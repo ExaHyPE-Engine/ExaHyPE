@@ -105,7 +105,7 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
 intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
   dim = args.dimensions,
   coarse_order = 1,
-  fine_order = 2
+  fine_order = args.poly_degree
   )
 prolongation_matrix = [intergrid_operators.prolongation()]
 prolongation_matrix_scaling = [0]
