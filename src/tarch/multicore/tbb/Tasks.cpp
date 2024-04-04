@@ -142,7 +142,6 @@ void tarch::multicore::native::spawnTask(
   const TaskNumber&            taskNumber
 ) {
   ::oneapi::tbb::dynamic_task_graph_node node(
-    taskGraph,
     [job]() -> void {
       while (job->run()) {
       }

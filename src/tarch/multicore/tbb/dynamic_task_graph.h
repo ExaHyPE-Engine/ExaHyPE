@@ -12,6 +12,8 @@
 #include <set>
 #include <tbb/task_arena.h>
 #include <oneapi/tbb/task_arena.h>
+#include <oneapi/tbb/concurrent_hash_map.h>
+#include <oneapi/tbb/concurrent_queue.h>
 
 
 namespace tbb {
@@ -35,7 +37,6 @@ namespace tbb {
       /**
        */
       dynamic_task_graph_node(
-        dynamic_task_graph&             graph,
         std::function<void()>           functor,
         dynamic_task_graph_node_number  dynamic_task_graph_node_number = AssignNewNumber
       );
@@ -92,9 +93,16 @@ namespace tbb {
   /**
    * Very simple dynamic task graph interface
    *
-   * Each task graph is tied to an arena and maintains a set of graphs with
-   * dependencies between them. Immediately after tasks become ready, the
-   * task graph spawns them into the arena.
+   * Each task graph is tied to an arena and maintains a set of graphs nodes
+   * aka tasks with dependencies between them. Immediately after tasks become
+   * ready, the task graph spawns them into the arena.
+   *
+   * ## Implementation
+   *
+   * The task graph holds a big hash map mapping individual task numbers of
+   * type dynamic_task_graph_node_number onto dynamic_task_graph_node which
+   * in turn hold the actual task graph. The entries are added to the list
+   * when we construct a node. They are removed after the ask has terminated.
    *
    * @author Tobias Weinzierl
    */
@@ -169,6 +177,11 @@ namespace tbb {
          * Spawned tasks where we hold
          */
 //        oneapi::tbb::concurrent_hash_map<int, SpawnedTaskDescriptor*> spawnedTasks;
+
+        /**
+         * Queue of numbers that should be recycled later.
+         */
+        oneapi::tbb::concurrent_queue<dynamic_task_graph_node_number>  _recycle_numbers;
   };
 }
 
