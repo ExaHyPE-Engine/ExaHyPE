@@ -54,6 +54,21 @@ and include the installation in the CXX flags in configuration
 CXXFLAGS="...... -Icosma/local/gsl/2.4/include ......"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+## Compiling on COSMA
+
+The suggest loading module when you use COSMA (include DINE) are
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
+export FLAVOUR_NOCONFLICT=1
+module load gsl
+export I_MPI_CXX=icpx
+export PYTHONPATH=/path/to/Peano/python
+export PYTHONPATH=$PYTHONPATH:/path/to/Peano/applications/exahype2/ccz4
+~~~~~~~~~~~~~~~~~~~~~~~
+
 ## SLURM script
 The default setup for this benchmark takes about 5 minutes to finish on 2 nodes on DINE,
 using the following job script.
