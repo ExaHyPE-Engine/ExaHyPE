@@ -30,7 +30,7 @@ class MatrixGenerator:
   """
   def __init__(self,
                dimensions,
-               poly_degree=1
+               poly_degree
                ):
     self.Dimensions    = dimensions
     self.poly_degree   = poly_degree

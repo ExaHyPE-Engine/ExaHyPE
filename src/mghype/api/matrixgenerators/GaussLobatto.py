@@ -27,8 +27,8 @@ class GaussLobatto(MatrixGenerator):
   def __init__(self,
                Dimensions,
                poly_degree,
-               unknowns_per_cell_node=1,
-               unknowns_per_face_node=1,
+               unknowns_per_cell_node,
+               unknowns_per_face_node,
                use_unit_interval=False):
 
     super( GaussLobatto, self ).__init__(Dimensions,
@@ -325,8 +325,8 @@ class GLMatrixFree(GaussLobatto):
   def __init__(self,
                Dimensions,
                poly_degree,
-               unknowns_per_cell_node=1,
-               solutions_per_face_node=2,   # number of solutions   we hold per node. Default to 2 since we have u and q
+               unknowns_per_cell_node,
+               solutions_per_face_node,   # number of solutions   we hold per node. Default to 2 since we have u and q
                projections_per_face_node=2, # number of projections we hold per node. Default to 2 since we have u and q
                use_unit_interval=False):
     super( GLMatrixFree, self ).__init__(Dimensions,
@@ -554,8 +554,3 @@ class GLMatrixFree(GaussLobatto):
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
 
-
-if __name__ == "__main__":
-  GL = GLMatrixFree(Dimensions=2, poly_degree=2)
-  print(f'Created {GL = }')
-  GL.get_face_from_cell_matrix()
