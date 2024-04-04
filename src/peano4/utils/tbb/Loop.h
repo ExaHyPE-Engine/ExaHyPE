@@ -118,8 +118,11 @@
   }
 
 
+/**
+ * Brackets here are important. Otherwise macro resolution will fail.
+ */
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
-  parallelForWithSchedulerInstructions(counter, max, loopParallelism==::peano4::utils::LoopPlacement::Nested ? ::peano4::utils::LoopPlacement::Nested : ::peano4::utils::LoopPlacement::Serial)
+  parallelForWithSchedulerInstructions(counter, max, (loopParallelism==::peano4::utils::LoopPlacement::Nested ? ::peano4::utils::LoopPlacement::Nested : ::peano4::utils::LoopPlacement::Serial))
 
 #define endSimtFor \
   endParallelFor
