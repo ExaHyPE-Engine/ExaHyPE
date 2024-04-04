@@ -19,8 +19,8 @@ modes = {
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
-parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="/nobackup/lcgk69/Peano/", help="Peano4 directory")
-parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="/nobackup/lcgk69/Peano/", help="Location of configure" )
+parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../../", help="Peano4 directory")
+parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
 parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=True, help="Verbose")
 parser.add_argument("-d",   "--dimensions",               dest="dimensions",              type=int,   default=2, help="Dimensions")
 parser.add_argument("-upvd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
