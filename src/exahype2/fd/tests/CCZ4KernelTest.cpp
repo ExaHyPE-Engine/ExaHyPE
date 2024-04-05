@@ -263,8 +263,8 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
    // std::cout<<patchData.QOut[0][QOutEnumerator(0, volumeIndex, checkingQ)]<<"\t";
   //}
   //std::cout<<std::endl;
-  std::cout << "Index: " << volumeIndex << " Coordinates: " << volumeCoordinates << std::endl;
-  std::cout << std::fixed <<std::setprecision(6); 
+  //std::cout << "Index: " << volumeIndex << " Coordinates: " << volumeCoordinates << std::endl;
+  //std::cout << std::fixed <<std::setprecision(6); 
   /*for (checkingQ=0;checkingQ<23;checkingQ++){
     std::cout<<"dtQ["<<checkingQ<<"]\t=  "<<patchData.QOut[0][QOutEnumerator(0, volumeIndex, checkingQ)]<<std::endl;
   }
