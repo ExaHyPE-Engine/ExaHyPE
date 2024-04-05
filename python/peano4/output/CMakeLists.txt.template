@@ -111,7 +111,7 @@ target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_
 target_link_options(${TARGET_NAME} PUBLIC ${PEANO_${PEANO_BUILD_TYPE}_LDFLAGS})
 
 # Link every toolbox, if they are enabled.
-if (ENABLE_PARTICLES)
+if(ENABLE_PARTICLES)
   target_link_libraries(${TARGET_NAME} PUBLIC ToolboxParticles${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
