@@ -1,0 +1,230 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org. It
+// supplements something to oneTBB which has been removed and which I need:
+// dynamic tasking. Therefore I add it to the tbb namespace rather than
+// Peano's tarch.
+#pragma once
+
+//#if defined(SharedTBB)
+
+
+#include <functional>
+#include <set>
+#include <tbb/task_arena.h>
+#include <oneapi/tbb/task_arena.h>
+#include <oneapi/tbb/concurrent_hash_map.h>
+#include <oneapi/tbb/concurrent_queue.h>
+
+
+namespace tbb {
+  class dynamic_task_graph_node;
+  class dynamic_task_graph_spawned_node;
+  class dynamic_task_graph;
+}
+
+
+/**
+ * @page tbb_dynamic_task_graph_design TBB dynamic task graph wrapper
+ *
+ * Users build up the task graph by creating instances of task graph
+ * node objects. Once we submit a node to the task graph, it is given a
+ * link to a task graph node on the heap and becomes itself invariant,
+ * i.e. you cannot add further dependencies anymore. Before that, each
+ * node can be added links to previously submitted task graph nodes.
+ *
+ * It is important to hold submitted task graphs on the heap, as they need
+ * to host a mutex. The task graph also holds a set of all heap objects
+ * which are still alive, as a user might refer to a previously generated
+ * task which is already complete and hence removed. That is: incoming
+ * dependencies might "point" to tasks which don't exist anymore. Later
+ * on, outgoing dependencies always point to something valid.
+ *
+ * ## Usage
+ *
+ * Users never interact with spawned nodes.
+ */
+namespace tbb {
+  /**
+   * Represents one node in task graph
+   */
+  class dynamic_task_graph_node {
+    public:
+      friend class dynamic_task_graph;
+
+      /**
+       * Create new task graph node
+       *
+       * Each task graph node is tied to a functor. When we create a task graph
+       * node, the task is not yet submitted or ready. We have to explicitly
+       * put() it into the task graph.
+       */
+      dynamic_task_graph_node( std::function<void()> functor );
+
+      /**
+       * Add a single dependency
+       *
+       * This works if and only if node has already been put into the task
+       * graph. You cannot add any dependency before that (cmp concept of
+       * anti-dependencies in OpenMP).
+       */
+      void add_dependency( const dynamic_task_graph_node& node );
+
+      /**
+       * Wrapper around add_dependency()
+       */
+      void add_dependencies( const std::set<dynamic_task_graph_node>& nodes );
+
+      /**
+       * Has task been submitted
+       *
+       * After you have submitted a node, you can use it as input dependency
+       * for other nodes. However, you cannot add further dependencies to
+       * itself anymore.
+       */
+      bool is_submitted() const;
+
+    private:
+      void add_dependency( const dynamic_task_graph_spawned_node& node );
+
+      std::function<void()>                        _functor;
+
+      dynamic_task_graph_spawned_node*             _spawned_task;
+
+      /**
+       * In dependencies.
+       *
+       * Can only refer to submitted tasks. If a task is given a number and
+       * it also depends on another task with the same number, this number
+       * is not stored within this array. Instead, _depends_on_previous_task_with_same_number
+       * is set.
+       */
+      std::vector<dynamic_task_graph_spawned_node*>  _in_dependency;
+  };
+
+  class spawned_task_graph_node: public dynamic_task_graph_node {
+    private:
+      std::mutex  _semaphore;
+      std::vector<spawned_task_graph_node*>  _out_dependency;
+  };
+
+  /**
+   * Very simple dynamic task graph interface
+   *
+   * Each task graph is tied to an arena and maintains a set of graphs nodes
+   * aka tasks with dependencies between them. Immediately after tasks become
+   * ready, the task graph spawns them into the arena.
+   *
+   * ## Implementation
+   *
+   * The task graph holds a big hash map mapping individual task numbers of
+   * type dynamic_task_graph_node_number onto dynamic_task_graph_node which
+   * in turn hold the actual task graph. The entries are added to the list
+   * when we construct a node. They are removed after the ask has terminated.
+   *
+   * @author Tobias Weinzierl
+   */
+  class dynamic_task_graph {
+      public:
+        friend class dynamic_task_graph_node;
+
+        /**
+         * Construct task graph over arena
+         *
+         * @param arena Arena to be used once the task becomes ready. It is the
+         *   user's responsibility to ensure that the arena is valid.
+         */
+        dynamic_task_graph(
+          ::oneapi::tbb::task_arena&      arena
+        );
+
+        /**
+         * Put a new node into the task graph
+         *
+         * The ownership of the node is passed over to the task graph. You
+         * don't have to delete it yourself. This is different to oneAPI's
+         * flow graph, where we can work with references, as we rely on the
+         * fact that nodes stay alive until we call wait_for_all. Here,
+         * everything is dynamic and the task might or might not be executed
+         * immediately or be referenced later on.
+         *
+         * The routine will assign node a valid dynamic_task_graph_node_number,
+         * unless it has already been given one from your side. It is always
+         * faster if you have assigned a task a number already, as we then
+         * don't have to search for a new task number.
+         *
+         * Once you have submitted a node, it becomes read-only, i.e. you
+         * cannot add any further dependencies to it.
+         *
+         *
+         * ## Implementation
+         *
+         * 1. If the task node depends upon a task with the same number,
+         *    memorise this additional task. We'll remove it from the hash
+         *    map next, so we have to keep track of its memory location.
+         */
+        void put(dynamic_task_graph_node& node );
+
+        /**
+         * Wait for one specific node
+         */
+        void wait( const dynamic_task_graph_node& node );
+
+        /**
+         * Wait for one specific node
+         */
+        void wait( const dynamic_task_graph_node_number& node );
+
+        /**
+         * Wait for set of nodes
+         */
+        void wait( const std::set<dynamic_task_graph_node>& node );
+
+        /**
+         * Wait for set of nodes
+         */
+        void wait( const std::set<dynamic_task_graph_node_number>& node );
+
+        /**
+         * Wait for all tasks to finish
+         *
+         * This drains the graph, i.e. size()==0 will hold once the function
+         * terminates.
+         */
+        void wait_for_all();
+
+        /**
+         * Number of tasks in graph
+         *
+         * This includes all running and pending tasks.
+         */
+        std::size_t size() const;
+      private:
+
+        ::oneapi::tbb::task_arena&      _arena;
+
+        using HashMap = oneapi::tbb::concurrent_hash_map<int, spawned_task_graph_node*>;
+
+        /**
+         * Spawned tasks known to system
+         */
+        HashMap _spawned_tasks;
+  };
+}
+
+
+//#endif
+
+
+// static constexpr dynamic_task_graph_node_number AssignNewNumber = -1;
+
+// using dynamic_task_graph_node_number = int;
+
+/**
+ * Add a single dependency
+ *
+ * This works if and only if node has already been put into the task
+ * graph. You cannot add any dependency before that (cmp concept of
+ * anti-dependencies in OpenMP).
+ */
+//void add_dependency( const dynamic_task_graph_node_number& node );
+
