@@ -327,11 +327,12 @@ class GLMatrixFree(GaussLobatto):
                poly_degree,
                unknowns_per_cell_node,
                solutions_per_face_node,   # number of solutions   we hold per node. Default to 2 since we have u and q
-               projections_per_face_node=2, # number of projections we hold per node. Default to 2 since we have u and q
+               projections_per_face_node, # number of projections we hold per node. Default to 2 since we have u and q
                use_unit_interval=False):
     super( GLMatrixFree, self ).__init__(Dimensions,
                                          poly_degree,
-                                         unknowns_per_cell_node
+                                         unknowns_per_cell_node,
+                                         solutions_per_face_node
                                          )
     self._solutions_per_face_node   = solutions_per_face_node
     self._projections_per_face_node = projections_per_face_node
