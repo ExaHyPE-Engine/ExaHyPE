@@ -13,7 +13,7 @@ class StepToObserver(object):
       Construct one mapping
     """
     observer = peano4.output.Observer(
-      self.step.name, self.step.project.namespace+ [ "observers" ],self.step.project.directory + "/observers",
+      self.step.name, self.step.project.namespace + [ "observers" ], self.step.project.subdirectory + "observers",
       included_action_sets,
       self.step.vertex_data,
       self.step.face_data,

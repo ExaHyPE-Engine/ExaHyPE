@@ -258,7 +258,7 @@ public:
         = (a * deltaQ[rho] + b * derivative[dudx] + c * derivative[dvdx] - irho2 * (deltaQ[Z] - 2 * Q[Z] * deltaQ[rho]));
       // derivative[dTdx] = Q[NumberOfUnknowns + dTdx] - 0.5 * deltaQ[NumberOfUnknowns + dTdx];
 
-#if Dimension == 3
+#if Dimensions == 3
       derivative[dwdx] = deltaQ[w];
       derivative[dudz] = Q[NumberOfUnknowns + dudz] - 0.5 * deltaQ[NumberOfUnknowns + dudz];
       derivative[dwdz] = Q[NumberOfUnknowns + dwdz] - 0.5 * deltaQ[NumberOfUnknowns + dwdz];
@@ -266,7 +266,7 @@ public:
 
       // -mu{2(du/dx) - 2/3 (du/dx + dv/dy)}
       BTimesDeltaQ[u] = -Viscosity * (2.0 * derivative[dudx] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy]
-#if Dimension == 3
+#if Dimensions == 3
         +derivative[dwdz]
 #endif
         )) / Q[rho];
@@ -274,11 +274,11 @@ public:
       // -mu{dv/dx + du/dy}
       BTimesDeltaQ[v] = -Viscosity * (derivative[dvdx] + derivative[dudy]) / Q[rho];
 
-#if Dimension == 3
+#if Dimensions == 3
       BTimesDeltaQ[w] = -Viscosity * (derivative[dudz] + derivative[dwdx]) / Q[rho];
 #endif
     } else {
-#if Dimension == 3
+#if Dimensions == 3
       if (normal == y) {
         derivative[dwdy] = deltaQ[w];
         derivative[dvdz] = Q[NumberOfUnknowns + dvdz] - 0.5 * deltaQ[NumberOfUnknowns + dvdz];
@@ -300,11 +300,11 @@ public:
 
         // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
         BTimesDeltaQ[v] = -Viscosity * (2.0 * derivative[dvdy] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy]
-#if Dimension == 3
+#if Dimensions == 3
         +derivative[dwdz]
 #endif
         )) / Q[rho];
-#if Dimension == 3
+#if Dimensions == 3
         BTimesDeltaQ[w] = -Viscosity * (derivative[dvdz] + derivative[dwdy]) / Q[rho];
       } else {
 

@@ -754,7 +754,7 @@ class EnclaveTasking(FV):
         step.add_action_set(self._action_set_merge_enclave_task_outcome)
 
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
         super(EnclaveTasking, self).add_implementation_files_to_project(
             namespace, output, dimensions
         )
@@ -763,6 +763,9 @@ class EnclaveTasking(FV):
             os.path.dirname(os.path.realpath(__file__)),
             "EnclaveTasking.EnclaveTask.template",
         )
+
+        if(subdirectory):
+            subdirectory += "/"
 
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(implementationDictionary)
@@ -780,15 +783,15 @@ class EnclaveTasking(FV):
                 "{}.cpp".format(templatefile_prefix),
                 task_name,
                 namespace + ["tasks"],
-                "tasks",
+                subdirectory + "tasks",
                 implementationDictionary,
                 True,
             )
         )
 
         output.add(generated_solver_files)
-        output.makefile.add_h_file("tasks/" + task_name + ".h", generated=True)
-        output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
+        output.makefile.add_h_file(subdirectory + "tasks/" + task_name + ".h", generated=True)
+        output.makefile.add_cpp_file(subdirectory + "tasks/" + task_name + ".cpp", generated=True)
 
 
     def _enclave_task_name(self):

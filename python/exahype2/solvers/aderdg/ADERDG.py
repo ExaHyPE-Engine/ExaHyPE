@@ -656,7 +656,7 @@ class ADERDG(object):
         return self._name + "Q"
 
     def get_name_of_global_instance(self):
-        return "InstanceOf" + self._name
+        return "instanceOf" + self._name
 
     def _get_default_includes(self):
         return """
@@ -951,7 +951,7 @@ class ADERDG(object):
     Finally, if the kernelgenerator option is chosen this calls generate_kernels() which then generates
     optimized aderdg kernels and adds these to the makefile.
     """
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
         """
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
@@ -967,6 +967,9 @@ class ADERDG(object):
         else:
             templatefile_prefix += self._solver_template_file_class_name
 
+        if(subdirectory):
+            subdirectory += "/"
+
         abstractHeaderDictionary = {}
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
@@ -980,7 +983,7 @@ class ADERDG(object):
                 templatefile_prefix + "Abstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                ".",
+                subdirectory + ".",
                 abstractHeaderDictionary,
                 True,
                 True,
@@ -992,7 +995,7 @@ class ADERDG(object):
                 templatefile_prefix + ".template.cpp",
                 self._name,
                 namespace,
-                ".",
+                subdirectory + ".",
                 implementationDictionary,
                 False,
                 True,
@@ -1001,10 +1004,10 @@ class ADERDG(object):
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
-        output.makefile.add_h_file(self._name + ".h", generated=True)
-        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
 
         if self._use_var_shortcut:
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
@@ -1013,13 +1016,13 @@ class ADERDG(object):
                 + "../VariableShortcuts.template.h",
                 "VariableShortcuts",
                 namespace,
-                ".",
+                subdirectory + ".",
                 implementationDictionary,
                 True,
                 True,
             )
             output.add(generated_shortcut_file)
-            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
+            output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
 
         if self._use_kernel_generator:
             self.generate_kernels(namespace, output, dimensions)
