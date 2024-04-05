@@ -347,7 +347,7 @@ Relaxation coefficient: {}
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, subdirectory=""):
     """
     
      The ExaHyPE2 project will call this operation when it sets
@@ -359,6 +359,9 @@ Relaxation coefficient: {}
      
     """
     templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/ConstrainedPoissonEquationForMarkerOnCells"
+
+    if(subdirectory):
+        subdirectory += "/"
 
     implementationDictionary = {}
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
@@ -377,13 +380,13 @@ Relaxation coefficient: {}
       templatefile_prefix + ".template.cpp",
       self._name, 
       namespace,
-      ".", 
+      subdirectory + ".", 
       implementationDictionary,
       True,
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
 
 
   @property
