@@ -26,6 +26,10 @@ if(CXX_COMPILER_NAME)
   set(CMAKE_CXX_COMPILER ${CXX_COMPILER_NAME})
 endif()
 
+if(LINKER_NAME)
+  set(CMAKE_LINKER ${LINKER_NAME})
+endif()
+
 set(CMakeCachePath {{PROJECT_ROOT_DIR}}/Config.cmake)
 include("${CMakeCachePath}")
 

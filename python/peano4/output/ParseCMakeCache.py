@@ -26,7 +26,7 @@ def populate_predefined_strings():
         "ENABLE_FINITEELEMENTS",
         "ENABLE_BLOCKSTRUCTURED",
         "ENABLE_LOADBALANCING",
-        "ENABLE_PARTICLES",
+        "CMAKE_POSITION_INDEPENDENT_CODE",
         "ENABLE_SWIFT",
         "PEANO_INCLUDES",
         "PEANO_LINK_LIBRARIES",
@@ -47,6 +47,7 @@ def populate_predefined_strings():
         "_PROJECT_WARNINGS_COMPILE_DEFINITIONS",
         "C_COMPILER_NAME",
         "CXX_COMPILER_NAME",
+        "LINKER_NAME",
     ]
 
     return predefined_strings
