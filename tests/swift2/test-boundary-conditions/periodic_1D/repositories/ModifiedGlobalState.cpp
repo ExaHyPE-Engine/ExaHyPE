@@ -21,7 +21,8 @@ namespace tests {namespace swift2 {namespace periodicBoundaryConditions1D {names
 
 tarch::logging::Log _log( "tests::swift2::periodicBoundaryConditions1D::repositories::GlobalState" );
 
-toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration(2));
+// toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration(2));
+toolbox::loadbalancing::strategies::SpreadOutHierarchically              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration());
 
 
 bool rerunPreviousGridSweep() {
