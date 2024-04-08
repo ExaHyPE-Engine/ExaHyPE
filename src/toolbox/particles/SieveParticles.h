@@ -33,6 +33,9 @@ namespace toolbox {
  * generally throw all particles that need to be resorted into the global
  * sieve set and then take it from there.
  *
+ *
+ * ## Relationship to various sorting approaches
+ *
  * So sieving means that particles are removed from the global mesh and
  * thrown into a sieve set represented by an instance of SieveParticles.
  * After one mesh traversal, this sieve set is fully populated. After that,
@@ -55,7 +58,38 @@ namespace toolbox {
  * or they create a copy of this sieve set through cloneParticlesToBeSieved()
  * and then hand out particles from this deep copy.
  *
+ * There are few key routines that you should study should you try to use this
+ * class:
  *
+ * 1. addParticleThatCanNotBeLiftedWithinItsTree(). The name is actually not
+ *   that good, as the class really doesn't care why you decide to add a
+ *   particle to the sieve set. It simply adds it to the set.
+ * 2. exchangeSieveListsGlobally(). Exchange all the particles between MPI
+ *   ranks, so everybody sees all particles, and also roll them over: particles
+ *   that have been added to the sieve set are form hereon in the list that
+ *   have to be sieved (bucket sorted), while the list of sieve particles is
+ *   cleared such that you can add further new particles to it.
+ * 3. getParticlesToBeSievedIntoVertex() picks those particles from the list of
+ *   particles that have to be deployed/bucket sorted that fit to one
+ *   particular vertex.
+ *
+ *
+ * ## Periodic boundary conditions
+ *
+ * If particles move around a lot such that the underlying sorting algorithm
+ * decides that it would prefer a global sorting step, it adds these particles
+ * to the sieve set. If these particles did fly through the domain boundary and
+ * now are outside, noone will bucket sort (sieve) them and they will eventually
+ * be deleted after the next mesh sweep.
+ *
+ * If particles did cross a periodic boundary, they should reenter the domain
+ * again: They might, for example, be lifted into the sieve set on the far left
+ * and of the domain but should be sorted into the far right one in return. To
+ * faciliate this, you have to run through all particles within the sieve set
+ * once and apply the periodic boundary conditions to them. This can be done
+ * either before exchangeSieveListsGlobally() for the rank-local set of
+ * _particlesThatCanNotBeLiftedWithinTheirTree, or is has to be done after the
+ * exchange on _partilesThatHaveToBeSieved.
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
