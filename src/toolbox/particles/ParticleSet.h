@@ -168,7 +168,11 @@ public:
    * as guard, which makes the querying faster.
    * 
    * This operation always removes particles from the sieve set, and it 
-   * sort exclusively local particles into the domain.
+   * sort exclusively local particles into the domain. For these two reasons
+   * (alter container plus share one among all threads), it has to use a
+   * semaphore whenever it accesses the set.
+   *
+   * Consult the @ref page_toolbox_particles_mesh_consistency
    *
    * @see SieveParticles::getParticlesToBeSievedIntoVertex()
    */
@@ -330,6 +334,20 @@ protected:
 
   /**
    * Map of persistent particles that have to be sieved
+   *
+   * Every particle set is tied to one global sieve set realised through this
+   * attribute. Sieving is briefly also mentioned on @ref page_toolbox_particles_mesh_consistency.
+   * Access to this set is provided through two routines:
+   *
+   * - getParticlesToBeSievedIntoVertex() pipes your request directly through
+   *   to the set's getParticlesToBeSievedIntoVertex(), i.e. it grants you
+   *   access to the global sieve set.
+   * - Alternatively, you can clone the whole sieve set for your algorithm via
+   *   cloneParticlesToBeSieved() and then sieve from thereon.
+   *
+   * Different particle sorting strategies these different options the way they
+   * see fit.
+   *
    */
   static SieveParticles _sieveParticles;
 

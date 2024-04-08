@@ -21,18 +21,41 @@ namespace toolbox {
 
 
 /**
- * Utility class for all flavours of particle sets
+ * Utility class for global sorting for all flavours of particle sets
  *
- * Particle sets differ in the way they actually manage the particles. However,
- * they all need global sorting routines (sieve sets) at one point including
- * their stats. These features are provided by this class.
+ * Particle sets and different sorting strategies all differ in the way they
+ * actually manage their particles and how they are assigned to the mesh
+ * vertices. Notably, they all differ in the way when and how they sort
+ * globally. Some sorting strategies such as peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop
+ * try to realise as much sorting as possible locally by shifting particles
+ * between levels and only resort to a global sieve set when particles are
+ * very fast, while other strategies such as peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort
+ * generally throw all particles that need to be resorted into the global
+ * sieve set and then take it from there.
  *
+ * So sieving means that particles are removed from the global mesh and
+ * thrown into a sieve set represented by an instance of SieveParticles.
+ * After one mesh traversal, this sieve set is fully populated. After that,
+ * the individual subdomains run through their mesh and pick the particles
+ * from the global sieve set as they fit. They realise a bucket sort. Again,
+ * there are two different ways how to bucket sort:
+ *
+ * - Some strategies work with one global sieve set, and remove the particles
+ *   from this one as they bucket sort into the domain
+ * - Other strategies clone the sieve set per thread and pick out only those
+ *   particles which are relevant.
+ *
+ * No matter which strategy you follow, all of them work against the same
+ * signature and all of them share the same statistics. These features are
+ * provided by this class:
  * The class is used by toolbox.particles.ParticleSet which usually holds
  * one class instance (static attribute) of this class to collect all sieve
  * information. To drop particles from the global sieve set into the respective
  * domains, mesh sweeps either use getParticlesToBeSievedIntoVertex() directly
  * or they create a copy of this sieve set through cloneParticlesToBeSieved()
  * and then hand out particles from this deep copy.
+ *
+ *
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -181,9 +204,12 @@ public:
    *   particles from the underlying set before we return them. That is, the
    *   underlying set on which we call getParticlesToBeSievedIntoVertex()
    *   shrinks monotonously. If you set it to false, the particles will reside
-   *   within the set, but the set will eventually delete them, as it updates
-   *   its content globally. Therefore, you should not use the returned
-   *   particles directly but rather create copies.
+   *   within the set (for this mesh traversal). Therefore, you should not use the returned
+   *   particles directly but rather create copies. There is no code at the
+   *   moment that does not remove the vertex from the set, as we otherwise
+   *   might sieve the same particle multiple times into the mesh (as the
+   *   association which particle belongs to which vertex is not absolutely
+   *   unique).
    */
   ParticleList getParticlesToBeSievedIntoVertex(
     const peano4::datamanagement::VertexMarker& marker,
