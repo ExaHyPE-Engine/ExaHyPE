@@ -437,8 +437,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-12,-12,0.0]
-    project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
+    probe_point = [-100, -100, 0.0]
+    project.add_plot_filter( probe_point,[200.0, 200.0, 0.01], 1 )
     #if args.extension=="Psi4":
     #  my_solver.select_dofs_to_print = [0,12,16,17,18,53,54,59,60]
     #elif args.extension=="adm" or args.extension=="phy-debug":
