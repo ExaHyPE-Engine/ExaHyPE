@@ -566,8 +566,13 @@ void toolbox::particles::assignmentchecks::eraseParticle(
 ) {
   logTraceInWith4Arguments("eraseParticle(...)", particleName, particleX, isLocal, treeId );
 
+
+
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event(internal::Event::Type::Erase, isLocal, treeId, trace);
+
+  logInfo("eraseParticle() particleHistory", _database.particleHistory(identifier));
+  logInfo("eraseParticle() database", _database.toString());
 
   internal::Event previousLocalParticle = _database.getEntry(identifier, treeId).first;
   assertion5(
@@ -604,6 +609,8 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
 
     _database.addEvent(identifier, event);
+    logInfo("assignParticleToVertex(...) v1 particleHistory", _database.particleHistory(identifier));
+    logInfo("assignParticleToVertex(...) v1 database", _database.toString());
   }
   else {
     internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
@@ -616,6 +623,9 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     const bool isLifting  = previousEvent.type == internal::Event::Type::DetachFromVertex and tarch::la::allSmaller( previousEvent.vertexH, vertexH );
     const bool isDroppingFromSieveSet  = previousEvent.type == internal::Event::Type::AssignToSieveSet;
     #endif
+
+    logInfo("assignParticleToVertex(...) v2 particleHistory", _database.particleHistory(identifier));
+    logInfo("assignParticleToVertex(...) v2 database", _database.toString());
 
     if (isLocal) {
       assertion7(
@@ -695,6 +705,14 @@ void toolbox::particles::assignmentchecks::moveParticle(
 ) {
   logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
 
+  internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX);
+  internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX, internal::ParticleIdentifier::Precision * 4.0);
+  logInfo("", _database.particleHistory(newIdentifier));
+
+  logInfo("moveParticle() NEW particleHistory", _database.particleHistory(newIdentifier));
+  logInfo("moveParticle() OLD particleHistory", _database.particleHistory(oldIdentifier));
+  logInfo("moveParticle() database", _database.toString());
+
   if (not tarch::la::equals(oldParticleX, newParticleX, internal::ParticleIdentifier::Precision)) {
     internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX);
     internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX, internal::ParticleIdentifier::Precision * 4.0);
@@ -714,14 +732,14 @@ void toolbox::particles::assignmentchecks::moveParticle(
 Explanation
 =============
 The tracer has been informed of a particle movement. When it tried to bookmark
-the particle with its new position, it found out that there is already a 
-particle registered at this place. It seems that a particle overlaps with 
+the particle with its new position, it found out that there is already a
+particle registered at this place. It seems that a particle overlaps with
 another one.
 
-This might mean that there is actually a particle here, but could also result 
+This might mean that there is actually a particle here, but could also result
 from two other situations:
 
-- We trace position updates one after the other. If particle A takes the 
+- We trace position updates one after the other. If particle A takes the
   position of a particle B, we might simply not have updated B yet.
 - We trace position updates only if positions have changed significantly.
   Significantly here is formalised via
@@ -729,13 +747,13 @@ from two other situations:
       toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision
 
   That is, if particles are closer together than this delta, we do not write
-  logs into our database. This ensures that the database is not filled with 
+  logs into our database. This ensures that the database is not filled with
   tiny update entries.
 
 As the tracing cannot handle either situation, we are left with two options.
-We can dramatically reduce Precision at the cost of a higher overhead. 
-Alternatively, it might be appropriate to check the time step sizes 
-employed: If particles move too fast, the probability that A ends up at a 
+We can dramatically reduce Precision at the cost of a higher overhead.
+Alternatively, it might be appropriate to check the time step sizes
+employed: If particles move too fast, the probability that A ends up at a
 position just previously held by B (which is not yet updated) is higher.
 
 )";
@@ -760,15 +778,15 @@ position just previously held by B (which is not yet updated) is higher.
 Explanation
 =============
 The tracer has been informed of a particle movement. When it tried to bookmark
-the particle with its new position, it found out that there is already a 
+the particle with its new position, it found out that there is already a
 particle registered at this place. That is fine, as particles might be held
 redundantly on different trees - either as halo copies or as they sit exactly
 on the face between two subdomains.
 
 If that happens, they however have to be tied to the same vertex in the domain
 although the vertex might be replicated on a different tree. Alternatively, the
-other rank might already have moved it and come to the conclusion that it has 
-to be assigned to the sieve set. The present tree is not there yet, i.e. is 
+other rank might already have moved it and come to the conclusion that it has
+to be assigned to the sieve set. The present tree is not there yet, i.e. is
 just about to move it, but will eventually also raise its particle to the
 sieve set.
 )";
@@ -833,6 +851,9 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::DetachFromVertex, isLocal, vertexX, vertexH, treeId, trace};
 
+  logInfo("detachParticleFromVertex() particleHistory", _database.particleHistory(identifier));
+  logInfo("detachParticleFromVertex() database", _database.toString());
+
   #if PeanoDebug>0
   internal::Event previousEvent = _database.getEntry(identifier, treeId).first;
   #endif
@@ -883,6 +904,9 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
+
+  logInfo("detachParticleToSieveSet() particleHistory", _database.particleHistory(identifier));
+  logInfo("detachParticleToSieveSet() database", _database.toString());
 
   #if PeanoDebug>0
   internal::Event              previousEvent = _database.getEntry(identifier, treeId).first;
