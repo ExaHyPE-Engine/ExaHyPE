@@ -12,86 +12,38 @@
 #include <set>
 #include <tbb/task_arena.h>
 #include <oneapi/tbb/task_arena.h>
-#include <oneapi/tbb/concurrent_hash_map.h>
-#include <oneapi/tbb/concurrent_queue.h>
+#include <oneapi/tbb/concurrent_unordered_set.h>
 
 
 namespace tbb {
-  class dynamic_task_graph_function_node;
+  class dynamic_task_graph_node;
+  class dynamic_task_graph_spawned_node;
   class dynamic_task_graph;
+  class dynamic_task_graph_node_repository;
 }
 
 
+/**
+ * @page tbb_dynamic_task_graph_design TBB dynamic task graph wrapper
+ *
+ * Users build up the task graph by creating instances of task graph
+ * node objects. Once we submit a node to the task graph, it is given a
+ * link to a task graph node on the heap and becomes itself invariant,
+ * i.e. you cannot add further dependencies anymore. Before that, each
+ * node can be added links to previously submitted task graph nodes.
+ *
+ * It is important to hold submitted task graphs on the heap, as they need
+ * to host a mutex. The task graph also holds a set of all heap objects
+ * which are still alive, as a user might refer to a previously generated
+ * task which is already complete and hence removed. That is: incoming
+ * dependencies might "point" to tasks which don't exist anymore. Later
+ * on, outgoing dependencies always point to something valid.
+ *
+ * ## Usage
+ *
+ * Users never interact with spawned nodes.
+ */
 namespace tbb {
-  using dynamic_task_graph_node_number = int;
-
-  /**
-   * Represents one node in task graph
-   */
-  class dynamic_task_graph_node {
-    public:
-      friend class dynamic_task_graph;
-
-      static constexpr dynamic_task_graph_node_number AssignNewNumber = -1;
-
-      /**
-       */
-      dynamic_task_graph_node(
-        std::function<void()>           functor,
-        dynamic_task_graph_node_number  dynamic_task_graph_node_number = AssignNewNumber
-      );
-
-      /**
-       * Alternative wrapper around add_dependency( const dynamic_task_graph_node_number& node )
-       */
-      void add_dependency( const dynamic_task_graph_node& node );
-
-      /**
-       * Add a single dependency
-       *
-       * This works if and only if node has already been put into the task
-       * graph. You cannot add any dependency before that (cmp concept of
-       * anti-dependencies in OpenMP).
-       */
-      void add_dependency( const dynamic_task_graph_node_number& node );
-
-      /**
-       * Alternative wrapper around add_dependency( const dynamic_task_graph_node_number& node )
-       */
-      void add_dependencies( const std::set<dynamic_task_graph_node>& nodes );
-
-      /**
-       * Alternative wrapper around add_dependency( const dynamic_task_graph_node_number& node )
-       */
-      void add_dependencies( const std::set<dynamic_task_graph_node_number>& nodes );
-
-      /**
-       * Has task been submitted
-       *
-       * After you have submitted a node, you can use it as input dependency
-       * for other nodes. However, you cannot add further dependencies to
-       * itself anymore.
-       */
-      bool is_submitted() const;
-
-      /**
-       * Get task/node number
-       *
-       * Return the number assigned to the task. This is either the value
-       * passed into the constructor through dynamic_task_graph_node_number, or
-       * it is one assigned by the task graph if you have passed
-       * AssignNewNumber.
-       *
-       * @return Node number identifying a unique task
-       */
-      dynamic_task_graph_node_number get_number() const;
-
-    private:
-      bool _submitted;
-      std::vector<dynamic_task_graph_node_number>  _in_dependency;
-      std::vector<dynamic_task_graph_node_number>  _out_dependency;
-  };
-
   /**
    * Very simple dynamic task graph interface
    *
@@ -110,7 +62,7 @@ namespace tbb {
    */
   class dynamic_task_graph {
       public:
-        friend class dynamic_task_graph_node;
+        friend class dynamic_task_graph_spawned_node;
 
         /**
          * Construct task graph over arena
@@ -133,10 +85,19 @@ namespace tbb {
          * immediately or be referenced later on.
          *
          * The routine will assign node a valid dynamic_task_graph_node_number,
-         * unless it has already been given one from your side.
+         * unless it has already been given one from your side. It is always
+         * faster if you have assigned a task a number already, as we then
+         * don't have to search for a new task number.
          *
          * Once you have submitted a node, it becomes read-only, i.e. you
          * cannot add any further dependencies to it.
+         *
+         *
+         * ## Implementation
+         *
+         * 1. If the task node depends upon a task with the same number,
+         *    memorise this additional task. We'll remove it from the hash
+         *    map next, so we have to keep track of its memory location.
          */
         void put(dynamic_task_graph_node& node );
 
@@ -146,19 +107,9 @@ namespace tbb {
         void wait( const dynamic_task_graph_node& node );
 
         /**
-         * Wait for one specific node
-         */
-        void wait( const dynamic_task_graph_node_number& node );
-
-        /**
          * Wait for set of nodes
          */
         void wait( const std::set<dynamic_task_graph_node>& node );
-
-        /**
-         * Wait for set of nodes
-         */
-        void wait( const std::set<dynamic_task_graph_node_number>& node );
 
         /**
          * Wait for all tasks to finish
@@ -175,19 +126,21 @@ namespace tbb {
          */
         std::size_t size() const;
       private:
-        /**
-         * Spawned tasks where we hold
-         */
-//        oneapi::tbb::concurrent_hash_map<int, SpawnedTaskDescriptor*> spawnedTasks;
+        ::oneapi::tbb::task_arena&      _arena;
 
         /**
-         * Queue of numbers that should be recycled later.
+         * See documentation of dynamic_task_graph_spawned_node for a
+         * discussion why we have to use smart pointers here.
          */
-        oneapi::tbb::concurrent_queue<dynamic_task_graph_node_number>  _recycle_numbers;
+        using SpawnedTasksContainer = oneapi::tbb::concurrent_unordered_set< dynamic_task_graph_spawned_node* >;
+
+        /**
+         * Spawned tasks known to system
+         */
+        SpawnedTasksContainer _spawned_tasks;
   };
 }
 
 
 //#endif
-
 

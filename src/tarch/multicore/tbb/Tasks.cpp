@@ -20,6 +20,9 @@
 #include <oneapi/tbb/concurrent_hash_map.h>
 
 #include "dynamic_task_graph.h"
+#include "dynamic_task_graph_node.h"
+#include "dynamic_task_graph_node_repository.h"
+
 
 namespace {
   ::oneapi::tbb::task_arena defaultTaskArena;
@@ -63,7 +66,8 @@ namespace {
     return result;
   }
 
-  ::oneapi::tbb::dynamic_task_graph taskGraph(defaultTaskArena);
+  ::oneapi::tbb::dynamic_task_graph_node_repository  taskGraphNodeRepository;
+  ::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
 } // namespace
 
 
@@ -141,18 +145,33 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  ::oneapi::tbb::dynamic_task_graph_node node(
-    [job]() -> void {
-      while (job->run()) {
+  if (taskNumber==NoDependencies) {
+    ::oneapi::tbb::dynamic_task_graph_node node(
+      [job]() -> void {
+        while (job->run()) {
+        }
+        delete job;
       }
-      delete job;
-    },
-    taskNumber==NoDependencies ? ::oneapi::tbb::dynamic_task_graph_node::AssignNewNumber : taskNumber
-  );
+    );
 
-  node.add_dependencies( inDependencies );
+    taskGraphNodeRepository.add_dependencies( node, inDependencies );
 
-  taskGraph.put(node);
+    taskGraph.put( node );
+  }
+  else {
+    ::oneapi::tbb::dynamic_task_graph_node& node = taskGraphNodeRepository.create_node(
+      [job]() -> void {
+        while (job->run()) {
+        }
+        delete job;
+      },
+      taskNumber
+    );
+
+    taskGraphNodeRepository.add_dependencies( node, inDependencies );
+
+    taskGraph.put( node );
+  }
 }
 
 
@@ -184,7 +203,9 @@ void tarch::multicore::native::processFusedTask(
 
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  taskGraph.wait( inDependencies );
+  for (auto& p: inDependencies) {
+    taskGraph.wait( taskGraphNodeRepository.get_node(p) );
+  }
 }
 
 

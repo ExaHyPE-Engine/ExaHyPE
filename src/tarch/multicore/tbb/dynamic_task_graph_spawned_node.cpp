@@ -1,54 +1,59 @@
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org. It
-// supplements something to oneTBB which has been removed and which I need:
-// dynamic tasking. Therefore I add it to the tbb namespace rather than
-// Peano's tarch.
-#pragma once
+#include "dynamic_task_graph_spawned_node.h"
+#include "dynamic_task_graph.h"
+#include "dynamic_task_graph_node.h"
+#include "dynamic_task_graph_utils.h"
 
-//#if defined(SharedTBB)
+#include <iostream>
 
 
-#include <functional>
-#include <set>
-#include <tbb/task_arena.h>
-#include <oneapi/tbb/task_arena.h>
-#include <oneapi/tbb/concurrent_hash_map.h>
-#include <oneapi/tbb/concurrent_queue.h>
 
 
-namespace tbb {
-  class dynamic_task_graph_node;
-  class dynamic_task_graph_spawned_node;
-  class dynamic_task_graph;
+tbb::dynamic_task_graph_spawned_node::dynamic_task_graph_spawned_node(
+  const dynamic_task_graph_node&  task_specification,
+  dynamic_task_graph&             task_graph
+):
+  _functor( task_specification._functor ),
+  _number_of_in_dependencies(1),
+  _task_graph(task_graph) {
+
+  __TBB_TRACE_TASK_CREATE(this);
 }
 
 
-/**
- * @page tbb_dynamic_task_graph_design TBB dynamic task graph wrapper
- *
- * Users build up the task graph by creating instances of task graph
- * node objects. Once we submit a node to the task graph, it is given a
- * link to a task graph node on the heap and becomes itself invariant,
- * i.e. you cannot add further dependencies anymore. Before that, each
- * node can be added links to previously submitted task graph nodes.
- *
- * It is important to hold submitted task graphs on the heap, as they need
- * to host a mutex. The task graph also holds a set of all heap objects
- * which are still alive, as a user might refer to a previously generated
- * task which is already complete and hence removed. That is: incoming
- * dependencies might "point" to tasks which don't exist anymore. Later
- * on, outgoing dependencies always point to something valid.
- *
- * ## Usage
- *
- * Users never interact with spawned nodes.
- */
-namespace tbb {
+void tbb::dynamic_task_graph_spawned_node::incoming_task_has_terminated() {
+  tbb::spin_mutex::scoped_lock lock(_semaphore);
+  _number_of_in_dependencies--;
 
-  class spawned_task_graph_node: public dynamic_task_graph_node {
-    private:
-      std::mutex  _semaphore;
-      std::vector<spawned_task_graph_node*>  _out_dependency;
-  };
+  __TBB_ASSERT( _number_of_in_dependencies>=0, "cannot wait for less than 0 other tasks" );
 
+  lock.release();
+
+  if (_number_of_in_dependencies==0) {
+    run();
+  }
+}
+
+
+void tbb::dynamic_task_graph_spawned_node::run() {
+  __TBB_ASSERT( _number_of_in_dependencies==0, "can only run if no incoming dependencies anymore" );
+
+  // @todo Really don't know how to catch environment
+  _task_graph._arena.enqueue([&] {
+    __TBB_TRACE_TASK_RUN(this);
+
+    _task_graph._spawned_tasks.unsafe_erase( this );
+
+    _functor();
+
+    tbb::spin_mutex::scoped_lock lock(_semaphore);
+    for (auto& p: _out_dependency) {
+      p->incoming_task_has_terminated();
+    }
+    lock.release();
+
+    __TBB_TRACE_TASK_COMPLETE(this);
+
+    // No delete here, as we work exclusively with shared pointers
+    // delete this;
+  });
 }

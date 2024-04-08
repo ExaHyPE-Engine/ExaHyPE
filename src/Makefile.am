@@ -83,6 +83,9 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/omp/Tasks.cpp \
 	tarch/multicore/tbb/multicore.cpp \
 	tarch/multicore/tbb/dynamic_task_graph.cpp \
+	tarch/multicore/tbb/dynamic_task_graph_node.cpp \
+	tarch/multicore/tbb/dynamic_task_graph_spawned_node.cpp \
+	tarch/multicore/tbb/dynamic_task_graph_node_repository.cpp \
 	tarch/multicore/tbb/BooleanSemaphore.cpp \
 	tarch/multicore/tbb/Core.cpp \
 	tarch/multicore/tbb/RecursiveSemaphore.cpp \

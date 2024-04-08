@@ -1,109 +1,57 @@
 #include "dynamic_task_graph.h"
+#include "dynamic_task_graph_node.h"
+#include "dynamic_task_graph_node_repository.h"
+#include "dynamic_task_graph_utils.h"
 
 
 #include <cassert>
 //#if defined(SharedTBB)
 
-/*
-
-
-
-
-
-
-
-tbb::dynamic_task_graph::dynamic_task_graph(
-  ::oneapi::tbb::task_arena&      arena
-):
-  _arena(arena) {
+tbb::dynamic_task_graph_node_repository::dynamic_task_graph_node_repository() {
 }
 
 
-void tbb::dynamic_task_graph::put(dynamic_task_graph_node& node ) {
-  if (node._depends_on_previous_task_with_same_number) {
-    // @todo
-//    wait( node._number );
-  }
-
+tbb::dynamic_task_graph_node&  tbb::dynamic_task_graph_node_repository::create_node(
+  std::function<void()>           functor,
+  dynamic_task_graph_node_number  number
+) {
   HashMap::accessor hash_map_accessor;
 
-  if (node._number==dynamic_task_graph_node::AssignNewNumber) {
-    bool is_new = false;
-    dynamic_task_graph_node_number new_number = 0;
-    while (is_new) {
-      new_number++;
-      is_new = _spawned_tasks.insert(hash_map_accessor, new_number);
-    }
-    node._number     = new_number;
-  }
-  else {
-    bool is_new = _spawned_tasks.insert(hash_map_accessor, node._number);
-    assert( is_new );
+  bool is_new = _node_container.insert(hash_map_accessor, number);
+
+  if (not is_new) {
+    delete hash_map_accessor->second;
   }
 
-  hash_map_accessor->second = nullptr;
+  hash_map_accessor->second = new dynamic_task_graph_node( functor );
 
+  __TBB_TRACE_TASK_MEMORIZE_NODE(number,hash_map_accessor->second);
+
+  return *(hash_map_accessor->second);
 }
 
 
-void tbb::dynamic_task_graph::wait( const dynamic_task_graph_node& node ) {
-  // @todo
-}
-
-void tbb::dynamic_task_graph::wait( const dynamic_task_graph_node_number& node ) {
-  // @todo
-}
-
-void tbb::dynamic_task_graph::wait( const std::set<dynamic_task_graph_node>& node ) {
-  // @todo
+tbb::dynamic_task_graph_node& tbb::dynamic_task_graph_node_repository::get_node(const dynamic_task_graph_node_number& number) {
+  HashMap::accessor hash_map_accessor;
+  __TBB_ASSERT( _node_container.count(number)==1, std::string( "node " + std::to_string(number) + " does not exist").c_str() );
+  _node_container.find(hash_map_accessor,number);
+  return *(hash_map_accessor->second);
 }
 
 
-void tbb::dynamic_task_graph::wait( const std::set<dynamic_task_graph_node_number>& node ) {
-  // @tood
-}
-
-void tbb::dynamic_task_graph::wait_for_all() {
-  // @todo
-}
-
-std::size_t tbb::dynamic_task_graph::size() const {
-  return _spawned_tasks.size();
-}
-*/
-
-
-
-/**
- * Describes a task
- *
- * Describes a task which is pending or runnning, i.e. has been spawned. Each
- * such task knows
- *
- * - the actual task to be executed;
- * - how many in-dependencies it has;
- * - what the actual task does.
- *
- * If the number of in-dependencies becomes 0, the task is ready, i.e. we can
- * hand it over to TBB.
- * has its own mutex, so we can lock
- */
-/*
-struct SpawnedTaskDescriptor {
-  tarch::multicore::Task* task;
-  std::atomic<int>        numberOfPredecessorTasks;
-  std::list<int>          successorTasks;
-  std::mutex              mutex;
-};
-*/
-
-
-/*
-getArena(job)->enqueue([&, job] {
-  while (job->run()) {
+void tbb::dynamic_task_graph_node_repository::add_dependency( dynamic_task_graph_node&  new_task_node, const dynamic_task_graph_node_number&  number) {
+  HashMap::accessor hash_map_accessor;
+  if (_node_container.find(hash_map_accessor, number)) {
+    __TBB_ASSERT( hash_map_accessor->second!=nullptr, std::string( "predecessor task " + std::to_string(number) + " does not exist").c_str() );
+    __TBB_ASSERT( hash_map_accessor->second->is_submitted(), std::string( "predecessor task " + std::to_string(number) + " is not yet submitted").c_str() );
+    new_task_node.add_dependency( *(hash_map_accessor->second) );
   }
-  delete job;
-});
-*/
+}
 
-//#endif
+
+void tbb::dynamic_task_graph_node_repository::add_dependencies( dynamic_task_graph_node&  new_task_node, const std::set< dynamic_task_graph_node_number >&  in_dependencies ) {
+  for (auto& p: in_dependencies) {
+    add_dependency( new_task_node, p );
+  }
+}
+
