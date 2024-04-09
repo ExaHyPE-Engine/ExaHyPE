@@ -74,7 +74,7 @@ class Zugspitze_noTopo : public Scenario<Shortcuts,basisSize>{
     constexpr  double M0 = 1000.0;
     
     double f =  M0*t/(t0*t0)*std::exp(-t/t0);
-
+  
     Shortcuts s;
     forceVector[s.sigma + 4] = f;
   }

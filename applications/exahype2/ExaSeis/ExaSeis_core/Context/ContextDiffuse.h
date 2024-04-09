@@ -44,7 +44,7 @@ public:
     double                                       dt
   ) override {
     Shortcuts s;
-    int       numberOfData = s.SizeVariables + s.SizeParameters;
+    int       numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
 
     kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
     kernels::idx4 id_xyzn(basisSize, basisSize, basisSize, Dimensions);
@@ -110,7 +110,7 @@ public:
 
   void initUnknownsPointwise(const double* const x, const double t, const double dt, double* Q) {
     Shortcuts s;
-    const int numberOfData = s.SizeVariables + s.SizeParameters;
+    const int numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
     Q[s.alpha]             = interface->getAlpha(x);
     tarch::la::Vector<Dimensions, double> center;
     center[0] = x[0];

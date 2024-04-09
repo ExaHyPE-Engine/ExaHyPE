@@ -78,11 +78,14 @@ class Loh1 : public Scenario<Shortcuts, basisSize>{
     double lower[3];
     double upper[3];
 
-    criteria.push_back(new Refinement::RefineDownToPosition<Shortcuts>(
-                                                           basisSize,
-                                                           solver->getMaximumAdaptiveMeshLevel(),
-                                                           m_pointSourceLocation,
-                                                           1));
+    criteria.push_back(
+      new Refinement::RefineDownToPosition<Shortcuts>(
+        basisSize,
+        solver->getMaximumAdaptiveMeshLevel(),
+        m_pointSourceLocation,
+        1
+      )
+    );
 
   }
 };

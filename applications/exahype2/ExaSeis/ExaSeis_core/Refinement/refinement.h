@@ -34,7 +34,7 @@ namespace Refinement {
       ::exahype2::RefinementCommand&               refine
     ) override {
       Shortcuts     s;
-      kernels::idx4 idx(basisSize, basisSize, basisSize, s.SizeVariables + s.SizeParameters);
+      kernels::idx4 idx(basisSize, basisSize, basisSize, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
       double        maxVelocity_2 = 0;
       double        minVelocity_2 = std::numeric_limits<double>::max();
       for (int i = 0; i < basisSize; i++) {
@@ -161,7 +161,7 @@ namespace Refinement {
       double left_vertex = std::numeric_limits<double>::min();
 
       Shortcuts     s;
-      kernels::idx4 idx(basisSize, basisSize, basisSize, s.SizeVariables + s.SizeParameters);
+      kernels::idx4 idx(basisSize, basisSize, basisSize, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
           double vertex = 0;
@@ -262,7 +262,7 @@ namespace Refinement {
       double        right_vertex[3];
       Shortcuts     s;
       bool          positionInElement = true;
-      kernels::idx4 idx(basisSize, basisSize, basisSize, s.SizeVariables + s.SizeParameters);
+      kernels::idx4 idx(basisSize, basisSize, basisSize, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
       for (int i = 0; i < basisSize; i++) {
         left_vertex[0] += luh[idx(0, 0, i, s.curve_grid + 0)] * FL[i];
         right_vertex[0] += luh[idx(basisSize - 1, basisSize - 1, i, s.curve_grid + 0)] * FR[i];

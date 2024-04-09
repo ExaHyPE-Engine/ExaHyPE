@@ -47,13 +47,15 @@ namespace Numerics {
     double& Tm_hat,
     double& Tl_hat
   ) {
-    if (faceIndex % 2 == 0) {
+    // if (faceIndex % 2  == 0) { //left face
+    if (faceIndex < Dimensions) { //left face
       riemannSolver_BC0(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolver_BC0(vm, Tm, zs[0], r, vm_hat, Tm_hat);
       riemannSolver_BC0(vl, Tl, zs[1], r, vl_hat, Tl_hat);
     }
 
-    if (faceIndex % 2 == 1) {
+    // if (faceIndex % 2 == 1) { //right face
+    else { //right face
       riemannSolver_BCn(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolver_BCn(vm, Tm, zs[0], r, vm_hat, Tm_hat);
       riemannSolver_BCn(vl, Tl, zs[1], r, vl_hat, Tl_hat);
