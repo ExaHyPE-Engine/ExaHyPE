@@ -43,10 +43,11 @@ namespace exahype2 {
     template<typename T>
     void computeCellErrorIntegral(
       std::function< void(
-        const tarch::la::Vector<Dimensions,double>&   position,
-        const double                                  t,
-        const double                                  dt,
-        double*                                       sol
+        [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
+        [[maybe_unused]] const double                                  t,
+        [[maybe_unused]] const double                                  dt,
+        [[maybe_unused]] const T*                                 Q,
+        [[maybe_unused]] double*                                       sol
       ) >   exactSolution,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
       const tarch::la::Vector<Dimensions,double>&  cellSize,
