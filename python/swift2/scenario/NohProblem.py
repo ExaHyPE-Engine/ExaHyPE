@@ -9,7 +9,7 @@ class NohProblemIC:
     """
 
     def __init__(self, dimensions):
-        if dimensions == 2:
+        if dimensions == 2 or dimension == 3:
             self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
@@ -76,8 +76,13 @@ class NohProblemIC:
          particle->setA          (d,0);
       }
 
+      #if HYDRO_DIMENSIONS == 2
       /* For 2D sims, we only get one component */
       particle->setRot_v(0);
+      #elif HYDRO_DIMENSIONS == 3
+      particle->setRot_v(tarch::la::Vector<Dimensions,double> 0);
+      #endif
+
 
       /* Initialise the "extended" arrays */
       particle->setV_full(particle->getV());
@@ -99,7 +104,30 @@ class NohProblemIC:
       particle->setBalsara (0.0);
 
       particle->setCellHasUpdatedParticle(false);
-      particle->setPartid(1);
+
+      if (particle->getPartid() == 0) {
+        // Set a reproducible particle ID assuming we're distributing particles on a regular grid
+        double xp = particle->getX(0);
+        double oneOverDx = HYDRO_PART_NUMBER / DomainSize[0];
+        int i = (int) (xp * oneOverDx + 0.5);
+        int partid = i;
+
+        if (HYDRO_DIMENSIONS > 1) {
+          double yp = particle->getX(1);
+          double oneOverDy = HYDRO_PART_NUMBER / DomainSize[1];
+          int j = (int) (yp * oneOverDy + 0.5);
+          partid += j * HYDRO_PART_NUMBER;
+        }
+
+        if (HYDRO_DIMENSIONS > 2) {
+          double zp = particle->getX(2);
+          double oneOverDz = HYDRO_PART_NUMBER / DomainSize[2];
+          int k = (int) (zp * oneOverDz + 0.5);
+          partid += k * HYDRO_PART_NUMBER * HYDRO_PART_NUMBER;
+        }
+
+        particle->setPartid(partid);
+      }
 
       /* Verbose */
       logDebug( "Init()", "dist = " << dist );
