@@ -487,6 +487,11 @@ if __name__ == "__main__":
 
     particle.data.expose_all_attributes_in_header_file()
 
+    # deploy particle properties
+    # This needs to be done if you're changing any of the default values.
+    # Otherwise, the changes won't propagate into dastgen.
+    particle.set_parameters()
+
     # Add particle to the SWIFT project --------------------------------------------
     # Notice that you any change to the particle will not take effect after adding
     # the particle_set to the project
