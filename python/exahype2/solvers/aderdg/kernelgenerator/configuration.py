@@ -74,7 +74,9 @@ class Configuration:
         "double",
         "long double",
         "std::float16_t",
-        "std::bfloat16_t"
+        "std::bfloat16_t",
+        "_Float16",
+        "__bf16"
     ]
 
 

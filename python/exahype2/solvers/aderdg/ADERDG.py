@@ -26,7 +26,7 @@ the same everywhere.
 
 
 class Polynomials(IntEnum):
-    Gauss_Legendre = (0,)
+    Gauss_Legendre = 0,
     Gauss_Lobatto = 1
 
 
@@ -46,14 +46,15 @@ PrecisionType = {
     "quadruple":   "long double",
     "long double": "long double",
     "fp128":       "long double",
-    "half_c++23":       "std::float16_t",
     "float16_t":        "std::float16_t",
     "std::float16_t":   "std::float16_t",
-    "fp16":             "std::float16_t",
-    "bfloat":           "std::bfloat16_t",
+    "_Float16":         "_Float16",
+    "fp16":             "_Float16",
     "bfloat16_t":       "std::bfloat16_t",
     "std::bfloat16_t":  "std::bfloat16_t",
-    "bf16":             "std::bfloat16_t"
+    "__bf16":           "__bf16",
+    "bfloat":           "__bf16",
+    "bf16":             "__bf16"
 }
 
 
@@ -794,12 +795,13 @@ class ADERDG(object):
         full_qualified_namespace = ""
         for i in namespace:
             full_qualified_namespace += i + "::"
-        full_qualified_namespace += self._name
+        # full_qualified_namespace += self._name
 
         is_linear = "linear" if self._is_linear else "nonlinear"
 
         generate_aderdg_kernels(
             full_qualified_namespace,
+            self._name,
             is_linear,
             self._unknowns,
             self._auxiliary_variables,
@@ -861,69 +863,69 @@ class ADERDG(object):
         This code just inserts that missing endif
         """
         if self._use_libxsmm and self._architecture == "noarch":
-            file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "r")
+            file = open("generated/kernels/"+self._name+"/" + is_linear + "/asm_fstpvi.c", "r")
             content = file.read()
             file.close()
-            file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "w")
+            file = open("generated/kernels/"+self._name+"/" + is_linear + "/asm_fstpvi.c", "w")
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
             file = open(
-                "generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", "r"
+                "generated/kernels/"+self._name+"/" + is_linear + "/asm_amrRoutines.c", "r"
             )
             content = file.read()
             file.close()
             file = open(
-                "generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", "w"
+                "generated/kernels/"+self._name+"/" + is_linear + "/asm_amrRoutines.c", "w"
             )
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp", generated=True
+            "generated/kernels/"+self._name+"/" + is_linear + "/Quadrature.cpp", generated=True
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp", generated=True
+            "generated/kernels/"+self._name+"/" + is_linear + "/DGMatrices.cpp", generated=True
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/"
+            "generated/kernels/"+self._name+"/"
             + is_linear
             + "/fusedSpaceTimePredictorVolumeIntegral.cpp",
             generated=True,
         )
         if self._point_sources_implementation != PDETerms.None_Implementation:
             output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/"
+                "generated/kernels/"+self._name+"/"
                 + is_linear
                 + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp",
                 generated=True,
             )
             output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp",
+                "generated/kernels/"+self._name+"/" + is_linear + "/deltaDistribution.cpp",
                 generated=True,
             )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp",
+            "generated/kernels/"+self._name+"/" + is_linear + "/riemannSolver.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp",
+            "generated/kernels/"+self._name+"/" + is_linear + "/faceIntegral.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp",
+            "generated/kernels/"+self._name+"/" + is_linear + "/solutionUpdate.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/boundaryConditions.cpp",
+            "generated/kernels/"+self._name+"/" + is_linear + "/boundaryConditions.cpp",
             generated=True,
         )
 
         if self._use_libxsmm:
             output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp",
+                "generated/kernels/"+self._name+"/" + is_linear + "/gemmsCPP.cpp",
                 generated=True,
             )
 

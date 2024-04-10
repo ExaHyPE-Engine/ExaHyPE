@@ -38,50 +38,50 @@ def create_predictor_allocations(use_kernelgenerator=True):
 """
 
     Template_kernelgenerator = """
-    const int basisElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
-    const int fluxElementsPerFace   = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
+    const int basisElementsPerFace  = generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getBndFaceSize();
+    const int fluxElementsPerFace   = generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getBndFluxSize();
 
-    constexpr int totalSize = generated::kernels::AderDG::{{LINEARITY}}::getFusedSTPVISize();
+    constexpr int totalSize = generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getFusedSTPVISize();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
         
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQhiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi           = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getlQiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi          = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getlQhiShift();
 
     {% if LINEARITY=="linear" or USE_FLUX!="<none>" %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFhiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getlFiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getlFhiShift();
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = nullptr;
     {% endif %}    
 
     {% if USE_SOURCE!="<none>" or (LINEARITY=="nonlinear" and USE_NCP!="<none>") %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlShiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getlSiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getlShiShift();
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = nullptr;
     {% endif %}
     
     {% if USE_NCP!="<none>" %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = memory + generated::kernels::AderDG::{{LINEARITY}}::getgradQShift(); 
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getgradQShift(); 
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = nullptr;
     {% endif %}
     
     {% if LINEARITY=="linear" and USE_POINT_SOURCE!="<none>" %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSderivativesShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getPSiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getPSderivativesShift();
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = nullptr;
     {% endif %}
         
-    constexpr int sizeLduh = generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize();
+    constexpr int sizeLduh = generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getUpdateSize();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} lduh[sizeLduh]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
 
-    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
-    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFluxTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getBndFluxTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
 """
     return (Template_kernelgenerator if use_kernelgenerator else Template_generic)
 
@@ -157,7 +157,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
 """
     Template_kernelgenerator_linear_no_ps = """
     //linear, no pointSources
-    int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+    int numberOfIterations = generated::kernels::AderDG::{{SOLVER_NAME}}::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lduh, lQhbnd, lFhbnd,
       lQi, lFi, lSi,
@@ -173,7 +173,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} rhs[(NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize];
 
     //nonlinear
-    int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+    int numberOfIterations = generated::kernels::AderDG::{{SOLVER_NAME}}::nonlinear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lduh, lQhbnd, nullptr, lFhbnd,
       lQi, rhs, lFi, lSi,
@@ -185,7 +185,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
 """
 
     Template_kernelgenerator_linear_w_ps = """
-    std::vector<int>* pointSources = generated::kernels::AderDG::linear::getPointSources(
+    std::vector<int>* pointSources = generated::kernels::AderDG::{{SOLVER_NAME}}::linear::getPointSources(
       repositories::{{SOLVER_INSTANCE}},
       marker.x(),
       marker.h()
@@ -193,7 +193,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
     
     if(pointSources != nullptr) {
         // perform pointsource
-        int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        int numberOfIterations = generated::kernels::AderDG::{{SOLVER_NAME}}::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh, lQhbnd, lFhbnd,
           lQi, lFi, lSi,
@@ -204,7 +204,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
           pointSources // will be deleted in the end if set
         );    
     } else {
-        int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        int numberOfIterations = generated::kernels::AderDG::{{SOLVER_NAME}}::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh, lQhbnd, lFhbnd,
           lQi, lFi, lSi,
@@ -243,7 +243,7 @@ def create_solution_update(use_kernelgenerator):
     );
 """
     template_kernelgenerator = """
-    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
+    generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::solutionUpdate( 
       luh,
       luh, 
       lduh, 
@@ -369,7 +369,7 @@ def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
     );
 """
     template_kernelgenerator = """
-    generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+    generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       FL,
       FR,
@@ -418,7 +418,7 @@ def face_integral(use_kernelgenerator, is_linear):
 """
     template_kernelgenerator = """
         const double inverseDxDirection = 1/marker.h()[d];
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
+        generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::faceIntegral(
           lduh,
           FIN,
           direction,
@@ -535,20 +535,20 @@ def create_corrector_allocations(use_kernelgenerator):
     const int fluxElementsPerFace = spaceFaceSize*NumberOfVariables;
 """
     template_kernelgenerator = """
-    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
-    const int fluxElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
+    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getUpdateSize()]{0.0};
+    const int fluxElementsPerFace  = generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::getBndFluxSize();
 """
     if use_kernelgenerator:
         return template_kernelgenerator
     else:
         return template_generic
     
-def create_includes(use_kernelgenerator, is_linear):
+def create_includes(use_kernelgenerator, solver_name, is_linear):
     template_generic = """
 #include "exahype2/aderdg/kernels/Kernels.h"
 """
     template_kernelgenerator = """
-#include "../generated/kernels/aderdg/""" + ("linear" if is_linear else "nonlinear") + """/Kernels.h"
+#include "../generated/kernels/"""+ solver_name +"""/""" + ("linear" if is_linear else "nonlinear") + """/Kernels.h"
 """
     if use_kernelgenerator:
         return template_kernelgenerator

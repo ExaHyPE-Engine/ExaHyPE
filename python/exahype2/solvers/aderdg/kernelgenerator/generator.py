@@ -31,6 +31,7 @@ from .controller import Controller
 
 
 def generate_aderdg_kernels(
+    namespace,
     solverName,
     numerics,
     numberOfVariables,
@@ -65,10 +66,10 @@ def generate_aderdg_kernels(
     InputConfig = {
         "kernelType": "aderdg",
         "pathToOptKernel": ".",
-        "pathToApplication": "generated/kernels/aderdg/" + numerics,
+        "pathToApplication": "generated/kernels/"+solverName+"/" + numerics,
         "pathToOutputDirectory": "generated/kernels/aderdg/" + numerics,
-        "solverName": solverName,
-        "namespace": "generated::kernels::AderDG::" + numerics,
+        "solverName": namespace+solverName,
+        "namespace": "generated::kernels::AderDG::" + solverName + "::" + numerics,
         "useLibxsmm": useLibxsmm,
         "useBLIS": useBLIS,
         "useEigen": useEigen,

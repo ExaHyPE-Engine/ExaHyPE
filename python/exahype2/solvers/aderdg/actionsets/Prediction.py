@@ -140,5 +140,5 @@ class Prediction(AbstractAderDGActionSet):
         linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
             super(Prediction, self).get_includes()
-            + create_includes(self.use_kernelgenerator, self._solver._is_linear)
+            + create_includes(self.use_kernelgenerator, self._solver._name, self._solver._is_linear)
         )
