@@ -14,7 +14,7 @@ from swift2.actionsets.DynamicMeshRefinementAnalysis import (
 )
 from swift2.output.SWIFTMain import SWIFTMain
 
-import swift2.graphcompiler
+import swift2.api.graphcompiler
 
 
 from abc import abstractmethod
@@ -66,11 +66,13 @@ class Project(object):
         )
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
+        self.additional_action_sets_per_solver_step = []
+
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -201,7 +203,7 @@ We assume that you use a domain of ("""
                 + str(self._domain_offset[1])
                 + ""","""
                 + str(self._domain_size[1] - self._domain_offset[1])
-                + """). 
+                + """).
     """
             )
         else:
@@ -220,7 +222,7 @@ We assume that you use a domain of ("""
                 + str(self._domain_offset[2])
                 + ""","""
                 + str(self._domain_size[2] - self._domain_offset[2])
-                + """). 
+                + """).
 """
             )
 
@@ -242,7 +244,7 @@ The coarsest regular mesh hence will host """
             + str((3**self._dimensions) ** (self.__real_max_mesh_size()[1]))
             + """ octants.
 
-Once this resultion is reached, the mesh will stop the initial load balancing, insert the 
+Once this resultion is reached, the mesh will stop the initial load balancing, insert the
 particles and then kick off the simulation. The mesh might be refined and erased subsequently,
 but it will never become coarser than these constraints.
 
@@ -265,9 +267,9 @@ Species | max_h | coarsest level | min_h | finest level
 
         readme_text += """
 
-The meshing quantities abive are species-specific. Once you have multiple 
-particle species, the actual grid results from a combination of their 
-properties, and some species particles might reside on different resolution 
+The meshing quantities abive are species-specific. Once you have multiple
+particle species, the actual grid results from a combination of their
+properties, and some species particles might reside on different resolution
 levels.
 
 """
@@ -400,6 +402,25 @@ levels.
          setup anymore. If you alter the ExaHyPE setup, you have to call
          generate_Peano4_project() again to get a new snapshot/version of the
          Peano setup.
+         
+         
+         ## Initial grid
+         
+         The initial grid will be a regular one, spanned through 
+         
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(...)
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         
+         According to the documentation of peano4.toolbox.CreateRegularGrid, 
+         the action set will produce a mesh that is just finer than the mesh
+         width passed, so we meet the max mesh width, but do not create a 
+         mesh that is significantly finer.
+         
+         As we insert particles in SPH, we have therefore to make this initial
+         resolution three times coarser than what we allow, as we only insert
+         particles into the finest mesh. 
+
 
 
          ## Task graph compiler
@@ -456,13 +477,13 @@ levels.
         #
         for current_species_set in self._particle_species_set:
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
+                peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
                     current_species_set
                 )
             )
 
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParallelState(current_species_set)
+                peano4.toolbox.particles.api.UpdateParallelState(current_species_set)
             )
 
         #
@@ -497,9 +518,16 @@ levels.
                     current_species_set.name
                 )
             )
-            cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_cell_marker(current_species_set.name)
-            vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_vertex_marker(current_species_set.name)
-            
+            cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(
+                current_species_set.name
+            )
+            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
+                task_name = current_species_set.name,
+                full_qualified_enumerator_type = "::swift2::TaskEnumerator",
+                enumerator_include = """ #include "swift2/TaskEnumerator.h" """
+                
+            )
+
             # Enable cell statistics for this species
             self._project.datamodel.add_cell(cell_marker_for_statistics)
             self._project.datamodel.add_cell(cell_marker_for_tasks)
@@ -537,7 +565,9 @@ levels.
 #include "repositories/GlobalState.h"
 """,
         )
-        action_set_plot_grid.descend_invocation_order = self.algorithm_step_plot.highest_descend_invocation_order() + 1
+        action_set_plot_grid.descend_invocation_order = (
+            self.algorithm_step_plot.highest_descend_invocation_order() + 1
+        )
         action_set_plot_grid.parallel = True
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
@@ -555,6 +585,8 @@ levels.
         self._project.solversteps.add_step(self.algorithm_step_plot)
 
         for solverstep in solver_steps:
+            for action_set in self.additional_action_sets_per_solver_step:
+                solverstep.add_action_set(action_set)
             self._project.solversteps.add_step(solverstep)
 
         for initialisation_step in initialisation_steps:

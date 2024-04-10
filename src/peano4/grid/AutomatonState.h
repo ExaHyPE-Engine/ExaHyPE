@@ -16,12 +16,12 @@
   #include <functional>
 #endif
 
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/grid/TraversalObserver.h"
+#include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
 
 
 
@@ -73,17 +73,14 @@ struct peano4::grid::AutomatonState {
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getForkDatatype();
+    [[clang::map_mpi_datatype]] static MPI_Datatype
+    getForkDatatype();
 
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getJoinDatatype();
+  [[clang::map_mpi_datatype]] static MPI_Datatype getJoinDatatype();
 
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getBoundaryExchangeDatatype();
+  [[clang::map_mpi_datatype]] static MPI_Datatype getBoundaryExchangeDatatype();
 
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+  [[clang::map_mpi_datatype]] static MPI_Datatype getMultiscaleDataExchangeDatatype();
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
@@ -107,82 +104,103 @@ struct peano4::grid::AutomatonState {
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
-    int getSenderRank() const;
+    int
+    getSenderRank() const;
 
-    /**
-     * Wrapper around getDatatype() to trigger lazy evaluation if we
-     * use the lazy initialisation.
-     */
-    static void initDatatype();
+  /**
+   * Wrapper around getDatatype() to trigger lazy evaluation if we
+   * use the lazy initialisation.
+   */
+  static void initDatatype();
 
-    /**
-     * Free the underlying MPI datatype.
-     */
-    static void shutdownDatatype();
+  /**
+   * Free the underlying MPI datatype.
+   */
+  static void shutdownDatatype();
 
-    /**
-     * In DaStGen (the first version), I had a non-static version of the send
-     * as well as the receive. However, this did not work with newer C++11
-     * versions, as a member function using this as pointer usually doesn't
-     * see the vtable while the init sees the object from outside, i.e.
-     * including a vtable. So this routine now is basically an alias for a
-     * blocking MPI_Send.
-     */
-    static void send(const peano4::grid::AutomatonState& buffer, int destination, int tag, MPI_Comm communicator );
-    static void receive(peano4::grid::AutomatonState& buffer, int source, int tag, MPI_Comm communicator );
+  /**
+   * In DaStGen (the first version), I had a non-static version of the send
+   * as well as the receive. However, this did not work with newer C++11
+   * versions, as a member function using this as pointer usually doesn't
+   * see the vtable while the init sees the object from outside, i.e.
+   * including a vtable. So this routine now is basically an alias for a
+   * blocking MPI_Send.
+   */
+  static void send(const peano4::grid::AutomatonState& buffer, int destination, int tag, MPI_Comm communicator);
+  static void receive(peano4::grid::AutomatonState& buffer, int source, int tag, MPI_Comm communicator);
 
-    /**
-     * Alternative to the other send() where I trigger a non-blocking send an
-     * then invoke the functor until the corresponding MPI_Test tells me that
-     * the message went through. In systems with heavy MPI usage, this can
-     * help to avoid deadlocks.
-     */
-    static void send(const peano4::grid::AutomatonState& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(   peano4::grid::AutomatonState& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    #endif
-
-
-    enum ObjectConstruction {
-      NoData
-    };
-
-    AutomatonState( ObjectConstruction ):
-        AutomatonState() {}
-    
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+  /**
+   * Alternative to the other send() where I trigger a non-blocking send an
+   * then invoke the functor until the corresponding MPI_Test tells me that
+   * the message went through. In systems with heavy MPI usage, this can
+   * help to avoid deadlocks.
+   */
+  static void send(
+    const peano4::grid::AutomatonState& buffer,
+    int                                 destination,
+    int                                 tag,
+    std::function<void()>               startCommunicationFunctor,
+    std::function<void()>               waitFunctor,
+    MPI_Comm                            communicator
+  );
+  static void receive(
+    peano4::grid::AutomatonState& buffer,
+    int                           source,
+    int                           tag,
+    std::function<void()>         startCommunicationFunctor,
+    std::function<void()>         waitFunctor,
+    MPI_Comm                      communicator
+  );
 #endif
-    
 
-    std::string toString() const;
+
+  enum ObjectConstruction { NoData };
+
+  AutomatonState(ObjectConstruction):
+    AutomatonState() {}
+
+#ifdef Parallel
+  static void sendAndPollDanglingMessages(
+    const peano4::grid::AutomatonState& message,
+    int                                 destination,
+    int                                 tag,
+    MPI_Comm                            communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  static void receiveAndPollDanglingMessages(
+    peano4::grid::AutomatonState& message,
+    int                           source,
+    int                           tag,
+    MPI_Comm                      communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+#endif
+
 
   private:
     [[clang::pack_range(0,63)]]  int   _level;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
+  [[clang::truncate_mantissa(23)]] double _x[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      tarch::la::Vector<Dimensions,double>   _x;
+  tarch::la::Vector<Dimensions, double> _x;
 #endif
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa(23)]]  double   _h[Dimensions];
+  [[clang::truncate_mantissa(23)]] double _h[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      tarch::la::Vector<Dimensions,double>   _h;
+  tarch::la::Vector<Dimensions, double> _h;
 #endif
-    [[clang::pack]]  bool   _inverted;
+  [[clang::pack]] bool _inverted;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::pack]]  bool   _evenFlags[Dimensions];
+  [[clang::pack]] bool _evenFlags[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      std::bitset<Dimensions>   _evenFlags;
+  std::bitset<Dimensions> _evenFlags;
 #endif
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::pack_range(-TwoTimesD,TwoTimesD)]]  int   _accessNumber[DimensionsTimesTwo];
+  [[clang::pack_range(-TwoTimesD, TwoTimesD)]] int _accessNumber[DimensionsTimesTwo];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      tarch::la::Vector<DimensionsTimesTwo,int>   _accessNumber;
+  tarch::la::Vector<DimensionsTimesTwo, int> _accessNumber;
 #endif
 
 
@@ -203,7 +221,19 @@ struct peano4::grid::AutomatonState {
     #endif
 
 
+#ifdef Parallel
+    private: int _senderDestinationRank;
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  /**
+   * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
+   * initialisation of the datatype. However, Peano calls init explicitly
+   * in most cases. Without the LLVM extension which caches the MPI
+   * datatype once constructed, this field stores the type.
+   */
+  static MPI_Datatype Datatype;
+#endif
+#endif
 };
 
   

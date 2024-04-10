@@ -1,7 +1,4 @@
 
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
-
 template <typename QStoreType>
 QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::CellMarker&    marker,

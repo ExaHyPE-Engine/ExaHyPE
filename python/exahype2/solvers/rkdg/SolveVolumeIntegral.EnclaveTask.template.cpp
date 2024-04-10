@@ -76,7 +76,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   } else
   {% endif %}
 
-  ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
+  ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
 }
 
 
@@ -324,6 +324,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 
 
 {% if STATELESS_PDE_TERMS %}
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
     _marker.x(),
@@ -406,7 +407,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
-  // Don't rerun, so return false
+  // Don't rerun, so return false.
   return false;
 }
+
 {% endif %}

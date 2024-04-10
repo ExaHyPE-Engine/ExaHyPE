@@ -1,7 +1,5 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/dg/DGUtils.h"
 
-#include "DGUtils.h"
 
 void exahype2::dg::copyOneSideOfFaceProjection(
   int    unknownsPlusAuxiliaryVariables,

@@ -46,8 +46,8 @@
   class {{CLASSNAME}}: public toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >
                        {
     public:
-      typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef std::{{STD_CONTAINER}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >          Container;
+      using Base      = toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >;
+      using Container = std::{{STD_CONTAINER}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >;
 
       /**
        * Expose C++ standard interface
@@ -83,13 +83,13 @@
        *
        * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
        * you study the implementation remarks below. Furhermore, consult the
-       * documentation of peano4.toolbox.particles.UpdateParallelState which
+       * documentation of peano4.toolbox.particles.api.UpdateParallelState which
        * provides some examples of the functionality added here.
        *
        * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
        */
-      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker, int spacetreeId);
 
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
@@ -109,14 +109,6 @@
        */
       void clone( const {{CLASSNAME}}& otherSet );
 
-      /**
-       * Eliminate spatial duplicates
-       *
-       * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
-       * you study the implementation remarks below.
-       */
-      void eliminateSpatialDuplicates();
-
       std::string toString() const;
 
       /**
@@ -129,6 +121,8 @@
        * particleCanNotBeLiftedLocally() per particle.
        */
       void particlesCanNotBeLiftedLocally();
+
+      void particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle);
 
       /**
        * Shallow clear
@@ -192,17 +186,6 @@
       void addParticle(DoFType* particle);
 
       /**
-       * Add set of particles
-       *
-       * This is a shallow addition, i.e. I attach these new pointers. The
-       * particles themselves are not copied.
-       *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
-       * some context and references to other routines.
-       */
-      void addParticles(const ParticleList& particleSet);
-
-      /**
        * Some simple validation
        *
        * I run some simple validations such as: does every particle have a
@@ -243,6 +226,27 @@
        */
       Container::iterator deleteParticle( const Container::iterator&   particle );
 
+      /**
+       * Extracted into routine of its own
+       *
+       * This routine it used by boundary merges, periodic boundary merges, and
+       * also drops.
+       *
+       * ## Debug data
+       *
+       * Even if we replace a current particle with an incoming one, we keep
+       * the current particle's (debug) location. This way, we ensure that all
+       * debug data remain correct also for periodic BCs.
+       *
+       * @param neighbourParticle Will either be incorporated into current data
+       *   structure or the routine will delete it if it decides not to use
+       *   the object the pointer points to.
+       */
+      void mergeWithParticle(
+        DoFType*                                     neighbourParticle,
+        const peano4::datamanagement::VertexMarker&  marker,
+        int                                          spacetreeId
+      );
     private:
       static tarch::logging::Log _log;
 

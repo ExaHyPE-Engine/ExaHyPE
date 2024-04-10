@@ -8,19 +8,13 @@ import argparse
 import subprocess
 
 parser = argparse.ArgumentParser(
-    description="Configuration helper script for GNU Autotools and CMake"
-)
-parser.add_argument(
-    "-cc", "--cc", type=str, default=os.environ.get("CC"), help="C compiler to use"
-)
-parser.add_argument(
-    "-cxx", "--cxx", type=str, default=os.environ.get("CXX"), help="C++ compiler to use"
+    description="Configuration helper script for GNU Automake and CMake"
 )
 parser.add_argument(
     "--cmake", help="Use CMake; specify target build folder via --cmake=..."
 )
-parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE2")
-parser.add_argument("--swift", action="store_true", help="Enable Swift2")
+parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE 2")
+parser.add_argument("--swift", action="store_true", help="Enable Swift 2")
 parser.add_argument("--particles", action="store_true", help="Enable particles support")
 parser.add_argument(
     "--loadbalancing", action="store_true", help="Enable load balancing support"
@@ -68,11 +62,18 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-cflags = "-O3 -march=native"
-cxxflags = "-std=c++20 -w -O3 -march=native"
-# cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
-nvccflags = "-O3"  # -march=native -mtune=native
-ldflags = "-march=native"
+cc = os.environ.get("CC")
+cxx = os.environ.get("CXX")
+if cc is None or cxx is None:
+    raise Exception(
+        "Invalid C and C++ compilers provided. \
+Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
+    )
+
+cflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
+cxxflags = "-std=c++20 -w -O3 -march=native -mtune=native -fomit-frame-pointer"
+nvccflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
+ldflags = "-march=native -mtune=native"
 configure_args = []
 
 # Merge in any additional flags needed for the selected multithreading backend
@@ -83,10 +84,10 @@ if args.multithreading == "omp":
 
     # Intel suggests to use -fiopenmp for performance and features:
     # https://www.intel.com/content/www/us/en/developer/articles/guide/porting-guide-for-icc-users-to-dpcpp-or-icx.html
-    if "icx" in args.cc:
+    if "icx" in cc:
         cflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
         ldflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
-    if "icpx" in args.cxx:
+    if "icpx" in cxx:
         cxxflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
         ldflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
 
@@ -104,13 +105,7 @@ if args.multithreading == "sycl":
 if args.gpu and not args.arch:
     raise Exception("You need to specify a GPU architecture when using GPU support.")
 
-if args.cc is None or args.cxx is None:
-    raise Exception(
-        "Invalid C and C++ compilers provided. \
-Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
-    )
-
-if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in args.arch:
+if args.gpu == "omp" and "icx" in cc and "icpx" in cxx and "spir64" in args.arch:
     cflags += (
         " -fopenmp-targets="
         + args.arch
@@ -124,7 +119,7 @@ if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in
         + args.arch
     )
 
-elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
+elif args.gpu == "omp" and "amdclang" in cc and "amdclang++" in cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch + " -D__AMDGPU__"
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch + " -D__AMDGPU__"
     cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
@@ -135,12 +130,12 @@ elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
 
 elif (
     args.gpu == "omp"
-    and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
+    and ("clang" in cc or "clangwrap" in cc or "tdclang" in cc)
     and (
-        "clang++" in args.cxx
-        or "clangwrap" in args.cxx
-        or "clangwrap++" in args.cxx
-        or "tdclang++" in args.cxx
+        "clang++" in cxx
+        or "clangwrap" in cxx
+        or "clangwrap++" in cxx
+        or "tdclang++" in cxx
     )
 ):
     cflags += (
@@ -160,10 +155,15 @@ elif (
         cflags += " -save-temps -Xcuda-ptxas -v"
         cxxflags += " -save-temps -Xcuda-ptxas -v"
 
+elif args.gpu == "omp" and "amdclang" in cc and "amdclang++" in cxx:
+    cflags += " -lstdc++fs --offload-arch=" + args.arch
+    cxxflags += " -lstdc++fs --offload-arch=" + args.arch
+    ldflags += " -lstdc++fs --offload-arch=" + args.arch
+
 elif (
     args.gpu == "omp"
-    and ("nvc" in args.cc or "nvc++ in args.cc")
-    and "nvc++" in args.cxx
+    and ("nvc" in cc or "nvc++ in cc")
+    and "nvc++" in cxx
 ):
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
@@ -174,8 +174,8 @@ elif (
 
 elif (
     args.gpu == "cpp"
-    and ("nvc" in args.cc or "nvc++ in args.cc")
-    and "nvc++" in args.cxx
+    and ("nvc" in cc or "nvc++ in cc")
+    and "nvc++" in cxx
 ):
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
     cxxflags += " -cuda -mp=gpu -stdpar=gpu -gpu=cc" + args.arch.split('_')[1]
@@ -184,7 +184,7 @@ elif (
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
 
-elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
+elif args.gpu == "omp" and "gcc" in cc and "g++" in cxx:
     cflags += " -fopenmp -foffload=nvptx-none -march=native"
     cxxflags += " -fopenmp -foffload=nvptx-none -march=native"
     ldflags += " -fopenmp -foffload=nvptx-none -march=native"
@@ -192,7 +192,7 @@ elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
         cflags += " -save-temps"
         cxxflags += " -save-temps"
 
-elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
+elif args.gpu == "sycl" and "icx" in cc and "icpx" in cxx:
     if "gfx" in args.arch:
         cflags += (
             " -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch="
@@ -240,9 +240,9 @@ else:
     if args.gpu is not None:
         raise Exception(
             "Unsupported compiler and GPU flag/arch combination requested: CC="
-            + args.cc
+            + cc
             + " CXX="
-            + args.cxx
+            + cxx
             + " --gpu="
             + args.gpu
             + " --arch="
@@ -303,9 +303,11 @@ if args.swift:
     if args.cmake:
         configure_args.append("-DENABLE_SWIFT=ON")
         configure_args.append("-DENABLE_PARTICLES=ON")
+        configure_args.append("-DENABLE_LOADBALANCING=ON")
     else:
         configure_args.append("--enable-swift")
         configure_args.append("--enable-particles")
+        configure_args.append("--enable-loadbalancing")
 
 if args.particles:
     if args.cmake:
@@ -337,13 +339,13 @@ if args.cmake:
     # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
     if args.scorep:
         env_vars = {
-            "CC": "scorep-{}".format(args.cc),
-            "CXX": "scorep-{}".format(args.cxx),
+            "CC": "scorep-{}".format(cc),
+            "CXX": "scorep-{}".format(cxx),
         }
     else:
         env_vars = {
-            "CC": "{}".format(args.cc),
-            "CXX": "{}".format(args.cxx),
+            "CC": "{}".format(cc),
+            "CXX": "{}".format(cxx),
         }
 
     # Create a string to display environment variables like in a terminal
@@ -391,17 +393,17 @@ else:
     if args.scorep:
         env_vars = {
             "CFLAGS": "{}".format(env_cflags),
-            "CC": "scorep-{}".format(args.cc),
+            "CC": "scorep-{}".format(cc),
             "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "scorep-{}".format(args.cxx),
+            "CXX": "scorep-{}".format(cxx),
             "LDFLAGS": "{}".format(env_ldflags),
         }
     else:
         env_vars = {
             "CFLAGS": "{}".format(env_cflags),
-            "CC": "{}".format(args.cc),
+            "CC": "{}".format(cc),
             "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "{}".format(args.cxx),
+            "CXX": "{}".format(cxx),
             "LDFLAGS": "{}".format(env_ldflags),
         }
 

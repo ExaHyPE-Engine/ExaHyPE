@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg3915"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="Comparisons.svg"
+   inkscape:export-filename="/home/tobias/git/Peano/src/toolbox/particles/assignmentchecks/Comparisons.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview3917"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.64052329"
+     inkscape:cx="397.33138"
+     inkscape:cy="561.25984"
+     inkscape:window-width="1850"
+     inkscape:window-height="1136"
+     inkscape:window-x="70"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs3912">
+    <marker
+       style="overflow:visible;"
+       id="Arrow1Lend"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.8) rotate(180) translate(12.5,0)"
+         style="fill-rule:evenodd;fill:context-stroke;stroke:context-stroke;stroke-width:1.0pt;"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path1653" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m 49.278807,118.28274 c 119.480033,0 119.480033,0 119.480033,0"
+       id="path4039" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="M 55.116975,126.10157 V 18.041544"
+       id="path4041" />
+    <circle
+       style="fill:#ffd42a;stroke:#000000;stroke-width:0.465;opacity:0.43649413"
+       id="path4147"
+       cx="87.981682"
+       cy="87.964188"
+       r="13.995557" />
+    <circle
+       style="opacity:0.436494;fill:#00ff00;stroke:#000000;stroke-width:0.465"
+       id="path4147-9"
+       cx="103.26843"
+       cy="76.831711"
+       r="13.995557" />
+    <circle
+       style="opacity:0.436494;fill:#0000ff;stroke:#000000;stroke-width:0.465"
+       id="path4147-0"
+       cx="104.16473"
+       cy="54.943832"
+       r="13.995557" />
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="87.162437"
+       y="95.402634"
+       id="text4852"><tspan
+         sodipodi:role="line"
+         id="tspan4850"
+         style="stroke-width:0.264583"
+         x="87.162437"
+         y="95.402634">A</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="104.26622"
+       y="81.968117"
+       id="text5156"><tspan
+         sodipodi:role="line"
+         id="tspan5154"
+         style="stroke-width:0.264583"
+         x="104.26622"
+         y="81.968117">B</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="104.41638"
+       y="55.221973"
+       id="text5424"><tspan
+         sodipodi:role="line"
+         id="tspan5422"
+         style="stroke-width:0.264583"
+         x="104.41638"
+         y="55.221973">C</tspan></text>
+  </g>
+</svg>

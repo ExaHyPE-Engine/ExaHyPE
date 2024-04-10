@@ -3,20 +3,18 @@
 #pragma once
 
 
-#include "config.h"
+#include <functional>
 
+#include "config.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"
-
-
-#include <functional>
+#include "tarch/Enumerator.h"
 
 
 namespace exahype2 {
   class EnclaveTask;
   class EnclaveBookkeeping;
-}
-
+} // namespace exahype2
 
 
 /**
@@ -52,86 +50,95 @@ namespace exahype2 {
  *   bookkeeping.
  *
  * ## SmartMPI
- * 
+ *
  * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I could
  * realise this through multiple inheritance, but I have to know excactly how big
  * the memory footprint behind an enclave task is, so I decided against this.
  * Instead, subclasses of the enclave task do specialise w.r.t. SmartMPI.
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
-  public:
-    typedef std::function< void() >  Functor;
+public:
+  typedef std::function<void()> Functor;
 
-  protected:
-    friend class EnclaveBookkeeping;
+protected:
+  friend class EnclaveBookkeeping;
 
-    static tarch::logging::Log                   _log;
+  static tarch::logging::Log _log;
 
-    /**
-     * Each task needs a unique number, so we can look up its output.
-     */
-    const int                                    _taskNumber;
-    const ::peano4::datamanagement::CellMarker   _marker;
+  /**
+   * Each task needs a unique number, so we can look up its output.
+   */
+  const int                                  _taskNumber;
+  const ::peano4::datamanagement::CellMarker _marker;
 
-    /**
-     * These are the reconstructed values in the Finite Volume sense and the
-     * linear combination in the DG solver. In both cases, the enclave task
-     * will free the memory once it has terminated, so the attribute may not
-     * be const here.
-     */
-    const double                                 _t;
-    const double                                 _dt;
-    double* __restrict__                         _inputValues;
-    double* __restrict__                         _outputValues;
-    int                                          _numberOfInputValues;
-    int                                          _numberOfResultValues;
-    Functor                                      _functor;
-    double                                       _maxEigenvalue;
+  /**
+   * These are the reconstructed values in the Finite Volume sense and the
+   * linear combination in the DG solver. In both cases, the enclave task
+   * will free the memory once it has terminated, so the attribute may not
+   * be const here.
+   */
+  const double _t;
+  const double _dt;
+  double* __restrict__ _inputValues;
+  double* __restrict__ _outputValues;
+  int     _numberOfInputValues;
+  int     _numberOfResultValues;
+  Functor _functor;
+  double  _maxEigenvalue;
 
-  public:
-    /**
-     * Create plain enclave task.
-     *
-     * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
-     * @param enclaveTaskTypeId  Please create it through
-     * <pre>
-    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
+public:
+  /**
+   * Create plain enclave task.
+   *
+   * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
+   * @param enclaveTaskTypeId  Please create it through
+   * <pre>
+  static int enclaveTaskTypeId = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}");
 </pre>
-     *
-     * @see _inputValues for a discussion of const qualifiers
-     */
-    EnclaveTask(
-      int                                            enclaveTaskTypeId,
-      const ::peano4::datamanagement::CellMarker&    marker,
-      double                                         t,
-      double                                         dt,
-      double* __restrict__                           inputValues,
-      int                                            numberOfInputValues,
-      int                                            numberOfResultValues,
-      Functor                                        functor
-    );
+   *
+   * @see _inputValues for a discussion of const qualifiers
+   */
+  EnclaveTask(
+    int                                         enclaveTaskTypeId,
+    const ::peano4::datamanagement::CellMarker& marker,
+    double                                      t,
+    double                                      dt,
+    double* __restrict__ inputValues,
+    int     numberOfInputValues,
+    int     numberOfResultValues,
+    Functor functor
+  );
 
-    EnclaveTask(const EnclaveTask& other) = delete;
-    EnclaveTask(const EnclaveTask&& other) = delete;
+  EnclaveTask(const EnclaveTask& other)  = delete;
+  EnclaveTask(const EnclaveTask&& other) = delete;
 
-    virtual ~EnclaveTask() = default;
+  virtual ~EnclaveTask() = default;
 
-    /**
-     * Computes a task and bookmarks the outcome
-     */
-    virtual bool run() override;
+  /**
+   * Computes a task and bookmarks the outcome
+   */
+  virtual bool run() override;
 
-    /**
-     * Computes a task without bookmarking the outcome.
-     * It is important for tasks that implement smartmpi::Task
-     * that outcomes can be bookmarked independently of the
-     * running of a task, hence why this function lives
-     * alongside and is used by run()
-     */
-    void computeTask();
+  /**
+   * Computes a task without bookmarking the outcome.
+   * It is important for tasks that implement smartmpi::Task
+   * that outcomes can be bookmarked independently of the
+   * running of a task, hence why this function lives
+   * alongside and is used by run()
+   */
+  void computeTask();
 
-    /**
-     * Return _taskNumber.
-     */
-    int getTaskId() const;
+  /**
+   * Return _taskNumber.
+   */
+  int getTaskId() const;
+
+  static int getNumberOfActiveTasks();
+
+  static void releaseTaskNumber(int number);
+
+private:
+  static tarch::Enumerator                  _enumerator;
+
+  static int reserveTaskNumber();
 };

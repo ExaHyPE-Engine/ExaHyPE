@@ -1,15 +1,14 @@
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
-
-#include "tarch/Assertions.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
-#include "tarch/memory/memory.h"
+
+#if defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+#endif
 
 #if defined(GPUOffloadingOMP)
 
-#pragma omp declare     target
-void                    tarch::accelerator::gpuAbort() {}
+#pragma omp declare target
+void tarch::gpuAbort() {}
 #pragma omp end declare target
 
 void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {

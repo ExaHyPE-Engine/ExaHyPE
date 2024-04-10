@@ -131,8 +131,10 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._solver_template_file_class_name = "SeparateSweeps"
         self._pde_terms_without_state = pde_terms_without_state
 
-        self._fused_volumetric_kernel_call_cpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
-        self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
+        self._fused_volumetric_compute_kernel_call_stateless_cpu = "#error Not yet defined. Set self._fused_volumetric_compute_kernel_call_stateless_cpu in your Python solver class."
+        self._fused_volumetric_compute_kernel_call_stateless_gpu = "#error Not yet defined. Set self._fused_volumetric_compute_kernel_call_stateless_gpu in your Python solver class."
+        self._fused_Riemann_compute_kernel_call_stateless_cpu = "#error Not yet defined. Set self._fused_Riemann_compute_kernel_call_stateless_cpu in your Python solver class."
+        self._fused_Riemann_compute_kernel_call_stateless_gpu = "#error Not yet defined. Set self._fused_Riemann_compute_kernel_call_stateless_gpu in your Python solver class."
 
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
@@ -227,14 +229,19 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
 
     def add_entries_to_text_replacement_dictionary(self, d):
-        super(
-            SeparateSweepsWithEnclaveTasking, self
-        ).add_entries_to_text_replacement_dictionary(d)
-        d["FUSED_VOLUMETRIC_KERNEL_CALL_CPU"] = jinja2.Template(
-            self._fused_volumetric_kernel_call_cpu, undefined=jinja2.DebugUndefined
+        super(SeparateSweepsWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
+
+        d["FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_CPU"] = jinja2.Template(
+            self._fused_volumetric_compute_kernel_call_stateless_cpu, undefined=jinja2.DebugUndefined
         ).render(**d)
-        d["FUSED_VOLUMETRIC_KERNEL_CALL_GPU"] = jinja2.Template(
-            self._fused_volumetric_kernel_call_gpu, undefined=jinja2.DebugUndefined
+        d["FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU"] = jinja2.Template(
+            self._fused_volumetric_compute_kernel_call_stateless_gpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FUSED_RIEMANN_COMPUTE_KERNEL_CALL_STATELESS_CPU"] = jinja2.Template(
+            self._fused_Riemann_compute_kernel_call_stateless_cpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FUSED_RIEMANN_COMPUTE_KERNEL_CALL_STATELESS_GPU"] = jinja2.Template(
+            self._fused_Riemann_compute_kernel_call_stateless_gpu, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["SEMAPHORE_LABEL"] = exahype2.grid.UpdateCellLabel.get_attribute_name(

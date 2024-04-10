@@ -151,6 +151,27 @@ namespace toolbox {
     );
 
     /**
+     * Flavour of restrictCellIntoOverlappingCell_inject() where we inject the
+     * solution but then take the average between the original value in
+     * destinationValues an the injected value. This "damps" the impact of the
+     * injection.
+     *
+     * @param weightOfInjectedValue If this value is 0.5, we take the average.
+     *   If it equals 1.0, we end up exactly with restrictCellIntoOverlappingCell_inject(),
+     *   i.e. overwrite the value in destinationValues. A value of 0.0 switches
+     *   the injection off.
+     */
+    void restrictCellIntoOverlappingCell_inject_and_average(
+      int     numberOfDoFsPerAxisInSourcePatch,
+      int     numberOfDoFsPerAxisInDestinationPatch,
+      int     unknowns,
+      double* sourceValues,
+      double* destinationValues,
+      double  weightOfInjectedValue = 0.5
+    );
+
+
+    /**
      * This routine is used when we delete a cell due to dynamic AMR
      */
     void restrictCell_AoS_averaging(

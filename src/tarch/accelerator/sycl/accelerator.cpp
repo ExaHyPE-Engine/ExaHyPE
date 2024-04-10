@@ -1,51 +1,31 @@
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
-
 #include "tarch/Assertions.h"
-#include "tarch/memory/memory.h"
 
 #if defined(GPUOffloadingSYCL)
+GPUCallableMethod void tarch::gpuAbort() {}
 
-GPUCallableMethod void tarch::accelerator::gpuAbort() {}
-
-void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {
-  void* data = nullptr;
-
-  ::sycl::queue& queue = getSYCLQueue(device);
-
+void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
+  void* result = nullptr;
   switch (location) {
-  case tarch::memory::MemoryLocation::HeapDeviceMemory:
-    data = ::sycl::malloc_device<void*>(size, queue);
-    break;
-  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    data = ::sycl::malloc_shared<void*>(size, queue);
-    break;
-  case tarch::memory::MemoryLocation::Heap:
-  case tarch::memory::MemoryLocation::PinnedMemory:
-    data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
-    break;
+    case MemoryLocation::Heap:
+      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap)); // Aligned alloc requires size to be a multiple of the aligment
+      break;
+    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+      assertionMsg(false, "not implemented yet" );
+      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap));
+      break;
   }
-
-  assertion(data);
-  return data;
+  return result;
 }
 
-
-void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation location, int device) {
-  assertion(data);
-
-  ::sycl::queue& queue = getSYCLQueue(device);
-
+void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
-  case tarch::memory::MemoryLocation::HeapDeviceMemory:
-  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    ::sycl::free(data, queue);
-    break;
-  case tarch::memory::MemoryLocation::Heap:
-  case tarch::memory::MemoryLocation::PinnedMemory:
-    std::free(data);
-    break;
+    case MemoryLocation::Heap:
+      std::free(data);
+      break;
+    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+      std::free(data);
+      break;
   }
 }
 

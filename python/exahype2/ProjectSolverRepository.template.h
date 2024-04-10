@@ -114,6 +114,16 @@
 
   void initSharedMemoryAndGPUEnvironment();
 
+  /**
+   * Concatenates all the toString() results from the solvers.
+   *
+   * Gives you one long string of the states of the solvers. If you study the
+   * states within the main of the simulation (the application driver so to
+   * say), these states denote the states that the solvers will have in the
+   * upcoming mesh sweep.
+   */
+  std::string getSolverStateDescriptions();
+
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}

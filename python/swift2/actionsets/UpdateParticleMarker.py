@@ -7,7 +7,8 @@ import jinja2
 
 class UpdateParticleMarker(ActionSet):
   def __init__(self, 
-               particle_set):
+               particle_set,
+               automatically_set_marker_in_leave_cell):
     """!
     
     Update particles marker
@@ -34,12 +35,24 @@ class UpdateParticleMarker(ActionSet):
     this routine is called before we store the vertices and we can be sure that
     it is called before we enter any adjacent cell. This statement implies that
     you shall not change a vertex position prior to touchVertexLastTime().
+    
+    For a task-based version, we cannot set the flags to true in 
+    touchCellLastTime(). At this point, the cell's task might not have run yet, 
+    so if we reset the particle state, we run risk that we break the code
+    semantics of the task functor, as they typically check for the update
+    flag. So if we use tasks, it has to be the task itself which sets the 
+    "have updated" flag to true. This is realised within swift2::CellTask.
+    
+    We note that the marker's name is unfortunate: It is not really that we 
+    have updated a particle necessary. But we keep track that we have at least
+    studied one.
 
     """
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                    = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]         = particle_set.name
+    self._automatically_set_marker_in_leave_cell = automatically_set_marker_in_leave_cell
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -64,7 +77,7 @@ class UpdateParticleMarker(ActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+    if self._automatically_set_marker_in_leave_cell and operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)

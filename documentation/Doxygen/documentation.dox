@@ -33,6 +33,11 @@ following terminology in mind:
   within a section where two hashes denote sections.
 
 
+The code on Peano's website is generated everytime we get a top-level push, 
+i.e. a push into the master branch p4. Therefore, the online docu will always
+lag behind the latest developments. You might be better off with creating your
+own docu on your branch locally.
+
 
 Rationale
 ============
@@ -218,19 +223,72 @@ rendered once again as source code. You have to remove the indentation sometimes
 that this mainly affects the Python code, but not the C++ documentation.
 
 
-Brief doxygen cheat sheet
-======================
 
-Creating new chapters within the page (note what appears in the dropdown on the left
-hand side) is done with the "=" symbol. The above chapter above is written under 
-the hood as:
+# Tutorials
+
+
+We hold tutorials parallel to the actual source code, tests and benchmarks.
+It is obviously up to the author of a tutorial how to structure the tutorial.
+However, we found it very useful if tutorials refer to other benchmarks and 
+tests wherever possible rather than duplicating code. 
+
+To facilitate this,
+doxygen allows you to "extract" source code snippets into your documentation 
+pages. The feature is documented at https://www.doxygen.nl/manual/commands.html#cmdsnippet.
+
+The idea is that the code that is relevant/discussed has to be annotated with 
 
 \verbatim
+//! [tutorials swift2 planet-orbit create project]
 
-Brief doxygen cheat sheet
+Code that you want to display in tutorials, too 
+
+//! [tutorials swift2 planet-orbit create project]
+\endverbatim
+
+(in C/C++ code) or
+
+\verbatim
+#! [tutorials swift2 planet-orbit create project]
+
+Code that you want to display in tutorials, too 
+
+#! [tutorials swift2 planet-orbit create project]
+\endverbatim
+
+respectively. We can then integrate this code part through
+
+
+\verbatim
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit create project
+
+This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
+\endverbatim
+
+
+
+
+Doxygen cheat sheet
 ======================
 
+New chapters are created with the ''' # ''' symbol. This will make "Brief doxygen cheat sheet"
+in the sidebar, as a drop-down menu within the current page.
+
+\verbatim
+# Brief doxygen cheat sheet
 \endverbatim
+
+## Headings 
+
+You can nest drop-down menus. Add a second sub-level with two hash signs. Note the appearance
+of "Headings" in the drop-down menu on the left. 
+
+\verbatim
+## Headings 
+\endverbatim
+
+You can even keep this going. Create a third nested level with three hash symbols ( ''' ### '''' )
+and so on.
 
 ## Comments 
 
@@ -246,15 +304,6 @@ Anything in here is ignored by doxygen.
 
 \endverbatim
 
-## Headings
-
-Bold headings such as the one above are created with two hash symbols. This creates
-a "secondary" chapter.
-The above line, under the hood, reads:
-
-\verbatim
-## Headings
-\endverbatim
 
 ## Code snippets
 
@@ -374,6 +423,53 @@ Simply write:
 
 You can enumerate lists by starting each new line with \verbatim \li \endverbatim
 
-The standard newline character \verbatim \n \endverbatim works as expected.
+The standard newline character \verbatim \n \endverbatim works as expected. 
+However, it is easiest to create new enumerations or lists via
+
+~~~~~~~~~~~~~~~~~~~~~
+1. This is the first item
+2. This is the second item
+
+
+- This is the first item
+- This is the second item
+~~~~~~~~~~~~~~~~~~~~~
+
+
+## Links to existing code snippets
+
+This section is particularly relevant for tutorials and the documentation of 
+benchmark scripts. Whenever you want to refer to a particular part of a script,
+a convenient way is to mark this part with
+
+~~~~~~~~~~~~~~~~~~~~~~
+/ / ! [My label]
+My fancy source code
+/ / ! [My label]
+~~~~~~~~~~~~~~~~~~~~~~
+
+In Python, it is 
+
+~~~~~~~~~~~~~~~~~~~~~~
+#! [My label]
+My fancy source code
+#! [My label]
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+Please remove the spaces above between the slashes and the exlamation mark.
+They are in there, as the parser otherwise fails.
+Once the source code annotation is in, you can refer to this code snippet in the doxygen docu via
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~
+@snippet myfile.py My label
+~~~~~~~~~~~~~~~~~~~~~~
+
+This reference will display the code snippet in the generated html code.
+The outcome resembles what we know from Jupyter notebooks.
+
 
 */

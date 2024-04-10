@@ -21,13 +21,11 @@ namespace {
 void toolbox::loadbalancing::dumpStatistics() {
   std::ostringstream msg;
 
+  int sumLocal  = 0;
+  int sumRemote = 0;
   std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
 
-  int localMinOfUnrefinedCells = std::numeric_limits<int>::max();
-  int localMaxOfUnrefinedCells = 0;
-  int localSumOfUnrefinedCells  = 0;
-  int localSumOfRemoteUnrefinedCells = 0;
-  int localSumOfSpacetrees = idsOfLocalSpacetrees.size();
+  msg << idsOfLocalSpacetrees.size() << " tree(s): ";
 
   msg << localSumOfSpacetrees << " Tree(s): ";
 
@@ -43,25 +41,16 @@ void toolbox::loadbalancing::dumpStatistics() {
     localSumOfUnrefinedCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
     localSumOfRemoteUnrefinedCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells();
   }
-
   if (idsOfLocalSpacetrees.empty()) {
-    msg << "No trees hosted on this node - therefore no load.";
-  } else {
-    if (localSumOfRemoteUnrefinedCells > 0) {
-      double granularity = static_cast<double>(localSumOfUnrefinedCells) / static_cast<double>(localSumOfRemoteUnrefinedCells);
-      msg << ", Granularity=" << granularity; // Higher is better
-    }
-    msg << ", Ratio=" << localMinOfUnrefinedCells << "/" << localMaxOfUnrefinedCells << " (Min/Max)";
-    msg << ", Total=" << localSumOfUnrefinedCells << "/" << localSumOfRemoteUnrefinedCells << " (Local/Remote)";
+    msg << "no trees hosted on this node - therefore no load";
+  }
+  else {
+    msg << " total=" << sumLocal << "/" << sumRemote << " (local/remote)";
   }
 
-  logDebug("dumpStatistics()", msg.str());
 
-  int globalMinOfUnrefinedCells = std::numeric_limits<int>::max();
-  int globalMaxOfUnrefinedCells = 0;
-  int globalSumOfUnrefinedCells  = 0;
-  int globalSumOfRemoteUnrefinedCells = 0;
-  int globalSumOfSpacetrees = 0;
+  //msg << " used memory=" << tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte ) << " MByte, "
+  //    << " free memory=" << tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte )  << " MByte";
 
 #ifdef Parallel
   tarch::mpi::Rank::getInstance().reduce(

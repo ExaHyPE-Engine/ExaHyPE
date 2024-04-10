@@ -1,7 +1,5 @@
 #include "FiniteVolumeMGCCZ4.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "InitialValues.h"
 #include "MGCCZ4Kernels.h"
 #include "PDE.h"
@@ -14,6 +12,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "tarch/NonCriticalAssertions.h"
 
 
 

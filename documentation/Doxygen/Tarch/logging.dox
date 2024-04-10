@@ -3,7 +3,6 @@
 \page tarch_logging Logging, tracing, statistics, profiling and assertions
 
 
-
 Logging, tracing and assertion architecture
 -------------------------------------------
 
@@ -103,7 +102,7 @@ outcome, you can either manually edit the logging header, or you can
 retranslate your code with `-DUseLogService=xxx`. `xxx` is the class to
 be used. I detail the variants I currently ship with Peano below.
 
- supports the instrumentation of source code for particular performance
+Supports the instrumentation of source code for particular performance
 analysis tools via its loggers. Notably all output to the `trace` target
 are forwarded to instrumentation APIs. To make this work, you either
 have to pick a particular logging device, or you switch to a
@@ -120,10 +119,10 @@ setter. Please consult the header or the webpage for details on the
 semantics of the arguments:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-tarch::logging::CommandLineLogger::setLogFormat( 
+tarch::logging::CommandLineLogger::setLogFormat(
  " ",
- true, false, false, true, true, 
- "my-fancy.log-file" 
+ true, false, false, true, true,
+ "my-fancy.log-file"
 );
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -161,7 +160,7 @@ easily.
 To select this logger, compile with `-DUseLogService=NVTXLogger`.
 This logger forwards all trace commands to NVIDIA's profiling/tracing
 library.
-It is automatically enabled once you configure with 
+It is automatically enabled once you configure with
 ~~~~~~~~~~~~~~~~~~~~~
 ./configure --with-toolchain=nvidia
 ~~~~~~~~~~~~~~~~~~~~~
@@ -179,20 +178,20 @@ sets, automatically, the compile flag `-DUseLogService=ITACLogger`.
 You can however also set the logger via the CXXFLAGS.
 
 The ITAC logger forwards all trace commands to Intel's profiling/tracing
-library. You can now compile 's tracing backend, and  will continue to
+library. You can now compile 's tracing backend, and will continue to
 plot all `info` statements to the terminal. The trace statements however
-are piped directly into ITAC, i.e. if you analyse the code with Intel's
+are piped directly into ITAC, i.e. if you analyse the code with Intel's
 `traceanalyzer` or VTune, you should see the -specific annotations and
 traces. You can also use 's log filter to filter which events are
 actually handed over to ITAC.
 
 I've recognised that the Intel scripts often do not include the ITAC
-headers that  requires in their search path. In this case, you will have
+headers that requires in their search path. In this case, you will have
 to augment your configure call:
 
 The class tarch::logging::ITACLogger provides further detail on the usage of the
 logging back-end. The punch line is that you have to translate in trace
-mode to get proper ITAC data. As the trace information of  quickly
+mode to get proper ITAC data. As the trace information of quickly
 becomes vast, I recommend to create a log filter, and start a run where
 you disable all but the top-level tracing information.
 
@@ -211,7 +210,7 @@ tarch::logging::LogFilter::getInstance().addFilterListEntry(
   tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetInfo,
     tarch::logging::LogFilter::FilterListEntry::AnyRank, \"peano4\", false,
-    tarch::logging::LogFilter::FilterListEntry::AlwaysOn 
+    tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   )
 );
 ~~~~~~~~~~~~~~~~~~~~~
@@ -227,19 +226,21 @@ log filter entries from a text file. This facilitates work with log
 filters. The usage is straightforward
 
 ~~~~~~~~~~~~~~~~~~~~~
-tarch::logging::LogFilterFileReader::parsePlainTextFile("my.log-filter" );
+tarch::logging::LogFilterFileReader::parsePlainTextFile("my.log-filter");
 ~~~~~~~~~~~~~~~~~~~~~
 
 and the format is very simple:
 
-    # Level             Trace                    Rank          Black/white  When on
-    # info/debug/trace  trace of class affected  -1=all ranks
-      debug             tarch                    -1            black       always-on
-      debug             peano4                   -1            black       always-on
-      info              tarch                    -1            black       always-on
-      info              peano4                   -1            black       always-on
-      trace             tarch                    -1            black       always-on
-      trace             peano                    -1            black       always-on
+    # Level                 Trace                    Rank          Black/white  When on
+    # info/debug/trace/all  trace of class affected  -1=all ranks
+      debug                 tarch                    -1            black        always-on
+      debug                 peano4                   -1            black        always-on
+      info                  tarch                    -1            black        always-on
+      info                  peano4                   -1            black        always-on
+      trace                 tarch                    -1            black        always-on
+      trace                 peano4                   -1            black        always-on
+      all                   tarch                    -1            black        always-on
+      all                   peano4                   -1            black        always-on
 
     # Lines starting with hash are comments
 
@@ -312,7 +313,7 @@ doubles, and you don't have to register your identifier or similar
 things.
 
 ~~~~~~~~~~~~~~~~~~~~~
-::tarch::logging::Statistics::getInstance().log( "mystats", 24 );
+::tarch::logging::Statistics::getInstance().log("mystats", 24);
 ~~~~~~~~~~~~~~~~~~~~~
 
 The statistics backend samples over these calls and eventually writes a
@@ -320,7 +321,7 @@ csv file with the logged entries over time. To trigger this write, you
 have to call tarch::logging::Statistics::writeToCSV().
 I usually invoke the write at the end of the main routine.
 
-If you activate the statistics,  automatically writes some runtime
+If you activate the statistics, automatically writes some runtime
 statistics into the stats file. These statistics give you, for example,
 and overview how many tasks are in flight at any time, or how long 's
 MPI routines had to wait for incoming data. The output format is plain

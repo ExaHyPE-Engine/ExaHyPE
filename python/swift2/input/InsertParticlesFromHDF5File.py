@@ -48,6 +48,8 @@ class InsertParticlesFromHDF5File(ActionSet):
      * List of particles that overlap with the current cell.
      */
 
+    using namespace ::swift2::kernels::legacy::kernelHydro; // for kernel_gamma
+
     std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReaderHDF5.getParticlesWithinVoxel( marker.x(), marker.h(), true );
 
     /* Retrieve the rest of fields for same set of particles */
@@ -58,8 +60,8 @@ class InsertParticlesFromHDF5File(ActionSet):
     std::vector <int>    PartidWithinVoxel          = _fileReaderHDF5.getParticleIDsWithinVoxel();
 
     int indexEntry = 0;
-    const double hmin = globaldata::{{PARTICLE}}::getSmlMin();
-    const double hmax = globaldata::{{PARTICLE}}::getSmlMax();
+    const double SmlMin = globaldata::{{PARTICLE}}::getSmlMin();
+    const double SmlMax = globaldata::{{PARTICLE}}::getSmlMax();
 
 
     // Now loop over these particle coordinates
@@ -79,11 +81,19 @@ class InsertParticlesFromHDF5File(ActionSet):
       tarch::la::Vector<Dimensions,double> Velocity;
       /* Density is not encoded in all SWIFT HDF5 IC files as it is recomputed
       by the density loop anyway. Here we just initialse to an arbitrary value */
-      const double Density         = 1.0;
-      const double Mass            = MassWithinVoxel[indexEntry];
-      const double SmoothingLength = SmoothingLengthWithinVoxel[indexEntry];
-      const double InternalEnergy  = InternalEnergyWithinVoxel[indexEntry];
-      const int    ParticleID      = PartidWithinVoxel[indexEntry];
+      double Density         = 1.0;
+      double Mass            = MassWithinVoxel[indexEntry];
+      double SmoothingLength = SmoothingLengthWithinVoxel[indexEntry];
+      double InternalEnergy  = InternalEnergyWithinVoxel[indexEntry];
+      int    ParticleID      = PartidWithinVoxel[indexEntry];
+
+      if (SmoothingLength > SmlMax){
+        logWarning("InsertParticlesFromHDF5File.py",
+          "particle smoothing length > global smoothing length max;"
+          << " h= " << SmoothingLength << " h_max= " << SmlMax <<
+          "setting it to 0.9 * Max");
+        SmoothingLength = 0.9 * SmlMax;
+      }
 
       /*
        * Other attributes not set in HDF5 file
@@ -91,17 +101,11 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       tarch::la::Vector<Dimensions,double> acceleration;
 
-      /* Internal search radius used by Peano.
-       * We set the maximum allowed value, R = grid_size/2.
-       */
-      tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0);
-
       /* Compute the pressure from the EoS */
-      const double Pressure = ::swift2::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
+      const double Pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
 
       /* Sound speed */
-      const double Soundspeed = ::swift2::legacy::eos::gas_soundspeed_from_internal_energy( InternalEnergy );
+      const double Soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( InternalEnergy );
 
       /* Now set the values */
       newParticle->setV              ( Velocity );
@@ -117,20 +121,41 @@ class InsertParticlesFromHDF5File(ActionSet):
        * initialisation script general for any hydro scheme, etc.
        */
 
-      newParticle->setSmoothingLengthPrevious( SmoothingLength );
+      /* Internal search radius used by Peano.
+       * We set the maximum allowed value, R = grid_size/2.  */
+      tarch::la::Vector<Dimensions,double> GridSize = marker.h();
+      const double GridSize_x = GridSize(0);
+      const double searchRadiusGlobal = SmlMax * kernel_gamma;
 
-      newParticle->setSearchRadius(GridSize_x / 2.0);
+      // TODO: use radius from smoothing length, not global one.
+      // Solve this once you add variable search radii.
+
+      if (tarch::la::greater(searchRadiusGlobal, 0.5 * GridSize_x)) {
+          std::ostringstream out;
+          out << " Global upper limit for search radius is > mesh size. You need to increase your cell size" <<
+              " or reduce hydro_h_max in your project python file." <<
+              " 0.5 * GridSize:" << 0.5 * GridSize_x <<
+              " max global search radius: " << searchRadiusGlobal;
+          logError("InsertParticlesFromHDF5File.py:", out.str());
+      }
+
+      newParticle->setSearchRadius( searchRadiusGlobal );
 
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );
 
       // Vectors
       for (int d=0; d<Dimensions; d++) {
-         newParticle->setA          (d,0);
+         newParticle->setA(d,0);
+#if Dimensions > 2
+         newParticle->setRot_v(d, 0);
+#endif
       }
 
+#if Dimensions <= 2
       /* For 2D sims, we only get one component */
       newParticle->setRot_v(0);
+#endif
 
       /* Initialise the "extended" arrays */
       newParticle->setV_full( newParticle->getV() );
@@ -139,19 +164,13 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setUDot  (0.0);
       newParticle->setHDot  (0.0);
       newParticle->setWcount(0.0);
-      newParticle->setNcount(0  );
-      newParticle->setF     (0.0);
+      newParticle->setF(0.0);
       newParticle->setRho_dh(0.0);
       newParticle->setWcount_dh(0.0);
 
-      newParticle->setHLeft (hmin);
-      newParticle->setHRight(hmax);
 
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
-      newParticle->setHasConverged(false);
-      newParticle->setHasNoNeighbours(false);
-      newParticle->setResidual(0.0);
-      newParticle->setIterCount(0);
+      newParticle->setSmoothingLengthIterCount(0);
       newParticle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
@@ -171,7 +190,8 @@ class InsertParticlesFromHDF5File(ActionSet):
       toolbox::particles::insertParticleIntoCell(
         marker,
         newParticle,
-        fineGridVerticeshydroPartSet
+        fineGridVertices{{PARTICLE}}Set,
+        _spacetreeId
       );
     }
 
@@ -184,9 +204,15 @@ class InsertParticlesFromHDF5File(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree "
-                                         << _spacetreeId
-                                         << " (boundary vertices might host redundant particle data)" );
+  if (_particleNumberOnThisTree==0) {
+    logWarning( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId );
+  }
+  else {
+    logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
+  }
+  #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
+  assertion( _particleNumberOnThisTree>0 );
+  #endif
 """
     )
 
@@ -210,6 +236,7 @@ class InsertParticlesFromHDF5File(ActionSet):
     def get_includes(self):
         result = jinja2.Template(
             """
+#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
@@ -219,8 +246,8 @@ class InsertParticlesFromHDF5File(ActionSet):
 
 #include "Constants.h"
 
-#include "swift2/legacy/kernel_hydro.h"
-#include "swift2/legacy/equation_of_state.h"
+#include "swift2/kernels/legacy/kernel_hydro.h"
+#include "swift2/kernels/legacy/equation_of_state.h"
 
 #include <fstream>
 #include <string>
@@ -255,10 +282,6 @@ toolbox::particles::FileReaderHDF5 """
             + """\" );
 """
         )
-
-    # def get_destructor_body(self):
-    #  return """
-    # """
 
     def get_attributes(self):
         return """

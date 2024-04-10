@@ -5,17 +5,21 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
-
-#include "config.h"
 #include "multicore.h"
-#include "tarch/multicore/otter.h"
 #include "tarch/multicore/orchestration/Strategy.h"
+#include "tarch/multicore/otter.h"
 
 namespace tarch {
   namespace multicore {
+    using TaskNumber = int;
+
+    constexpr TaskNumber NoDependencies = -1;
+
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
@@ -26,44 +30,6 @@ namespace tarch {
      * with the result afterwards and re-obtain the original strategy.
      */
     tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
-
-    /**
-     * Utility function for unique task numbers
-     *
-     * This routine has to return a number which is currently not in use.
-     *
-     * ## Implementation
-     *
-     * There is no need for delivered task numbers to be
-     * consecutive. Therefore, I use the size of the existing task set as
-     * a guideline for a task number to search for. If this initial guess
-     * is already handed out, I increase the counter by a prime number and
-     * try the new number again - until I've finally found a task which is
-     * not yet processed.
-     *
-     * @see Task
-     */
-    int reserveTaskNumber();
-
-    /**
-     * Release a task number
-     *
-     * @param number Either a valid non-negative number (as returned by
-     *   reserveTaskNumber() for example) or NoDependency.
-     */
-    void releaseTaskNumber(int number);
-
-    /**
-     * How many task numbers are currently reserved.
-     *
-     * Should usually be more than pending tasks, as it also includes tasks that have
-     * finished yet have not released their number yet.
-     *
-     * @return Number of tasks that are currently reserved. I assume that these belong
-     *  to tasks that are either running or that have produced outcome that's not yet
-     *  used.
-     */
-    int getNumberOfReservedTaskNumbers();
 
     /**
      * Abstract super class for a job.
@@ -115,8 +81,8 @@ namespace tarch {
 
       virtual ~Task() {}
 
-      int  getTaskType() const;
-      int  getPriority() const;
+      int getTaskType() const;
+      int getPriority() const;
 
       /**
        * Set priority
@@ -266,7 +232,11 @@ namespace tarch {
      * Ownership goes over to Peano's job namespace, i.e. you don't have
      * to delete the pointer.
      *
-     * The realisation is straightforward:
+     * ## Handling tasks without outgoing dependencies
+     *
+     * If taskNumber equals NoDependency, we know that noone is (directly)
+     * waiting for this task, i.e. we won't add dependencies to the task
+     * graph afterwards. In this case, the realisation is straightforward:
      *
      * 1. If SmartMPI is enabled and the task should be sent away, do so.
      * 2. If the current orchestration strategy (an implementation of
@@ -282,21 +252,12 @@ namespace tarch {
      * spawnTask() will ***never*** commit a task to the global task
      * queue and therefore is inherently thread-safe.
      *
-     * @see tarch::multicore::spawnAndWait()
-     * @see processPendingTasks(int)
-     *
-     */
-    void spawnTask(Task* job);
-
-    constexpr int NoDependency = -1;
-
-    /**
-     * Spawn a task which dependencies
+     * ## Tasks with a task number and incoming dependencies
      *
      * Spawn a task that depends on one other task. Alternatively, pass in
      * NoDependency. In this case, the task can kick off immediately. You have
      * to specify a task number. This number allows other, follow-up tasks to
-     * become dependant on this very task. Please note that the tasks have to
+     * become dependent on this very task. Please note that the tasks have to
      * be spawned in order, i.e. if B depends on A, then A has to be spawned
      * before B. Otherwise, you introduce a so-called anti-dependency. This is
      * OpenMP jargon which we adopted ruthlessly.
@@ -304,32 +265,53 @@ namespace tarch {
      * You may pass NoDependency as taskNumber. In this case, you have a
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
+     *
+     *
+     * @see tarch::multicore and the section "Tasks with dependencies" therein
+     *   for further documentation.
+     * @see tarch::multicore::spawnAndWait() for details what happens with
+     *   tasks that have no outgoing dependencies.
+     * @see processPendingTasks(int) describing how we handle pending tasks.
+     *
      */
-    void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+    void spawnTask(
+      Task*                        task,
+      const std::set<TaskNumber>&  inDependencies = std::set<TaskNumber>(),
+      const std::set<TaskNumber>&  conflicts = std::set<TaskNumber>(),
+      const TaskNumber&            taskNumber = NoDependencies
+    );
 
     /**
-     * Alternative realisation of spawnTaskWithDependencies() with multiple in
-     * dependencies.
+     * Wait for all tasks which have been spawned by spawnTask. This routine
+     * might return and still miss out for a few pending tasks. It basically
+     * runs only over those tasks with in/out dependencies and ensures that
+     * they are either done or are pending.
+     *
      */
-    void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+    void waitForAllTasks();
 
     /**
      * Wait for set of tasks
      *
-     * Entries in inDependencies can be NoDependency.
-     */
-    void waitForTasks( const std::vector<int>& inDependencies );
-
-    /**
-     * Wait for one task
+     * Entries in inDependencies can be NoDependency. This is a trivial
+     * implementation, as we basically run through each task in
+     * inDependencies and invoke waitForTask() for it. We don't have to rely on
+     * some backend-specific implementation.
      *
-     * taskNumber can be NoDependency. In this case, the operation degenerates
-     * to nop.
+     * ## Serial code
+     *
+     * This routine degenerates to nop, as no task can be pending. spawnTask()
+     * always executed the task straightaway.
      */
-    void waitForTask( int taskNumber );
+    void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
     /**
-     * Run a bunch of tasks
+     * Wrapper around waitForTasks() with a single-element set.
+     */
+    void waitForTask(const int taskNumber);
+
+    /**
+     * Fork-join task submission pattern
      *
      * The realisation is relatively straightforward:
      *
@@ -438,21 +420,6 @@ namespace tarch {
 
     namespace native {
       /**
-       * Spawn a ready task into the runtime system of choice.
-       *
-       * The responsibility to destroy task is handed over to the runtime of
-       * choice.
-       *
-       * @see tarch::multicore::spawnTask()
-       */
-      void spawnTask(Task* task);
-
-      /**
-       * @see tarch::multicore::spawnTask()
-       */
-      void spawnTask(Task* task, int in, int out);
-
-      /**
        * Map onto native tasking
        *
        * Run over the tasks and issue native tasks. If the tasks spawn, in
@@ -478,6 +445,13 @@ namespace tarch {
        * list can be empty. Efficient implementations should spawn the fused
        * tasks as a further ready task and return immediately.
        *
+       * ## No multithreading
+       *
+       * If no multithreading is enabled, then we map it onto a plain task via
+       * a spawnTask(). This spawn has no conflicts and no dependencies.
+       *
+       *
+       *
        * @param firstTask First task. This is a task which can be fused. The pointer
        *   is valid. The ownership of firstTask is handed over to the called routine,
        *   i.e. processFusedTask() has to ensure that it is deleted.
@@ -490,19 +464,133 @@ namespace tarch {
       void processFusedTask(Task* firstTask, const std::list<tarch::multicore::Task*>& otherTasks, int device);
 
       /**
-       * Drain all task queues
-       */
-      void drainTaskQueues();
-
-      /**
        * These are the non-blocking (ready) tasks submitted via spawnTask()
        */
       int getNumberOfPendingTasks();
 
-      void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
-      void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
-      void waitForTasks( const std::vector<int>& inDependencies );
-      void waitForTask( int taskNumber );
+      /**
+       * Spawn a new task into the tasking backend
+       *
+       * This routine is invoked by tarch::multicore::spawnTask(). The invoking
+       * method is not a sole forwarding. It takes care of the categorisation
+       * of ready tasks into pending tasks, and it also handles all the fusion
+       * for GPUs. Therefore, if it delegates calls to this class, we really
+       * can directly map the task 1:1 onto the native task system used.
+       *
+       *
+       * ## Serial code
+       *
+       * This is a trivial case in a serial run: As we have already completed
+       * all incoming tasks (we work serially and all incoming tasks have to
+       * be done by this time), we can simply process the task and return. As a
+       * direct consequence, all dependencies of future tasks are always
+       * fulfilled.
+       *
+       * ## C++ variant
+       *
+       * 1. We first check if a task with this number is among the submitted
+       *    tasks. This is possible if a previous algorithm phase has submitted
+       *    a task with this number which was a sink, but noone ever waited for
+       *    it. This should usually not happen and is a sign of bad code
+       *    design. We issue a warning, free all locks and wait for the
+       *    previous task with the same number to terminate.
+       * 2. Next, we spawn the actual task via a std::async call. The core task
+       *    code consists of three parts:
+       *    - We first run through all the dependencies and ensure they all are
+       *      fulfilled. waitForTasks() realises check.
+       *    - Execute the task object.
+       *    - Free its memory.
+       * 3. We store the shared_future returned by the task. If the task number
+       *    equals NoDependencies, we know that noone will ever be able to wait
+       *    for this task. In this case, we skip the storing.
+       *
+       * ## OpenMP
+       *
+       * In OpenMP, we have less explicit control over the number of alive
+       * tasks compared to C++ for example. However, nothing stops us from
+       * checking if an in-dependency has been fulfilled. If this in-dependency
+       * does not exist, then we have an anti-dependency. But this one does not
+       * matter. It will just be executed sequentially.
+       *
+       * taskwait does not directly work with an if statement (we would need
+       * some workaround with iterators), so we have to explicitly
+       * embed it into an if block which checks if we have to wait at all.
+       *
+       * OpenMP models dependencies through addresses. While it does not use
+       * the data to which these addresses point to, it is important that the
+       * addresses are valid, i.e. the system owns these memory locations.
+       * I use an internal std::vector to administer the byte array which I
+       * use for dependencies. See the description of the internal variable
+       * memoryRegionToTrackTaskDependencies and also
+       * tarch::multicore::native::spawnTask() for a discussion of the required
+       * dynamic growth.
+       *
+       *
+       * ## No multithreading
+       *
+       * We just execute this task. We know that tasks may not have anti-dependencies.
+       * That is, we know that any incoming task has been spawned before. By
+       * induction, it therefore has already completed. We also don't have any
+       * competition, as there are no competing tasks. So we actually can ignore
+       * all the parameters and just execute the task.
+       */
+      void spawnTask(
+        Task*                        task,
+        const std::set<TaskNumber>&  inDependencies,
+        const std::set<TaskNumber>&  conflicts,
+        const TaskNumber&            taskNumber
+      );
+
+      /**
+       * Wait for other task
+       *
+       *
+       * ## Serial code
+       *
+       * Degenerates to nop here, as all incoming tasks are completed. We just
+       * have to ensure that the task we are waiting for is not(!) registered,
+       * i.e. has actually been submitted.
+       *
+       * ## C++ code
+       *
+       * waitForTasks() is quite tricky, as we have to avoid any deadlocks
+       * here. We therefore use a quite defensive programming.
+       *
+       * 1. We lock the set of spawned tasks. If a dependency task is in there
+       *    and is valid, we memorise it in a pointer checkFuture and release
+       *    the lock.
+       * 2. Should we have found a dependency, we call the C++ wait. From
+       *    hereon, the core task is complete, but there's still an entry in
+       *    the global lookup table of spawned tasks. At this point, we
+       *    might actually have finished a lot of tasks recursively.
+       * 3. We briefly lock the data structure again and check if the task is
+       *    bookmarked in there and is already complete. In this case, we
+       *    remove the entry. We kind of run an on-the-fly immediate garbage
+       *    collection to slim down our map of spawned tasks.
+       */
+      void waitForTasks(const std::set<TaskNumber>& inDependencies);
+
+      /**
+       * Slightly different than the umbrella version in the general namespace.
+       * See comments there. This version only waits for tasks which have been
+       * submitted with a valid task number.
+       *
+       * ## Serial code
+       *
+       * This routine degenerates to nop, as no task can be pending. spawnTask()
+       * always executed the task straightaway.
+       *
+       * ## C++
+       *
+       * There are different ways how to implement this wait: The most
+       * straight-forward implementation takes all the keys and the invokes
+       * waitForTasks() for all keys. We do not implement this pattern, as it
+       * would mean that we potentially copy quite a lot of keys. Instead, we
+       * iteratively wait for one task after another to finish. This implies
+       * that we give the runtime system a lot of freedom in which order and
+       * how parallel to tidy up all tasks.
+       */
+      void waitForAllTasks();
     } // namespace native
 
     namespace internal {

@@ -27,7 +27,7 @@ class SedovBlastIC:
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
 
-      particle->setSearchRadius( GridSize_x / 2.0);
+      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
 
       /* Constant density field */
       particle->setDensity ( 1.0 );
@@ -74,11 +74,11 @@ class SedovBlastIC:
 //      }
 
       /* Compute the pressure from the EoS */
-      const double pressure = ::swift2::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
+      const double pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
       particle->setPressure( pressure );
 
       /* Compute the sound speed */
-      const double soundspeed = ::swift2::legacy::eos::gas_soundspeed_from_internal_energy( particle->getU() );
+      const double soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( particle->getU() );
       particle->setSoundSpeed( soundspeed );
 
       /* Initialize remaining fields  */

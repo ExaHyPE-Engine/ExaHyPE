@@ -56,21 +56,16 @@ class GlobalFixedTimeStep(SeparateSweeps):
             pde_terms_without_state
         )
 
-        self._normalised_time_step_size = time_step_size
+        self._kernel_namespace                                = "rusanov"
+        self._normalised_time_step_size                       = time_step_size
 
         self._kernel_namespace = "rusanov"
-        self._volumetric_solver_call = create_volumetric_solver_call(
-            self._basis, SolverVariant.WithVirtualFunctions
-        )
-        self._Riemann_solver_call = create_Riemann_solver_call(
-            self._basis, face_projections
-        )
-        self._add_solver_contributions_call = create_add_solver_contributions_call(
-            self._basis
-        )
-        self._multiply_with_inverted_mass_matrix_call = (
-            create_multiply_with_inverted_mass_matrix_call(self._basis)
-        )
+        self._volumetric_compute_kernel_call                  = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
+        self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
+        self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, face_projections)
+        # TODO: self._Riemann_compute_kernel_call_stateless =
+        self._add_solver_contributions_call                   = create_add_solver_contributions_call(self._basis)
+        self._multiply_with_inverted_mass_matrix_call         = create_multiply_with_inverted_mass_matrix_call(self._basis)
 
         self.set_implementation(
             boundary_conditions=boundary_conditions,
@@ -84,6 +79,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             source_term=source_term,
             point_source=point_source,
         )
+
 
     def set_implementation(
         self,
@@ -174,6 +170,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
         self._constructor_implementation = (
             solver_code_snippets.create_abstract_solver_constructor_statements()
         )
+
 
     @property
     def user_action_set_includes(self):

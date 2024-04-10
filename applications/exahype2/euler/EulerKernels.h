@@ -5,23 +5,30 @@
 #include "Constants.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
-#include "VariableShortcuts.h"
 
 namespace applications::exahype2::euler {
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue(
-    const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal
-  ) InlineMethod {
+  static inline double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
+    const double rho = Q[0];
+    const double u   = Q[1];
+    const double v   = Q[2];
+#if Dimensions == 3
+    const double w = Q[3];
+    const double e = Q[4];
+#else
+    const double e = Q[3];
+#endif
+
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
-    assertion(Q[VARS_rho] != Q[VARS_rho]);
-    assertion(Q[VARS_rho] > 0);
+    assertion(rho != rho);
+    assertion(rho > 0);
 #endif
 
-    const double irho = 1.0 / std::abs(Q[VARS_rho]);
-    const double p = (GAMMA - 1.0) * (Q[VARS_e] - 0.5 * irho * (Q[VARS_u] * Q[VARS_u] + Q[VARS_v] * Q[VARS_v]
+    const double irho = 1.0 / std::abs(rho);
+    const double p = (GAMMA - 1) * (e - 0.5 * irho * (u * u + v * v
 #if Dimensions == 3
-      + Q[VARS_w] * Q[VARS_w]
+      + w * w
 #endif
     ));
 
@@ -40,27 +47,28 @@ namespace applications::exahype2::euler {
     return result;
   }
 
+  static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+    const double rho = Q[0];
+    const double u   = Q[1];
+    const double v   = Q[2];
+#if Dimensions == 3
+    const double w = Q[3];
+    const double e = Q[4];
+#else
+    const double e = Q[3];
+#endif
 
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double* __restrict__ F
-  ) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
-    assertion(Q[VARS_rho] != Q[VARS_rho]);
-    assertion(Q[VARS_rho] > 0);
+    assertion(rho != rho);
+    assertion(rho > 0);
 #endif
 
-    const double irho = 1.0 / Q[VARS_rho];
-    const double p = (GAMMA - 1) * (Q[VARS_e] - 0.5 * irho * (Q[VARS_u] * Q[VARS_u] + Q[VARS_v] * Q[VARS_v]
+    const double irho = 1.0 / rho;
+    const double p = (GAMMA - 1) * (e - 0.5 * irho * (u * u + v * v
 #if Dimensions == 3
-      + Q[VARS_w] * Q[VARS_w]
+      + w * w
 #endif
     ));
 
@@ -69,15 +77,14 @@ namespace applications::exahype2::euler {
 #endif
 
     const double coeff = irho * Q[normal + 1];
-
-    F[VARS_rho] = coeff * Q[VARS_rho];
-    F[VARS_u]   = coeff * Q[VARS_u];
-    F[VARS_v]   = coeff * Q[VARS_v];
+    F[0]               = coeff * rho;
+    F[1]               = coeff * u;
+    F[2]               = coeff * v;
 #if Dimensions == 3
-    F[VARS_w] = coeff * Q[VARS_w];
-    F[VARS_e] = coeff * Q[VARS_e] + coeff * p;
+    F[3] = coeff * w;
+    F[4] = coeff * e + coeff * p;
 #endif
-    F[VARS_e] = coeff * Q[VARS_e] + coeff * p;
+    F[3] = coeff * e + coeff * p;
 
     F[normal + 1] += p;
   }

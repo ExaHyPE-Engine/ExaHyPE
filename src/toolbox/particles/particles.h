@@ -13,7 +13,7 @@ namespace toolbox {
     /**
      * Default tolerance to decide when two particles are the same.
      *
-     * @see eliminateSpatialDuplicates()
+     * @see toolbox::particles::particleIsDuplicate()
      */
     constexpr double SpatialDuplicateTolerance = 1e-6;
 
@@ -41,25 +41,25 @@ namespace toolbox {
      */
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
-      const Particle&                              particle,
-      const tarch::la::Vector<Dimensions, double>& domainOffset,
-      const tarch::la::Vector<Dimensions, double>& domainWidth
+      const Particle& particle, const tarch::la::Vector<Dimensions, double>& domainOffset, const tarch::la::Vector<Dimensions, double>& domainWidth
     );
 
 
     /**
+     * Insert particle into a cell
+     *
      * Shallow copy, i.e. you can remove the input container newParticles, but
      * you may not delete the particles it is pointing to.
      *
      * This routine basically runs through the vector passed and calls the
      * other insertParticleIntoCell() operation per particle.
-     *
      */
     template <typename Particle, typename ParticleSet>
     void insertParticlesIntoCell(
       const peano4::datamanagement::CellMarker&              marker,
       const std::vector<Particle*>&                          newParticles,
-      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
+      int                                                    spacetreeId
     );
 
 
@@ -93,9 +93,28 @@ namespace toolbox {
      */
     template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
-      const peano4::datamanagement::CellMarker&              marker,
-      Particle*                                              newParticles,
-      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
+      const peano4::datamanagement::CellMarker& marker, Particle* newParticles, peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices, int spacetreeId
+    );
+
+
+    bool particleAssignedToVertexWillBeLocal(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+
+    /**
+     * Mirror a particle along the periodic domain boundaries
+     *
+     * @param x Position of the particle as received along a periodic boundary
+     *   exchange.
+     * @param marker Marker of vertex which triggers the receive, i.e. the one
+     *   to which the incoming particle at x will be attached to.
+     *
+     * @param Position of particle as "seen" from receiving side
+     */
+    tarch::la::Vector<Dimensions, double> mirrorParticleAlongPeriodicDomains(
+        const tarch::la::Vector<Dimensions, double>& x,
+        const peano4::datamanagement::VertexMarker&  marker,
+        const tarch::la::Vector<Dimensions,double>   domainOffset,
+        const tarch::la::Vector<Dimensions,double>   domainSize,
+        const std::bitset<Dimensions>                periodicBC
     );
   } // namespace particles
 } // namespace toolbox

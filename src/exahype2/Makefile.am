@@ -1,6 +1,3 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
-
 AUTOMAKE_OPTIONS = subdir-objects
 
 if UseExaHyPE
@@ -9,15 +6,11 @@ if UseExaHyPE
 endif
 
 ExaHyPE2Sources = \
-  exahype2.cpp \
-  UserInterface.cpp \
-  UnitTests.cpp \
   CellData.cpp \
   CellAccess.cpp \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
   LoadBalancingConfiguration.cpp \
-  NonCriticalAssertions.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
   PrecisionControl.cpp \
@@ -35,27 +28,30 @@ ExaHyPE2Sources = \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
-  dg/fluxaverage/FluxAverage.cpp \
-  dg/laxfriedrichs/LaxFriedrichs.cpp \
   dg/rusanov/Rusanov.cpp \
-  dg/rusanov/tests/RiemannTest.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
   dg/tests/TestUtils.cpp \
+  enumerator/AoSLexicographicEnumerator.cpp \
+  enumerator/SoALexicographicEnumerator.cpp \
+  enumerator/SingleDoFEnumerator.cpp \
+  enumerator/AoSoALexicographicEnumerator.cpp \
+  enumerator/FaceAoSLexicographicEnumerator.cpp \
   fd/BoundaryConditions.cpp \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
-  fd/fd4/LoopBody.cpp \
-  fd/fd4/FD4_patchwise_functors.cpp \
-  fd/tests/SommerfeldBCTest.cpp\
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
+  fd/tests/SommerfeldBCTest.cpp\
   fv/tests/InterpolationRestrictionTest.cpp \
+  fd/fd4/LoopBody.cpp \
+  fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/rusanov.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
+  dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 

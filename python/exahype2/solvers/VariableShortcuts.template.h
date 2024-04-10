@@ -40,7 +40,6 @@ public:
 
   {% for VARIABLE_NO in range(0, VARIABLE_NAMES|length) %}
     static constexpr int {{VARIABLE_NAMES[VARIABLE_NO]}} = {{VARIABLE_POSITIONS[VARIABLE_NO]}};
-    #define VARS_{{VARIABLE_NAMES[VARIABLE_NO]}} {{VARIABLE_POSITIONS[VARIABLE_NO]}}
   {% endfor %}
 
   constexpr int operator [] (const int index) const noexcept { return Q[index]; }

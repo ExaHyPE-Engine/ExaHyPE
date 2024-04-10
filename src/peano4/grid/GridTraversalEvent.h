@@ -40,7 +40,8 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoPowerD>  __isVertexParentOfSubtree, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+
 
 
     tarch::la::Vector<Dimensions,double>   getX() const;
@@ -71,6 +72,11 @@ struct peano4::grid::GridTraversalEvent {
     bool   getIsParentVertexLocal(int index) const;
     void   setIsParentVertexLocal(int index, bool value);
     void   flipIsParentVertexLocal(int index);
+    std::bitset<TwoPowerD>   getIsVertexParentOfSubtree() const;
+    void   setIsVertexParentOfSubtree(const std::bitset<TwoPowerD>&  value);
+    bool   getIsVertexParentOfSubtree(int index) const;
+    void   setIsVertexParentOfSubtree(int index, bool value);
+    void   flipIsVertexParentOfSubtree(int index);
     std::bitset<TwoTimesD>   getIsFaceLocal() const;
     void   setIsFaceLocal(const std::bitset<TwoTimesD>&  value);
     bool   getIsFaceLocal(int index) const;
@@ -90,6 +96,11 @@ struct peano4::grid::GridTraversalEvent {
     bool   getIsFaceAdjacentToParallelDomainBoundary(int index) const;
     void   setIsFaceAdjacentToParallelDomainBoundary(int index, bool value);
     void   flipIsFaceAdjacentToParallelDomainBoundary(int index);
+    std::bitset<ThreePowerD>   getIsAdjacentCellLocal() const;
+    void   setIsAdjacentCellLocal(const std::bitset<ThreePowerD>&  value);
+    bool   getIsAdjacentCellLocal(int index) const;
+    void   setIsAdjacentCellLocal(int index, bool value);
+    void   flipIsAdjacentCellLocal(int index);
     tarch::la::Vector<TwoPowerD,int>   getVertexDataFrom() const;
     void   setVertexDataFrom(const tarch::la::Vector<TwoPowerD,int>& value);
     int   getVertexDataFrom(int index) const;
@@ -247,6 +258,12 @@ struct peano4::grid::GridTraversalEvent {
       std::bitset<TwoPowerD>   _isParentVertexLocal;
 #endif
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isVertexParentOfSubtree[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoPowerD>   _isVertexParentOfSubtree;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::pack]]  bool   _isFaceLocal[TwoTimesD];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
@@ -265,6 +282,12 @@ struct peano4::grid::GridTraversalEvent {
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isAdjacentCellLocal[ThreePowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<ThreePowerD>   _isAdjacentCellLocal;
 #endif
     tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
     tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;

@@ -1,26 +1,38 @@
-  template <typename ParticleSet>
-  class VertexTask: public tarch::multicore::Task {
-    public:
-      typedef std::function<void( ParticleSet& localParticles,
-                                  ParticleSet& activeParticles )>  Functor;
+#include "peano4/parallel/parallel.h"
 
-      /**
-       * Construct a vertex task
-       *
-       * Memorize the three parameters, and grab a new task number from the
-       * multicore component via
-       */
-      VertexTask(
-        const ParticleSet& localParticles,
-        const ParticleSet& activeParticles,
-        Functor            functor
-      );
-      ~VertexTask();
 
-      virtual bool run() override;
+template <typename ParticleSet>
+int swift2::CellTask<ParticleSet>::TaskTypeId = peano4::parallel::getTaskType("swift2::CellTask<ParticleSet>::");
 
-    private:
-      ParticleSet  _localParticles;
-      ParticleSet  _activeParticles;
-      Functor      _functor;
-  };
+
+template <typename ParticleSet>
+swift2::CellTask<ParticleSet>::CellTask(
+  const peano4::datamanagement::CellMarker&  marker,
+  const ParticleSet&                         localParticles,
+  const ParticleSet&                         activeParticles,
+  Functor                                    functor,
+  bool                                       fuseAndPortToGPU
+):
+  tarch::multicore::Task(
+    fuseAndPortToGPU ? TaskTypeId : tarch::multicore::Task::DontFuse, tarch::multicore::Task::DefaultPriority
+  ),
+  _activeParticles(activeParticles),
+  _localParticles(localParticles),
+  _functor(functor),
+  _marker(marker) {}
+
+
+template <typename ParticleSet>
+swift2::CellTask<ParticleSet>::~CellTask() {}
+
+
+template <typename ParticleSet>
+bool swift2::CellTask<ParticleSet>::run() {
+  _functor(_marker, _localParticles, _activeParticles);
+  for (auto* particle: _localParticles ) {
+    if ( _marker.isContained( particle->getX() ) ) {
+      particle->setCellHasUpdatedParticle(true);
+    }
+  }
+  return false;
+}

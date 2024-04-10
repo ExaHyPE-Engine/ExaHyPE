@@ -32,6 +32,8 @@ toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
 bool rerunPreviousGridSweep() {
   bool result = false;
   {% for PARTICLE in PARTICLE_SPECIES -%}
+  result |= vertexdata::{{PARTICLE}}Set::getNumberOfDropsIntoHorizontalTreeDecomposition()>0;
+
   result |= globaldata::{{PARTICLE}}::getSpecies().rerunPreviousGridSweep();
   {%- endfor %}
   return result;
@@ -99,6 +101,10 @@ void startGridConstructionStep() {
 
 void startIntermediateStep() {
   logTraceIn( "IntermediateStep()" );
+
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  {%- endfor %}
 }
 
 
@@ -119,10 +125,14 @@ void startInitialisationStep() {
 
 
 void startTimeStep() {
+  logTraceIn( "startTimeStep()" );
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
+
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
-  logTraceIn( "TimeStep()" );
+  logTraceOut( "startTimeStep()" );
 }
 
 
@@ -132,22 +142,24 @@ void startPlotStep() {
 
 
 void finishTimeStep() {
+  logTraceIn( "finishTimeStep()" );
+
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
+  logInfo("finishTimeStep()", vertexdata::{{PARTICLE}}Set::printParticleStateStatistics() );
   {%- endfor %}
 
   loadBalancer.finishStep();
 
-  logInfo("TimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
-  logInfo("TimeStep()",
+  logInfo("finishTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
+  logInfo("finishTimeStep()",
     "#local cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalRefinedCells() <<
     ")\t(unrefined/refined)"
    );
-  logInfo("TimeStep()",
+  logInfo("finishTimeStep()",
     "#remote cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteRefinedCells() <<
     ")\t(unrefined/refined)"
@@ -156,7 +168,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceOut( "TimeStep()" );
+  logTraceOut( "finishTimeStep()" );
 }
 
 
@@ -173,8 +185,9 @@ void finishGridConstructionStep() {
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+
+  vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -185,8 +198,9 @@ void finishInitialisationStep() {
 void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -205,6 +219,11 @@ void finishPlotStep() {
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
+
+  vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
+  if (vertexdata::{{PARTICLE}}Set::registeredAnyResorting()) {
+    logInfo( "finishIntermediateStep()", vertexdata::{{PARTICLE}}Set::printReassignmentStatistics() );
+  }
   {%- endfor %}
   logTraceOut( "IntermediateStep()" );
 }

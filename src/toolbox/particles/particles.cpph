@@ -1,12 +1,13 @@
 #include "tarch/la/VectorVectorOperations.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 
 template <typename Iterator>
-Iterator toolbox::particles::particleIsDuplicate(
-  const typename Iterator::value_type& particle, Iterator begin, const Iterator& end
-) {
+Iterator toolbox::particles::particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end) {
+  static tarch::logging::Log _log( "toolbox::particles" );
   while (begin != end) {
     if (tarch::la::equals((*begin)->getX(), particle->getX(), SpatialDuplicateTolerance)) {
+      logDebug( "particleIsDuplicate(...)", "particles " << particle->toString() << " and " << (*begin)->toString() << " are the same" );
       return begin;
     }
     begin++;
@@ -17,12 +18,9 @@ Iterator toolbox::particles::particleIsDuplicate(
 
 template <typename Particle>
 bool toolbox::particles::particleWillStayWithinComputationalDomain(
-  const Particle&                              particle,
-  const tarch::la::Vector<Dimensions, double>& domainOffset,
-  const tarch::la::Vector<Dimensions, double>& domainWidth
+  const Particle& particle, const tarch::la::Vector<Dimensions, double>& domainOffset, const tarch::la::Vector<Dimensions, double>& domainWidth
 ) {
-  return particle.getParallelState() == Particle::ParallelState::Local
-         and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
+  return particle.getParallelState() == Particle::ParallelState::Local and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
          and tarch::la::allSmallerEquals(particle.getX(), domainOffset + domainWidth);
 }
 
@@ -31,7 +29,8 @@ template <typename Particle, typename ParticleSet>
 void toolbox::particles::insertParticlesIntoCell(
   const peano4::datamanagement::CellMarker&              marker,
   const std::vector<Particle*>&                          newParticles,
-  peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
+  peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
+  int                                                    spacetreeId
 ) {
   for (auto& p : newParticles) {
     insertParticleIntoCell(marker, p, fineGridVertices);
@@ -41,31 +40,24 @@ void toolbox::particles::insertParticlesIntoCell(
 
 template <typename Particle, typename ParticleSet>
 void toolbox::particles::insertParticleIntoCell(
-  const peano4::datamanagement::CellMarker&              marker,
-  Particle*                                              newParticle,
-  peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
+  const peano4::datamanagement::CellMarker& marker, Particle* newParticle, peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices, int spacetreeId
 ) {
   static tarch::logging::Log _log("toolbox::particles");
   std::bitset<Dimensions>    targetVertex;
   for (int d = 0; d < Dimensions; d++) {
     assertion4(
-      tarch::la::greaterEquals(newParticle->getX()(d), marker.x()(d) - marker.h()(d) / 2.0),
-      marker.toString(),
-      newParticle->toString(),
-      marker.x()(d) - marker.h()(d) / 2.0,
-      d
+      tarch::la::greaterEquals(newParticle->getX()(d), marker.x()(d) - marker.h()(d) / 2.0), marker.toString(), newParticle->toString(), marker.x()(d) - marker.h()(d) / 2.0, d
     );
     assertion4(
-      tarch::la::smallerEquals(newParticle->getX()(d), marker.x()(d) + marker.h()(d) / 2.0),
-      marker.toString(),
-      newParticle->toString(),
-      marker.x()(d) + marker.h()(d) / 2.0,
-      d
+      tarch::la::smallerEquals(newParticle->getX()(d), marker.x()(d) + marker.h()(d) / 2.0), marker.toString(), newParticle->toString(), marker.x()(d) + marker.h()(d) / 2.0, d
     );
     targetVertex[d] = newParticle->getX()(d) > marker.x()(d);
   }
 
-  newParticle->setNewParallelState(Particle::NewParallelState::Local);
+  assertion3( tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())), marker.toString(), newParticle->toString(), spacetreeId );
+
+  newParticle->setParallelState(Particle::ParallelState::Local);
+  newParticle->setCellH(marker.h());
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
 
@@ -76,4 +68,15 @@ void toolbox::particles::insertParticleIntoCell(
       << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")"
   );
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
+
+  toolbox::particles::assignmentchecks::assignParticleToVertex(
+    toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
+    newParticle->getX(),
+    true, // is local
+    marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions, double>(targetVertex), marker.h()),
+    marker.h(),
+    spacetreeId,
+    "toolbox::particles::insertParticleIntoCell()",
+    true
+  );
 }

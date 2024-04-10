@@ -1,5 +1,3 @@
-# This file is part of the Peano project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
 #
 # Recreate build environment:
 # ---------------------------
@@ -23,7 +21,7 @@
 # ---------------------------
 #   make clean
 #   make distclean
-#   git clean -xf
+#   git clean -xdf
 #   rm -rf submodules
 #
 # Summary:
@@ -66,7 +64,7 @@ AC_PREFIX_DEFAULT("libs")
 #
 # This is just a sanity check whether the right files/directories do exist
 #
-AC_CONFIG_SRCDIR([src/peano4/peano4.cpp])
+AC_CONFIG_SRCDIR([src/peano4/peano.cpp])
 
 #
 # Pipe system-specific findings into a file config.h
@@ -102,26 +100,26 @@ srcdir_full_path=`cd $srcdir && pwd`
 # Define all the compiler and linker variables of Peano
 # ===============================================================
 #
-CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 -DNDEBUG "
-CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics -DNDEBUG "
+CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 "
+CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics "
 CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g "
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g -DNDEBUG "
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g "
 CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0 "
 
-CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 -DNDEBUG "
-CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics -DNDEBUG "
+CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 "
+CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics "
 CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g -DNDEBUG "
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g "
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 
 # Note: the flag "-g" is essentially a flag for the compiler driver.
 # Given as a linker flag, the linker does not complain but it will be ignored.
 # Taken from GNU ld documentation: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
+LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
+LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src "
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src "
 
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
 LDADD_PEANO_2D_STATS="   -lPeano4Core2d_stats   -lTarch_stats"
@@ -155,11 +153,11 @@ AC_ARG_WITH(
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
-      cpp)    AC_MSG_RESULT([build with C++ threading support]);     multithreading=cpp ;;
+      cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
       tbb)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb ;;
-      omp)    AC_MSG_RESULT([build with OpenMP]);                    multithreading=omp ;;
+      omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
       sycl)   AC_MSG_RESULT([build with SYCL tasking on host]);      multithreading=sycl ;;
-      *)      AC_MSG_FAILURE([Unrecognised multithreading target. Use omp, cpp, tbb or sycl to define target.]); multithreading=false ;;
+      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
     esac
   ],
   [
@@ -174,7 +172,6 @@ if test "$multithreading" == cpp; then
 fi
 
 if test "$multithreading" == tbb; then
-  AC_CHECK_HEADERS([tbb/tbb.h],[],[AC_MSG_WARN([header <tbb/tbb.h> not found])])
   AC_DEFINE([SharedTBB], [1], [SharedTBB])
 fi
 
@@ -254,7 +251,6 @@ if test "$gpu" == omp; then
 fi
 
 if test "$gpu" == sycl; then
-  AC_CHECK_HEADERS([CL/sycl.hpp],[],[AC_MSG_WARN([header <CL/sycl.hpp> not found])])
   AC_DEFINE([GPUOffloadingSYCL], [1], [GPUOffloadingSYCL])
 fi
 
@@ -303,7 +299,7 @@ if test "$gpu" == cuda; then
     AC_SUBST(NVCC)
     AC_SUBST(CUDA_PATH)
   else
-    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit.])
+    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit])
   fi
 
   CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CUDA_INCLUDE_FLAGS"
@@ -486,6 +482,28 @@ fi
 
 
 #
+# OPENBLAS
+# This is needed by LAPACK and libxsmmjit, so we enable/disable
+# here, make sure we add "-lopenblas" to LIBS, and do not 
+# allow configuring --with-lapack or --with-libxsmm without
+# it
+#
+AC_ARG_WITH(openblas,
+  AS_HELP_STRING([--with-openblas],[enable OpenBLAS [default=false]]),
+  [ AC_MSG_CHECKING(for openblas)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_openblas=false ;;
+      *)     AC_MSG_RESULT(yes);   use_openblas=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for openblas); AC_MSG_RESULT(no); use_openblas=false ])
+AM_CONDITIONAL([UseOpenblas],[test "x$use_openblas" = xtrue])
+
+if test "$use_openblas" == true; then
+  AC_DEFINE([UseOpenblas], [UseOpenblas], [UseOpenblas])
+fi
+
+
+#
 # LIBXSMM
 #
 AC_ARG_WITH(libxsmm,
@@ -505,6 +523,8 @@ fi
 
 #
 # LIBXSMM JIT
+# 
+# Check to see if user enabled openblas...
 #
 AC_ARG_WITH(libxsmmjit,
   AS_HELP_STRING([--with-libxsmmjit],[enable LIBXSMM JIT [default=false]]),
@@ -517,7 +537,11 @@ AC_ARG_WITH(libxsmmjit,
 AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
 
 if test "$use_libxsmmJIT" == true; then
+  if test "$use_openblas" == false; then
+  AC_MSG_ERROR([LIBXSMM JIT requires OpenBlas. Re-reun with --with-openblas])
+  else
   AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
+  fi
 fi
 
 
@@ -554,6 +578,28 @@ AM_CONDITIONAL([UseEigen],[test "x$use_Eigen" = xtrue])
 
 if test "$use_Eigen" == true; then
   AC_DEFINE([UseEigen], [UseEigen], [UseEigen])
+fi
+
+
+#
+# LAPACK
+#
+AC_ARG_WITH(lapack,
+  AS_HELP_STRING([--with-lapack],[enable LAPACK [default=false]]),
+  [ AC_MSG_CHECKING(for lapack)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_lapack=false ;;
+      *)     AC_MSG_RESULT(yes);   use_lapack=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for lapack); AC_MSG_RESULT(no); use_lapack=false ])
+AM_CONDITIONAL([UseLapack],[test "x$use_lapack" = xtrue])
+
+if test "$use_lapack" == true; then
+  if test "$use_openblas" == false; then
+  AC_MSG_ERROR([Lapack requires OpenBlas. Re-reun with --with-openblas])
+  else
+  AC_DEFINE([UseLapack], [UseLapack], [UseLapack])
+  fi
 fi
 
 
@@ -718,7 +764,7 @@ AM_CONDITIONAL([UseToolboxParticles],[test "x$toolbox_particles" = xtrue])
 # ExaHyPE 2
 #
 AC_ARG_ENABLE(exahype,
-  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE 2 [default=false]]),
+  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE2 [default=false]]),
   [ AC_MSG_CHECKING(for exahype)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_exahype=false ;;
@@ -732,7 +778,7 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 # SWIFT 2
 #
 AC_ARG_ENABLE(swift,
-  AS_HELP_STRING([--enable-swift],[enable SWIFT 2 [default=false]]),
+  AS_HELP_STRING([--enable-swift],[enable SWIFT2 [default=false]]),
   [ AC_MSG_CHECKING(for swift)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_swift=false ;;
@@ -924,6 +970,16 @@ if test "$petsc" != false; then
   if test "$toolbox_finiteelements" == false; then
     AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
   fi
+  AC_CHECK_HEADER([petsc.h], [
+  ], [
+    AC_MSG_ERROR([PETSc headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([petsc], [MatCreate], [
+    PETSC_LIBS="ac_cv_search_MatCreate"
+  ], [
+    AC_MSG_ERROR([PETSc library not found. Did you forget to include -lpetsc to LDFLAGS?])
+  ])
   LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS "
@@ -972,6 +1028,27 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
+fi
+
+
+#
+# OPENBLAS
+#
+if test "$use_openblas" != false; then
+  # Find the lapack header
+  AC_CHECK_HEADER([cblas.h], [
+  ], [
+    AC_MSG_ERROR([OpenBLAS headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([openblas], [cblas_daxpby], [
+    OPENBLAS_LIBS="ac_cv_search_cblas_daxpby"
+  ], [
+    AC_MSG_ERROR([OpenBLAS library not found. Did you forget to include -lopenblas to LDFLAGS?])
+  ])
+  AC_SUBST([OPENBLAS_LIBS])
+  OPENBLAS_INCLUDE_DIR=$(dirname $OPENBLAS_LIBS)
+  AC_SUBST([OPENBLAS_INCLUDE_DIR])
 fi
 
 
@@ -1045,29 +1122,6 @@ if test "$use_libxsmmJIT" != false; then
     cd ../..
   fi
   echo "Finished building LIBXSMM JIT"
-
-  echo "Checking whether OpenBLAS needs to be installed or built"
-  if @<:@ ! -d submodules @:>@; then
-    mkdir submodules
-    echo "Created OpenBLAS directory in submodules"
-  fi
-  if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
-    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while."
-    cd submodules
-    git clone https://github.com/xianyi/OpenBLAS.git
-    cd OpenBLAS
-    cd ../..
-  fi
-
-  # Build OpenBLAS
-    REBUILD_OpenBLAS=true
-  if @<:@ "$REBUILD_OpenBLAS" = true @:>@; then
-    echo "Building OpenBLAS"
-    cd submodules/OpenBLAS
-    make --silent
-    cd ../..
-  fi
-  echo "Finished building OpenBLAS"
 fi
 
 
@@ -1120,6 +1174,29 @@ if test "$use_Eigen" != false; then
     cd eigen
     cd ../..
   fi
+fi
+
+
+#
+# LAPACK
+#
+if test "$use_lapack" != false; then
+  # Find the lapack header
+  AC_CHECK_HEADER([lapacke.h], [
+  ], [
+    AC_MSG_ERROR([LAPACK headers not found])
+  ])
+  # Check for libraries. The lapack libraries are 
+  # libopenblas, but if this doesn't work, try 
+  # configuring with -llapack
+  AC_CHECK_LIB([openblas], [LAPACKE_dgetrf], [
+    LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
+  ], [
+    AC_MSG_ERROR([LAPACK library not found.])
+  ])
+  AC_SUBST([LAPACK_LIBS])
+  LAPACK_INCLUDE_DIR=$(dirname $LAPACK_LIBS)
+  AC_SUBST([LAPACK_INCLUDE_DIR])
 fi
 
 
@@ -1236,8 +1313,6 @@ AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
 AC_CONFIG_FILES([Makefile
   src/Makefile
-  src/tarch/Makefile
-  src/peano4/Makefile
   src/toolbox/blockstructured/Makefile
   src/toolbox/multiprecision/Makefile
   src/toolbox/finiteelements/Makefile

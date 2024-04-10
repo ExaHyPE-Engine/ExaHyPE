@@ -4,8 +4,12 @@
 
 
 #include <list>
+#include <map>
 
+#include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+
+#include "peano4/datamanagement/VertexMarker.h"
 
 
 namespace toolbox {
@@ -17,10 +21,12 @@ namespace toolbox {
 
 
 /**
- * Abstract base class for all flavours of particle sets
+ * Utility class for all flavours of particle sets
  *
  * Particle sets differ in the way they actually manage the particles. However,
  * they all share common stats, operations, ... This is covered by this class.
+ * The class is used by toolbox.particles.ParticleSet which usually holds
+ * multiple of these classes for different purposes.
  *
  * There's a problem here however: Most of these fields are static fields and
  * hence cannot be modelled as static. If we have them static, they are tied
@@ -35,6 +41,7 @@ namespace toolbox {
  * actual particles sets holds a static attribute of this class. I think that
  * would be a valid implementation, too.
  *
+ *
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -42,29 +49,6 @@ public:
   typedef T DoFType;
 
   typedef std::list<T*> ParticleList;
-
-  /**
-   * Deep copy of particles that have to be sieved
-   *
-   * This routine returns a deep copy of all the particles that are to be
-   * sieved. Use this before you start to traverse your local domain. As
-   * it is a deep copy, you have to invoke deleteParticles() on the result.
-   * The rationale behind the deep copying is as follows: Individual
-   * threads run through their subdomain in parallel and they should not
-   * compete for a global sieve set. At the same time, you want to
-   * eliminate a particle from the sieve set as soon as you have worked it
-   * in: No code should check that particle again, and you definitely don't
-   * want to insert it multiple times. So I make each thread (subtree) work
-   * with a sieve set of its own which it can manipulate as it wants. At
-   * the end of the traversal, it will delete all remaining particles, i.e.
-   * kill all those deep copies that were not relevant to the local
-   * partition.
-   *
-   * @see deleteParticles() to clean up the local copy.
-   * @see _particlesThatHaveToBeSieved which is the container from which we
-   *   create a deep copy.
-   */
-  //    ParticleList getSievedParticlesForNextGridTraversal() const;
 
   /**
    * Get all the global sieve data consistent
@@ -130,8 +114,11 @@ public:
    *
    * The routine is thread-safe. The object does not keep any kind of
    * statistics. You have to maintain stats on your own if you need them.
+   * However, it only uses the lock, i.e. is thread-safe for
+   * originatingTree==GlobalSort.
    */
   void addParticleThatCanNotBeLiftedWithinItsTree(T*);
+
 
   /**
    * Get particles that are to be sieved into one vertex
@@ -141,10 +128,14 @@ public:
    * particleList, as it returns the particles that are to be sieved and
    * removes them from the current set.
    *
-   * All the particles in the result set have the parallel state Virtual,
-   * as we have to assume that they have been non-local on the current rank
-   * so far. The new parallel state is not altered, as this is the job of
-   * the action set UpdateParallelSet.
+   * In line with peano4.toolbox.particles.Particle, we do not alter the
+   * parallel state. That's the job of whoever calls this routine. Most
+   * action sets (notably our sorting action sets) will invoke the boundary
+   * merger and this merger will then take care of the parallel flag.
+   *
+   * All the particles in the result set are assigned the correct mesh
+   * size h of the corresponding mesh into which we sieve it. So this
+   * attribute is changed.
    *
    *
    * ## Thread safety
@@ -158,14 +149,29 @@ public:
    * particles which have not been sieved by a local thread. As the list
    * had been a deep copy, we'd otherwise create a memory leak.
    *
-   *
    * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
    *   roll-over of particles that cannot be lifted into particles that have
    *   to be sieved.
    * @see ::toolbox::particles::sieveParticle() for the sieve logic.
    * @see deleteParticles() for the deletion of deep copies.
+   *
+   * @param originatingTree Number of tree (positive integer) or GlobalSort. It
+   *   indicates where the particles should come from, i.e. are they form a
+   *   specific tree or some particles that we have to sort globally.
+   *
+   * @param removeReturnedParticlesFromSet If this field is set, we remove the
+   *   particles from the underlying set before we return them. That is, the
+   *   underlying set on which we call getParticlesToBeSievedIntoVertex()
+   *   shrinks monotonously. If you set it to false, the particles will reside
+   *   within the set, but the set will eventually delete them, as it updates
+   *   its content globally. Therefore, you should not use the returned
+   *   particles directly but rather create copies.
    */
-  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool  removeReturnedParticlesFromSet,
+    bool  onlyReturnParticlesThatWillBeLocal
+  );
 
   /**
    * Fine out how many particles still to sieve
@@ -176,6 +182,12 @@ public:
    * been done.
    */
   bool hasParticlesToBeSievedIntoVertices() const;
+
+  /**
+   * hasParticlesToBeSievedIntoVertices() is equivalent to checking if this
+   * routine returns something greater than 0.
+   */
+  int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
 
 
 private:
@@ -198,7 +210,7 @@ private:
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
 
-  ParticleList _particlesThatCanNotBeLiftedWithinTheirTree;
+  ParticleList  _particlesThatCanNotBeLiftedWithinTheirTree;
 
   /**
    * Particles that should be sieved
@@ -211,7 +223,7 @@ private:
    *
    * The list is populated by finishedTraversal().
    */
-  ParticleList _particlesThatHaveToBeSieved;
+  ParticleList  _particlesThatHaveToBeSieved;
 };
 
 

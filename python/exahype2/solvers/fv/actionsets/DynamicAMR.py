@@ -245,22 +245,19 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
           fineGridFace""" + solver._name + """QNew.value + serialisedDoF * {{UNKNOWNS}},
           ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
           ::exahype2::fv::getVolumeSize( marker.h(), {{DOFS_PER_AXIS}} ),
-          dof,
-          true
+          true // grid grid is constructed
         );
         repositories::{{SOLVER_INSTANCE}}.initialCondition(
           fineGridFace""" + solver._name + """QOld.value + serialisedDoF * {{UNKNOWNS}},
           ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
           ::exahype2::fv::getVolumeSize( marker.h(), {{DOFS_PER_AXIS}} ),
-          dof,
-          true
+          true // grid grid is constructed
         );
         repositories::{{SOLVER_INSTANCE}}.initialCondition(
           fineGridFace""" + solver._name + """QUpdate.value + serialisedDoF * {{UNKNOWNS}},
           ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
           ::exahype2::fv::getVolumeSize( marker.h(), {{DOFS_PER_AXIS}} ),
-          dof,
-          true
+          true // grid grid is constructed
         );
       }
     }

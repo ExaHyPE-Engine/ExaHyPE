@@ -21,7 +21,7 @@ namespace exahype2 {
     /**
      * Wrapper around CellData
      *
-     * Within ExaHyPE 2, data that has to be processed by the GPU is
+     * Within ExaHyPE2, data that has to be processed by the GPU is
      * initially on the heap allocated via ::tarch::accelerator::ManagedSharedAcceleratorDeviceMemory.
      * This holds for the core user data. It does not hold for any meta data.
      *
@@ -64,8 +64,8 @@ namespace exahype2 {
      *
      * For all the other data, which we have to copy explicitly, we have
      * to decide if we want to allocate these data explicitly on the
-     * device or make it shared, too. To be "clean", we put everything into
-     * the shared memory, so we can use simple memcopies on the host to
+     * device or make it shared, too. To be "clean", I put everything into
+     * the shared memory, so I can use simple memcopies on the host to
      * get everything set up properly.
      */
     struct GPUUSMCellData {
@@ -125,10 +125,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUUSMCellData(
-        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, int targetDevice
+        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, int targetDevice);
+      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
 
     /**
@@ -218,11 +218,12 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUCopyCellData(
-        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, int targetDevice
+        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, int targetDevice);
+      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
+
 
     /**
      * Wrapper around CellData
@@ -254,6 +255,7 @@ namespace exahype2 {
       int                                      numberOfCells;
       double**                                 QOut;
       double*                                  maxEigenvalue;
+
 
       double* QInCopyInOneHugeBuffer;
       double* QOutCopyInOneHugeBuffer;
@@ -300,10 +302,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUManagedCellData(
-        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, int targetDevice
+        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, int targetDevice);
+      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
   } // namespace fv::rusanov::sycl
 } // namespace exahype2

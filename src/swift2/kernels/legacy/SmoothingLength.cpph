@@ -1,0 +1,243 @@
+#include "equation_of_state.h"
+#include "hydro_dimensions.h"
+#include "kernel_hydro.h"
+
+template <typename Particle>
+void swift2::kernels::legacy::
+  hydro_update_smoothing_length_and_rerun_if_required(Particle* localParticle) {
+  if (localParticle->getSmoothingLengthConverged())
+    return;
+
+  // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
+  using namespace swift2::kernels::legacy::kernelHydro;
+
+  static tarch::logging::Log _log("swift2::kernels");
+
+  /* Grab static parameters */
+  const int hydro_dimensions = localParticle->getHydroDimensions();
+
+  /* Initialize some variables */
+  double hydro_h_max = std::min(
+    localParticle->getSmlMax(),
+    localParticle->getSearchRadius() / kernel_gamma
+  );
+  const double hydro_h_min           = localParticle->getSmlMin();
+  const double sml_tolerance_epsilon = localParticle->getSmlTolerance();
+  const double eta                   = localParticle->getEtaFactor();
+  const double eta_dim = ::swift2::kernels::legacy::hydroDimensions::
+    pow_dimension(eta);
+  const int max_iterations = localParticle->getSmlMaxIterations();
+
+  double left  = hydro_h_min;
+  double right = hydro_h_max;
+
+  // Now on to the smoothing length computation
+  const double h_old     = localParticle->getSmoothingLength();
+  const double h_old_dim = legacy::hydroDimensions::pow_dimension(h_old);
+  const double h_old_dim_minus_one = legacy::hydroDimensions::
+    pow_dimension_minus_one(h_old);
+  double h_new;
+
+  bool hasNoNeighbours = false;
+
+  const int iteration = localParticle->getSmoothingLengthIterCount();
+  localParticle->setSmoothingLengthIterCount(iteration + 1);
+
+
+  // Condition changes here compared to swift1 because we've done
+  // hydro_end_density already
+  if (std::abs(localParticle->getWcount() - kernel_root) < 1.e-5 * h_old_dim * kernel_root) {
+
+    // No neighbours case
+    hasNoNeighbours = true;
+
+    // Double h and try again
+    h_new = 2.f * h_old;
+
+    // for now, make sure this fails even without debug mode
+    logError(
+      "hydro_update_smoothing_length_and_rerun_if_required",
+      "Caught situation with no neighbours. Needs exception handling. part="
+        << localParticle->toString()
+    );
+
+    localParticle->setSmoothingLengthConverged(false);
+    return;
+
+  } else {
+
+    // swift1 calls hydro_end_density here. We did that already.
+
+    // If we are using alternative definition of number of neighbours, e.g.
+    // mass weighted, then we'd need to make adaptations here.
+    // p->density.wcount = p->rho * inv_mass;
+    // p->density.wcount_dh = p->density.rho_dh * inv_mass;
+
+    // Compute one step of the Newton-Raphson scheme
+    const double wcount   = localParticle->getWcount();
+    const double n_sum    = wcount * h_old_dim;
+    const double n_target = eta_dim;
+    const double f        = n_sum - n_target;
+    const double f_prime  = localParticle->getWcount_dh() * h_old_dim
+                           + hydro_dimensions * wcount * h_old_dim_minus_one;
+
+    // Improve the bisection bounds
+    if (n_sum < n_target) {
+      left = std::max(left, h_old);
+    } else if (n_sum > n_target) {
+      right = std::min(right, h_old);
+    }
+
+    assertion4(
+      //     localParticle->getIsBoundaryParticle()
+      //     or
+      (left <= right),
+      "Invalid left and right",
+      left,
+      right,
+      localParticle->toString()
+    );
+
+    // Skip if h is already h_max and we don't have enough neighbours
+    // Same if we are below h_min
+    if (((h_old >= hydro_h_max) && (f < 0.)) || ((h_old <= hydro_h_min) && (f > 0.))) {
+
+      // Temporary warning until I make sure everything's fine with the search
+      // radius
+      logWarning(
+        "hydro_update_smoothing_length_and_rerun_if_required",
+        "particle wants a smaller or bigger SML than it's allowed to have."
+          << " partID " << localParticle->getPartid() << " h_old " << h_old
+          << " h_min " << hydro_h_min << " h_max " << hydro_h_max << " f " << f
+      );
+
+      // We have a particle whose smoothing length is already set (wants
+      // to be larger but has already hit the maximum OR wants to be
+      // smaller but has already reached the minimum). So, just give up.
+      // Leave things as they are and don't re-run.
+
+      localParticle->setSmoothingLengthConverged(true);
+      return;
+    }
+
+    // Normal case: Use Newton-Raphson to get a better value of h
+    // Avoid floating point exception from f_prime = 0
+    h_new = h_old - f / (f_prime + std::numeric_limits<double>::min());
+
+    // Be verbose about the particles that struggle to converge
+    // `max_iterations` is currently a user-set variable, with the swift1
+    // choice being 30. You can set that when initialising the SPH particle.
+    // via the python project generation.
+
+    if (iteration > max_iterations - 10) {
+      logWarning(
+        "hydro_update_smoothing_length_and_rerun_if_required",
+        "Smoothing length convergence problem: iteration "
+          << iteration << " part ID " << localParticle->getPartid() << " h_old "
+          << h_old << " h_new " << h_new << " f " << f << " f_prime " << f_prime
+          << " n_sum " << n_sum << " n_target " << n_target << " left " << left
+          << " right " << right
+      );
+    }
+
+    assertion9(
+      !(((f > 0. && (h_new > h_old)) || (f < 0. && (h_new < h_old)))
+        && (h_old < (0.999999 * hydro_h_max))),
+      "Smoothing length correction not going in the right direction",
+      h_new,
+      h_old,
+      f,
+      hydro_h_max,
+      (f > 0. && h_new > h_old),
+      (f < 0. && h_new < h_old),
+      (h_old < 0.999 * hydro_h_max),
+      localParticle->toString()
+    );
+
+    // Safety check: truncate to the range [ h_old/2 , 2h_old ].
+    h_new = std::min(h_new, 2. * h_old);
+    h_new = std::max(h_new, 0.5 * h_old);
+
+    // Verify that we are actually progressing towards the answer
+    h_new = std::max(h_new, left);
+    h_new = std::min(h_new, right);
+  } // if particle has neighbours
+
+
+  // Check whether the particle has an appropriate smoothing length
+  if (std::abs(h_new - h_old) <= sml_tolerance_epsilon * h_old) {
+    // we're done. Note that in SWIFT, they check the other way around.
+    localParticle->setSmoothingLength(h_new);
+    localParticle->setSmoothingLengthConverged(true);
+    return;
+  }
+
+  // Ok, we're not done and need to correct
+
+  // Case where we have been oscillating around the solution
+  if ((h_new == left && h_old == right) || (h_old == left && h_new == right)) {
+
+    // Bisect the remaining interval
+    const double temp
+      = 0.5
+        * (legacy::hydroDimensions::pow_dimension(left) + legacy::hydroDimensions::pow_dimension(right));
+    localParticle->setSmoothingLength(
+      legacy::hydroDimensions::pow_inv_dimension(temp)
+    );
+
+  } else {
+
+    // Normal case
+    localParticle->setSmoothingLength(h_new);
+  }
+
+
+  // If within the allowed range, try again
+  if (localParticle->getSmoothingLength() < hydro_h_max && localParticle->getSmoothingLength() > hydro_h_min) {
+    // SWIFT calls hydro_init_part here. We do that at the start at the loop.
+    // If we reach this point, we need to run again.
+    localParticle->getSpecies().setRerunPreviousGridSweep();
+    localParticle->setSmoothingLengthConverged(false);
+    return;
+
+  } else if (localParticle->getSmoothingLength() >= hydro_h_max) {
+
+    // Ok, this particle is a lost cause...
+    localParticle->setSmoothingLength(hydro_h_max);
+    // Temporary warning. This may not be an error, but just a particle hitting
+    // the limit we impose on it.
+    logWarning(
+      "hydro_update_smoothing_length_and_rerun_if_required",
+      "Got a particle that is lost cause. Setting h = h_max , id="
+        << localParticle->getPartid()
+    );
+    // Do some damage control if no neighbours at all were found
+    // if (has_no_neighbours) {
+    //   ... we already crash if this is the case.
+    //   logError("hydro_update_smoothing_length_and_rerun_if_required",
+    //   "Particle also has no neighbours... TODO");
+    // }
+    localParticle->setSmoothingLengthConverged(true);
+  } else if (localParticle->getSmoothingLength() <= hydro_h_min) {
+    // Ok, this particle is a lost cause...
+    localParticle->setSmoothingLength(hydro_h_min);
+    // Temporary warning. This may not be an error, but just a particle hitting
+    // the limit we impose on it.
+    logWarning(
+      "hydro_update_smoothing_length_and_rerun_if_required",
+      "Got a particle that is lost cause. Setting h = h_min , id="
+        << localParticle->getPartid()
+    );
+    localParticle->setSmoothingLengthConverged(true);
+    // if (hasNoNeighbours){
+    //   logError("hydro_update_smoothing_length_and_rerun_if_required",
+    //   "Particle also has no neighbours... TODO");
+    // }
+
+  } else {
+    logError(
+      "hydro_update_smoothing_length_and_rerun_if_required",
+      "Fundamental problem with the smoothing length iteration logic."
+    );
+  }
+}

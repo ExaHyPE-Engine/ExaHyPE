@@ -1,6 +1,3 @@
-# This file is part of the Peano project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
-
 cmake_minimum_required(VERSION 3.20.5)
 
 set(META_PROJECT_NAME "Peano")
@@ -21,7 +18,8 @@ set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
 project(${META_PROJECT_NAME}
   DESCRIPTION ${META_PROJECT_DESCRIPTION}
   HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
-  LANGUAGES C CXX)
+  LANGUAGES C CXX
+)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -176,20 +174,11 @@ if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
   target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
   target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
-  endif()
+endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-
-  # Workaround for Intel oneAPI. TODO: Fix this:
-  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to get the full command which is failing"
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    target_compile_options(project_options INTERFACE -fopenmp)
-    target_link_libraries(project_options INTERFACE -fopenmp)
-  else()
-    #target_link_libraries(project_options INTERFACE "-Wl,--copy-dt-needed-entries")
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
-  endif()
+  target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)
@@ -356,8 +345,8 @@ option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" OFF)
 option(WITH_NETCDF "Build with NetCDF support" OFF)
-option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
-option(ENABLE_SWIFT "Enable Swift 2" OFF)
+option(ENABLE_EXAHYPE "Enable ExaHyPE2" OFF)
+option(ENABLE_SWIFT "Enable Swift2" OFF)
 option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
@@ -432,21 +421,33 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
-foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
-  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
-    execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+function(create_symlinks source_dir dest_dir)
+  file(MAKE_DIRECTORY "${dest_dir}")
+  file(GLOB_RECURSE items LIST_DIRECTORIES TRUE RELATIVE "${source_dir}" "${source_dir}/*")
+  foreach(item IN LISTS items)
+    set(source_dir_item "${source_dir}/${item}")
+    set(dest_dir_item "${dest_dir}/${item}")
+    if(IS_DIRECTORY ${source_dir_item})
+      file(MAKE_DIRECTORY "${dest_dir_item}")
+    else()
+      get_filename_component(dest_dir_item_path "${dest_dir_item}" DIRECTORY)
+      file(RELATIVE_PATH relative_source_item "${dest_dir_item_path}" "${source_dir_item}")
+      execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${relative_source_item}" "${dest_dir_item}")
+    endif()
+  endforeach()
+endfunction()
+
+list(APPEND DIRECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications" "documentation")
+foreach(directory IN LISTS DIRECTORIES_TO_LINK_OVER)
+  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${directory}")
+    create_symlinks("${CMAKE_SOURCE_DIR}/${directory}" "${CMAKE_BINARY_DIR}/${directory}")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${directory}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
   endif()
 endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
-
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
-  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
-endif()
 
 add_subdirectory(src)
 

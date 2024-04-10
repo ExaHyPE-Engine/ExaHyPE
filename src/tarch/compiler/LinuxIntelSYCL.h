@@ -30,7 +30,15 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
-#undef OpenMPTaskGroup
+#define OpenMPDependenciesInTaskWait
+
+/**
+ * This flag had been undefined before.
+ *
+ * However, I do not understand why SYCL should not support the task group in
+ * OpenMP.
+ */
+#define OpenMPTaskGroup
 
 #define PragmaPush
 #define SilenceUnknownAttribute

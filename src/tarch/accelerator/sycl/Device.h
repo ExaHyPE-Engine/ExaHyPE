@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include "config.h"
+
 
 /**
  * @page tarch_accelerator_SYCL SYCL support
@@ -130,33 +132,35 @@
 
 #include <set>
 
-namespace tarch::accelerator {
-  /**
-   * Get a SYCL queue
-   *
-   * The Device singleton instantiates all SYCL queues. You can query the
-   * singleton for the total number of (logical) devices. Per device,
-   * we hold one SYCL queue persistently. You can gain access to this
-   * one queue via this getter.
-   *
-   * number is a logical number, i.e. it is a number from 0 to
-   * getNumberOfSYCLQueues(). The actual device number might be totally
-   * different.
-   *
-   * If you use SYCL on the host, too, you should not access this queue
-   * throught he accelerator namespace, but use the tarch::multicore
-   * namespace.
-   *
-   * @see tarch::multicore::getHostSYCLQueue()
-   */
-  sycl::queue& getSYCLQueue(int number);
+namespace tarch {
+  namespace accelerator {
+    /**
+     * Get a SYCL queue
+     *
+     * The Device singleton instantiates all SYCL queues. You can query the
+     * singleton for the total number of (logical) devices. Per device,
+     * we hold one SYCL queue persistently. You can gain access to this
+     * one queue via this getter.
+     *
+     * number is a logical number, i.e. it is a number from 0 to
+     * getNumberOfSYCLQueues(). The actual device number might be totally
+     * different.
+     *
+     * If you use SYCL on the host, too, you should not access this queue
+     * throught he accelerator namespace, but use the tarch::multicore
+     * namespace.
+     *
+     * @see tarch::multicore::getHostSYCLQueue()
+     */
+    sycl::queue& getSYCLQueue( int number );
 
-  /**
-   * Write available queues to cout. The logging interface is not used, as
-   * the logging might not be up when you invoke this routine for the first
-   * time.
-   */
-  void listSYCLQueues();
-} // namespace tarch::accelerator
+    /**
+     * Write available queues to cout. The logging interface is not used, as
+     * the logging might not be up when you invoke this routine for the first
+     * time.
+     */
+    void listSYCLQueues();
+  }
+}
 
 #endif

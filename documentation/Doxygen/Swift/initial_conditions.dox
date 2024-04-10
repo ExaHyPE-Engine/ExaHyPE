@@ -60,7 +60,7 @@ simulations:
 
 Nothing stops you from additing further action sets to
 algorithm_step_initial_conditions. Some scenarios, for example, hard code
-the initial condition of further particles. The @ref benchmarks_swift2_planet_orbit "planet orbit benchmark"
+the initial condition of further particles. The @ref tests_swift2_planet_orbit "planet orbit benchmark"
 is such an example, where no input files are required.
 
 
@@ -90,7 +90,7 @@ meaningful attribute values.
 
 If you have to calculate particle attributes after the particles are thrown
 into the domain, these calculations are best modelled as
-@ref swift_particle_lifecycle "steps within the particle lifecycle".
+@ref swift_particle_new_solver "steps within the particle lifecycle".
 
 
 <!-- Use 'section' command here to be able to reference the section somewhere

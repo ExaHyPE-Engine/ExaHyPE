@@ -9,7 +9,6 @@
 #include "config.h"
 #include "Constants.h"
 #include "{{MAIN_NAME}}.h"
-#include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UnitTests.h"
 #include "exahype2/UserInterface.h"
 #include "observers/CreateGrid.h"
@@ -18,7 +17,7 @@
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
-#include "peano4/peano4.h"
+#include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "repositories/DataRepository.h"
 #include "repositories/SolverRepository.h"
@@ -32,11 +31,13 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/otter.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
+
 
 {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
@@ -76,7 +77,7 @@ bool selectNextAlgorithmicStep() {
   static int globalNumberOfTrees = 0;
   bool       continueToSolve     = true;
 
-  if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
+  if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
     );
@@ -84,7 +85,7 @@ bool selectNextAlgorithmicStep() {
     logError(
       "selectNextAlgorithmicStep()", "Non-critical assertion has been triggered in code. Dump final state and terminate."
     );
-  } else if (exahype2::hasNonCriticalAssertionBeenViolated()) {
+  } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
   } else if (gridConstructed and not gridBalanced) {
     if (not repositories::loadBalancer.isEnabled(true) and not repositories::loadBalancer.hasSplitRecently()) {
@@ -473,7 +474,7 @@ int main(int argc, char** argv) {
   // Do this early, so people can use logInfo properly.
   repositories::initLogFilters();
 
-  exahype2::initNonCritialAssertionEnvironment();
+  tarch::initNonCriticalAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
@@ -525,16 +526,21 @@ int main(int argc, char** argv) {
 #endif
 
 #if defined(UseSmartMPI)
-      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
 #else
-      const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 #endif
 
       if (isGlobalMaster) {
         while (selectNextAlgorithmicStep()) {
+          watch.start();
           step();
+          watch.stop();
+
+          timePerMeshSwepMeasurement.setValue(watch.getCalendarTime());
+          logInfo("main()", "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timePerMeshSwepMeasurement.getValue() );
         }
 
         logInfo("main()", "Terminated successfully");
@@ -581,7 +587,7 @@ int main(int argc, char** argv) {
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
-  exahype2::shutdownNonCritialAssertionEnvironment();
+  tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;

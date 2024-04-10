@@ -29,8 +29,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     /**
      * Refinement criterion
      *
-     * ExaHypE 2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e., if your
+     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
+     * All (dynamic) AMR is constrained by these values, i.e. if your
      * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
      * automatically refine. If you try to refine further than the
      * minimum mesh size, ExaHyPE 2 will ignore any refinement.
@@ -44,7 +44,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      *  to a valid value throughout grid construction. That is: If
      *  t equals 0.0, you cannot assume that Q is properly initialised.
      *  Therefore, Q usually is only evaluated by dynamic AMR codes
-     *  which make the solution follow.
+     *  which make the solution follow
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],

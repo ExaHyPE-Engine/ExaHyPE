@@ -126,9 +126,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
       activeParticles.push_front( p );
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      if ( marker.isContained( p->getX() ) ) {
-        localParticles.push_front( p );
-      }
+      localParticles.push_front( p );
     }
   }
 
@@ -177,3 +175,13 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
 """
         )
         return result.render(**self.d)
+
+    def get_attributes(self):
+        return """
+  int  _spacetreeId;
+"""
+
+    def get_constructor_body(self):
+        return """
+            _spacetreeId              = treeNumber;
+          """

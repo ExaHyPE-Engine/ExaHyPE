@@ -1,0 +1,230 @@
+/**
+
+ @page tutorials_swift2_planet_orbit Planet orbit
+
+
+This simple tutorial runs through the steps that we followed to create the
+@ref tests_swift2_planet_orbit "planet orbit test case", which basically 
+ensures that the AMR underlying Swift 2 works.
+
+@image html two-particles-00.png
+
+
+# High-level code structure
+
+We need Peano's core Python package, the Swift 2 package, and then we employ
+DaStGen 2 which is a tool that allows Peano to write plain C++ classes which 
+hold our particle data, e.g. We will add additional attributes to this data
+set and hence use the DaStGen2 package.
+
+## Create project
+
+First of all, we have to create a project. 
+The project is our wrapper of the whole SPH code (which is not really SPH
+but simply a simple Lagrangian model for an object subject to an ODE):
+
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Create project
+
+This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
+
+
+## Configure the overall simulation
+
+Peano will need to know the value of some general properties.
+For more information, consult the documentation of swift2.Project
+and also the @ref page_architecture "remarks on build variants":
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Configure project
+
+
+The call of swift2.Project.set_load_balancing() activates one of Peano's
+generic load balancing strategies. The last line is notably interesting:
+It instructs the Python API to parse the settings of your configure (autotools)
+or CMake run. That is, all the flags that you specified throughout
+@ref page_installation "your installation" will automatically be picked
+up by the code that the Python script will ultimately produce.
+
+## Generate a genuine Peano project
+
+Once all is complete, we generate a Peano project and make it dump 
+the C++ code:
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Create Peano project
+
+After the project is generated, we add the compile constants required
+(see below) and then can dump it into the file system and either compile
+it in place through the Python script, or leave it to the user to type 
+in make.
+
+
+# Particle implementation
+
+## Instantiate particle (and select species)
+
+A particle in Swift is defined by its type which implicitly select
+its numerics. 
+Once instantiated, we say the particle has a ***species***.
+In this simple example,
+we don't really have an interaction radius, so we can take the simplest
+particle with a fixed interaction radius.
+
+We need a leapfrog time integrator rather than an
+explicit Euler to maintain a stable radius. However, we can provide 
+various different schemes and just swap them in an out.
+
+Besides the time stepping
+scheme (which implicitly defines the steps any particle completes per
+time step), each particle guides the size of the underlying adaptive mesh.
+We therefore specify min_h and max_h.
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Instantiate particle with leapfrog ODE integrator
+
+As we set the interaction radius to 
+zero later on, and as we set the particles_per_cell to zero, the code will run
+into a dilemma:
+There will always be one cell in the mesh which hosts one particle which
+violates the zero threshold.
+So the code will aggressively refine until the mesh is smaller than min_h.
+That stops the refinement no matter of the violated particles_pre_cell
+constraint.
+
+
+## Adding additional attributes
+
+So far, our particles are primitive. They will hold a position and a maximum
+search radius, as any particle within Peano's particle toolbox owns these
+properties.
+The integration of choice will add further attributes.
+In the present case, that's speed and acceleration.
+But other than that, the particle so far has no properties.
+We add a few ones:
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Declare additional attributes
+
+
+The package dastgen2.attributes hosts also arrays of doubles and integers and
+booleans. Please note that there is an opportunity to specify accuracies (valid
+bits) for floating point values and upper and lower bounds for integers. Such
+additional information allows Peano in combination with our LLVM modifications
+to produce particularly memory-efficient code.
+
+
+## Injecting the physics
+
+We start with the definition of some constants. 
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Define constants
+
+
+The actual export happens later:
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Export constants
+
+
+## Add the forces
+
+To add the forces, we have attach a C/C++ code snippet to the particle. In our
+present case, the force is hard-coded, i.e. does not depend on other particles.
+It uses some constants that we have previously defined in the Python script.
+Here, we have now two options:
+
+- We can take the C++ code snippet in Python and replace the constant strings
+  in there via a Python format() call. The C++ code then will see the actual
+  constants as hard-coded values.
+- We can use some constants like SUN_X_COORD in the C++ code and define these
+  as proper constants in the generated C++ code.
+
+In the example below, we go down the second route. That means, the code as it
+stands will contain some constants like SUN_X_COORD. We have to ensure that
+these constants are properly exported into the Peano project. Both approaches
+(replacing literals before we dump the code snippet into the Python API and
+defining C++ constants) are fine and work. It is all a matter of taste.
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Particle force
+
+The code now is fully functional, but will not produced any output, as we
+haven't inserted any particle into our computational domain yet. Even if we
+do so, we will only see the particles and not their properties, as the code
+knows nothing about these properties. Please study the script
+benchmarks/swift2/planet-orbit/planet-orbit.py for more documentation how
+these two missing steps are to be realised.
+
+If we had some proper n-body physics, we would use another iterator, i.e. 
+one that runs through the particle pairs.
+
+
+## Set initial conditions
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Initial conditions
+
+## Plot
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Plot
+
+
+
+# A better code structure
+
+The code above is fully functional. One however might argue that the mixture of
+Python code and string-based C++ code is not particularly nice, hardly reusable 
+and difficult to debug: You have to generate the code, compile, parse the error
+and then reconstruct where in the Python script it comes from. It hence would be 
+nicer to define the Physics in a header/implementation file of its own. Once we 
+have a Peano project in Python, we can add further C++ files to its make file.
+That is, we can implement the Physics independently and then add these files to 
+the project manually. This way, we work with Python in the Python scripts and 
+with C++ only in proper C++ classes.
+
+
+
+
+# In-situ analysis features to implement automatic testing/constraints
+
+In-situ analysis of simulations is very important for many sophisticated 
+experiments.
+Swift 2 offers various ways to realise such on-the-fly data analysis.
+We do not really use such an analysis here, but we use the in-situ plug-in
+points to phrase our one fundamental constraint in this example: 
+The particle should not disappear!
+So we basically assess that the orbit is stable (and that there are no bugs).
+
+
+The elegant way to realise in-situ checks is to plug into one of the particle
+steps. 
+In the example below, we take the particle's final reduction step and check, 
+once this one is completed, if our global constraints are still fulfilled:
+
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Validation
+
+
+Following the discussion above, it would be more elegant to derive from the
+baseline class and then to add these steps.
+We don't work with a subclass here.
+"Fortunately", the Euler and leap frog solver here both provide a routine 
+(property setter) to append additional source code to the final reduction.
+
+
+Particles are associated to vertices, and the sets of particles (tied to
+vertices) are organised through instances of toolbox.particles.ParticleSet
+and subclasses thereof.
+This class allows us to query how many local particles we have.
+As we plug into the wrap-up phase of the global reduction, we know that this
+quantity is valid at this point.
+If we worked with MPI, we should guard this check such that it is only 
+performed on the global master.
+
+
+Technically, we realise the validation with a non-critical assertion. 
+This is @ref tarch_logging "a special type of an assertion": 
+If violated, it does ***not*** stop the simulation immediately.
+Instead, it allows the code to finish the current time step,
+then asks it to dump the result, and eventually quits the code.
+For many logical errors, this is better, as we get a snapshot of the last 
+system state.
+ 
+
+
+ */
+

@@ -78,57 +78,50 @@ class ExplicitEulerDynamicSearchRadius(Particle):
         to update position and velocity. We also determine the CFL condition here.
 
         """
+
+        PARTICLE = self.name
+        CFL_FACTOR = self.cfl_factor
+        TIME_STEP_SIZE = self.initial_time_step_size
+        NR_INTERACTION_PARTNERS = self.number_of_interaction_partners
+
         return [
             AlgorithmStep(
                 name="DensityCalculation",
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
                 touch_vertex_first_time_kernel="",
-                cell_kernel="""
-                                         ::swift2::kernels::adoptSearchRadiusAndTriggerRerun<globaldata::{}>(
+                cell_kernel=f"""
+                                         ::swift2::kernels::adoptSearchRadiusAndTriggerRerun<globaldata::{PARTICLE}>(
                                            localParticles,
                                            activeParticles,
-                                           {}
+                                           {NR_INTERACTION_PARTNERS}
                                          );
-                                         """.format(
-                    self.name, self.number_of_interaction_partners
-                ),
+                """,
                 touch_vertex_last_time_kernel="",
-                prepare_traversal_kernel="globaldata::{}::getSpecies().clearRerunPreviousGridSweepFlag();".format(
-                    self.name
-                ),
-                unprepare_traversal_kernel="globaldata::{}::getSpecies().allReduce();".format(
-                    self.name
-                ),
+                prepare_traversal_kernel=f"globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();",
+                unprepare_traversal_kernel=f"globaldata::{PARTICLE}::getSpecies().allReduce();",
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/kernels/ParticleSearchRadiusCalculation.h"
-                                         """,
+                """,
             ),
             AlgorithmStep(
                 name="ForceCalculation",
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="""
-                                         ::swift2::kernels::genericInteraction<globaldata::{}>(
+                cell_kernel=f"""
+                                         ::swift2::kernels::genericInteraction<globaldata::{PARTICLE}>(
                                            localParticles,
                                            activeParticles,
-                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
-                                             {}
+                                           [&] (globaldata::{PARTICLE}* localParticle, const globaldata::{PARTICLE} * const globalParticle) -> void {{
+                                             {self.particle_particle_interaction_over_particle_sets_kernel}
                                            }}
                                          );
-                                         """.format(
-                    self.name,
-                    self.name,
-                    self.name,
-                    self.particle_particle_interaction_over_particle_sets_kernel,
-                ),
+                """,
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
-                                         """,
+                """,
             ),
             AlgorithmStep(
                 name="UpdatePositionAndVelocity",
@@ -136,15 +129,12 @@ class ExplicitEulerDynamicSearchRadius(Particle):
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
                 touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize( assignedParticles );""",
-                prepare_traversal_kernel="""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(
-                    self.name, self.cfl_factor, self.initial_time_step_size
-                ),
+                prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/timestepping/Euler.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
-                                         """,
+                """,
             ),
             AlgorithmStep(
                 name="ReduceGlobalQuantities",
@@ -154,21 +144,16 @@ class ExplicitEulerDynamicSearchRadius(Particle):
                 prepare_traversal_kernel="""
                                          globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                                         """.replace(
-                    "{PARTICLE}", self.name
-                ),
-                unprepare_traversal_kernel="""
+                """,
+                unprepare_traversal_kernel=f"""
                                          globaldata::{PARTICLE}::getSpecies().allReduce();
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                          ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                         """.replace(
-                    "{PARTICLE}", self.name
-                ),
+                """,
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/statistics/Reports.h"
                                          #include "swift2/statistics/Statistics.h"
-                                         """,
+                """,
             ),
         ]
 

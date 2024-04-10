@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import argparse
 
@@ -29,7 +31,7 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="ExaHyPE 2 - CCZ4-GaugeWave benchmarking script"
+        description="ExaHyPE 2 - CCZ4-Performance studies benchmarking script"
     )
     parser.add_argument(
         "-j",
@@ -82,7 +84,7 @@ if __name__ == "__main__":
         dest="cell_size",
         type=float,
         default=1.8,
-        help="Minimal cell size (AMR) or regular mesh cell size (without AMR)",
+        help="Minimal cell size (AMR) or regular mesh cell size (without AMR), default=1.8",
     )
     parser.add_argument(
         "-asserts",
@@ -173,49 +175,45 @@ if __name__ == "__main__":
     # Configure run
     ########################################################################################
     if args.scheduler == "native-no-priorities":
-        project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+        project.set_multicore_orchestration( "tarch::multicore::orchestration::Hardcoded::createNative()" )
         enable_higher_priority_for_FV_tasks = False
         parallelise_interpolation           = KernelParallelisation.NONE
         fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "native":
-        project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+        project.set_multicore_orchestration( "tarch::multicore::orchestration::Hardcoded::createNative()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.NONE
         fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "tailored":
-        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.NONE
         fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "parallel-for":
-        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.PARALLEL_FOR
         fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "subtasks":
-        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.SUBTASKS
         fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "subtasks-and-kernel-parallelisation":
-        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.SUBTASKS
         fv_kernel_parallelisation           = KernelParallelisation.SUBTASKS
     else:
         assert False, "not supported yet"
-
-
-      
+ 
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
         my_primary_solver = FD4SolverWithoutLimiter(name          = "CCZ4SBH",
                                                     patch_size    = FD4PatchSize,
                                                     min_cell_size = args.cell_size, 
-                                                    max_cell_size = max_cell_size,
-                                                    parallelisation_of_interpolation = parallelise_interpolation,
-                                                    parallelisation_of_kernels       = fv_kernel_parallelisation
+                                                    max_cell_size = max_cell_size
                                                     )
         project.add_solver(my_primary_solver)
         added_limiter = False
@@ -326,6 +324,19 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file(
         "MulticoreOrchestration.cpp"
     )
+    peano4_project.output.makefile.add_cpp_file(
+        "CCZ4SBH_FD4.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "CCZ4SBH_FV.cpp"
+    )
+    peano4_project.output.makefile.add_h_file(
+        "CCZ4SBH_FD4.h"
+    )
+    peano4_project.output.makefile.add_h_file(
+        "CCZ4SBH_FV.h"
+    )
+    peano4_project.constants.add_include("""#include "MulticoreOrchestration.h" """)
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")

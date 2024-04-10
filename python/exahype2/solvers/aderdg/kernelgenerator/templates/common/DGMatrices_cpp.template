@@ -72,51 +72,51 @@ void {{codeNamespace}}::DGMatrices<{{computePrecisions[precision_number]}}>::ini
   }
   
 {% for i in nDofPad_seq %}
-  FLCoeff[{{i}}] = {{"{:.15e}".format(FLCoeff[i])}};
+  FLCoeff[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(FLCoeff[i])}};
 {% endfor %}
 
 {% for i in nDofPad_seq %}
-  FRCoeff[{{i}}] = {{"{:.15e}".format(FRCoeff[i])}};
+  FRCoeff[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(FRCoeff[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  dudx[{{i}}] = {{"{:.15e}".format(dudx[i])}};
+  dudx[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(dudx[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  dudx_T[{{i}}] = {{"{:.15e}".format(dudx_T[i])}};
+  dudx_T[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(dudx_T[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  iK1_T[{{i}}] = {{"{:.15e}".format(iK1_T[i])}};
+  iK1_T[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(iK1_T[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  Kxi[{{i}}] = {{"{:.15e}".format(Kxi[i])}};
+  Kxi[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(Kxi[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  Kxi_T[{{i}}] = {{"{:.15e}".format(Kxi_T[i])}};
+  Kxi_T[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(Kxi_T[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d[0][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_0[i])}};
+  fineGridProjector1d[0][{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fineGridProjector1d_0[i])}};
 {% endfor %}
 {% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d[1][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_1[i])}};
+  fineGridProjector1d[1][{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fineGridProjector1d_1[i])}};
 {% endfor %}
 {% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d[2][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_2[i])}};
+  fineGridProjector1d[2][{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fineGridProjector1d_2[i])}};
 {% endfor %}
 
 {% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d_T_weighted[0][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_T_weighted_0[i])}};
+  fineGridProjector1d_T_weighted[0][{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fineGridProjector1d_T_weighted_0[i])}};
 {% endfor %}
 {% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d_T_weighted[1][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_T_weighted_1[i])}};
+  fineGridProjector1d_T_weighted[1][{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fineGridProjector1d_T_weighted_1[i])}};
 {% endfor %}
 {% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d_T_weighted[2][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_T_weighted_2[i])}};
+  fineGridProjector1d_T_weighted[2][{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fineGridProjector1d_T_weighted_2[i])}};
 {% endfor %}
 }
 {% endfor %}

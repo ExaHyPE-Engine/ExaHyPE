@@ -89,31 +89,40 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = False,
       solver_variant = SolverVariant.WithVirtualFunctions,
-      kernel_variant = KernelVariant.VolumeWiseAoS
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
-    self._compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call_stateless = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = False,
       solver_variant = SolverVariant.Stateless,
-      kernel_variant = KernelVariant.VolumeWiseSoA
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
-    self._compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._fused_compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
-      compute_max_eigenvalue_of_next_time_step = False,
+      compute_max_eigenvalue_of_next_time_step = True,
+      solver_variant = SolverVariant.Stateless,
+      kernel_variant = KernelVariant.PatchWiseAoS
+    )
+
+    self._fused_compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation,
+      self._ncp_implementation,
+      self._source_term_implementation,
+      compute_max_eigenvalue_of_next_time_step = True,
       solver_variant = SolverVariant.Accelerator,
-      kernel_variant = KernelVariant.VolumeWiseSoA
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)
@@ -123,11 +132,11 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
 
-    self._solver_user_declarations          = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
-    self._solver_user_definitions           = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
+    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
 
-    self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
-    self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
+    self._compute_time_step_size             = solver_code_snippets.create_compute_time_step_size()
+    self._compute_new_time_step_size         = solver_code_snippets.create_compute_new_time_step_size()
 
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()

@@ -99,15 +99,18 @@ h_tol = args.h_tol
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["benchmarks", "swift2", "testSML1D"]
+project_namespace = ["tests", "swift2", "testSML1D"]
 
 project = swift2.Project(
     namespace=project_namespace, project_name="TestSML1D", executable="testSML"
 )
 
-
 cfl_factor = 1e-6
 init_dt = 1.0e-6
+
+offset = [0, 0, 0]
+domain_size = [1, 1, 1]
+periodic_boundary_conditions = [False, False, False]
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -147,6 +150,7 @@ HYDRO_DIMENSIONS = hydro_dimensions
 hfile = h5py.File(args.ic_filename, "r")
 header = hfile["Header"]
 npart = header.attrs["NumPart_ThisFile"][0]
+npart_base = header.attrs["NumPart_base"][0]
 hfile.close()
 HYDRO_PART_NUMBER = npart
 
@@ -167,11 +171,13 @@ GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
 KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
-KERNEL_SUPPORT_RAD = swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions - 1][kernel]
-
 
 # Additional Particle Parameters -----------------------------------------------
-hydro_h_max = args.cell_size / 2
+dx = domain_size[0] / npart_base
+hydro_H_max = 20 * dx
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+    hydro_H_max, kernel, hydro_dimensions
+)
 particle.h_hydro_max = hydro_h_max
 
 # Modify the eta factor to look for a precise number of neighbours.
@@ -181,7 +187,7 @@ particle.eta_factor = swift2.sphtools.eta_from_number_of_neighbours(
     nneigh, kernel=kernel, ndim=hydro_dimensions
 )
 
-# particle.h_hydro_min = 1e-6
+particle.h_hydro_min = 1e-10
 particle.h_max_iterations = 50
 particle.h_tolerance = h_tol
 # particle.beta_av = 3.0
@@ -206,10 +212,6 @@ else:
     build_mode = peano4.output.CompileMode.Release
 
 # Set Peano4 simulation parameters ---------------------------------------------
-offset = [0, 0, 0]
-domain_size = [1, 1, 1]
-periodic_boundary_conditions = [False, False, False]
-
 project.set_global_simulation_parameters(
     dimensions=dimensions,
     offset=offset,
@@ -278,8 +280,6 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.f, 1)
-particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
 particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 

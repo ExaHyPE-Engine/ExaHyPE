@@ -1,0 +1,155 @@
+#include "equation_of_state.h"
+#include "hydro_dimensions.h"
+#include "kernel_hydro.h"
+#include "swift2/kernels/ParticleUpdatePredicates.h"
+#include "tarch/la/ScalarOperations.h"
+#include "tarch/la/VectorOperations.h"
+#include "tarch/la/VectorVectorOperations.h"
+
+
+template <typename Particle>
+void swift2::kernels::legacy::leapfrog_drift_global_time_step_size(
+  Particle* particle
+) {
+  const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+
+  // Use V_full here, not V
+  particle->setX(particle->getX() + timeStepSize * particle->getV_full());
+
+  assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
+
+  // Flag this particle as Moved
+  particle->setMoveState(Particle::MoveState::Moved);
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::hydro_predict_extra(Particle* localParticle) {
+
+  const int    hydroDimensions = localParticle->getHydroDimensions();
+  const double timeStepSize = localParticle->getSpecies().getMinTimeStepSize();
+  // When integrating in time with cosmology, the three times below will all
+  // have different factors/powers of the expansion factor `a` absorbed in them.
+  // For now, without cosmology, they are identical.
+  const double dt_kick_hydro = timeStepSize;
+  const double dt_drift      = timeStepSize;
+  const double dt_therm      = timeStepSize;
+
+
+  // Predict velocities for hydro terms
+  localParticle->setV(
+    localParticle->getV() + localParticle->getA() * dt_kick_hydro
+  );
+
+  // Predict additional particle fields forward in time after the Drift step
+
+  // Predict the internal energy
+  localParticle->setU(
+    localParticle->getU() + localParticle->getUDot() * dt_therm
+  );
+
+  // Predict smoothing length
+  const double h_inv = 1.0 / localParticle->getSmoothingLength();
+  const double w1    = localParticle->getHDot() * h_inv * dt_drift;
+  localParticle->setSmoothingLength(
+    localParticle->getSmoothingLength() * std::exp(w1)
+  );
+
+  // Predict density
+  const double w2 = -hydroDimensions * w1;
+  localParticle->setDensity(localParticle->getDensity() * std::exp(w2));
+
+  localParticle->setU(std::max(localParticle->getU(), 0.0));
+
+  // Compute the new pressure
+  const double pressure = eos::gas_pressure_from_internal_energy(
+    localParticle->getDensity(),
+    localParticle->getU()
+  );
+
+  // Compute the new sound speed
+  const double soundspeed = eos::gas_soundspeed_from_pressure(
+    localParticle->getDensity(),
+    pressure
+  );
+
+  localParticle->setPressure(pressure);
+  localParticle->setSoundSpeed(soundspeed);
+  localParticle->setV_sig_AV(
+    std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed)
+  );
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::leapfrog_kick_global_time_step_size(
+  Particle* particle
+) {
+  const double timeStepSizeKick = 0.5
+                                  * Particle::getSpecies().getMinTimeStepSize();
+
+  /* Kick the particle */
+  particle->setV_full(
+    particle->getV_full() + timeStepSizeKick * particle->getA()
+  );
+
+  swift2::kernels::legacy::hydro_kick_extra_global_time_step_size(particle);
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::hydro_reset_predicted_values(
+  Particle* localParticle
+) {
+
+  // Re-set the predicted velocities
+  localParticle->setV(localParticle->getV_full());
+
+  // Re-set the entropy
+  localParticle->setU(localParticle->getU_full());
+
+  // Re-compute the pressure
+  const double pressure = eos::gas_pressure_from_internal_energy(
+    localParticle->getDensity(),
+    localParticle->getU()
+  );
+
+  // Compute the new sound speed
+  const double soundspeed = eos::gas_soundspeed_from_pressure(
+    localParticle->getDensity(),
+    pressure
+  );
+
+  // Update variables
+  localParticle->setPressure(pressure);
+  localParticle->setSoundSpeed(soundspeed);
+  localParticle->setV_sig_AV(
+    std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed)
+  );
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::hydro_kick_extra_global_time_step_size(
+  Particle* localParticle
+) {
+
+  // TODO: apply correct cosmology factors
+  double dt_kick_therm = 0.5 * localParticle->getSpecies().getMinTimeStepSize();
+
+  // Integrate the internal energy forward in time
+  const double delta_u = localParticle->getUDot() * dt_kick_therm;
+
+  // Do not decrease the energy by more than a factor of 2
+  localParticle->setU_full(std::max(
+    localParticle->getU_full() + delta_u,
+    localParticle->getU_full() * 0.5
+  ));
+
+  /* Check against absolute minimum.
+   * Default value is zero. */
+  if (localParticle->getU_full() < 0.0) {
+    localParticle->setU_full(0.0);
+    localParticle->setUDot(0.0);
+  }
+}

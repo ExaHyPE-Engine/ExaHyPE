@@ -60,11 +60,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       t,
       dt
   )) {
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS}}
   } else
   {% endif %}
 
-  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_CPU}}
+  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
   ::exahype2::fv::validatePatch(
     targetPatch,
@@ -315,6 +315,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 }
 #endif
 
+
 {% if STATELESS_PDE_TERMS %}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
@@ -325,6 +326,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
     _dt
   );
 }
+
 
 /**
  * Also merge the current task
@@ -364,28 +366,28 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #if defined(GPUOffloadingOMP)
   if (targetDevice >= 0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
 
 #if defined(GPUOffloadingHIP)
   if (targetDevice >= 0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
 
 #if defined(GPUOffloadingSYCL)
   if (targetDevice >= 0 or targetDevice == Host) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
 
 #if defined(GPUOffloadingCPP)
   if (targetDevice >= 0 or targetDevice == Host) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
 #endif
 

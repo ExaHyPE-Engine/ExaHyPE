@@ -241,9 +241,9 @@ double {{codeNamespace}}::solutionUpdate(
           // fused Source
 {% if useSource %}
           #ifdef USE_IPO
-          #pragma forceinline recursive
+            #pragma forceinline recursive
           #endif
-          solver.{{solverName}}::algebraicSource(luhShort + zyx, x0, t, dt, Qt);
+          solver.{{solverName}}::algebraicSource(x0, t, luhShort + zyx, Qt);
 {% else %}
           std::memset(ncp, 0, {{nVarPad}}*sizeof(double));
 {% endif %}{# useSource #}
@@ -522,7 +522,7 @@ double {{codeNamespace}}::solutionUpdate(
         }
 
 {% if useSource %}
-        solver.{{solverName}}::algebraicSource(luhShort+zyx, x0, t + 0.5 * dt, dt, src);
+        solver.{{solverName}}::algebraicSource(x0, t + 0.5 * dt, luhShort+zyx, src);
 {% else %}
         std::memset(src, 0, {{nVarPad}}*sizeof(double));
 {% endif %}
