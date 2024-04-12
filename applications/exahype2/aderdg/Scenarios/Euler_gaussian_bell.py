@@ -51,7 +51,7 @@ class Euler_gaussian_bell(Scenario):
   tarch::la::Vector<Dimensions,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]), 
                                                (x[1] - t) + (int)(t + .5 - x[1]) };
 
-  sol[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(x)*tarch::la::norm2(x)/0.01));
+  sol[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
 
   sol[1] = 1.0*sol[0];
   sol[2] = 1.0*sol[0];
