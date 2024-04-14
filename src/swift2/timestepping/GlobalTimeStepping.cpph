@@ -21,7 +21,8 @@ void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMax
 template <typename Particle>
 void swift2::timestepping::computeCFLTimeStepSizeSPH() {
 
-  const double cflFactor           = Particle::getCfl();
+  assertion1(false, "Don't use this");
+
   const double initialTimeStepSize = Particle::getInitialTimeStepSize();
   const bool   adjustTimeStepSize  = Particle::getAdjustTimeStepSize();
 

@@ -190,7 +190,6 @@ def get_algorithm_step_dict(particle):
         touch_vertex_last_time_kernel=v_iter.insert(
             "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
         ),
-        prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",
         includes="""
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/GlobalTimeStepping.h"
@@ -318,16 +317,26 @@ def get_algorithm_step_dict(particle):
             )
             + v_iter.insert("::swift2::kernels::legacy::resetPredictedValues")
         ),
-        prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",
-        # TODO: temporary solution for initialization step
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
-            #include "swift2/timestepping/GlobalTimeStepping.h"
-            #include "swift2/timestepping/TimeStepping.h"
         """,
     )
     algorithm_steps_dict["SPH_Kick2"] = sph_kick2
+
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    timestep = AlgorithmStep(
+        name="SPHTimestep",
+        dependencies=AlgorithmStep.Dependencies.SELF,
+        effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_last_time_kernel= "::swift2::kernels::legacy::computeNextTimestep(marker, assignedParticles);",
+        includes="""
+            #include "Constants.h"
+            #include "swift2/kernels/legacy/Timestep.h"
+        """,
+    )
+    algorithm_steps_dict["SPHTimestep"] = timestep
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
