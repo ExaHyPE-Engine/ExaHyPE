@@ -1,5 +1,5 @@
 [project]
-name = "Peano"
+name = "peano4"
 version = "4.0.0"
 description = "Peano Python API"
 license = {file = "LICENSE"}
