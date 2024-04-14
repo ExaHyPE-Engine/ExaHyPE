@@ -15,12 +15,6 @@ CFL_FACTOR=0.2
 PLOT_DELTA=0.0001
 CELL_SIZE=0.3
 
-# Parameters
-#N_PART=2000
-PLOT_DELTA=0.0
-
-
-
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
 echo python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE

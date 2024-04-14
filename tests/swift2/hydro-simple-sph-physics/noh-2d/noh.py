@@ -201,6 +201,7 @@ particle.h_hydro_max = hydro_h_max
 
 
 # deploy particle properties
+# This needs to be done if you're changing any of the default values.
 particle.set_parameters()
 
 
