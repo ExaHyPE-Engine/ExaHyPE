@@ -9,7 +9,7 @@ class NohProblemIC:
     """
 
     def __init__(self, dimensions):
-        if dimensions == 2 or dimension == 3:
+        if dimensions == 2 or dimensions == 3:
             self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
@@ -60,9 +60,7 @@ class NohProblemIC:
       double norm_dist = tarch::la::norm2(dist);
 
       // Cap min value of distance
-      if ( tarch::la::equals(norm_dist, 0.0) ){
-        norm_dist = 1e-10;
-      }
+      norm_dist = std::max(norm_dist, 1e-10);
 
       // Set velocity
       tarch::la::Vector<Dimensions,double> v_ini = -1.0 * dist / norm_dist;

@@ -53,7 +53,6 @@ class SodShockIC:
       for(int d=0; d<Dimensions; d++){
          particle->setV          (d,0);
          particle->setA          (d,0);
-//         particle->setA_prev_step(d,0);
       }
 
       /* For 2D sims, we only get one component */
