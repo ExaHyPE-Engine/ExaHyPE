@@ -1,0 +1,22 @@
+/**
+
+ @page tests_swift2_test_boundary_conditions Test boundary conditions
+
+
+Very rudimentary tests to verify that the boundary conditions are working
+as expected.
+
+The periodic_[1,2,3]D tests test simple setups in [1,2,3] dimensions.
+We use a generic particle type with a constant velocity and drift it
+over time across periodic boundaries.
+
+To verify the results, you can either just load the output files with
+paraview and manually inspect that you're not losing particles.
+
+Alternately, a script `compare_particle_positions.py` is provided.
+It will compare the output at t=0 with the output at an end time
+you provide as a cmdline argument, and check whether the particles
+are in the positions they're supposed to be.
+
+*/
+
