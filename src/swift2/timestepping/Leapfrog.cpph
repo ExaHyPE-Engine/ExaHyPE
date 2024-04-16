@@ -13,8 +13,6 @@ void swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize(
     assertion1(tarch::la::isEntryFinite(particle.getX()), particle.toString());
     particle.setMoveState(Particle::MoveState::Moved);
   }
-
-  std::cout << "CALLING PARTICLE " << particle.getPartid() << " IN DRIFT\n";
 }
 
 

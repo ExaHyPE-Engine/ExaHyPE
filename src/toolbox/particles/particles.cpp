@@ -48,8 +48,6 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::applyPeriodicBoundaryC
 ) {
   tarch::la::Vector<Dimensions, double> result = x;
 
-  std::cout << " ¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬ CHECKING PERIODIC BCS" << std::endl;
-
   for (int d=0; d<Dimensions; d++) {
     if ( periodicBC[d] ) {
       if ( tarch::la::smaller( result(d), domainOffset(d) ) ) {

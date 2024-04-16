@@ -571,9 +571,6 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event(internal::Event::Type::Erase, isLocal, treeId, trace);
 
-  logInfo("eraseParticle() particleHistory", _database.particleHistory(identifier));
-  logInfo("eraseParticle() database", _database.toString());
-
   internal::Event previousLocalParticle = _database.getEntry(identifier, treeId).first;
   assertion5(
     previousLocalParticle.type==internal::Event::Type::DetachFromVertex,
@@ -609,8 +606,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
 
     _database.addEvent(identifier, event);
-    logInfo("assignParticleToVertex(...) v1 particleHistory", _database.particleHistory(identifier));
-    logInfo("assignParticleToVertex(...) v1 database", _database.toString());
   }
   else {
     internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
@@ -623,9 +618,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     const bool isLifting  = previousEvent.type == internal::Event::Type::DetachFromVertex and tarch::la::allSmaller( previousEvent.vertexH, vertexH );
     const bool isDroppingFromSieveSet  = previousEvent.type == internal::Event::Type::AssignToSieveSet;
     #endif
-
-    logInfo("assignParticleToVertex(...) v2 particleHistory", _database.particleHistory(identifier));
-    logInfo("assignParticleToVertex(...) v2 database", _database.toString());
 
     if (isLocal) {
       assertion7(
@@ -704,14 +696,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                            trace
 ) {
   logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
-
-  internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX);
-  internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX, internal::ParticleIdentifier::Precision * 4.0);
-  logInfo("", _database.particleHistory(newIdentifier));
-
-  logInfo("moveParticle() NEW particleHistory", _database.particleHistory(newIdentifier));
-  logInfo("moveParticle() OLD particleHistory", _database.particleHistory(oldIdentifier));
-  logInfo("moveParticle() database", _database.toString());
 
   if (not tarch::la::equals(oldParticleX, newParticleX, internal::ParticleIdentifier::Precision)) {
     internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX);
@@ -851,9 +835,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::DetachFromVertex, isLocal, vertexX, vertexH, treeId, trace};
 
-  logInfo("detachParticleFromVertex() particleHistory", _database.particleHistory(identifier));
-  logInfo("detachParticleFromVertex() database", _database.toString());
-
   #if PeanoDebug>0
   internal::Event previousEvent = _database.getEntry(identifier, treeId).first;
   #endif
@@ -904,9 +885,6 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
-
-  logInfo("detachParticleToSieveSet() particleHistory", _database.particleHistory(identifier));
-  logInfo("detachParticleToSieveSet() database", _database.toString());
 
   #if PeanoDebug>0
   internal::Event              previousEvent = _database.getEntry(identifier, treeId).first;

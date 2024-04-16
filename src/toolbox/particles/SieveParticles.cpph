@@ -142,22 +142,11 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
   // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 
-
-  std::cout << "================================================= HELLO WORLD SIEVING" << std::endl;
-
-  for (auto p: _particlesThatHaveToBeSieved){
-
-    tarch::la::Vector<Dimensions,double> x_prev = p->getX();
-
-    p->setX( toolbox::particles::applyPeriodicBoundaryConditions(
-            p->getX(), domainOffset, domainSize, periodicBC)
-        );
-
-    if (not tarch::la::equals(x_prev, p->getX())){
-      std::cout << "===============================================================CHANGED COORDINATES " << x_prev << " " << p->getX() << std::endl;
+  if (periodicBC.any()){
+    for (auto p: _particlesThatHaveToBeSieved){
+      p->setX( toolbox::particles::applyPeriodicBoundaryConditions( p->getX(), domainOffset, domainSize, periodicBC) );
     }
   }
-
 }
 
 
