@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "GlobalState.h"
+#include "Constants.h"
 
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -123,7 +124,7 @@ void finishTimeStep() {
   logTraceIn( "finishTimeStep()" );
 
   globaldata::GenericParticle::getSpecies().finishTimeStep();
-  vertexdata::GenericParticleSet::finishedTraversal();
+  vertexdata::GenericParticleSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   vertexdata::GenericParticleSet::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::GenericParticleSet::printParticleStateStatistics() );
 
@@ -164,7 +165,7 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
-  vertexdata::GenericParticleSet::finishedTraversal();
+  vertexdata::GenericParticleSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   loadBalancer.finishStep();
   logTraceOut( "GridConstructionStep()" );
@@ -172,7 +173,7 @@ void finishGridConstructionStep() {
 
 
 void finishInitialisationStep() {
-  vertexdata::GenericParticleSet::finishedTraversal();
+  vertexdata::GenericParticleSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::GenericParticleSet::reduceReassignmentStatistics();
   vertexdata::GenericParticleSet::reduceParticleStateStatistics();
@@ -183,7 +184,7 @@ void finishInitialisationStep() {
 
 
 void finishInitialConditionStep() {
-  vertexdata::GenericParticleSet::finishedTraversal();
+  vertexdata::GenericParticleSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::GenericParticleSet::clearReassignmentStatistics();
   vertexdata::GenericParticleSet::clearParticleStateStatistics();
@@ -194,13 +195,13 @@ void finishInitialConditionStep() {
 
 
 void finishPlotStep() {
-  vertexdata::GenericParticleSet::finishedTraversal();
+  vertexdata::GenericParticleSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   logTraceOut( "PlotStep()" );
 }
 
 
 void finishIntermediateStep() {
-  vertexdata::GenericParticleSet::finishedTraversal();
+  vertexdata::GenericParticleSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::GenericParticleSet::reduceReassignmentStatistics();
   if (vertexdata::GenericParticleSet::registeredAnyResorting()) {

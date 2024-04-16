@@ -40,3 +40,28 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::mirrorParticleAlongPer
 }
 
 
+tarch::la::Vector<Dimensions, double> toolbox::particles::applyPeriodicBoundaryConditions(
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions,double>   domainOffset,
+    const tarch::la::Vector<Dimensions,double>   domainSize,
+    const std::bitset<Dimensions>                periodicBC
+) {
+  tarch::la::Vector<Dimensions, double> result = x;
+
+  std::cout << " ¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬ CHECKING PERIODIC BCS" << std::endl;
+
+  for (int d=0; d<Dimensions; d++) {
+    if ( periodicBC[d] ) {
+      if ( tarch::la::smaller( result(d), domainOffset(d) ) ) {
+        result(d) += domainSize(d);
+      }
+      if ( tarch::la::greater( result(d), domainOffset(d)+domainSize(d) ) ) {
+        result(d) -= domainSize(d);
+      }
+    }
+  }
+
+  return result;
+}
+
+

@@ -89,7 +89,7 @@ namespace toolbox {
  * once and apply the periodic boundary conditions to them. This can be done
  * either before exchangeSieveListsGlobally() for the rank-local set of
  * _particlesThatCanNotBeLiftedWithinTheirTree, or is has to be done after the
- * exchange on _partilesThatHaveToBeSieved.
+ * exchange on _particlesThatHaveToBeSieved.
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -171,7 +171,11 @@ public:
    *   which will be used in the future to gather the newly sieved
    *   particles.
    */
-  void exchangeSieveListsGlobally();
+  void exchangeSieveListsGlobally(
+        const tarch::la::Vector<Dimensions,double>   domainOffset,
+        const tarch::la::Vector<Dimensions,double>   domainSize,
+        const std::bitset<Dimensions>                periodicBC
+      );
 
   /**
    * Add a particle to the list of particles which cannot be lifted
