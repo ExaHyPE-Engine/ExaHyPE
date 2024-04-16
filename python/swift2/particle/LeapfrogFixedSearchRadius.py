@@ -77,35 +77,37 @@ class LeapfrogFixedSearchRadius(Particle):
         )
         self.touch_particles_of_set_last_time_kernel = (
             touch_particles_of_set_last_time_kernel
-         )
+        )
         pass
 
     @property
     def touch_particles_of_set_first_time_kernel(self):
-      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel
+        return self._algorithm_steps["ForceCalculation"].touch_vertex_first_time_kernel
 
     @touch_particles_of_set_first_time_kernel.setter
     def touch_particles_of_set_first_time_kernel(self, value):
-      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel = value
+        self._algorithm_steps["ForceCalculation"].touch_vertex_first_time_kernel = value
 
     @property
     def touch_particles_of_set_last_time_kernel(self):
-      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel
+        return self._algorithm_steps["ForceCalculation"].touch_vertex_last_time_kernel
 
     @touch_particles_of_set_first_time_kernel.setter
     def touch_particles_of_set_last_time_kernel(self, value):
-      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel = value
+        self._algorithm_steps["ForceCalculation"].touch_vertex_last_time_kernel = value
 
     @property
     def cell_kernel(self):
-      return self._algorithm_steps[ "ForceCalculation" ].cell_kernel
+        return self._algorithm_steps["ForceCalculation"].cell_kernel
 
     @cell_kernel.setter
     def cell_kernel(self, value):
-        self._algorithm_steps[ "ForceCalculation" ].cell_kernel = value
+        self._algorithm_steps["ForceCalculation"].cell_kernel = value
 
     def add_to_reduction(self, value):
-      self._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += value
+        self._algorithm_steps[
+            "ReduceGlobalQuantities"
+        ].unprepare_traversal_kernel += value
 
     def __setup_algorithm_steps(self):
         """!

@@ -196,7 +196,6 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 #! [tutorials swift2 planet-orbit Configure project]
 
 
-
 #! [tutorials swift2 planet-orbit Define constants]
 # Orbital parameters
 N_orbits = 8
@@ -244,8 +243,6 @@ GLOBAL_TIME_STEP_SIZE = str(dt)
 EARTH_V_INI_X = str(0.0)
 EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 #! [tutorials swift2 planet-orbit Define constants]
-
-
 
 
 #! [tutorials swift2 planet-orbit Particle force]
@@ -456,14 +453,13 @@ project.algorithm_step_plot.add_action_set(particle_plotter)
 #! [tutorials swift2 planet-orbit Plot]
 
 
-
-
 #! [tutorials swift2 planet-orbit Validation]
-particle.add_to_reduction( f"""
+particle.add_to_reduction(
+    f"""
 nonCriticalAssertion( vertexdata::{particle.name}Set::getNumberOfRemainingLocalParticles() == 1 );
-""")
+"""
+)
 #! [tutorials swift2 planet-orbit Validation]
-
 
 
 ###############################################################################

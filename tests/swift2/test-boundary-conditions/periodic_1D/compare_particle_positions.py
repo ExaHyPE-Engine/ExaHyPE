@@ -23,7 +23,7 @@ parser.add_argument(
     "--pvd-file",
     dest="pvdfile",
     help=".pvd file to read in",
-    default = "./particles.pvd"
+    default="./particles.pvd",
 )
 parser.add_argument(
     "-d",
@@ -61,13 +61,13 @@ parser.add_argument(
 args = parser.parse_args()
 
 ndim = args.ndim
-comparison_tolerance=args.tolerance
+comparison_tolerance = args.tolerance
 boxsize = args.boxsize
 end_time = args.t_end
 pvdfile = args.pvdfile
 
 
-reader_0 = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.)
+reader_0 = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.0)
 partData_0 = reader_0.load()
 
 reader_1 = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=end_time)
@@ -76,7 +76,7 @@ partData_1 = reader_1.load()
 actual_end_time = reader_1.get_snapshot_time()
 
 coords_0 = partData_0.x[:, :ndim]
-vels_0= partData_0.v[:, :ndim]
+vels_0 = partData_0.v[:, :ndim]
 ids_0 = partData_0.partid
 sort0 = np.argsort(ids_0)
 coords_0 = coords_0[sort0]
@@ -90,11 +90,10 @@ for dim in range(ndim):
         coords_expect[mask, dim] -= boxsize
         mask = coords_expect[:, dim] > boxsize
 
-    mask = coords_expect[:, dim] < 0.
+    mask = coords_expect[:, dim] < 0.0
     while mask.any():
         coords_expect[mask, dim] += boxsize
-        mask = coords_expect[:, dim] < 0.
-
+        mask = coords_expect[:, dim] < 0.0
 
 
 coords_1 = partData_1.x[:, :ndim]
@@ -104,8 +103,7 @@ coords_1 = coords_1[sort1]
 ids_1 = ids_1[sort1]
 
 
-
-if coords_0.shape != coords_1.shape :
+if coords_0.shape != coords_1.shape:
     print("Error: coordinate arrays are not of equal length.")
     print("       coords_0.shape", coords_0.shape)
     print("       coords_1.shape", coords_1.shape)
@@ -115,10 +113,8 @@ if coords_0.shape != coords_1.shape :
 errors = 0
 
 for i in range(ids_0.shape[0]):
-
     for n in range(ndim):
-
-        diff = coords_expect[i,n] / coords_1[i,n] - 1.
+        diff = coords_expect[i, n] / coords_1[i, n] - 1.0
         if abs(diff) > comparison_tolerance:
             print("Error: Coordinates disagree.")
             print("    Particle ID:   ", ids_0[i], ids_1[i])

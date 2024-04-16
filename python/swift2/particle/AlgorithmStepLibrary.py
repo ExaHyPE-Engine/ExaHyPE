@@ -354,7 +354,4 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["SPH_ReduceGlobalQuantities"] = sph_reduceGlobals
 
-
-
-
     return algorithm_steps_dict

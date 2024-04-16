@@ -64,7 +64,11 @@ parser.add_argument(
     help="Cell size (default 0.1)",
 )
 parser.add_argument(
-    "-pd", "--peano-dir", dest="peanodir", default="../../../../", help="Peano4 directory"
+    "-pd",
+    "--peano-dir",
+    dest="peanodir",
+    default="../../../../",
+    help="Peano4 directory",
 )
 parser.add_argument(
     "-asserts",
@@ -135,7 +139,6 @@ project.set_load_balancing(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 
-
 ###############################################################################
 # Declare the force acting on the particle
 ###############################################################################
@@ -163,8 +166,8 @@ initialisation_snippet = (
   /* Internal search radius used by Peano.
    * Not really used here. */
   particle->setSearchRadius("""
-  +str(search_radius)+
-  """);
+    + str(search_radius)
+    + """);
   particle->setA( {0, 0, 0} );
 
   if( particle->getX(0) > 0.5 ){
@@ -178,8 +181,12 @@ initialisation_snippet = (
   // uniform grid particle distribution. (1600^3 is close)
   // to the numeric limits of integers.
 
-  double boxsize_x = """ + str(domain_size[0]) + """;
-  double offset_x = """ + str(offset[0]) + """;
+  double boxsize_x = """
+    + str(domain_size[0])
+    + """;
+  double offset_x = """
+    + str(offset[0])
+    + """;
 
   double dx = boxsize_x / 1600.;
 
@@ -189,10 +196,7 @@ initialisation_snippet = (
 """
 )
 
-coords = np.array([
-    [0.21, 0.5, 0.],
-    [0.81, 0.5, 0.]
-    ])
+coords = np.array([[0.21, 0.5, 0.0], [0.81, 0.5, 0.0]])
 
 project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesByCoordinates(
@@ -234,8 +238,6 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 particle_plotter.add_attribute_to_plot(particle.part_id, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
-
-
 
 
 ###############################################################################

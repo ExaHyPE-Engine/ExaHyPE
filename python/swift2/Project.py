@@ -117,8 +117,10 @@ class Project(object):
 
         for d in (swift2dir, peano4dir, tarchdir):
             if not os.path.exists(d):
-                dir_stripped = d[len(src_path):]
-                raise FileNotFoundError(f"Didn't find directory {dir_stripped} in passed peano root dir={src_path}")
+                dir_stripped = d[len(src_path) :]
+                raise FileNotFoundError(
+                    f"Didn't find directory {dir_stripped} in passed peano root dir={src_path}"
+                )
 
         self._Peano_src_directory = src_path
         self._build_mode = mode
@@ -532,10 +534,9 @@ levels.
                 current_species_set.name
             )
             vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
-                task_name = current_species_set.name,
-                full_qualified_enumerator_type = "::swift2::TaskEnumerator",
-                enumerator_include = """ #include "swift2/TaskEnumerator.h" """
-
+                task_name=current_species_set.name,
+                full_qualified_enumerator_type="::swift2::TaskEnumerator",
+                enumerator_include=""" #include "swift2/TaskEnumerator.h" """,
             )
 
             # Enable cell statistics for this species
