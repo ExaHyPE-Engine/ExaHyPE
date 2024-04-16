@@ -194,6 +194,9 @@ class ParticleVTUReader(object):
         self._vtufile = vtufile
         self._pvdfile = pvdfile
         self._snapshot_time = snapshot_time
+        # have we read in the snapshot time?
+        self._read_time = False
+        self._snapshot_time_read = None
 
         # First check that we have all necessary requirements
         if vtufile is None:
@@ -244,6 +247,21 @@ class ParticleVTUReader(object):
 
         else:
             raise ValueError("Unknown mode? How did we get here?")
+
+    def get_snapshot_time(self):
+        """!
+        Return the time/timestep information of the read snapshot.
+        This is only available if you read in the .pvd file, not
+        the .vtu file. If the .vtu file has been read, this method
+        returns `None`. Otherwise, it returns the time of the
+        snapshot, which may vary (slightly) from the snapshot time
+        you specified with when loading the data.
+        """
+
+        if self._read_time:
+            return self._snapshot_time_read
+        else:
+            return None
 
 
     def get_all_vtufiles(self):
@@ -359,6 +377,10 @@ the ParticleVTUReader() object.
 
         vtufiles = np.array(allvtufiles)[snap_indexes]
         vtufiles = vtufiles.tolist()
+
+        # store snapshot time
+        self._read_time = True
+        self._snapshot_time_read = timesteps[snap_indexes][0]
 
         return vtufiles
 

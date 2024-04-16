@@ -111,7 +111,6 @@ else:
 offset = [0, 0, 0]
 domain_size = [1, 1, 1]
 periodic_boundary_conditions = [True, True, False]  # Periodic BC
-#  periodic_boundary_conditions = [False, False, False]  # Periodic BC
 
 project.set_global_simulation_parameters(
     dimensions=dimensions,
@@ -165,21 +164,71 @@ initialisation_snippet = (
   """);
   particle->setA( {0, 0, 0} );
 
-  if( particle->getX(0) > 0.5 ){
-    particle->setV( {1, 0, 0} );
+  const double boxsize_x = """ + str(domain_size[0]) + """;
+  const double boxsize_y = """ + str(domain_size[1]) + """;
+  const double offset_x = """ + str(offset[0]) + """;
+  const double offset_y = """ + str(offset[1]) + """;
+  const double sq2 = std::sqrt(2);
+
+
+  if( particle->getX(0) < offset_x + 1./ 3. * boxsize_x ) {
+
+    if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
+      // Low left square
+      particle->setV(0, -sq2);
+      particle->setV(1, -sq2);
+
+    } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
+      // Mid left square
+      particle->setV(0, -1.);
+      particle->setV(1, 0.);
+
+    } else {
+      // Top left square
+      particle->setV(0, -sq2);
+      particle->setV(1, sq2);
+    }
+  } else if( particle->getX(0) < offset_x + 2./ 3. * boxsize_x ) {
+
+    if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
+      // Low center square
+      particle->setV(0,0.);
+      particle->setV(1,-1.);
+
+    } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
+      // Mid center square
+      particle->setV(0, 0.);
+      particle->setV(1, 0.);
+
+    } else {
+      // Top center square
+      particle->setV(0, 0.);
+      particle->setV(1, 1.);
+    }
+
   } else {
-    particle->setV( {-1, 0, 0} );
+
+    if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
+      // Low right square
+      particle->setV(0, sq2);
+      particle->setV(1, -sq2);
+
+    } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
+      // Mid right square
+      particle->setV(0, 1.);
+      particle->setV(1, 0.);
+
+    } else {
+      // Top right square
+      particle->setV(0,sq2);
+      particle->setV(1,sq2);
+    }
   }
 
   // hack to get a somewhat flexible, but always unique
   // and reproducible particle ID: Assume we have a 1600^3
   // uniform grid particle distribution. (1600^3 is close)
   // to the numeric limits of integers.
-
-  double boxsize_x = """ + str(domain_size[0]) + """;
-  double boxsize_y = """ + str(domain_size[1]) + """;
-  double offset_x = """ + str(offset[0]) + """;
-  double offset_y = """ + str(offset[1]) + """;
 
   double dx = boxsize_x / 1600.;
   double dy = boxsize_y / 1600.;
@@ -191,10 +240,108 @@ initialisation_snippet = (
 """
 )
 
-coords = np.array([
-    [0.21, 0.5, 0.],
-    [0.81, 0.5, 0.]
-    ])
+
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+
+    https://stackoverflow.com/questions/6802577/rotation-of-3d-vector
+    """
+    axis = np.asarray(axis)
+    axis = axis / np.sqrt(np.dot(axis, axis))
+    a = np.cos(theta / 2.0)
+    b, c, d = -axis * np.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+def draw_R(scale=1., origin=[0., 0., 0.], plane=0, random_shift=True, shift_scale=0.05):
+    """
+    Draw a letter R consisting of 17 particles.
+
+    scale: what the total size of the letter R should be.
+    origin: where to put lower left corner of R
+    plane: along which plane to put the letter:
+            0: x-y plane.
+            1: y-z plane.
+            2: x-z plane.
+            3: rotate by 45deg around axis (1, 1, 1,)
+    perturb: Whether to randomly shift the resulting array
+             by up to `shift_scale`. Use this to avoid having
+             particles end up overlapping once the simulation
+             is running.
+
+    returns: numpy array of 3D coordinates of 17 particles
+    """
+
+    points = [
+        [0., 0.],
+        [0., 0.2],
+        [0., 0.4],
+        [0., 0.6],
+        [0., 0.8],
+        [0., 1.0],
+        [0.1, 1.0],
+        [0.2, 0.95],
+        [0.3, 0.8],
+        [0.2, 0.625],
+        [0.05, 0.6],
+        [0.1, 0.5],
+        [0.15, 0.4],
+        [0.2, 0.3],
+        [0.25, 0.2],
+        [0.3, 0.1],
+        [0.35, 0.0],
+            ]
+
+    R = np.array(points)
+
+    result = np.zeros((R.shape[0], 3))
+
+    if plane == 0:
+        result[:, 0] = R[:,0]
+        result[:, 1] = R[:,1]
+    elif plane == 1:
+        result[:, 1] = R[:,0]
+        result[:, 2] = R[:,1]
+    elif plane == 2:
+        result[:, 0] = R[:,0]
+        result[:, 2] = R[:,1]
+    elif plane == 3:
+        result[:, 0] = R[:,0]
+        result[:, 1] = R[:,1]
+        rot = rotation_matrix([1., 1., 1], np.pi / 4.)
+        for i in range(result.shape[0]):
+            result[i,:] = np.dot(rot, result[i,:])
+
+    if random_shift:
+        shift = np.random.uniform(0, shift_scale, size=3)
+        result += shift
+
+    result *= scale
+    result += np.array(origin)
+
+    return result
+
+
+# Generate coorinates.
+
+R1 = draw_R(scale=0.2, origin=[0.1, 0.4, 0.5], plane=0)
+R2 = draw_R(scale=0.2, origin=[0.7, 0.4, 0.5], plane=0)
+R3 = draw_R(scale=0.2, origin=[0.4, 0.1, 0.5], plane=0)
+R4 = draw_R(scale=0.2, origin=[0.4, 0.7, 0.5], plane=0)
+
+R5 = draw_R(scale=0.2, origin=[0.1, 0.1, 0.5], plane=0)
+R6 = draw_R(scale=0.2, origin=[0.1, 0.7, 0.5], plane=0)
+R7 = draw_R(scale=0.2, origin=[0.7, 0.1, 0.5], plane=0)
+R8 = draw_R(scale=0.2, origin=[0.7, 0.7, 0.5], plane=0)
+
+
+coords = np.concatenate((R1, R2, R3, R4, R5, R6, R7, R8), axis=0)
+
 
 project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesByCoordinates(
