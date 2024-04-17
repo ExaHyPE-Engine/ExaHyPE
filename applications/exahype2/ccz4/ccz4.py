@@ -24,37 +24,37 @@ modes = {
 }
 
 floatparams = {
-        "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
-        "GLMepsD":1.0, 
+  "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
+  "GLMepsD":1.0, 
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
-        "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0, "KOSigma":8.0 #, \
+  "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+  "sk":1.0, "bs":1.0,
+  "domain_r":0.5, "smoothing":0.0, "KOSigma":8.0 #, \
 }
 
 intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "SO":0}
-#sss
+#
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume/meshcell size, i.e. not to patch size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume/meshcell size, i.e. not to patch size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
-    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
-    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4","phy-debug", "PT"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
+    parser.add_argument("-maxh", "--max-h",           dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume/meshcell size, i.e. not to patch size" )
+    parser.add_argument("-minh", "--min-h",           dest="min_h",           type=float, default=0,        help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume/meshcell size, i.e. not to patch size" )
+    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int,   default=6,        help="Patch size, i.e. number of volumes per patch per direction" )
+    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04,     help="Plot step size (0 to switch it off)" )
+    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",            help="|".join(modes.keys()) )
+    parser.add_argument(         "--gpu",             dest="GPU",             default=False, action="store_true",  help="Run with accelerator support" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
-    parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",      dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
+    parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",   dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
+    parser.add_argument("-pst",  "--plot-start-time", dest="plot_start_time", type=float, default=0.0, help="start time for plot" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures", "flat"], required="True", help="Scenario" )
-    parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-static point tracer, 2-moving point tracer" )
-    parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
-    parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
-    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-so", "--second-order",  dest="SO_flag",           default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
+    parser.add_argument("-cfl",  "--CFL-ratio",       dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer",  type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-static point tracer, 2-moving point tracer" )
+    parser.add_argument("-tn",   "--tracer-name",     dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
+    parser.add_argument("-exn",  "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
+    parser.add_argument("-outdir", "--output-directory", dest="path",     type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-so",   "--second-order",    dest="SO_flag",     default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -447,14 +447,14 @@ if __name__ == "__main__":
     #  pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95,0,128,128))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-    #  "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
+    #  "new ::exahype2::LoadBalancingConfiguration(0.95, 32 ,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
 
 ########################################################################################
 #Tracer setting 
@@ -580,7 +580,7 @@ if __name__ == "__main__":
         )
 
       additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
-                                                                             is_enclave_solver = False,
+                                                                             is_enclave_solver = ("enclave" in args.implementation),
                                                                              ))
       additional_mesh_traversal.add_action_set( project_patch_onto_faces )
       additional_mesh_traversal.add_action_set( roll_over_projected_faces )

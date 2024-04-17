@@ -16,7 +16,7 @@ To run the benchmark, configure and compile the Peano under main directory follo
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang::" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
+./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -56,7 +56,7 @@ CXXFLAGS="...... -Icosma/local/gsl/2.4/include ......"
 
 ## Compiling on COSMA
 
-The suggest loading module when you use COSMA (include DINE) are
+the suggest loading module (before compiling the Peano kernel) when you use COSMA or DINE are
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 module purge
@@ -65,8 +65,6 @@ module load gnu_comp/13.1.0
 export FLAVOUR_NOCONFLICT=1
 module load gsl
 export I_MPI_CXX=icpx
-export PYTHONPATH=/path/to/Peano/python
-export PYTHONPATH=$PYTHONPATH:/path/to/Peano/applications/exahype2/ccz4
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 ## SLURM script
