@@ -42,7 +42,7 @@ void tbb::dynamic_task_graph::wait( const dynamic_task_graph_node& node ) {
 
   __TBB_TRACE_TASK_WAIT( node._spawned_task );
 
-  if ( _spawned_tasks.count(node._spawned_task.get() )>0 ) {
+  while ( _spawned_tasks.count(node._spawned_task.get() )>0 ) {
     std::this_thread::yield();
   }
 }

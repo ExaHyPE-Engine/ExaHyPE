@@ -103,6 +103,17 @@ namespace tbb {
 
         /**
          * Wait for one specific node
+         *
+         * ## Realisation
+         *
+         * Very simplistic implementation: We know that the task has been
+         * submitted, so its spawned task's pointer should be in the repo.
+         * If it is not there (anymore), it has finished. So we run into a
+         * while loop over the repo. As long as the task is still bookmarked
+         * there, we yield.
+         *
+         * @param node Task to wait for. This task has to be submitted.
+         *   Otherwise, we trigger an assertion.
          */
         void wait( const dynamic_task_graph_node& node );
 

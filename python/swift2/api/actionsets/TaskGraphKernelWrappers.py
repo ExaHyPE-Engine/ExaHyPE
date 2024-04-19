@@ -140,9 +140,6 @@ def construct_touch_cell_first_time_call(
     
     
     """
-    if touch_cell_first_time_kernel == None:
-        touch_cell_first_time_kernel = ""
-
     d = {
         "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
             current_species_set.name
@@ -173,12 +170,13 @@ def construct_touch_cell_first_time_call(
       adjacentVertexAndParentTasks.insert( parentTaskNumber );
       {% endif %}
 
-      logDebug( 
+      logInfo( 
         "touchCellFirstTime(...)", 
         "create task " << taskNumberToBeUsed.toString() << 
         " for " << marker.toString() <<
         " depends on " << ::swift2::toString(adjacentVertexAndParentTasks) <<
-        " with " << localParticles.size() << " local particles on marker " << marker.toString() 
+        " with " << localParticles.size() << " local particles on marker " << marker.toString() <<
+        " on tree " << _spacetreeId
       );
       
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
@@ -192,6 +190,8 @@ def construct_touch_cell_first_time_call(
         }
       );  
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentVertexAndParentTasks), ::swift2::flatten(taskNumberToBeUsed) );
+      // @todo remove
+      tarch::multicore::waitForTask( ::swift2::flatten(taskNumberToBeUsed) );
     """
     ).render(**d)
 
@@ -286,7 +286,8 @@ def construct_touch_vertex_last_time_call(
           return false;
         }
       );
-      
+
+      /*
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
 
       {% if USE_MULTILEVEL_DEPENDENCIES %}
@@ -301,6 +302,9 @@ def construct_touch_vertex_last_time_call(
         ));
       }
       {% endif %}
+      */
+      newTask->run();
+      delete newTask;
       
       {% if ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE %}
       constexpr bool alterParticlePositionOrGlobalState = true;
@@ -308,9 +312,8 @@ def construct_touch_vertex_last_time_call(
       constexpr bool alterParticlePositionOrGlobalState = false;
       {% endif %}
 
-      
       if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrGlobalState ) {
-        tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
+//        tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
       }
     """
     ).render(**d)

@@ -68,6 +68,9 @@ class UpdateParticleMarker(ActionSet):
   for (int i=0; i<TwoPowerD; i++) {
     for (auto* particle: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if ( marker.isContained( particle->getX() ) ) {
+//          toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+          // @todo Not sure with this marker
+  //    ) {
         particle->setCellHasUpdatedParticle(true);
       }
     }
