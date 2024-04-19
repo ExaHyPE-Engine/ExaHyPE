@@ -16,6 +16,7 @@ from SBH import KernelParallelisation
 from SBH import Limiter
 from SBH import FD4SolverWithLimiter
 from SBH import FD4SolverWithoutLimiter
+from SBH import FVSolverTest
 
 # See comments in README.dox
 # export PYTHONPATH=../../../../python
@@ -142,6 +143,7 @@ if __name__ == "__main__":
         "--solver",
         dest="solver",
         choices=[
+            "fv",
             "fd4-rk1-ps-3",
             "fd4-rk1-ps-6",
             "fd4-rk1-limited-ps-3",
@@ -241,6 +243,15 @@ if __name__ == "__main__":
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
+    elif "fv" in args.solver:
+        my_primary_solver = FVSolverTest(name                      = "CCZ4SBH",
+                                         patch_size                = 4,
+                                         min_cell_size = args.cell_size, 
+                                         max_cell_size = max_cell_size
+                                        )
+        project.add_solver(my_primary_solver)
+        added_limiter = False
+        args.end_time*=10
     else:
         raise "unknown solver type {}".format(args.solver)
 
@@ -327,24 +338,27 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file(
         "MulticoreOrchestration.cpp"
     )
-    peano4_project.output.makefile.add_cpp_file(
-        "CCZ4SBH_FD4.cpp"
-    )
-    peano4_project.output.makefile.add_cpp_file(
-        "CCZ4SBH_FV.cpp"
-    )
-    peano4_project.output.makefile.add_h_file(
-        "CCZ4SBH_FD4.h"
-    )
-    peano4_project.output.makefile.add_h_file(
-        "CCZ4SBH_FV.h"
-    )
+
+    peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
+    peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
     #peano4_project.output.makefile.add_h_file(
     #    "../CompressedFloat.h"
     #)
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FD4.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
+    elif "fv" in args.solver:
+        peano4_project.output.makefile.add_CXX_flag("-DPureFV")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FV.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FV.h")
+    else:
+        peano4_project.output.makefile.add_CXX_flag("-DPureFD4")
+        peano4_project.output.makefile.add_cpp_file("CCZ4SBH_FD4.cpp")
+        peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
 
     peano4_project.generate(throw_away_data_after_generation=False)
     peano4_project.build(make=not args.no_make, make_clean_first=True, number_of_parallel_builds=args.j)

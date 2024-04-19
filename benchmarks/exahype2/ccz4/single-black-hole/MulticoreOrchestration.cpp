@@ -4,9 +4,15 @@
 
 #include "tarch/multicore/Tasks.h"
 #include "tarch/accelerator/Device.h"
+#ifdef PureFV
+#else
 #include "tasks/CCZ4SBH_FD4EnclaveTask.h"
-#include "tasks/CCZ4SBH_FVEnclaveTask.h"
+#endif
 
+#ifdef PureFD4
+#else
+#include "tasks/CCZ4SBH_FVEnclaveTask.h"
+#endif
 
 benchmarks::exahype2::ccz4::MulticoreOrchestration::MulticoreOrchestration():
   _nestedBSPLevels(0),

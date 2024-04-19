@@ -554,6 +554,15 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         ## For compatibility. Name makes no sense. But the value
         ## guides the AMR pattern
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+
+        self.set_implementation(
+            initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
+        )
+
+        self.add_all_solver_constants()
+        update_solver_parameters_for_single_black_hole(self)
         
 
     def create_action_sets(self):
@@ -580,7 +589,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
                 solver.
 
         """
-        super(Solver, self).create_action_sets()
+        super(FD4SolverWithoutLimiter, self).create_action_sets()
 
         self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = (
             """
@@ -633,6 +642,76 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
       );
       """
         )
+
+
+class FVSolverTest(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
+    """!
+
+    Construct 4th order Finite Differences solver without a limiter
+
+    """
+
+    def __init__(self, 
+                 name, 
+                 patch_size,
+                 min_cell_size, 
+                 max_cell_size, 
+                 use_heap_storage=False, # See superclass docu
+                 ):
+
+        super(FVSolverTest, self).__init__(
+            name=name + "_FV",
+            patch_size=patch_size,
+            min_volume_h=min_cell_size / patch_size,
+            max_volume_h=max_cell_size / patch_size,
+            use_heap_storage=False, # See superclass docu
+            pde_terms_without_state=True
+        )
+
+        self._user_action_set_includes += """
+#include "toolbox/blockstructured/Projection.h"        
+#include "toolbox/blockstructured/Restriction.h"        
+#include "toolbox/blockstructured/Interpolation.h"        
+#include "toolbox/blockstructured/Copy.h"        
+"""
+        ## For compatibility. Name makes no sense. But the value
+        ## guides the AMR pattern
+        self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+        
+        self.set_implementation(
+            initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
+        )
+
+        self.add_all_solver_constants()
+        update_solver_parameters_for_single_black_hole(self)
+
+    def create_action_sets(self):
+        """!
+
+                Tailor action set behaviour
+
+                We first make a few additional cells skeleton cells. The rationale
+                behind additional skeletons is given in the @ref benchmarks_exahype2_ccz4_single_black_hole "generic overview".
+                Given the first remark there on FD4-FV coupling, one would be tempted
+                to use the predicate
+
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                self._action_set_update_cell.additional_skeleton_guard = " " "(
+          repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          and
+          not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+        )
+        " " "
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                Once we study the other items (notably the fourth), we see that it is
+                reasonable to make all the overlap region a skeleton within the FD4
+                solver.
+
+        """
+        super(FVSolverTest, self).create_action_sets()
 
 
 
