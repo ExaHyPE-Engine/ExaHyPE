@@ -35,7 +35,7 @@ void tarch::multicore::Lock::lock() {
 
 
 void tarch::multicore::Lock::free() {
-  assertion( _lockIsAquired );
+  assertion( _lockIsAquired or not _freeLockInDestructor );
   _semaphore.leaveCriticalSection();
   _lockIsAquired = false;
 }

@@ -43,6 +43,16 @@ class tarch::multicore::Lock {
     ~Lock();
 
     void lock();
+
+    /**
+     * Free the lock
+     *
+     * There is an assertion here that checks if you have acquired the lock
+     * before. When people use the locks to wrap around the semaphore and to
+     * alter it manually, i.e. when they disable the automatic lock management
+     * in the constructor by unsetting freeLockInDestructor, then these
+     * checks are not valid anymore.
+     */
     void free();
     bool tryLock();
 };
