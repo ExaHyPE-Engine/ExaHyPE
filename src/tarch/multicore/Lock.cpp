@@ -3,9 +3,10 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 
-tarch::multicore::Lock::Lock( tarch::multicore::BooleanSemaphore& semaphore, bool aquireLockImmediately ):
+tarch::multicore::Lock::Lock( tarch::multicore::BooleanSemaphore& semaphore, bool aquireLockImmediately, bool freeLockInDestructor ):
   _semaphore(semaphore),
-  _lockIsAquired(false) {
+  _lockIsAquired(false),
+  _freeLockInDestructor(freeLockInDestructor) {
   if (aquireLockImmediately) {
     lock();
   }
@@ -13,9 +14,16 @@ tarch::multicore::Lock::Lock( tarch::multicore::BooleanSemaphore& semaphore, boo
 
 
 tarch::multicore::Lock::~Lock() {
-  if (_lockIsAquired) {
+  if (_lockIsAquired and _freeLockInDestructor) {
     free();
   }
+}
+
+
+bool tarch::multicore::Lock::tryLock() {
+  assertion( !_lockIsAquired );
+  _lockIsAquired = _semaphore.tryEnterCriticalSection();
+  return _lockIsAquired;
 }
 
 
