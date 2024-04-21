@@ -11,7 +11,7 @@ class Euler_isotropic_vortex(Scenario):
     Scenario reproduced from Ioratti, Dumbser & Loubère, https://doi.org/10.1007/s10915-020-01209-w (p. 43)
     """
 
-    _plot_dt     = 0.1
+    _plot_dt     = 0.0
     _offset      = -5.
     _domain_size = 10.
     _end_time    = 10.0
