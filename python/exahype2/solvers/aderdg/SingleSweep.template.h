@@ -75,15 +75,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     ) override;
     {% endif %}
 
-    {% if ERROR_MEASUREMENT_IMPLEMENTATION=="<user-defined>" %}
-    virtual void analyticalSolution(
-      const tarch::la::Vector<Dimensions,double>&   x,
-      const double                                  t,
-      const double                                  dt,
-      double*                                       sol
-    ) override;
-    {% endif %}
-
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
       const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
