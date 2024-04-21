@@ -168,7 +168,7 @@ void tarch::multicore::native::spawnTask(
       taskNumber
     );
 
-    taskGraphNodeRepository.add_dependencies( node, inDependencies );
+    taskGraphNodeRepository.add_dependencies( taskNumber, inDependencies );
 
     taskGraph.put( node );
   }

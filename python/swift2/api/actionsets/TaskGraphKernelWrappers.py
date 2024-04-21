@@ -153,9 +153,11 @@ def construct_touch_cell_first_time_call(
         fineGridCell{{MARKER_NAME}}.getNumber(),
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
       };
-                  
+      
+      int adjacentResourcesIndices[TwoPowerD];
       std::set<::swift2::TaskNumber> adjacentVertexAndParentTasks;
       for (int i=0; i<TwoPowerD; i++) {
+        adjacentResourcesIndices[i] = fineGridVertices{{MARKER_NAME}}(i).getNumber();
         adjacentVertexAndParentTasks.insert( ::swift2::TaskNumber{
           fineGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
@@ -170,7 +172,7 @@ def construct_touch_cell_first_time_call(
       adjacentVertexAndParentTasks.insert( parentTaskNumber );
       {% endif %}
 
-      logInfo( 
+      logDebug( 
         "touchCellFirstTime(...)", 
         "create task " << taskNumberToBeUsed.toString() << 
         " for " << marker.toString() <<
@@ -183,15 +185,20 @@ def construct_touch_cell_first_time_call(
         tarch::multicore::Task::DontFuse,
         tarch::multicore::Task::DefaultPriority,
         [=,this]()->bool {
+          ::swift2::TaskEnumerator::lockResources(adjacentResourcesIndices);
+        
           {% if TOUCH_CELL_FIRST_TIME_KERNEL!=None %}
           {{TOUCH_CELL_FIRST_TIME_KERNEL}}
           {% endif %}
+          
+          ::swift2::markAllParticlesAsUpdatedWithinCell( localParticles, marker );
+          
+          ::swift2::TaskEnumerator::unlockResources(adjacentResourcesIndices);
+          
           return false;
         }
       );  
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentVertexAndParentTasks), ::swift2::flatten(taskNumberToBeUsed) );
-      // @todo remove
-      tarch::multicore::waitForTask( ::swift2::flatten(taskNumberToBeUsed) );
     """
     ).render(**d)
 
@@ -287,7 +294,6 @@ def construct_touch_vertex_last_time_call(
         }
       );
 
-      /*
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
 
       {% if USE_MULTILEVEL_DEPENDENCIES %}
@@ -302,9 +308,6 @@ def construct_touch_vertex_last_time_call(
         ));
       }
       {% endif %}
-      */
-      newTask->run();
-      delete newTask;
       
       {% if ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE %}
       constexpr bool alterParticlePositionOrGlobalState = true;
@@ -313,7 +316,7 @@ def construct_touch_vertex_last_time_call(
       {% endif %}
 
       if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrGlobalState ) {
-//        tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
+        tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
       }
     """
     ).render(**d)

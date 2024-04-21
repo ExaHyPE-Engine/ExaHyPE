@@ -16,11 +16,22 @@ tbb::dynamic_task_graph_node&  tbb::dynamic_task_graph_node_repository::create_n
   dynamic_task_graph_node_number  number
 ) {
   HashMap::accessor hash_map_accessor;
+  HashMap::accessor shadowed_hash_map_accessor;
 
-  bool is_new = _node_container.insert(hash_map_accessor, number);
+  bool task_with_number_has_never_been_created_before  = _node_container.insert(hash_map_accessor, number);
 
-  if (not is_new) {
-    delete hash_map_accessor->second;
+  if (not task_with_number_has_never_been_created_before) {
+    bool task_with_number_has_never_been_shadowed_before = _shadowed_node_container.insert(shadowed_hash_map_accessor, number);
+
+    if (not task_with_number_has_never_been_shadowed_before) {
+      delete shadowed_hash_map_accessor->second;
+    }
+
+    shadowed_hash_map_accessor->second = hash_map_accessor->second;
+    hash_map_accessor->second          = nullptr;
+  }
+  else {
+    hash_map_accessor->second          = nullptr;
   }
 
   hash_map_accessor->second = new dynamic_task_graph_node( functor );
@@ -36,6 +47,30 @@ tbb::dynamic_task_graph_node& tbb::dynamic_task_graph_node_repository::get_node(
   __TBB_ASSERT( _node_container.count(number)==1, std::string( "node " + std::to_string(number) + " does not exist").c_str() );
   _node_container.find(hash_map_accessor,number);
   return *(hash_map_accessor->second);
+}
+
+
+void tbb::dynamic_task_graph_node_repository::add_dependency( const dynamic_task_graph_node_number& new_task_node, const dynamic_task_graph_node_number&  number) {
+  if (new_task_node==number) {
+    HashMap::accessor hash_map_accessor_for_previous_task_with_same_number;
+
+    bool theres_a_previous_task_with_this_number = _shadowed_node_container.find(hash_map_accessor_for_previous_task_with_same_number, number);
+
+    if (theres_a_previous_task_with_this_number) {
+      __TBB_ASSERT( hash_map_accessor_for_previous_task_with_same_number->second!=nullptr, std::string( "no backup of predecessor task " + std::to_string(number) + " available").c_str() );
+      get_node(new_task_node).add_dependency( *(hash_map_accessor_for_previous_task_with_same_number->second) );
+    }
+  }
+  else {
+    add_dependency( get_node(new_task_node), number );
+  }
+}
+
+
+void tbb::dynamic_task_graph_node_repository::add_dependencies( const dynamic_task_graph_node_number& new_task_node, const std::set< dynamic_task_graph_node_number >&  in_dependencies ) {
+  for (auto& p: in_dependencies) {
+    add_dependency( new_task_node, p );
+  }
 }
 
 
