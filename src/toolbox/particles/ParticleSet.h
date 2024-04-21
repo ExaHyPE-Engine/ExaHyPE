@@ -50,16 +50,16 @@ namespace toolbox {
  *
  *
  * ## Sieve semantics
- * 
- * Whenever a particle has to be added to the sieve set, the underlying action 
- * set will inform the particle set or vertex, respectively, to move the 
- * particle into the sieve set. This step has to be protected by a semaphore, 
- * as relaised in SieveParticles. After the mesh sweep, all the particles are 
+ *
+ * Whenever a particle has to be added to the sieve set, the underlying action
+ * set will inform the particle set or vertex, respectively, to move the
+ * particle into the sieve set. This step has to be protected by a semaphore,
+ * as relaised in SieveParticles. After the mesh sweep, all the particles are
  * exchanged between ranks, and then we have to sort them into the mesh again.
- * 
+ *
  * There are two different modes how to use this sieve set: We can either work
  * against a global sieve set, or we can make each thread first create a copy
- * of all the particles to be sieved and then hand out thread-local copies. 
+ * of all the particles to be sieved and then hand out thread-local copies.
  * Which variant to pick is a choice to be made by the sorting action set.
  */
 template <typename T>
@@ -153,7 +153,11 @@ public:
   /**
    * Invoke exchangeSieveListsGlobally().
    */
-  static void finishedTraversal();
+  static void finishedTraversal(
+      const tarch::la::Vector<Dimensions,double>   domainOffset,
+      const tarch::la::Vector<Dimensions,double>   domainSize,
+      const std::bitset<Dimensions>                periodicBC
+  );
 
   /**
    * @return A copy of all the particles that have to be sieved.
@@ -166,16 +170,20 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
-   * 
-   * This operation always removes particles from the sieve set, and it 
-   * sort exclusively local particles into the domain.
+   *
+   * This operation always removes particles from the sieve set, and it
+   * sorts exclusively local particles into the domain. For these two reasons
+   * (alter container plus share one among all threads), it has to use a
+   * semaphore whenever it accesses the set.
+   *
+   * Consult the @ref page_toolbox_particles_mesh_consistency
    *
    * @see SieveParticles::getParticlesToBeSievedIntoVertex()
    */
   static ParticleList getParticlesToBeSievedIntoVertex(
     const peano4::datamanagement::VertexMarker& marker
  );
-    
+
   /**
    * Make routine from SieveParticles public
    *
@@ -330,6 +338,20 @@ protected:
 
   /**
    * Map of persistent particles that have to be sieved
+   *
+   * Every particle set is tied to one global sieve set realised through this
+   * attribute. Sieving is briefly also mentioned on @ref page_toolbox_particles_mesh_consistency.
+   * Access to this set is provided through two routines:
+   *
+   * - getParticlesToBeSievedIntoVertex() pipes your request directly through
+   *   to the set's getParticlesToBeSievedIntoVertex(), i.e. it grants you
+   *   access to the global sieve set.
+   * - Alternatively, you can clone the whole sieve set for your algorithm via
+   *   cloneParticlesToBeSieved() and then sieve from thereon.
+   *
+   * Different particle sorting strategies these different options the way they
+   * see fit.
+   *
    */
   static SieveParticles _sieveParticles;
 

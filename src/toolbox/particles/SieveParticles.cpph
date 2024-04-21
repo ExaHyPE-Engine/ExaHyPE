@@ -38,7 +38,11 @@ void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) 
 
 
 template <typename T>
-void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
+void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
+    const tarch::la::Vector<Dimensions,double>   domainOffset,
+    const tarch::la::Vector<Dimensions,double>   domainSize,
+    const std::bitset<Dimensions>                periodicBC
+    ) {
   logDebug("finishedTraversal()", "there are " << _particlesThatHaveToBeSieved.size() << " sieve sets (each tied to one tree or the global sorting, respectively)");
 
   deleteParticles(_particlesThatHaveToBeSieved);
@@ -137,6 +141,12 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
 
   // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+
+  if (periodicBC.any()){
+    for (auto p: _particlesThatHaveToBeSieved){
+      p->setX( toolbox::particles::applyPeriodicBoundaryConditions( p->getX(), domainOffset, domainSize, periodicBC) );
+    }
+  }
 }
 
 

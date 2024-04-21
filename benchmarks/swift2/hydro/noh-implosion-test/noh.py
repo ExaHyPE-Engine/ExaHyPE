@@ -606,7 +606,6 @@ if __name__ == "__main__":
     particle_plotter.add_attribute_to_plot(particle.pressure, 1)
     particle_plotter.add_attribute_to_plot(particle.u, 1)
     particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-    particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
     if args.mode == "asserts" or args.mode == "debug":
         particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
         particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)

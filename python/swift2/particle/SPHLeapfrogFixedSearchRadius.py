@@ -309,14 +309,13 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         """
 
         steps = [
-            #  self.algorithm_steps_dict["FlagBoundaryParticles"],
-            self.algorithm_steps_dict["Drift"],
+            self.algorithm_steps_dict["SPH_Drift"],
             self.algorithm_steps_dict["PredictHydro"],
-            self.algorithm_steps_dict["Density"],
-            self.algorithm_steps_dict["Force"],
-            self.algorithm_steps_dict["Kick2"],
-            self.algorithm_steps_dict["ReduceGlobalQuantities"],
-            self.algorithm_steps_dict["Kick1"],
+            self.algorithm_steps_dict["SPH_Density"],
+            self.algorithm_steps_dict["SPH_Force"],
+            self.algorithm_steps_dict["SPH_Kick2"],
+            self.algorithm_steps_dict["SPH_ReduceGlobalQuantities"],
+            self.algorithm_steps_dict["SPH_Kick1"],
         ]
 
         # make a copy of the steps, so if you modify them later (e.g. by
@@ -333,12 +332,11 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         Make sure get_algorithm_steps_dict(self) has been called before.
         """
         initsteps = [
-            self.algorithm_steps_dict["FlagBoundaryParticles"],
-            self.algorithm_steps_dict["Density"],
-            self.algorithm_steps_dict["Force"],
-            # TODO MLADEN: verify this later.
-            #  self.algorithm_steps_dict["Kick1"],
-            self.algorithm_steps_dict["Kick2"],
+            self.algorithm_steps_dict["SPH_Density"],
+            self.algorithm_steps_dict["SPH_Force"],
+            # for the first kick in the simulation, we need the reset that
+            # is done in the kick2 algorithm step, but not in the kick1.
+            self.algorithm_steps_dict["SPH_Kick2"],
         ]
 
         # return deep copies of algorithms steps. Otherwise,

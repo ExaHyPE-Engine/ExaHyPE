@@ -287,8 +287,12 @@ void toolbox::particles::ParticleSet<T>::shutdownDatatype() {
 
 
 template <typename T>
-void toolbox::particles::ParticleSet<T>::finishedTraversal() {
-  _sieveParticles.exchangeSieveListsGlobally();
+void toolbox::particles::ParticleSet<T>::finishedTraversal(
+    const tarch::la::Vector<Dimensions,double>   domainOffset,
+    const tarch::la::Vector<Dimensions,double>   domainSize,
+    const std::bitset<Dimensions>                periodicBC
+    ) {
+  _sieveParticles.exchangeSieveListsGlobally(domainOffset, domainSize, periodicBC);
 }
 
 
@@ -303,11 +307,11 @@ typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::Pa
   const peano4::datamanagement::VertexMarker& marker
 ) {
   return _sieveParticles.getParticlesToBeSievedIntoVertex(
-    marker, 
+    marker,
     true,     // removeReturnedParticlesFromSet
-    true,      // onlyReturnParticlesThatWillBeLocal
-    false      // don't have to lock underlying semaphore, as I don't 
-               // alter sieve set
+    true,     // onlyReturnParticlesThatWillBeLocal
+    true      // don't have to lock underlying semaphore, as I don't
+              // alter sieve set
   );
 }
 
