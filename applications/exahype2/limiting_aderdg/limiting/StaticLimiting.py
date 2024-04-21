@@ -394,7 +394,7 @@ Type:                   """ + self.__class__.__name__
     specifically cell or face data or grid actions such as the actionsets.
     Currently it generates solver implementation and header files.
     """
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
         """
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
@@ -403,6 +403,9 @@ Type:                   """ + self.__class__.__name__
 
         output: peano4.output.Output
         """
+
+        if(subdirectory):
+            subdirectory += "/"
 
         HeaderDictionary = {}
         self._init_dictionary_with_default_parameters(HeaderDictionary)
@@ -413,7 +416,7 @@ Type:                   """ + self.__class__.__name__
                 os.path.dirname(os.path.realpath(__file__)) + "/StaticLimitingAbstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                ".",
+                subdirectory + ".",
                 HeaderDictionary,
                 True,
                 True
@@ -426,7 +429,7 @@ Type:                   """ + self.__class__.__name__
                 os.path.dirname(os.path.realpath(__file__)) + "/StaticLimiting.template.cpp",
                 self._name,
                 namespace,
-                ".",
+                subdirectory + ".",
                 HeaderDictionary,
                 False,
                 True
@@ -434,12 +437,12 @@ Type:                   """ + self.__class__.__name__
         )
 
         output.add(generated_abstract_files)
-        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
 
         output.add(generated_solver_files)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
-        output.makefile.add_h_file(self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
 
         self.generate_kernels(namespace, output, dimensions)
 

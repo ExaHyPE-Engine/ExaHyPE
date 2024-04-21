@@ -75,14 +75,14 @@ class ModelToDataRepository(object):
       
     namespace  = self.__get_full_namespace()
     class_name = self.__get_class_name()
-    output.makefile.add_cpp_file( namespace[-1] + "/" + class_name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self.model.subdirectory + namespace[-1] + "/" + class_name + ".cpp", generated=True )
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
       templatefile_prefix+".template.h",
       templatefile_prefix+".template.cpp",
       class_name, 
       namespace,
-      namespace[-1], 
+      self.model.subdirectory + namespace[-1], 
       self.d,
       True)
     output.add(generated_files)

@@ -1,0 +1,685 @@
+/**
+
+ @page tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
+
+ We solve the Poisson equation 
+ 
+ @f$ -\Delta u = 4 \pi^2 \prod_{d} \sin (2 \pi x_d) @f$
+ 
+ over the unit square or cube @f$ \Omega = [0,1]^d @f$, subject to Dirichlet boundary conditions @f$ u |_{\partial \Omega} = 0 @f$.
+ The exact solution of this problem is @f$ u_{\mathrm{exact}} = \prod_d \sin (2 \pi x_d) @f$
+
+ Things that you should be familiar with before you read this tutorial:
+ 
+ - Peano's @ref page_multigrid_terminology "multigrid terminology";
+ - DG basics (from a math point of view, though no in-depth knowledge is required);
+ - How to @ref page_installation "install and build Peano" and notably how to enable its @ref documentation_multigrid_petsc "PETSc backend".
+ 
+ 
+ This simple example discusses the steps and code snippets from the file benchmarks/multigrid/petsc/poisson/dg.py.
+ We omit some technical details (such as the parsing of the command line) and 
+ focus on key ingredients. Therefore, it is reasonable to study this description 
+ in combination with the actual script. It is best to read all high-level documentation in 
+ combination with the documentation of the class multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation
+ which provides a lot of details on the actual implementation and mathematical ingredients.
+ This page is more on the how to use the class to construct a working solver.
+ 
+ 
+ # High level overview of Python script structure
+  
+ ## Set up the project
+ 
+ First, we have to create a multigrid project.
+
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create project
+ 
+ This is kind of an empty hull until we fill it with some global information 
+ (such as the domain size) and also tell the API to scan the global Makefile.
+ 
+ We will insert the solvers into this project in a minute. Once this is done,
+ we need to configure the project
+ 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Configure build 
+
+ ## Introduce the solver
+
+@todo Change the arguments' names to the "from" notation.
+  
+ A DG solver is created through 
+
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create solver
+
+ We discuss the details of the parameters below, as they depend - to some 
+ degree - upon the chosen Riemann solver. For the time being, it is sufficient
+ to recognise that we create a solver object, instruct it about the matrices/operators
+ that are to be used, and the add it to the PETSc project.
+ 
+ ## Deliver C++ code
+ 
+ Finally, we can ask the PETSc project to build a Peano project which we can 
+ translate into C++.
+ So we have a multilevel architecture: A high-level, PETSc-specific view is used
+ to construct the solver.
+ Peano's Python API breaks it down into a Peano representation which is a 
+ conceptual/logical representation of the final C++ code.
+ This Peano project then is used to actually write all code snippets and glue 
+ code to end up with a genuine C++ application.
+ You can then either compile the code via a plain Makefile through the Python API
+ or you switch to the command line. 
+ All of these steps follow @ref page_architecture "the generic architecture of any Peano project".
+ 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create Peano project
+ 
+ 
+ # Created C++ code
+ 
+ Once the script has terminated, a lot of subdirectories will be there in your 
+ project repository. They contain glue code and usually don't have to be 
+ inspected. There are four files which represent your solver: An abstract
+ solver class AbstractDGPoisson (with a header and an implementation) and 
+ its implementation DGPoisson (header plus implementation).
+ 
+ You should never edit the abstract class, as it is overwritten every time 
+ you invoke the Python script. However, it is worth having a look: This
+ abstract superclass contains all the matrices, constants, ... That is, it
+ picks up the details from the Python script.
+ 
+ The actual implementation is something you can edit and alter. Unless you
+ prescribe a right-hand side (not done in the example discussed), this is 
+ the place where you introduce your problem-specific right-hand side. It is
+ also the place where you inject Dirichlet Boundary conditions for example.
+ 
+ 
+ # Solver flavours
+
+ ## Naïve DG discretization of the Poisson equation
+
+ Here we demonstrate how a simple weak formulation resulting from the classical Poisson equation can be implemented within the solver interface.
+ 
+ <div style="background-color: #ffc0cb; padding: 10px; border: 1px solid black;"> 
+ We emphasize that this straightforward discretization cannot be used to build a working solver since it leads to a singular matrix! However, it is instructive to discuss it as a first simple example to illustrate the general structure and design philosophy of the solver. The naïve discretisation is then extended to the correct \ref Interior penalty formulation at the end of this tutorial.
+ </div>
+ 
+ Throughout the tutorial, we follow the notation as used for
+ <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation</a>
+ and discuss 2D Poisson equation with @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
+ The extension to higher dimensions is straightforward.
+ Multiplying by a test-function @f$ v @f$ and integrating by parts, our weak formulation becomes
+
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v \ d\boldsymbol{x} 
+  &=& 
+  \int _\Omega ( -\Delta u) \cdot v \ d\boldsymbol{x} 
+  \\ 
+  &=& 
+  \sum_{\text{cells } K} \int _{K} (- \Delta u) \cdot v \ d\boldsymbol{x} 
+  \\ 
+  &=& 
+  \sum_{\text{cells } K} 
+  \left( 
+  \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x} 
+  - 
+  \int _{\partial K} (\widehat{\nabla u},n) \cdot v \ ds 
+  \right)
+  =
+  \sum_{\text{cells } K} \int _{K} f \cdot v \ d\boldsymbol{x}  
+\f}
+The Dirichlet boundary condition @f$ u |_{\partial \Omega} = 0 @f$ is enforced weakly. However, we will defer a discussion of how this is implemented to the next section where we introduce the interior penalty method. In the facet integrals @f$ \int_{\partial K} @f$ of the above expression, @f$ n @f$ denotes the outward normal of the cell @f$ K @f$. The term @f$ ( \nabla u, n) @f$, which results from the integration by parts, needs to be evaluated on the cell boundary @f$ \partial K @f$. For interior faces this is not defined since the solution is allowed to be discontinuous across cells' boundaries in the DG approach. Hence, we need to replace @f$ \nabla u @f$ by some @f$ \widehat{\nabla u} @f$ as discussed in the following. First, we introduce the vector @f$ n_F@f$ on each facet. On boundary facets we set @f$ n_F = n @f$ such that @f$ n_F @f$ is the outward normal vector. For all interior facets there are two outward normals, one associated with each of the two neighbouring cells, and we need to make a choice. If the facet is oriented such that its normal points in coordinate direction @f$ j @f$ then @f$ n_F@f$ is the unit vector with 1 at position @f$ j @f$ and zeros everywhere else. For example, in two dimensions we have that @f$ n_F \in \{(1,0)^T, (0,1)^T\} @f$ on interior facets. Observe that in this case @f$ n_F @f$ and @f$ n @f$ only differ by a sign: @f$ n = \pm n_F @f$ or more explicitly @f$ n = n_F (n\cdot n_F) @f$.
+
+In Peano, we need proceed as follows to deal with the term @f$ ( \nabla u, n) = ( \nabla u, n_F) (n\cdot n_F) @f$:
+
+- First, we introduce projections @f$ q^- @f$ and @f$ q^+ @f$ of the normal gradient @f$ ( \nabla u, n_F) @f$ in the cell onto facets,
+  so that
+\f{equation}{
+  q^\pm = ( \nabla u, n_F)|_{\partial K}
+\f}
+  Mathematically, the projections can be constructed through L-2 projection or extrapolation
+  of the cell values. From the perspective of each individual cell, the projections are distributed
+  as shown in the picture in @ref page_multigrid_terminology "enumeration discussion": 
+  left and bottom facets are assigned the "+" projection, and top and right 
+  facets receive the "-" projections. As a result, each facet stores both @f$ q^+ @f$ and @f$ q^- @f$
+  coming from its two neighboring cells (the case of boundary facets will be discussed separately). 
+
+
+- Then, on each facet of @f$ \partial K @f$, we define @f$ q^f = \mathcal{R} \left( q^-, q^+ \right) @f$ and 
+  replace the term @f$ (\widehat{\nabla u},n_F) @f$ 
+  with @f$ q^f @f$ in the integrand.
+  The simplest choice of @f$ \mathcal{R} @f$ is @f$ q^f = \left( q^- + q^+ \right) / 2 @f$, which corresponds to averaging the gradients of two neighbouring cells.
+  So, the weak formulation becomes
+\f{eqnarray*}{
+  \sum_{\text{cells } K} 
+  \left( 
+  \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x}  
+  - 
+  \int_{\partial K} q^f  v(n\cdot n_F)\, ds
+  \right)
+  =
+  \sum_{\text{cells } K} \int _{K} f \cdot v \ d\boldsymbol{x} 
+\f}
+
+Now, we consider the discretization of the problem <em>at the level of an individual cell</em> and its facets,
+as it gives us the information required for the arguments in <code>multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation()</code>.
+We illustrate each components of the solver with an example of a 1st order discretization.
+As the problem is discretized by choosing appropriate test functions and calculating the integrals,
+the discussed above weak formulation for an individual cell results in a set of linear equations, which can be written in the matrix form:
+
+\f{equation}{
+  \left(
+    \begin{array}{cc}
+      A_{c \gets c} & A_{c \gets f} \\
+    \end{array}
+  \right)
+  \left(
+    \begin{array}{c}
+      \bar{u} \\
+      \bar{q}^f
+    \end{array}
+  \right)
+  =
+  M \bar{f}
+\f}
+
+where @f$ M @f$ is the mass matrix that arises from the right hand side of the weak formulation above. The projections of the normal gradient can then be represented as follows
+
+\f{equation}{
+  \bar{q}^\pm = P_{f \gets c} \bar{u}
+\f}
+
+The bar notation of @f$ \bar{u} @f$, @f$ \bar{q}^f @f$, @f$ \bar{q}^\pm @f$ here denotes vectors of nodal values of 
+corresponding unknowns for a single representative cell and its faces as illustrated below.
+
+@image html two-d-1st-order-stencil.png width=25%
+
+Here, @f$ \bar{u} = \left( u_0, u_1, u_2, u_3 \right) @f$ (4 unknowns), @f$ \bar{q}^f = \left( q^f_0, ... , q^f_7 \right) @f$ (8 unknowns)
+and @f$ \bar{q}^\pm = \left( q^+_0, ..., q^+_3 , q^-_4, ..., q^-_7 \right) @f$ (8 unknowns). Note that the vector @f$ \bar{q}^\pm @f$
+is composed only of those projections @f$ q^+_i @f$ and @f$ q^-_i @f$ to which the values from the given cell are projected.
+As such, we do not count her, for example, @f$ q^-_0 @f$ and @f$ q^+_4 @f$, as they will be assigned values when accessed from neighbouring cells.
+On the right-hand side, @f$ \bar{f} @f$ is the vector of nodal values of the given function @f$ f @f$.
+
+The ingredients required for a DG solver are the following:
+ 
+  - Each cell holds @f$ (p+1)^d @f$ nodes, where the polynomial degree @f$ p @f$ is stored in the
+    variable <code> polynomial_degree </code>. In our 2D 1st order example, @f$ p = 1 @f$, @f$ d = 2 @f$,
+    so each cell has 4 nodes.
+    <br><br>
+
+  - Each node within the cell holds one unknown, as we solve a scalar equation for @f$ u @f$.
+    Therefore,
+    
+            cell_unknowns = 1
+
+    If you have vector-valued PDEs, it is worth studying the documentation of
+    <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver itself</a>
+    and notably the section "Data storage" therein.
+    <br><br>
+
+  - On the facets, we have introduced one helper variable @f$ q^f @f$ to represent an approximation of the 
+    normal component of the gradient vector. Since this is a scalar variable, we set 
+     
+            face_unknowns = 1
+
+    The number of @f$ q^f @f$ unknowns per facet is @f$ (p+1)^{d-1} @f$, which gives 2 for @f$ p = 1 @f$, @f$ d = 2 @f$.
+    Additionally, on each facet we store the same number of @f$ q^- @f$ and @f$ q^+ @f$ projections, which gives extra @f$ 2(p+1)^{d-1} @f$
+    unknowns per facet.
+    <br><br>
+
+  - The operator @f$ A_{c \gets c} @f$ takes the dofs within a cell and couples
+    them with each other. It arises from the discretization of the term @f$ \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x} @f$ and represents a 
+    @f$ (p+1)^{d} \times (p+1)^{d} @f$ matrix, which should be specified in <code> cell_cell_lhs_matrix </code>.
+    In our example, this is a @f$ 4 \times 4 @f$ matrix.
+    
+    Additionally, since the supplied matrix is supposed to be mesh-independent and computed for a reference unit square, one needs to indicate
+    how it should be scaled when mapped onto a particular mesh cell with spacing @f$ h @f$. This should be done by specifying <em>a power of</em> @f$ h @f$ in
+    <code> cell_cell_lhs_matrix_scaling </code>.
+    It is easy to show that for the term @f$ \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x} @f$ this scaling factor is @f$ h^{d-2} @f$, i.e.
+
+            cell_cell_lhs_matrix_scaling = args.dimensions-2
+
+    For two dimensions, it is 0.
+    <br>
+
+  - The operator @f$ A_{c \gets f} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values of @f$ q^f @f$ on the faces and couples them
+    with @f$ (p+1)^{d} @f$ cell values of @f$ u @f$.
+    This is responsible for the face integral term @f$ \int_{\partial K} q^f v \, ds @f$ in our weak formulation.
+    Thus, it represents a @f$ (p+1)^{d} \times 2d(p+1)^{d-1} @f$ matrix, which is passed on as <code> face_to_cell_matrix </code>
+    with scaling power of @f$ h @f$ specified in <code> face_to_cell_matrix_scaling </code>.
+    
+    In the 2D 1st order case, this is a @f$ 4 \times 8 @f$ matrix, where the first two columns correspond to the integral over the left facet,
+    the next two columns correspond to the bottom facet, followed by the next two columns for the right facet, and the last two columns for the top.
+    See @ref page_multigrid_terminology "this page" for more details on the enumeration order.
+    <br><br>
+
+  - The right-hand side operator @f$ M @f$ is a @f$ (p+1)^d \times (p+1)^d @f$ matrix which is
+    applied to the vector of nodal values @f$ b @f$, i.e. function @f$ f(x) @f$ evaluated at the Gauss-Lobatto
+    or Gauss-Legendre points of a cell. This default right-hand side is a ***mass matrix***
+    and scaled with @f$ h^d @f$ due to the integral. Consequently, 
+    
+            cell_cell_rhs_matrix_scaling = args.dimensions
+    <br>
+
+  - The operator @f$ P_{f \leftarrow c} @f$ takes the values from a cell, compute the gradient and projects it onto
+    the faces. Hence, @f$ P_{f \leftarrow c} @f$ is a @f$ 2d(p+1)^{d-1} \times (p+1)^{d} @f$ matrix.
+    The 2d equals the number of faces of a cell, while the face is a submanifold
+    and therefore hosts @f$ (p+1)^{d-1} @f$ values.
+    The result is written into @f$ q^+ @f$ or @f$ q^- @f$ on the faces, depending on the relative position of the facet within the cell.
+    Read through <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver's</a>
+    data storage section and also consult Peano's @ref page_multigrid_terminology "enumeration discussion"
+    for information on the ordering.
+    In the interface above, @f$ P_{f \leftarrow c} @f$ is specified by <code> cell_to_face_matrix </code> with scaling <code> cell_to_face_matrix_scaling </code>.
+    As we compute derivatives, the matrix needs to be scaled by @f$ 1/h @f$, so
+
+            cell_to_face_matrix_scaling = -1
+
+    For @f$ p = 1 @f$ and @f$ d = 2 @f$, @f$ P_{f \leftarrow c} @f$ is an @f$ 8 \times 4 @f$ matrix with the first two lines corresponding to
+    the normal gradient computed for the left facet, with the remaining lines following the same order as earlier discussed for 
+    @f$ A_{c \leftarrow f} @f$.
+    <br><br>
+
+  - Finally, we need to couple @f$ q^f @f$ and @f$ q^- @f$, @f$ q^+ @f$. For this, we specify <code>face_face_Riemann_problem_matrix</code>
+    that defines the linear relation @f$ q^f = \mathcal{R} \left( q^- , q^+ \right) = \frac{1}{2} \left( q^- + q^+ \right) @f$.
+    Unlike the operators @f$ A_{c \leftarrow f} @f$ and @f$ P_{f \leftarrow c} @f$, which employ unknowns on all the facets of a given cell,
+    this needs to be specified for one representative facet only, assuming that the relation is the same for all interior facets.
+    As such, it requires a @f$ (p+1)^{d-1} \times 2(p+1)^{d-1} @f$ matrix. Let us illustrate this with our reference case. Coupling the unknowns
+    on the left facet gives
+  \f{equation}{
+    \left(
+      \begin{array}{c}
+        q^f_0 \\
+        q^f_1
+      \end{array}
+    \right)
+    =
+    \left(
+      \begin{array}{cccc}
+        \frac{1}{2} & \frac{1}{2} & 0 & 0 \\
+        0 & 0 & \frac{1}{2} & \frac{1}{2}
+      \end{array}
+    \right)
+    \left(
+      \begin{array}{c}
+        q_0^- \\
+        q_0^+ \\
+        q_1^- \\
+        q_1^+  
+      \end{array}
+    \right)
+  \f}
+      This @f$ 2 \times 4 @f$ matrix needs to be specified as <code>face_face_Riemann_problem_matrix</code> in our case.
+      See Section "The simplest Riemann solver: averaging" for a general discussion.
+
+  <!-- 
+  - The quadrature points are dumped into the solver and are mainly used for 
+    the visualization, but also to evaluate @f$ f(x) @f$ for the right-hand
+    side at the correct positions in space. 
+  --> 
+
+### Global matrix representation
+Denoting the *global* dof-vectors vectors @f$ \bar{u}^{\text{global}} @f$, @f$ \bar{q}^{f,\text{global}} @f$ and @f$ \bar{q}^{\pm,\text{global}} @f$, the weak formulation is equivalent to the matrix equation
+
+\f{equation}{
+\begin{pmatrix}
+A_{c\leftarrow c}^{\text{global}} & A_{c\leftarrow f}^{\text{global}} & 0 \\
+P_{f\leftarrow c}^{\text{global}} & 0 & -\text{Id} \\
+0 & -\text{Id} & R_{f\leftarrow f}^{\text{global}}
+\end{pmatrix}
+\begin{pmatrix}
+\bar{u}^{\text{global}} \\
+\bar{q}^{f,\text{global}} \\
+\bar{q}^{\pm,\text{global}} \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+M^{\text{global}}\bar{f}^{\text{global}} \\ 0 \\ 0
+\end{pmatrix}
+\f}
+In this expression @f$ A_{c\leftarrow c}^{\text{global}} @f$, @f$ A_{c\leftarrow f}^{\text{global}} @f$,
+@f$ P_{f\leftarrow c}^{\text{global}} @f$ and @f$ M^{\text{global}} @f$  are the globally assembled versions of the cell-local matrices @f$ A_{c\leftarrow c} @f$, @f$ A_{c\leftarrow f} @f$,
+@f$ P_{f\leftarrow c} @f$ and @f$ M @f$ defined above. The matrix @f$ R_{f\leftarrow f}^{\text{global}} @f$ arises from the construction @f$ q^f = \mathcal{R}(q^-,q^+) @f$ on the facets.
+
+It should be stressed that the construction of the global matrix (or, in a matrix-free approach, the machinery for applying it to a given vector) is handled by Peano, so the matrix equation is written down in abstract form here for future reference and to highlight its general structure. The user only needs to specify the *local* building block as explained above.
+
+## Interior penalty method for the Poisson equation
+ 
+The above discretisation, which averages the normal gradient of two neighbouring cells to obtain a value on the facets has the serious drawback that it leads to a singular matrix. Mathematically, the reason for this is that the weak form does not have a unique solution: given a solution @f$ u @f$, we can always obtain another solution @f$ u' = u+\delta u @f$ by adding an arbitrary function @f$ \delta u @f$ which is piecewise constant on the interior cells. In order to make the DG discretization of the Poisson equation well-defined, we need to modify the weak formulation by introducing two additional terms,
+"penalizing" jumps of the solution across the faces. This method is known as the interior penalty method, 
+and we will use the formulation summarized in <a href="https://doi.org/10.1002/nla.1816">Bastian, Blatt, Scheichl: Num. Lin. Alg. with Appl., 19(2), pp.367-388 (2012)</a>.
+
+First, we need to introduce some notation. It can be shown that the sum of face integrals in the weak
+form discussed in the previous paragraph, i.e. @f$ - \sum_{\text{cells } K} \int _{\partial K} (\widehat{\nabla u},n) \cdot v \ ds @f$,
+is equivalent to the following, for the interior facets:
+
+\f{equation}{
+  - \sum_{\text{facets } F} \int _{F} \{ (\nabla u, n_F) \} [\![ v ]\!] \ ds
+\f}
+
+Unlike the summation over the cells @f$ K @f$, where each facet of the boundary @f$ \partial K @f$ is integrated over twice, in this case, we sum over the facets,
+so each of them is covered only once. This results in the jump and average terms under the integral:
+
+\f{equation}{
+  [\![ v ]\!] := v^- - v^+, \quad \{ (\nabla u, n_F) \} := \frac{1}{2} \left( (\nabla u, n_F)^- + (\nabla u, n_F)^+ \right),
+\f}
+
+where the "-"s and "+"s are the values from the two cells sharing the facet, evaluated on this facet. For the vertical facets, the "+" and "-" cells are
+the right and the left one, respectively, and for the horizontal ones, they correspond to the upper and the lower cells. In our framework, we will use the projection variables for the "+" and "-" values discussed earlier .
+
+Note that the above equivalence of integral terms is consistent with how we defined the averaging flux
+@f$ \mathcal{R}\left( q^- , q^+ \right) = \left( q^- + q^+ \right) / 2 @f$. If we want to use another relation for
+@f$ \mathcal{R} @f$, we will need to redefine the @f$ \{ \cdot \} @f$.
+
+In these terms, the full formulation for our problem reads as follows
+
+\f{multline}{
+  \sum_{\text{cells } K} 
+  \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x} 
+  +
+  \sum_{\text{interior facets } F_i}
+  \int _{F_i}
+  \biggl[
+    - \{ (\nabla u, n_F) \} [\![ v ]\!] 
+    + \theta [\![ u ]\!] \{ (\nabla v, n_F) \}
+    + \gamma_F [\![ u ]\!] [\![ v ]\!] 
+  \biggr] \ ds
+  +
+  \\
+  \sum_{\text{boundary facets } F_b}
+  \int _{F_b}
+  \biggl[
+    - (\nabla u, n_F) \, v 
+    + \theta \, u \, (\nabla v, n_F)
+    + \gamma_F u v
+  \biggr] \ ds
+  =
+  \sum_{\text{cells } K} \int _{K} f v \ d\boldsymbol{x},
+\f}
+where @f$ \theta @f$ and @f$ \gamma_F @f$ are user-defined constant penalty parameters.
+We will consider @f$ \theta = 1 @f$ and @f$ \gamma_F = p (p + d - 1) / h = 2/h @f$, where @f$ h @f$ is the grid spacing.
+See <a href="https://doi.org/10.1002/nla.1816">Bastian, Blatt, Scheichl: Num. Lin. Alg. with Appl., 19(2), pp.367-388 (2012)</a> and reference therein for details 
+on the choice of penalty parameters.
+
+To implement this formulation in a solver, we will use the same notation and follow the same steps as for
+the "naive discretization" discussed earlier.
+
+First, in addition to the gradient projections @f$ q^\pm @f$, we introduce the projections of the solution
+\f{equation}{
+  u^+ := - u |_{\text{left and bottom facet}}, \quad u^- := u |_{\text{right and top facet}}.
+\f}
+It is convenient to introduce the opposite signs for the "-" and "+" projections, as we did above, because it will
+provide the required jumps when summed up.
+We also introduce @f$ u^f @f$, which couples with the projections on each facet in the same way as @f$ q^f @f$, i.e.
+@f$ u^f = \mathcal{R} \left( u^-, u^+ \right) = \left( u^- + u^+ \right) / 2 @f$.
+
+The discretized weak formulation takes the following form
+
+\f{equation}{
+  \left(
+    \begin{array}{cc}
+      A_{c \gets c} & A^{\text{penalty}}_{c \gets f} \\
+    \end{array}
+  \right)
+  \left(
+    \begin{array}{c}
+      \bar{u} \\
+      \bar{w}^f
+    \end{array}
+  \right)
+  =
+  M \bar{f}
+\f}
+
+@image html two-d-1st-order-penalty-stencil.png width=35%
+
+We introduced @f$ \bar{w}^f @f$ to denote the collection of @f$ q^f @f$ and @f$ u^f @f$ values
+as they are intertwined due to the enumeration system used: we first count all the values on the left facet,
+followed by the bottom, and so on, i.e. @f$ \bar{w}^f = \left( q_0^f, q_1^f, u_0^f, u_1^f, q_2^f, q_3^f, u_2^f, u_3^f, ... \right)@f$, 
+which makes 16 unknowns in our example.
+
+The projection equations become
+
+\f{equation}{
+  \bar{w}^\pm = P_{f \gets c} \bar{u},
+\f}
+
+where, similarly, the vector @f$ \bar{w}^\pm @f$ combines the projection components following the same order:
+@f$ \bar{w}^\pm = \left( q_0^+, q_1^+, u_0^+, u_1^+, \quad q_2^+, q_3^+, u_2^+, u_3^+, \quad q_4^-, q_5^-, ... \right) @f$.
+Again, here we only include the unknowns that are assigned values when accessed from the given cell:
+these are the "+" projections for the left and bottom facets, and "-" projections for the right and top. 16 in total.
+
+Now, let us review the components required to build the solver:
+
+  - As in the previous paragraph, we specify the variable <code> polynomial_degree </code> and set
+
+            cell_unknowns = 1
+    Number of cell unknowns stays the same.
+    <br><br>
+
+  - On the facets, we have, as previously, @f$ q^f @f$ and, additionally, @f$ u^f @f$, so we now set 
+     
+            face_unknowns = 2
+
+    The number of @f$ q^f @f$ and @f$ u^f @f$ unknowns together per facet is @f$ 2(p+1)^{d-1} @f$, which gives 4 for @f$ p = 1 @f$, @f$ d = 2 @f$.
+    Additionally, on each facet we store the same number of @f$ q^-, u^- @f$ and @f$ q^+, u^+ @f$ projections, which gives extra @f$ 4(p+1)^{d-1} @f$
+    unknowns per facet.
+    <br><br>
+
+  - The operator @f$ A_{c \gets c} @f$ remains the same as in the previous paragraph.
+    The penalty terms do not affect the cell-cell coupling.
+    <br><br>
+
+  - The operator @f$ A^{\text{penalty}}_{c \gets f} @f$ is an extended version of the operator
+    @f$ A_{c \gets f} @f$ of the classical weak formulation, which incorporates the penalty terms.
+    It takes the @f$ 4d(p+1)^{d-1} @f$ values of @f$ q^f @f$ and @f$ u^f @f$ on the faces and couples them
+    with @f$ (p+1)^{d} @f$ cell values of @f$ u @f$.
+    It represents a @f$ (p+1)^{d} \times 4d(p+1)^{d-1} @f$ matrix, which is passed on as <code> face_to_cell_matrix </code>.
+
+    This operator now has a part that couples @f$ u @f$ with @f$ q^f @f$ and another part that couples @f$ u @f$ with @f$ u^f @f$.
+    The first, "classical", component under the boundary integral is responsible for coupling @f$ u @f$ and @f$ q^f @f$:
+    When computed for a given cell boundary, it gives the terms @f$ \pm \int q^f v \, ds @f$.
+    
+    Both penalty terms couple @f$ u @f$ and @f$ u^f @f$. They result from the integrals like
+    @f$ \pm \theta \int u^f ( \nabla v, n) \, ds \pm 2 \gamma_F \int u^f v \, ds @f$.
+    In the 2D 1st order case, this is a @f$ 4 \times 16 @f$ matrix, which is divided into segments as shown in the picture:
+    blue segments result from the standard flux integral, and the green ones result from the summed-up penalty terms.
+
+    @image html penalty-matrix.png width=45%
+    <br>
+
+    As one can see, the blue segments needs to be scaled by @f$ h @f$.
+    A potential issue with the current approach to scaling in the interface becomes evident 
+    when we look at the green segments. Each green entity is a sum of two penalty terms,
+    one of which should be scaled by @f$ h^0 @f$ (no scaling) and another one by @f$ h @f$.
+    It means that, in the general case, we cannot separate this scaling without passing the
+    information about @f$ h @f$ to the matrix generator, which we want to avoid.
+
+    In our case, this issue is resolved by choosing the penalty parameter
+    @f$ \gamma_F \sim 1/h @f$, which is consistent with the literature and 
+    ensures that the entire green segment has the same scaling factor @f$ h^0 @f$.
+
+    However, we still need different scaling factors for the blue (@f$ h^1 @f$) and 
+    green (@f$ h^0 @f$) segments, so we cannot do with just one argument <code> face_to_cell_matrix_scaling </code>,
+    and we split the matrix internally for the purpose of scaling.
+    <br><br>
+
+  - The right-hand side operator @f$ M @f$ remains the same.
+    <br><br>
+
+  - The operator @f$ P_{f \leftarrow c} @f$ needs to be changed to accommodate the projection @f$ u^\pm @f$.
+    It is now a @f$ 4d(p+1)^{d-1} \times (p+1)^{d} @f$ (i.e. @f$ 16 \times 4 @f$) matrix with the lines arranged
+    according to the order of unknowns in @f$ \bar{w}^\pm @f$. This is specified in <code> cell_to_face_matrix </code>.
+    
+    Similar to @f$ A^{\text{penalty}}_{c \gets f} @f$, the projection matrix will be divided into the segments corresponding to
+    @f$ q^\pm @f$ and segments corresponding to @f$ u^\pm @f$. The gradient-related @f$ q^\pm @f$ segments, as previously, 
+    should be scaled by @f$ h^{-1} @f$, while the @f$ u^\pm @f$ part does not need to be scaled (@f$ h^0 @f$).
+    <br><br>
+
+  - Finally, we need to extend the <code>face_face_Riemann_problem_matrix</code>
+    to include the relation @f$ u^f = \left( u^- + u^+ \right) / 2 @f$.
+    This gives a @f$ (p+1)^{d-1} \times 4(p+1)^{d-1} @f$ matrix:
+\f{equation}{
+    \left(
+      \begin{array}{c}
+        q^f_0 \\
+        u^f_0 \\
+        q^f_1 \\
+        u^f_1
+      \end{array}
+    \right)
+    =
+    \left(
+      \begin{array}{cccccccc}
+        \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} & 0 & 0 & 0 \\
+        0 & \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} & 0 & 0 \\
+        0 & 0 & \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} & 0 \\
+        0 & 0 & 0 & \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} \\
+      \end{array}
+    \right)
+    \left(
+      \begin{array}{c}
+        q_0^- \\
+        u_0^- \\
+        q_1^- \\
+        u_1^- \\
+        q_0^+ \\
+        u_0^+ \\
+        q_1^+ \\
+        u_1^+ \\ 
+      \end{array}
+    \right)
+\f}
+      See Section "The simplest Riemann solver: averaging" 
+      for a general discussion on the implementation of the face-face coupling.
+
+### Treatment of boundary faces and boundary conditions
+While on the interior faces we construct @f$ q^f=\mathcal{R}(q^-,q^+)@f$, @f$ u^f =\mathcal{R}(u^-,u^+)@f$ from pairs of values @f$ q^\pm @f$, @f$ u^\pm @f$ obtained from the two neighbouring cells, the boundary faces need to be treated differently. For this we set @f$ q^f = q^+ @f$, @f$ u^f = u^+ @f$ for the left and bottom facets and @f$ q^f = q^- @f$, @f$ u^f = u^- @f$ for the right and top facets.
+
+Since Peano stores pairs of variables @f$ u^\pm @f$ and @f$ q^\pm @f$ on *all* faces, this means that the linear system no longer contains equations for the variables @f$ q^- @f$, @f$ u^- @f$ for the left and bottom facets and @f$ q^+ @f$, @f$ u^+ @f$ for the right and top facets. This is expressing the fact that these variables do not have any physical meaning and are decoupled from the solution. As a consequence, they can be set to arbitrary values. To prevent the system matrix from becoming singular, we simply insert 1s into the relevant positions of the global matrix. This implies that if the corresponding entries of the right hand side vector are set to zero, the redundant variables will also be zero. This treatment of boundary values is implemented
+in python/multigrid/petsc/actionsets/ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod.py
+
+To see understand the treatment of boundary conditions it is instructive to consider the general case where @f$ u|_{\partial \Omega} = g @f$ for some arbitrary function @f$ g @f$. As described in <a href="https://doi.org/10.1002/nla.1816">Bastian, Blatt, Scheichl: Num. Lin. Alg. with Appl., 19(2), pp.367-388 (2012)</a>, the boundary condition is enforced weakly by adding the following expression to the right hand of the weak formulation:
+
+\f{equation}{
+\sum_{\text{boundary facets } F_b}
+  \int _{F_b}
+  \biggl[    
+    \theta \, g \, (\nabla v, n_F)
+    + \gamma_F g v
+  \biggr] \ ds
+\f}
+
+In our case @f$ g=0 @f$, so this term vanishes. It is also worth pointing out that Neumann boundary conditions can be enforced in a similar way, see <a href="https://doi.org/10.1002/nla.1816">Bastian, Blatt, Scheichl: Num. Lin. Alg. with Appl., 19(2), pp.367-388 (2012)</a> for details.
+
+### Global matrix representation
+Again, we can write down a the matrix equation for the *global* dof-vectors vectors @f$ \bar{u}^{\text{global}} @f$, @f$ \bar{w}^{f,\text{global}} @f$ and @f$ \bar{w}^{\pm,\text{global}} @f$ which is equivalent to the weak formulation. This matrix equation is
+
+\f{equation}{
+\begin{pmatrix}
+A_{c\leftarrow c}^{\text{global}} & A_{c\leftarrow f}^{\text{penalty,global}} & 0 \\
+P_{f\leftarrow c}^{\text{global}} & 0 & -\text{Id} \\
+0 & -\text{Id} & R_{f\leftarrow f}^{\text{global}}
+\end{pmatrix}
+\begin{pmatrix}
+\bar{u}^{\text{global}} \\
+\bar{w}^{f,\text{global}} \\
+\bar{w}^{\pm,\text{global}} \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+M^{\text{global}}\bar{f}^{\text{global}} \\ 0 \\ 0
+\end{pmatrix}
+\f}
+where construction of the *global* matrices are is handled by Peano. The matrix @f$ R_{f\leftarrow f}^{\text{global}} @f$ takes into account the correct treatment of redundant variables on boundary faces as discussed above.
+
+## The simplest Riemann solver: averaging
+
+@todo Tobias. Continue writing.
+@todo This section needs to be revisited or moved. 
+
+  - On the faces, we have the gradient @f$ \nabla u @f$ from the left and from
+    right right. So we might be tempted to hold @f$ \nabla u^+ @f$ and
+    @f$ \nabla u^- @f$. So @f$ 2d @f$ quantities in total. However, this is 
+    not necessary: We are really only interested in the gradient along the 
+    normal. Therefore, we set 
+     
+            face_unknowns = 1 
+    
+    These are not really unknowns in the linear algebra sense. They are 
+    helpers.        
+  - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ on the face
+    and yields the 
+    @f$ (p+1)^{d-1} @f$ averages.
+    In the interface, it is specified by the parameter <code> face_face_Riemann_problem_matrix </code>.
+
+ 
+ 
+The treatment of the face terms differs from Riemann solver to Riemann solver.
+
+
+This discussion follows the Discontinuous Galerking discussion. The only
+difference is that we have to extend our averaging such that both solution
+components, i.e. @f$ u @f$ and the normal projection of the @f$ \phi @f$
+are taken into account:
+
+\f{eqnarray*}{
+  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+  & \approx & 
+  \int_{\partial \text{cell}_{\psi _\phi }} [[ (\phi,n) ]] \psi _\phi dS(x)  
+  =
+  \pm
+  \frac{1}{2} \int_{\partial \text{cell}_{\psi _\phi }} \left( \phi ^+ + \phi ^- \right) \psi _\phi dS(x)  
+  \\
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+  & \approx & 
+  \int _{\partial \text{cell}_{\psi _u}}  [[u]] \cdot (n, \psi _u) dS(x)
+  = 
+  \frac{1}{2}
+  \int _{\partial \text{cell}_{\psi _u}}  (u^- + u^+) \cdot ( n, \psi _u ) dS(x)
+\f}
+
+The image below illustrates this:
+
+  @image html average_gradient.png
+
+Neither the solution nor the gradient exist at the cell boundaries.
+We have to average both of them.
+
+
+There are two ways to implement this scheme:
+
+1. We don't use any constraint equation (see continuous case), but let the 
+   face-to-cell projection use the average of left and right value.
+2. We introduce a helper dof.
+
+The first variant is close-to-trivial and certainly a good sanity check. The 
+face-to-face matrix here is empty/zero, but the user has to take the averaging
+into account within the projection matrix. 
+
+
+The second variant is more sophsticiated, yet allows users later to implement
+more sophisticated schemes aka Riemann solvers. We have already gone down this
+route by introducing dedicated "helper" dofs on the face.
+
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  \frac{1}{2} & 0 & 0 & 0     & \frac{1}{2} & 0 & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
+  0 & \frac{1}{2} & 0 & 0     & 0 & \frac{1}{2} & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0               & 0 & 0 & 0 & 0               & \frac{1}{2} & 0 & 0 & 0     & \frac{1}{2} & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0               & 0 & 0 & 0 & 0               & 0 & \frac{1}{2} & 0 & 0     & 0 & \frac{1}{2} & 0 & 0 
+  \end{pmatrix}
+\f}
+
+The first two rows refer to projected values from the left. They are sole 
+input values (should be brought to the right by the solver in this context) 
+and hence not subject to any additional equations.
+The third line averages the @f$ u @f$ values from left and right, the
+fourth line addresses the normal projections of @f$ \phi @f$. 
+
+  
+ In the example above, we use d-linear shape functions arranged along the 
+ Gauss-Lobatto integration points. So the two nodes carrying the shape 
+ function weights are spread out over the unit interval.
+
+ @image html face_to_face_projection.png
+ @image html piecewise_discontinuous_shape_functions.png
+ @image html projection.png
+ 
+*/

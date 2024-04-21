@@ -94,7 +94,7 @@
   { \
   tarch::la::Vector<4,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp parallel for collapse(3) default(shared) of (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp parallel for collapse(3) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \

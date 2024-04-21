@@ -12,6 +12,7 @@ import sys
 import peano4
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
 import swift2.sphtools
+import multiprocessing
 
 
 parser = argparse.ArgumentParser(
@@ -86,6 +87,8 @@ args = parser.parse_args()
 icfile = args.ic_filename
 h_tolerance = args.h_tol
 kernel = args.kernel
+if kernel == "quartic_spline":
+    kernel = "quartic_spline_vectorized"
 ndim = args.ndim
 
 eta = args.eta
@@ -126,11 +129,12 @@ print(" --- comparison tolerance:       ", comparison_tolerance)
 
 if icfile.endswith(".hdf5"):
     # Doing a hdf5 run.
-    vtufile = "particles-0.vtu"
+    vtufile = "particles-1.vtu"
 
     hfile = h5py.File(icfile, "r")
     gas = hfile["PartType0"]
     coords = gas["Coordinates"][:]
+    coords = coords[:, :ndim]
     ids = gas["ParticleIDs"][:]
     hfile.close()
 
@@ -140,12 +144,11 @@ elif icfile.endswith(".vtu"):
 
     reader = ParticleVTUReader(vtufile=vtufile, verbose=False)
     partData = reader.load()
-    coords = partData.x
+    coords = partData.x[:, :ndim]
     ids = partData.partid
 
 else:
     raise ValueError("Unrecognized file type {icfile}, looking for .vtu or .hdf5 file.")
-
 
 # Sort by particle ID
 sort_ic = np.argsort(ids)
@@ -157,21 +160,28 @@ coords = coords[sort_ic]
 # -------------------------
 
 tree = KDTree(coords)
-distances, indexes = tree.query(coords, k=nneigh + 10 * ndim)
+distances, indexes = tree.query(coords, k=2 * nneigh + 10 * ndim)
 neighbours = coords[indexes]
 
 npart = coords.shape[0]
 sml_python = np.zeros((npart))
 
-for i in range(npart):
+
+def sml_search(i):
     # the KDTree returns the particle itself as a neighbour too.
     # it is stored at the first index, with distance 0.
     xp = neighbours[i, 0, :]
     xn = neighbours[i, 1:, :]
+
+    verb = False
     h = swift2.sphtools.find_smoothing_length(
-        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=ndim
+        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=ndim, verbose=verb
     )
-    sml_python[i] = h
+    return h
+
+
+pool = multiprocessing.Pool()
+sml_python[:] = pool.map(sml_search, (i for i in range(npart)))
 
 
 # Read in peano output
@@ -197,8 +207,8 @@ errors = 0
 errorstr = (
     "Found difference: "
     + "particle ID = {0:4d} "
-    + "H_peano = {1:.5e} "
-    + "H_python = {2:.5e} "
+    + "h_peano = {1:.5e} "
+    + "h_python = {2:.5e} "
     + "diff = {3:.5e}"
 )
 
@@ -216,6 +226,7 @@ if errors > 0:
     print("Before you panic:")
     print(" - Are you using the correct kernel in this script?")
     print(" - Are you using the correct resolution eta in this script?")
+    print(" - Are you hitting h_min/h_max limits?")
     print("Other ToDo's left for this script: ")
     print(" - corrections for periodic wrapping ")
 

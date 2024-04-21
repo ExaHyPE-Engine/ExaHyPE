@@ -38,6 +38,14 @@ namespace swift2 {
        *
        * Notice that this operation modifies the particle topology and hence
        * particles must be re-sorted before further operations can be executed.
+       *
+       * It's important to take the "V_full" here, not the fluid velocity V.
+       * V_full doesn't get touched outside of kicks. V will be interpolated/
+       * integrated in time as the time step progresses. V_full is the correct
+       * choice here.
+       *
+       * Note that original SWIFT predicts the velocities at this point. We
+       * moved that into hydroPredictExtra().
        */
       template <typename Particle>
       void leapfrog_drift_global_time_step_size(Particle* particle);
@@ -91,13 +99,25 @@ namespace swift2 {
        *  update the particle velocity by a half-timestep using:
        *
        *  Kick1:
-       *     {\bf v}^{n+\frac{1}{2}} &= {\bf v}^{n} + {\bf a}^{n}\frac{\Delta t}{2}
+       *  @f$ {\bf v}^{n+\frac{1}{2}} = {\bf v}^{n} + {\bf a}^{n}\frac{\Delta t}{2} @f$
        *
        *  Kick2:
-       *     {\bf v}^{n+1} &= {\bf v}^{n+\frac{1}{2}} + {\bf a}^{n+1}\frac{\Delta t}{2}
+       *  @f$ {\bf v}^{n+1} = {\bf v}^{n+\frac{1}{2}} + {\bf a}^{n+1}\frac{\Delta t}{2} @f$
        *
-       * Notice that the last kick in this sequence is implicit if ${\bf a}$
-       * depends on ${\bf v}$ (e.g. due to artificial viscosity terms), which in
+       * Additionally, thermal quantities are being updated. In the case of "Minimal"
+       * SPH, we update
+       *
+       * Kick1:
+       *  @f$ {u}^{n+\frac{1}{2}} = u^{n} + \frac{\partial u}{\partial t}^{n}\frac{\Delta t}{2} @f$
+       *
+       * Kick2:
+       *  @f$ {u}^{n+1} = u^{n+\frac{1}{2}} + \frac{\partial u}{\partial t}^{n+1}\frac{\Delta t}{2} @f$
+       *
+       * The update of thermal quantities has been separated into hydro_kick_extra_global_time_step_size
+       * as it depends on the SPH flavour used, and needs to be replaceable.
+       *
+       * Notice that the last kick in this sequence is implicit if @f${\bf a}@f$
+       * depends on @f${\bf v}@f$ (e.g. due to artificial viscosity terms), which in
        * principle requires extra treatments (see e.g. Price et al. 2017).
        *
        * While the time integration scheme should be kick1 - drift - kick2, we do a
@@ -110,18 +130,14 @@ namespace swift2 {
        * linear operations which in principle can be concatenated in any number,
        * provided the total time a particle is being drifted sums up to the correct
        * value. So for example, it should be equivalent to compute
-       * \f$ K_1(\Delta t/2) \circ D(\Delta t) \circ K_2(\Delta t/2) \f$ or
-       * \f$ K_1(\Delta t/2) \circ D(\Delta t/4) \circ D(\Delta t/4) \circ D(\Delta t/4)
-       * \circ D(\Delta t/4) \circ K_2(\Delta t/2) \f$.
        *
+       * @f$ K_1(\Delta t/2) \circ D(\Delta t) \circ K_2(\Delta t/2) @f$
        *
-       * After the kick1, we also call hydro_kick_extra(). That function performs
-       * additional operations on particle quantities aside from the velocity, and
-       * strongly depends on the SPH flavour used.
+       * or
        *
-       * Similarly, after a drift, some additional particle quantities aside from
-       * their position need updating, which also heavily depend on the SPH flavour
-       * used. They are being updated in the function hydro_predict_extra().
+       * @f$ K_1(\Delta t/2) \circ D(\Delta t/4) \circ D(\Delta t/4) \circ D(\Delta t/4)
+       * \circ D(\Delta t/4) \circ K_2(\Delta t/2) @f$.
+       *
        *
        * Once the kick2 operation is complete, the "predicted" values stemming from
        * the "prediction" step in hydro_predict_extra() after a drift need to be
