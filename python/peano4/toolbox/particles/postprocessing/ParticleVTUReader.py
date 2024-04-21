@@ -12,7 +12,9 @@ from typing import Union
 try:
     import vtuIO
 except ModuleNotFoundError:
-    raise ModuleNotFoundError("You need the 'VTUinterface' package to use the ParticleVTUReader")
+    raise ModuleNotFoundError(
+        "You need the 'VTUinterface' package to use the ParticleVTUReader"
+    )
 
 
 def _clean_attribute_string(attr: str):
@@ -32,15 +34,14 @@ def _clean_attribute_string(attr: str):
     # keep all illegal characters and their replacements
     # in this dict. Keys will be replaced by values.
     illegal_character_replacements = {
-            "-": "_",
-            " ": "_",
-            }
+        "-": "_",
+        " ": "_",
+    }
 
     for key in illegal_character_replacements:
         cleaned_attr = cleaned_attr.replace(key, illegal_character_replacements[key])
 
     return cleaned_attr
-
 
 
 class VTUParticleSet(object):
@@ -78,12 +79,14 @@ class VTUParticleSet(object):
         self._attribute_translator = {}
 
         if len(particle_attributes) == 0:
-            raise ValueError("Got empty particle attributes list. Can't work with that.")
+            raise ValueError(
+                "Got empty particle attributes list. Can't work with that."
+            )
 
         cleaned_attributes = []
         for att in particle_attributes:
             if not isinstance(att, str):
-                raise ValueError("Attribute '",att,"' is not a string?")
+                raise ValueError("Attribute '", att, "' is not a string?")
             cleaned_attr = _clean_attribute_string(att)
             setattr(self, cleaned_attr, None)
 
@@ -131,7 +134,6 @@ class VTUParticleSet(object):
         return self.__str__()
 
 
-
 class ParticleVTUReader(object):
     """!
     Reads in particle fields from  a single .vtu file, or all .vtu
@@ -154,12 +156,13 @@ class ParticleVTUReader(object):
         out VTUParticleSet object containing the particle data.
     """
 
-    def __init__(self,
-                 vtufile: Union[str, None] = None,
-                 snapshot_time: Union[float, None] = None,
-                 pvdfile: Union[str, None] = None,
-                 verbose: bool = False,
-                 ):
+    def __init__(
+        self,
+        vtufile: Union[str, None] = None,
+        snapshot_time: Union[float, None] = None,
+        pvdfile: Union[str, None] = None,
+        verbose: bool = False,
+    ):
         """!
         At initialization, either the ``vtufile`` argument needs to
         be provided, or both the ``snapshot_time`` and ``pvdfile``
@@ -194,15 +197,18 @@ class ParticleVTUReader(object):
         self._vtufile = vtufile
         self._pvdfile = pvdfile
         self._snapshot_time = snapshot_time
+        # have we read in the snapshot time?
+        self._read_time = False
+        self._snapshot_time_read = None
 
         # First check that we have all necessary requirements
         if vtufile is None:
             if (snapshot_time is None) or (pvdfile is None):
                 raise ValueError(
-                        "You need to specify either the `vtufile` argument, or "+
-                        "*both* the `snapshot_time` and `pvdfile` arguments so I "+
-                        "know what to read."
-                        )
+                    "You need to specify either the `vtufile` argument, or "
+                    + "*both* the `snapshot_time` and `pvdfile` arguments so I "
+                    + "know what to read."
+                )
             else:
                 self._mode = "multiple"
                 if self._verbose:
@@ -230,7 +236,9 @@ class ParticleVTUReader(object):
             return self.read_single_vtu_file(self._vtufile)
 
         elif self._mode == "multiple":
-            vtufiles = self._get_snapshot_vtu_files_from_pvd(self._pvdfile, self._snapshot_time)
+            vtufiles = self._get_snapshot_vtu_files_from_pvd(
+                self._pvdfile, self._snapshot_time
+            )
             partdata = None
             for f in vtufiles:
                 fullpath = self._get_full_vtufile_path(f)
@@ -245,6 +253,20 @@ class ParticleVTUReader(object):
         else:
             raise ValueError("Unknown mode? How did we get here?")
 
+    def get_snapshot_time(self):
+        """!
+        Return the time/timestep information of the read snapshot.
+        This is only available if you read in the .pvd file, not
+        the .vtu file. If the .vtu file has been read, this method
+        returns `None`. Otherwise, it returns the time of the
+        snapshot, which may vary (slightly) from the snapshot time
+        you specified with when loading the data.
+        """
+
+        if self._read_time:
+            return self._snapshot_time_read
+        else:
+            return None
 
     def get_all_vtufiles(self):
         """!
@@ -260,11 +282,13 @@ class ParticleVTUReader(object):
         """
 
         if self._pvdfile is None:
-            raise ValueError("""
+            raise ValueError(
+                """
 No .pvd file has been specified.
 You need to provide a .pvd file name during initialisation of
 the ParticleVTUReader() object.
-                             """)
+                             """
+            )
 
         # backend specified to vtuIO default to avoid warning messages
         pvdfile = vtuIO.PVDIO(self._pvdfile, interpolation_backend="vtk")
@@ -272,22 +296,23 @@ the ParticleVTUReader() object.
         fullpathfiles = [self._get_full_vtufile_path(f) for f in allvtufiles]
         return fullpathfiles
 
-    def _get_full_vtufile_path(self, vtufile:str):
+    def _get_full_vtufile_path(self, vtufile: str):
         """!
         The .pvd file will provide relative path names to its
         own file path for the .vtu files.
         This function returns the full path of the .vtu file.
         """
         if self._pvdfile is None:
-            raise ValueError("""
+            raise ValueError(
+                """
 No .pvd file has been specified.
 You need to provide a .pvd file name during initialisation of
 the ParticleVTUReader() object.
-                             """)
+                             """
+            )
         pathprefix = os.path.dirname(self._pvdfile)
         fullpath = os.path.join(pathprefix, vtufile)
         return fullpath
-
 
     def _get_snapshot_vtu_files_from_pvd(self, pvdfilename: str, time: float):
         """!
@@ -311,7 +336,9 @@ the ParticleVTUReader() object.
         """
 
         if not os.path.exists(pvdfilename):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), pvdfilename)
+            raise FileNotFoundError(
+                errno.ENOENT, os.strerror(errno.ENOENT), pvdfilename
+            )
 
         # 'interpolation_backend' is used to generate plots with seemingly
         # continuous data. That's not what we're using this module for. We
@@ -331,7 +358,7 @@ the ParticleVTUReader() object.
 
         # make sure we found something
         if not snap_indexes.any():
-            errmsg=f"""
+            errmsg = f"""
             Couldn't find any snapshots?
             Looking for snashots with time={self._snapshot_time}
             pvd file provides following times: {timesteps}
@@ -341,27 +368,30 @@ the ParticleVTUReader() object.
 
         # check that we found the correct snapshot time
         close_enough = True
-        if self._snapshot_time == 0.:
-            if timediff.min() > 1.e-5:
+        if self._snapshot_time == 0.0:
+            if timediff.min() > 1.0e-5:
                 close_enough = False
 
         else:
-            if np.abs(timediff.min() / self._snapshot_time) > 1.e-4:
+            if np.abs(timediff.min() / self._snapshot_time) > 1.0e-4:
                 close_enough = False
 
         if self._verbose or not close_enough:
             print(f"WARNING: You requested snapshot at time={self._snapshot_time}")
             print(
-                    "WARNING: Closest snapshot time I found is:",
-                    timesteps[snap_indexes][0],
-                    "; reading that in now"
-                    )
+                "WARNING: Closest snapshot time I found is:",
+                timesteps[snap_indexes][0],
+                "; reading that in now",
+            )
 
         vtufiles = np.array(allvtufiles)[snap_indexes]
         vtufiles = vtufiles.tolist()
 
-        return vtufiles
+        # store snapshot time
+        self._read_time = True
+        self._snapshot_time_read = timesteps[snap_indexes][0]
 
+        return vtufiles
 
     def read_single_vtu_file(self, vtufilename: str):
         """!
@@ -383,7 +413,9 @@ the ParticleVTUReader() object.
         """
 
         if not os.path.exists(vtufilename):
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), vtufilename)
+            raise FileNotFoundError(
+                errno.ENOENT, os.strerror(errno.ENOENT), vtufilename
+            )
 
         # 'interpolation_backend' is used to generate plots with seemingly
         # continuous data. That's not what we're using this module for. We
@@ -406,10 +438,12 @@ the ParticleVTUReader() object.
 
             if self._verbose:
                 print(
-                        "File", vtufilename, "read in field", attr,
-                        "with shape", part_fields.shape
-                     )
+                    "File",
+                    vtufilename,
+                    "read in field",
+                    attr,
+                    "with shape",
+                    part_fields.shape,
+                )
 
         return data
-
-

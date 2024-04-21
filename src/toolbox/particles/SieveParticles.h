@@ -21,18 +21,75 @@ namespace toolbox {
 
 
 /**
- * Utility class for all flavours of particle sets
+ * Utility class for global sorting for all flavours of particle sets
  *
- * Particle sets differ in the way they actually manage the particles. However,
- * they all need global sorting routines (sieve sets) at one point including
- * their stats. These features are provided by this class.
+ * Particle sets and different sorting strategies all differ in the way they
+ * actually manage their particles and how they are assigned to the mesh
+ * vertices. Notably, they all differ in the way when and how they sort
+ * globally. Some sorting strategies such as peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop
+ * try to realise as much sorting as possible locally by shifting particles
+ * between levels and only resort to a global sieve set when particles are
+ * very fast, while other strategies such as peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort
+ * generally throw all particles that need to be resorted into the global
+ * sieve set and then take it from there.
  *
+ *
+ * ## Relationship to various sorting approaches
+ *
+ * So sieving means that particles are removed from the global mesh and
+ * thrown into a sieve set represented by an instance of SieveParticles.
+ * After one mesh traversal, this sieve set is fully populated. After that,
+ * the individual subdomains run through their mesh and pick the particles
+ * from the global sieve set as they fit. They realise a bucket sort. Again,
+ * there are two different ways how to bucket sort:
+ *
+ * - Some strategies work with one global sieve set, and remove the particles
+ *   from this one as they bucket sort into the domain
+ * - Other strategies clone the sieve set per thread and pick out only those
+ *   particles which are relevant.
+ *
+ * No matter which strategy you follow, all of them work against the same
+ * signature and all of them share the same statistics. These features are
+ * provided by this class:
  * The class is used by toolbox.particles.ParticleSet which usually holds
  * one class instance (static attribute) of this class to collect all sieve
  * information. To drop particles from the global sieve set into the respective
  * domains, mesh sweeps either use getParticlesToBeSievedIntoVertex() directly
  * or they create a copy of this sieve set through cloneParticlesToBeSieved()
  * and then hand out particles from this deep copy.
+ *
+ * There are few key routines that you should study should you try to use this
+ * class:
+ *
+ * 1. addParticleThatCanNotBeLiftedWithinItsTree(). The name is actually not
+ *   that good, as the class really doesn't care why you decide to add a
+ *   particle to the sieve set. It simply adds it to the set.
+ * 2. exchangeSieveListsGlobally(). Exchange all the particles between MPI
+ *   ranks, so everybody sees all particles, and also roll them over: particles
+ *   that have been added to the sieve set are form hereon in the list that
+ *   have to be sieved (bucket sorted), while the list of sieve particles is
+ *   cleared such that you can add further new particles to it.
+ * 3. getParticlesToBeSievedIntoVertex() picks those particles from the list of
+ *   particles that have to be deployed/bucket sorted that fit to one
+ *   particular vertex.
+ *
+ *
+ * ## Periodic boundary conditions
+ *
+ * If particles move around a lot such that the underlying sorting algorithm
+ * decides that it would prefer a global sorting step, it adds these particles
+ * to the sieve set. If these particles did fly through the domain boundary and
+ * now are outside, noone will bucket sort (sieve) them and they will eventually
+ * be deleted after the next mesh sweep.
+ *
+ * If particles did cross a periodic boundary, they should reenter the domain
+ * again: They might, for example, be lifted into the sieve set on the far left
+ * and of the domain but should be sorted into the far right one in return. To
+ * faciliate this, you have to run through all particles within the sieve set
+ * once and apply the periodic boundary conditions to them. This can be done
+ * either before exchangeSieveListsGlobally() for the rank-local set of
+ * _particlesThatCanNotBeLiftedWithinTheirTree, or is has to be done after the
+ * exchange on _particlesThatHaveToBeSieved.
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -114,7 +171,11 @@ public:
    *   which will be used in the future to gather the newly sieved
    *   particles.
    */
-  void exchangeSieveListsGlobally();
+  void exchangeSieveListsGlobally(
+        const tarch::la::Vector<Dimensions,double>   domainOffset,
+        const tarch::la::Vector<Dimensions,double>   domainSize,
+        const std::bitset<Dimensions>                periodicBC
+      );
 
   /**
    * Add a particle to the list of particles which cannot be lifted
@@ -181,9 +242,12 @@ public:
    *   particles from the underlying set before we return them. That is, the
    *   underlying set on which we call getParticlesToBeSievedIntoVertex()
    *   shrinks monotonously. If you set it to false, the particles will reside
-   *   within the set, but the set will eventually delete them, as it updates
-   *   its content globally. Therefore, you should not use the returned
-   *   particles directly but rather create copies.
+   *   within the set (for this mesh traversal). Therefore, you should not use the returned
+   *   particles directly but rather create copies. There is no code at the
+   *   moment that does not remove the vertex from the set, as we otherwise
+   *   might sieve the same particle multiple times into the mesh (as the
+   *   association which particle belongs to which vertex is not absolutely
+   *   unique).
    */
   ParticleList getParticlesToBeSievedIntoVertex(
     const peano4::datamanagement::VertexMarker& marker,
