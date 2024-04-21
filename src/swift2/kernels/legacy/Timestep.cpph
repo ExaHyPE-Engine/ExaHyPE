@@ -28,7 +28,7 @@ double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle){
   // if we exceed it.
   assertion1(dt_cfl <= initialTimeStepSize, "particle requires time step smaller than set time step size.");
 
-  assertion3(dt > 0., "Got negative time step", dt, particle->toString());
+  assertion3(dt_cfl > 0., "Got negative time step", dt_cfl, particle->toString());
 
   return dt_cfl;
 }
