@@ -5,7 +5,7 @@
 
 
 #include <cassert>
-//#if defined(SharedTBB)
+
 
 tbb::dynamic_task_graph_node_repository::dynamic_task_graph_node_repository() {
 }

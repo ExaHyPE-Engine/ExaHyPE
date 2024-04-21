@@ -5,7 +5,6 @@
 // Peano's tarch.
 #pragma once
 
-//#if defined(SharedTBB)
 
 
 #include <functional>
@@ -64,6 +63,4 @@ namespace tbb {
   };
 }
 
-
-//#endif
 

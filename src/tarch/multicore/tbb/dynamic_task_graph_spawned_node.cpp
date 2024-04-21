@@ -12,6 +12,7 @@ tbb::dynamic_task_graph_spawned_node::dynamic_task_graph_spawned_node(
   const dynamic_task_graph_node&  task_specification,
   dynamic_task_graph&             task_graph
 ):
+  _state( State::Submitted ),
   _functor( task_specification._functor ),
   _number_of_in_dependencies(1),
   _task_graph(task_graph) {
@@ -37,13 +38,14 @@ void tbb::dynamic_task_graph_spawned_node::incoming_task_has_terminated() {
 void tbb::dynamic_task_graph_spawned_node::run() {
   __TBB_ASSERT( _number_of_in_dependencies==0, "can only run if no incoming dependencies anymore" );
 
-  // @todo Really don't know how to catch environment
+  _state = State::Spawned;
+
   _task_graph._arena.enqueue([&] {
     __TBB_TRACE_TASK_RUN(this);
 
-    _task_graph._spawned_tasks.unsafe_erase( this );
-
     _functor();
+
+    _state = State::Complete;
 
     tbb::spin_mutex::scoped_lock lock(_semaphore);
     for (auto& p: _out_dependency) {
@@ -52,8 +54,5 @@ void tbb::dynamic_task_graph_spawned_node::run() {
     lock.release();
 
     __TBB_TRACE_TASK_COMPLETE(this);
-
-    // No delete here, as we work exclusively with shared pointers
-    // delete this;
   });
 }

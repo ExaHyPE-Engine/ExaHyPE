@@ -5,8 +5,6 @@
 // Peano's tarch.
 #pragma once
 
-//#if defined(SharedTBB)
-
 
 #include <functional>
 #include <set>
@@ -49,6 +47,12 @@ namespace tbb {
     public:
       friend class dynamic_task_graph;
 
+      enum class State {
+        Submitted,
+        Spawned,
+        Complete
+      };
+
       /**
        * Create a new task node in the graph
        *
@@ -76,14 +80,42 @@ namespace tbb {
       /**
        * Run the task
        *
-       * - Invoke the actual functor
-       * - Remove the task from the set of spawned tasks. Noone should use this
-       *   task after that anymore.
-       * - Lock the task, as we now will change things.
+       * This is the actual routine which hands the task over to TBB's runtime.
+       * The system is allowed to invoke it if and only if the task is ready,
+       * i.e. has no pending incoming dependencies anymore.
        *
+       *
+       * ## Algorithm steps
+       *
+       * 1. Invoke the functor, i.e. do the actual task calculations. Note that
+       *    other tasks still might add further outgoing dependencies at this
+       *    point.
+       * 2. Create our own smart pointer to the underlying instance of
+       *    dynamic_tsak_graph_spawned_node. We will remove it from the list of
+       *    spawned tasks next, which means it could be destroyed at this point.
+       *    We still have to tidy it up however, so better to hold our own
+       *    smart pointer.
+       *
+       *
+       * 2. Remove the task from the set of spawned tasks. Noone should use this
+       *    task after that anymore.
+       * 3. Lock the task, as we now will change things. In theory, this should
+       *    not be necessary, but someone might still hold a pointer to this
+       *    task and try to alter it while we sort out the outgoing dependencies
+       *    and ramp up the task.
+       * 4. Inform all outgoing tasks that we are done.
+       *
+       *
+       * ## Implementation
+       *
+       * We work with catch by reference here, as we know that all the task's
+       * fields are still alive while we execute the task.
+       *
+       * @todo Write something about lazy deletion
        */
       void run();
     private:
+      std::atomic<State>                              _state;
       std::function<void()>                           _functor;
       tbb::spin_mutex                                 _semaphore;
       dynamic_task_graph&                             _task_graph;
