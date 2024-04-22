@@ -24,7 +24,7 @@ mghype::matrixfree::solvers::Solver::Solver(
 
 
 bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
-  int residualReduced = 0;
+  int residualReducedUnderThreshold = 0;
   int residualGrows   = 0;
 
   if ( tarch::la::equals(_initialGlobalResidualMaxNorm,0.0) ) {
@@ -35,7 +35,7 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualGrows++;
   }
   else if (_globalResidualMaxNorm / _initialGlobalResidualMaxNorm < _tolerance) {
-    residualReduced++;
+    residualReducedUnderThreshold++;
   }
 
   if ( tarch::la::equals(_initialGlobalResidualEukledianNormSquared,0.0) ) {
@@ -46,7 +46,7 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualGrows++;
   }
   else if (_globalResidualEukledianNormSquared / _initialGlobalResidualEukledianNormSquared < _tolerance) {
-    residualReduced++;
+    residualReducedUnderThreshold++;
   }
 
   if ( tarch::la::equals(_initialGlobalResidualHNormSquared,0.0) ) {
@@ -57,14 +57,15 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualGrows++;
   }
   else if (_globalResidualHNormSquared / _initialGlobalResidualHNormSquared < _tolerance ) {
-    residualReduced++;
+    residualReducedUnderThreshold++;
   }
 
   _previousGlobalResidualMaxNorm              = _globalResidualMaxNorm;
   _previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   _previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
 
-  return residualGrows==3 or residualReduced==3;
+  logInfo( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
+  return residualReducedUnderThreshold>=3 or residualGrows>=5;
 }
 
 
