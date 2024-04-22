@@ -20,6 +20,11 @@ mghype::matrixfree::solvers::Solver::Solver(
   _previousGlobalResidualMaxNorm(0.0),
   _previousGlobalResidualEukledianNormSquared(0.0),
   _previousGlobalResidualHNormSquared(0.0) {
+  const std::string      prefix = "Abstract";
+  std::string::size_type index  = _name.find( prefix );
+  if (index!=std::string::npos) {
+    _name.erase(index, prefix.length());
+  }
 }
 
 

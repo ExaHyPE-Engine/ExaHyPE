@@ -52,7 +52,7 @@ class mghype::matrixfree::solvers::Solver {
      *
      * Usually only used for debuggin purposes
      */
-    const std::string _name;
+    std::string _name;
 
     /**
      * @see terminationCriterionHolds()
