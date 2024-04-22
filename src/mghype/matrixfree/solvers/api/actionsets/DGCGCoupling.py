@@ -107,22 +107,26 @@ class DGCGCoupling(ActionSet):
     fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(0.0);
   }
   else {
+    auto rescaledNewValue = 
+      1.0 / fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()
+      *
+      fineGridVertex{{CG_SOLVER_NAME}}.getSumOfInjectedValues();
     fineGridVertex{{CG_SOLVER_NAME}}.setDelta(
       fineGridVertex{{CG_SOLVER_NAME}}.getValue()
       -
       fineGridVertex{{CG_SOLVER_NAME}}.getOldValue()
     );
     fineGridVertex{{CG_SOLVER_NAME}}.setValue(
-      1.0 / fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()
-      *
-      fineGridVertex{{CG_SOLVER_NAME}}.getSumOfInjectedValues()
+      rescaledNewValue
     );
     fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(
-      fineGridVertex{{CG_SOLVER_NAME}}.getSumOfInjectedValues()
+      rescaledNewValue
     );    
     fineGridVertex{{CG_SOLVER_NAME}}.setRhs( 
       fineGridVertex{{CG_SOLVER_NAME}}.getNewRestrictedRhs() 
-     );
+    );
+
+    logDebug( "touchVertexFirstTime()", "reset vertex to " << fineGridVertex{{CG_SOLVER_NAME}}.toString() );
   }
   fineGridVertex{{CG_SOLVER_NAME}}.setSumOfInjectedValues( 0.0 );
   fineGridVertex{{CG_SOLVER_NAME}}.setNumberOfRestrictions( 0 );
@@ -134,8 +138,8 @@ class DGCGCoupling(ActionSet):
   // ============================
   // Interpolation
   // ============================
-  // @todo remove the false here
-  if (false and fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  const double additiveMultigridRelaxation = 0.0;
+  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -173,7 +177,7 @@ class DGCGCoupling(ActionSet):
       
     fineGridCell{{DG_SOLVER_NAME}}.setSolution(
       fineGridCell{{DG_SOLVER_NAME}}.getSolution() + 
-      prolongatedValues
+      additiveMultigridRelaxation * prolongatedValues
     );
   }
 """
@@ -189,8 +193,7 @@ class DGCGCoupling(ActionSet):
     // ============================
     // compute hierarchical residual
     // ============================
-    // @todo false
-    if (false)
+    if (true)
     {
       constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
       constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
@@ -245,8 +248,7 @@ class DGCGCoupling(ActionSet):
     // ============================
     // restrict hierarchical residual
     // ============================
-    // @todo false
-    if (false)
+    if (true)
     {
       constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
       constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
