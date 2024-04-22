@@ -4,7 +4,7 @@
 
 #include "RefinementControl.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/RecursiveSemaphore.h"
 #include "tarch/services/Service.h"
 
 namespace exahype2 {
@@ -136,7 +136,7 @@ public:
 private:
   static tarch::logging::Log _log;
 
-  static tarch::multicore::BooleanSemaphore _semaphore;
+  static tarch::multicore::RecursiveSemaphore _semaphore;
 
   RefinementControlService();
 
