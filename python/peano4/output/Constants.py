@@ -9,9 +9,9 @@ from .Overwrite  import Overwrite
 
 class Constants(object):
   """!
-    
+
     Representative of generated Constants.h holding all user-defined constants
-  
+
     Represents all constants that a Project exports from the Python
     script into C++. I do provide routines to export defines or
     constants (via constexpr). For the latter, I rely on the auto
@@ -26,7 +26,7 @@ class Constants(object):
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Constants also allows you to add defines (precompiler statements).
-    
+
   """
   default_overwrite = True
 
@@ -131,17 +131,17 @@ class Constants(object):
 
   def define( self, name ):
     """!
-    
+
     Add define pragma to Constants.h
-    
-    This routine introduces a 
-    
+
+    This routine introduces a
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #defined name
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     entry into your Constants.h.
-    
+
     """
     new_entry = "#define " + name
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
@@ -149,17 +149,17 @@ class Constants(object):
 
   def define_value(self, name, value):
     """!
-    
+
     Add define pragma to Constants.h
-    
-    This routine introduces a 
-    
+
+    This routine introduces a
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #defined name value
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     entry into your Constants.h.
-    
+
     """
     new_entry = "#define " + name + " " + value
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
@@ -182,22 +182,25 @@ class Constants(object):
 
   def readme_entry(self):
     """!
-    
-    
-    
+
+
+
     """
     result = """
-    
+
 ## Exported C++ constants in project
-   
+
 """ + self.d[ "ADD_CONSTANTS" ] + """
 
 These constants are available to the application within its namespace.
-"""      
+"""
     return result
 
   def generate(self, overwrite, directory):
     filename = directory + "/Constants.h"
+
+  def generate(self, overwrite, directory, subdirectory=""):
+    filename = directory + "/" + subdirectory + "Constants.h"
     if write_file(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
 

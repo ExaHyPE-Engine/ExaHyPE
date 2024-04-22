@@ -96,6 +96,10 @@ namespace tarch {
        */
       virtual bool canFuse() const;
 
+      /**
+       * @return This task has to be executed again. In most cases, you should
+       *   return false, to indicate that this task has finished.
+       */
       virtual bool run() = 0;
 
       /**
@@ -160,6 +164,28 @@ namespace tarch {
 
     /**
      * Frequently used implementation for job with a functor.
+     *
+     * Peano's tasking API is a plain class-based implementation of a task
+     * system. Many modern APIs such as oneTBB favour a functor-based API.
+     * The latter approach add nothing new, as C++ internally breaks down
+     * functors into classes with an operator(). In Peano, we mirror this
+     * behaviour, i.e. start with a class design and then offer this class
+     * on top which allows you to pipe in a functor instead of implementing
+     * your run() within a subclass.
+     *
+     * Most people using lambdas for this class will define a lambda within
+     * a function which catches all relevant data and then pass this lambda
+     * into a task. This implies that this lambda object will be destroyed
+     * once the spawning routine terminates, even though the task might not
+     * have been executed at this point. Therefore, this routine copies the
+     * lambda.
+     *
+     * The functor is a 1:1 translation of Task's run(). It takes no arguments,
+     * and it returns a bool which indicates if this task has to rerun.
+     * Returning false signals that this task is done and can be discarded.
+     * Returning true signals that the task is done, but the same task has to
+     * be re-executed. It is up to the tasking runtime to decide if it will
+     * re-execute immediately again or at a later point.
      */
     class TaskWithCopyOfFunctor: public Task {
     private:
@@ -172,13 +198,33 @@ namespace tarch {
     public:
       TaskWithCopyOfFunctor()                             = delete;
       TaskWithCopyOfFunctor(const TaskWithCopyOfFunctor&) = delete;
-      TaskWithCopyOfFunctor(int taskType, int priority, const std::function<bool()>& taskFunctor);
+
+      /**
+       * @param taskType See superclass documentation
+       * @param priority See superclass documentation
+       * @param taskFunctor Functor that's then internally copied. Functor
+       *   returns indicator if task has to rerun. See class documentation.
+       */
+      TaskWithCopyOfFunctor(
+        int taskType, int priority, const std::function<bool()>& taskFunctor);
 
       virtual bool run() override;
     };
 
     /**
      * Frequently used implementation for job with a functor.
+     *
+     * Cousin implementation to TaskWithCopyOfFunctor which does not copy the
+     * underlying functor but holds a reference to it. This implies that you
+     * have to ensure that the functor remains valid after you have spawned
+     * the task.
+     *
+     * It can pay off to use this variant for very expensive functors, i.e.
+     * functors that internally copy a lot of things. In most cases, you won't
+     * need this class. I recommend to start with the copy version always.
+     *
+     * Please consult TaskWithCopyOfFunctor for further information on the
+     * used attributes.
      */
     class TaskWithoutCopyOfFunctor: public Task {
     private:
