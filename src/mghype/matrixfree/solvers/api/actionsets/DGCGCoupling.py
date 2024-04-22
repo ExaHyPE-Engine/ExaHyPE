@@ -1,5 +1,6 @@
 from peano4.solversteps.ActionSet import ActionSet
 
+import dastgen2
 import peano4
 import jinja2
 
@@ -22,12 +23,15 @@ def prepare_CG_correction_solvers( dg_solver,
     the solvers new rhs, which we again use for the next iteration, and its 
     previous (old) value which we use to compute the delta.
     
+    @see DGCGCoupling for a description of where the individual values are used.
+    
     """
     assert cg_solver._unknowns_per_vertex==dg_solver._unknowns_per_cell_node
-    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "newInjectedValue", str(cg_solver._unknowns_per_vertex) ) )
+    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "sumOfInjectedValues", str(cg_solver._unknowns_per_vertex) ) )
     cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "oldValue", str(cg_solver._unknowns_per_vertex) ) )
     cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "newRestrictedRhs", str(cg_solver._unknowns_per_vertex) ) )
     cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "delta", str(cg_solver._unknowns_per_vertex) ) )
+    cg_solver._vertex_data.data.add_attribute( dastgen2.attributes.Integer( "numberOfRestrictions" ) )
 
 
 class DGCGCoupling(ActionSet):
@@ -41,6 +45,24 @@ class DGCGCoupling(ActionSet):
   onto the vertices. For this, it simply averages the @f$ 2^d @f$ different 
   values of the DG polynomials into the vertex. We do this only for unrefined
   vertices obviously. 
+  
+  
+  ## Behaviour
+  
+  We have a new variable SumOfInjectedValues. This one is set to zero at the end
+  of touchVertexFirstTime(), i.e. at the begin of a mesh sweep. In each fine 
+  grid cell, i.e. each cell carrying a DG polynomial, we evaluate this
+  polynomial's value in the @f$ 2^d @f$ vertices (corners) of the cell. Of 
+  these values, we restrict @f$ 2^{=-d} @f$th of its value to the next coarser
+  mesh level. Prior to the start of a new mesh sweep, SumOfInjectedValues holds 
+  the average value of the solution in a vertex. This is just before we 
+  clear it again, i.e. we can plug into touchVertexFirstTime() just before we
+  clear this field to read our a coarsened representation of the solution at 
+  this point.
+  
+  
+  
+  ## Realisation
   
   To realise this behaviour, the touchVertexFirstTime() instantiates the 
   template templateTouchVertexFirstTime which clears the current solution in 
@@ -66,24 +88,45 @@ class DGCGCoupling(ActionSet):
   """
 
 
+  """!
+  
+  We have to get boundary vertices right, but we don't know about them. So we 
+  use the number of restrictions counter. Even if this one is garbage, it will
+  only be garbage in one initial step. After that, we'll update it properly.
+  
+  """
   templateTouchVertexFirstTime="""
-  if ( fineGridVertex{{CG_SOLVER_NAME}}.getType() == vertexdata::{{CG_SOLVER_NAME}}::Type::Interior ) {
+  if ( 
+    fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()<=0
+    or
+    fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()>TwoPowerD
+  ) {
+    fineGridVertex{{CG_SOLVER_NAME}}.setDelta(0.0);
+    fineGridVertex{{CG_SOLVER_NAME}}.setValue(0.0);
+    fineGridVertex{{CG_SOLVER_NAME}}.setRhs( 0.0 );
+    fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(0.0);
+  }
+  else {
     fineGridVertex{{CG_SOLVER_NAME}}.setDelta(
       fineGridVertex{{CG_SOLVER_NAME}}.getValue()
       -
       fineGridVertex{{CG_SOLVER_NAME}}.getOldValue()
     );
     fineGridVertex{{CG_SOLVER_NAME}}.setValue(
-      fineGridVertex{{CG_SOLVER_NAME}}.getNewInjectedValue()
+      1.0 / fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()
+      *
+      fineGridVertex{{CG_SOLVER_NAME}}.getSumOfInjectedValues()
     );
     fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(
-      fineGridVertex{{CG_SOLVER_NAME}}.getNewInjectedValue()
-    );
-    fineGridVertex{{CG_SOLVER_NAME}}.setNewInjectedValue( 0.0 );
-    
-    fineGridVertex{{CG_SOLVER_NAME}}.setRhs( fineGridVertex{{CG_SOLVER_NAME}}.getNewRestrictedRhs() );
-    fineGridVertex{{CG_SOLVER_NAME}}.setNewRestrictedRhs( 0.0 );
+      fineGridVertex{{CG_SOLVER_NAME}}.getSumOfInjectedValues()
+    );    
+    fineGridVertex{{CG_SOLVER_NAME}}.setRhs( 
+      fineGridVertex{{CG_SOLVER_NAME}}.getNewRestrictedRhs() 
+     );
   }
+  fineGridVertex{{CG_SOLVER_NAME}}.setSumOfInjectedValues( 0.0 );
+  fineGridVertex{{CG_SOLVER_NAME}}.setNumberOfRestrictions( 0 );
+  fineGridVertex{{CG_SOLVER_NAME}}.setNewRestrictedRhs( 0.0 );
 """
 
 
@@ -91,7 +134,8 @@ class DGCGCoupling(ActionSet):
   // ============================
   // Interpolation
   // ============================
-  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  // @todo remove the false here
+  if (false and fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -145,6 +189,8 @@ class DGCGCoupling(ActionSet):
     // ============================
     // compute hierarchical residual
     // ============================
+    // @todo false
+    if (false)
     {
       constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
       constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
@@ -199,6 +245,8 @@ class DGCGCoupling(ActionSet):
     // ============================
     // restrict hierarchical residual
     // ============================
+    // @todo false
+    if (false)
     {
       constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
       constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
@@ -272,14 +320,21 @@ class DGCGCoupling(ActionSet):
         composedInjectionMatrix * fineGridCell{{DG_SOLVER_NAME}}.getSolution();
 
       for (int vertex=0; vertex<TwoPowerD; vertex++) {
-        fineGridVertices{{CG_SOLVER_NAME}}(vertex).setNewInjectedValue(
-          fineGridVertices{{CG_SOLVER_NAME}}(vertex).getNewInjectedValue()
+        fineGridVertices{{CG_SOLVER_NAME}}(vertex).setSumOfInjectedValues(
+          fineGridVertices{{CG_SOLVER_NAME}}(vertex).getSumOfInjectedValues()
           + 
-          1.0 / TwoPowerD 
-          * 
           tarch::la::slice<{{CG_SOLVER_NAME}}::VertexUnknowns>(injectedValues,vertex*{{CG_SOLVER_NAME}}::VertexUnknowns)
         );
       }
+    }
+    
+    // ==============
+    // Update counter
+    // ==============
+    for (int vertex=0; vertex<TwoPowerD; vertex++) {
+      fineGridVertices{{CG_SOLVER_NAME}}(vertex).setNumberOfRestrictions( 
+        fineGridVertices{{CG_SOLVER_NAME}}(vertex).getNumberOfRestrictions()+1
+      );
     }
   }
 """
