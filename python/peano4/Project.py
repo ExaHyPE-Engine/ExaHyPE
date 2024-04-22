@@ -15,20 +15,20 @@ import peano4.runner
 
 class Project (object):
   """!
-  
+
   Represents a Peano 4 project.
 
-  namespace Sequence of strings representing the (nested) namespace. Pass in 
-    [ "examples", "algebraicmg" ] for example if you wanna write a solver that 
+  namespace Sequence of strings representing the (nested) namespace. Pass in
+    [ "examples", "algebraicmg" ] for example if you wanna write a solver that
     is embedded into the namespace examples::algebraicmg.
-    
-    
+
+
   ## Global project properties
-  
+
   If you want to alter some global constants, you should manipulate
   the constants attribute. It will eventually feed into the generated
   file Constants.h. See peano4.output.Constants for further info.
-  
+
   """
 
   def __init__(self, namespace, project_name, directory = ".", subdirectory = "", executable = ""):
@@ -125,6 +125,8 @@ class Project (object):
     self.is_built = False
     if len(self.output.artefacts)>0:
       print( "some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
+
+    self.output.readme.add_package_description( self.constants.readme_entry() )
 
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
@@ -280,7 +282,7 @@ class Project (object):
     """!
     Adds a new Peano4 project into this Peano 4 project
     """
-    """ 
+    """
       assert(
           lhs.namespace == rhs.namespace
       ), "namespaces of the projects being merged don't match"
@@ -323,7 +325,7 @@ class Project (object):
       #   return dict_merged
 
     # result_project = Project(lhs.namespace, project_name, lhs.directory)
-    
+
     # result_project.output.makefile.set_executable_name(executable)
     # result_project.output.readme.set_executable_name(executable)
 
@@ -433,7 +435,7 @@ class Project (object):
 
     for i in subproject.output.artefacts:
       self.output.add(i)
-    
+
     # What "HEADER_FILE_TEMPLATE" and "CPP_FILE_TEMPLATE" are to be in the main project, if subprojects have individual values
     # if not self.main.d["HEADER_FILE_TEMPLATE"]:
     #   self.main.d["HEADER_FILE_TEMPLATE"] = subproject.main.d["HEADER_FILE_TEMPLATE"]

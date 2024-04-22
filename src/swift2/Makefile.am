@@ -16,6 +16,7 @@ SWIFT2Sources = \
   UserInterface.cpp \
   boundaryconditions/FixedBoundary.cpp \
   boundaryconditions/Utils.cpp \
+  kernels/ParticleSetIterators.cpp \
   kernels/legacy/Density.cpp \
   kernels/legacy/HydroForce.cpp \
   kernels/legacy/SmoothingLength.cpp \

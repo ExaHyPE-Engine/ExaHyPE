@@ -162,6 +162,7 @@ void swift2::kernels::forAllParticlePairs(
         if ( particlePairPredicate(marker, *localParticle, *activeParticle) ) {
           f(marker, *localParticle, *activeParticle);
           if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+            tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
             f(marker, *activeParticle, *localParticle);
           }
         }
@@ -199,6 +200,7 @@ void swift2::kernels::forAllParticlePairsVectorised(
   for (auto& activeParticle : activeParticles) {
     for (auto& localParticle : localParticles) {
       if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+        tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
         f(marker, *activeParticle, *localParticle);
       }
     }

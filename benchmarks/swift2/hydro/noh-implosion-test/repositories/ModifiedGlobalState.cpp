@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "GlobalState.h"
+#include "Constants.h"
 
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -13,13 +14,17 @@
 #include "vertexdata/HydroPartSet.h"
 
 
+#include "toolbox/loadbalancing/strategies/SpreadOutOnceGridStagnates.h"
+
 
 namespace benchmarks {namespace swift2 {namespace noh {namespace repositories {
 
 
 tarch::logging::Log _log( "benchmarks::swift2::noh::repositories::GlobalState" );
 
-toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration());
+toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration(2));
+
+
 bool rerunPreviousGridSweep() {
   bool result = false;
   result |= vertexdata::HydroPartSet::getNumberOfDropsIntoHorizontalTreeDecomposition()>0;
@@ -118,7 +123,7 @@ void finishTimeStep() {
   logTraceIn( "finishTimeStep()" );
 
   globaldata::HydroPart::getSpecies().finishTimeStep();
-  vertexdata::HydroPartSet::finishedTraversal();
+  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::HydroPartSet::printParticleStateStatistics() );
 
@@ -159,7 +164,7 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
-  vertexdata::HydroPartSet::finishedTraversal();
+  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   loadBalancer.finishStep();
   logTraceOut( "GridConstructionStep()" );
@@ -167,7 +172,7 @@ void finishGridConstructionStep() {
 
 
 void finishInitialisationStep() {
-  vertexdata::HydroPartSet::finishedTraversal();
+  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::HydroPartSet::reduceReassignmentStatistics();
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
@@ -178,7 +183,7 @@ void finishInitialisationStep() {
 
 
 void finishInitialConditionStep() {
-  vertexdata::HydroPartSet::finishedTraversal();
+  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::HydroPartSet::clearReassignmentStatistics();
   vertexdata::HydroPartSet::clearParticleStateStatistics();
@@ -189,13 +194,13 @@ void finishInitialConditionStep() {
 
 
 void finishPlotStep() {
-  vertexdata::HydroPartSet::finishedTraversal();
+  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   logTraceOut( "PlotStep()" );
 }
 
 
 void finishIntermediateStep() {
-  vertexdata::HydroPartSet::finishedTraversal();
+  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::HydroPartSet::reduceReassignmentStatistics();
   if (vertexdata::HydroPartSet::registeredAnyResorting()) {
