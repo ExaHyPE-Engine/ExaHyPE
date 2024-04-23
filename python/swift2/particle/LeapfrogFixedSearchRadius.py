@@ -64,8 +64,10 @@ class LeapfrogFixedSearchRadius(Particle):
         # Particle attributes
         self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
         self.accelerator = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
+        self.part_id = dastgen2.attributes.Integer("partid", initval="0")
         self.data.add_attribute(self.velocity)
         self.data.add_attribute(self.accelerator)
+        self.data.add_attribute(self.part_id)
 
         self.__setup_algorithm_steps()
 
@@ -75,36 +77,38 @@ class LeapfrogFixedSearchRadius(Particle):
         )
         self.touch_particles_of_set_last_time_kernel = (
             touch_particles_of_set_last_time_kernel
-         )
+        )
         pass
-    
-    @property 
+
+    @property
     def touch_particles_of_set_first_time_kernel(self):
-      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel
+        return self._algorithm_steps["ForceCalculation"].touch_vertex_first_time_kernel
 
     @touch_particles_of_set_first_time_kernel.setter
     def touch_particles_of_set_first_time_kernel(self, value):
-      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel = value
-    
-    @property 
+        self._algorithm_steps["ForceCalculation"].touch_vertex_first_time_kernel = value
+
+    @property
     def touch_particles_of_set_last_time_kernel(self):
-      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel
+        return self._algorithm_steps["ForceCalculation"].touch_vertex_last_time_kernel
 
     @touch_particles_of_set_first_time_kernel.setter
     def touch_particles_of_set_last_time_kernel(self, value):
-      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel = value
-    
-    @property 
+        self._algorithm_steps["ForceCalculation"].touch_vertex_last_time_kernel = value
+
+    @property
     def cell_kernel(self):
-      return self._algorithm_steps[ "ForceCalculation" ].cell_kernel
+        return self._algorithm_steps["ForceCalculation"].cell_kernel
 
     @cell_kernel.setter
     def cell_kernel(self, value):
-        self._algorithm_steps[ "ForceCalculation" ].cell_kernel = value
-    
+        self._algorithm_steps["ForceCalculation"].cell_kernel = value
+
     def add_to_reduction(self, value):
-      self._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += value
-    
+        self._algorithm_steps[
+            "ReduceGlobalQuantities"
+        ].unprepare_traversal_kernel += value
+
     def __setup_algorithm_steps(self):
         """!
 
@@ -188,7 +192,7 @@ class LeapfrogFixedSearchRadius(Particle):
 
     def algorithm_steps(self):
         """!
-        
+
         Create algorithm steps behind leapfrog
 
         Leapfrog consists basically of four steps per particle. We first
@@ -197,7 +201,7 @@ class LeapfrogFixedSearchRadius(Particle):
         second half of the velocity update is done.
         Some variations of this KDK form re-arrange the steps executed per timestep
         to avoid a second force loop.
-        
+
         """
         return [
             self._algorithm_steps["ForceCalculation"],

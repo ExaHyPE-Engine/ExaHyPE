@@ -1,8 +1,8 @@
 /**
 
-@page test_swift2_tests_test_smoothing_length_computation_1D Smoothing Length Computation Test in 1D
+@page tests_swift2_test_smoothing_length_computation Smoothing Length Computation Tests
 
-Scripts and setups to test the smoothing length computation algorithms.
+Scripts and setups to test the smoothing length computation algorithms in 1D, 2D, and 3D.
 There are basically two running modes:
 
 1) generate a new IC with randomly sampled particle positions. Then run swift2
@@ -15,15 +15,12 @@ Furthermore, there are 2 types of tests you can run:
     a)  The "normal" test, following `run.sh`. This will generate a file containing
         uniformly distributed particles, which are then randomly displaced.
     b)  The "multiscale" test, following `run_multiscale.sh`. This will also generate
-        @TODO finish docu
+        a setup that encourages multiscale interactions between particles.
 
 
 2) Provide the script `compare_results.py` with an already existing swift2 snapshot
 (`particle-X.vtu` file). It then computes the smoothing lengths from the given
 particle positions, and compares them to the smoothing lengths given in the snapshot.
 
-
-
-
- */
+*/
 

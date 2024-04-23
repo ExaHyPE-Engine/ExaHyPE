@@ -73,7 +73,9 @@ def translate_one_step_of_species_into_mesh_traversal(
     )
 
     action_set_update_marker = UpdateParticleMarker(particle_set = current_species_set,
-                                                    automatically_set_marker_in_leave_cell=True)
+                                                    automatically_set_marker_in_leave_cell=True,
+                                                    make_reset_separate_task=False,
+                                                    )
 
     action_set_update_marker.descend_invocation_order = (
         new_step.highest_descend_invocation_order() + 1
@@ -465,7 +467,7 @@ def map_onto_separate_mesh_traversals(
 # function calls, yet with different arguments.
 #
 
-def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory(
+def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -509,7 +511,7 @@ def initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_mem
     )
 
 
-def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory(
+def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -531,7 +533,7 @@ def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coales
     )
 
 
-def initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory(
+def initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -553,7 +555,7 @@ def initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced
     )
 
 
-def particle_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory(
+def particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -606,7 +608,7 @@ def particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory(
 
 
 
-def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory(
+def particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -632,7 +634,7 @@ def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_me
     )
 
 
-def particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory(
+def particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
