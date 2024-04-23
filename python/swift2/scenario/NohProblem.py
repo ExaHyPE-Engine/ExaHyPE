@@ -27,7 +27,7 @@ class NohProblemIC:
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
 
-      particle->setSearchRadius( GridSize_x / 2.0);
+      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
 
       /* Constant density field */
       particle->setDensity ( 1.0 );
@@ -92,7 +92,6 @@ class NohProblemIC:
 
       particle->setHasNoNeighbours(false);
       particle->setSmoothingLengthIterCount(0);
-      particle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);

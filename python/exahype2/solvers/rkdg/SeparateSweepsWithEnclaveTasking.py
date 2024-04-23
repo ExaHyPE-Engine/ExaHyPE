@@ -172,7 +172,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         )
 
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
         super(
             SeparateSweepsWithEnclaveTasking, self
         ).add_implementation_files_to_project(namespace, output, dimensions)
@@ -180,6 +180,9 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             os.path.dirname(os.path.realpath(__file__)),
             "SolveVolumeIntegral.EnclaveTask.template",
         )
+
+        if(subdirectory):
+            subdirectory += "/"
 
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(implementationDictionary)
@@ -197,14 +200,14 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
                 "{}.cpp".format(templatefile_prefix),
                 task_name,
                 namespace + ["tasks"],
-                "tasks",
+                subdirectory + "tasks",
                 implementationDictionary,
                 True,
             )
         )
 
         output.add(generated_solver_files)
-        output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(subdirectory + "tasks/" + task_name + ".cpp", generated=True)
 
 
     def _volumetric_solver_enclave_task_name(self):

@@ -5,6 +5,7 @@
 
 #include <map>
 #include <vector>
+#include <list>
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
@@ -132,7 +133,29 @@ namespace toolbox {
           std::string                           particleName;
           tarch::la::Vector<Dimensions, double> particleX;
 
-          bool operator==(const ParticleIdentifier& rhs) const;
+          /**
+           * Equals predicate
+           *
+           * I originally declared this function as
+           *
+           * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           * bool operator==(const ParticleIdentifier& rhs) const;
+           * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           *
+           * Some variants of C++ however require an external operator (not
+           * embedded into class or namespace) to compare two objects. We have
+           * seen issues with Intel 2023, e.g., while 2024 was absolutely fine.
+           * It might also be due to a lack of C++2x flags. Anyway, I decided
+           * to define an equals operation and to define the operator== and
+           * operator!= using this function.
+           *
+           * To some degree, this is actually the cleaner solution, as it
+           * highlights the difference to the < operator. This equality
+           * routine and the comparison operator are not compatible, as the
+           * present routine is purely floating point error-aware, while the
+           * comparison operator uses bit-wise inequality.
+           */
+          bool numericalEquals( const ParticleIdentifier& rhs ) const;
           bool operator<(const ParticleIdentifier& rhs) const;
 
           std::string toString() const;
@@ -228,13 +251,51 @@ namespace toolbox {
           private:
             tarch::multicore::MultiReadSingleWriteSemaphore  _semaphore;
 
-            std::vector<MeshSweepData> _data;
+            std::list<MeshSweepData> _data;
+
+            /**
+             * Of how many previous associations do we want to keep track
+             *
+             * If we do not clean up the database every now and then, we
+             * will run into situations where the memory footprint exceeds the
+             * available mem. More importantly, the validation steps will last
+             * for ages. So we clean up the database of old data every now and
+             * then. This threshold indicates how many old data entries to keep.
+             * Set it to std::numerics<int>::max() to disable this type of
+             * garbage collection on the history.
+             */
+            int _maxParticleSnapshotsToKeepTrackOf;
+
+            /**
+             * Remove the particle trajectory that ends up in lastIdentifier
+             *
+             * This is typically invoked by addEvent(). It is not thread-safe,
+             * i.e. does not acquire a write lock.
+             */
+            void removeTrajectory(
+              const ParticleIdentifier&  lastIdentifier,
+              int                        spacetreeId,
+              int                        firstNRecentEntriesToSkip = 0
+            );
+
+            /**
+             * Not thread-safe
+             *
+             * Run through the individual snapshots and remove those trajectory
+             * entries which are now empty. If a whole snapshot becomes empty, we
+             * delete it but if and only if it is not the very last one. If we
+             * deleted the very last one, we'd confuse the timeline of some
+             * particles as the ordering of the snapshots carries temporal
+             * causalities.
+             */
+            void removeEmptyDatabaseSnapshots();
+
           public:
             static constexpr int SearchWholeDatabase = 0;
             static constexpr int AnyTree = -1;
             static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
 
-            Database();
+            Database( int maxParticleSnapshotsToKeepTrackOf = 16 );
 
             /**
              * Create a particle identifier
@@ -266,12 +327,6 @@ namespace toolbox {
              */
             void startMeshSweep(const std::string&  meshSweepName);
 
-            /**
-             * We enumerate the mesh sweeps. This routine returns the number of
-             * the current one.
-             */
-            int getCurrentMeshSweep();
-
              /**
               * Return last entry matching identifier
              *
@@ -296,9 +351,26 @@ namespace toolbox {
              * floating point accuracy. So we have to make them match before we
              * continue to search recursively.
              *
+             * ## Implementation
+             *
+             * I originally thought that I have to release the lock before I
+             * jump into the recursion. This is however not necessary, as we
+             * are working with read/write locks and I can have an arbitrary
+             * number of read locks in this case. Actually, it would be
+             * outrightly wrong to free it, as someone might alter the data
+             * structure in-between a function and its recursive re-invocation.
+             * So we have to keep it lock until we return.
+             *
+             *
              * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
+             *
+             * @return tuple of event and identifier. In most cases, the
+             *   identifier returned will equal the parameter identifier.
+             *   However, if the particle has moved, the result identifier
+             *   will identify the spatial position corresponding to the
+             *   returned event.
              */
-            Event getEntry(
+            std::pair< Event, ParticleIdentifier > getEntry(
               const ParticleIdentifier&  identifier,
               int                        spacetreeId,
               int                        firstNRecentEntriesToSkip = SearchWholeDatabase
@@ -336,11 +408,43 @@ namespace toolbox {
             int totalEntries(const ParticleIdentifier& identifier);
 
             /**
+             * Return number of snapshots
+             *
+             * These are the active snapshots still held in the database.
+             * addEntry()'s garbage collection might have removed some of
+             * them already.
+             */
+            int getNumberOfSnapshots() const;
+
+            /**
              * Add a new event to the database
              *
              * If there is not yet an entry for identifier in the current
              * snapshot, we create one. Afterwards, we append event to this
-             * new dataset for particle identifier.
+             * new dataset for particle identifier and clean up the database,
+             * i.e. throw away irrelevant old data.
+             *
+             *
+             * ## Garbage/history collection
+             *
+             * Eventually, it is time to clean up the database. This happens if
+             * and only if we have a maximum database size set in
+             * _maxParticleSnapshotsToKeepTrackOf.
+             *
+             * - If the new event is an assignment, then we know that now
+             *   future request will ever look backwards in history beyond this
+             *   assignment. So we can delete all of this historic data.
+             * - If we have tons of particle moves switching vertices (and
+             *   hence deleting and re-associating particles), we can eliminate
+             *   all of those and instead add two events: one that attaches a
+             *   particle and one that moves it in one go.
+             *
+             * I originally thought that I'd also like to remove old data
+             * entries whenever we encounter an erase event. However, this is
+             * not necessary: If we have an erase event (for an expired halo
+             * element), we'll very likely get a new assignment in a second.
+             * This assignment will then eliminate previous "expired"
+             * information as per the description above.
              */
             void addEvent(ParticleIdentifier identifier, const Event& event);
 
@@ -350,6 +454,33 @@ namespace toolbox {
              * Cannot be const as we have a semaphore to be thread-safe.
              */
             std::string toString();
+
+            /**
+             * Eliminate existing particles, so only those that are "forgotten" remain
+             *
+             * This routine runs through the particles for which we have
+             * recorded events in the last snapshot. If the event
+             *
+             * - affects a remote particle;
+             * - is a move;
+             * - is an assignment to vertex,
+             *
+             * we know that it cannot eliminate existing particles. So we
+             * remote their trajectories via removeTrajectory(). If the
+             * last snapshot is empty, we remove it completely.
+             *
+             * After a sweep through the last snapshot, we run through the
+             * algorithm again, maybe eliminating further data (if we got
+             * rid of a snapshot).
+             *
+             * Once this routine has terminated, we get the stuff in the
+             * database for particles that seem to have been left over. We also
+             * get a lot of historic data, but if we plot the database and
+             * study solely the last snapshot, we typically get a good idea of
+             * which particles got lost.
+             */
+            void eliminateExistingParticles();
+
         };
       } // namespace internal
 
@@ -408,6 +539,23 @@ namespace toolbox {
          int                                           treeId,
          const std::string&                            trace
       );
+
+      /**
+       * Eliminate all "live" particles from database
+       *
+       * This routine can be used to find "lost" particles. It runs through the
+       * database and eliminates all those particles which do still exist.
+       *
+       * This routine is not called routinely, as it can be very expensive.
+       *
+       * @param numberOfParticles Specify the number of particles you are
+       *   searching for or pass in a negative number to indicate that all
+       *   particles still have to be in the domain.
+       *
+       * @param eliminateExistingParticlesFromDatabase This operation prunes
+       *   the database and speeds up the validation process significantly.
+       */
+      void eliminateExistingParticles();
 
       /**
        * Assign a particle to a vertex
@@ -581,9 +729,29 @@ namespace toolbox {
         assertion2(result.size() > 1, typeid(Particle).name(), result);
         return result.size() > 1 ? result.substr(0, result.size() - 1) : result;
       }
+
+      /**
+       * Ensure that database is empty
+       *
+       * This one is usually called after eliminateExistingParticles() and will
+       * leave the user only with particles which have "magically" disappeared.
+       *
+       * This routine uess exit(-1) if no assertions are enabled.
+       */
+      void ensureDatabaseIsEmpty();
     } // namespace assignmentchecks
   }   // namespace particles
 } // namespace toolbox
 
 
+/**
+ * Comparison operator
+ *
+ * Some older variants of C++ require an external operator (not embedded
+ * into class or namespace) to compare two objects. We have seen issues
+ * with Intel 2023, e.g., while 2024 was absolutely fine. Delegates to
+ * member function.
+ */
+bool operator==(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs );
+bool operator!=(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs );
 

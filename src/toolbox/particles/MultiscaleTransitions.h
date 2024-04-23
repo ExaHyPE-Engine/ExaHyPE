@@ -204,6 +204,8 @@ namespace toolbox {
      *   there is no next finer mesh level; AND
      * - the particle's search radius is not too big for the current mesh level.
      *
+     * This routine does not check in any way if the particle will be local.
+     *
      *
      * ## Rationale and usage
      *
