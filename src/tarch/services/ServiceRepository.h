@@ -54,6 +54,15 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * This routine is thread-safe, i.e. it blocks other addService() calls as
      * well as receiveDanglingMessages().
      *
+     * ## Implementation
+     *
+     * I add a recursive semaphore to the addService() routine, as I think this
+     * is correct. However, this routine is called very early in the execution.
+     * I get seg faults with TBB in this case, and guess this is due to some
+     * memory lacking a proper initialisation. So I omit the recursive
+     * semaphore whenever I use TBB.
+     *
+     *
      * @param service Pointer to service
      * @param name    Name of service (mandatory, not empty)
      */

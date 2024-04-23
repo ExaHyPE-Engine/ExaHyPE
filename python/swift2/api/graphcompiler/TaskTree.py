@@ -103,7 +103,9 @@ def translate_one_step_of_species_into_mesh_traversal(
     )
 
     action_set_update_marker = UpdateParticleMarker(particle_set = current_species_set,
-                                                    automatically_set_marker_in_leave_cell=False)
+                                                    automatically_set_marker_in_leave_cell=False,
+                                                    make_reset_separate_task=True,
+                                                    )
     action_set_update_marker.descend_invocation_order = (
         new_step.highest_descend_invocation_order() + 1
     )

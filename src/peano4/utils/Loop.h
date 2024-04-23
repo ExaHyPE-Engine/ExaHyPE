@@ -16,7 +16,7 @@
 #include <oneapi/tbb/blocked_range3d.h>
 #include <oneapi/tbb/parallel_for.h>
 
-#include "tarch/multicore/tbb/blocked_rangexd.h"
+#include "tbb/blocked_rangexd.h"
 #endif
 
 #if defined(SharedSYCL)
