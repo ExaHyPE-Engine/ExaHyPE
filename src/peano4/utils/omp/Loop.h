@@ -4,7 +4,7 @@
 // Included by peano4/utils/Loop.h. Do not use directly
 //
 
-// TODO: It does not work if to have multiple pragmas with if, so I only support taskloop
+// TODO: It does not work if you have multiple pragmas with if, so I only support taskloop
 //       as I assume that parallel for in nested parallelism would not work anyway.
 // TODO: Use variadic templates for n-dimensions. -> Might not work, but maybe there is some (similar) trick.
 

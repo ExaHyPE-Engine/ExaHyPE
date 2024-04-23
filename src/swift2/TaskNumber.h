@@ -117,11 +117,17 @@ namespace swift2 {
    * get there, i.e. back to the coarser level, the fine grid info will not
    * be at hand anymore. Therefore, we have to memorise these dependencies on
    * the fine grid, and then use this memorised info later.
+   *
+   * Dependencies are stored as from->to.
    */
   using PendingDependencies = std::set<std::pair<::swift2::TaskNumber, ::swift2::TaskNumber>>;
 
   /**
    * Extract set of dependencies for given task
+   *
+   * We take the bookmarked dependencies from pendingDependencies that feed
+   * into task and return those. Before we do so, we remove them from
+   * pendingDependencies.
    */
   std::set<::swift2::TaskNumber> getDependenciesForTask(
     const ::swift2::TaskNumber& task, PendingDependencies& pendingDependencies

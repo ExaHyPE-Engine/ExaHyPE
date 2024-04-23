@@ -196,7 +196,6 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 #! [tutorials swift2 planet-orbit Configure project]
 
 
-
 #! [tutorials swift2 planet-orbit Define constants]
 # Orbital parameters
 N_orbits = 8
@@ -244,8 +243,6 @@ GLOBAL_TIME_STEP_SIZE = str(dt)
 EARTH_V_INI_X = str(0.0)
 EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 #! [tutorials swift2 planet-orbit Define constants]
-
-
 
 
 #! [tutorials swift2 planet-orbit Particle force]
@@ -303,24 +300,24 @@ particle_force = """
       #else
       tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD,0.0};
       #endif
-    
+
        /* G_NEWTON in internal units */
       double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
       double const T2 = PERIOD * PERIOD;
       double const GN = G_NEWTON * M_SUN * T2 / L3;
       //double GN = 1.0;
-    
+
       tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle.getX() - pos_sun;
       const double r = tarch::la::norm2(earthSunDistance);
       if (tarch::la::greater(r,0.0)) {
         const double r_inv =  1.0 / r;
         localParticle.setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
-    
+
         /* Update Energy */
         const double vel = tarch::la::norm2( localParticle.getV() );
         const double E_kin = 0.5 * vel * vel;
         const double E_pot = - GN * r_inv;
-    
+
         /* Update total energy (overall minus sign) */
         localParticle.setEnergyKin( E_kin );
         localParticle.setEnergyPot(-E_pot );
@@ -456,14 +453,13 @@ project.algorithm_step_plot.add_action_set(particle_plotter)
 #! [tutorials swift2 planet-orbit Plot]
 
 
-
-
 #! [tutorials swift2 planet-orbit Validation]
-particle.add_to_reduction( f"""
+particle.add_to_reduction(
+    f"""
 nonCriticalAssertion( vertexdata::{particle.name}Set::getNumberOfRemainingLocalParticles() == 1 );
-""")
+"""
+)
 #! [tutorials swift2 planet-orbit Validation]
-
 
 
 ###############################################################################

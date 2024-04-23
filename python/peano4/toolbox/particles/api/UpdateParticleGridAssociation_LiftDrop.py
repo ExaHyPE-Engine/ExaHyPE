@@ -120,13 +120,30 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
             particle_set, guard
         )
 
+    _Template_Sieve = jinja2.Template(
+        """
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+      marker
+    );
+
+    for (auto& newParticle: sievedParticles) {
+      _numberOfDropsFromSieveSet++;
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
+    }
+
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  }
+"""
+    )
+
     """!
-  
+
   Takes those particles which are not within h/2 reach of a vertex and lift those.
-  
+
   This code snippet is used with touchVertexLastTime(). Therefore, the marker
   is a vertex marker.
-  
+
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
         """
@@ -140,10 +157,12 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
         _numberOfLiftsIntoSieveSet++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " on tree " << _spacetreeId << " globally. Previously assigned to " << marker.toString() );
+
         toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles" );
         toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles" );
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
-        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
+
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
+        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
         break;
       case 0:
       case 1:
@@ -159,16 +178,16 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
         (*p)->setCellH(3.0 * marker.h());
         toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles" );
-        toolbox::particles::assignmentchecks::assignParticleToVertex( 
+        toolbox::particles::assignmentchecks::assignParticleToVertex(
           "{{PARTICLE}}",
-          (*p)->getX(), 
-          (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, 
+          (*p)->getX(),
+          (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
           peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
           3.0*marker.h(), _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).grabParticle( p, fineGridVertex{{PARTICLES_CONTAINER}} );
-        assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );    
-        assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );    
+        assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
+        assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
         break;
       default:
         assertionMsg( false, "value not implemented" );
