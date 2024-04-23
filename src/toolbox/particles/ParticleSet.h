@@ -170,7 +170,6 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
-<<<<<<< HEAD
    * 
    * This operation always removes particles from the sieve set, and it 
    * sort exclusively local particles into the domain. We use it within
@@ -188,15 +187,8 @@ public:
    * If we don't remove it, we can run into situations where a particle sits
    * right in-between two vertices and is hence sieved in twice. It appears
    * two times.
-=======
-   *
-   * This operation always removes particles from the sieve set, and it
-   * sorts exclusively local particles into the domain. For these two reasons
-   * (alter container plus share one among all threads), it has to use a
-   * semaphore whenever it accesses the set.
    *
    * Consult the @ref page_toolbox_particles_mesh_consistency
->>>>>>> refs/remotes/origin/particles
    *
    * @see SieveParticles::getParticlesToBeSievedIntoVertex()
    */
