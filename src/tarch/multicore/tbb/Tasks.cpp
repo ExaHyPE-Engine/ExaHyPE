@@ -19,9 +19,9 @@
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/concurrent_hash_map.h>
 
-#include "dynamic_task_graph.h"
-#include "dynamic_task_graph_node.h"
-#include "dynamic_task_graph_node_repository.h"
+#include "tbb/dynamic_task_graph.h"
+#include "tbb/dynamic_task_graph_node.h"
+#include "tbb/dynamic_task_graph_node_repository.h"
 
 
 namespace {
