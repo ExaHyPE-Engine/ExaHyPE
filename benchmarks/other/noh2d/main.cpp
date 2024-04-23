@@ -218,7 +218,6 @@ auto Kick1Kernel = [](Tree *leaf) {
 
         localPart.xpart.v_full[0] += localPart.a_hydro[0] * DT_KICK_HYDRO;
         localPart.xpart.v_full[1] += localPart.a_hydro[1] * DT_KICK_HYDRO;
-//        localPart.xpart.v_full[2] += localPart.a_hydro[2] * DT_KICK_HYDRO;
 
         hydro_kick_extra(&localPart, &localPart.xpart, dt_kick_therm, 0, 0, 0, 0, &COSMO, &HYDRO_PROPS, nullptr);
     }
@@ -235,7 +234,6 @@ auto Kick2Kernel = [](Tree *leaf) {
 
         localPart.xpart.v_full[0] += localPart.a_hydro[0] * DT_KICK_HYDRO;
         localPart.xpart.v_full[1] += localPart.a_hydro[1] * DT_KICK_HYDRO;
-//        localPart.xpart.v_full[2] += localPart.a_hydro[2] * DT_KICK_HYDRO;
 
         hydro_kick_extra(&localPart, &localPart.xpart, dt_kick_therm, 0, 0, 0, 0, &COSMO, &HYDRO_PROPS, nullptr);
 
@@ -249,17 +247,15 @@ auto DriftKernel = [](Tree *leaf) {
 
         localPart._x[0] += localPart.xpart.v_full[0] * DT_DRIFT;
         localPart._x[1] += localPart.xpart.v_full[1] * DT_DRIFT;
-//        localPart._x[2] += localPart.xpart.v_full[2] * DT_DRIFT;
 
         /* Predict velocities (for hydro terms) */
         localPart.v[0] += localPart.a_hydro[0] * DT_KICK_HYDRO;
         localPart.v[1] += localPart.a_hydro[1] * DT_KICK_HYDRO;
-//        localPart.v[2] += localPart.a_hydro[2] * DT_KICK_HYDRO;
 
         hydro_predict_extra(&localPart, &localPart.xpart, DT_DRIFT, dt_therm, 0, &COSMO, &HYDRO_PROPS, nullptr, nullptr);
 
         /* Compute offsets since last cell construction */
-        for (int k = 0; k < 3; k++) {
+        for (int k = 0; k < 2; k++) {
             const float dx = localPart.xpart.v_full[k] * DT_DRIFT;
             localPart.xpart.x_diff[k] -= dx;
             localPart.xpart.x_diff_sort[k] -= dx;
