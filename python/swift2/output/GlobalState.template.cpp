@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "GlobalState.h"
+#include "Constants.h"
 
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -146,7 +147,7 @@ void finishTimeStep() {
 
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::{{PARTICLE}}Set::printParticleStateStatistics() );
   {%- endfor %}
@@ -174,7 +175,7 @@ void finishTimeStep() {
 
 void finishGridConstructionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -184,7 +185,7 @@ void finishGridConstructionStep() {
 
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
@@ -197,7 +198,7 @@ void finishInitialisationStep() {
 
 void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
@@ -210,7 +211,7 @@ void finishInitialConditionStep() {
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   {%- endfor %}
   logTraceOut( "PlotStep()" );
 }
@@ -218,7 +219,7 @@ void finishPlotStep() {
 
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
   if (vertexdata::{{PARTICLE}}Set::registeredAnyResorting()) {

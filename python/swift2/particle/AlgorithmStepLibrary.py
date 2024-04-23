@@ -178,26 +178,10 @@ def get_algorithm_step_dict(particle):
         v_iter_with_global_reduction,
     ) = _get_particle_iterator_templates(PARTICLE, realisation)
 
-    # @todo Mladen, can we remove this one please?
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
-    flagBoundaryParticlesStep = AlgorithmStep(
-        name="FlagBoundaryParticles",
-        dependencies=AlgorithmStep.Dependencies.SELF,
-        effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel="",
-        touch_vertex_last_time_kernel=f"::swift2::kernels::flagBoundaryParticles(assignedParticles, {NAMESPACE}::HYDRO_PART_NUMBER, {NAMESPACE}::DomainSize, {NAMESPACE}::DomainOffset);",
-        includes="""
-                   #include "Constants.h"
-                   #include "swift2/kernels/ParticleSelfInteraction.h"
-        """,
-    )
-    algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
-
-    # --------------------------------------------------------------------------
-    # --------------------------------------------------------------------------
-    kick1 = AlgorithmStep(
-        name="Kick1",
+    sph_kick1 = AlgorithmStep(
+        name="SPH_Kick1",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel=v_iter.insert(
@@ -213,7 +197,7 @@ def get_algorithm_step_dict(particle):
             #include "swift2/timestepping/TimeStepping.h"
         """,
     )
-    algorithm_steps_dict["Kick1"] = kick1
+    algorithm_steps_dict["SPH_Kick1"] = sph_kick1
 
     # --------------------------------------------------------------------------
     #
@@ -228,8 +212,8 @@ def get_algorithm_step_dict(particle):
     # they check), and that a cell update can follow a touchVertexLastTime()
     # (on a finer level if we move particles from fine to coarse).
     # --------------------------------------------------------------------------
-    drift = AlgorithmStep(
-        name="Drift",
+    sph_drift = AlgorithmStep(
+        name="SPH_Drift",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
         touch_vertex_first_time_kernel=v_iter.insert(
@@ -248,7 +232,7 @@ def get_algorithm_step_dict(particle):
         touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
     )
-    algorithm_steps_dict["Drift"] = drift
+    algorithm_steps_dict["SPH_Drift"] = sph_drift
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
@@ -276,8 +260,8 @@ def get_algorithm_step_dict(particle):
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
-    densityWithConstantSearchRadius = AlgorithmStep(
-        name="DensityLoopWithConstantSearchRadius",
+    sph_densityWithConstantSearchRadius = AlgorithmStep(
+        name="SPH_DensityLoopWithConstantSearchRadius",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
         prepare_traversal_kernel=f"""globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();""",
@@ -296,12 +280,12 @@ def get_algorithm_step_dict(particle):
             #include "swift2/kernels/legacy/Density.h"
         """,
     )
-    algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
+    algorithm_steps_dict["SPH_Density"] = sph_densityWithConstantSearchRadius
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
-    force = AlgorithmStep(
-        name="ForceLoop",
+    sph_force = AlgorithmStep(
+        name="SPH_ForceLoop",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel=(
@@ -320,12 +304,12 @@ def get_algorithm_step_dict(particle):
           #include "swift2/kernels/legacy/HydroForce.h"
         """,
     )
-    algorithm_steps_dict["Force"] = force
+    algorithm_steps_dict["SPH_Force"] = sph_force
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
-    kick2 = AlgorithmStep(
-        name="Kick2",
+    sph_kick2 = AlgorithmStep(
+        name="SPH_Kick2",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_last_time_kernel=(
@@ -343,12 +327,12 @@ def get_algorithm_step_dict(particle):
             #include "swift2/timestepping/TimeStepping.h"
         """,
     )
-    algorithm_steps_dict["Kick2"] = kick2
+    algorithm_steps_dict["SPH_Kick2"] = sph_kick2
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
-    reduceGlobals = AlgorithmStep(
-        name="ReduceGlobalQuantities",
+    sph_reduceGlobals = AlgorithmStep(
+        name="SPH_ReduceGlobalQuantities",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
         touch_vertex_last_time_kernel=v_iter_with_global_reduction.insert(
@@ -368,6 +352,6 @@ def get_algorithm_step_dict(particle):
                                    #include "swift2/statistics/Statistics.h"
         """,
     )
-    algorithm_steps_dict["ReduceGlobalQuantities"] = reduceGlobals
+    algorithm_steps_dict["SPH_ReduceGlobalQuantities"] = sph_reduceGlobals
 
     return algorithm_steps_dict

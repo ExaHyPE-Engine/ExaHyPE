@@ -35,9 +35,10 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, executable, directory="."):
-        self._project = peano4.Project(namespace, project_name, directory)
+    def __init__(self, namespace, project_name, executable, directory=".", subdirectory=""):
+        self._project = peano4.Project(namespace, project_name, directory, subdirectory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
+        self._subdirectory = subdirectory
 
         self._solvers = []
         self._domain_offset = [0.0, 0.0, 0.0]
@@ -70,12 +71,8 @@ class Project(object):
 
         self.create_grid = peano4.solversteps.Step("CreateGrid", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
-        self.create_grid_but_postpone_refinement = peano4.solversteps.Step(
-            "CreateGridButPostponeRefinement", False
-        )
-        self.create_grid_and_converge_lb = peano4.solversteps.Step(
-            "CreateGridAndConvergeLoadBalancing", False
-        )
+        self.create_grid_but_postpone_refinement = peano4.solversteps.Step("CreateGridButPostponeRefinement", False)
+        self.create_grid_and_converge_lb = peano4.solversteps.Step("CreateGridAndConvergeLoadBalancing", False)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
@@ -359,12 +356,8 @@ thus appreciate any citation of the original release paper
     def add_mainfile_include(self,value):
         self._additional_includes.append( value )
 
-    def __generate_solver_repository(self):
-        """
-        I have to call finishedTraversal() for each tracer set. As tracers
-        are a subclass of DoF, they have a name property.
-        """
-        solverRepositoryDictionary = {
+    def __set_solver_repository_dict(self):
+        self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
             "LOAD_BALANCER":            self._load_balancer_name,
             "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
@@ -378,8 +371,16 @@ thus appreciate any citation of the original release paper
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 
+    def __generate_solver_repository(self):
+        """
+        I have to call finishedTraversal() for each tracer set. As tracers
+        are a subclass of DoF, they have a name property.
+        """
+
+        self.__set_solver_repository_dict()
+
         for solver in self._solvers:
-            solverRepositoryDictionary["SOLVERS"].append(
+            self.solverRepositoryDictionary["SOLVERS"].append(
                 (solver._name, solver.get_name_of_global_instance())
             )
 
@@ -392,15 +393,15 @@ thus appreciate any citation of the original release paper
                 templatefile_prefix + "SolverRepository.template.cpp",
                 "SolverRepository",
                 self._project.namespace + ["repositories"],
-                "repositories",
-                solverRepositoryDictionary,
+                self._project.subdirectory + "repositories",
+                self.solverRepositoryDictionary,
                 True,
             )
         )
 
         self._project.output.add(generated_solver_files)
         self._project.output.makefile.add_cpp_file(
-            "repositories/SolverRepository.cpp", generated=True
+            self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True
         )
 
     def add_tracer(
@@ -704,7 +705,7 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
             solver.add_implementation_files_to_project(
-                self._project.namespace, self._project.output, self._dimensions
+                self._project.namespace, self._project.output, self._dimensions, self._subdirectory
             )
 
         self.__generate_solver_repository()
@@ -734,13 +735,13 @@ thus appreciate any citation of the original release paper
                     for root, dirs, files in os.walk(pathToExaHyPERoot+ "/submodules/blis/include"):
                         archname = dirs[0]
                         break
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
+                    self._project.output.makefile.add_header_search_path(pathToExaHyPERoot + "/submodules/blis/include/" + archname)
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/lib/" + archname + "/libblis.a")
                     self._project.output.makefile.add_library("-lpthread")
                 elif solver._use_Eigen:
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
+                    self._project.output.makefile.add_header_search_path(pathToExaHyPERoot + "/submodules/eigen")
                 elif solver._use_libxsmm_JIT:
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
+                    self._project.output.makefile.add_header_search_path(pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmmJIT/lib/libxsmm.a")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
                     self._project.output.makefile.add_library("-lpthread")

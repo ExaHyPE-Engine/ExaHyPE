@@ -3,12 +3,15 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
+import peano4
 
 
 class UpdateParticleMarker(ActionSet):
   def __init__(self, 
                particle_set,
-               automatically_set_marker_in_leave_cell):
+               automatically_set_marker_in_leave_cell,
+               make_reset_separate_task,
+               ):
     """!
     
     Update particles marker
@@ -41,7 +44,8 @@ class UpdateParticleMarker(ActionSet):
     so if we reset the particle state, we run risk that we break the code
     semantics of the task functor, as they typically check for the update
     flag. So if we use tasks, it has to be the task itself which sets the 
-    "have updated" flag to true. This is realised within swift2::CellTask.
+    "have updated" flag to true. This is realised within the tasks created by
+    TaskGraphKernelWrapper.
     
     We note that the marker's name is unfortunate: It is not really that we 
     have updated a particle necessary. But we keep track that we have at least
@@ -52,7 +56,13 @@ class UpdateParticleMarker(ActionSet):
     self.d = {}
     self.d[ "PARTICLE" ]                    = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]         = particle_set.name
+    self.d[ "MARKER_NAME" ]                 = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+       particle_set.name
+    )
     self._automatically_set_marker_in_leave_cell = automatically_set_marker_in_leave_cell
+    self._make_reset_separate_task               = make_reset_separate_task
+
+
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -64,13 +74,32 @@ class UpdateParticleMarker(ActionSet):
 """)
 
 
+  __Template_TouchVertexFirstTimeAsTask = jinja2.Template("""
+  auto& particles  = fineGridVertex{{PARTICLES_CONTAINER}};
+
+  const ::swift2::TaskNumber taskNumberToBeUsed{
+      fineGridVertex{{MARKER_NAME}}.getNumber(),
+      ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
+    };
+
+  tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [=,this]()->bool {
+      for (auto* particle: particles) {
+        particle->setCellHasUpdatedParticle(false);
+      }
+      return false;
+    }
+  );
+  
+  tarch::multicore::spawnTask( newTask, std::set<int>{::swift2::flatten(taskNumberToBeUsed)}, ::swift2::flatten(taskNumberToBeUsed) );
+""")
+
+
   __Template_TouchCellLastTime = jinja2.Template("""
   for (int i=0; i<TwoPowerD; i++) {
-    for (auto* particle: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-      if ( marker.isContained( particle->getX() ) ) {
-        particle->setCellHasUpdatedParticle(true);
-      }
-    }
+    ::swift2::markAllParticlesAsUpdatedWithinCell( fineGridVertices{{PARTICLES_CONTAINER}}(i), marker );
   }
 """)
 
@@ -79,8 +108,10 @@ class UpdateParticleMarker(ActionSet):
     result = "\n"
     if self._automatically_set_marker_in_leave_cell and operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME and not self._make_reset_separate_task:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME and self._make_reset_separate_task:
+      result = self.__Template_TouchVertexFirstTimeAsTask.render(**self.d)
     return result
 
 
@@ -108,5 +139,7 @@ class UpdateParticleMarker(ActionSet):
     return jinja2.Template( """
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "swift2/swift2.h"
+#include "swift2/TaskNumber.h"
 """ ).render( **self.d )
 

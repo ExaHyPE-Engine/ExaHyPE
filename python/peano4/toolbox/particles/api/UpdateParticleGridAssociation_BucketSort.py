@@ -73,6 +73,20 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     @ref toolbox_particles_memorypool "Peano's memory pool discussion".
 
 
+    ## Sieve set administration
+
+    For bucket sort, each action set clones its own sieve set and then inserts
+    all particles, i.e. both inside and virtual ones. This is important, as we
+    want to have everything in the right place in one mesh sweep. We cannot
+    just insert local particles (as in other action sets) and then rely on the
+    boundary exchange to get the halos right. As each
+    action set clones its own particle set, we can in return remove any
+    particle successfully inserted.
+
+    This means we have some high overhead initially to replicate all sieved
+    particles. From thereon, we however run embarassingly parallel and bring
+    the memory footprint successively down.
+
     """
 
     def __init__(self, particle_set, guard="true"):
@@ -130,7 +144,6 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
-
     """!
         
     The sieve here differs from the default one in the lift-drop variants. It
@@ -140,11 +153,12 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     """
     _Template_Sieve = jinja2.Template(
         """
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( 
+  if ( _sieveParticleSet.hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = _sieveParticleSet.getParticlesToBeSievedIntoVertex( 
       marker,
-      false, // removeReturnedParticlesFromSet,
-      false  // onlyReturnParticlesThatWillBeLocal
+      true,   // removeReturnedParticlesFromSet,
+      false,  // onlyReturnParticlesThatWillBeLocal
+      false   // don't lock particle set, as we work with our thread-local copy
     );
 
     for (auto& sievedParticle: sievedParticles) {
@@ -196,3 +210,32 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
+    def get_constructor_body(self):
+        return (
+            super(UpdateParticleGridAssociation_BucketSort, self).get_constructor_body()
+            + jinja2.Template(
+                """
+            _sieveParticleSet = vertexdata::{{PARTICLES_CONTAINER}}::cloneParticlesToBeSieved();
+          """
+            ).render(**self.d)
+        )
+
+    def get_destructor_body(self):
+        return (
+            super(UpdateParticleGridAssociation_BucketSort, self).get_destructor_body()
+            + jinja2.Template(
+                """
+            _sieveParticleSet.deleteParticles();
+          """
+            ).render(**self.d)
+        )
+
+    def get_attributes(self):
+        return (
+            super(UpdateParticleGridAssociation_BucketSort, self).get_attributes()
+            + jinja2.Template(
+                """
+  toolbox::particles::SieveParticles< globaldata::{{PARTICLE}} >  _sieveParticleSet;
+"""
+            ).render(**self.d)
+        )
