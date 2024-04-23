@@ -140,9 +140,6 @@ def construct_touch_cell_first_time_call(
     
     
     """
-    if touch_cell_first_time_kernel == None:
-        touch_cell_first_time_kernel = ""
-
     d = {
         "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
             current_species_set.name
@@ -156,9 +153,11 @@ def construct_touch_cell_first_time_call(
         fineGridCell{{MARKER_NAME}}.getNumber(),
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
       };
-                  
+      
+      int adjacentResourcesIndices[TwoPowerD];
       std::set<::swift2::TaskNumber> adjacentVertexAndParentTasks;
       for (int i=0; i<TwoPowerD; i++) {
+        adjacentResourcesIndices[i] = fineGridVertices{{MARKER_NAME}}(i).getNumber();
         adjacentVertexAndParentTasks.insert( ::swift2::TaskNumber{
           fineGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
@@ -178,16 +177,24 @@ def construct_touch_cell_first_time_call(
         "create task " << taskNumberToBeUsed.toString() << 
         " for " << marker.toString() <<
         " depends on " << ::swift2::toString(adjacentVertexAndParentTasks) <<
-        " with " << localParticles.size() << " local particles on marker " << marker.toString() 
+        " with " << localParticles.size() << " local particles on marker " << marker.toString() <<
+        " on tree " << _spacetreeId
       );
       
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
         tarch::multicore::Task::DontFuse,
         tarch::multicore::Task::DefaultPriority,
         [=,this]()->bool {
+          ::swift2::TaskEnumerator::lockResources(adjacentResourcesIndices);
+        
           {% if TOUCH_CELL_FIRST_TIME_KERNEL!=None %}
           {{TOUCH_CELL_FIRST_TIME_KERNEL}}
           {% endif %}
+          
+          ::swift2::markAllParticlesAsUpdatedWithinCell( localParticles, marker );
+          
+          ::swift2::TaskEnumerator::unlockResources(adjacentResourcesIndices);
+          
           return false;
         }
       );  
@@ -286,7 +293,7 @@ def construct_touch_vertex_last_time_call(
           return false;
         }
       );
-      
+
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
 
       {% if USE_MULTILEVEL_DEPENDENCIES %}
@@ -308,7 +315,6 @@ def construct_touch_vertex_last_time_call(
       constexpr bool alterParticlePositionOrGlobalState = false;
       {% endif %}
 
-      
       if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrGlobalState ) {
         tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
       }

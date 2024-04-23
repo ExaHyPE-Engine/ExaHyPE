@@ -616,12 +616,12 @@ void swift2::dependencychecks::checkAlgorithmStep(
     errors = internal::checkPastStages(policy, particle->getParallelState() == PartType::ParallelState::Local, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors));
+    assertionEquals3(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors), spacetreeId);
 
     errors = internal::checkFutureStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors));
+    assertionEquals3(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors), spacetreeId);
   }
 }
 
@@ -652,12 +652,12 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
              + internal::checkFutureStages(policy, algorithmStepMarker, touchVertexLastTime, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals1(
+    assertionEquals2(
       errors,
       0,
       internal::outputParticle(
         particle, algorithmStep, PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime, errors
-      )
+      ), spacetreeId
     );
   }
 }
@@ -694,15 +694,21 @@ static void swift2::dependencychecks::checkInitStep(
     errors = internal::checkPastStages(policy, particle->getParallelState() == PartType::ParallelState::Local, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0,
+    assertionEquals3(errors, 0,
       toString(policy),
-      internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors)
+      internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors),
+      spacetreeId
     );
 
     errors = internal::checkFutureStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors));
+    assertionEquals3(
+       errors, 0,
+       toString(policy),
+       internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors),
+       spacetreeId
+    );
   }
 }
 

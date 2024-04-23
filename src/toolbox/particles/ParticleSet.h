@@ -170,11 +170,23 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
+   * 
+   * This operation always removes particles from the sieve set, and it 
+   * sort exclusively local particles into the domain. We use it within
+   * the lift-drop sorting approach, where it is used by the dummy mesh
+   * sweeps following each sweep that moves around particles. Details on
+   * this scheme are provided in peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop.
    *
-   * This operation always removes particles from the sieve set, and it
-   * sorts exclusively local particles into the domain. For these two reasons
-   * (alter container plus share one among all threads), it has to use a
-   * semaphore whenever it accesses the set.
+   * All action sets in this scheme share one common sieve set. Therefore, we
+   * do not run risk that one tree grabs a particle, sorts it into its mesh,
+   * labels it as outside and then this particle disappears. This is avoided,
+   * as we only sieve in particles if they become local.
+   *
+   * When we take a particle that's local, we have to remove it from the
+   * sieve set. This is triggered by a hard-coded boolean that we pass on.
+   * If we don't remove it, we can run into situations where a particle sits
+   * right in-between two vertices and is hence sieved in twice. It appears
+   * two times.
    *
    * Consult the @ref page_toolbox_particles_mesh_consistency
    *
