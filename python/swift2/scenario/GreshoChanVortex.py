@@ -129,7 +129,6 @@ class GreshoChanVortexIC:
       particle->setHasNoNeighbours(false);
       particle->setResidual(0.0);
       particle->setIterCount(0);
-      particle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);

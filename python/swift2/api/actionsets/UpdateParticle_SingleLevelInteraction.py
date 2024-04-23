@@ -63,6 +63,7 @@ class UpdateParticle_SingleLevelInteraction(
             additional_includes=additional_includes
             + """
 #include "tarch/multicore/Tasks.h"
+#include "swift2/swift2.h"                
 #include "swift2/TaskNumber.h"                
                  """,
             active_particle_set=active_particle_set,

@@ -10,6 +10,7 @@ endif
 SWIFT2Sources = \
   GridControlEvents.cpp \
   ParticleSpecies.cpp \
+  swift2.cpp \
   TaskEnumerator.cpp \
   TaskNumber.cpp \
   UnitTests.cpp \
