@@ -171,7 +171,6 @@ class InsertParticlesFromHDF5File(ActionSet):
 
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       newParticle->setSmoothingLengthIterCount(0);
-      newParticle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
       newParticle->setDiv_v   (0.0);

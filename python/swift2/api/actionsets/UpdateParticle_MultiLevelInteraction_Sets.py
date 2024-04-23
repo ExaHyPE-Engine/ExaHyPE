@@ -13,6 +13,15 @@ from .TaskGraphKernelWrappers import (
 class UpdateParticle_MultiLevelInteraction_Sets(
     peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets
 ):
+    """!
+    
+    Slight modification of toolbox's update particle action set
+    
+    The interesting stuff is actually happing in 
+    TaskGarphKernelWrappers.py however.
+    
+    """
+    
     def __init__(
         self,
         particle_set,
@@ -23,7 +32,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(
         unprepare_traversal_kernel,
         additional_includes,
         active_particle_set,
-        current_step_alters_particle_position,
+        alter_particle_position_or_global_state,
         wait_for_all_tasks_to_finish_after_traversal,
     ):
         """!
@@ -32,6 +41,9 @@ class UpdateParticle_MultiLevelInteraction_Sets(
 
 
         @param wait_for_all_tasks_to_finish_after_traversal: Boolean
+          If this one is set, we insert a wait into the unprepare traversal 
+          event. Each rank then waits for all tasks to be completed before
+          it continues. We have a strong synchronisation point.
 
         """
         if wait_for_all_tasks_to_finish_after_traversal:
@@ -45,21 +57,27 @@ class UpdateParticle_MultiLevelInteraction_Sets(
         super(UpdateParticle_MultiLevelInteraction_Sets, self).__init__(
             particle_set,
             particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                particle_set,particle_particle_interaction_kernel,True
+                particle_set,
+                particle_particle_interaction_kernel,
+                use_multilevel_dependencies=True
             ),
             touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                particle_set,touch_vertex_first_time_compute_particle_update_kernel,True
+                particle_set,
+                touch_vertex_first_time_compute_particle_update_kernel,
+                use_multilevel_dependencies=True
             ),
             touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                particle_set,touch_vertex_last_time_compute_particle_update_kernel,True,current_step_alters_particle_position
+                particle_set,
+                touch_vertex_last_time_compute_particle_update_kernel,
+                use_multilevel_dependencies=True,
+                alter_particle_position_or_global_state=alter_particle_position_or_global_state
             ),
             prepare_traversal_kernel=prepare_traversal_kernel,
             unprepare_traversal_kernel=unprepare_traversal_kernel,
             additional_includes=additional_includes
             + """
-#include "tarch/multicore/Tasks.h"                
-#include "swift2/VertexTask.h"                
-#include "swift2/CellTask.h"                
+#include "tarch/multicore/Tasks.h"
+#include "swift2/swift2.h"                
 #include "swift2/TaskNumber.h"                
                  """,
             active_particle_set=active_particle_set,
@@ -68,8 +86,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(
     def get_body_of_operation(self, operation_name):
         if operation_name == peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
             return "_pendingDependencies.clear();"
-        elif operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
-            return "assertion1( _pendingDependencies.empty(), _pendingDependencies.size() );"
         else:
             return super(
                 UpdateParticle_MultiLevelInteraction_Sets, self
@@ -82,3 +98,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(
           ::swift2::PendingDependencies  _pendingDependencies;
         """
         )
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")

@@ -43,7 +43,7 @@ namespace d1 {
 
 
 /**
- * Hack class
+ * Hack class replacing TBB's blocked range
  *
  * The TBB design is not particularly clean when it comes to ranges (at least
  * in my opinion): The tbb::blocked_range class is heavily used by
@@ -184,6 +184,13 @@ class redefined_blocked_range_with_friend {
  * for our code. Therefore, we artificially introduce a blocked_rangexd which
  * can handle higher dimensions.
  *
+ * Furthermore, the blocked range, as offered by TBB, is agnostic to whether
+ * is it used in the context of vectorised routines or not. If we don't
+ * primarily care about vectorisation, we typically try to keep ranges as
+ * quadratic as possbile to have blocked ranges (as the name suggests). If we
+ * want to have high vector efficiency however, it makes sense to have more
+ * line blocks with consecutive index spaces which are as long as possible.
+ *
  *
  * ## Signature
  *
@@ -212,13 +219,21 @@ public:
 private:
     std::vector< range_type > my_subranges;
 
+    const bool my_optimise_for_vectorisation;
+
 public:
     /**
      * This constructor is slightly different to TBB's block_range2d and
      * block_range3d, as it uses arrays to indicate start and end indices.
      */
-    blocked_rangexd( Value begin[RangeDimensions], Value end[RangeDimensions], typename range_type::size_type grainsize[RangeDimensions] ):
-      my_subranges(RangeDimensions, range_type(1,1,1) ) {
+    blocked_rangexd(
+      Value begin[RangeDimensions],
+      Value end[RangeDimensions],
+      typename range_type::size_type grainsize[RangeDimensions],
+      bool optimise_for_vectorisation = false
+    ):
+      my_subranges(RangeDimensions, range_type(1,1,1) ),
+      my_optimise_for_vectorisation(optimise_for_vectorisation) {
       for (int d=0; d<RangeDimensions; d++) {
         my_subranges[d] = range_type( begin[d], end[d], grainsize[d] );
       }
@@ -229,15 +244,28 @@ public:
      * block_range3d, but is very useful: It uses the same grain size in all
      * directions.
      */
-    blocked_rangexd( Value begin[RangeDimensions], Value end[RangeDimensions], typename range_type::size_type grainsize ):
-      my_subranges(RangeDimensions, range_type(1,1,1) ) {
+    blocked_rangexd(
+      Value begin[RangeDimensions],
+      Value end[RangeDimensions],
+      typename range_type::size_type grainsize,
+      bool optimise_for_vectorisation = false
+    ):
+      my_subranges(RangeDimensions, range_type(1,1,1) ),
+      my_optimise_for_vectorisation(optimise_for_vectorisation) {
       for (int d=0; d<RangeDimensions; d++) {
         my_subranges[d] = range_type( begin[d], end[d], grainsize );
       }
     }
 
-    blocked_rangexd( Value begin[RangeDimensions], Value end[RangeDimensions] ):
-      my_subranges(RangeDimensions, range_type(1,1,1) ) {
+    /**
+     * Dummy version where the grain size equals 1
+     */
+    blocked_rangexd(
+      Value begin[RangeDimensions],
+      Value end[RangeDimensions]
+    ):
+      my_subranges(RangeDimensions, range_type(1,1,1) ),
+      my_optimise_for_vectorisation(false) {
       for (int d=0; d<RangeDimensions; d++) {
         my_subranges[d] = range_type( begin[d], end[d] );
       }
@@ -256,14 +284,19 @@ public:
     //! True if range is divisible into two pieces.
     bool is_divisible() const {
       bool result = false;
-      for (int d=0; d<RangeDimensions; d++) {
+      for (
+        int d=my_optimise_for_vectorisation ? 1 : 0;
+        d<RangeDimensions;
+        d++
+      ) {
         result |= my_subranges[d].is_divisible();
       }
       return result;
     }
 
     blocked_rangexd( blocked_rangexd& r, split ):
-      my_subranges(RangeDimensions, range_type(1,1,1) ) {
+      my_subranges(RangeDimensions, range_type(1,1,1) ),
+      my_optimise_for_vectorisation(r.my_optimise_for_vectorisation) {
       for (int d=0; d<RangeDimensions; d++) {
         my_subranges[d] = r.my_subranges[d];
       }
@@ -272,7 +305,8 @@ public:
     }
 
     blocked_rangexd( blocked_rangexd& r, proportional_split& proportion ):
-      my_subranges(RangeDimensions, range_type(1,1,1) ) {
+      my_subranges(RangeDimensions, range_type(1,1,1) ),
+      my_optimise_for_vectorisation(r.optimise_for_vectorisation) {
       for (int d=0; d<RangeDimensions; d++) {
         my_subranges[d] = r.my_subranges[d];
       }
@@ -286,7 +320,11 @@ private:
     void do_split( blocked_rangexd& r, Split& split_obj ) {
       int    biggestRelativeRange = -1;
       double biggestRelativeSize  = -1.0;
-      for (int d=0; d<RangeDimensions; d++) {
+      for (
+        int d=my_optimise_for_vectorisation ? 1 : 0;
+        d<RangeDimensions;
+        d++
+      ) {
         double currentRelativeSize = my_subranges[d].size()*double(my_subranges[d].grainsize());
         if ( currentRelativeSize>biggestRelativeSize ) {
           biggestRelativeSize  = currentRelativeSize;

@@ -47,7 +47,10 @@ void tarch::services::ServiceRepository::addService( Service* const service, con
   entry._name    = name;
   entry._service = service;
 
+  #if !defined(SharedTBB)
   tarch::multicore::RecursiveLock  lock(_receiveDanglingMessagesSemaphore);
+  #endif
+
   _services.push_back( entry );
 }
 

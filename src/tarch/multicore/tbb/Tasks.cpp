@@ -1,22 +1,30 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/Tasks.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
+
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
 
 #if defined(SharedTBB)
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
 #include <oneapi/tbb/task_arena.h>
+#include <oneapi/tbb/concurrent_hash_map.h>
+
+#include "tbb/dynamic_task_graph.h"
+#include "tbb/dynamic_task_graph_node.h"
+#include "tbb/dynamic_task_graph_node_repository.h"
+
 
 namespace {
-  tarch::multicore::BooleanSemaphore suspensionPointSemaphore;
-
   ::oneapi::tbb::task_arena defaultTaskArena;
 
   /**
@@ -42,6 +50,9 @@ namespace {
 
   /**
    * Fiddle out which arena to use for a job
+   *
+   * This operation analyses the task's priority, compares it to the default
+   * priority and then returns a pointer to the fitting task arena.
    */
   ::oneapi::tbb::task_arena* getArena(::tarch::multicore::Task* task) {
     ::oneapi::tbb::task_arena* result = &defaultTaskArena;
@@ -54,6 +65,9 @@ namespace {
 
     return result;
   }
+
+  ::oneapi::tbb::dynamic_task_graph_node_repository  taskGraphNodeRepository;
+  ::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
 } // namespace
 
 
@@ -121,52 +135,45 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 }
 
 
-void tarch::multicore::native::spawnTask(Task* job, const TaskNumber& in, const TaskNumber& out) {
-  tarch::multicore::native::spawnTask(job);
+int tarch::multicore::native::getNumberOfPendingTasks() {
+  return taskGraph.size();
 }
 
 
-/**
- * Spawn a single task
- *
- * Spawn a single task. This spawn is not a classic tree-based/nested
- * parallelism but instead is used within Peano to realise a producer-consumer
- * pattern. As a result, we cannot simply spawn the task as a child, but we
- * have to enqueue it as a free task.
- *
- * There are two options to do so. On the one hand, we could use a global task
- * group, which we use to always "supervise" all ready tasks that are produced.
- * On the other hand, we could use TBB's arena mechanism and spawn the produced
- * tasks directly as new roots into an arena of our choice.
- *
- * The advantage of the task group approach is that we can always explicitly
- * empty all (background) tasks by invoking a wait() on the task group.
- * However, relying (solely) on an explicit task group strips us off the
- * opportunity to work with different priorities, and it is not really in line
- * with the TBB vision, where a task group is a helper construct to logically
- * order tasks which have to synchronise at the end. Therefore, I decided to
- * abandon the task group concept and instead work with task arenas.
- *
- *
- * ## Priorities
- *
- * TBB does not support proper task priorities anymore.
- * Instead, its arenas have priorities. This does not match Peano, where each
- * and every task could have a different priority. Therefore, we create three
- * explicit task arenas (one per TBB priority) and check the priorities handed
- * in for the task: If the priority is higher than the default priority, we
- * enqueue a task in the high priority arena. For low priority we do the same
- * kind of check. All the default queues go into TBB's default arena.
- *
- * @see spawnAndWaitAsTaskLoop()
- */
-void tarch::multicore::native::spawnTask(Task* job) {
-  getArena(job)->enqueue([&, job] {
-    while (job->run()) {
-    }
-    delete job;
-  });
+void tarch::multicore::native::spawnTask(
+  Task*                        job,
+  const std::set<TaskNumber>&  inDependencies,
+  const TaskNumber&            taskNumber
+) {
+  if (taskNumber==NoDependencies) {
+    ::oneapi::tbb::dynamic_task_graph_node node(
+      [job]() -> void {
+        while (job->run()) {
+        }
+        delete job;
+      }
+    );
+
+    taskGraphNodeRepository.add_dependencies( node, inDependencies );
+
+    taskGraph.put( node );
+  }
+  else {
+    ::oneapi::tbb::dynamic_task_graph_node& node = taskGraphNodeRepository.create_node(
+      [job]() -> void {
+        while (job->run()) {
+        }
+        delete job;
+      },
+      taskNumber
+    );
+
+    taskGraphNodeRepository.add_dependencies( taskNumber, inDependencies );
+
+    taskGraph.put( node );
+  }
 }
+
 
 /**
  * Process a fused task (an assembly of multiple tasks of the same type)
@@ -187,7 +194,7 @@ void tarch::multicore::native::processFusedTask(
   getArena(myTask)->execute([&, myTask, copyOfTasksOfSameType] {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
     } else {
       delete myTask;
     }
@@ -195,19 +202,15 @@ void tarch::multicore::native::processFusedTask(
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  for (auto& p: inDependencies) {
+    taskGraph.wait( taskGraphNodeRepository.get_node(p) );
+  }
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(
-  Task* job, const std::vector<int>& inDependencies, int taskNumber
-) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForAllTasks() {
+  taskGraph.wait_for_all();
 }
 
-
-void tarch::multicore::native::waitForTasks(const std::vector<int>& inDependencies) {}
-
-void tarch::multicore::native::waitForTask(int taskNumber) {}
 #endif

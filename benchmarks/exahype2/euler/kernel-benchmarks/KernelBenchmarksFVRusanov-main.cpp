@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "KernelBenchmarksFVRusanov-main.h"
 
 #include <fenv.h>
@@ -392,10 +394,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       parallelFor(launchingThread, launchingThreads) {
         ::exahype2::CellData patchData(patches);
         for (int i = 0; i < patches; i++) {
-          patchData.QIn[i]           = ::tarch::allocateMemory(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
           patchData.t[i]             = TimeStamp;
           patchData.dt[i]            = TimeStepSize;
-          patchData.QOut[i]          = ::tarch::allocateMemory(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QOut[i]          = ::tarch::allocateMemory<double>(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
           patchData.cellCentre[i]    = ::tarch::la::Vector<Dimensions, double>(CellOffset + 0.5 * CellSize);
           patchData.cellSize[i]      = ::tarch::la::Vector<Dimensions, double>(CellSize);
           patchData.maxEigenvalue[i] = 0.0;
@@ -421,8 +423,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
           if (errors > 0) {
             logError(
               "runBenchmarks()",
-              "max difference of outcome from "
-                << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")"
+              "Max difference of outcome from \""
+                << markerName << "\" for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")"
                 << " for " << errors << " entries"
             );
             std::abort();
@@ -1944,22 +1946,32 @@ int main(int argc, char** argv) {
       logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
     }
 #if defined(GPUOffloadingSYCL)
-    logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu when using SYCL on the device");
+    logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu or ONEAPI_DEVICE_SELECTOR=cuda:0 when using SYCL on the device");
     logInfo("main()", "Set SYCL_PI_TRACE=2 in case of runtime errors");
 #endif
   }
 
+#if defined(SharedOMP)
+#pragma omp parallel
+  {
+#pragma omp master
+    {
+#endif
   for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
     std::stringstream msg;
     msg << "kernel-benchmarks-" << NumberOfPatchesToStudy[n] << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
     OTTER_PHASE_SWITCH(msg.str().c_str());
     runBenchmarks(NumberOfPatchesToStudy[n], NumberOfLaunchingThreads);
   }
+#if defined(SharedOMP)
+    }
+  }
+#endif
 
   if constexpr (Accuracy > 0.0) {
-    logInfo("main()", "all kernels yield the same outcome up to a accuracy of " << Accuracy << " unless reported otherwise");
+    logInfo("main()", "All kernels yield the same outcome up to a accuracy of " << Accuracy << " unless reported otherwise");
   } else {
-    logInfo("main()", "no accuracy checks were performed");
+    logInfo("main()", "No accuracy checks were performed");
   }
 
   OTTER_FINALISE();

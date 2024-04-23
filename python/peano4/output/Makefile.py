@@ -154,13 +154,15 @@ the SISC paper
         self.d["CMAKE_LDFLAGS"] = []
         self.d["CMAKE_COMPILE_DEFINITIONS"] = []
         self.d["USING_CMAKE"] = False
+        self.d["APP_SUBDIRECTORY"] = ""
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
         self.d["CMAKE_MAKE_COMMAND"] = ""
         self.set_mode(CompileMode.Debug)
         self.clear_files()
 
     def add_cmake_core_library(self, name):
-        self.d["CMAKE_CORE_LIBS"].append(name)
+        if name not in self.d["CMAKE_CORE_LIBS"]:
+            self.d["CMAKE_CORE_LIBS"].append(name)
 
     def set_executable_name(self, fname):
         self.d["EXECUTABLENAME"] = fname
@@ -610,7 +612,7 @@ then this message can typically be ignored.
         for i in module_files:
             self.add_Fortran_module(i)
 
-    def generate(self, overwrite, directory):
+    def generate(self, overwrite, directory, subdirectory=""):
         """
         Generates build files and other project-related files based on templates.
 
@@ -639,6 +641,7 @@ then this message can typically be ignored.
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
         self.d["USING_CMAKE"] = cmake_build_dir != ""
+        self.d["APP_SUBDIRECTORY"] = subdirectory
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
         # In CMake, we add a command that allows to build the generated project in the project's directory.

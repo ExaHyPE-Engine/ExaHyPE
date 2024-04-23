@@ -10,12 +10,14 @@ endif
 SWIFT2Sources = \
   GridControlEvents.cpp \
   ParticleSpecies.cpp \
+  swift2.cpp \
   TaskEnumerator.cpp \
   TaskNumber.cpp \
   UnitTests.cpp \
   UserInterface.cpp \
   boundaryconditions/FixedBoundary.cpp \
   boundaryconditions/Utils.cpp \
+  kernels/ParticleSetIterators.cpp \
   kernels/legacy/Density.cpp \
   kernels/legacy/HydroForce.cpp \
   kernels/legacy/SmoothingLength.cpp \

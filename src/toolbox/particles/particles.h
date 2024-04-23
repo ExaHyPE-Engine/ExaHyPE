@@ -116,6 +116,23 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions,double>   domainSize,
         const std::bitset<Dimensions>                periodicBC
     );
+
+    /**
+     * Applies the periodic boundary condition on particle coordinates `x`.
+     *
+     * In mirrorParticleAlongPeriodicDomains(), we check whether a vertex is
+     * located on the boundary, and if it is, apply the boundary conditions
+     * such that the vertex would "see" the particles.
+     * In contrast, here we blindly apply the periodic boundary conditions
+     * to a particle. This function is intended to be run on global particle
+     * lists, such as is used e.g. in exchangeSieveListsGlobally().
+     */
+    tarch::la::Vector<Dimensions, double> applyPeriodicBoundaryConditions(
+        const tarch::la::Vector<Dimensions, double>& x,
+        const tarch::la::Vector<Dimensions,double>   domainOffset,
+        const tarch::la::Vector<Dimensions,double>   domainSize,
+        const std::bitset<Dimensions>                periodicBC
+    );
   } // namespace particles
 } // namespace toolbox
 
