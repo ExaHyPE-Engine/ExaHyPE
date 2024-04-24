@@ -64,74 +64,17 @@ class DGCGCoupling(ActionSet):
   
   ## Realisation
   
-  To realise this behaviour, the touchVertexFirstTime() instantiates the 
-  template templateTouchVertexFirstTime which clears the current solution in 
-  the CG solve, and it also plugs into touchVertexLastTime:
-  
-  - touchVertexFirstTime:
-    - Store the value minus the previous value in delta. We will use delta to
-      interpolate.
-    - Set the value to the injected value which we know is correct from the 
-      previous traversal.
-    - Also set the old value to the injected value. We'll need it in the next
-      traversal to compute delta.
-    - Clear the CG solver's injected value to zero, as we'll accumulate into it
-      from hereon.
-  - touchVertexLastTime:
-    - Nothing to be done. We are all fine. We know that new injected value is 
-      valid now, but we'll roll it over in touchVertexFirstTime() of the 
-      subsequent mesh sweep.
-  
+  To realise this behaviour, we rely on functions held within 
+  DGCGCoupling.h.   
   It is important that prepare_and_order_DG_CG_solvers() has been invoked for
   the two solvers whenever we use this action set.
    
   """
 
 
-  """!
-  
-  We have to get boundary vertices right, but we don't know about them. So we 
-  use the number of restrictions counter. Even if this one is garbage, it will
-  only be garbage in one initial step. After that, we'll update it properly.
-  
-  """
   templateTouchVertexFirstTime="""
-  if ( 
-    fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()<=0
-    or
-    fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()>TwoPowerD
-  ) {
-    fineGridVertex{{CG_SOLVER_NAME}}.setDelta(0.0);
-    fineGridVertex{{CG_SOLVER_NAME}}.setValue(0.0);
-    fineGridVertex{{CG_SOLVER_NAME}}.setRhs( 0.0 );
-    fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(0.0);
-  }
-  else {
-    auto rescaledNewValue = 
-      1.0 / fineGridVertex{{CG_SOLVER_NAME}}.getNumberOfRestrictions()
-      *
-      fineGridVertex{{CG_SOLVER_NAME}}.getSumOfInjectedValues();
-    fineGridVertex{{CG_SOLVER_NAME}}.setDelta(
-      fineGridVertex{{CG_SOLVER_NAME}}.getValue()
-      -
-      fineGridVertex{{CG_SOLVER_NAME}}.getOldValue()
-    );
-    fineGridVertex{{CG_SOLVER_NAME}}.setValue(
-      rescaledNewValue
-    );
-    fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(
-      rescaledNewValue
-    );    
-    fineGridVertex{{CG_SOLVER_NAME}}.setRhs( 
-      fineGridVertex{{CG_SOLVER_NAME}}.getNewRestrictedRhs() 
-    );
-
-    logDebug( "touchVertexFirstTime()", "reset vertex to " << fineGridVertex{{CG_SOLVER_NAME}}.toString() );
-  }
-  fineGridVertex{{CG_SOLVER_NAME}}.setSumOfInjectedValues( 0.0 );
-  fineGridVertex{{CG_SOLVER_NAME}}.setNumberOfRestrictions( 0 );
-  fineGridVertex{{CG_SOLVER_NAME}}.setNewRestrictedRhs( 0.0 );
-"""
+    mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( fineGridVertex{{CG_SOLVER_NAME}} );
+  """
 
 
   templateTouchCellFirstTime="""
@@ -139,7 +82,7 @@ class DGCGCoupling(ActionSet):
   // Interpolation
   // ============================
   const double additiveMultigridRelaxation = 0.0;
-  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  if (false and fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -193,7 +136,7 @@ class DGCGCoupling(ActionSet):
     // ============================
     // compute hierarchical residual
     // ============================
-    if (true)
+    if (false)
     {
       constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
       constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
@@ -248,7 +191,7 @@ class DGCGCoupling(ActionSet):
     // ============================
     // restrict hierarchical residual
     // ============================
-    if (true)
+    if (false)
     {
       constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
       constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
@@ -451,4 +394,5 @@ class DGCGCoupling(ActionSet):
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 #include "mghype/mghype.h"
+#include "mghype/matrixfree/solvers/DGCGCoupling.h"
 """

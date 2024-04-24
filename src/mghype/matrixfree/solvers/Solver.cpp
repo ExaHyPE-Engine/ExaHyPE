@@ -70,8 +70,12 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   _previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
 
   logInfo( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
+  static int numberOfResidualGrowths = 0;
   const int numberOfChecks = 3;
-  return residualReducedUnderThreshold==numberOfChecks or residualGrows==numberOfChecks;
+
+  if (residualGrows==numberOfChecks) numberOfResidualGrowths++;
+
+  return residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5;
 }
 
 

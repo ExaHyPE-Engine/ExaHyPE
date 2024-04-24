@@ -1,0 +1,51 @@
+// This file is part of the Peano's PETSc extension. For conditions of
+// distribution and use, please see the copyright notice at
+// www.peano-framework.org
+#pragma once
+
+
+namespace mghype {
+  namespace matrixfree {
+    namespace solvers {
+      namespace dgcgcoupling {
+        /**
+         * Apply updates from previous mesh sweep in multigrid sense and prepare for next correction step
+         *
+         * This routine runs through a couple of steps which are required for
+         * any correction mesh sweep. We assume that a vertex holds the
+         * following fields:
+         *
+         * - SumOfInjectedValues. Each vertex is adjacent to up to @f$ 2^d @f$
+         *   DG patches. Each patch has (potentially) a different value within
+         *   the vertex. This field holds the average.
+         * - NumberOfRestrictions. See description of SumOfInjectedValues. This
+         *   is the number of times we've injected data into the sum.
+         * - NewRestrictedRhs. We will work with a given right-hand side.
+         *   However, we also might need a (separate) place to restrict the next
+         *   right-hand side. This is what this variable is made for.
+         *
+         *
+         *
+         * To prepare of for the next mesh sweep, we reset the restriction and
+         * accumulation variables:
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~
+         *   vertex.setSumOfInjectedValues( 0.0 );
+         *   vertex.setNumberOfRestrictions( 0 );
+         *   vertex.setNewRestrictedRhs( 0.0 );
+         * ~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * It does not hurt if we do this for outer or boundary vertices, so we
+         * simply do it everywhere.
+         */
+        void rollOverAndPrepareCGVertex(
+          auto&  vertex
+        );
+      }
+    }
+  }
+}
+
+
+#include "DGCGCoupling.cpph"
+
