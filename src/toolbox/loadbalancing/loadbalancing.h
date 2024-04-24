@@ -29,6 +29,11 @@
  * determines the load balancing strategy, while the configuration object
  * tailors this strategy to your experimental setup and machine.
  *
+ * see more on how to configure load balancing of ExaHyPE:
+ * \li \subpage page_exahype_multicore
+ * 
+ * and suggenstions on performance optimisation in Peano
+ * \li \subpage page_peano_performance_optimisation
  *
  * ## Overview over some pre-manufactured load balancing strategies
  *
@@ -89,6 +94,44 @@
  * default, we use CellCount. But you can create your own cost metric and
  * use this one instead.
  *
+ * ## Visualizing load balancing
+ * 
+ * In the toolbox.loadbalancing toolbox, you find a script plot-load-distribution.py which creates 
+ * plots over the data distribution.
+ * The invocation is close to trivial 
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~
+ * python3 ~/git/Peano/python/peano4/toolbox/loadbalancing/plot_load_distribution.py mpi/ccz4-backfill-fv-0.05-4-ranks.results 
+ * ~~~~~~~~~~~~~~~~~~~~~
+ * 
+ * though you might want to study the help dumped if you pass --help.
+ * 
+ * 
+ * The script works for shared and distributed memory and gives you a scatter plot
+ * over the load distribution and tells you also how many trees aka subpartitions
+ * you employ per rank.
+ * 
+ * @image html runtime_analysis_loadbalancing_example00.png 
+ * @image html runtime_analysis_loadbalancing_example01.png 
+ * 
+ * 
+ * ### Statistics
+ * 
+ * Peano provides a statistics API, and a lot of Peano components, the technical 
+ * architecture, and Peano's extensions use this API to dump stats. As tracking
+ * statistics can be expensive, it is disabled by default. The statistics are not
+ * meant to replace any performance statistics as you get them from profiling.
+ * In the context of runtime, we offer them to supplement performance data and 
+ * behaviour with an application point of view. 
+
+ * All the statistics writing is realised through tarch::logging::Statistics. 
+ * This is a singleton (similar to a normal logger) which builds up statistics
+ * databases over runtime. It flushes the data once you call tarch::logging::Statistics::writeToCSV().
+ 
+ * It is up to the source code to dump stats into the singleton. The data dump
+ * calls also can control how the statistics backend stores the data: It can 
+ * memorise (trace) each individual data submission, 
+ * or dump data in regular intervals (sampling).
  */
 
 
