@@ -52,6 +52,8 @@ bool selectNextAlgorithmicStep() {
 
   bool continueToSolve = true;
 
+  static bool plotThenExit = false;
+
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
     auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
@@ -78,20 +80,21 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Solve:
         {
           {
-            peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
-            );
+          if (
+            ++solverSteps >= 100
+            or
+            repositories::terminationCriterionHolds()
+          ) plotThenExit = true;
+          
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+          );
           }
         } break;
 
       case repositories::StepRepository::Steps::Plot:
         {
-          if (
-            ++solverSteps >= 100
-            or
-            repositories::terminationCriterionHolds()
-          )
-            continueToSolve = false;
+          if (plotThenExit) continueToSolve = false;
 
           else 
             peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -109,6 +112,7 @@ bool selectNextAlgorithmicStep() {
             repositories::terminationCriterionHolds()
           )
           {
+            plotThenExit = true;
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
             );
@@ -123,11 +127,7 @@ bool selectNextAlgorithmicStep() {
         break;
       case repositories::StepRepository::Steps::Plot:
         {
-          if (
-            ++solverSteps >= 100
-            or
-            repositories::terminationCriterionHolds()
-          )
+          if ( plotThenExit )
             continueToSolve = false;
           else 
             peano4::parallel::Node::getInstance().setNextProgramStep(
