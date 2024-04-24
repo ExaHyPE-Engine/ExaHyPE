@@ -73,7 +73,10 @@ class DGCGCoupling(ActionSet):
 
 
   templateTouchVertexFirstTime="""
-    mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( fineGridVertex{{CG_SOLVER_NAME}} );
+    mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
+      fineGridVertex{{CG_SOLVER_NAME}},
+      true // restrictRhsAndInjectSolution
+    );
   """
 
 
@@ -280,6 +283,8 @@ class DGCGCoupling(ActionSet):
       fineGridVertices{{CG_SOLVER_NAME}}(vertex).setNumberOfRestrictions( 
         fineGridVertices{{CG_SOLVER_NAME}}(vertex).getNumberOfRestrictions()+1
       );
+      assertion1( fineGridVertices{{CG_SOLVER_NAME}}(vertex).getNumberOfRestrictions()>0,          fineGridVertices{{CG_SOLVER_NAME}}(vertex).toString() );
+      assertion1( fineGridVertices{{CG_SOLVER_NAME}}(vertex).getNumberOfRestrictions()<=TwoPowerD, fineGridVertices{{CG_SOLVER_NAME}}(vertex).toString() );
     }
   }
 """

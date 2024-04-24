@@ -25,6 +25,18 @@ namespace mghype {
          *   right-hand side. This is what this variable is made for.
          *
          *
+         * First and foremost, we need a case distinction: If a vertex is
+         * outside or if we don't have any valid restricted data, then we cannot
+         * realise any data flow from fine to coarse. We don't have the right
+         * data. We could try to evaluate some flags, but that's difficult.
+         * Instead, we rely on the fact that the counter NumberOfRestrictions
+         * will hold invalid values for outer vertices.
+         *
+         * Along the same lines, we don't have to care about special treatment
+         * for boundary vertices, i.e. some marker semantics there. If a vertex
+         * has less than @f$ 2^d @f$ adjacent CG patches, we can assume that it
+         * is a boundary vertex (or outer as sketched above).
+         *
          *
          * To prepare of for the next mesh sweep, we reset the restriction and
          * accumulation variables:
@@ -39,7 +51,8 @@ namespace mghype {
          * simply do it everywhere.
          */
         void rollOverAndPrepareCGVertex(
-          auto&  vertex
+          auto&  vertex,
+          bool   restrictRhsAndInjectSolution
         );
       }
     }
