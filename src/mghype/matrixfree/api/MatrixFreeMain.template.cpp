@@ -68,10 +68,38 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::InitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
           );
         }
         break;
+
+{% if PlotEachTimeStep %}
+
+      case repositories::StepRepository::Steps::Solve:
+        {
+          {
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+            );
+          }
+        } break;
+
+      case repositories::StepRepository::Steps::Plot:
+        {
+          if (
+            ++solverSteps >= 100
+            or
+            repositories::terminationCriterionHolds()
+          )
+            continueToSolve = false;
+
+          else 
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+            );
+        } break;
+
+{% else  %}
 
       case repositories::StepRepository::Steps::Solve:
         {
@@ -95,12 +123,20 @@ bool selectNextAlgorithmicStep() {
         break;
       case repositories::StepRepository::Steps::Plot:
         {
-          continueToSolve = false;
+          if (
+            ++solverSteps >= 100
+            or
+            repositories::terminationCriterionHolds()
+          )
+            continueToSolve = false;
+          else 
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+            );
         }
         break;
-      case repositories::StepRepository::Steps::Undef:
-        assertion(false);
-        break;
+
+{% endif %}
     }
   }
   else {
