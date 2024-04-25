@@ -218,7 +218,9 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
 
     double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; 
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
+    #pragma clang loop unroll(disable)
     for (int j = 0; j < 3; j++)
     {
        RicciPlusNablaZSrc[i][j] -= (np-1.0)*PP[i]*PP[j]/(np*np*chi*chi); 						// Baojiu-13-06-23: changed to chi=phi^n
@@ -252,7 +254,9 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     const double AA[3] = {Q[23], Q[24], Q[25]};
 
     double nablaijalphaSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+    #pragma clang loop unroll(disable)
     for (int j = 0; j < 3; j++)
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     {
        // ================================
@@ -274,6 +278,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     }
 
     double nablanablaalphaSrc=0;
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) nablanablaalphaSrc += g_contr[i][j]*nablaijalphaSrc[i][j];
     nablanablaalphaSrc *= phi2;
@@ -293,17 +298,21 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     // ================================
 
     double SecondOrderTermsSrc[3][3];
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) SecondOrderTermsSrc[i][j] = -nablaijalphaSrc[i][j] + alpha*RicciPlusNablaZSrc[i][j];
 
     double traceSrc = 0;
+#pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) traceSrc += g_contr[i][j]*SecondOrderTermsSrc[i][j];
 
+#pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) SecondOrderTermsSrc[i][j] -= 1./3 * traceSrc * g_cov[i][j];
 
     double dtgamma[3][3];
+#pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) dtgamma[i][j] = -2.0 * alpha * Aex[i][j] - CCZ4itau*(det -1.0)*g_cov[i][j];
 
@@ -314,12 +323,14 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     double traceB = BB[0][0] + BB[1][1] + BB[2][2];
     const double beta[3] = {Q[17], Q[18], Q[19]};
 
+#pragma clang loop unroll(disable)
     for (int k = 0; k < 3; k++)
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++) dtgamma[i][j] += g_cov[k][i]*BB[j][k] + g_cov[k][j]*BB[i][k] - 2./3. *g_cov[i][j]*BB[k][k] + 2.*beta[k]*DD[k][i][j];
 
     // MATMUL(Aex,Amix)
     double Atemp[3][3]={0,0,0,0,0,0,0,0,0};
+#pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) Atemp[i][j] += Aex[i][u] * Amix[u][j];
@@ -328,9 +339,11 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 
     //! Main variables of the CCZ4 system
     double dtK[3][3];
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtK[i][j] = phi2*SecondOrderTermsSrc[i][j] + alpha*Aex[i][j]*(traceK-2.*Theta*CCZ4c) - 2.*alpha*Atemp[i][j] - CCZ4itau*g_cov[i][j]*traceA;
+    for (int j = 0; j < 3; j++) dtK[i][j] = phi2*SecondOrderTermsSrc[i][j] + alpha*Aex[i][j]*(traceK-2.*Theta*CCZ4c) - 2.*alpha*Atemp[i][j]; //- CCZ4itau*g_cov[i][j]*traceA;
 
+#pragma clang loop unroll(disable)
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++) dtK[i][j] += Aex[k][i]*BB[j][k] + Aex[k][j]*BB[i][k] - 2./3.*Aex[i][j]*BB[k][k];
@@ -347,6 +360,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     double dtalpha = -alpha*alpha*fa*(traceK-K0-2.*CCZ4c*Theta)+beta[0]*AA[0]+beta[1]*AA[1]+beta[2]*AA[2];
 
     double Aupdown = 0;
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];
 
@@ -356,9 +370,11 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*(RPlusTwoNablaZSrc - Aupdown + 2./3.*traceK*traceK) - alpha*(CCZ4c*Theta*traceK + sumzupaa/alpha + CCZ4k1*(2.+CCZ4k2)*Theta/alpha); 
 
     double dtGhat[3] = {0,0,0};
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     {
         double temp1=0, temp2=0, temp3=0, temp4=0, temp5=0, temp6=0;
+        #pragma clang loop unroll(disable)
         for (int m = 0; m < 3; m++)
         {
           temp1 += Aup[i][m]*PP[m]/(np*chi);   					// Baojiu-13-06-23: changed to chi=phi^n
@@ -375,6 +391,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     }
 
     double ov[3];
+    #pragma clang loop unroll(disable)
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
@@ -384,6 +401,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     }
 
     // matrix vector multiplication in a loop and add result to existing vector
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4helper*CCZ4sk*g_contr[i][j]*ov[j]; //19-02-24: add control parameter CCZ4helper
 
@@ -393,12 +411,14 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++) dtbb[i] = CCZ4sk*(CCZ4xi*dtGhat[i] - CCZ4eta*myb[i]);
 
     double dtbeta[3];
+#pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++) dtbeta[i] = CCZ4f*myb[i];
     for (int i = 0; i < 3; i++) dtbeta[i] += CCZ4bs*(beta[0]*BB[0][i] + beta[1]*BB[1][i] + beta[2]*BB[2][i]);
     for (int i = 0; i < 3; i++) dtbeta[i] *= CCZ4sk;
 
     // Auxiliary variables
     double dtA[3] ={0,0,0};
+#pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     {
       // Baojiu-01-08-22: in the equation below: fa -> 2*fa
@@ -415,17 +435,20 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     }
 
     double dtB[3][3] = {0,0,0,0,0,0,0,0,0};
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) dtB[i][j] += CCZ4sk*(BB[i][u] * BB[u][j]);
 
     double dtD[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#pragma clang loop unroll(disable)
     for (int m = 0; m < 3; m++)
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     for (int n = 0; n < 3; n++) dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*dgup[k][n][m]*Aex[n][m]; 
 
+#pragma clang loop unroll(disable)
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
@@ -435,9 +458,11 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     }
 
     double dtP[3] = {0,0,0};
+    #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) dtP[i] += BB[i][j]*PP[j];
 
+#pragma clang loop unroll(disable)
     for (int k = 0; k < 3; k++)
     {
       double temp=0;

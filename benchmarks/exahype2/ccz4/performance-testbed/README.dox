@@ -16,7 +16,7 @@ To run the benchmark, configure and compile the Peano under main directory follo
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang::" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
+./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -54,6 +54,19 @@ and include the installation in the CXX flags in configuration
 CXXFLAGS="...... -Icosma/local/gsl/2.4/include ......"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+## Compiling on COSMA
+
+the suggest loading module (before compiling the Peano kernel) when you use COSMA or DINE are
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
+export FLAVOUR_NOCONFLICT=1
+module load gsl
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~~
+
 ## SLURM script
 The default setup for this benchmark takes about 5 minutes to finish on 2 nodes on DINE,
 using the following job script.
@@ -73,8 +86,8 @@ using the following job script.
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 
 module purge
-module load intel_comp/2022.3.0 compiler mpi 
-module load gnu_comp/11.1.0
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
 export FLAVOUR_NOCONFLICT=1
 module load gsl
 
