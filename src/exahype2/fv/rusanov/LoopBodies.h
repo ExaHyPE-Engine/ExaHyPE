@@ -593,11 +593,26 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 
   /**
+   * Compute non-conservative flux over one face along normal normal
+   *
    * We count faces starting with zero, i.e., effectively shift the indices
-   * not by 1/2 but one volume to the right: Let the leftmost volume have
-   * the index i. i is typically 0 but can also be negative (if we have halos).
-   * The leftmost volume's left face does not exist. Its right face has index
-   * 0.
+   * not by one to the right: Let the leftmost volume have
+   * the index i. i is typically 0 or -1 (if we have halos).
+   *
+   * If we call this routine for the index i, we first take the volume
+   * i and then we average it with i+1. So we look to the right. The
+   * result is stored in i. That means, all the indices are kind of
+   * shifted by 1/2 to the left. Index (4,3,2) is actually the face
+   * located at (4.5, 3, 2).
+   *
+   * See updateSolutionWithNonconservativeFlux() for some fancy ASCII art
+   * illustrating our enumeration rules. As this routine is used over faces,
+   * we work with slightly squeued indices. Let us work with a patch size of
+   * 5. That means, we have (logically) an array of [-1,5]x[-1,5]x[-1,5] for
+   * the patch. The diagonal values such as (-1,-1,4) are not initialised
+   * properly. For the ncp along the x-direction, we have to befill an array
+   * of the dimensions [-1,4]x[0,4]x[0,4]. This is the range we have to
+   * invoke this routine for.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class NCPFaceEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeNonconservativeFlux(
@@ -652,6 +667,51 @@ namespace exahype2::fv::rusanov::loopbodies {
    * which gives us a scaling of dt for the update. We also have a volume
    * integral on the left-hand side and a face integral on the right-hand
    * side, and therefore a further scaling by one over the volume size.
+   *
+   * ## Enumeration
+   *
+   * We enumerate all data lexicographically, although the ncpEnumerator might
+   * remap and permute this ordering. The routine updates a given volume
+   * identified by volumeIndex with the fluxes over all d dimensions. So we
+   * need the flux over the left face, right face, bottom face, top face, ...
+   *
+   * The flux over the left face is stored in the x-flux array with exactly
+   * the same x index as the volume. For the right face, we have to increase
+   * this index by one along the coordinate axis. This enumeration is
+   * encoded within computeNonconservativeFlux(), too.
+   *
+   * Here's some ASCII art illustrating the enumeration. If we update volume
+   * (2,1) along the x-axis
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * -------------------------
+   * | 0,3 | 1,3 | 2,3 | 3,3 |
+   * -------------------------
+   * | 0,2 | 1,2 | 2,2 | 3,2 |
+   * -------------------------
+   * | 0,1 | 1,1 | 2,1 | 3,1 |
+   * -------------------------
+   * | 0,0 | 1,0 | 2,0 | 3,0 |
+   * -------------------------
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * then the ncp values that matter are stored as follows:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * -------------------------------
+   * | -1,3 | 0,3 | 1,3 | 2,3 | 3,3 |
+   * -------------------------------
+   * | -1,2 | 0,2 | 1,2 | 2,2 | 3,2 |
+   * -------------------------------
+   * | -1,1 | 0,1 | 1,1 | 2,1 | 3,1 |
+   * -------------------------------
+   * | -1,0 | 0,0 | 1,0 | 2,0 | 3,0 |
+   * -------------------------------
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * where (0,1) for example holds the flux over the right face of volume
+   * (0,1) in the upper block. So index (0,1) in ncpX holds the ncp between
+   * volume (0,1) and (1,1).
    */
 #pragma omp declare simd
   template <class NCPFaceEnumeratorType, class QOutEnumeratorType>
@@ -674,7 +734,10 @@ namespace exahype2::fv::rusanov::loopbodies {
   /**
    * Face-oriented flavour of NCP
    *
-   * The non-conservative flux is always computed per face.
+   * Update a volume due to the NCP, but only the flux along one direction,
+   * i.e. along normal. This is a specialisation of the other
+   * updateSolutionWithNonconservativeFlux() routine. Please consult this one
+   * for more in-depth explanations.
    */
 #pragma omp declare simd
   template <class NCPFaceEnumeratorType, class QOutEnumeratorType>

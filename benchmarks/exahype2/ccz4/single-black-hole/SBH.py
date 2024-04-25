@@ -644,11 +644,16 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         )
 
 
-class FVSolverTest(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
+class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
     """!
 
-    Construct 4th order Finite Differences solver without a limiter
-
+    A finite volume solver
+    
+    This solver is not appropriate to simulate black holes as a stand-alone 
+    solver, as it is way too diffusive. If you use it without another scheme, 
+    you typically see the black hole disappear after a brief period. So we 
+    have it in here merely for performance tests.
+    
     """
 
     def __init__(self, 
@@ -656,15 +661,35 @@ class FVSolverTest(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
                  patch_size,
                  min_cell_size, 
                  max_cell_size, 
-                 use_heap_storage=False, # See superclass docu
+                 use_heap_storage=False,
                  ):
+        """!
+        
+        Construct the Finite Volume solver
+        
+        @param patch_size: Integer
+           Defines how big the individual patches are. If you pass in 10, each
+           Finite Volume patch will have the dimensions 10x10x10.
+        @param min_cell_size: Float
+           This parameter refers to the cell size, i.e. the size of a whole 
+           patch. We use this one here, to make the signature the same as for 
+           the FD and DG solver variants. The superclass constructor argues 
+           over finite volume sizes, and we hence have to recalibrate this 
+           parameter with patch_size.
+        @param use_heap_storage: Boolean
+           Please see superclass. If this is set to false, it does not(!) mean
+           that we do not(!) store data on the heap. It merely says we use 
+           different variants how to store data on the heap. See 
+           CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking.
+        
+        """
 
-        super(FVSolverTest, self).__init__(
+        super(FVSolver, self).__init__(
             name=name + "_FV",
             patch_size=patch_size,
             min_volume_h=min_cell_size / patch_size,
             max_volume_h=max_cell_size / patch_size,
-            use_heap_storage=False, # See superclass docu
+            use_heap_storage=False,
             pde_terms_without_state=True
         )
 
@@ -711,7 +736,7 @@ class FVSolverTest(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
                 solver.
 
         """
-        super(FVSolverTest, self).create_action_sets()
+        super(FVSolver, self).create_action_sets()
 
 
 
