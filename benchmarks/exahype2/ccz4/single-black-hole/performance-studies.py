@@ -16,7 +16,7 @@ from SBH import KernelParallelisation
 from SBH import Limiter
 from SBH import FD4SolverWithLimiter
 from SBH import FD4SolverWithoutLimiter
-from SBH import FVSolverTest
+from SBH import FVSolver
 
 # See comments in README.dox
 # export PYTHONPATH=../../../../python
@@ -246,11 +246,11 @@ if __name__ == "__main__":
         project.add_solver(my_secondary_solver)
         added_limiter = True
     elif "fv" in args.solver:
-        my_primary_solver = FVSolverTest(name                      = "CCZ4SBH",
-                                         patch_size                = 4,
-                                         min_cell_size = args.cell_size, 
-                                         max_cell_size = max_cell_size
-                                        )
+        my_primary_solver = FVSolver(name                      = "CCZ4SBH",
+                                     patch_size                = 4,
+                                     min_cell_size = args.cell_size, 
+                                     max_cell_size = max_cell_size
+                                     )
         project.add_solver(my_primary_solver)
         added_limiter = False
         args.end_time*=10
