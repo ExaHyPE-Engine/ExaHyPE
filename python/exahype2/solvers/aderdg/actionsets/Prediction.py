@@ -67,11 +67,10 @@ class Prediction(AbstractAderDGActionSet):
     _Template_TouchCellFirstTime_Core = """
 
     {{FUSED_PREDICTOR_VOLUME_INTEGRAL}}
-
-    {{SOLUTION_UPDATE}}
     
     {{PROJECT_SOLUTION_TO_FACES}}
 
+    {{SOLUTION_UPDATE}}
 
 """
 

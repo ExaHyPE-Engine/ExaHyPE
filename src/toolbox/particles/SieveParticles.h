@@ -21,27 +21,75 @@ namespace toolbox {
 
 
 /**
- * Utility class for all flavours of particle sets
+ * Utility class for global sorting for all flavours of particle sets
  *
- * Particle sets differ in the way they actually manage the particles. However,
- * they all share common stats, operations, ... This is covered by this class.
+ * Particle sets and different sorting strategies all differ in the way they
+ * actually manage their particles and how they are assigned to the mesh
+ * vertices. Notably, they all differ in the way when and how they sort
+ * globally. Some sorting strategies such as peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop
+ * try to realise as much sorting as possible locally by shifting particles
+ * between levels and only resort to a global sieve set when particles are
+ * very fast, while other strategies such as peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort
+ * generally throw all particles that need to be resorted into the global
+ * sieve set and then take it from there.
+ *
+ *
+ * ## Relationship to various sorting approaches
+ *
+ * So sieving means that particles are removed from the global mesh and
+ * thrown into a sieve set represented by an instance of SieveParticles.
+ * After one mesh traversal, this sieve set is fully populated. After that,
+ * the individual subdomains run through their mesh and pick the particles
+ * from the global sieve set as they fit. They realise a bucket sort. Again,
+ * there are two different ways how to bucket sort:
+ *
+ * - Some strategies work with one global sieve set, and remove the particles
+ *   from this one as they bucket sort into the domain
+ * - Other strategies clone the sieve set per thread and pick out only those
+ *   particles which are relevant.
+ *
+ * No matter which strategy you follow, all of them work against the same
+ * signature and all of them share the same statistics. These features are
+ * provided by this class:
  * The class is used by toolbox.particles.ParticleSet which usually holds
- * multiple of these classes for different purposes.
+ * one class instance (static attribute) of this class to collect all sieve
+ * information. To drop particles from the global sieve set into the respective
+ * domains, mesh sweeps either use getParticlesToBeSievedIntoVertex() directly
+ * or they create a copy of this sieve set through cloneParticlesToBeSieved()
+ * and then hand out particles from this deep copy.
  *
- * There's a problem here however: Most of these fields are static fields and
- * hence cannot be modelled as static. If we have them static, they are tied
- * to the base object, not the the particular particle type. However, the fact
- * that we work with templates rides to our rescue. We can assume that this
- * base class is instantiated per particle type. Therefore, all of its static
- * fields are unique again. Along these discussions, this base class is more of
- * an aspect rather than a real base class. The number of real functions and
- * attributes is negligible.
+ * There are few key routines that you should study should you try to use this
+ * class:
  *
- * An alternative implementation would make this a real class and let the
- * actual particles sets holds a static attribute of this class. I think that
- * would be a valid implementation, too.
+ * 1. addParticleThatCanNotBeLiftedWithinItsTree(). The name is actually not
+ *   that good, as the class really doesn't care why you decide to add a
+ *   particle to the sieve set. It simply adds it to the set.
+ * 2. exchangeSieveListsGlobally(). Exchange all the particles between MPI
+ *   ranks, so everybody sees all particles, and also roll them over: particles
+ *   that have been added to the sieve set are form hereon in the list that
+ *   have to be sieved (bucket sorted), while the list of sieve particles is
+ *   cleared such that you can add further new particles to it.
+ * 3. getParticlesToBeSievedIntoVertex() picks those particles from the list of
+ *   particles that have to be deployed/bucket sorted that fit to one
+ *   particular vertex.
  *
  *
+ * ## Periodic boundary conditions
+ *
+ * If particles move around a lot such that the underlying sorting algorithm
+ * decides that it would prefer a global sorting step, it adds these particles
+ * to the sieve set. If these particles did fly through the domain boundary and
+ * now are outside, noone will bucket sort (sieve) them and they will eventually
+ * be deleted after the next mesh sweep.
+ *
+ * If particles did cross a periodic boundary, they should reenter the domain
+ * again: They might, for example, be lifted into the sieve set on the far left
+ * and of the domain but should be sorted into the far right one in return. To
+ * faciliate this, you have to run through all particles within the sieve set
+ * once and apply the periodic boundary conditions to them. This can be done
+ * either before exchangeSieveListsGlobally() for the rank-local set of
+ * _particlesThatCanNotBeLiftedWithinTheirTree, or is has to be done after the
+ * exchange on _particlesThatHaveToBeSieved.
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -50,7 +98,27 @@ public:
 
   typedef std::list<T*> ParticleList;
 
-  static constexpr int GlobalSort = -1;
+  SieveParticles() = default;
+
+  /**
+   * Destructor
+   *
+   * The sieve set works with shallow copies, i.e. we assign particles from
+   * the mesh and the ownership then goes over into the sieve set. However,
+   * when we sort particles into the mesh, each mesh traversal creates its own
+   * copy of the particles. The routine cloneParticlesToBeSieved() creates a
+   * deep copy.
+   *
+   * As we might hand around this deep copy, and as the copy constructor also
+   * creates shallow copies, the destructor does not(!) free the memory. You
+   * have to do this manually via a call to deleteParticles().
+   */
+  virtual ~SieveParticles();
+
+  /**
+   * Deep clear.
+   */
+  void deleteParticles();
 
   /**
    * Get all the global sieve data consistent
@@ -103,7 +171,11 @@ public:
    *   which will be used in the future to gather the newly sieved
    *   particles.
    */
-  void exchangeSieveListsGlobally();
+  void exchangeSieveListsGlobally(
+        const tarch::la::Vector<Dimensions,double>   domainOffset,
+        const tarch::la::Vector<Dimensions,double>   domainSize,
+        const std::bitset<Dimensions>                periodicBC
+      );
 
   /**
    * Add a particle to the list of particles which cannot be lifted
@@ -119,7 +191,13 @@ public:
    * However, it only uses the lock, i.e. is thread-safe for
    * originatingTree==GlobalSort.
    */
-  void addParticleThatCanNotBeLiftedWithinItsTree(T*, int originatingTree);
+  void addParticleThatCanNotBeLiftedWithinItsTree(T*);
+
+  /**
+   * Clone object, but let it contain only the delivering part, i.e. those
+   * particles that have to be sieved.
+   */
+  SieveParticles<T> cloneParticlesToBeSieved();
 
   /**
    * Get particles that are to be sieved into one vertex
@@ -130,10 +208,13 @@ public:
    * removes them from the current set.
    *
    * In line with peano4.toolbox.particles.Particle, we do not alter the
-   * parallel state. That's the job of peano4.toolbox.particles.api.UpdateParticle.
+   * parallel state. That's the job of whoever calls this routine. Most
+   * action sets (notably our sorting action sets) will invoke the boundary
+   * merger and this merger will then take care of the parallel flag.
    *
    * All the particles in the result set are assigned the correct mesh
-   * size h of the corresponding mesh into which we sieve it.
+   * size h of the corresponding mesh into which we sieve it. So this
+   * attribute is changed.
    *
    *
    * ## Thread safety
@@ -147,9 +228,6 @@ public:
    * particles which have not been sieved by a local thread. As the list
    * had been a deep copy, we'd otherwise create a memory leak.
    *
-   * The routine is thread-safe, i.e. uses a lock, i.e. if
-   * originatingTree==GlobalSort.
-   *
    * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
    *   roll-over of particles that cannot be lifted into particles that have
    *   to be sieved.
@@ -159,11 +237,24 @@ public:
    * @param originatingTree Number of tree (positive integer) or GlobalSort. It
    *   indicates where the particles should come from, i.e. are they form a
    *   specific tree or some particles that we have to sort globally.
-   * @param callingTree Number of tree calling this routine. We need this
-   *   information to find out if particles that we deposit are local or
-   *   virtual.
+   *
+   * @param removeReturnedParticlesFromSet If this field is set, we remove the
+   *   particles from the underlying set before we return them. That is, the
+   *   underlying set on which we call getParticlesToBeSievedIntoVertex()
+   *   shrinks monotonously. If you set it to false, the particles will reside
+   *   within the set (for this mesh traversal). Therefore, you should not use the returned
+   *   particles directly but rather create copies. There is no code at the
+   *   moment that does not remove the vertex from the set, as we otherwise
+   *   might sieve the same particle multiple times into the mesh (as the
+   *   association which particle belongs to which vertex is not absolutely
+   *   unique).
    */
-  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
+  ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool  removeReturnedParticlesFromSet,
+    bool  onlyReturnParticlesThatWillBeLocal,
+    bool  lockSemaphore
+  );
 
   /**
    * Fine out how many particles still to sieve
@@ -172,14 +263,19 @@ public:
    * that have not been sieved so far. Therefore, this routine can not be used
    * for any statistics after a grid sweep to find out how many sieves have
    * been done.
-   *
-   * The routine is thread-safe, i.e. uses a lock, i.e. if
-   * originatingTree==GlobalSort.
-   *
-   * @param originatingTree Number of tree (positive integer) or GlobalSort.
    */
-  bool hasParticlesToBeSievedIntoVertices(int originatingTree) const;
+  bool hasParticlesToBeSievedIntoVertices() const;
 
+  /**
+   * hasParticlesToBeSievedIntoVertices() is equivalent to checking if this
+   * routine returns something greater than 0.
+   */
+  int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
+
+  /**
+   * @return Overview of set.
+   */
+  std::string toString() const;
 
 private:
   static tarch::logging::Log _log;
@@ -194,14 +290,29 @@ private:
   static int _SieveReductionTag;
 
   /**
+   * Semaphores
+   *
    * This is for the assembly of the set of particles which require global
    * (sieve) data exchange. When we later on sieve the particles into their
    * target vertices, we need another semaphore of its own.
+   *
+   * In the present case, the semaphores don't have to be static, as we assume that
+   * ParticleSet uses this class as a static class. That is, we implicitly
+   * have a static attribute. In return, if someone creates a deep clone
+   * of the present particle set through cloneParticlesToBeSieved(), we
+   * explicitly don't want the semaphores to lock all other particle sets.
+   *
+   * Problems arise once we translate these considerations 1:1 into code,
+   * as semaphores cannot be copied. That is, we cannot omit the static
+   * keyword. To take the synchronisation remark into account (some routines
+   * can work with thread-local copies), we therefore have to make the
+   * semaphores static and "just" not lock them if we work with thread-local
+   * copies.
    */
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
 
-  std::map<int, ParticleList> _particlesThatCanNotBeLiftedWithinTheirTree;
+  ParticleList  _particlesThatCanNotBeLiftedWithinTheirTree;
 
   /**
    * Particles that should be sieved
@@ -214,7 +325,7 @@ private:
    *
    * The list is populated by finishedTraversal().
    */
-  std::map<int, ParticleList> _particlesThatHaveToBeSieved;
+  ParticleList  _particlesThatHaveToBeSieved;
 };
 
 

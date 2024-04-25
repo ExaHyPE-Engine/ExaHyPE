@@ -4,7 +4,6 @@ from .Visualiser import Visualiser
 
 try:
   from .VTU                import VTU
-  from .VTU                import render_single_file
   from .Interactive        import Interactive
   from .VTU_legacy         import VTU_legacy
 except ModuleNotFoundError:

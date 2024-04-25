@@ -40,29 +40,29 @@ class ExplicitEulerFixedSearchRadius(Particle):
 
     There is a dedicated algorithmic step to do all the force calculation. This
     step can be tailored to your needs by setting the strings
-    
+
     - enter_cell_kernel
     - touch_particles_of_set_first_time_kernel
     - touch_particles_of_set_last_time_kernel
-    
-    Each of these is unset (None) by default, but you can make it hold any 
-    reasonable C++ string. The Swift2ish way to use them is ot use the 
+
+    Each of these is unset (None) by default, but you can make it hold any
+    reasonable C++ string. The Swift2ish way to use them is ot use the
     iterators from ParticleSetIterators.h to run over the relevant particles.
-    
+
     For the two vertex kernels, this would look similar to
-    
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     touch_vertex_first_time_kernel = "::swift2::kernels::forAllParticles( marker, assignedParticles, myFunctor );"
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     For the cell, it resembles
-    
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, myFunction);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
+
     The documentation of the actual operators ParticleBinaryOperator and
-    ParticleUnaryOperatorOnVertex for more documentation. 
+    ParticleUnaryOperatorOnVertex for more documentation.
 
 
      ## Attributes
@@ -100,7 +100,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
         enter_cell_kernel="",
         touch_particles_of_set_first_time_kernel="",
         touch_particles_of_set_last_time_kernel="",
-        particles_per_cell=0,  
+        particles_per_cell=0,
         min_h=0.005,
         max_h=0.3,
     ):
@@ -118,97 +118,115 @@ class ExplicitEulerFixedSearchRadius(Particle):
 
         self.cfl_factor = cfl_factor
         self.initial_time_step_size = initial_time_step_size
+        
+        self.__setup_algorithm_steps()
 
-        self.enter_cell_kernel = (
-            enter_cell_kernel
-        )
+        self.enter_cell_kernel = enter_cell_kernel
         self.touch_particles_of_set_first_time_kernel = (
             touch_particles_of_set_first_time_kernel
         )
         self.touch_particles_of_set_last_time_kernel = (
             touch_particles_of_set_last_time_kernel
-        )
-
+         )
         pass
+    
+    @property 
+    def touch_particles_of_set_first_time_kernel(self):
+      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel
+
+    @touch_particles_of_set_first_time_kernel.setter
+    def touch_particles_of_set_first_time_kernel(self, value):
+      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel = value
+    
+    @property 
+    def touch_particles_of_set_last_time_kernel(self):
+      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel
+
+    @touch_particles_of_set_first_time_kernel.setter
+    def touch_particles_of_set_last_time_kernel(self, value):
+      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel = value
+    
+    @property 
+    def cell_kernel(self):
+      return self._algorithm_steps[ "ForceCalculation" ].cell_kernel
+
+    @cell_kernel.setter
+    def cell_kernel(self, value):
+        self._algorithm_steps[ "ForceCalculation" ].cell_kernel = value
+    
+    def add_to_reduction(self, value):
+      self._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += value
 
     def __setup_algorithm_steps(self):
         """!
-        
-        Create a repository of algorithmic steps which are then 
+
+        Create a repository of algorithmic steps which are then
         ordered into the actual time stepping sequence.
-        
+
         """
+
+        PARTICLE = self.name
+        CFL_FACTOR = self.cfl_factor
+        TIME_STEP_SIZE = self.initial_time_step_size
+        
         self._algorithm_steps = {
-            "ForceCalculation":
-            AlgorithmStep(
+            "ForceCalculation": AlgorithmStep(
                 name="ForceCalculation",
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel=self.enter_cell_kernel,
-                touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
+                touch_vertex_first_time_kernel="",
+                cell_kernel="",
+                touch_vertex_last_time_kernel="",
             ),
-            "UpdatePositionAndVelocity":
-            AlgorithmStep(
+            "UpdatePositionAndVelocity": AlgorithmStep(
                 name="UpdatePositionAndVelocity",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                touch_vertex_first_time_kernel = """::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{}> );""".format( self.name),
-                touch_vertex_last_time_kernel  = """
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}> );""",
+                touch_vertex_last_time_kernel=f"""
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-                ::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize<globaldata::{}> );
+                ::swift2::kernels::forAllParticles(marker, assignedParticles, ::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
                 ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
-                """.format( self.name),
-                prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(
-                    self.name, self.cfl_factor, self.initial_time_step_size
-                ),
+                """,
+                prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
                 includes="""
                                          #include "swift2/timestepping/Euler.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
-                                         """,
+                """,
             ),
-            "ReduceVelocityAndDetermineTimeStepSize":
-            AlgorithmStep(
+            "ReduceVelocityAndDetermineTimeStepSize": AlgorithmStep(
                 name="ReduceVelocityAndDetermineTimeStepSize",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(
-                    self.name, self.cfl_factor, self.initial_time_step_size
-                ),
+                prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
                 includes="""
                                          #include "swift2/timestepping/Euler.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
-                                         """,
+                """,
             ),
-            "ReduceGlobalQuantities":
-            AlgorithmStep(
+            "ReduceGlobalQuantities": AlgorithmStep(
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                touch_vertex_first_time_kernel="""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{}> );""".format( self.name) ,
-                prepare_traversal_kernel="""
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}> );""",
+                prepare_traversal_kernel=f"""
                     globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                     globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                    """.replace(
-                        "{PARTICLE}", self.name
-                    ),
-                unprepare_traversal_kernel="""
+                """,
+                unprepare_traversal_kernel=f"""
                                          globaldata::{PARTICLE}::getSpecies().allReduce();
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                          ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                         """.replace(
-                    "{PARTICLE}", self.name
-                ),
+                """,
                 includes="""
                                          #include "swift2/statistics/Reports.h"
                                          #include "swift2/statistics/Statistics.h"
-                                         """,
+                """,
             ),
         }
-        
-        
+
     def algorithm_steps(self):
         """
 
@@ -220,23 +238,21 @@ class ExplicitEulerFixedSearchRadius(Particle):
         So we
 
         """
-        self.__setup_algorithm_steps()
         return [
-            self._algorithm_steps[ "ForceCalculation" ],
-            self._algorithm_steps[ "UpdatePositionAndVelocity" ],
-            self._algorithm_steps[ "ReduceGlobalQuantities" ],
+            self._algorithm_steps["ForceCalculation"],
+            self._algorithm_steps["UpdatePositionAndVelocity"],
+            self._algorithm_steps["ReduceGlobalQuantities"],
         ]
 
     def initialisation_steps(self):
         """!
 
         No particular initialisation required, but we reduce once, so we get
-        the initial stats right before we jump into the time stepping. 
-        
+        the initial stats right before we jump into the time stepping.
+
         """
-        self.__setup_algorithm_steps()
         return [
-            self._algorithm_steps[ "ReduceVelocityAndDetermineTimeStepSize" ],
+            self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
         ]
 
     @property

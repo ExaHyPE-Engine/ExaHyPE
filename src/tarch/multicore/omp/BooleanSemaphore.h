@@ -13,6 +13,7 @@ class tarch::multicore::BooleanSemaphore {
     friend class tarch::multicore::Lock;
     friend class tarch::mpi::BooleanSemaphore;
     friend class MultiReadSingleWriteSemaphore;
+    friend class RecursiveSemaphore;
 
     omp_lock_t lock;
 

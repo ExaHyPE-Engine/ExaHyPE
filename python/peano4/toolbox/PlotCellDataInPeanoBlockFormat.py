@@ -6,6 +6,20 @@ import jinja2
 
 
 class PlotCellDataInPeanoBlockFormat(ActionSet):
+  """!
+  
+  This writer writes a fixed number of unknown per cell
+  
+  Originally, I had considered this plotter to be used if you have a Finite 
+  Volume-type discretisation with N unknowns associated to a cell. However, it
+  turns out that there might be other use cases: People might want to add N
+  unknowns but actually specify that these unknowns are distributed in a certain
+  way. So you can alter the meta information, but per default it is set to one
+  vector of entries per cell. If you want to visualise patch data, I still
+  recommend to use the tailored patch data writer, which plays nicely together
+  with the Python data model.
+  
+  """
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"
   CastToDouble   = -1
@@ -52,12 +66,13 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
     
     self.d = {}
     self.d[ "FILENAME" ]            = filename
-    self.d[ "CELL_UNKNOWN_NAME" ] = cell_unknown.name
+    self.d[ "CELL_UNKNOWN_NAME" ]   = cell_unknown.name
     self.d[ "GETTER" ]              = getter
     self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = number_of_unknows_per_cell
     self.d[ "DESCRIPTION" ]         = description
     self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
     self.d[ "GUARD_PREDICATE" ]    = guard_predicate
+    self.d[ "META_DATA" ]          = ""
     self.additional_includes       = additional_includes
         
 
@@ -90,7 +105,7 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
   _writer     = nullptr;
 """
 
-    
+
   def get_destructor_body(self):
     return ""
 
@@ -161,13 +176,14 @@ if ( {{GUARD_PREDICATE}} ) {
     
   _dataWriter = _writer->createCellDataWriter( 
     "{{CELL_UNKNOWN_NAME}}", 
-    1,
+    1, // nodes per axis                                          
     {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
-    1,
+    1,                                          // records per cell
     {% else %}
     {{NUMBER_OF_UNKNOWNS_PER_CELL}},
     {% endif %}
-    "{{DESCRIPTION}}" 
+    "{{DESCRIPTION}}",
+    "{{META_DATA}}"
   );
 """
 

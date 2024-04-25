@@ -1248,6 +1248,9 @@ The finest mesh width of """
         else:
             templatefile_prefix += self._solver_template_file_class_name
 
+        if(subdirectory):
+            subdirectory += "/"
+
         abstractHeaderDictionary = {}
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
@@ -1271,7 +1274,7 @@ The finest mesh width of """
                 cpp_file_abstr_template,
                 "Abstract" + self._name,
                 namespace,
-                "./" + subdirectory,
+                subdirectory + ".",
                 abstractHeaderDictionary,
                 True,
                 True,
@@ -1283,7 +1286,7 @@ The finest mesh width of """
                 cpp_file_template,
                 self._name,
                 namespace,
-                "./" + subdirectory,
+                subdirectory + ".",
                 implementationDictionary,
                 False,
                 True,
@@ -1304,7 +1307,7 @@ The finest mesh width of """
                 + "../VariableShortcuts.template.h",
                 "VariableShortcuts",
                 namespace,
-                "./" + subdirectory,
+                subdirectory + ".",
                 implementationDictionary,
                 True,
                 True,
