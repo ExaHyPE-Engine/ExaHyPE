@@ -8,7 +8,7 @@
 
 
 /**
- * @page toolbox_loadbalancing Loadbalancing toolbox
+ * @page toolbox_loadbalancing Loadbalancing
  *
  * Suite of generic load balancing algorithms for Peano 4. The toolbox's
  * strategies typically have a State, a Configuration and a Blacklist. The
@@ -34,6 +34,9 @@
  * 
  * and suggenstions on performance optimisation in Peano
  * \li \subpage page_peano_performance_optimisation
+ * 
+ * A usercase of tunning load balancing within the astrophysics application of ExaHyPE
+ * \li \subpage page_toolbox_loadbalancing_usercase
  *
  * ## Overview over some pre-manufactured load balancing strategies
  *
