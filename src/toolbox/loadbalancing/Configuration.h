@@ -4,6 +4,7 @@
 
 
 #include "State.h"
+#include "peano4/grid/grid.h"
 
 
 namespace toolbox {
@@ -51,6 +52,8 @@ class toolbox::loadbalancing::Configuration {
      */
     virtual double getWorstCaseBalancingRatio(State state) = 0;
 
+    virtual peano4::SplitInstruction::Mode getMode(State state) = 0;
+
     /**
      * Minimum tree size.
      */
@@ -67,4 +70,6 @@ class toolbox::loadbalancing::DefaultConfiguration: public toolbox::loadbalancin
   virtual double getWorstCaseBalancingRatio(State state) override;
 
   virtual int getMinTreeSize(State state) override;
+
+  virtual peano4::SplitInstruction::Mode getMode(State state) override;
 };
