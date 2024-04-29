@@ -402,8 +402,146 @@ class GLMatrixFree(GaussLobatto):
     #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
     #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
 
+
+  def get_projection_matrices(self):
+    """
+    Compute projection matrix from the FC and FF matrices provided in BlockMatrix interface
+
+    Return face-from-cell projection matrices with and without zero rows corresponding to the redundant projections.
+    Matrix with redundant projections is needed for get_face_from_cell_matrix(self).
+    Matrix without redundant projections is convenient for computing the Schur-complement matrix.
+
+    The output matrix with redundant projections should have:                                               extra factor to account for all the faces
+    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows (= 32 in 2D 1st order)
+    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols (= 4  in 2D 1st order)
+
+    The output matrix without redundant projections should have half the number of row as the previous one:
+    rows (= 16 in 2D 1st order)
+    cols (= 4  in 2D 1st order)
+    """
+    
+    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions # number of cell unknowns
+    nodes_per_face = ( self.poly_degree + 1 ) ** (self.Dimensions-1)
+    proj_unknowns_per_face = 2 * self._projections_per_face_node * nodes_per_face # q^-+, u^-+ projection unknowns per face
+    proj_unknowns = proj_unknowns_per_face * 2 * self.Dimensions # total number of q^-+, u^-+ projection unknowns on all faces
+
+    ### Compute the gradient projections
+    A_qp_u_left   = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
+    A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
+    A_qm_u_right  = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
+    A_qm_u_top    = self.block_matrix._A_FC[(1,0)]["top"][(0,0)]
+
+    M_qp_qp_left   = self.block_matrix._A_FF[(0,0)]["left"][(0,1)]   # These are now the same;
+    M_qp_qp_bottom = self.block_matrix._A_FF[(0,0)]["bottom"][(1,0)] # keep for generality
+    M_qm_qm_right  = self.block_matrix._A_FF[(1,1)]["right"][(0,1)]  #
+    M_qm_qm_top    = self.block_matrix._A_FF[(1,1)]["top"][(1,0)]    #
+
+    # SCALING: All P_q matrices are scaled with power -1 (i.e. 1/h)
+    P_qp_u_left   = -np.dot(np.linalg.inv(M_qp_qp_left),   A_qp_u_left)
+    P_qp_u_bottom = -np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_u_bottom)
+    P_qm_u_right  = -np.dot(np.linalg.inv(M_qm_qm_right),  A_qm_u_right)
+    P_qm_u_top    = -np.dot(np.linalg.inv(M_qm_qm_top),    A_qm_u_top)
+
+    ### Compute the solution projections
+    A_up_u_left   = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
+    A_up_u_bottom = self.block_matrix._A_FC[(3,0)]["bottom"][(1,0)]
+    A_um_u_right  = self.block_matrix._A_FC[(4,0)]["right"][(0,1)]
+    A_um_u_top    = self.block_matrix._A_FC[(4,0)]["top"][(1,0)]
+
+    M_up_up_left   = self.block_matrix._A_FF[(3,3)]["left"][(0,1)]   # These are now the same;
+    M_up_up_bottom = self.block_matrix._A_FF[(3,3)]["bottom"][(1,0)] # keep for generality
+    M_um_um_right  = self.block_matrix._A_FF[(4,4)]["right"][(0,1)]  #
+    M_um_um_top    = self.block_matrix._A_FF[(4,4)]["top"][(1,0)]    #
+
+    # SCALING: All P_u matrices are scaled with power 0
+    P_up_u_left = -np.dot(np.linalg.inv(M_up_up_left), A_up_u_left)
+    P_up_u_bottom = -np.dot(np.linalg.inv(M_up_up_bottom), A_up_u_bottom)
+    P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
+    P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
+
+
+    assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
+    assert proj_unknowns % 2 == 0
+    # q^\pm - gradient projections, scaled by h**-1
+    matrix_0_redundant =  np.zeros((proj_unknowns,     cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
+    matrix_0           =  np.zeros((proj_unknowns // 2, cell_unknowns)) # should be 16x4 for 2D 1st order, no redundant projections
+    # u^\pm - solution projections, scaled by h**0
+    matrix_1_redundant =  np.zeros((proj_unknowns,     cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
+    matrix_1           =  np.zeros((proj_unknowns // 2, cell_unknowns)) # should be 16x4 for 2D 1st order, no redundant projections
+    
+    # select indices corresponding to q^+- and u^+- unknowns
+    q_m_indices = [ index for index in range(proj_unknowns) if                       (index % proj_unknowns_per_face) < nodes_per_face ]
+    u_m_indices = [ index for index in range(proj_unknowns) if     nodes_per_face <= (index % proj_unknowns_per_face) < 2 * nodes_per_face ]
+    q_p_indices = [ index for index in range(proj_unknowns) if 2 * nodes_per_face <= (index % proj_unknowns_per_face) < 3 * nodes_per_face ]
+    u_p_indices = [ index for index in range(proj_unknowns) if 3 * nodes_per_face <= (index % proj_unknowns_per_face) < 4 * nodes_per_face ]
+    # example for degree = 1: index%8 < 2 selects q_m_indices = [0,1, 8,9, 16,17, 24,25] out of range(32)
+
+    Zeros = np.zeros_like(P_qp_u_left)
+    # Zeros corresponds to the redundant projections, as we decided to include them in the projection matrix
+    # In general, Zeros can be replaced by corresponding matrices from BlockMatrix, as they are all-zeros anyway
+    matrix_0_redundant[ q_p_indices, : ] = np.concatenate((P_qp_u_left, P_qp_u_bottom, Zeros, Zeros), axis=0)  
+    matrix_0_redundant[ q_m_indices, : ] = np.concatenate((Zeros, Zeros, P_qm_u_right, P_qm_u_top),   axis=0)
+
+    matrix_1_redundant[ u_p_indices, : ] = np.concatenate((P_up_u_left, P_up_u_bottom, Zeros, Zeros), axis=0)
+    matrix_1_redundant[ u_m_indices, : ] = np.concatenate((Zeros, Zeros, P_um_u_right, P_um_u_top),   axis=0)
+
+    # # Eliminate redundant projections:
+    # matrix_0 = np.concatenate((P_qp_u_left, P_qp_u_bottom, Zeros, Zeros), axis=0)  
+    # matrix_0_redundant[ q_m_indices, : ] = np.concatenate((Zeros, Zeros, P_qm_u_right, P_qm_u_top),   axis=0)
+
+
+    output_matrices_redundant = [ matrix_0_redundant, matrix_1_redundant ]
+    output_matrices = [ np.zeros_like(matrix_0_redundant), np.zeros_like(matrix_1_redundant) ]
+    output_scalings = [ -1, 0 ]
+
+    assert( len(output_matrices_redundant) == len(output_scalings) )
+
+    for matrix in output_matrices_redundant:
+      assert matrix.shape == output_matrices_redundant[0].shape
+
+    return output_matrices, output_matrices_redundant, output_scalings
+  
+    # SCALING: Consider our case with 32x4 matrix:
+    # [[ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 1. -1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0.  1. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -0. -1. -0.]  -- scale by 1
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 1. -0. -1. -0.]  -- scale by 1/h
+    #  [-0.  1. -0. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -1. -0. -0.]  -- scale by 1
+    #  [-1.  1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0. -1.  1.]  -- scale by 1/h
+    #  [-0.  1. -0. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]  -- scale by 1
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [-1. -0.  1. -0.]  -- scale by 1/h
+    #  [-0. -1. -0.  1.]  -- scale by 1/h
+    #  [-0. -0.  1. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]  -- scale by 1
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+
   def get_face_from_cell_matrix(self):
     """
+
+    Calculation of the projection matrix is implemented in get_projection_matrices().
+    Here we use it's output.
+
+    ----------------------------------
 
     We wanna project the cell solution onto the face projections vector
     We wanna include redundant rows now.
@@ -417,70 +555,8 @@ class GLMatrixFree(GaussLobatto):
 
     """
 
-    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions # number of cell unknowns
-    nodes_per_face = ( self.poly_degree + 1 ) ** (self.Dimensions-1)
-    proj_unknowns_per_face = 2 * self._projections_per_face_node * nodes_per_face # q^-+, u^-+ projection unknowns per face
-    proj_unknowns = proj_unknowns_per_face * 2 * self.Dimensions # total number of q^-+, u^-+ projection unknowns on all faces
-
-    ### Compute the gradient projections
-    A_qp_u_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
-    A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
-    A_qm_u_right = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
-    A_qm_u_top = self.block_matrix._A_FC[(1,0)]["top"][(0,0)]
-
-    M_qp_qp_left   = self.block_matrix._A_FF[(0,0)]["left"][(0,1)]   # These are now the same;
-    M_qp_qp_bottom = self.block_matrix._A_FF[(0,0)]["bottom"][(1,0)] # keep for generality
-    M_qm_qm_right = self.block_matrix._A_FF[(1,1)]["right"][(0,1)]   #
-    M_qm_qm_top  = self.block_matrix._A_FF[(1,1)]["top"][(1,0)]      #
-
-    # SCALING: All P_q matrices are scaled with power -1 (i.e. 1/h)
-    P_qp_u_left = -np.dot(np.linalg.inv(M_qp_qp_left), A_qp_u_left)
-    P_qp_u_bottom = -np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_u_bottom)
-    P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
-    P_qm_u_top = -np.dot(np.linalg.inv(M_qm_qm_top), A_qm_u_top)
-
-    ### Compute the solution projections
-    A_up_u_left = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
-    A_up_u_bottom = self.block_matrix._A_FC[(3,0)]["bottom"][(1,0)]
-    A_um_u_right = self.block_matrix._A_FC[(4,0)]["right"][(0,1)]
-    A_um_u_top = self.block_matrix._A_FC[(4,0)]["top"][(1,0)]
-
-    M_up_up_left   = self.block_matrix._A_FF[(3,3)]["left"][(0,1)]   # These are now the same;
-    M_up_up_bottom = self.block_matrix._A_FF[(3,3)]["bottom"][(1,0)] # keep for generality
-    M_um_um_right = self.block_matrix._A_FF[(4,4)]["right"][(0,1)]   #
-    M_um_um_top  = self.block_matrix._A_FF[(4,4)]["top"][(1,0)]      #
-
-    # SCALING: All P_u matrices are scaled with power 0
-    P_up_u_left = -np.dot(np.linalg.inv(M_up_up_left), A_up_u_left)
-    P_up_u_bottom = -np.dot(np.linalg.inv(M_up_up_bottom), A_up_u_bottom)
-    P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
-    P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
-
-
-    assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
-    # q^\pm - gradient projections, scaled by h**-1
-    matrix_0 =  np.zeros((proj_unknowns, cell_unknowns)) # should be 32x4 for 2D 1st order
-    # u^\pm - solution projections, scaled by h**0
-    matrix_1 =  np.zeros((proj_unknowns, cell_unknowns)) # should be 32x4 for 2D 1st order
-    
-    # select indices corresponding to q^+- and u^+- unknowns
-    q_m_indices = [ index for index in range(proj_unknowns) if                       (index % proj_unknowns_per_face) < nodes_per_face ]
-    u_m_indices = [ index for index in range(proj_unknowns) if     nodes_per_face <= (index % proj_unknowns_per_face) < 2 * nodes_per_face ]
-    q_p_indices = [ index for index in range(proj_unknowns) if 2 * nodes_per_face <= (index % proj_unknowns_per_face) < 3 * nodes_per_face ]
-    u_p_indices = [ index for index in range(proj_unknowns) if 3 * nodes_per_face <= (index % proj_unknowns_per_face) < 4 * nodes_per_face ]
-    # example for degree = 1: index%8 < 2 selects q_m_indices = [0,1, 8,9, 16,17, 24,25] out of range(32)
-
-    Zeros = np.zeros_like(P_qp_u_left)
-    # In general, Zeros can be replaced by corresponding matrices from BlockMatrix, as they are all-zeros anyway
-    matrix_0[ q_p_indices, : ] = np.concatenate((P_qp_u_left, P_qp_u_bottom, Zeros, Zeros), axis=0)  
-    matrix_0[ q_m_indices, : ] = np.concatenate((Zeros, Zeros, P_qm_u_right, P_qm_u_top),   axis=0)
-
-    matrix_1[ u_p_indices, : ] = np.concatenate((P_up_u_left, P_up_u_bottom, Zeros, Zeros), axis=0)
-    matrix_1[ u_m_indices, : ] = np.concatenate((Zeros, Zeros, P_um_u_right, P_um_u_top),   axis=0)
-
-
-    output_matrices = [ matrix_0, matrix_1 ]
-    output_scalings = [ -1, 0 ]
+    output_matrices = self.get_projection_matrices()[1] # projection matrices with redundant rows
+    output_scalings = self.get_projection_matrices()[2]
 
     assert( len(output_matrices) == len(output_scalings) )
 
@@ -554,4 +630,3 @@ class GLMatrixFree(GaussLobatto):
     1 for scale factor. Hardcoding the number
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
-
