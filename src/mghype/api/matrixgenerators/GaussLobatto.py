@@ -425,6 +425,10 @@ class GLMatrixFree(GaussLobatto):
     proj_unknowns_per_face = 2 * self._projections_per_face_node * nodes_per_face # q^-+, u^-+ projection unknowns per face
     proj_unknowns = proj_unknowns_per_face * 2 * self.Dimensions # total number of q^-+, u^-+ projection unknowns on all faces
 
+    # number of "not redundant" projections: the same as q^f and u^f unknowns in get_cell_from_face
+    f_unknowns_per_face = self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) # q^f and u^f unknowns per face
+    f_unknowns = f_unknowns_per_face * 2 * self.Dimensions # total number of q^f and u^f unknowns on all faces = how many projections excluding the redundant ones
+
     ### Compute the gradient projections
     A_qp_u_left   = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
     A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
@@ -461,14 +465,37 @@ class GLMatrixFree(GaussLobatto):
 
 
     assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
-    assert proj_unknowns % 2 == 0
     # q^\pm - gradient projections, scaled by h**-1
-    matrix_0_redundant =  np.zeros((proj_unknowns,     cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
+    matrix_0_redundant =  np.zeros((proj_unknowns,      cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
     matrix_0           =  np.zeros((proj_unknowns // 2, cell_unknowns)) # should be 16x4 for 2D 1st order, no redundant projections
     # u^\pm - solution projections, scaled by h**0
-    matrix_1_redundant =  np.zeros((proj_unknowns,     cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
+    matrix_1_redundant =  np.zeros((proj_unknowns,      cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
     matrix_1           =  np.zeros((proj_unknowns // 2, cell_unknowns)) # should be 16x4 for 2D 1st order, no redundant projections
+
+    ##############################################
+    ### Matrices without redundant projections ###
+    ##############################################
+
+    # select indices corresponding to q and u projections -- same way as ^f-variables in get_cell_from_face
+    q_indices = [ index for index in range(f_unknowns) if (index % f_unknowns_per_face) < ( self.poly_degree + 1 ) ** (self.Dimensions-1) ]
+    # example for degree = 1: index%4 < 2 selects q_indices = [0,1, 4,5, 8,9, 12,13] out of range(16)
+    u_indices = [ index for index in range(f_unknowns) if index not in q_indices]
+
+    # assign "not redundant" projections rows: q_+, u_+ for the left and bottom; q_-, u_- for the right and top
+    matrix_0[ q_indices, : ] = np.concatenate((P_qp_u_left, 
+                                               P_qp_u_bottom,
+                                               P_qm_u_right,
+                                               P_qm_u_top), axis=0)
     
+    matrix_1[ u_indices, : ] = np.concatenate((P_up_u_left, 
+                                               P_up_u_bottom,
+                                               P_um_u_right,
+                                               P_um_u_top), axis=0)
+
+    ###########################################
+    ### Matrices with redundant projections ###
+    ###########################################
+
     # select indices corresponding to q^+- and u^+- unknowns
     q_m_indices = [ index for index in range(proj_unknowns) if                       (index % proj_unknowns_per_face) < nodes_per_face ]
     u_m_indices = [ index for index in range(proj_unknowns) if     nodes_per_face <= (index % proj_unknowns_per_face) < 2 * nodes_per_face ]
@@ -479,19 +506,28 @@ class GLMatrixFree(GaussLobatto):
     Zeros = np.zeros_like(P_qp_u_left)
     # Zeros corresponds to the redundant projections, as we decided to include them in the projection matrix
     # In general, Zeros can be replaced by corresponding matrices from BlockMatrix, as they are all-zeros anyway
-    matrix_0_redundant[ q_p_indices, : ] = np.concatenate((P_qp_u_left, P_qp_u_bottom, Zeros, Zeros), axis=0)  
-    matrix_0_redundant[ q_m_indices, : ] = np.concatenate((Zeros, Zeros, P_qm_u_right, P_qm_u_top),   axis=0)
+    matrix_0_redundant[ q_p_indices, : ] = np.concatenate((P_qp_u_left, 
+                                                           P_qp_u_bottom,
+                                                           Zeros, 
+                                                           Zeros), axis=0)  
+    matrix_0_redundant[ q_m_indices, : ] = np.concatenate((Zeros, 
+                                                           Zeros, 
+                                                           P_qm_u_right, 
+                                                           P_qm_u_top),   axis=0)
 
-    matrix_1_redundant[ u_p_indices, : ] = np.concatenate((P_up_u_left, P_up_u_bottom, Zeros, Zeros), axis=0)
-    matrix_1_redundant[ u_m_indices, : ] = np.concatenate((Zeros, Zeros, P_um_u_right, P_um_u_top),   axis=0)
+    matrix_1_redundant[ u_p_indices, : ] = np.concatenate((P_up_u_left, 
+                                                           P_up_u_bottom, 
+                                                           Zeros, 
+                                                           Zeros), axis=0)
+    matrix_1_redundant[ u_m_indices, : ] = np.concatenate((Zeros, 
+                                                           Zeros, 
+                                                           P_um_u_right, 
+                                                           P_um_u_top),   axis=0)
+    
+    ###########################################
 
-    # # Eliminate redundant projections:
-    # matrix_0 = np.concatenate((P_qp_u_left, P_qp_u_bottom, Zeros, Zeros), axis=0)  
-    # matrix_0_redundant[ q_m_indices, : ] = np.concatenate((Zeros, Zeros, P_qm_u_right, P_qm_u_top),   axis=0)
-
-
+    output_matrices = [ matrix_0, matrix_1 ]
     output_matrices_redundant = [ matrix_0_redundant, matrix_1_redundant ]
-    output_matrices = [ np.zeros_like(matrix_0_redundant), np.zeros_like(matrix_1_redundant) ]
     output_scalings = [ -1, 0 ]
 
     assert( len(output_matrices_redundant) == len(output_scalings) )
