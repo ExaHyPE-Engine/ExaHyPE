@@ -8,6 +8,7 @@
 \li \subpage multigrid_benchmarks
 \li \subpage documentation_multigrid_boundary_conditions
 \li \subpage page_multigrid_terminology
+\li \subpage multigrid_solvers
  
 Peano's multigrid extension provides stand-alone multigrid solvers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
@@ -22,6 +23,11 @@ to build Multigrid applications, the minimal configure options needed are:
 - ``` --enable-exahype ```
 - ``` --enable-blockstructured ```
 - ``` --enable-finiteelements ```
+- ``` --enable-mghype ```
+
+The pythonpath needed is:
+
+``` export PYTHONPATH=/path/to/Peano/python:/path/to/Peano/src ```
 
 Please refer to \ref documentation_multigrid_petsc for info on PETSC-specific build settings.
 */
