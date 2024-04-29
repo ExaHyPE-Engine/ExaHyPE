@@ -526,7 +526,7 @@ if __name__ == "__main__":
       additional_mesh_traversal.add_action_set( roll_over_projected_faces )
       additional_mesh_traversal.add_action_set( dynamic_AMR )
       
-      project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+      project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
 
       peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
