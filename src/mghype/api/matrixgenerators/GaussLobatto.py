@@ -682,4 +682,3 @@ class GLMatrixFree(GaussLobatto):
     1 for scale factor. Hardcoding the number
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
-  
