@@ -13,13 +13,14 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pt",   "--plot-timestep",     dest="plot_each_timestep", type=bool, default=False, help="Plot after each timestep. By default (False) we plot after initialisation and at the end" )
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
-parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
-parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
+parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Smoothing parameter for cells")
+parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Smoothing parameter for faces")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
@@ -150,6 +151,7 @@ project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
+  plot_each_timestep    = args.plot_each_timestep
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
@@ -157,6 +159,9 @@ project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.generate()
+
+# for vis files to go into
+os.system( "mkdir visualisation" )
 
 os.system( "make clean" )
 if args.j>0:

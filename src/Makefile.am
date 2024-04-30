@@ -18,6 +18,7 @@ SUBDIRS = . \
 	mghype \
 	petsc \
 	swift2 \
+	tbb \
 	unittests
 
 #

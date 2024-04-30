@@ -20,11 +20,16 @@ mghype::matrixfree::solvers::Solver::Solver(
   _previousGlobalResidualMaxNorm(0.0),
   _previousGlobalResidualEukledianNormSquared(0.0),
   _previousGlobalResidualHNormSquared(0.0) {
+  const std::string      prefix = "Abstract";
+  std::string::size_type index  = _name.find( prefix );
+  if (index!=std::string::npos) {
+    _name.erase(index, prefix.length());
+  }
 }
 
 
 bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
-  int residualReduced = 0;
+  int residualReducedUnderThreshold = 0;
   int residualGrows   = 0;
 
   if ( tarch::la::equals(_initialGlobalResidualMaxNorm,0.0) ) {
@@ -35,7 +40,7 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualGrows++;
   }
   else if (_globalResidualMaxNorm / _initialGlobalResidualMaxNorm < _tolerance) {
-    residualReduced++;
+    residualReducedUnderThreshold++;
   }
 
   if ( tarch::la::equals(_initialGlobalResidualEukledianNormSquared,0.0) ) {
@@ -46,7 +51,7 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualGrows++;
   }
   else if (_globalResidualEukledianNormSquared / _initialGlobalResidualEukledianNormSquared < _tolerance) {
-    residualReduced++;
+    residualReducedUnderThreshold++;
   }
 
   if ( tarch::la::equals(_initialGlobalResidualHNormSquared,0.0) ) {
@@ -57,14 +62,20 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualGrows++;
   }
   else if (_globalResidualHNormSquared / _initialGlobalResidualHNormSquared < _tolerance ) {
-    residualReduced++;
+    residualReducedUnderThreshold++;
   }
 
   _previousGlobalResidualMaxNorm              = _globalResidualMaxNorm;
   _previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   _previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
 
-  return residualGrows==3 or residualReduced==3;
+  logInfo( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
+  static int numberOfResidualGrowths = 0;
+  const int numberOfChecks = 3;
+
+  if (residualGrows==numberOfChecks) numberOfResidualGrowths++;
+
+  return residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5;
 }
 
 

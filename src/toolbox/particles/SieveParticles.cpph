@@ -24,6 +24,11 @@ tarch::multicore::BooleanSemaphore toolbox::particles::SieveParticles<T>::_parti
 
 
 template <typename T>
+toolbox::particles::SieveParticles<T>::~SieveParticles() {
+}
+
+
+template <typename T>
 void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) {
   for (auto* p : list) {
     delete p;
@@ -33,7 +38,11 @@ void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) 
 
 
 template <typename T>
-void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
+void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
+    const tarch::la::Vector<Dimensions,double>   domainOffset,
+    const tarch::la::Vector<Dimensions,double>   domainSize,
+    const std::bitset<Dimensions>                periodicBC
+    ) {
   logDebug("finishedTraversal()", "there are " << _particlesThatHaveToBeSieved.size() << " sieve sets (each tied to one tree or the global sorting, respectively)");
 
   deleteParticles(_particlesThatHaveToBeSieved);
@@ -132,11 +141,54 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
 
   // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+
+  if (periodicBC.any()){
+    for (auto p: _particlesThatHaveToBeSieved){
+      p->setX( toolbox::particles::applyPeriodicBoundaryConditions( p->getX(), domainOffset, domainSize, periodicBC) );
+    }
+  }
+}
+
+
+template <typename T>
+std::string toolbox::particles::SieveParticles<T>::toString() const {
+  std::ostringstream msg;
+
+  msg << "(#particles-that-cannot-be-lifted=" << _particlesThatCanNotBeLiftedWithinTheirTree.size()
+      << ",#particles-that-have-to-be-sieved=" << _particlesThatHaveToBeSieved.size()
+      << ")";
+
+  return msg.str();
+}
+
+
+template <typename T>
+void toolbox::particles::SieveParticles<T>::deleteParticles() {
+  deleteParticles(_particlesThatCanNotBeLiftedWithinTheirTree);
+  deleteParticles(_particlesThatHaveToBeSieved);
+
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+  _particlesThatHaveToBeSieved.clear();
+}
+
+
+template <typename T>
+toolbox::particles::SieveParticles<T> toolbox::particles::SieveParticles<T>::cloneParticlesToBeSieved() {
+  SieveParticles<T> result;
+
+  for (auto p: _particlesThatHaveToBeSieved) {
+    result._particlesThatHaveToBeSieved.push_back( new T(*p) );
+  }
+
+  logDebug( "cloneParticlesToBeSieved()", "created a clone of the particle set: " << this->toString() << "->" << result.toString() );
+
+  return result;
 }
 
 
 template <typename T>
 void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p) {
+  logDebug( "addParticleThatCanNotBeLiftedWithinItsTree(T* p)", "particle cannot be lifted: " << p->toString() );
   _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
 }
 
@@ -157,9 +209,10 @@ template <typename T>
 typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles::SieveParticles<T>::getParticlesToBeSievedIntoVertex(
   const peano4::datamanagement::VertexMarker& marker,
   bool  removeReturnedParticlesFromSet,
-  bool  onlyReturnParticlesThatWillBeLocal
+  bool  onlyReturnParticlesThatWillBeLocal,
+  bool  lockSemaphore
 ) {
-  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, removeReturnedParticlesFromSet);
+  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, removeReturnedParticlesFromSet and lockSemaphore);
 
   ParticleList                    result;
   typename ParticleList::iterator p = _particlesThatHaveToBeSieved.begin();

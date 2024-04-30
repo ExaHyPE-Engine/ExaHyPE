@@ -21,7 +21,7 @@
 # ---------------------------
 #   make clean
 #   make distclean
-#   git clean -xf
+#   git clean -xdf
 #   rm -rf submodules
 #
 # Summary:
@@ -173,7 +173,21 @@ fi
 
 if test "$multithreading" == tbb; then
   AC_DEFINE([SharedTBB], [1], [SharedTBB])
+  
+  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   -Isrc/tbb"
+  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE -Isrc/tbb"
+  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS -DTBB_USE_ASSERT -Isrc/tbb"
+  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE   -DTBB_USE_ASSERT -Isrc/tbb"
+  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG   -DTBB_USE_ASSERT -Isrc/tbb"
+
+  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS   -Isrc/tbb"
+  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE -Isrc/tbb"
+  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS -DTBB_USE_ASSERT -Isrc/tbb"
+  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   -DTBB_USE_ASSERT -Isrc/tbb"
+  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   -DTBB_USE_ASSERT -Isrc/tbb"
 fi
+AM_CONDITIONAL([UseTBB], [test "x$multithreading" = xtbb])
+
 
 if test "$multithreading" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
@@ -1361,6 +1375,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/finiteelements/Makefile
   src/toolbox/loadbalancing/Makefile
   src/toolbox/particles/Makefile
+  src/tbb/Makefile
   src/convert/Makefile
   src/exahype2/Makefile
   src/mghype/Makefile

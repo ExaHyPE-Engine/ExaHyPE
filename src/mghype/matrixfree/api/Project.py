@@ -116,6 +116,7 @@ the build mode. The values for these parameters step from set_Peano4_installatio
                                        dimensions,
                                        offset,
                                        domain_size,
+                                       plot_each_timestep,
                                        plotter_precision = 5,
                                        ):
     """
@@ -123,10 +124,11 @@ the build mode. The values for these parameters step from set_Peano4_installatio
       offset and size should be lists with dimensions double entries.
             
     """
-    self._domain_offset = offset
-    self._domain_size   = domain_size
-    self._dimensions    = dimensions
-    self._plotter_precision = plotter_precision
+    self._domain_offset      = offset
+    self._domain_size        = domain_size
+    self._dimensions         = dimensions
+    self._plot_each_timestep = plot_each_timestep
+    self._plotter_precision  = plotter_precision
     if plotter_precision<=0:
       raise Exception( "Plotter precision has to be bigger than 0" ) 
 
@@ -148,6 +150,7 @@ you require to run this Peano4 application with PETSc.
     self._project.main = MatrixFreeMain(self._project,
                                 self._domain_offset,
                                 self._domain_size,
+                                self._plot_each_timestep
                                 )
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)

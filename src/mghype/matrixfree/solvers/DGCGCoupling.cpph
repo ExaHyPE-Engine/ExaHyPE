@@ -1,0 +1,54 @@
+#include "peano4/utils/Globals.h"
+
+
+void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
+  auto&  vertex,
+  bool   restrictRhsAndInjectSolution
+) {
+  if (
+    vertex.getNumberOfRestrictions()<=0
+    or
+    vertex.getNumberOfRestrictions()>TwoPowerD
+  ) {
+    vertex.setDelta(0.0);
+    vertex.setValue(0.0);
+    vertex.setRhs( 0.0 );
+    vertex.setOldValue(0.0);
+  }
+  else {
+    vertex.setDelta(
+      vertex.getValue()
+      -
+      vertex.getOldValue()
+    );
+
+    assertion1(
+      vertex.getNumberOfRestrictions() == TwoPowerD
+      or
+      tarch::la::equals( vertex.getDelta(), 0.0 ),
+      vertex.toString()
+    );
+
+    if (restrictRhsAndInjectSolution) {
+      auto rescaledNewValue =
+        1.0 / vertex.getNumberOfRestrictions()
+        *
+        vertex.getSumOfInjectedValues();
+
+      vertex.setValue(
+        rescaledNewValue
+      );
+      vertex.setOldValue(
+        rescaledNewValue
+      );
+      vertex.setRhs(
+        vertex.getNewRestrictedRhs()
+      );
+    }
+
+    logDebug( "touchVertexFirstTime()", "reset vertex to " << vertex.toString() );
+  }
+  vertex.setSumOfInjectedValues( 0.0 );
+  vertex.setNumberOfRestrictions( 0 );
+  vertex.setNewRestrictedRhs( 0.0 );
+}

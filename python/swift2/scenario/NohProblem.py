@@ -92,7 +92,6 @@ class NohProblemIC:
 
       particle->setHasNoNeighbours(false);
       particle->setSmoothingLengthIterCount(0);
-      particle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);

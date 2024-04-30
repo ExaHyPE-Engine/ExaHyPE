@@ -96,13 +96,14 @@ class DoF(object):
     self._additional_load_and_store_arguments = []
   
   
-  def configure(self,namespace,association):
+  def configure(self,namespace,association, subdirectory=""):
     """
     Typically called by model as soon as you add an object to it
     """
     self.namespace = [x for x in namespace]
     self.association  = association
-    self.namespace   += [ get_subnamespace_for_association(association) ]    
+    self.namespace   += [ get_subnamespace_for_association(association) ]   
+    self.subdirectory = subdirectory 
     
 
   def get_full_qualified_type(self):

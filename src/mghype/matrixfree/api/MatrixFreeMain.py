@@ -5,7 +5,8 @@ class MatrixFreeMain(peano4.runner.DefaultSequence):
   def __init__(self,
                project,
                domain_offset,
-               domain_size
+               domain_size,
+               plot_each_timestep
                ):
     super(MatrixFreeMain,self).__init__(project)
     self.overwrite     = True
@@ -21,6 +22,8 @@ class MatrixFreeMain(peano4.runner.DefaultSequence):
       self.d[ "DomainSize" ] += str(i)
     self.d[ "DomainOffset" ] += "}"
     self.d[ "DomainSize" ]   += "}"
+
+    self.d["PlotEachTimeStep"] = plot_each_timestep
     
   def _get_header_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
