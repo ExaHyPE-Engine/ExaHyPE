@@ -32,7 +32,13 @@
 
 #define OpenMPDependenciesInTaskWait
 
-#undef OpenMPTaskGroup
+/**
+ * This flag had been undefined before.
+ *
+ * However, I do not understand why SYCL should not support the task group in
+ * OpenMP.
+ */
+#define OpenMPTaskGroup
 
 #define PragmaPush
 #define SilenceUnknownAttribute

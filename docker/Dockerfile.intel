@@ -1,0 +1,96 @@
+FROM spack/ubuntu-jammy:0.21.2 as builder
+
+# Needed for nvtop
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-recommends --fix-missing \
+libudev-dev \
+libsystemd-dev && \
+apt-get clean -y && \
+apt-get autoremove -y && \
+apt-get autoclean -y && \
+rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /opt/spack-environment \
+&&  (echo spack: \
+&&   echo '  packages:' \
+&&   echo '    all:' \
+&&   echo '      target: [x86_64]' \
+&&   echo '' \
+&&   echo '  specs:' \
+&&   echo '  - py-pip' \
+&&   echo '  - py-black' \
+&&   echo '  - py-jinja2' \
+&&   echo '  - py-h5py' \
+&&   echo '  - py-hpccm' \
+&&   echo '  - py-sympy' \
+&&   echo '  - py-numpy' \
+&&   echo '  - py-mpmath' \
+&&   echo '  - py-jsonschema' \
+&&   echo '  - py-jupyterlab' \
+&&   echo '  - py-scipy' \
+&&   echo '  - py-matplotlib' \
+&&   echo '  - py-pspamm' \
+&&   echo '  - libxsmm+generator' \
+&&   echo '  - slurm' \
+&&   echo '  - memkind' \
+&&   echo '  - blis' \
+&&   echo '  - boost' \
+&&   echo '  - openblas' \
+&&   echo '  - gsl' \
+&&   echo '  - intel-oneapi-compilers' \
+&&   echo '  - intel-oneapi-mpi' \
+&&   echo '  - intel-oneapi-mkl' \
+&&   echo '  - nvtop+cuda' \
+&&   echo '  - papi+cuda' \
+&&   echo '  - likwid+cuda' \
+&&   echo '  - easi+asagi' \
+&&   echo '  - eigen+ipo' \
+&&   echo '  - babelstream+cuda cuda_arch=70' \
+&&   echo '  - parmetis+int64+shared+ipo' \
+&&   echo '  - metis+int64+real64+ipo+shared' \
+&&   echo '  - hdf5+fortran+threadsafe+mpi+shared' \
+&&   echo '  - netcdf-c+mpi+shared' \
+&&   echo '  - netcdf-cxx4+pic+shared' \
+&&   echo '  - netcdf-fortran+pic+shared' \
+&&   echo '  - parallel-netcdf+cxx+fortran+pic+shared' \
+&&   echo '  - petsc+mpi+memkind+metis+cuda+hwloc+openmp' \
+&&   echo '  - paraview+mpi+osmesa+ipo+python+hdf5 ^llvm ~clang ~flang ~lldb ~lld libcxx=none ~gold +llvm_dylib' \
+&&   echo '' \
+&&   echo '  concretizer:' \
+&&   echo '    unify: true' \
+&&   echo '  config:' \
+&&   echo '    install_tree: /opt/software' \
+&&   echo '  view: /opt/views/view') > /opt/spack-environment/spack.yaml
+
+RUN cd /opt/spack-environment && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-environment && spack env activate --sh -d . > activate.sh
+
+RUN . /opt/spack-environment/activate.sh && \
+python3 -m pip install --upgrade \
+pip \
+clang-html
+#VTUInterface
+
+FROM peanoframework/base:latest
+LABEL peano-framework.org=http://www.peano-framework.org/
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=UTC \
+DISPLAY=host.docker.internal:0.0
+
+COPY --from=builder /opt/spack-environment /opt/spack-environment
+COPY --from=builder /opt/software /opt/software
+
+# paths.view is a symlink, so copy the parent to avoid dereferencing and duplicating it
+COPY --from=builder /opt/views /opt/views
+
+RUN { \
+      echo '#!/bin/sh' \
+      && echo '.' /opt/spack-environment/activate.sh \
+      && echo 'exec "$@"'; \
+    } > /entrypoint.sh \
+&& chmod a+x /entrypoint.sh \
+&& ln -s /opt/views/view /opt/view
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]

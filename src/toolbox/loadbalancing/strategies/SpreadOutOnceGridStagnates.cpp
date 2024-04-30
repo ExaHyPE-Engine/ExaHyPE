@@ -35,34 +35,36 @@ int toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::getNumberOfT
     and
     _numberOfStableGridIterations>3
   ) {
-    const int MaxTreesPerRank = std::min(
-      _configuration->getMaxLocalTreesPerRank(_state),
+    int maxPermittedTreesPerRank = _configuration->getMaxLocalTreesPerRank(_state)>=1
+                                 ? _configuration->getMaxLocalTreesPerRank(_state)
+                                 : std::numeric_limits<int>::max();
+
+    int treesPerRankToExploitAllThreads = std::min(
+      maxPermittedTreesPerRank,
       tarch::multicore::Core::getInstance().getNumberOfThreads()
     );
-    const int MaxTotalTrees = MaxTreesPerRank * tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-    const int MinMeshSizeToAccommodateMaxTotalTrees = _configuration->getMinTreeSize(_state)<=1 ? MaxTotalTrees : _configuration->getMinTreeSize(_state) * MaxTotalTrees;
-  
-    const int MinTreeSize = std::max(
+    int minTreeSize = std::max(
       _configuration->getMinTreeSize(_state),
       1
     );
 
-    result = std::min(
-      MaxTreesPerRank,
-      std::max(1,_statistics.getLocalNumberOfInnerUnrefinedCells() / MinTreeSize / tarch::mpi::Rank::getInstance().getNumberOfRanks())
+    int treesPerRankAccommodatingMinTreeSize = std::max(
+      _statistics.getLocalNumberOfInnerUnrefinedCells() / minTreeSize / tarch::mpi::Rank::getInstance().getNumberOfRanks(),
+      1
     );
+
+    result = std::min( treesPerRankAccommodatingMinTreeSize, treesPerRankToExploitAllThreads );
 
     logInfo(
       "getNumberOfTreesPerRank()",
       "mesh has " << _statistics.getLocalNumberOfInnerUnrefinedCells() <<
-      " cells already (we would need at least " << MinMeshSizeToAccommodateMaxTotalTrees <<
-      " cells)"
-    );
-    logInfo(
-      "getNumberOfTreesPerRank()",
-      "create " << result << " trees per rank to obtain up to " << MaxTotalTrees << " trees in total (min tree size=" << _configuration->getMinTreeSize(_state) <<
-      ", max-trees-per-rank=" << _configuration->getMaxLocalTreesPerRank(_state) << ")"
+      " cells, so split " << result << " times " <<
+      "(maxPermittedTreesPerRank=" << maxPermittedTreesPerRank <<
+      ",treesPerRankToExploitAllThreads=" << treesPerRankToExploitAllThreads <<
+      ",minTreeSize=" << minTreeSize <<
+      ",treesPerRankAccommodatingMinTreeSize" << treesPerRankAccommodatingMinTreeSize <<
+      ")"
     );
   }
 

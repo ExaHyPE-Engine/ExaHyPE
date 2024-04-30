@@ -17,11 +17,27 @@
 #include <numeric>
 
 
+//using std::iota;
+//using std::ranges::cartesian_product;
+using std::ranges::views::iota;
+using std::ranges::views::cartesian_product;
+
+
 namespace {
+  /**
+   * As the
+   */
+/*
   inline constexpr auto translateIntoCPPExecutionPolicyForParallelLoop( peano4::utils::LoopPlacement placement ) {
     return placement==peano4::utils::LoopPlacement::Serial ? std::execution::seq : std::execution::par;
   }
+*/
+  #define translateIntoCPPExecutionPolicyForParallelLoop( placement ) \
+    placement==peano4::utils::LoopPlacement::Serial ? std::execution::seq : std::execution::par
 
+  #define translateIntoCPPExecutionPolicyForSimtLoop( placement ) \
+    std::execution::seq;
+/*
   inline constexpr auto translateIntoCPPExecutionPolicyForSimtLoop( peano4::utils::LoopPlacement placement ) {
     if (placement==peano4::utils::LoopPlacement::Serial)
       return std::execution::seq;
@@ -30,12 +46,13 @@ namespace {
     else
       return std::execution::par_unseq;
   }
+*/
 }
 
 
 #define parallelForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
-    auto counter##Range = std::iota(0, max); \
+    auto counter##Range = iota(0, max); \
     std::for_each( std::execution::par_unseq, counter##Range, [&]( const int counter ) {
 
 
@@ -51,42 +68,42 @@ namespace {
 #define parallelDforWithSchedulerInstructions2d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<2, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-  std::for_each( std::execution::par, std::ranges::cartesian_product( counter##Range0, counter##Range1 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+  std::for_each( std::execution::par, cartesian_product( counter##Range0, counter##Range1 ), [&]( auto counter##Native ) { \
     tarch::la::Vector<2, int> counter = { counter##Native[0], counter##Native[1] };
 
 
 #define parallelDforWithSchedulerInstructions3d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<3, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    auto                      counter##Range2 = std::iota(0, counter##Max(2)); \
-  std::for_each( std::execution::par, std::ranges::cartesian_product( counter##Range0, counter##Range1, counter##Range2 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    auto                      counter##Range2 = iota(0, counter##Max(2)); \
+  std::for_each( std::execution::par, cartesian_product( counter##Range0, counter##Range1, counter##Range2 ), [&]( auto counter##Native ) { \
     tarch::la::Vector<3, int> counter = { counter##Native[0], counter##Native[1], counter##Native[2] };
 
 
 #define parallelDforWithSchedulerInstructions4d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<4, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    auto                      counter##Range2 = std::iota(0, counter##Max(2)); \
-    auto                      counter##Range3 = std::iota(0, counter##Max(3)); \
-    std::for_each( std::execution::par, std::ranges::cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    auto                      counter##Range2 = iota(0, counter##Max(2)); \
+    auto                      counter##Range3 = iota(0, counter##Max(3)); \
+    std::for_each( std::execution::par, cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3 ), [&]( auto counter##Native ) { \
       tarch::la::Vector<4, int> counter = { counter##Native[0], counter##Native[1], counter##Native[2], counter##Native[3] };
 
 
 #define parallelDforWithSchedulerInstructions5d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<5, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    auto                      counter##Range2 = std::iota(0, counter##Max(2)); \
-    auto                      counter##Range3 = std::iota(0, counter##Max(3)); \
-    auto                      counter##Range4 = std::iota(0, counter##Max(4)); \
-  std::for_each( std::execution::par, std::ranges::cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3, counter##Range4 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    auto                      counter##Range2 = iota(0, counter##Max(2)); \
+    auto                      counter##Range3 = iota(0, counter##Max(3)); \
+    auto                      counter##Range4 = iota(0, counter##Max(4)); \
+  std::for_each( std::execution::par, cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3, counter##Range4 ), [&]( auto counter##Native ) { \
     tarch::la::Vector<5, int> counter = { counter##Native[0], counter##Native[1], counter##Native[2], counter##Native[3], counter##Native[4] };
 
 
@@ -102,7 +119,7 @@ namespace {
 
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
-    std::for_each( std::execution::par_unseq, std::iota(0, max), [&]( const int counter ) {
+    std::for_each( std::execution::par_unseq, iota(0, max), [&]( const int counter ) {
 
 
 /**
@@ -117,42 +134,42 @@ namespace {
 #define simtDforWithSchedulerInstructions2d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<2, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    std::for_each( std::execution::par_unseq, std::ranges::cartesian_product( counter##Range0, counter##Range1 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    std::for_each( std::execution::par_unseq, cartesian_product( counter##Range0, counter##Range1 ), [&]( auto counter##Native ) { \
       tarch::la::Vector<2, int> counter = { counter##Native[0], counter##Native[1] };
 
 
 #define simtDforWithSchedulerInstructions3d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<3, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    auto                      counter##Range2 = std::iota(0, counter##Max(2)); \
-  std::for_each( std::execution::par_unseq, std::ranges::cartesian_product( counter##Range0, counter##Range1, counter##Range2 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    auto                      counter##Range2 = iota(0, counter##Max(2)); \
+  std::for_each( std::execution::par_unseq, cartesian_product( counter##Range0, counter##Range1, counter##Range2 ), [&]( auto counter##Native ) { \
     tarch::la::Vector<3, int> counter = { counter##Native[0], counter##Native[1], counter##Native[2] };
 
 
 #define simtDforWithSchedulerInstructions4d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<4, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    auto                      counter##Range2 = std::iota(0, counter##Max(2)); \
-    auto                      counter##Range3 = std::iota(0, counter##Max(3)); \
-  std::for_each( std::execution::par_unseq, std::ranges::cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    auto                      counter##Range2 = iota(0, counter##Max(2)); \
+    auto                      counter##Range3 = iota(0, counter##Max(3)); \
+  std::for_each( std::execution::par_unseq, cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3 ), [&]( auto counter##Native ) { \
     tarch::la::Vector<4, int> counter = { counter##Native[0], counter##Native[1], counter##Native[2], counter##Native[3] };
 
 
 #define simtDforWithSchedulerInstructions5d(counter, max, loopParallelism) \
   { \
     tarch::la::Vector<5, int> counter##Max(max); \
-    auto                      counter##Range0 = std::iota(0, counter##Max(0)); \
-    auto                      counter##Range1 = std::iota(0, counter##Max(1)); \
-    auto                      counter##Range2 = std::iota(0, counter##Max(2)); \
-    auto                      counter##Range3 = std::iota(0, counter##Max(3)); \
-    auto                      counter##Range4 = std::iota(0, counter##Max(4)); \
-  std::for_each( std::execution::par_unseq, std::ranges::cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3, counter##Range4 ), [&]( auto counter##Native ) { \
+    auto                      counter##Range0 = iota(0, counter##Max(0)); \
+    auto                      counter##Range1 = iota(0, counter##Max(1)); \
+    auto                      counter##Range2 = iota(0, counter##Max(2)); \
+    auto                      counter##Range3 = iota(0, counter##Max(3)); \
+    auto                      counter##Range4 = iota(0, counter##Max(4)); \
+  std::for_each( std::execution::par_unseq, cartesian_product( counter##Range0, counter##Range1, counter##Range2, counter##Range3, counter##Range4 ), [&]( auto counter##Native ) { \
     tarch::la::Vector<5, int> counter = { counter##Native[0], counter##Native[1], counter##Native[2], counter##Native[3], counter##Native[4] };
 
 

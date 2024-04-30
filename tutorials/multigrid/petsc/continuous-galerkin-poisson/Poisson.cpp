@@ -22,7 +22,7 @@ benchmarks::multigrid::petsc::poisson::Poisson::~Poisson() {
 }
 
 
-void benchmarks::multigrid::petsc::poisson::Poisson::vertexInit(
+void benchmarks::multigrid::petsc::poisson::Poisson::initVertex(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
   

@@ -1,0 +1,129 @@
+# Mathematical basics of mixed DG
+
+We aim to solve
+
+@f$ - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u = f, @f$
+
+which is a second-order equation. Let us first introduce a helper vector @f$ p = (p _x, p _y) @f$, so we can instead 
+write in a first-order formulation:
+
+@f$ p_x = \partial_x u, \ p_y = \partial_y u @f$. 
+
+We note that @f$ p @f$ is a @f$ d @f$-dimensional vector, which contains the
+gradient of @f$ u @f$ in each dimension. 
+The introduction of the helper variable allows us to rewrite the PDE in 
+first order, noting that the left hand side is just a divergence:
+
+\f{eqnarray*}{
+- \partial_x p_x - \partial_y p_y = - \text{div} \ p & = & f, \\
+  p_x - \partial_x u & = & 0, \\
+  p_y - \partial_y u & = & 0. 
+\f}
+
+
+We can write the second and third line as one with the gradient:
+\f{eqnarray*}{
+  - \text{div} \ p & = & f, \\
+  p - \nabla u & = & 0. 
+\f}
+
+Nothing has been gained so far, despite the fact that the gradient is now 
+explicitly available in our formulation. Some codes can use this for their 
+algorithm. We have indeed "lost" a little bit of efficiency. In the normal
+@ref tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson "continuous Galerkin case", for example, 
+we have only one unknown, i.e. a scalar, per degree of freedom. This time, we have 
+have to maintain and evolve @f$ d+1 @f$ unknowns.
+
+
+The splitting above into a PDE over the primary variable @f$ u @f$ and the
+helper variables is not intuitive. We could merge all of it in one big system
+of PDEs. However, we note that the two equations are of different character:
+In the equation with the divergence operator, we have only one type of 
+derivatives on the left-hand side and only one type of unknown. The
+helper equations are slightly different, as they couple the two types of 
+unknowns, and one of them arises in its "real" form, while the other guys
+enter the equation through their first derivative.
+We will see below that it is advantageous to keep the two types of equation 
+systems separate and often even to bring some equations to the right-hand
+side - the best notation always depends on the context what you want to show:
+
+
+\f{eqnarray*}{
+  - \text{div} \ p & = & f, \\
+  \nabla u & = & p. 
+\f}
+
+
+## Weak formulation
+
+If we want to solve the arising system of equations (with multiple equations due
+to the mixed approach), we have to 
+test both the first, second, third, ... line. 
+Let us call them @f$ v_u @f$ and @f$ v_p @f$.
+We draw test functions from the solution space (the original PDE) and 
+from the helper spaces, i.e. @f$ v _u: \Omega \mapsto \mathbb{R} @f$ and @f$ v _p: \Omega \mapsto \mathbb{R}^d @f$. 
+The latter is a vector test function, so we might instead use 
+@f$ v_u, v_{p_x}, v_{p_y}, \dots @f$
+
+
+
+As we take all these tests from the same function space as the shape functions,
+we know that they all have local support. Integration hence yields
+
+\f{eqnarray*}{
+  \int _\Omega ( -\text{div} \ p ) \cdot v_u \ dx 
+    & = & 
+    \sum _{K}
+    \int_{K} ( -\text{div} \ p ) \cdot v _u \ dx  \qquad \forall v_u 
+  \\  
+     & = & 
+     \int_{K} ( p, \nabla v _u ) dx - 
+     \sum _{\partial K}
+     \int_{\partial K} \widehat{(n, p)} \cdot v_u \ dS(x)  
+   = \int_K f \cdot v_u \ dx
+\f}
+
+for the first equation where the @f$ n @f$ is the outer normal of the cell. The
+second equation gives us 
+
+\f{eqnarray*}{
+  \int _\Omega ( p, v_p ) dx - \int _\Omega ( \nabla u, v_p ) dx
+    & = & 
+    \sum _K
+    \int _K ( p, v_p ) dx - \int _K ( \nabla u, v_p ) dx
+  \\  
+    & = & 
+    \int _K ( p, v_p ) dx + \int _K  u \cdot \text{div} \ v_p \ dx
+    - 
+    \sum _{\partial K}
+    \int _{\partial K}  \hat u \cdot (n, v_p) \ dS(x) = 0.
+\f}
+
+
+In both lines, we exploit that the domain consists of cells and the integral 
+is just the sum over the cells.
+Within each cell, the shape functions are infinitely smooth.
+We can apply integration by parts.
+This leaves us with boundary terms over the faces.
+
+
+## The Riemann solver
+
+There are different Riemann solvers that we can use for a mixed formulation. A
+simple one is discussed in <a href="www.maths.dur.ac.uk/lms/2014/NPDE14/talks/0509cockburn.pdf">
+Cockburn's LMS EPSRC Durham Symposium</a> on page 28:
+
+Here, the @f$ \widehat{u} @f$ on the face is a weighted average of the left and the right @f$ u @f$.
+After that, it computes the jump, i.e. difference, of the @f$ (n, v_p ) @f$ on the face, relaxes this value and adds
+it to the @f$ \widehat{u} @f$ we have computed before. 
+The @f$ \widehat{(n,p)} @f$ is computed the other way round.
+
+So @f$ \widehat{u} @f$ depends on @f$ u^+ + u^- @f$ subject to some weights plus @f$ (n,p^+) - (n,p^-) @f$ weighted.
+@f$ \widehat{(n,p)} @f$ depends on @f$ (n,p^+) + (n,p^-) @f$ subject to some weights plus @f$ u^+ - u^- @f$ weighted.
+
+
+\f{eqnarray*}{
+  \hat u & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ + \tau^- u^- + (n,p^+) - (n,p^-) \right) 
+    \\
+  \widehat{(n,p)} & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ - \tau^- u^- + (n,p^+) + (n,p^-) \right) 
+\f}

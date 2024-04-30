@@ -112,22 +112,22 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     while the extraction of particles or moves from fine to coarse are epilogues to
     any operation in the primary mesh sweep.
 
-  
+
     ## Number of sweeps
-    
+
     All update flavours need 2+ mesh sweeps.
-    In the first sweep, they check if a particle sits with the right vertex. If 
-    not, is it either lifted locally or added to a global sort set. In the 
-    second sweep, we then insert particles from global sort sets into the 
-    domain or we drop the particles down further in the mesh hierarchy. 
-    
-    Horizontal tree cuts, i.e. situations where the parent cell of a cell 
+    In the first sweep, they check if a particle sits with the right vertex. If
+    not, is it either lifted locally or added to a global sort set. In the
+    second sweep, we then insert particles from global sort sets into the
+    domain or we drop the particles down further in the mesh hierarchy.
+
+    Horizontal tree cuts, i.e. situations where the parent cell of a cell
     belongs to another tree, are challenging: We cannot know prior to the
     drop if we would drop into such a cut. If we do however, we have to take
     the respective particle, send it to the neighbour, pick it up in the next
     mesh traversal and continue dropping. For a tree with depth L, we have up
-    to L-1 drop iterations. 
-    
+    to L-1 drop iterations.
+
 
     ## Grid resorting followed by particle-particle interactions
 
@@ -137,6 +137,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     illustrated with the sketch below.
 
     @image html SievingAlongAMRBoundaries.png
+
 
     ### Particles along AMR boundaries
 
@@ -155,6 +156,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     Let the green particle affect the blue one. As a consequence of the
     constraint above, the green particle has to be updated with contributions
     from blue. We need a proper multiscale interaction.
+
 
     ### Multiscale interaction
 
@@ -178,6 +180,24 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     latter usually, as it is more complicated.
 
 
+    ## Sieving
+
+    It is the sieving where the various subclasses differ. Sieving has to be
+    used whenever particles move through horizontal cuts. Some subclasses use
+    it to manage all particle transitions (bucket sort), while others only
+    use it for these special cuts plus tunneling particles. Consult the
+    discussion at @ref page_toolbox_particles_mesh_consistency for further
+    contextualisation.
+
+    The sieve set is managed via a static attribute of the particle: Each
+    particle has an instance of toolbox::particles::SieveParticles tied to
+    its class. From hereon, we have to options:
+
+    - Let each action set clone the particle set and then hand out sieved
+      particles from there.
+    - Work against one global cloned version.
+
+    Which stategy is the right one depends upon the chosen sieving strategy.
 
     """
 
@@ -200,7 +220,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   _numberOfDrops  = 0;
   _numberOfLiftsIntoSieveSet = 0;
   _numberOfDropsFromSieveSet = 0;
-  _numberOfSkippedDropsFromSieveSet = 0;
   _numberOfDropsIntoHorizontalTreeDecomposition = 0;
 """
     )
@@ -213,7 +232,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfParticleReassignmentsOnCurrentLevel,
     _numberOfLiftsIntoSieveSet,
     _numberOfDropsFromSieveSet,
-    _numberOfSkippedDropsFromSieveSet,
     _numberOfDropsIntoHorizontalTreeDecomposition
   );
 """
@@ -248,6 +266,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
    the coarse vertices could be on another rank if the tree is cut vertically.
    If could also be that the green vertex is actually from an adjacent domain
    and hence does not hold any reasonable information.
+   
+   This routine is not used by all action sets. The bucket sort for example 
+   does not need it. The lift drop sets in return however all use this 
+   particular action set.
 
   """
     _Template_Drop = jinja2.Template(
@@ -257,16 +279,18 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       // Define inside for loop, as sieve will define it as well
       vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-        if ( ::toolbox::particles::dropParticle(**p,marker) ) {
+        if ( 
+          ::toolbox::particles::dropParticle(**p,marker) 
+          and 
+          marker.isParentOfSubtree() 
+          and 
+          toolbox::particles::particleWillBeDroppedFurther(**p, marker)
+        ) {
+          _numberOfDropsIntoHorizontalTreeDecomposition++;
+          fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(*p);    
+        }
+        else if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
-          
-          if (
-            marker.isParentOfSubtree() 
-            and 
-            toolbox::particles::particleWillBeDroppedFurther(**p, marker)
-          ) {
-            _numberOfDropsIntoHorizontalTreeDecomposition++;
-          }
           
           (*p)->setCellH(marker.h());
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
@@ -294,43 +318,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         else p++;
       } // while loop over coarse particles
     } // if coarse vertex local
-  }
-"""
-    )
-
-    _Template_Sieve = jinja2.Template(
-        """
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
-      marker,
-      vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort,
-      _spacetreeId
-    );
-
-    for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle,
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(),
-        fineGridVertex{{PARTICLES_CONTAINER}}.end()
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId, "AbstractUpdateParticleGridAssociation::_Template_Sieve"
-        );
-      }
-    }
-
-    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
 """
     )
@@ -419,9 +406,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     def get_constructor_body(self):
         return (
             super(AbstractUpdateParticleGridAssociation, self).get_constructor_body()
-            + """
-            _spacetreeId              = treeNumber;
+            + jinja2.Template(
+                """
+            _spacetreeId      = treeNumber;
           """
+            ).render(**self.d)
         )
 
     def get_attributes(self):
@@ -433,8 +422,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   int  _numberOfDrops;
   int  _numberOfLiftsIntoSieveSet;
   int  _numberOfDropsFromSieveSet;
-  int  _numberOfSkippedDropsFromSieveSet;
   int  _numberOfDropsIntoHorizontalTreeDecomposition;
 """
         ).render(**self.d)
-

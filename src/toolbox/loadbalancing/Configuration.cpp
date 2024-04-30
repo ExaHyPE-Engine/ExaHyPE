@@ -6,12 +6,17 @@ std::string toolbox::loadbalancing::Configuration::toString() const {
   return "<toString() undef>";
 }
 
+
+toolbox::loadbalancing::DefaultConfiguration::DefaultConfiguration(int maxTreesPerRank):
+  _maxTreesPerRank(maxTreesPerRank<=0 ? peano4::parallel::Node::MaxSpacetreesPerRank : maxTreesPerRank)
+{}
+
 bool toolbox::loadbalancing::DefaultConfiguration::makeSplitDependOnMemory(State) {
   return false;
 }
 
 int toolbox::loadbalancing::DefaultConfiguration::getMaxLocalTreesPerRank(State) {
-  return peano4::parallel::Node::MaxSpacetreesPerRank;
+  return _maxTreesPerRank;
 }
 
 double toolbox::loadbalancing::DefaultConfiguration::getWorstCaseBalancingRatio(State) {

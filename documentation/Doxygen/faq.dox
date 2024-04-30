@@ -42,11 +42,11 @@ Some frequently asked questions and problems are discussed below.
 - ***My C++ version is too old***
   Try to rerun configure with
   ~~~~~~~~~~~~~~~~~~~
-CXXFLAGS=-std=c++0x
+CXXFLAGS=-std=c++20
   ~~~~~~~~~~~~~~~~~~~
   Depending on your compiler, the flag might also be
   ~~~~~~~~~~~~~~~~~~~
-CXXFLAGS=--std=c++0x
+CXXFLAGS=--std=c++20
   ~~~~~~~~~~~~~~~~~~~
   Some compilers want you to use two hyphens, others expect one. Please note
   that most Clang-based compiler installations do not bring their own C++ standard
@@ -57,7 +57,7 @@ CXXFLAGS=--std=c++0x
   loaded your Intel, NVIDIA or Clang module. You basically load the Clang-based
   compiler which will introduce a GNU STL, i.e. set the corresponding environment
   variables. After that, you manually load a newer GCC which redirects all of
-  these variables.
+  these variables.  
 
   If there are multiple `gcc` versions present, it is possible for CLANG to
   automatically select an outdated version thus creates problem when
@@ -129,6 +129,27 @@ export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
   pretty picky when it decides which temporary variables it might place on the
   call stack. This should not affect Peano 4's core, but it can affect some
   extensions such as ExaHyPE.
+
+- ***My compiler stops with ***
+
+  ~~~~~~~~~~~~~~~~~~~
+  /apps/developers/compilers/gcc/13.2/1/default/lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/chrono:2320:48: error: call to consteval function 'std::chrono::hh_mm_ss::_S_fractional_width' is not a constant expression
+        static constexpr unsigned fractional_width = {_S_fractional_width()};
+  ~~~~~~~~~~~~~~~~~~~
+  
+  We have seen this with too ***new*** C++ standard libs such as the version 13.2.
+  Use an older one such as 11.2.
+  
+- ***With Intel's OpenMP, we get the following error***
+
+  ~~~~~~~~~~~~~~~~~~~
+/nobackup/frmh84/Peano/src/libTarch_debug.a(libTarch_debug_a-Tasks.o): In function `tarch::multicore::native::spawnTask(tarch::multicore::Task*, std::set<int, std::less<int>, std::allocator<int> > const&, int const&)':
+/nobackup/frmh84/Peano/src/tarch/multicore/omp/Tasks.cpp:275: undefined reference to `__kmpc_omp_taskwait_deps_51'
+  ~~~~~~~~~~~~~~~~~~~
+                  
+  We have seen this with Intel compiler when you use the Clang LLVM OpenMP 
+  runtime, i.e. use -fopenmp. Switch to -fiopenmp instead.
+
 
 
 # Linking
