@@ -179,8 +179,30 @@
  * 
  * ## Displaying the domain decomposition in Paraview
  *
- * @todo Han
- *
+ * The Peano output patch files contain the information of domain decomposition
+ * for you to inspect. You can convert the patch files to standard vtu files using
+ * the postprocessing script of Peano:
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * pvpython ~/git/Peano/python/peano4/visualisation/render.py your_output.peano-patch-file 
+ * ~~~~~~~~~~~~~~~~~~~~~~~
+ * 
+ * The vtu files can be visualized via a visualization software, and we take paraview as the 
+ * example. In paraview you can switch to the last variable of the grid which represents which tree
+ * the volumes belong to:
+ * 
+ * @image html visualize_domain_decomposition0.png 
+ * 
+ * You can further look into individual trees by adding Filters - Calculator to extract the field
+ * information
+ * 
+ * @image html visualize_domain_decomposition1.png 
+ * 
+ * and then apply Filters - Threshold where you can alter the minimum and maximum to visualize the 
+ * certain partition:
+ * 
+ * @image html visualize_domain_decomposition2.png 
+ * 
  *
  * ## Performance flaws
  *
