@@ -338,7 +338,23 @@ class GLMatrixFree(GaussLobatto):
     self._projections_per_face_node = projections_per_face_node
     
   def get_A_tilde(self):
-    return [self.get_cell_identity_matrix()], [0]
+    '''
+    Compute block-diagonal of the Schur-complement matrix
+    '''
+
+    A_CF = self.get_cell_from_face_matrix()[0]
+    P    = self.get_projection_matrices()[0]
+    A_CC = self.get_cell_system_matrix_for_laplacian()[0][0]
+
+    output_matrices = [ +0.5 * np.dot(A_CF[0], P[0]),
+                        A_CC + 0.5 * (np.dot(A_CF[0], P[1]) + np.dot(A_CF[1], P[0])),
+                        +0.5 * np.dot(A_CF[1], P[1])
+                       ]
+    
+    output_scalings = [-1, 0, 1]
+
+    return output_matrices, output_scalings
+    #return [self.get_cell_identity_matrix()], [0]
 
   def get_cell_from_face_matrix(self):
     '''
@@ -666,3 +682,4 @@ class GLMatrixFree(GaussLobatto):
     1 for scale factor. Hardcoding the number
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
+  
