@@ -370,20 +370,13 @@ def get_algorithm_step_dict(particle):
 
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-
         touch_vertex_last_time_kernel= v_iter.insert("::swift2::kernels::legacy::firstInitParticle"),
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Swift.h"
         """,
-
-        dependencies=AlgorithmStep.Dependencies.SELF,
-        effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        includes="""
-            #include "Constants.h"
-        """,
     )
-    algorithm_steps_dict["SPHFirstInit"] = firstInit
+    algorithm_steps_dict["SPHFirstInitParticle"] = firstInit
 
 
     return algorithm_steps_dict

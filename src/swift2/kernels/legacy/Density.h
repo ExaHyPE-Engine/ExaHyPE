@@ -5,6 +5,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "swift2/kernels/ParticleUpdatePredicates.h"
+#include "swift2/kernels/legacy/Swift.h"
 
 
 namespace swift2 {
@@ -13,22 +14,14 @@ namespace swift2 {
 
       /**
        * @brief Prepares a particle for the density calculation.
-       *
-       * Zeroes all the relevant arrays in preparation for the sums taking place
-       * in the various density loop over neighbours. Typically, all fields of
-       * the density sub-structure of a particle get zeroed in here.
        */
-      template <typename Particle>
-      void hydro_prepare_density(Particle* localParticle);
-
       template <typename Particle>
       void prepareDensity(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_prepare_density(&localParticle);
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
+          hydro_init_particle(&localParticle);
         }
       }
 

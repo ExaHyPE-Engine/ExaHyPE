@@ -48,8 +48,33 @@ namespace swift2 {
      * computation algorithms for both a constant search radius as well as a
      * varying search radius.
      */
-    namespace legacy {} // namespace legacy
-  }                     // namespace kernels
+    namespace legacy {
+
+      /**
+       * Initialise particles for the first time. This method is intended to
+       * be called during startup only, not every simulation step.
+       */
+      template <typename Particle>
+      void first_init_particle(Particle* particle);
+
+      template <typename Particle>
+      void firstInitParticle(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
+        // We don't need to check for anything here, just overwrite particle data.
+        first_init_particle(&particle);
+      }
+
+      /**
+       * @brief Prepares a particle for the density calculation.
+       *
+       * Zeroes all the relevant arrays in preparation for the sums taking place
+       * in the various density loop over neighbours. Typically, all fields of
+       * the density sub-structure of a particle get zeroed in here.
+       */
+      template <typename Particle>
+      void hydro_init_particle(Particle* particle);
+
+    } // namespace legacy
+  } // namespace kernels
 } // namespace swift2
 
 
