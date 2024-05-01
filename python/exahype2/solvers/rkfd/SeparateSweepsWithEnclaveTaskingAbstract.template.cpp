@@ -410,7 +410,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return isLastGridSweepOfTimeStep()
+  return isLastGridSweepOfTimeStep() or _solverState==SolverState::Suspended
       or _solverState==SolverState::GridInitialisation
       or _solverState==SolverState::Plotting;
 }
