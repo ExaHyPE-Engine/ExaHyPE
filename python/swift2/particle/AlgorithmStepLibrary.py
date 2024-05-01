@@ -363,4 +363,27 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["SPH_ReduceGlobalQuantities"] = sph_reduceGlobals
 
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    firstInit = AlgorithmStep(
+        name="SPHFirstInitParticle",
+
+        dependencies=AlgorithmStep.Dependencies.SELF,
+        effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+
+        touch_vertex_last_time_kernel= v_iter.insert("::swift2::kernels::legacy::firstInitParticle"),
+        includes="""
+            #include "Constants.h"
+            #include "swift2/kernels/legacy/Swift.h"
+        """,
+
+        dependencies=AlgorithmStep.Dependencies.SELF,
+        effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        includes="""
+            #include "Constants.h"
+        """,
+    )
+    algorithm_steps_dict["SPHFirstInit"] = firstInit
+
+
     return algorithm_steps_dict
