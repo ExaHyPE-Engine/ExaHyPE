@@ -28,6 +28,8 @@ class SodShockIC:
        * Here we initialize the rest of arrays which are mostly trivial.
        */
 
+       logError("Unused and deprecated. Probably needs fixing.")
+
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
@@ -63,10 +65,8 @@ class SodShockIC:
       particle->setU_full( particle->getU() );
 
       particle->setUDot  (0.0);
-//      particle->setUDot_prev_step(0.0);
       particle->setHDot  (0.0);
       particle->setWcount(0.0);
-      particle->setNcount(0  );
       particle->setF     (0.0);
       particle->setRho_dh(0.0);
       particle->setWcount_dh(0.0);
@@ -74,12 +74,9 @@ class SodShockIC:
       particle->setHLeft (particle->getSmlMin());
       particle->setHRight(particle->getSmlMax());
 
-//      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
-      particle->setTime(0);
-      particle->setHasConverged(false);
+      particle->setSmoothingLengthConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setResidual(0.0);
-      particle->setIterCount(0);
+      particle->setSmoothingLengthIterCount(0);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);
