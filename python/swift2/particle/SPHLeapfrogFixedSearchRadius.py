@@ -314,7 +314,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
             self.algorithm_steps_dict["SPH_Density"],
             self.algorithm_steps_dict["SPH_Force"],
             self.algorithm_steps_dict["SPH_Kick2"],
-            self.algorithm_steps_dict["SPHTimestep"],
+            self.algorithm_steps_dict["SPH_Timestep"],
             self.algorithm_steps_dict["SPH_ReduceGlobalQuantities"],
             self.algorithm_steps_dict["SPH_Kick1"],
         ]
