@@ -25,11 +25,11 @@ namespace swift2 {
       template <typename ParticleContainer>
       void computeNextTimestep(
         const peano4::datamanagement::VertexMarker& marker,
-        ParticleContainer& assignedParticles
+        ParticleContainer&                          assignedParticles
       );
 
-    }
-  }
-}
+    } // namespace legacy
+  }   // namespace kernels
+} // namespace swift2
 
 #include "Timestep.cpph"

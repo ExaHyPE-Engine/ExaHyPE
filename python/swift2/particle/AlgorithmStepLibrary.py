@@ -330,7 +330,7 @@ def get_algorithm_step_dict(particle):
         name="SPH_Timestep",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_last_time_kernel= "::swift2::kernels::legacy::computeNextTimestep(marker, assignedParticles);",
+        touch_vertex_last_time_kernel="::swift2::kernels::legacy::computeNextTimestep(marker, assignedParticles);",
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Timestep.h"
@@ -367,16 +367,16 @@ def get_algorithm_step_dict(particle):
     # --------------------------------------------------------------------------
     firstInit = AlgorithmStep(
         name="SPHFirstInitParticle",
-
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_last_time_kernel= v_iter.insert("::swift2::kernels::legacy::firstInitParticle"),
+        touch_vertex_last_time_kernel=v_iter.insert(
+            "::swift2::kernels::legacy::firstInitParticle"
+        ),
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Swift.h"
         """,
     )
     algorithm_steps_dict["SPHFirstInitParticle"] = firstInit
-
 
     return algorithm_steps_dict

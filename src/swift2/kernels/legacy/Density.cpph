@@ -79,7 +79,6 @@ void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 }
 
 
-
 template <typename Particle>
 void swift2::kernels::legacy::density_kernel(
   Particle*       localParticle,

@@ -182,7 +182,7 @@ class SPHParticle(Particle):
         self.pressure = dastgen2.attributes.Double("pressure")
         # Make sure to initialize SML to zero, not possibly some random value.
         # Will be checked to see whether ICs have modified it.
-        self.smoothL = dastgen2.attributes.Double("smoothingLength", initval=0.)
+        self.smoothL = dastgen2.attributes.Double("smoothingLength", initval=0.0)
         self.u = dastgen2.attributes.Double("u")
         self.uDot = dastgen2.attributes.Double("uDot")
         self.data.add_attribute(self.density)

@@ -5,18 +5,16 @@
 #include "kernel_hydro.h"
 
 
-
-
 template <typename Particle>
-double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle){
+double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle) {
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace kernelHydro;
 
   const double cflFactor = Particle::getCfl();
 
-  const double h = particle->getSmoothingLength();
-  const double v_sig = particle->getV_sig_AV();
+  const double h      = particle->getSmoothingLength();
+  const double v_sig  = particle->getV_sig_AV();
   const double dt_cfl = 2. * kernel_gamma * cflFactor * h / v_sig;
   // For cosmology: needs additional expansion factors
   // const double dt_cfl = 2. * kernel_gamma * cflFactor * cosmo->a * p->h /
@@ -26,35 +24,41 @@ double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle){
   // const bool   adjustTimeStepSize  = Particle::getAdjustTimeStepSize();
   // For now, compute the admissible time step size and throw an error
   // if we exceed it.
-  assertion1(dt_cfl <= initialTimeStepSize, "particle requires time step smaller than set time step size.");
+  assertion1(
+    dt_cfl <= initialTimeStepSize,
+    "particle requires time step smaller than set time step size."
+  );
 
-  assertion3(dt_cfl > 0., "Got negative time step", dt_cfl, particle->toString());
+  assertion3(
+    dt_cfl > 0.,
+    "Got negative time step",
+    dt_cfl,
+    particle->toString()
+  );
 
   return dt_cfl;
 }
 
 
-
 template <typename ParticleContainer>
 void swift2::kernels::legacy::computeNextTimestep(
   const peano4::datamanagement::VertexMarker& marker,
-  ParticleContainer& assignedParticles
+  ParticleContainer&                          assignedParticles
 ) {
 
-  using Particle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using Particle = typename std::remove_pointer<
+    typename ParticleContainer::value_type>::type;
 
   double dt = std::numeric_limits<double>::max();
 
-  for (auto &particle : assignedParticles) {
+  for (auto& particle : assignedParticles) {
     if (localParticleCanBeUpdatedInVertexKernel(marker, *particle)) {
       double dt_new = hydro_compute_timestep(particle);
-      dt = std::min(dt, dt_new);
+      dt            = std::min(dt, dt_new);
     }
   }
 
-  if (dt < std::numeric_limits<double>::max()){
+  if (dt < std::numeric_limits<double>::max()) {
     Particle::getSpecies().setTimeStepSize(dt);
   }
-
 }
-

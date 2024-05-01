@@ -54,12 +54,15 @@ namespace swift2 {
        * Initialise particles for the first time. This method is intended to
        * be called during startup only, not every simulation step.
        */
-      template <typename Particle>
-      void first_init_particle(Particle* particle);
+      template <typename Particle> void first_init_particle(Particle* particle);
 
       template <typename Particle>
-      void firstInitParticle(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
-        // We don't need to check for anything here, just overwrite particle data.
+      void firstInitParticle(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   particle
+      ) {
+        // We don't need to check for anything here, just overwrite particle
+        // data.
         first_init_particle(&particle);
       }
 
@@ -70,11 +73,10 @@ namespace swift2 {
        * in the various density loop over neighbours. Typically, all fields of
        * the density sub-structure of a particle get zeroed in here.
        */
-      template <typename Particle>
-      void hydro_init_particle(Particle* particle);
+      template <typename Particle> void hydro_init_particle(Particle* particle);
 
     } // namespace legacy
-  } // namespace kernels
+  }   // namespace kernels
 } // namespace swift2
 
 

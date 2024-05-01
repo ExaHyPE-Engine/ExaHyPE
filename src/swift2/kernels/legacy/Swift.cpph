@@ -2,7 +2,7 @@
 #include "kernel_hydro.h"
 
 template <typename Particle>
-void swift2::kernels::legacy::first_init_particle(Particle* particle){
+void swift2::kernels::legacy::first_init_particle(Particle* particle) {
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
@@ -18,7 +18,7 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle){
 
   // Artificial viscosity scheme
   particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
-  particle->setBalsara (0.0);
+  particle->setBalsara(0.0);
 
   // All the inits done each step too.
   hydro_init_particle(particle);
@@ -28,7 +28,7 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle){
 
   double h = particle->getSmoothingLength();
 
-  if (h == 0.){
+  if (h == 0.) {
     // Make an initial guess for the smoothing length.
     // If the value for smoothing length is non-zero, assume that a
     // reasonable guess has already been made, and e.g. has been
@@ -72,5 +72,3 @@ void swift2::kernels::legacy::hydro_init_particle(Particle* particle) {
   particle->setDensityNeighbourCount(0);
 #endif
 }
-
-

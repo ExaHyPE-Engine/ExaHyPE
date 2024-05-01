@@ -4,8 +4,8 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-#include "swift2/kernels/ParticleUpdatePredicates.h"
 #include "swift2/kernels/legacy/Swift.h"
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
 namespace swift2 {
@@ -20,7 +20,8 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
+        if (::swift2::kernels::
+              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
           hydro_init_particle(&localParticle);
         }
       }
@@ -107,8 +108,9 @@ namespace swift2 {
        *   = - \nu \frac{1}{h ^ {\nu + 1}} f(r/h) +
        *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial h}
        *   =  - \nu \frac{1}{h ^ {\nu + 1}} f(q) +
-       *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial q} \frac{\partial q}{\partial h}
-       *   =  - \frac{1}{h} \left( \nu W(q) + q \frac{\partial W(q)}{\partial q} \right)
+       *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial q} \frac{\partial
+       * q}{\partial h} =  - \frac{1}{h} \left( \nu W(q) + q \frac{\partial
+       * W(q)}{\partial q} \right)
        * @f$
        *
        * which is a quantity we accumulate in the density interaction kernel
