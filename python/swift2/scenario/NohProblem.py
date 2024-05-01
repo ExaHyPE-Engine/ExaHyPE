@@ -128,9 +128,9 @@ class NohProblemIC:
       }
 
       /* Verbose */
-      logDebug( "Init()", "dist = " << dist );
-      logDebug( "Init()", "v_ini = " << v_ini );
-      logDebug( "Init()", "Particle: " << particle->toString() );
+      // logDebug( "Init()", "dist = " << dist );
+      // logDebug( "Init()", "v_ini = " << v_ini );
+      // logDebug( "Init()", "Particle: " << particle->toString() );
 
       /* End of inserted block */
 
