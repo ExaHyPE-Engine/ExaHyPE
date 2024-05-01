@@ -17,7 +17,8 @@ SUBDIRS = . \
 	swift2 \
 	petsc \
 	convert \
-	unittests
+	unittests \
+	tbb
 
 #
 # I want Peano to be as fast as possible and thus build it as static library

@@ -1,4 +1,4 @@
-#include "../dependencychecks/DependencyChecks.h"
+#include "DependencyChecks.h"
 
 
 std::string swift2::dependencychecks::toString(Invariant policy) {
@@ -110,17 +110,23 @@ int swift2::dependencychecks::internal::checkFutureStages(
   int errors = 0;
   int firstFutureStepToCheck = firstFutureStepThatHasToBeCleared(policy,nsteps);
 
-  // Check everything *after* this stage, and check that everything
-  // that shouldn't have run until now actually hasn't run.
   for (int step = currentStep + (firstFutureStepToCheck==0 ? 1 : firstFutureStepToCheck); step < nsteps; step++) {
-
     for (int stage = 0; stage < nstages; stage++) {
-
       const int index     = step * nstages + stage;
       const int partStage = sweepStateProgression[index];
 
-      if (partStage != 0)
-        errors++;
+      if (partStage<0) errors++;
+    }
+  }
+
+  // Check everything *after* this stage, and check that everything
+  // that shouldn't have run until now actually hasn't run.
+  for (int step = currentStep + (firstFutureStepToCheck==0 ? 1 : firstFutureStepToCheck); step < nsteps; step++) {
+    for (int stage = 0; stage < nstages; stage++) {
+      const int index     = step * nstages + stage;
+      const int partStage = sweepStateProgression[index];
+
+      if (partStage != 0) errors++;
     }
   }
 
@@ -149,6 +155,15 @@ int swift2::dependencychecks::internal::checkPastStages(
   const int* sweepStateProgression
 ) {
   int errors = 0;
+
+  for (int step = 0; step < currentStep; step++) {
+    for (int stage = 0; stage < nstages; stage++) {
+      const int index     = step * nstages + stage;
+      const int partStage = sweepStateProgression[index];
+
+      if (partStage<0) errors++;
+    }
+  }
 
   if (isLocal and previousStepsAllHaveToAccessAtLeastOnce(policy)) {
     // Check everything else before this stage, and check that everything

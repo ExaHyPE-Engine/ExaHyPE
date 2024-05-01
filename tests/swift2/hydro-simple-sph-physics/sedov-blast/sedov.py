@@ -329,7 +329,6 @@ particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
 particle_plotter.add_attribute_to_plot(particle.f, 1)
 particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
-particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
 

@@ -252,35 +252,6 @@ def create_solution_update(use_kernelgenerator):
 """
     return (template_kernelgenerator if use_kernelgenerator else template_generic)
 
-def reset_troubled_markers():
-    return """
-    // reset cell and face labels for limiting
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::ADER);
-
-    for(int d=0; d<Dimensions; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
-    }
-"""
-
-def compute_local_min_and_max_and_project():
-    return """
-    constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-    double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
-    generated::kernels::limiter::findCellLocalMinAndMax(
-      fineGridCell{{SOLVER_NAME}}Q_old.value,
-      repositories::{{SOLVER_INSTANCE}},
-      localMinPerVariables, localMaxPerVariables
-    );
-
-    for(int d=0; d<Dimensions; d++){
-        //Projection of cell local min and max
-        std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+numberOfObservables);
-        std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value);
-        std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+3*numberOfObservables);
-        std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+2*numberOfObservables);
-    }
-"""
 
 def copy_estimates_into_faces():
     return """
@@ -447,7 +418,7 @@ def face_integral(use_kernelgenerator, is_linear):
 """
     template_kernelgenerator = """
         const double inverseDxDirection = 1/marker.h()[d];
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
           lduh,
           FIN,
           direction,
@@ -488,10 +459,10 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
         //Left values
         if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FR = &lFhbnd[2*d*fluxElementsPerFace];
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QR = &lQhbnd[2*d*basisElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FR = &lFhbnd[2*d*fluxElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QR = &lQhbnd[2*d*basisElementsPerFace];
             int orientation = 0;
             int faceNumber  = d;
             bool isBoundary = false;
@@ -500,7 +471,7 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
     """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
 
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FIN = FR;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = FR;
 
     """ + face_integral(use_kernelgenerator, is_linear) + """
 
@@ -514,10 +485,10 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
         //Right values
         if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FL = &lFhbnd[(2*d+1)*fluxElementsPerFace];
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FL = &lFhbnd[(2*d+1)*fluxElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
             int orientation = 0;
             int faceNumber  = d+Dimensions;
             bool isBoundary = false;
@@ -526,7 +497,7 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
         
     """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
 
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FIN = FL;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = FL;
 
     """ + face_integral(use_kernelgenerator, is_linear) + """
         
@@ -545,57 +516,6 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
     d["RIEMANN_SOLVER"] = riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear)
     d["FACE_INTEGRAL"] = face_integral(use_kernelgenerator, is_linear)
     return Template#Template.render(**d)
-
-def check_troubledness(usePAC, useDMP, useTroubledMarkers):
-    templatePAC = """
-    isUnTroubled &= generated::kernels::limiter::isPhysicallyAdmissible(
-      luh,
-      repositories::{{SOLVER_INSTANCE}},
-      marker.x(),
-      marker.h(),
-      timeStamp+timeStepSize
-    );
-    """
-    template_DMP = """
-    constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-    double boundaryMinPerVariables[2*Dimensions*numberOfObservables];
-    double boundaryMaxPerVariables[2*Dimensions*numberOfObservables];
-
-    for(int d=0; d<Dimensions; d++){
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value,                                 numberOfObservables, &boundaryMinPerVariables[d*numberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+numberOfObservables,  numberOfObservables, &boundaryMinPerVariables[(d+Dimensions)*numberOfObservables]);
-
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+2*numberOfObservables,            numberOfObservables, &boundaryMaxPerVariables[d*numberOfObservables]);
-        std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+3*numberOfObservables, numberOfObservables, &boundaryMaxPerVariables[(d+Dimensions)*numberOfObservables]);
-    }
-
-    isUnTroubled &= generated::kernels::limiter::discreteMaximumPrincipleAndMinAndMaxSearch(
-      luh,
-      repositories::{{SOLVER_INSTANCE}},
-      repositories::{{SOLVER_INSTANCE}}.RelaxationParameter, //const double relaxationParameter
-      repositories::{{SOLVER_INSTANCE}}.DifferencesScaling, //const double differenceScaling
-      boundaryMinPerVariables, 
-      boundaryMaxPerVariables
-    );
-"""
-    template_set_troubled_markers = """
-    if(!isUnTroubled){
-
-      repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
-      for(int d=0; d<2*Dimensions; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
-      }
-
-      return;
-    }
-"""
-    return ("""
-    bool isUnTroubled = true;
-""" + (templatePAC if usePAC else "")
-    + (template_DMP if useDMP else "")
-    + (template_set_troubled_markers if useTroubledMarkers else "")
-    )
     
 
 def create_corrector_allocations(use_kernelgenerator):
@@ -623,18 +543,13 @@ def create_corrector_allocations(use_kernelgenerator):
     else:
         return template_generic
     
-def create_includes(use_kernelgenerator, use_limiter, is_linear):
+def create_includes(use_kernelgenerator, is_linear):
     template_generic = """
 #include "exahype2/aderdg/kernels/Kernels.h"
 """
     template_kernelgenerator = """
 #include "../generated/kernels/aderdg/""" + ("linear" if is_linear else "nonlinear") + """/Kernels.h"
 """
-    template_limiter = """
-#include "../generated/kernels/limiter/fv/Kernels.h"
-"""
     if use_kernelgenerator:
-        if use_limiter:
-            return template_kernelgenerator + template_limiter
         return template_kernelgenerator
     return template_generic

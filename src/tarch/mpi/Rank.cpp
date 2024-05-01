@@ -48,12 +48,17 @@ int tarch::mpi::Rank::reserveFreeTag([[maybe_unused]] const std::string& fullQua
   // properly initialised. Please note rank is -1 as long as MPI is not properly
   // initialised, i.e. any tag booking prior to the MPI initialisation is not
   // logged properly.
+  // 
+  // We also may not use the instance, as the instance might not be up yet. I
+  // also saw other stuff with cout, so better ignore it
+  /*
   #if PeanoDebug>0
   if ( getInstance()._rank==getGlobalMasterRank() ) {
-    std::cout << "rank " << getInstance()._rank << ": assigned message " << fullQualifiedMessageName
+    std::cout << "assigned message " << fullQualifiedMessageName
               << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)" << std::endl;
   }
   #endif
+  */
 
   validateMaxTagIsSupported();
 

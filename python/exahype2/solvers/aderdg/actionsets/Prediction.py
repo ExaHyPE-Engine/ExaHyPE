@@ -5,10 +5,9 @@ from .AbstractAderDGActionSet import AbstractAderDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (
   create_predictor_allocations, create_fstpvi_call,
-  create_solution_update, compute_local_min_and_max_and_project,
-  copy_estimates_into_faces, copy_estimates_and_perform_riemann_solution_on_hanging_faces,
-  reset_troubled_markers, create_includes,
-  number_of_precisions_iterator
+  create_includes, create_solution_update,
+  copy_estimates_and_perform_riemann_solution_on_hanging_faces,
+  copy_estimates_into_faces, number_of_precisions_iterator
 )
 
 # import peano4
@@ -68,19 +67,14 @@ class Prediction(AbstractAderDGActionSet):
     _Template_TouchCellFirstTime_Core = """
 
     {{FUSED_PREDICTOR_VOLUME_INTEGRAL}}
-
-    {{SOLUTION_UPDATE}}
     
     {{PROJECT_SOLUTION_TO_FACES}}
 
-
-    {{COMPUTE_AND_PROJECT_LOCAL_MIN_AND_MAX}}
+    {{SOLUTION_UPDATE}}
 
 """
 
     _Template_TouchCellFirstTime_Epilogue = """
-
-    {{RESET_TROUBLED_MARKERS}}
 
     repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0) );
   }
@@ -101,9 +95,6 @@ class Prediction(AbstractAderDGActionSet):
         self.is_linear                  = solver._is_linear
         self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
         self.usePointSource             = solver._point_sources_implementation!=PDETerms.None_Implementation
-        self.use_DMP                    = solver._number_of_dmp_observables>0
-        self.useTroubledMarker          = solver._use_troubled_marker
-        self.use_limiting               = solver._use_limiting
         self.multiple_precisions        = len(solver._predictor_computation_precisions) > 1
         self.store_old_solution         = solver._hold_previous_time_step
 
@@ -116,8 +107,8 @@ class Prediction(AbstractAderDGActionSet):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
-            d["PREDICATE"]  = self.guard
-            d["STORE_OLD_SOLUTION"]      = self.store_old_solution
+            d["PREDICATE"]                = self.guard
+            d["STORE_OLD_SOLUTION"]       = self.store_old_solution
             d["PRECISIONS_CAPITALIZED"]   = [
                 x.replace(" ", "_").replace("std::", "").capitalize()
                 for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]
@@ -128,14 +119,6 @@ class Prediction(AbstractAderDGActionSet):
             d["PROJECT_SOLUTION_TO_FACES"]              = (
                 copy_estimates_and_perform_riemann_solution_on_hanging_faces(self.use_custom_riemann_solver, self.use_kernelgenerator, self.is_linear) if self.onHangingCells
                 else copy_estimates_into_faces()
-            )
-            d["COMPUTE_AND_PROJECT_LOCAL_MIN_AND_MAX"]  = (
-                compute_local_min_and_max_and_project() if self.use_DMP
-                else ""
-            )
-            d["RESET_TROUBLED_MARKERS"]                 = (
-                reset_troubled_markers() if self.useTroubledMarker
-                else ""
             )
 
             result  = jinja2.Template(self._Template_TouchCellFirstTime_Preamble).render(**d)
@@ -157,5 +140,5 @@ class Prediction(AbstractAderDGActionSet):
         linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
             super(Prediction, self).get_includes()
-            + create_includes(self.use_kernelgenerator, self.use_limiting, self._solver._is_linear)
+            + create_includes(self.use_kernelgenerator, self._solver._is_linear)
         )

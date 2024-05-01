@@ -22,9 +22,6 @@
 {% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
-{% if USE_LIMITER %}
-#include "generated/kernels/limiter/fv/Quadrature.h"
-{% endif %}
 {% endif %}
 
 {% if USE_HALF_PRECISION==True %}
@@ -76,23 +73,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       Prediction,
       PredictionOnHangingCells,
       Correction,
-      LimiterStatusSpreadingToNeighbours,
-      LimiterStatusSpreadingToSecondNeighbours,
-      FVRecomputation,
       Plotting,
       Suspended
     };
 
     static std::string toString(SolverState);
 
-    static constexpr int  Order                     = {{ORDER}};
-    static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    static constexpr int MaxPicardIterations        = {{ORDER}}+1;
-    static constexpr bool UseMaxPicardIterations    = true;
-    static constexpr bool UseLobattoBasis           = {{USE_GAUSS_LOBATTO}};
-    static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
-    static constexpr double PNPM                    = {{CFL_ADER}};
+    static constexpr int    Order                      = {{ORDER}};
+    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr int    MaxPicardIterations        = {{ORDER}}+1;
+    static constexpr bool   UseMaxPicardIterations     = true;
+    static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}};
+    static constexpr double CFL                        = {{CFL_SAFETY_FACTOR}};
+    static constexpr double PNPM                       = {{CFL_ADER}};
     
     {% if USE_POINT_SOURCE!="<none>" %}
     static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
@@ -239,23 +233,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
-    {% if ERROR_MEASUREMENT_IMPLEMENTATION!="<none>" %}
-    /**
-     * Exact solution of the equation at a given point and time
-     *
-     * @param x             position
-     * @param t             Time
-     * @param dt            Timestep size
-     * @param sol           Solution of the equation
-     */
-    virtual void analyticalSolution(
-      const tarch::la::Vector<Dimensions,double>&   x,
-      const double                                  t,
-      const double                                  dt,
-      double*                                       sol
-    ) {% if ERROR_MEASUREMENT_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
-    {% endif %}
-
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     /**
      * Evaluate precision criterion over cell
@@ -291,7 +268,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * operation is still invoked.
      */
     virtual void finishGridConstructionStep() override;
-
 
 
     /**
@@ -441,8 +417,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     double     _maxTimeStepSizeThisTimeStep;
 
     int        _cellUpdates;
-
-    int        _numberOfTroubledCellsThisTimeStep;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
