@@ -15,7 +15,6 @@ END_TIME=0.2      # original setup
 TIMESTEP_SIZE=9.765625e-05 # copied from SWIFT output.
 CFL_FACTOR=0.1
 PLOT_DELTA=0.01
-# PLOT_DELTA=9.765625e-05 # write each step.
 CELL_SIZE=0.3
 
 # Generate initial condition file
@@ -37,8 +36,11 @@ echo 'experiment run finished.'
 
 echo 'post-processing results...'
 
+# make a nice plot
+python3 plotSolution.py
+
 # generate Peano grid for Paraview (if needed)
-pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
+# pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
 
 # # Save results into directory
 # DIRNAME="output"
@@ -61,6 +63,3 @@ pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
 # then
 #     mv *.csv $DIRNAME
 # fi
-
-# plot the solution
-# python plotSolution.py 0.1 # not fully ready yet
