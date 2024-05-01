@@ -4,6 +4,7 @@
 
 import sys
 import matplotlib
+
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 import numpy as np
@@ -11,7 +12,6 @@ import h5py
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
 import swift2
 import swift2.sphtools as sphtools
-
 
 
 # Generates the analytical  solution for the Sod shock test case
@@ -40,9 +40,9 @@ partData = reader.load()
 # show me what particle fields are stored
 #  partData.show_attribute_list()
 
-x = partData.x[:,0]
+x = partData.x[:, 0]
 #  y = partData.x[:,1]
-v = partData.v[:,0]
+v = partData.v[:, 0]
 u = partData.u
 #  S = partData.S # doesn't exist yet?
 P = partData.pressure
@@ -50,7 +50,7 @@ rho = partData.density
 
 
 N = 1000  # Number of points
-x_min = 0.
+x_min = 0.0
 x_max = 2.0
 
 x += x_min
@@ -59,14 +59,14 @@ x += x_min
 solver = sphtools.RiemannSolver(gas_gamma)
 
 delta_x = (x_max - x_min) / N
-center = (x_max + x_min ) / 2
+center = (x_max + x_min) / 2
 x_s = np.arange(x_min - center, x_max - center, delta_x)
 rho_s, v_s, P_s, _ = solver.solve(rho_L, v_L, P_L, rho_R, v_R, P_R, x_s / time)
 x_s += center
 
 # Additional arrays
 u_s = P_s / (rho_s * (gas_gamma - 1.0))  # internal energy
-s_s = P_s / rho_s ** gas_gamma  # entropic function
+s_s = P_s / rho_s**gas_gamma  # entropic function
 
 # Shock position (since we want to overplot it in the viscosity/diffusion plot
 c_R = np.sqrt(gas_gamma * P_R / rho_R)
