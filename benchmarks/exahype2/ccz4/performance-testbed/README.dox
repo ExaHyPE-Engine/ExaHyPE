@@ -67,6 +67,18 @@ module load gsl
 export I_MPI_CXX=icpx
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+## Compiling on Hamilton
+
+the suggest loading module (before compiling the Peano kernel) when you use Hamilton are
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load intel/2023.2 intelmpi/2021.10
+module load python/3.10.8
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
 ## SLURM script
 The default setup for this benchmark takes about 5 minutes to finish on 2 nodes on DINE,
 using the following job script.
