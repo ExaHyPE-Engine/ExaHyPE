@@ -12,12 +12,14 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
   double loadBalancingQuality,
   int minSizeOfTree,
   int maxNumberOfTreesThroughoutInitialDistribution,
-  int maxNumberOfTrees
+  int maxNumberOfTrees,
+  peano4::SplitInstruction::Mode mode
 ):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
   _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
-  _maxNumberOfTrees( maxNumberOfTrees ) {
+  _maxNumberOfTrees( maxNumberOfTrees ),
+  _mode( mode ) {
   assertion2(
     (_maxNumberOfTrees>=_maxNumberOfTreesThroughoutInitialDistribution)
     or
@@ -90,4 +92,9 @@ std::string exahype2::LoadBalancingConfiguration::toString() const {
       << ",max-no-of-trees=" << _maxNumberOfTrees
       << ")";
   return msg.str();
+}
+
+
+peano4::SplitInstruction::Mode exahype2::LoadBalancingConfiguration::getMode(toolbox::loadbalancing::State state) {
+  return _mode;
 }
