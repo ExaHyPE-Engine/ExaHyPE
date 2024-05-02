@@ -8,3 +8,4 @@ from .smltools import (
     eta_from_number_of_neighbours,
     number_of_neighbours_from_eta,
 )
+from .riemann import RiemannSolver
