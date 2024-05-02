@@ -309,7 +309,7 @@ if "sofd4" in args.solver:
     additional_mesh_traversal.add_action_set( project_patch_onto_faces )
     additional_mesh_traversal.add_action_set( roll_over_projected_faces )
      
-    project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+    project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
     
     # 
     # Consult remarks in README.dox on the additional step and how it is 
