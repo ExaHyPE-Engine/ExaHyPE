@@ -423,7 +423,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}};
+  return _solverState==SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}} or _solverState==SolverState::Suspended;
 }
 
 
