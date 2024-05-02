@@ -2,13 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 #include "toolbox/loadbalancing/metrics/CustomCellWeight.h"
 
-
 /**
- * @page toolbox_loadbalancing Loadbalancing (domain decomposition)
+ * @page toolbox_loadbalancing Load balancing (domain decomposition)
  *
  * Suite of generic load balancing algorithms (strategies) for Peano 4. The
  * toolbox::loadbalancing::strategies namespace hosts various primitive strategies, but you
@@ -38,18 +36,18 @@
  *
  * ## Usage through Python API
  *
- * Many extensions, such as ExaHyPE, not only use the load balancing
- * toolbox, they also offer a tailored ExaHyPE load balancing configuration,
+ * Many extensions, such as ExaHyPE 2, not only use the load balancing
+ * toolbox, they also offer a tailored ExaHyPE 2 load balancing configuration,
  * i.e. they provide means for users to employ the toolbox without interfering
  * with the main functions or calling the load balancing manually.
  * Indeed,the toolbox follows the philosophy that the chosen load balancing
  * determines the load balancing strategy, while the configuration object
  * tailors this strategy to your experimental setup and machine.
- * 
- * - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE".
- * - There's a dedicated page on @ref swift_parallelisation "the parallelisation aspects within Swift".
- * - ExaHyPE's astrophysics flavour hosts @ref page_toolbox_loadbalancing_usercase "a dedicated load balancing discussion on load balancing for single balck holes".
- * 
+ *
+ * - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE 2".
+ * - There's a dedicated page on @ref swift_parallelisation "the parallelisation aspects within Swift 2".
+ * - ExaHyPE's astrophysics flavour hosts \subpage page_toolbox_loadbalancing_single_black_hole "a dedicated load balancing discussion on load balancing for single black holes".
+ *
  *
  * ## Overview over some pre-manufactured load balancing strategies
  *
@@ -142,8 +140,8 @@
  *
  * This strict commitments to tree-like joins and forks makes the
  * implementation easier - notably in a multiscale context. You can still
- * ovresubscribe the threads, i.e. create more logical subpartitions than
- * threads, and hence mimick diffusion-based load balancing for example.
+ * oversubscribe the threads, i.e. create more logical subpartitions than
+ * threads, and hence mimic diffusion-based load balancing for example.
  *
  * Dynamic AMR is no problem for the domain decomposition. That is, a refined
  * region can ripple or propagate through a domain cut. However, Peano will
@@ -153,56 +151,56 @@
  * where the AMR effectively "stops" the SFC decomposition from adding further
  * cells to a new domain. The reason for this policy is that the tracking of
  * multiscale data consistency between hanging nodes on different trees
- * otherwise becomes unmanagable hard.
+ * otherwise becomes unmanageable hard.
  *
  *
- * # Visualizing and understanding the domain decomposition
- * 
- * In the toolbox.loadbalancing toolbox, you find a script plot-load-distribution.py which creates 
+ * # Visualising and understanding the domain decomposition
+ *
+ * In the toolbox.loadbalancing toolbox, you find a script plot-load-distribution.py which creates
  * plots over the data distribution.
- * The invocation is close to trivial 
- * 
+ * The invocation is close to trivial
+ *
  * ~~~~~~~~~~~~~~~~~~~~~
- * python3 ~/git/Peano/python/peano4/toolbox/loadbalancing/plot_load_distribution.py mpi/ccz4-backfill-fv-0.05-4-ranks.results 
+ * python3 ~/git/Peano/python/peano4/toolbox/loadbalancing/plot_load_distribution.py mpi/ccz4-backfill-fv-0.05-4-ranks.results
  * ~~~~~~~~~~~~~~~~~~~~~
- * 
+ *
  * though you might want to study the help dumped if you pass --help.
- * 
- * 
+ *
+ *
  * The script works for shared and distributed memory and gives you a scatter plot
  * over the load distribution and tells you also how many trees aka subpartitions
  * you employ per rank.
- * 
- * @image html runtime_analysis_loadbalancing_example00.png 
- * @image html runtime_analysis_loadbalancing_example01.png 
- * 
- * 
+ *
+ * @image html runtime_analysis_loadbalancing_example00.png
+ * @image html runtime_analysis_loadbalancing_example01.png
+ *
+ *
  * ## Displaying the domain decomposition in Paraview
  *
  * The Peano output patch files contain the information of domain decomposition
  * for you to inspect. You can convert the patch files to standard vtu files using
  * the postprocessing script of Peano:
- * 
+ *
  * ~~~~~~~~~~~~~~~~~~~~~~~
- * pvpython ~/git/Peano/python/peano4/visualisation/render.py your_output.peano-patch-file 
+ * pvpython ~/git/Peano/python/peano4/visualisation/render.py your_output.peano-patch-file
  * ~~~~~~~~~~~~~~~~~~~~~~~
- * 
- * The vtu files can be visualized via a visualization software, and we take paraview as the 
- * example. In paraview you can switch to the last variable of the grid which represents which tree
+ *
+ * The vtu files can be visualised via a visualisation software, and we take Paraview as the
+ * example. In Paraview you can switch to the last variable of the grid which represents which tree
  * the volumes belong to:
- * 
- * @image html visualize_domain_decomposition0.png 
- * 
+ *
+ * @image html visualise_domain_decomposition0.png
+ *
  * You can further look into individual trees by adding Filters - Calculator to extract the field
  * information
- * 
- * @image html visualize_domain_decomposition1.png 
- * 
- * and then apply Filters - Threshold where you can alter the minimum and maximum to visualize the 
+ *
+ * @image html visualise_domain_decomposition1.png
+ *
+ * and then apply Filters - Threshold where you can alter the minimum and maximum to visualise the
  * certain partition:
- * 
- * @image html visualize_domain_decomposition2.png 
- * 
+ *
+ * @image html visualise_domain_decomposition2.png
+ *
  *
  * ## Performance flaws
  *
@@ -230,7 +228,7 @@
  *
  * While the toolbox offers some generic load balancing schemes, it will not be
  * able to accommodate all applications. It notably will always lack
- * domain-specific knowledge. However, there are generic tunign knobs and
+ * domain-specific knowledge. However, there are generic tuning knobs and
  * considerations.
  *
  *
@@ -318,14 +316,12 @@ namespace toolbox {
     void dumpStatistics();
 
     /**
-     * This is a helper routine which is used by ExaHyPE's default main for 
+     * This is a helper routine which is used by ExaHyPE's default main for
      * for example. It is never used by the actual load balancing at the
      * moment.
-     * 
+     *
      * @return -1 if there is no local tree yet
      */
     int getWeightOfHeaviestLocalSpacetree();
   }
 }
-
-

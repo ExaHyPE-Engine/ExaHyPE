@@ -1,14 +1,14 @@
 /**
 
-@page page_toolbox_loadbalancing_usercase Usercase of tunning load balancing
+@page page_toolbox_loadbalancing_single_black_hole Load balancing for single black holes
 
-In the documentation page we describle a usercase of tunning load balancing for the 
-astrophysics appllication in ExaHyPE.
+In the documentation page we describle a usercase of tuning load balancing for the
+astrophysics single black hole application in ExaHyPE 2.
 
-##Run the Benchmark
+# Run the Benchmark
 
 The setup under investigation is the single black hole benchmark with a pure FD4 solver
-and two levels of AMR. To compile and run the benchmark, first configure and compile the Peano 
+and two levels of AMR. To compile and run the benchmark, first configure and compile the Peano
 under main directory following
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,7 +25,7 @@ export PYTHONPATH=../../../../python
 export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-generate the executable and run
+Generate the executable and run
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 performance_testbed.py -et 0.01
@@ -67,7 +67,7 @@ The executable runs with the following script on DINE
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
 
 module purge
-module load intel_comp/2022.3.0 compiler mpi 
+module load intel_comp/2022.3.0 compiler mpi
 module load gnu_comp/11.1.0
 export FLAVOUR_NOCONFLICT=1
 module load gsl
@@ -79,15 +79,15 @@ export OMP_NUM_THREADS=16
 mpirun ./peano4_test
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-## Issues in Load Balancing
+# Issues in Load Balancing
 
 The default load balancing strategy is
 
 ~~~~~~~~~~~~~~~~~~~~~~~~
-project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95,1000,16))" )
+project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "(new ::exahype2::LoadBalancingConfiguration(0.95,1000,16))")
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-We notice that the load balancing stop too early where there are still three trees empty, and the resulting first tree is too 
+We notice that the load balancing stop too early where there are still three trees empty, and the resulting first tree is too
 big compared to the others:
 ~~~~~~~~~~~~~~~~~~~~~~~~
  40722272766  00:00:40     rank:0       core:28      info         toolbox::loadbalancing::dumpStatistics()                16 tree(s): (#0:1178/2801)(#1:248/1547)(#2:248/1547)(#3:248/1443)(#4:248/2067)(#5:248/2353)(#6:248/2665)(#7:248/2665)(#8:248/2249)(#9:248/1547)(#10:248/1755)(#11:248/1443)(#12:73/786)(#13:0/27)(#14:0/27)(#15:0/27) total=3979/24949 (local/remote)
@@ -102,13 +102,12 @@ big compared to the others:
  43096217851  00:00:43     rank:0       core:28      info         toolbox::loadbalancing::dumpStatistics()                13 tree(s): (#0:1178/2801)(#1:248/1547)(#2:248/1547)(#3:248/1443)(#4:248/2067)(#5:248/2353)(#6:248/2665)(#7:248/2665)(#8:248/2249)(#9:248/1547)(#10:248/1755)(#11:248/1443)(#12:73/786) total=3979/24868 (local/remote)
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The first tree can also be visualized in paraview:
+The first tree can also be visualised in paraview:
 
-@image html Loadbalancing_usercase1.png
+@image html Loadbalancing_single_black_hole.png
 
-## Investigation and Solution
+# Investigation and Solution
 
 @todo more content to follow up for the solution
 
 */
-
