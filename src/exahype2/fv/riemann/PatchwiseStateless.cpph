@@ -18,7 +18,7 @@ void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapStateless(
   peano4::utils::LoopPlacement loopPlacement
 ) {
   static tarch::logging::Log _log("exahype2::fv::riemann");
-  logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
+  logTraceIn("timeStepWithRiemannPatchwiseHeapStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(
     1,
@@ -694,5 +694,5 @@ void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapStateless(
     tarch::freeMemory(tempMaxEigenvalueZ, tarch::MemoryLocation::Heap);
   }
 
-  logTraceOut("timeStepWithRusanovPatchwiseHeapStateless()");
+  logTraceOut("timeStepWithRiemannPatchwiseHeapStateless()");
 }
