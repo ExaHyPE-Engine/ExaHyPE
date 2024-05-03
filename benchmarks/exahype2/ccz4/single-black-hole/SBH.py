@@ -144,7 +144,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         return (
             """("""
             + super(Limiter, self)._store_cell_data_default_guard()
-            + " and repositories::InstanceOf"
+            + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
@@ -153,7 +153,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         return (
             """("""
             + super(Limiter, self)._load_cell_data_default_guard()
-            + " and repositories::InstanceOf"
+            + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
@@ -162,25 +162,25 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         return (
             """("""
             + super(Limiter,self)._provide_cell_data_to_compute_kernels_default_guard()
-            + " and repositories::InstanceOf"
+            + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
       
     def _provide_face_data_to_compute_kernels_default_guard(self):
-        return "{} and repositories::InstanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
+        return "{} and repositories::instanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
                 super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard(),
                 self._name
             )
         
     def _store_face_data_default_guard(self):
-        return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+        return "({} and repositories::instanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
                 super(Limiter, self)._store_face_data_default_guard(),
                 self._name
             )
 
     def _load_face_data_default_guard(self):
-        return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+        return "({} and repositories::instanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
                 super(Limiter, self)._load_face_data_default_guard(),
                 self._name
             )
@@ -203,10 +203,10 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         """
         super(Limiter, self).create_action_sets()
 
-        self._action_set_update_cell.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
+        self._action_set_update_cell.guard = "({} and repositories::instanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
             self._action_set_update_cell.guard, self._name
         )
-        self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
+        self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::instanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
             self._action_set_merge_enclave_task_outcome.guard, self._name
         )
 
@@ -287,9 +287,9 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
 
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 self._action_set_update_cell.additional_skeleton_guard = " " "(
-          repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
           and
-          not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+          not repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
         )
         " " "
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -356,30 +356,30 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(
             self,
             """
-const int sizeOfPatch = (repositories::InstanceOf"""
+const int sizeOfPatch = (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
+            + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables);
 const int sizeOfFace = 2
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
+            + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables);
   
@@ -392,17 +392,17 @@ double* dummyFace4 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
 double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 
 ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
   3, // halo in FD4
   1, // halo in FV
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
+            + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
   oldQWithHalo, 
@@ -411,43 +411,43 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
 );
 
 ::toolbox::blockstructured::projectPatchHaloOntoFaces(
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
   1,      // int    haloSize,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfUnknowns,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
   interpolatedFVDataWithHalo,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(0).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(1).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(2).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(3).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(4).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
             + self._name_without_FD4_extension
@@ -469,10 +469,10 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             + self._action_set_preprocess_solution.guard
             + """
                                                   and 
-                                                  repositories::InstanceOf"""
+                                                  repositories::instanceOf"""
             + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
                                                   and
-                                                  not repositories::InstanceOf"""
+                                                  not repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
                                                   and
@@ -484,28 +484,28 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             self,
             """
 if (
-  repositories::InstanceOf{0}_FV.isCellOverlappingWithBHImpactArea(marker) 
+  repositories::instanceOf{0}_FV.isCellOverlappingWithBHImpactArea(marker) 
   and
   not marker.willBeRefined()
 ) {{
   logTraceIn( "touchCellFirstTime(...)-inject" );
 
-  repositories::InstanceOf{0}_FV.incNumberOfPatches();
+  repositories::instanceOf{0}_FV.incNumberOfPatches();
   
-  //if ( repositories::InstanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
+  //if ( repositories::instanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
-      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      repositories::instanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::instanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::instanceOf{0}_FV.NumberOfUnknowns + repositories::instanceOf{0}_FV.NumberOfAuxiliaryVariables,
       fineGridCell{0}_FVQ.value,
       fineGridCell{0}_FD4Q.value
     );
   /*}}
   else {{
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(
-      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
-      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      repositories::instanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::instanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::instanceOf{0}_FV.NumberOfUnknowns + repositories::instanceOf{0}_FV.NumberOfAuxiliaryVariables,
       fineGridCell{0}_FVQ.value,
       fineGridCell{0}_FD4Q.value
     );
@@ -577,9 +577,9 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 self._action_set_update_cell.additional_skeleton_guard = " " "(
-          repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
           and
-          not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+          not repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
         )
         " " "
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -724,9 +724,9 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 self._action_set_update_cell.additional_skeleton_guard = " " "(
-          repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
           and
-          not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+          not repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
         )
         " " "
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
