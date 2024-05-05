@@ -401,7 +401,14 @@ if(WITH_MPI)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
   target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(project_options INTERFACE Parallel)
-  target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
+  # Using the target for MPI::MPI_CXX results with the executable to segfault
+  # target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
+  # The garget is MPI_CXX (C bindings available from C++) and not MPI_MPICXX (dead MPI C++ library)
+  target_compile_options(project_options INTERFACE ${MPI_CXX_FLAGS})
+  target_link_libraries(project_options INTERFACE ${MPI_CXX_LIBRARIES})
+  target_compile_definitions(project_options INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
+  target_include_directories(project_options INTERFACE ${MPI_CXX_INCLUDE_DIRS})
+  target_link_options(project_options INTERFACE ${MPI_CXX_LINK_FLAGS})
 endif()
 
 if(WITH_OTTER)
@@ -669,11 +676,14 @@ endif()
 
 
 get_target_property(INTERFACE_LINK_LIBRARIES project_options INTERFACE_LINK_LIBRARIES)
+message(WARNING ${INTERFACE_LINK_LIBRARIES})
 
 # Iterate the options of the libraries linked to the project_options interface library
 if(INTERFACE_LINK_LIBRARIES)
     message("Link libraries for my_target: ${INTERFACE_LINK_LIBRARIES}")
     foreach(lib ${INTERFACE_LINK_LIBRARIES})
+      if(TARGET ${lib})
+        message(WARNING ${lib})
         get_target_property(COMPILE_OPTIONS ${lib} INTERFACE_COMPILE_OPTIONS)
         if(COMPILE_OPTIONS)
             message("Interface Compile options for ${lib}: ${COMPILE_OPTIONS}")
@@ -704,15 +714,16 @@ if(INTERFACE_LINK_LIBRARIES)
             message("Link options for ${lib}: ${LINK_OPTIONS}")
             set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${LINK_OPTIONS} CACHE INTERNAL "")
         endif()
+      endif()
     endforeach()
 endif()
 
 # Add options of MPI, it is handled differently than the libraries linked to project options
 if(WITH_MPI)
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${MPI_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILER_OPTIONS} CACHE INTERNAL "")
+  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${MPI_CXX_COMPILE_OPTIONS} CACHE INTERNAL "")
   set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${MPI_CXX_COMPILE_DEFINITIONS} CACHE INTERNAL "")
   set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${MPI_CXX_LINK_FLAGS} CACHE INTERNAL "")
-  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${MPI_CXX_INCLUDE_DIRS} CACHE INTERNAL "")
+  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS} CACHE INTERNAL "")
   set(PEANO_LINK_LIBRARIES ${PEANO_LINK_LIBRARIES} ${MPI_CXX_LIBRARIES} CACHE INTERNAL "")
 endif()
 
@@ -720,10 +731,11 @@ endif()
 get_property(_GLOBAL_COMPILE_OPTIONS DIRECTORY PROPERTY COMPILE_OPTIONS)
 get_property(_GLOBAL_COMPILE_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
 get_property(_GLOBAL_LINK_OPTIONS DIRECTORY PROPERTY LINK_OPTIONS)
-set(PEANO_INCLUDES ${PEANO_INCLUDES} ${MPI_CXX_INCLUDE_DIRS} ${CMAKE_REQUIRED_INCLUDES} CACHE INTERNAL "")
+set(PEANO_INCLUDES ${PEANO_INCLUDES} ${CMAKE_REQUIRED_INCLUDES} CACHE INTERNAL "")
 set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${_GLOBAL_COMPILE_OPTIONS} ${CMAKE_REQUIRED_FLAGS} CACHE INTERNAL "")
 set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${_GLOBAL_COMPILE_DEFINITIONS} CACHE INTERNAL "")
 set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${_GLOBAL_COMPILE_OPTIONS} ${CMAKE_REQUIRED_LIBRARIES} ${CMAKE_REQUIRED_LINK_OPTIONS} CACHE INTERNAL "")
+
 
 message("Interface compile options for project_options after expanding: ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS}")
 message("Interface compile definitions for project_options after expanding: ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS}")
