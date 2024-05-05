@@ -233,23 +233,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
-    {% if ERROR_MEASUREMENT_IMPLEMENTATION!="<none>" %}
-    /**
-     * Exact solution of the equation at a given point and time
-     *
-     * @param x             position
-     * @param t             Time
-     * @param dt            Timestep size
-     * @param sol           Solution of the equation
-     */
-    virtual void analyticalSolution(
-      const tarch::la::Vector<Dimensions,double>&   x,
-      const double                                  t,
-      const double                                  dt,
-      double*                                       sol
-    ) {% if ERROR_MEASUREMENT_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
-    {% endif %}
-
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     /**
      * Evaluate precision criterion over cell

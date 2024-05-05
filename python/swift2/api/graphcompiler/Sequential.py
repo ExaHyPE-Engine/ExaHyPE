@@ -19,7 +19,6 @@ from .Utils import (
     get_observer_prefix,
     StepType,
 )
-from _ast import Or
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -51,6 +50,17 @@ def translate_one_step_of_species_into_mesh_traversal(
     supplement the actual particle sorting later on in a postprocessing
     step once all steps are assembled.
 
+
+    @param current_species_set: Particle
+      You get a specific algorithmic step as input. The current_species_set
+      highlights to which this step originally belonged to.
+
+    @param mesh_traversals: [peano4.solversteps.Step]
+      Inout parameter. We append a new step to this sequence.
+
+    @param alter_particle_position: [Bool]
+      Inout parameter. We append a new marker to this sequence.
+
     """
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
@@ -62,7 +72,11 @@ def translate_one_step_of_species_into_mesh_traversal(
         add_user_defined_actions=False,
     )
 
-    action_set_update_marker = UpdateParticleMarker(current_species_set)
+    action_set_update_marker = UpdateParticleMarker(particle_set = current_species_set,
+                                                    automatically_set_marker_in_leave_cell=True,
+                                                    make_reset_separate_task=False,
+                                                    )
+
     action_set_update_marker.descend_invocation_order = (
         new_step.highest_descend_invocation_order() + 1
     )
@@ -179,9 +193,9 @@ def translate_one_step_of_species_into_mesh_traversal(
     # As we have a 1:1 mapping, we can directly translate the effect into flags
     #
     if (
-        step.effect
-        == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
+        step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+        or 
+        step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     ):
         alter_particle_position.append(True)
     else:
@@ -190,6 +204,170 @@ def translate_one_step_of_species_into_mesh_traversal(
     mesh_traversals.append(new_step)
 
 
+def map_onto_separate_mesh_traversals_with_generic_mapper(
+    sequence_of_steps,
+    particle_sorting_and_storage: ParticleSortingAndStorage,
+    step_type: StepType,
+    verbose,
+    mapper
+):
+    """!
+    
+    Generic mapper of separate steps of separate particles onto mesh traversals
+    
+    expects a mapper that then defines how to actually map the species plus
+    step combination.
+    
+    """
+    mesh_traversals = []
+    alter_particle_position = []
+
+    if verbose:
+        print(
+            "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: start graph construction with particle sorting {} and step type {}".format(
+                particle_sorting_and_storage, step_type
+            )
+        )
+
+    for current_entry_from_total_sequence_of_steps in sequence_of_steps:
+        current_species_set     = current_entry_from_total_sequence_of_steps[0]
+        current_step_of_species = current_entry_from_total_sequence_of_steps[1]
+
+        if (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
+        ):
+            use_lists_to_construct_active_sets = False
+            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
+        ):
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
+            and len(alter_particle_position) > 0
+            and alter_particle_position[-1]
+        ):
+            use_lists_to_construct_active_sets = False
+            add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
+        ):
+            use_lists_to_construct_active_sets = False
+            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
+            and len(alter_particle_position) > 0
+            and alter_particle_position[-1]
+        ):
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
+        ):
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
+        else:
+           assert False, "variant {} x {} not supported".format(particle_sorting_and_storage,alter_particle_position)
+
+        if add_additional_dummy_sweep == AddAdditionalDummySweep.BEFORE:
+            if verbose:
+                print(
+                    "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting. Will not alter particle position itself".format(
+                        len(mesh_traversals),
+                        current_step_of_species.name,
+                        current_species_set.particle_model.name,
+                    )
+                )
+            new_step = peano4.solversteps.Step(
+                "DummyStep{}{}_sweep{}".format(
+                    current_species_set.particle_model.name,
+                    current_step_of_species.name,
+                    len(mesh_traversals),
+                ),
+                add_user_defined_actions=False,
+            )
+            new_step.add_action_set(swift2.actionsets.DummyStep())
+            mesh_traversals.append(new_step)
+            alter_particle_position.append(False)
+
+        mapper(
+            step=current_step_of_species,
+            current_species_set=current_species_set,
+            mesh_traversals=mesh_traversals,
+            alter_particle_position=alter_particle_position,
+            use_lists_to_construct_active_sets=use_lists_to_construct_active_sets,
+            step_type=step_type,
+            verbose=verbose,
+        )
+
+        if add_additional_dummy_sweep == AddAdditionalDummySweep.AFTER:
+            if verbose:
+                print(
+                    "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting. Will not alter the particle position itself".format(
+                        len(mesh_traversals),
+                        current_step_of_species.name,
+                        current_species_set.particle_model.name,
+                    )
+                )
+            new_step = peano4.solversteps.Step(
+                "DummyStep{}{}_sweep{}".format(
+                    current_species_set.particle_model.name,
+                    current_step_of_species.name,
+                    len(mesh_traversals),
+                ),
+                add_user_defined_actions=False,
+            )
+            new_step.add_action_set(swift2.actionsets.DummyStep())
+            mesh_traversals.append(new_step)
+            alter_particle_position.append(False)
+
+    if step_type == StepType.INITIALISATION and len(alter_particle_position) > 0:
+        # When we insert particles initially, they will be scattered. So it is
+        # important that we immediately gather them. We cannot flag step -1 as
+        # one that changes teh particle position, but we can present to the
+        # graph compiler that the last step will change the ordering. The graph
+        # compiler does not distinguish initialisation from time stepping and
+        # hence thinks that the sweep prior to the first sweep has changed the
+        # particle order. Which is exactly what we want. We also flag the first
+        # sweep as change, as the initial insertion indeed might be buggy.
+        alter_particle_position[0] = True
+        alter_particle_position[-1] = True
+        
+
+    if (
+        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
+        or
+        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
+    ):
+        sort_with_lifts_and_drops = True
+    elif (
+        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
+        or
+        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
+    ):
+        sort_with_lifts_and_drops = False
+    else:
+        assert False, "variant {} not implemented".format(particle_sorting_and_storage)
+
+
+    add_dynamic_mesh_refinement_and_particle_resorting(
+        mesh_traversals,
+        alter_particle_position,
+        get_species_set(sequence_of_steps),
+        sort_with_lifts_and_drops=sort_with_lifts_and_drops,
+        verbose=verbose,
+    )
+    
+    if verbose:
+        print(
+            "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: finished graph construction"
+        )
+
+    return mesh_traversals
+    
+    
+    
 def map_onto_separate_mesh_traversals(
     sequence_of_steps,
     particle_sorting_and_storage: ParticleSortingAndStorage,
@@ -271,174 +449,15 @@ def map_onto_separate_mesh_traversals(
     @return mesh_traversals
 
     """
-    mesh_traversals = []
-    alter_particle_position = []
-
-    if verbose:
-        print(
-            "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: start graph construction with particle sorting {} and step type {}".format(
-                particle_sorting_and_storage, step_type
-            )
-        )
-
-    for current_entry_from_total_sequence_of_steps in sequence_of_steps:
-        current_species_set = current_entry_from_total_sequence_of_steps[0]
-        current_step_of_species = current_entry_from_total_sequence_of_steps[1]
-
-        if (
-            (
-                particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE
-                or
-                particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
-            )
-            and len(alter_particle_position) > 0
-            and alter_particle_position[-1]
-        ):
-            use_lists_to_construct_active_sets = False
-            add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
-        elif (
-            particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE
-            or
-            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
-        ):
-            use_lists_to_construct_active_sets = False
-            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
-        elif (
-            (
-                particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE
-                or
-                particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
-            )
-            and len(alter_particle_position) > 0
-            and alter_particle_position[-1]
-        ):
-            use_lists_to_construct_active_sets = True
-            add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
-        elif (
-            particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE
-            or
-            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
-        ):
-            use_lists_to_construct_active_sets = True
-            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
-        else:
-           assert False, "option not supported"
-
-        if add_additional_dummy_sweep == AddAdditionalDummySweep.BEFORE:
-            if verbose:
-                print(
-                    "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting. Will not alter particle position itself".format(
-                        len(mesh_traversals),
-                        current_step_of_species.name,
-                        current_species_set.particle_model.name,
-                    )
-                )
-            new_step = peano4.solversteps.Step(
-                "DummyStep{}{}_sweep{}".format(
-                    current_species_set.particle_model.name,
-                    current_step_of_species.name,
-                    len(mesh_traversals),
-                ),
-                add_user_defined_actions=False,
-            )
-            new_step.add_action_set(swift2.actionsets.DummyStep())
-            mesh_traversals.append(new_step)
-            alter_particle_position.append(False)
-
-        translate_one_step_of_species_into_mesh_traversal(
-            step=current_step_of_species,
-            current_species_set=current_species_set,
-            mesh_traversals=mesh_traversals,
-            alter_particle_position=alter_particle_position,
-            use_lists_to_construct_active_sets=use_lists_to_construct_active_sets,
-            step_type=step_type,
-            verbose=verbose,
-        )
-
-        if add_additional_dummy_sweep == AddAdditionalDummySweep.AFTER:
-            if verbose:
-                print(
-                    "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting. Will not alter the particle position itself".format(
-                        len(mesh_traversals),
-                        current_step_of_species.name,
-                        current_species_set.particle_model.name,
-                    )
-                )
-            new_step = peano4.solversteps.Step(
-                "DummyStep{}{}_sweep{}".format(
-                    current_species_set.particle_model.name,
-                    current_step_of_species.name,
-                    len(mesh_traversals),
-                ),
-                add_user_defined_actions=False,
-            )
-            new_step.add_action_set(swift2.actionsets.DummyStep())
-            mesh_traversals.append(new_step)
-            alter_particle_position.append(False)
-
-    if step_type == StepType.INITIALISATION and len(alter_particle_position) > 0:
-        # When we insert particles initially, they will be scattered. So it is
-        # important that we immediately gather them. We cannot flag step -1 as
-        # one that changes teh particle position, but we can present to the
-        # graph compiler that the last step will change the ordering. The graph
-        # compiler does not distinguish initialisation from time stepping and
-        # hence thinks that the sweep prior to the first sweep has changed the
-        # particle order. Which is exactly what we want. We also flag the first
-        # sweep as change, as the initial insertion indeed might be buggy.
-        alter_particle_position[0] = True
-        alter_particle_position[-1] = True
-        
-
-    if (
-        particle_sorting_and_storage==ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE
-        or
-        particle_sorting_and_storage==ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE
-    ):
-        sort_with_lifts_and_drops = True
-    elif (
-        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
-        or
-        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
-    ):
-        sort_with_lifts_and_drops = False
-    else:
-        assert False, "variant {} not implemented".format(particle_sorting_and_storage)
-
-
-    add_dynamic_mesh_refinement_and_particle_resorting(
-        mesh_traversals,
-        alter_particle_position,
-        get_species_set(sequence_of_steps),
-        sort_with_lifts_and_drops=sort_with_lifts_and_drops,
-        verbose=verbose,
+    return map_onto_separate_mesh_traversals_with_generic_mapper(
+        sequence_of_steps,
+        particle_sorting_and_storage,
+        step_type,
+        verbose,
+        translate_one_step_of_species_into_mesh_traversal
     )
-#    if does_one_species_require_gather(sequence_of_steps):
-#    else:
-#        add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
-#            mesh_traversals,
-#            alter_particle_position,
-#            get_species_set(sequence_of_steps),
-#            verbose,
-#        )
-
-    if verbose:
-        print(
-            "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: finished graph construction"
-        )
-
-    return mesh_traversals
-
-
-
-
-
-
-
-
-
-
-
-#
+    
+    
 # ====================================
 # Public API functions
 # ====================================
@@ -448,7 +467,7 @@ def map_onto_separate_mesh_traversals(
 # function calls, yet with different arguments.
 #
 
-def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory(
+def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -464,13 +483,13 @@ def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scatte
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
 
 
-def initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory(
+def initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -492,7 +511,7 @@ def initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered
     )
 
 
-def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory(
+def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -508,13 +527,13 @@ def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coales
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
 
 
-def initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory(
+def initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -536,7 +555,7 @@ def initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced
     )
 
 
-def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory(
+def particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -556,13 +575,13 @@ def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_me
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
 
 
-def particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory(
+def particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -589,7 +608,7 @@ def particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memor
 
 
 
-def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory(
+def particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -609,13 +628,13 @@ def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_me
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
 
 
-def particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory(
+def particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):

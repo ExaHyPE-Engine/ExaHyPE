@@ -16,31 +16,37 @@ import peano4.runner
 
 class Project (object):
   """!
-  
+
   Represents a Peano 4 project.
 
-  namespace Sequence of strings representing the (nested) namespace. Pass in 
-    [ "examples", "algebraicmg" ] for example if you wanna write a solver that 
+  namespace Sequence of strings representing the (nested) namespace. Pass in
+    [ "examples", "algebraicmg" ] for example if you wanna write a solver that
     is embedded into the namespace examples::algebraicmg.
-    
-    
+
+
   ## Global project properties
-  
+
   If you want to alter some global constants, you should manipulate
   the constants attribute. It will eventually feed into the generated
   file Constants.h. See peano4.output.Constants for further info.
-  
+
   """
 
-  def __init__(self, namespace, project_name, directory = "."):
+  def __init__(self, namespace, project_name, directory = ".", subdirectory = "", executable = ""):
     """!
       project_name  Simple string.
     """
     if sys.version_info.major < 3:
       print( "Warning: should be invoked through python3, i.e. with newer Python version" )
 
+    if subdirectory and not os.path.exists(subdirectory):
+      os.mkdir(subdirectory)
+
     self.namespace    = namespace
     self.directory    = directory
+    self.subdirectory    = subdirectory
+    if(subdirectory):
+      self.subdirectory += "/"
     self.project_name = project_name
 
     #
@@ -52,7 +58,7 @@ class Project (object):
     #
     # Empty model by default
     #
-    self.datamodel    = peano4.datamodel.Model(namespace)
+    self.datamodel    = peano4.datamodel.Model(namespace, self.subdirectory)
 
     self.solversteps  = peano4.solversteps.Steps(self)
 
@@ -63,6 +69,10 @@ class Project (object):
     self.build_was_successful = False
 
     self.constants  = peano4.output.Constants(self)
+
+    if executable:
+      self.output.makefile.set_executable_name(executable)
+
 
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
@@ -117,11 +127,13 @@ class Project (object):
     if len(self.output.artefacts)>0:
       print( "some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
 
+    self.output.readme.add_package_description( self.constants.readme_entry() )
+
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
     self.main.construct_output(self.output,self.project_name + "-main")
-    self.output.generate(overwrite, self.directory)
-    self.constants.generate(overwrite, self.directory)
+    self.output.generate(overwrite, self.directory, self.subdirectory)
+    self.constants.generate(overwrite, self.directory, self.subdirectory)
 
     print( "generation complete" )
 
@@ -161,10 +173,10 @@ class Project (object):
       return
 
     if make_clean_first:
-      print( "clean up project ..." )
+      print( "clean up project ... in {}".format(self.directory) )
       try:
         if make_clean_first:
-          subprocess.check_call(["make", "clean"])
+          subprocess.check_call(["make", "clean"], cwd=self.directory)
         self.is_built = False
         print( "clean complete" )
       except Exception as e:
@@ -196,7 +208,7 @@ class Project (object):
           print("COMMAND: ", command)
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
-          process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Extract warnings and errors from error message
         error_message = process.stderr.decode().strip()
         warnings = re.findall(r"(?i)warning:.*", error_message)
@@ -279,19 +291,196 @@ class Project (object):
     return success
 
 
-
-def merge(lhs: Project,
-          rhs: Project,
-          ):
+  def add_subproject(self, subproject: 'Project'): #, subnamespace: str #def merge
+            # project_name = 'merged_project',
+            # executable = 'merged_executable'
     """!
-    
-    Merges two Peano 4 projects
-    
+    Adds a new Peano4 project into this Peano 4 project
     """
-    result_project = Project()
-    
-    # @todo Dmitry please befill
-    
-    return result_project
+    """
+      assert(
+          lhs.namespace == rhs.namespace
+      ), "namespaces of the projects being merged don't match"
 
+      assert(
+          lhs.directory == rhs.directory
+      ), "directories of the projects being merged don't match"
 
+      assert(
+          lhs.output.makefile.d["CXX"] == lhs.output.makefile.d["CXX"]
+      ), "CXX compilers of the projects being merged don't match"
+
+      assert(
+          lhs.output.makefile.d["FC"] == lhs.output.makefile.d["FC"]
+      ), "FC compilers of the projects being merged don't match"
+
+      assert(
+          lhs.output.makefile.d["DIM"] == lhs.output.makefile.d["DIM"]
+      ), "dimensions of the projects being merged don't match"
+
+      assert(
+          lhs.output.makefile.d["MODE"] == lhs.output.makefile.d["MODE"]
+      ), "compile modes of the projects being merged don't match"
+    """
+      # assert(
+      #   lhs._domain_offset == rhs._domain_offset and
+      #   lhs._domain_size == rhs._domain_size and
+      #   lhs._dimensions == rhs._dimensions and
+      #   lhs._plotter_precision == rhs._plotter_precision
+      # ), "global simulation parameters of the projects being merged don't match"
+
+      # an internal utility function to merge two dictionaries
+      # def _merge(lhs_dict: dict, rhs_dict: dict) -> dict:
+      #   dict_merged = lhs_dict.copy()
+      #   for key,value in rhs_dict.items():
+      #     if key in dict_merged:
+      #         dict_merged[key] += value
+      #     else:
+      #         dict_merged[key] = value
+      #   return dict_merged
+
+    # result_project = Project(lhs.namespace, project_name, lhs.directory)
+
+    # result_project.output.makefile.set_executable_name(executable)
+    # result_project.output.readme.set_executable_name(executable)
+
+    #
+    # merge all DaStGen2 and ParticleSet attributes of datamodel
+    #
+    for data in subproject.datamodel.cell_data:
+      self.datamodel.add_cell(data)
+    for data in subproject.datamodel.face_data:
+      self.datamodel.add_face(data)
+    for particle in subproject.datamodel.vertex_data:
+      self.datamodel.add_vertex(particle)
+    for particle in subproject.datamodel.global_data:
+      self.datamodel.add_global(particle)
+
+    # ...
+
+    #
+    # merge all steps of solversteps
+    #
+    for step in subproject.solversteps._steps:
+      # step.name = lhs.project_name
+      self.solversteps.add_step(step)
+
+    #
+    # merge all keys and strings of output.makefile
+    #
+
+    # ... for compilers
+    if (self.output.makefile.d["CXX"]):
+      assert (
+          self.output.makefile.d["CXX"] == subproject.output.makefile.d["CXX"]
+      ), "the CXX compiler of the subproject being added doesn't match the one of the main project"
+    else:
+      self.output.makefile.d["CXX"] = subproject.output.makefile.d["CXX"]
+
+    if (self.output.makefile.d["FC"]):
+      assert (
+          self.output.makefile.d["FC"] == subproject.output.makefile.d["FC"]
+      ), "the FC compiler of the subproject being added doesn't match the one of the main project"
+    else:
+      self.output.makefile.d["FC"] = subproject.output.makefile.d["FC"]
+
+    # ... for makefile dictionary
+    for library in subproject.output.makefile.d["CMAKE_CORE_LIBS"]:
+      self.output.makefile.add_cmake_core_library(library)
+
+    for flag in subproject.output.makefile.d["CXXFLAGS"].split():
+      self.output.makefile.add_CXX_flag(flag)
+
+    for flag in subproject.output.makefile.d["FCFLAGS"].split():
+      self.output.makefile.add_Fortran_flag(flag)
+
+    for flag in subproject.output.makefile.d["LDFLAGS"].split():
+      self.output.makefile.add_linker_flag(flag)
+
+    # result_project.output.makefile.add_gpu_object()
+    # result_project.output.makefile.d["CMAKE_LIBS"]
+
+    self.output.makefile.d["LIBS"] += subproject.output.makefile.d["LIBS"]
+
+    for module in subproject.output.makefile.d["FORTRAN_MODULES"]:
+      self.output.makefile.add_Fortran_module(module)
+
+    assert (
+        self.output.makefile.d["EXECUTABLENAME"]
+    ), "the name of the main project is empty"
+    if not self.output.makefile.d["DIM"]:
+      self.output.makefile.set_dimension(subproject.output.makefile.d["DIM"])
+    else:
+      assert (
+          self.output.makefile.d["DIM"] == subproject.output.makefile.d["DIM"]
+      ), "the dimensions of the added subproject doesn't match the current one of the main project"
+
+    self.output.makefile.d["GENERATED_INCLUDE_DIRS"] |= subproject.output.makefile.d["GENERATED_INCLUDE_DIRS"]
+
+    # ... for filepaths
+    for filename in subproject.output.makefile.hfiles:
+      self.output.makefile.add_h_file(filename, False)
+    for filename in subproject.output.makefile.cppfiles:
+      self.output.makefile.add_cpp_file(filename, False)
+    for filename in subproject.output.makefile.cufiles:
+      self.output.makefile.add_cu_file(filename, False)
+    for filename in subproject.output.makefile.fortranfiles:
+      self.output.makefile.add_Fortran_file(filename, False)
+
+    for filename in subproject.output.makefile.generated_hfiles:
+      self.output.makefile.add_h_file(filename, True)
+    for filename in subproject.output.makefile.generated_cppfiles:
+      self.output.makefile.add_cpp_file(filename, True)
+    for filename in subproject.output.makefile.generated_cufiles:
+      self.output.makefile.add_cu_file(filename, True)
+    for filename in subproject.output.makefile.generated_fortranfiles:
+      self.output.makefile.add_Fortran_file(filename, True)
+
+    #
+    # merge all strings and artefacts of readme
+    #
+    for i in subproject.output.readme._entries:
+      self.output.readme.add_entry(i)
+
+    for i in subproject.output.readme._package_descriptions:
+      self.output.readme.add_package_description(i)
+
+    for i in subproject.output.readme._entries:
+      self.output.readme.add_entry(i)
+
+    for i in subproject.output.artefacts:
+      self.output.add(i)
+
+    # What "HEADER_FILE_TEMPLATE" and "CPP_FILE_TEMPLATE" are to be in the main project, if subprojects have individual values
+    # if not self.main.d["HEADER_FILE_TEMPLATE"]:
+    #   self.main.d["HEADER_FILE_TEMPLATE"] = subproject.main.d["HEADER_FILE_TEMPLATE"]
+    # if not self.main.d["CPP_FILE_TEMPLATE"]:
+    #   self.main.d["CPP_FILE_TEMPLATE"] = subproject.main.d["CPP_FILE_TEMPLATE"]
+
+    #
+    # merge all constants
+    #
+    self.constants.d = {**self.constants.d, **subproject.constants.d}
+
+    # ...
+    # result_project.set_solver_repository_dict()
+    # result_project.generate_solver_repository()
+
+    # print("=== BEGIN output artefacts: ===")
+    # artefacts_list = []
+    # for item in result_project.output.artefacts:
+    #   # if isinstance(item, peano4.output.Jinja2TemplatedHeaderImplementationFilePair):
+    #     artefacts_list.append(f"Item = \nHeaderFile:{type(item)}")
+    # output_str = '\n'.join(artefacts_list)
+    # print(output_str)
+    # print("=== END output artefacts: ===")
+
+    # print("=== BEGIN main dict: ===")
+    # main_dict = []
+    # for key, value in self.main.d.items():
+    #     main_dict.append(f"Key = {key}, Value = \n{value}")
+    # output_str = '\n'.join(main_dict)
+    # print(output_str)
+    # print("=== END main dict: ===")
+
+    # return result_project

@@ -127,6 +127,9 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
   }
 }
 
+void toolbox::blockstructured::GlobalDatabase::setDeltaBetweenTwoDatabaseFlushes(const int deltaBetweenTwoDatabaseFlushes) {
+  _deltaBetweenTwoDatabaseFlushes = deltaBetweenTwoDatabaseFlushes;
+}
 
 void toolbox::blockstructured::GlobalDatabase::setOutputFileName( const std::string& filename ) {
   _fileName = filename;
@@ -150,7 +153,6 @@ void toolbox::blockstructured::GlobalDatabase::setDataDeltaBetweenTwoSnapshots( 
   _maxDataDelta = 1e-20;
   _deltasAreRelative = deltasAreRelative;
 }
-
 
 void toolbox::blockstructured::GlobalDatabase::setTimeDeltaBetweenTwoSnapshots( double value ) {
   assertion(value>=0.0);

@@ -21,7 +21,8 @@ namespace toolbox {
  *
  * Particle sets differ in the way they actually manage the particles. However,
  * they all share common stats, operations, ... This is covered by this class.
- *
+ * All particle types (species) are also tied to a sieve set, which is also
+ * class attribute of this abstract particle supertype.
  *
  *
  * ## Rationale: static attributes vs static aggregation
@@ -47,6 +48,19 @@ namespace toolbox {
  * outsourced into a separate class. All the stats, initialisation and whatever
  * generic stuff is out there is collocated in this very routine.
  *
+ *
+ * ## Sieve semantics
+ *
+ * Whenever a particle has to be added to the sieve set, the underlying action
+ * set will inform the particle set or vertex, respectively, to move the
+ * particle into the sieve set. This step has to be protected by a semaphore,
+ * as relaised in SieveParticles. After the mesh sweep, all the particles are
+ * exchanged between ranks, and then we have to sort them into the mesh again.
+ *
+ * There are two different modes how to use this sieve set: We can either work
+ * against a global sieve set, or we can make each thread first create a copy
+ * of all the particles to be sieved and then hand out thread-local copies.
+ * Which variant to pick is a choice to be made by the sorting action set.
  */
 template <typename T>
 class toolbox::particles::ParticleSet {
@@ -95,10 +109,10 @@ public:
    * Reduces and prints the global statistics
    */
   static void reduceParticleStateStatistics();
-  static void printParticleStateStatistics();
+  static std::string printParticleStateStatistics();
 
   static void reduceReassignmentStatistics();
-  static void printReassignmentStatistics();
+  static std::string printReassignmentStatistics();
 
   static void updateLiftDropStatistics(
     int numberOfLiftsInThisTree,
@@ -106,15 +120,13 @@ public:
     int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
     int numberOfDropsFromSieveSetInThisTree,
-    int numberOfSkippedDropsFromSieveSetInThisTree,
     int numberOfDropsIntoHorizontalTreeDecomposition
   );
 
   static void updateNumberOfLocalAndExpiredParticles(
     int numberOfRemainingLocalParticles,
     int numberOfExpiredHaloParticles,
-    int numberOfLeavingLocalParticles,
-    int numberOfIncomingParticles
+    int numberOfParticlesThatHaveLeftTheirDomain
   );
 
   /**
@@ -141,7 +153,16 @@ public:
   /**
    * Invoke exchangeSieveListsGlobally().
    */
-  static void finishedTraversal();
+  static void finishedTraversal(
+      const tarch::la::Vector<Dimensions,double>   domainOffset,
+      const tarch::la::Vector<Dimensions,double>   domainSize,
+      const std::bitset<Dimensions>                periodicBC
+  );
+
+  /**
+   * @return A copy of all the particles that have to be sieved.
+   */
+  static SieveParticles cloneParticlesToBeSieved();
 
   /**
    * Make routine from SieveParticles public
@@ -149,11 +170,31 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
+   * 
+   * This operation always removes particles from the sieve set, and it 
+   * sort exclusively local particles into the domain. We use it within
+   * the lift-drop sorting approach, where it is used by the dummy mesh
+   * sweeps following each sweep that moves around particles. Details on
+   * this scheme are provided in peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop.
    *
-   * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
-   *   descriptions.
+   * All action sets in this scheme share one common sieve set. Therefore, we
+   * do not run risk that one tree grabs a particle, sorts it into its mesh,
+   * labels it as outside and then this particle disappears. This is avoided,
+   * as we only sieve in particles if they become local.
+   *
+   * When we take a particle that's local, we have to remove it from the
+   * sieve set. This is triggered by a hard-coded boolean that we pass on.
+   * If we don't remove it, we can run into situations where a particle sits
+   * right in-between two vertices and is hence sieved in twice. It appears
+   * two times.
+   *
+   * Consult the @ref page_toolbox_particles_mesh_consistency
+   *
+   * @see SieveParticles::getParticlesToBeSievedIntoVertex()
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
+  static ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker
+ );
 
   /**
    * Make routine from SieveParticles public
@@ -161,11 +202,15 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. This predicate is usually always used as guard before
    * actually invoking getParticlesToBeSievedIntoVertex().
-   *
-   * @param originatingTree Either a number associated with a local tree or
-   *                        SieveParticles<T>::GlobalSort.
    */
-  static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
+  static bool hasParticlesToBeSievedIntoVertices();
+
+  /**
+   * Return total number of particles to be sieved
+   *
+   * Delegates to SieveParticles::getNumberOfParticlesThatHaveBeSievedIntoVertices()
+   */
+  static int getNumberOfParticlesThatHaveBeSievedIntoVertices();
 
   /**
    * Return global sum of the particles that did remain within their partition at a time.
@@ -236,7 +281,6 @@ protected:
    */
   static int _numberOfLiftsIntoSieveSet;
   static int _numberOfDropsFromSieveSet;
-  static int _numberOfSkippedDropsFromSieveSet;
   static int _numberOfDropsIntoHorizontalTreeDecomposition;
 
   /**
@@ -258,14 +302,7 @@ protected:
    *
    * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
    */
-  static int _numberOfLeavingLocalParticles;
-
-  /**
-   * Set by parallel state analysis
-   *
-   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
-   */
-  static int _numberOfIncomingParticles;
+  static int _numberOfParticlesThatHaveLeftTheirDomain;
 
   /**
    * Number of incoming halo particles which are not worked in
@@ -297,7 +334,7 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfReplacedParticlesAlongBoundary;
+  static int _numberOfReplacedVirtualParticlesAlongBoundary;
 
   /**
    * Newly "discovered" virtual particles
@@ -308,30 +345,31 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfAddedParticlesAlongBoundary;
+  static int _numberOfAddedVirtualParticlesAlongBoundary;
+  static int _numberOfAddedLocalParticlesAlongBoundary;
 
   /**
    * Map of persistent particles that have to be sieved
+   *
+   * Every particle set is tied to one global sieve set realised through this
+   * attribute. Sieving is briefly also mentioned on @ref page_toolbox_particles_mesh_consistency.
+   * Access to this set is provided through two routines:
+   *
+   * - getParticlesToBeSievedIntoVertex() pipes your request directly through
+   *   to the set's getParticlesToBeSievedIntoVertex(), i.e. it grants you
+   *   access to the global sieve set.
+   * - Alternatively, you can clone the whole sieve set for your algorithm via
+   *   cloneParticlesToBeSieved() and then sieve from thereon.
+   *
+   * Different particle sorting strategies these different options the way they
+   * see fit.
+   *
    */
   static SieveParticles _sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;
   tarch::la::Vector<Dimensions, double> _debugH;
-#endif
-
-#if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
-  /**
-   * Counter to ensure no particles get lost
-   *
-   * We reset the particle counter in each clearParticleStateStatistics().
-   * Therefore, we can each (prior to the reset) if the total particle count
-   * is still the same. However, this works if and only if no parallelisation
-   * is switched on. As soon as the parallelisation kicks in, particles can be
-   * hosted redundantly and travel, so counting the number of local/real
-   * particles is not that trivial anymore.
-   */
-  static int _numberOfParticlesInLastClear;
 #endif
 };
 

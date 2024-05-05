@@ -279,7 +279,7 @@ const double boundaryValue = 0.0;
   
 
   def get_name_of_global_instance(self):
-    return "InstanceOf" + self._name
+    return "instanceOf" + self._name
 
   
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -379,7 +379,7 @@ const double boundaryValue = 0.0;
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output, dimensions):
+  def add_implementation_files_to_project(self,namespace,output, dimensions, subdirectory=""):
     """
     
      The ExaHyPE2 project will call this operation when it sets
@@ -391,6 +391,9 @@ const double boundaryValue = 0.0;
      
     """
     templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/AMRMarker"
+
+    if(subdirectory):
+        subdirectory += "/"
 
     headerDictionary = {}
     implementationDictionary = {}
@@ -404,13 +407,13 @@ const double boundaryValue = 0.0;
       templatefile_prefix + ".template.cpp",
       self._name, 
       namespace,
-      ".", 
+      subdirectory + ".", 
       implementationDictionary,
       True,
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
 
 
 #  def _init_dictionary_with_default_parameters(self,d):

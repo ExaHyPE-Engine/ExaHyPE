@@ -12,7 +12,7 @@
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithNeighbourParticle(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   DoFType*                                     neighbourParticle,
   const peano4::datamanagement::VertexMarker&  marker,
   int                                          spacetreeId
@@ -24,46 +24,99 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithNeighbourParticle(
     spacetreeId
   );
   const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( neighbourParticle->getX(), marker );
-  neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
-  Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _memoryPool.container.begin(), _memoryPool.container.end());
-  if ( iteratorToExistingCopy!=end() ) {
-    if ( (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local ) {
+  Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(neighbourParticle, _memoryPool.container.begin(), _memoryPool.container.end());
+
+  if (neighbourParticle->getParallelState()==DoFType::ParallelState::Virtual and not incomingParticleWillBeLocal) {
+    logDebug(
+      "mergeWithParticle(...)",
+      "incoming particle " << neighbourParticle->toString() << " tied to " << marker.toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank."
+    );
+    delete neighbourParticle;
+    tarch::multicore::Lock lock( _statisticsSemaphore );
+    _numberOfDroppedIncomingVirtualParticles++;
+  }
+  else if (
+    iteratorToExistingCopy!=end()
+    and
+    neighbourParticle->getParallelState()==DoFType::ParallelState::Virtual
+    and
+    incomingParticleWillBeLocal
+  ) {
+    logDebug(
+      "mergeWithParticle(...)",
+      "incoming particle " << neighbourParticle->toString() << " tied to " << marker.toString() << " is virtual on neighbour and local here, i.e. neighbour sent me back my own copy. Drop on tree " << spacetreeId << " (marker=" << marker.toString() << ")"
+    );
+    delete neighbourParticle;
+    tarch::multicore::Lock lock( _statisticsSemaphore );
+    _numberOfDroppedIncomingVirtualParticles++;
+  }
+  else if ( iteratorToExistingCopy!=end() ) {
+    neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
+   
+    #if PeanoDebug>0
+    neighbourParticle->setDebugX( (*iteratorToExistingCopy)->getDebugX() );
+    #endif
+    
+    if ( (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local and incomingParticleWillBeLocal ) {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfRedundantlySharedLocalParticles++;
+      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing copy and will be local on tree  " << spacetreeId << " (marker=" << marker.toString() << ")" );
     }
+    else if (not incomingParticleWillBeLocal) {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfReplacedVirtualParticlesAlongBoundary++;
+      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy on tree  " << spacetreeId << " (marker=" << marker.toString() << ")");
+    }
+    else {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfAddedLocalParticlesAlongBoundary++;
+      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy but is local, i.e. particle entered subdomain");
+    }
+
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
       marker.x(), marker.h(), spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     toolbox::particles::assignmentchecks::eraseParticle(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
       spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
-    // See docu of replace(): it will delete p
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
       marker.x(), marker.h(), spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()-replaced"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
+    
+    // See docu of replace(): it will delete p
     _memoryPool.replace( iteratorToExistingCopy, neighbourParticle );
-    tarch::multicore::Lock lock( _statisticsSemaphore );
-    _numberOfReplacedParticlesAlongBoundary++;
   }
   else {
+    neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
+    
     _memoryPool.scatter();
     _memoryPool.container.push_back(neighbourParticle);
-    tarch::multicore::Lock lock( _statisticsSemaphore );
-    _numberOfAddedParticlesAlongBoundary++;
+
+    if (incomingParticleWillBeLocal) {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfAddedLocalParticlesAlongBoundary++;
+      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new local vertex");
+    }
+    else {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfAddedVirtualParticlesAlongBoundary++;
+      logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new and will be remote on tree  " << spacetreeId << " (marker=" << marker.toString() << ")" );
+    }
+    
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
       marker.x(), marker.h(), spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
   }
 }
@@ -83,25 +136,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour._memoryPool.container) {
-          if (p->getParallelState()==DoFType::ParallelState::Virtual) {
-            logDebug(
-              "merge(...)",
-              "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank."
-            );
-            delete p;
-            tarch::multicore::Lock lock( _statisticsSemaphore );
-            _numberOfDroppedIncomingVirtualParticles++;
-          }
-          else {
-            p->setX( toolbox::particles::mirrorParticleAlongPeriodicDomains(
-              p->getX(),
-              marker,
-              DomainOffset,
-              DomainSize,
-              PeriodicBC
-            ));
-            mergeWithNeighbourParticle(p, marker, spacetreeId);
-          }
+          p->setX( toolbox::particles::mirrorParticleAlongPeriodicDomains(
+            p->getX(),
+            marker,
+            DomainOffset,
+            DomainSize,
+            PeriodicBC
+          ));
+          mergeWithParticle(p, marker, spacetreeId);
         }
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
@@ -119,19 +161,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour._memoryPool.container) {
-          const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-          if (p->getParallelState()==DoFType::ParallelState::Virtual) {
-            logDebug(
-              "merge(...)",
-              "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank."
-            );
-            delete p;
-            tarch::multicore::Lock lock( _statisticsSemaphore );
-            _numberOfDroppedIncomingVirtualParticles++;
-          }
-          else {
-            mergeWithNeighbourParticle(p, marker, spacetreeId);
-          }
+          mergeWithParticle(p, marker, spacetreeId);
         }
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
@@ -223,23 +253,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
-  const Container::iterator&   originalParticleContainer,
-  int                          targetTree
+  const Container::iterator&   originalParticleContainer
 ) {
   logDebug( "particleCanNotBeLiftedLocally()", "call scatter and update iterator" );
   Container::iterator particle = _memoryPool.scatterAndUpdateIterator( originalParticleContainer );
 
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, targetTree );
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle );
   return _memoryPool.container.erase(particle);
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle) {
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   _memoryPool.scatter();
   for (auto p: _memoryPool.container) {
-    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
   _memoryPool.container.clear();
 }

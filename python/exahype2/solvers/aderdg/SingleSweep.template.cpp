@@ -63,21 +63,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 }
 {% endif %}
 
-{% if ERROR_MEASUREMENT_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::analyticalSolution(
-  const tarch::la::Vector<Dimensions,double>&   x,
-  const double                                  t,
-  const double                                  dt,
-  double*                                       sol
-) {
-  logTraceInWith2Arguments( "analyticalSolution(...)", x, t );
-
-  // @todo Implement your stuff here
-
-  logTraceOut( "initialCondition(...)" );
-}
-{% endif %}
-
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

@@ -38,7 +38,7 @@ args = parser.parse_args()
 if args.s is None:
   while True:
       try:
-          s = input( "Which of the following scenarios would you like to try out?\n" + "- ".join(available_scenarios.keys()) + "\n" )
+          s = input( "Which of the following scenarios would you like to try out?\n" + " - ".join(available_scenarios.keys()) + "\n" )
           scenario = available_scenarios[s]
       except KeyError:
           print("i'm afraid i can't do that Dave")
@@ -80,7 +80,11 @@ theSolver = exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
 theSolver.add_kernel_optimizations(polynomials = polynomials)
 
 if(scenario.analytical_solution()!=exahype2.solvers.PDETerms.None_Implementation):
-  theSolver.add_error_measurement(scenario.analytical_solution())
+    exahype2.errorMeasurement.ADERErrorMeasurement(
+      theSolver,
+      error_measurement_implementation = scenario.analytical_solution(),
+      outputFileName = "err_" + scenario.__class__.__name__
+    )
 
 if(scenario._plot_dt>0.0):
   project.set_output_path("solutions")

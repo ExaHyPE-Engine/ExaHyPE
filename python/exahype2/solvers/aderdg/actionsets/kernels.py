@@ -418,7 +418,7 @@ def face_integral(use_kernelgenerator, is_linear):
 """
     template_kernelgenerator = """
         const double inverseDxDirection = 1/marker.h()[d];
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
           lduh,
           FIN,
           direction,
@@ -459,10 +459,10 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
         //Left values
         if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FR = &lFhbnd[2*d*fluxElementsPerFace];
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QR = &lQhbnd[2*d*basisElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FR = &lFhbnd[2*d*fluxElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QR = &lQhbnd[2*d*basisElementsPerFace];
             int orientation = 0;
             int faceNumber  = d;
             bool isBoundary = false;
@@ -471,7 +471,7 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
     """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
 
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FIN = FR;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = FR;
 
     """ + face_integral(use_kernelgenerator, is_linear) + """
 
@@ -485,10 +485,10 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
         //Right values
         if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FL = &lFhbnd[(2*d+1)*fluxElementsPerFace];
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FL = &lFhbnd[(2*d+1)*fluxElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
+            {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
             int orientation = 0;
             int faceNumber  = d+Dimensions;
             bool isBoundary = false;
@@ -497,7 +497,7 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
         
     """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
 
-            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FIN = FL;
+            {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = FL;
 
     """ + face_integral(use_kernelgenerator, is_linear) + """
         

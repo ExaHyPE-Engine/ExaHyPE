@@ -8,8 +8,6 @@
 //
 #pragma once
 
-
-
 #include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
 
 {% if LOAD_BALANCER!="" -%}
