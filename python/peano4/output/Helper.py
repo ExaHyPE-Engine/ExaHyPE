@@ -221,9 +221,13 @@ def parse_cmake_cache_for_mpi_and_gpu_vendor():
   mpi_vendor = None
   gpu_vendor = None
 
-  fname = os.path.join(cmake_build_dir, "CMakeCache.txt") if \
-    os.path.exists(os.path.join(cmake_build_dir, "CMakeCache.txt")) \
-    else os.path.join(cmake_build_dir, "Config.cmake")
+  peano_root_dir = os.environ['PEANO_ROOT']
+  if os.path.exists(os.path.join(peano_root_dir, "Config.cmake")):
+    fname = os.path.join(peano_root_dir, "Config.cmake")
+  else:
+    fname = os.path.join(cmake_build_dir, "CMakeCache.txt") if \
+      os.path.exists(os.path.join(cmake_build_dir, "CMakeCache.txt")) \
+      else os.path.join(cmake_build_dir, "Config.cmake")
 
   with open(fname, "r") as f:
     for line in f:

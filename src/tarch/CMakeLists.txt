@@ -32,13 +32,6 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
     PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
     PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
   )
-
-  get_target_property(TARCH_COMPILE_OPTIONS Tarch_${mode_lower} COMPILE_OPTIONS)
-  message("Compile options for Tarch_${mode_lower} : ${TARCH_COMPILE_OPTIONS}")
-  get_target_property(TARCH_INTERFACE_COMPILE_OPTIONS Tarch_${mode_lower} INTERFACE_COMPILE_OPTIONS)
-  message("Compile options for Tarch_${mode_lower} : ${TARCH_INTERFACE_COMPILE_OPTIONS}")
-  get_target_property(TARCH_LINK_OPTIONS Tarch_${mode_lower} LINK_OPTIONS)
-  message("Link options for Tarch_${mode_lower} : ${TARCH_LINK_OPTIONS}")
 endforeach()
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"

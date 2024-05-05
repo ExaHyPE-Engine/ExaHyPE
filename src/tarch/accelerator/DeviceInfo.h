@@ -58,8 +58,8 @@ namespace tarch::accelerator {
   /**
    * Num of repeats of streaming benchmarks and the number of elements N per vector
    */
-  constexpr uint64_t repeats    = 10;
-  constexpr size_t   alloc_size = 1024*1024*1024;
+  constexpr uint64_t repeats    = 3;
+  constexpr size_t   alloc_size = 1024*1024*512;
   constexpr size_t   N          = alloc_size / sizeof(double); // 1 GB, Ensure the number divides the block size 256 without remainder for CUDA backend
 
   static tarch::logging::Log _log("tarch::accelerator");
