@@ -59,7 +59,7 @@ class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
                                              patch_overlap = solver._patch_overlap_new,
                                              functor_implementation = compute_kernel_implementation,
                                              reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch,
-                                             guard                               = "repositories::InstanceOf" + solver._name + ".isFirstGridSweepOfTimeStep()",
+                                             guard                               = "repositories::instanceOf" + solver._name + ".isFirstGridSweepOfTimeStep()",
                                              add_assertions_to_halo_exchange     = False
                                              )
     self._solver = solver

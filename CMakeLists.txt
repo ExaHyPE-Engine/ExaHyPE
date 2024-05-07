@@ -420,21 +420,33 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
-foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
-  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
-    execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+function(create_symlinks source_dir dest_dir)
+  file(MAKE_DIRECTORY "${dest_dir}")
+  file(GLOB_RECURSE items LIST_DIRECTORIES TRUE RELATIVE "${source_dir}" "${source_dir}/*")
+  foreach(item IN LISTS items)
+    set(source_dir_item "${source_dir}/${item}")
+    set(dest_dir_item "${dest_dir}/${item}")
+    if(IS_DIRECTORY ${source_dir_item})
+      file(MAKE_DIRECTORY "${dest_dir_item}")
+    else()
+      get_filename_component(dest_dir_item_path "${dest_dir_item}" DIRECTORY)
+      file(RELATIVE_PATH relative_source_item "${dest_dir_item_path}" "${source_dir_item}")
+      execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${relative_source_item}" "${dest_dir_item}")
+    endif()
+  endforeach()
+endfunction()
+
+list(APPEND DIRECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications" "documentation")
+foreach(directory IN LISTS DIRECTORIES_TO_LINK_OVER)
+  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${directory}")
+    create_symlinks("${CMAKE_SOURCE_DIR}/${directory}" "${CMAKE_BINARY_DIR}/${directory}")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${directory}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
   endif()
 endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
-
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
-  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
-endif()
 
 add_subdirectory(src)
 

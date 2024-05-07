@@ -39,7 +39,9 @@ namespace petsc {
 *   - Handover to PETSc to solve by calling the solve() routine. We currently use no preconditioner and a GMRES solver. These options can be seen in the body of solve()
 *   - Use the get() routine to inspect the solution vector at each index.
 *
-*
+*  At present, we only support a handful of preconditioners and solvers, each of which can yield
+*  quite different results. More info on which preconditioners are supported can be found [here](https://petsc.org/main/manualpages/PC/) 
+*  and solvers can be found [here](https://petsc.org/main/manual/ksp/) (see table 6).
 */
 class petsc::LinearEquationSystem{
   public:
@@ -156,9 +158,31 @@ class petsc::LinearEquationSystem{
     }
 
     /**
+    * Enum class to allow us to customise different 
+    * different petsc preconditioner types. See documentation
+    * of this class for more info on what preconditioners
+    * are supported within petsc.
+    */
+    enum class PreconditionerType: int 
+    {
+      None, LU, JACOBI
+    };
+
+    /**
+    * Enum class to allow us to customise different 
+    * different petsc solver types. See documentation
+    * of this class for more info on what solvers
+    * are supported within petsc.
+    */
+    enum class KSPSolverType: int
+    {
+      GMRES, CG
+    };
+
+    /**
     * Method to hand over to petsc and solve.
     */
-    void solve();
+    void solve(PreconditionerType pctype = PreconditionerType::None, KSPSolverType ksptype = KSPSolverType::GMRES);
 
     /**
     * Method to clean up PETSc objects. Call this in some late stage 
@@ -169,6 +193,10 @@ class petsc::LinearEquationSystem{
     * put this stuff here so as not to cause any issues.
     */
     void cleanUpPetscObjects();
+
+
+    PCType  getPreconditionerTypeFromEnum(PreconditionerType type);
+    KSPType getKSPSolverTypeFromEnum(KSPSolverType type);
 
   private:
     static tarch::logging::Log  _log;

@@ -16,7 +16,10 @@ def construct_marker_name(task_name):
     return task_name + "EnclaveMeshEntityNumber"
 
 
-def create_vertex_marker(task_name):
+def create_vertex_marker(task_name,
+                         full_qualified_enumerator_type = "tarch::Enumerator",
+                         enumerator_include = """ #include "tarch/Enumerator.h" """
+                         ):
     """!
 
     Create vertex marker
@@ -59,8 +62,8 @@ def create_vertex_marker(task_name):
     dastgen_marker.data.add_attribute(
         dastgen2.attributes.UserDefinedType(
             name="Enumerator",
-            type="tarch::Enumerator",
-            include=""" #include "tarch/Enumerator.h" """,
+            type=full_qualified_enumerator_type,
+            include=enumerator_include,
             qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
         )
     )
@@ -115,9 +118,9 @@ class AssignNumbersToMesh(ActionSet):
 
         Initialise assignment
 
-        @param touch_vertex_first_time_assignment_predicate: Boolean C++ expression
-          This parameter determines if a vertex is assigned a task number of
-          not in touchVertexFirstTime().
+        @param task_name: String
+          The name of the task (attribute tied to the mesh entity) to be 
+          manipulated.
 
 
         """

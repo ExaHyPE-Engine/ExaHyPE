@@ -41,13 +41,13 @@ class DaStGen2Generator(object):
     full_qualified_name += self._data.name
     self._data.data.set_full_qualified_name(full_qualified_name)
 
-    self._data.data.write_header_file( self._data.namespace[-1] + "/" + self._data.name + ".h" )
+    self._data.data.write_header_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".h" )
     if using_cuda_backend():
-      self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cu" )
-      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cu", generated=True )
+      self._data.data.write_implementation_file(  self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cu" )
+      output.makefile.add_cpp_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cu", generated=True )
     else:
-      self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
+      self._data.data.write_implementation_file(  self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+      output.makefile.add_cpp_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
 
 
 
@@ -150,7 +150,7 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     self.data.add_aspect( self.peano4_mpi_and_storage_aspect )
 
 
-  def configure(self,namespace,association):
+  def configure(self, namespace, association, subdirectory=""):
     """
     
       I always need the MPI aspect, but I can't add the right one before I don't 
@@ -167,7 +167,7 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
       aspects might be added multiple times.
       
     """
-    super(DaStGen2, self).configure(namespace,association)
+    super(DaStGen2, self).configure(namespace,association,subdirectory)
     self.peano4_mpi_and_storage_aspect.dof_association = association
     
         

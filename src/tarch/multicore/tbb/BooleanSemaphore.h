@@ -20,12 +20,12 @@ namespace tarch {
 
 class tarch::multicore::BooleanSemaphore {
   private:
+    friend class tarch::multicore::Lock;
     friend class tarch::mpi::BooleanSemaphore;
+    friend class MultiReadSingleWriteSemaphore;
+    friend class RecursiveSemaphore;
 
     tbb::spin_mutex   _mutex;
-
-    friend class tarch::multicore::Lock;
-    friend class RecursiveSemaphore;
 
     void enterCriticalSection();
     void leaveCriticalSection();

@@ -4,7 +4,6 @@ from .Visualiser import Visualiser
 
 try:
   from .VTU                import VTU
-  from .VTU                import render_single_file
   from .Interactive        import Interactive
 except ModuleNotFoundError:
   print("postprocessing tools imported without paraview/pvpython modules")
