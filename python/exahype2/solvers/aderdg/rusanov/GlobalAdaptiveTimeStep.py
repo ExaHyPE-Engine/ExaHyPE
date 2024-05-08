@@ -82,17 +82,15 @@ class GlobalAdaptiveTimeStep(SingleSweep):
 
     def set_implementation(
         self,
-        flux=None,
-        ncp=None,
-        eigenvalues=None,
-        boundary_conditions=None,
-        refinement_criterion=None,
-        initial_conditions=None,
-        source_term=None,
-        material_parameters=None,
-        riemann_solver=None,
-        number_of_point_sources=0,
-        point_source=None,
+        flux=PDETerms.None_Implementation,
+        ncp=PDETerms.None_Implementation,
+        eigenvalues=PDETerms.User_Defined_Implementation,
+        boundary_conditions=PDETerms.User_Defined_Implementation,
+        refinement_criterion=PDETerms.Empty_Implementation,
+        initial_conditions=PDETerms.User_Defined_Implementation,
+        source_term=PDETerms.None_Implementation,
+        point_source=0,
+        material_parameters=PDETerms.None_Implementation,
         additional_action_set_includes="",
         additional_user_includes="",
     ):
@@ -107,8 +105,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             eigenvalues=eigenvalues,
             source_term=source_term,
             material_parameters=material_parameters,
-            riemann_solver=riemann_solver,
-            number_of_point_sources=number_of_point_sources,
             point_source=point_source,
         )
 
@@ -126,10 +122,10 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._material_param_implementation,
-            self._point_source_implementation,
+            self._point_sources_implementation,
             self._is_linear,
             computation_precisions,
-            self._pde_terms_without_state,
+            False,
         )
         self._abstract_solver_user_declarations += (
             create_abstract_solver_user_declarations_for_adaptive_time_stepping()
@@ -140,10 +136,10 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._material_param_implementation,
-            self._point_source_implementation,
+            self._point_sources_implementation,
             self._is_linear,
             computation_precisions,
-            self._pde_terms_without_state,
+            False,
         )
         self._abstract_solver_user_definitions += (
             create_abstract_solver_user_definitions_for_adaptive_time_stepping()
@@ -155,7 +151,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._material_param_implementation,
-            self._point_source_implementation,
+            self._point_sources_implementation,
             self._is_linear,
             computation_precisions,
             False,
@@ -166,7 +162,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._material_param_implementation,
-            self._point_source_implementation,
+            self._point_sources_implementation,
             self._is_linear,
             computation_precisions,
             False,

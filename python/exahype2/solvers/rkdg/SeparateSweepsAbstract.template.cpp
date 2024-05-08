@@ -12,8 +12,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 
-{{SOLVER_INCLUDES}}
-
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
@@ -36,7 +34,6 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _minTimeStepSizeThisTimeStep(0.0),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -224,7 +221,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  if (isFirstGridSweepOfTimeStep()) {
+  if ( isFirstGridSweepOfTimeStep() ) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
 

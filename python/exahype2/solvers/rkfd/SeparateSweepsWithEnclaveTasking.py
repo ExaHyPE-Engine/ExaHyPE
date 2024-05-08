@@ -655,9 +655,16 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         output.add(generated_solver_files)
         output.makefile.add_cpp_file(subdirectory + "tasks/" + task_name + ".cpp", generated=True)
 
+        if self._pde_terms_without_state:
+            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
+            # this hack has to suffice
+            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
+            output.makefile.d["PEANODIR"] = peanodir
+            exahype2.gpu.add_exahype_objects(output.makefile)
 
     def add_actions_to_perform_time_step(self, step):
         """!
+
         Add enclave aspect
 
         Add enclave aspect to time stepping. If you study the superclass'
@@ -674,7 +681,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             step
         )
         step.add_action_set(self._action_set_merge_enclave_task_outcome)
-
 
     def add_entries_to_text_replacement_dictionary(self, d):
         super(
@@ -702,7 +708,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 """
             + super(SeparateSweeps, self).user_action_set_includes
         )
-
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)

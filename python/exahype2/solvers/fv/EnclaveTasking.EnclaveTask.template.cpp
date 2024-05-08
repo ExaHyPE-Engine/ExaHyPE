@@ -332,7 +332,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
-  logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
   ::exahype2::CellData patchData(otherTasks.size() + 1);
@@ -392,9 +392,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
 
   if (not foundOffloadingBranch) {
-    logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+    logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
       << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
 
   //
@@ -402,7 +402,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   // Bring back results
   // ==================
   //
-  for (int i=0; i<patchData.numberOfCells; i++) {
+  for (int i = 0; i < patchData.numberOfCells; i++) {
     // Delete reconstructed data which has been allocated before spawning the tasks.
     tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);

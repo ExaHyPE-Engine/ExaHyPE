@@ -22,7 +22,7 @@ std::string peano4::parallel::TreeManagementMessage::toString() const {
   out << ","; 
   out << "workerSpacetreeId=" << _workerSpacetreeId;
   out << ","; 
-  out << "action=" << castActionToString(_action);
+  out << "action=" << (_action==Action::RequestNewRemoteTree? "RequestNewRemoteTree" : "")  << (_action==Action::CreateNewRemoteTree? "CreateNewRemoteTree" : "")  << (_action==Action::RemoveChildTreeFromBooksAsChildBecameEmpty? "RemoveChildTreeFromBooksAsChildBecameEmpty" : "")  << (_action==Action::JoinWithWorker? "JoinWithWorker" : "")  << (_action==Action::Acknowledgement? "Acknowledgement" : "") ;
   out << ")";
   return out.str();
 }
@@ -61,21 +61,14 @@ void   peano4::parallel::TreeManagementMessage::setAction(Action value) {
 }
 
 
-const std::string   peano4::parallel::TreeManagementMessage::castActionToString(Action value) {
-  std::ostringstream out;
-  out  << (value ==Action::RequestNewRemoteTree? "RequestNewRemoteTree" : "")  << (value ==Action::CreateNewRemoteTree? "CreateNewRemoteTree" : "")  << (value ==Action::RemoveChildTreeFromBooksAsChildBecameEmpty? "RemoveChildTreeFromBooksAsChildBecameEmpty" : "")  << (value ==Action::JoinWithWorker? "JoinWithWorker" : "")  << (value ==Action::Acknowledgement? "Acknowledgement" : "") ;
-  return out.str();
-}
-
-
 
 
 
 
 #ifdef Parallel
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype = MPI_DATATYPE_NULL;
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype;
 #endif
 
 
@@ -109,55 +102,9 @@ MPI_Datatype peano4::parallel::TreeManagementMessage::getMultiscaleDataExchangeD
 }
 
 
-[[clang::map_mpi_datatype]]
-void peano4::parallel::TreeManagementMessage::freeForkDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::parallel::TreeManagementMessage::freeGlobalCommunciationDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::parallel::TreeManagementMessage::freeJoinDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::parallel::TreeManagementMessage::freeBoundaryExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::parallel::TreeManagementMessage::freeMultiscaleDataExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
 int peano4::parallel::TreeManagementMessage::getSenderRank() const {
   return _senderDestinationRank;
 }
-
 
 
 void peano4::parallel::TreeManagementMessage::initDatatype() {
@@ -170,9 +117,9 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
   NumberOfAttributes++;
 
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
-  int*          blocklen = new int[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
   MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
-
+  
   int counter            = 0;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
@@ -183,12 +130,12 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
   counter++;
-
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-
+  
   counter = 0;
   MPI_Get_address( &(instances[0]._masterSpacetreeId), &disp[counter] );
   counter++;
@@ -203,8 +150,8 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
     disp[i] = disp[i] - disp[0];
   }
 
-  int errorCode = 0;
-  MPI_Datatype tmpType;
+  int errorCode = 0; 
+  MPI_Datatype tmpType; 
   errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
   errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
   errorCode += MPI_Type_commit( &Datatype );
@@ -212,7 +159,7 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 
   delete[] subtypes;
-  delete[] blocklen;
+  delete[] blocklen; 
   delete[] disp;
 
   #else
@@ -228,11 +175,17 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
 
 void peano4::parallel::TreeManagementMessage::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  freeForkDatatype();
-  freeJoinDatatype();
-  freeBoundaryExchangeDatatype();
-  freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  MPI_Datatype type;
+  type = getForkDatatype();
+  MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );
@@ -253,42 +206,42 @@ void peano4::parallel::TreeManagementMessage::receive(peano4::parallel::TreeMana
 
 
 void peano4::parallel::TreeManagementMessage::send(
-  const peano4::parallel::TreeManagementMessage& buffer,
-  int destination,
-  int tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm communicator
+  const peano4::parallel::TreeManagementMessage& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
 ) {
-  MPI_Request sendRequestHandle;
-  int         flag = 0;
-  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle );
+  MPI_Request sendRequestHandle; 
+  int         flag = 0; 
+  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
   MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
-  startCommunicationFunctor();
-  while (!flag) {
+  startCommunicationFunctor(); 
+  while (!flag) { 
     waitFunctor();
-    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
   }
 }
 
 
 void peano4::parallel::TreeManagementMessage::receive(
-  peano4::parallel::TreeManagementMessage& buffer,
-  int source,
-  int tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm communicator
-) {
+  peano4::parallel::TreeManagementMessage& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
-  MPI_Request receiveRequestHandle;
-  int         flag = 0;
-  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle );
+  MPI_Request receiveRequestHandle; 
+  int         flag = 0; 
+  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
   MPI_Test( &receiveRequestHandle, &flag, &status );
-  startCommunicationFunctor();
-  while (!flag) {
+  startCommunicationFunctor(); 
+  while (!flag) { 
     waitFunctor();
-    MPI_Test( &receiveRequestHandle, &flag, &status );
+    MPI_Test( &receiveRequestHandle, &flag, &status ); 
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }

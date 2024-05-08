@@ -1787,7 +1787,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       localPatches
     );
 
-    /*assessKernel(
+    assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
         FVRusanovSolver,
         FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
@@ -1803,7 +1803,41 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       launchingThreads,
       device,
       localPatches
-    );*/
+    );
+    assessKernel(
+      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>>,
+      "device(s) " + deviceString + ", stateless, volume-wise, SoA, copy",
+      launchingThreads,
+      device,
+      localPatches
+    );
+    assessKernel(
+      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+      "device(s) " + deviceString + ", stateless, volume-wise, AoSoA, copy",
+      launchingThreads,
+      device,
+      localPatches
+    );
 #endif
 
 #if defined(GPUOffloadingCPP)
@@ -1922,7 +1956,7 @@ int main(int argc, char** argv) {
   ::tarch::multicore::initSmartMPI();
   ::peano4::fillLookupTables();
   repositories::initSharedMemoryAndGPUEnvironment();
-  //::peano4::runTestsAndBenchmarks();
+  ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
 
   if (EnableFPE) {

@@ -16,14 +16,11 @@ ExaHyPE2Sources = \
   PrecisionControl.cpp \
   RefinementControlService.cpp \
   TimeStepping.cpp \
-  enumerator/AoSLexicographicEnumerator.cpp \
-  enumerator/SoALexicographicEnumerator.cpp \
-  enumerator/SingleDoFEnumerator.cpp \
-  enumerator/AoSoALexicographicEnumerator.cpp \
-  enumerator/FaceAoSLexicographicEnumerator.cpp \
-  aderdg/ADERUtils.cpp \
-  aderdg/basis/GaussLegendreBasis.cpp \
-  aderdg/basis/GaussLobattoBasis.cpp \
+  UserInterface.cpp \
+  UnitTests.cpp \
+  aderdg/kernels/Basis/GaussLegendreBasis.cpp \
+  aderdg/kernels/Basis/GaussLobattoBasis.cpp \
+  aderdg/kernels/AderUtils.cpp \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \

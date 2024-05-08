@@ -160,14 +160,13 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessa
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     #ifdef Parallel
     int flag = false;
-    MPI_Message msg;
     MPI_Status status;
-    MPI_Improbe(MPI_ANY_SOURCE, _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &msg, &status);
+    MPI_Iprobe(MPI_ANY_SOURCE, _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
 
     if (flag) {
       int number;
       logDebug( "receiveDanglingMessages()", "there's a pending message from " << status.MPI_SOURCE );
-      MPI_Mrecv( &number, 1, MPI_INT, &msg, MPI_STATUS_IGNORE);
+      MPI_Recv( &number, 1, MPI_INT, status.MPI_SOURCE, _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE);
       assertion(number!=0);
 
       logDebug( "receiveDanglingMessages()", "received number " << number << " from rank " << status.MPI_SOURCE );

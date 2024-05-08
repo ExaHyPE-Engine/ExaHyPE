@@ -6,7 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#pragma once
+#pragma once 
 
 #include <string>
 
@@ -19,8 +19,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-
-
 
 
 namespace tarch{
@@ -46,6 +44,8 @@ struct tarch::mpi::IntegerMessage {
 
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -65,21 +65,7 @@ struct tarch::mpi::IntegerMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeForkDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeGlobalCommunciationDatatype();
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call

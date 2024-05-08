@@ -64,17 +64,17 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-  assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
-  assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
+  assertion2(tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp);
+  assertion2(tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp);
 
   ::exahype2::fv::validatePatch(
       oldQWithHalo,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1, // halo
+      1, // Halo size
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); // previous time step has to be valid
+  ); // Previous time step has to be valid
 
   if (marker.willBeSkeletonCell()) {
     const double maxEigenvalue = tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
@@ -320,6 +320,9 @@ class EnclaveTasking(FV):
         """
         self._name = name
 
+        self._fused_compute_kernel_call_stateless_cpu = "#error Not yet defined"
+        self._fused_compute_kernel_call_stateless_gpu = "#error Not yet defined"
+
         super(EnclaveTasking, self).__init__(
             name,
             patch_size,
@@ -345,7 +348,7 @@ class EnclaveTasking(FV):
 
     def _create_guards(self):
         """!
-        All the internal logic depends on guards, i.e. boolean predicates. We
+        All the internal logic depends on guards, i.e., boolean predicates. We
         want to be able to alter them in subclasses, but we need a certain
         baseline. It is defined in this routine.
         """
@@ -483,7 +486,7 @@ class EnclaveTasking(FV):
     def create_data_structures(self):
         """
         This routine does not really add new data, but it heavily tailors when data are
-        stored, exchanged, ... Each generator has some guard attributes, i.e. some guards,
+        stored, exchanged, ... Each generator has some guard attributes, i.e., some guards,
         which control when data is stored, sent, received. The routine takes these guards
         and rewires them to the local guards of this object. If you alter these guards
         further, you have to alter them before you invoke this class' create_data_structures().
@@ -557,7 +560,7 @@ class EnclaveTasking(FV):
         happening directly in the primary sweep, as the cells adjacent to the hanging
         face are skeleton cells.
 
-        AMR and adjust cell have to be there always, i.e. also throughout
+        AMR and adjust cell have to be there always, i.e., also throughout
         the grid construction. But the criterion is something that we only
         evaluate in the secondary sweep. That's when we have an updated/changed time step.
         If we identify coarsening and refinement instructions in the secondary sweep, the
@@ -643,7 +646,7 @@ class EnclaveTasking(FV):
         """
         If you pass in User_Defined, then the generator will create C++ stubs
         that you have to befill manually. If you pass in None_Implementation, it
-        will create nop, i.e. no implementation or defaults. Any other string
+        will create nop, i.e., no implementation or defaults. Any other string
         is copied 1:1 into the implementation. If you pass in None, then the
         set value so far won't be overwritten.
         """
@@ -705,6 +708,13 @@ class EnclaveTasking(FV):
             * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
         )
 
+        d["FUSED_COMPUTE_KERNEL_CALL_STATELESS_CPU"] = jinja2.Template(
+            self._fused_compute_kernel_call_stateless_cpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FUSED_COMPUTE_KERNEL_CALL_STATELESS_GPU"] = jinja2.Template(
+            self._fused_compute_kernel_call_stateless_gpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
         d["SEMAPHORE_LABEL"] = exahype2.grid.UpdateCellLabel.get_attribute_name(
             self._name
         )
@@ -729,7 +739,7 @@ class EnclaveTasking(FV):
 
         There's a bunch of different things to do to extend my standard solver
         into an enclave solver. In this operation, we add the runtime logic,
-        i.e. what happens at which point.
+        i.e., what happens at which point.
 
         We need additional action sets that are
         triggered throughout the traversal in every second time step. I call this

@@ -31,38 +31,22 @@ static_assert(sizeof(long long) == 8, "sizeof(long long) != 8");
 static_assert('A' == 65, "A != 65");
 
 namespace {
-  tarch::logging::Log _log("tarch");
-} // namespace
-
-void tarch::dumpStatistics() {
-  std::stringstream msg;
-
-  int numberOfRanks        = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  int localNumberOfThreads = tarch::multicore::Core::getInstance().getNumberOfThreads();
-  int localNumberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-
-  int globalNumberOfThreads = 0;
-  int globalNumberOfDevices = 0;
-
-#ifdef Parallel
-  tarch::mpi::Rank::getInstance().reduce(&localNumberOfThreads, &globalNumberOfThreads, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  });
-
-  tarch::mpi::Rank::getInstance().reduce(&localNumberOfDevices, &globalNumberOfDevices, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  });
-#else
-  globalNumberOfThreads = localNumberOfThreads;
-  globalNumberOfDevices = localNumberOfDevices;
-#endif
-
-  msg << numberOfRanks << " Rank(s), ";
-  msg << globalNumberOfThreads << " Core(s), ";
-  msg << globalNumberOfDevices << " GPU(s)";
-
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("dumpStatistics()", msg.str());
+  int convertMemorySize(long value, tarch::MemoryUsageFormat format) {
+    static tarch::logging::Log _log( "tarch" );
+    int result = 0;
+    switch (format) {
+      case tarch::MemoryUsageFormat::MByte:
+      {
+        long megaByte = 1024 * 1024;
+        long usageMB ((value + (megaByte/2)) / megaByte );
+        const long maxInteger = std::numeric_limits<int>::max();
+        if (usageMB>maxInteger) {
+          logError( "convertMemorySize()", "cannot cast result to return value: " << usageMB );
+        }
+        result = static_cast<int>(usageMB);
+      }
+    }
+    return result;
   }
 }
 

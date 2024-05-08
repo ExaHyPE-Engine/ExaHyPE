@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractADERDGActionSet import AbstractADERDGActionSet
+from .AbstractAderDGActionSet import AbstractAderDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
 # import peano4
 import peano4.solversteps
@@ -10,29 +10,33 @@ import jinja2
 from .kernels import (
     create_corrector_allocations, create_includes,
     riemann_solver, face_integral,
-    create_solution_update, check_troubledness
+    create_solution_update
 )
 
 
-class Correction(AbstractADERDGActionSet):
+class Correction(AbstractAderDGActionSet):
     """
+
     The linear combination of the Runge Kutta trials has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
+
+
     """
 
     Template_TouchFaceFirstTime = """
+
   if ({{PREDICATE}}) {
-
+  
     const double timeStamp = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-
-    // Needs to declare and define timeStepSize
+  
+    // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
-
+    
     constexpr int Order = {{ORDER}};
     constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
     constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-
+    
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
     #else
@@ -42,10 +46,10 @@ class Correction(AbstractADERDGActionSet):
     constexpr int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
     constexpr int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
 
-    /**
-     * 2d: 0,1,2,3 -> 0,2,1,3
-     * 3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
-     */
+    /*
+    2d: 0,1,2,3 -> 0,2,1,3
+    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
+    */
     {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value;
     {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace;
     {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
@@ -56,76 +60,79 @@ class Correction(AbstractADERDGActionSet):
     tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
 
     {{RIEMANN_SOLVER}}
-  }
+
+  }  
+
 """
 
     Template_TouchCellFirstTime = """
   if ({{PREDICATE}}) {
+  
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-
-    // Needs to declare and define timeStepSize
+  
+    // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
-
+        
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
     {{CORRECTOR_ALLOCATIONS}}
-
-    for (int d=0; d<Dimensions; d++) {
+    
+    for(int d=0; d<Dimensions; d++){
+    
       const int direction = d;
 
-      // Negative face
-      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
+      //negative face
+      if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace;
         const int orientation = 0;
 
         {{FACE_INTEGRAL}}
+
       }
 
-      // Positive face
-      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()) {
+      //positive face
+      if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
         const int orientation = 1;
 
         {{FACE_INTEGRAL}}
-      }
-    } // for d
 
+      }
+
+    }// for d
+    
     {{SOLUTION_UPDATE}}
 
-    {{CHECK_TROUBLEDNESS}}
-
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
+  
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0));
+      
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+   
   }
 """
 
     def __init__(self, solver, guard):
         """
+
         guard_project: String (C++ code)
           Predicate which controls if the solution is actually projected
 
         guard_safe_old_time_step: String (C++ code)
           Predicate which controls if the projection should be copied into
           the old solution and the time step should also be moved over
+
         """
         super(Correction, self).__init__(solver)
-
+        
         self.guard = guard
         self.riemann_guard  = guard
 
         self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
         self.use_kernelgenerator        = solver._use_kernel_generator
         self.is_linear                  = solver._is_linear
-        self.use_PAC                    = solver._physical_admissibility_criterion!=PDETerms.None_Implementation
-        self.use_DMP                    = solver._number_of_dmp_observables>0
-        self.useTroubledMarker          = solver._use_troubled_marker
-        self.use_limiting               = solver._use_limiting
-
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -144,23 +151,20 @@ class Correction(AbstractADERDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            d[ "PREDICATE" ]            = self.guard
+            d["PREDICATE" ]             = self.guard
             d["CORRECTOR_ALLOCATIONS"]  = jinja2.Template(create_corrector_allocations(self.use_kernelgenerator)).render(**d)
             d["SOLUTION_UPDATE"]        = jinja2.Template(create_solution_update(self.use_kernelgenerator)).render(**d)
             d["FACE_INTEGRAL"]          = jinja2.Template(face_integral(self.use_kernelgenerator, self.is_linear)).render(**d)
-            d["CHECK_TROUBLEDNESS"]     = jinja2.Template(check_troubledness(self.use_PAC, self.use_DMP, self.useTroubledMarker)).render(**d)
             result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
             pass
         return result
 
-
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
-
 
     def get_includes(self):
         linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
             super(Correction, self).get_includes()
-            + create_includes(self.use_kernelgenerator, self.use_limiting, self._solver._is_linear)
+            + create_includes(self.use_kernelgenerator, self._solver._is_linear)
         )

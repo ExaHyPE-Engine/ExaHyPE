@@ -1,16 +1,18 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractADERDGActionSet import AbstractADERDGActionSet
+from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
 import peano4.solversteps
 import jinja2
 
-class EmptyPostprocessSolution(AbstractADERDGActionSet):
+class EmptyPostprocessSolution(AbstractAderDGActionSet):
     """
+    
     PostprocessSolution differs from other action sets, as I only create it once. See 
     FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
+    
     """
 
     def __init__(self,solver):
@@ -34,7 +36,7 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
         return __name__.replace(".py", "").replace(".", "_")
 
 
-class DoFWisePostprocessSolution(AbstractADERDGActionSet):
+class DoFWisePostprocessSolution(AbstractAderDGActionSet):
     """
 
     PostprocessSolution differs from other action sets, as I only create it once. See
@@ -139,7 +141,7 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
         )
 
 
-class CellWisePostprocessSolution(AbstractADERDGActionSet):
+class CellWisePostprocessSolution(AbstractAderDGActionSet):
     """ """
 
     def __init__(self, solver):

@@ -13,6 +13,8 @@
 #include "exahype2/EnclaveTask.h"
 #include "repositories/SolverRepository.h"
 
+{{SOLVER_INCLUDES}}
+
 #include <vector>
 
 #ifdef UseSmartMPI

@@ -10,10 +10,9 @@
 
 #include <string>
 
-
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <functional>
+#include <mpi.h>
 #endif
 
 #include "peano4/grid/LoadStoreComputeFlag.h"
@@ -24,50 +23,53 @@
 #include "tarch/services/ServiceRepository.h"
 
 
-
-
-namespace peano4{
-namespace grid{
-
-  struct AutomatonState;
-}
-}
-
-
+namespace peano4 {
+  namespace grid {
+    struct AutomatonState;
+  } // namespace grid
+} // namespace peano4
 
 struct peano4::grid::AutomatonState {
-  public:
+public:
+  AutomatonState() = default;
+  AutomatonState(
+    int                                        __level,
+    tarch::la::Vector<Dimensions, double>      __x,
+    tarch::la::Vector<Dimensions, double>      __h,
+    bool                                       __inverted,
+    std::bitset<Dimensions>                    __evenFlags,
+    tarch::la::Vector<DimensionsTimesTwo, int> __accessNumber
+  );
 
+  AutomatonState(const AutomatonState& copy);
+  AutomatonState& operator=(const AutomatonState& other);
 
-    AutomatonState() {}
-    AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber);
+  ~AutomatonState() = default;
 
+  int                                        getLevel() const;
+  void                                       setLevel(int value);
+  tarch::la::Vector<Dimensions, double>      getX() const;
+  void                                       setX(const tarch::la::Vector<Dimensions, double>& value);
+  double                                     getX(int index) const;
+  void                                       setX(int index, double value);
+  tarch::la::Vector<Dimensions, double>      getH() const;
+  void                                       setH(const tarch::la::Vector<Dimensions, double>& value);
+  double                                     getH(int index) const;
+  void                                       setH(int index, double value);
+  bool                                       getInverted() const;
+  void                                       setInverted(bool value);
+  std::bitset<Dimensions>                    getEvenFlags() const;
+  void                                       setEvenFlags(const std::bitset<Dimensions>& value);
+  bool                                       getEvenFlags(int index) const;
+  void                                       setEvenFlags(int index, bool value);
+  void                                       flipEvenFlags(int index);
+  tarch::la::Vector<DimensionsTimesTwo, int> getAccessNumber() const;
+  void                                       setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo, int>& value);
+  int                                        getAccessNumber(int index) const;
+  void                                       setAccessNumber(int index, int value);
 
-    int   getLevel() const;
-    void   setLevel(int value);
-    tarch::la::Vector<Dimensions,double>   getX() const;
-    void   setX(const tarch::la::Vector<Dimensions,double>& value);
-    double   getX(int index) const;
-    void   setX(int index, double value);
-    tarch::la::Vector<Dimensions,double>   getH() const;
-    void   setH(const tarch::la::Vector<Dimensions,double>& value);
-    double   getH(int index) const;
-    void   setH(int index, double value);
-    bool   getInverted() const;
-    void   setInverted(bool value);
-    std::bitset<Dimensions>   getEvenFlags() const;
-    void   setEvenFlags(const std::bitset<Dimensions>&  value);
-    bool   getEvenFlags(int index) const;
-    void   setEvenFlags(int index, bool value);
-    void   flipEvenFlags(int index);
-    tarch::la::Vector<DimensionsTimesTwo,int>   getAccessNumber() const;
-    void   setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo,int>& value);
-    int   getAccessNumber(int index) const;
-    void   setAccessNumber(int index, int value);
-    AutomatonState(const AutomatonState& copy);
-
-
-    #ifdef Parallel
+#ifdef Parallel
+  PragmaPush SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -82,23 +84,8 @@ struct peano4::grid::AutomatonState {
 
   [[clang::map_mpi_datatype]] static MPI_Datatype getMultiscaleDataExchangeDatatype();
 
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getGlobalCommunciationDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeForkDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeGlobalCommunciationDatatype();
+  [[clang::map_mpi_datatype]] static MPI_Datatype getGlobalCommunciationDatatype();
+  PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -175,8 +162,10 @@ struct peano4::grid::AutomatonState {
 #endif
 
 
-  private:
-    [[clang::pack_range(0,63)]]  int   _level;
+  std::string toString() const;
+
+private:
+  PragmaPush SilenceUnknownAttribute [[clang::pack_range(0, 63)]] int _level;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
   [[clang::truncate_mantissa(23)]] double _x[Dimensions];
 #endif
@@ -202,24 +191,7 @@ struct peano4::grid::AutomatonState {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
   tarch::la::Vector<DimensionsTimesTwo, int> _accessNumber;
 #endif
-
-
-
-    #ifdef Parallel
-    private:
-      int                  _senderDestinationRank;
-
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-      /**
-       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
-       * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI
-       * datatype once constructed, this field stores the type.
-       */
-      static MPI_Datatype  Datatype;
-      #endif
-    #endif
-
+  PragmaPop
 
 #ifdef Parallel
     private: int _senderDestinationRank;
@@ -235,7 +207,3 @@ struct peano4::grid::AutomatonState {
 #endif
 #endif
 };
-
-  
-
-

@@ -362,12 +362,6 @@ class RungeKuttaDG(object):
 
         self._compute_time_step_size = "#error Not yet defined"
 
-        self._compute_kernel_call_cpu = "#error Not yet defined"
-        self._compute_kernel_call_stateless_cpu = "#error Not yet defined"
-        self._compute_kernel_call_fused_cpu = "#error Not yet defined"
-        self._compute_kernel_call_fused_gpu = "#error Not yet defined"
-        self._pde_terms_without_state = pde_terms_without_state
-
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""

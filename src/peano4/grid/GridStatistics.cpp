@@ -1,24 +1,18 @@
 #include "GridStatistics.h"
 
-
-
 #include <sstream>
 #include <algorithm>
 
-
-
 peano4::grid::GridStatistics::GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH){
-setNumberOfLocalUnrefinedCells( __numberOfLocalUnrefinedCells);
-setNumberOfRemoteUnrefinedCells( __numberOfRemoteUnrefinedCells);
-setNumberOfLocalRefinedCells( __numberOfLocalRefinedCells);
-setNumberOfRemoteRefinedCells( __numberOfRemoteRefinedCells);
-setStationarySweeps( __stationarySweeps);
-setCoarseningHasBeenVetoed( __coarseningHasBeenVetoed);
-setRemovedEmptySubtree( __removedEmptySubtree);
-setMinH( __minH);
+  setNumberOfLocalUnrefinedCells( __numberOfLocalUnrefinedCells);
+  setNumberOfRemoteUnrefinedCells( __numberOfRemoteUnrefinedCells);
+  setNumberOfLocalRefinedCells( __numberOfLocalRefinedCells);
+  setNumberOfRemoteRefinedCells( __numberOfRemoteRefinedCells);
+  setStationarySweeps( __stationarySweeps);
+  setCoarseningHasBeenVetoed( __coarseningHasBeenVetoed);
+  setRemovedEmptySubtree( __removedEmptySubtree);
+  setMinH( __minH);
 }
-
-
 
 std::string peano4::grid::GridStatistics::toString() const {
   std::ostringstream out;
@@ -42,191 +36,112 @@ std::string peano4::grid::GridStatistics::toString() const {
   return out.str();
 }
 
-
-
-
-
 int   peano4::grid::GridStatistics::getNumberOfLocalUnrefinedCells() const {
   return _numberOfLocalUnrefinedCells;
 }
-
 
 void   peano4::grid::GridStatistics::setNumberOfLocalUnrefinedCells(int value) {
   _numberOfLocalUnrefinedCells = value;
 }
 
-
 int   peano4::grid::GridStatistics::getNumberOfRemoteUnrefinedCells() const {
   return _numberOfRemoteUnrefinedCells;
 }
-
 
 void   peano4::grid::GridStatistics::setNumberOfRemoteUnrefinedCells(int value) {
   _numberOfRemoteUnrefinedCells = value;
 }
 
-
 int   peano4::grid::GridStatistics::getNumberOfLocalRefinedCells() const {
   return _numberOfLocalRefinedCells;
 }
-
 
 void   peano4::grid::GridStatistics::setNumberOfLocalRefinedCells(int value) {
   _numberOfLocalRefinedCells = value;
 }
 
-
 int   peano4::grid::GridStatistics::getNumberOfRemoteRefinedCells() const {
   return _numberOfRemoteRefinedCells;
 }
-
 
 void   peano4::grid::GridStatistics::setNumberOfRemoteRefinedCells(int value) {
   _numberOfRemoteRefinedCells = value;
 }
 
-
 int   peano4::grid::GridStatistics::getStationarySweeps() const {
   return _stationarySweeps;
 }
-
 
 void   peano4::grid::GridStatistics::setStationarySweeps(int value) {
   _stationarySweeps = value;
 }
 
-
 bool   peano4::grid::GridStatistics::getCoarseningHasBeenVetoed() const {
   return _coarseningHasBeenVetoed;
 }
-
 
 void   peano4::grid::GridStatistics::setCoarseningHasBeenVetoed(bool value) {
   _coarseningHasBeenVetoed = value;
 }
 
-
 bool   peano4::grid::GridStatistics::getRemovedEmptySubtree() const {
   return _removedEmptySubtree;
 }
-
 
 void   peano4::grid::GridStatistics::setRemovedEmptySubtree(bool value) {
   _removedEmptySubtree = value;
 }
 
-
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridStatistics::getMinH() const {
   return   _minH;
 }
-
 
 void   peano4::grid::GridStatistics::setMinH(const tarch::la::Vector<Dimensions,double>& value) {
   _minH = value;
 }
 
-
 double   peano4::grid::GridStatistics::getMinH(int index) const {
   return   _minH(index);
 }
-
 
 void   peano4::grid::GridStatistics::setMinH(int index, double value) {
   _minH(index) = value;
 }
 
-
-
-
-
-
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::grid::GridStatistics::Datatype = MPI_DATATYPE_NULL;
+MPI_Datatype peano4::grid::GridStatistics::Datatype;
 #endif
-
 
 [[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getForkDatatype() {
   return Datatype;
 }
 
-
 [[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getGlobalCommunciationDatatype() {
   return Datatype;
 }
-
 
 [[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getJoinDatatype() {
   return Datatype;
 }
 
-
 [[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getBoundaryExchangeDatatype() {
   return Datatype;
 }
-
 
 [[clang::map_mpi_datatype]]
 MPI_Datatype peano4::grid::GridStatistics::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::GridStatistics::freeForkDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::GridStatistics::freeGlobalCommunciationDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::GridStatistics::freeJoinDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::GridStatistics::freeBoundaryExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::GridStatistics::freeMultiscaleDataExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
 int peano4::grid::GridStatistics::getSenderRank() const {
   return _senderDestinationRank;
 }
-
-
 
 void peano4::grid::GridStatistics::initDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
@@ -323,32 +238,34 @@ void peano4::grid::GridStatistics::initDatatype() {
   #endif
 }
 
-
 void peano4::grid::GridStatistics::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  freeForkDatatype();
-  freeJoinDatatype();
-  freeBoundaryExchangeDatatype();
-  freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  MPI_Datatype type;
+  type = getForkDatatype();
+  MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );
   #endif
 }
 
-
 void peano4::grid::GridStatistics::send(const peano4::grid::GridStatistics& buffer, int destination, int tag, MPI_Comm communicator ) {
   MPI_Send( &buffer, 1, Datatype, destination, tag, communicator);
 }
-
 
 void peano4::grid::GridStatistics::receive(peano4::grid::GridStatistics& buffer, int source, int tag, MPI_Comm communicator ) {
   MPI_Status status;
   MPI_Recv( &buffer, 1, Datatype, source, tag, communicator, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 
 void peano4::grid::GridStatistics::send(
   const peano4::grid::GridStatistics& buffer,
@@ -368,7 +285,6 @@ void peano4::grid::GridStatistics::send(
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
   }
 }
-
 
 void peano4::grid::GridStatistics::receive(
   peano4::grid::GridStatistics& buffer,

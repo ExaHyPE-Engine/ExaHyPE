@@ -11,6 +11,7 @@
 #include <string>
 
 
+
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
@@ -41,7 +42,6 @@ struct peano4::grid::GridTraversalEvent {
 
     GridTraversalEvent() {}
     GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoPowerD>  __isVertexParentOfSubtree, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
-
 
 
     tarch::la::Vector<Dimensions,double>   getX() const;

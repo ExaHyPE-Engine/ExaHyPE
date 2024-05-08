@@ -99,29 +99,29 @@ void tarch::logging::Log::indent( bool indent, const std::string& trace, Message
 std::string tarch::logging::Log::getMachineInformation() {
   std::ostringstream message;
 
-#ifdef CompilerHasUTSName
+  #ifdef CompilerHasUTSName
   utsname* utsdata = new utsname();
   assertion( utsdata!=NULL );
   uname(utsdata);
 
   message << "[" << utsdata->nodename << "]";
 
-#ifdef Parallel
+  #ifdef Parallel
   message << ",";
-#endif
+  #endif
 
   delete utsdata;
-#endif
+  #endif
 
-#ifdef Parallel
+  #ifdef Parallel
   if (tarch::mpi::Rank::getInstance().isInitialised()) {
-    message << "Rank:" << tarch::mpi::Rank::getInstance().getRank();
+    message << "rank:" << tarch::mpi::Rank::getInstance().getRank();
   } else {
-    message << "Rank:Not-initialised-yet";
+    message << "rank:not-initialised-yet";
   }
   #else
-  message << "Rank:0";
-#endif
+  message << "rank:0";
+  #endif
 
   return message.str();
 }

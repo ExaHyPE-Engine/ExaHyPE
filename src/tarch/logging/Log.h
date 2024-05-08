@@ -420,7 +420,7 @@ namespace tarch {
 
 #define logExceptionAndQuit(exception) \
   { \
-    std::cerr << std::string("Caught exception (file:)") << __FILE__ << std::string(", line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
+    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(", line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
     exit(-1); \
   }
 

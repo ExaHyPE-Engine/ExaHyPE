@@ -1,5 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 import dastgen2
 import peano4.toolbox.blockstructured
 import peano4.datamodel
@@ -8,9 +9,7 @@ import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from exahype2.solvers.PDETerms import PDETerms
-from .kernels import (get_face_overlap_merge_implementation, create_abstract_solver_user_declarations_for_error_measurement,
-  create_abstract_solver_user_definitions_for_error_measurement, create_finish_time_step_implementation_for_error_measurement,
-  add_final_action_for_error_measurement)
+from .kernels import get_face_overlap_merge_implementation
 from .kernelgenerator import generate_aderdg_kernels, Configuration
 
 import os
@@ -19,12 +18,13 @@ from abc import abstractmethod
 from enum import IntEnum
 import jinja2
 
-
 """
-Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
-and Gauss-Lobatto nodes, helps avoid having to constantly pass a string and ensure that this string is
+used to have a central way for all of this class' descendants to differentiate between gauss-legendre
+and gauss-lobatto nodes, helps avoid having to constantly pass a string and ensure that this string is
 the same everywhere.
 """
+
+
 class Polynomials(IntEnum):
     Gauss_Legendre = (0,)
     Gauss_Lobatto = 1
@@ -36,23 +36,29 @@ in the naming. If a user wants to name it float because they're more used to C-b
 fine but if they'd rather use single we allow it as well.
 """
 PrecisionType = {
-    "SP": "float",
-    "float": "float",
+    "SP":     "float",
+    "float":  "float",
     "single": "float",
-    "DP": "double",
+    "fp32":   "float",
+    "DP":     "double",
     "double": "double",
-    "quadruple": "long double",
+    "fp64":   "double",
+    "quadruple":   "long double",
     "long double": "long double",
-    "half_c++23": "std::float16_t",
-    "float16_t": "std::float16_t",
-    "std::float16_t": "std::float16_t",
-    "bfloat": "std::bfloat16_t",
-    "bfloat16_t": "std::bfloat16_t",
-    "std::bfloat16_t": "std::bfloat16_t"
+    "fp128":       "long double",
+    "half_c++23":       "std::float16_t",
+    "float16_t":        "std::float16_t",
+    "std::float16_t":   "std::float16_t",
+    "fp16":             "std::float16_t",
+    "bfloat":           "std::bfloat16_t",
+    "bfloat16_t":       "std::bfloat16_t",
+    "std::bfloat16_t":  "std::bfloat16_t",
+    "bf16":             "std::bfloat16_t"
 }
 
 
 class ADERDG(object):
+    # initialization stores the key information about the solver and initializes a number of variables for later usage
     def __init__(
         self,
         name,
@@ -61,29 +67,9 @@ class ADERDG(object):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
-        plot_grid_properties,
-        pde_terms_without_state: bool,
-        # Kernel optimisations
-        is_linear,
-        polynomials,
-        use_kernel_generator,
-        use_libxsmm,
-        use_BLIS,
-        use_Eigen,
-        use_libxsmm_JIT,
-        predictor_computation_precisions,
-        corrector_computation_precision,
-        solution_persistent_storage_precision,
-        precision_criterion_implementation,
-        hold_cell_data_on_heap_with_smart_pointer,
-        hold_face_data_on_heap_with_smart_pointer,
-        use_vectorized_PDE,
-        architecture,
-        use_CERK_guess,
-        use_split_CK,
-        predictor_recompute,
-        initialize_patches,
+        plot_grid_properties=False,
     ):
+        # name of the solver
         self._name = name
 
         """
@@ -93,7 +79,7 @@ class ADERDG(object):
         self._order = order
 
         """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
         auxiliary variables in the equation to be computed. Unknowns are variables that change over
         time whereas auxiliary variables can be space-dependent but don't vary over time.
         These can be specified either as simple ints or by a dictionary
@@ -123,7 +109,7 @@ class ADERDG(object):
             self._unknowns = unknowns
         else:
             raise Exception(
-                "Not a valid type for parameter unknowns, needs to be int or dictionary."
+                "not a valid type for parameter unknowns, needs to be int or dictionary"
             )
 
         if type(auxiliary_variables) is dict:
@@ -136,7 +122,7 @@ class ADERDG(object):
             self._auxiliary_variables = auxiliary_variables
         else:
             raise Exception(
-                "Not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
+                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
             )
 
         """
@@ -147,142 +133,72 @@ class ADERDG(object):
         self._max_cell_h = max_cell_h
         if min_cell_h > max_cell_h:
             raise Exception(
-                "min_cell_h ("
+                "Error: min_cell_h ("
                 + str(min_cell_h)
                 + ") is bigger than max_cell_h ("
                 + str(max_cell_h)
                 + ")"
             )
 
-        if polynomials is Polynomials.Gauss_Legendre:
-            self._basis = GaussLegendreBasis(self._order + 1)
-        elif polynomials is Polynomials.Gauss_Lobatto:
-            self._basis = GaussLobattoBasis(self._order + 1)
-        else:
-            raise Exception(
-                "No proper basis chosen: {}, valid options are Gauss_Legendre and Gauss_Lobatto nodes".format(
-                    polynomials
-                )
-            )
+        """
+        for kernel optimizations, these all default to the "unoptimized" version but can be set using the function
+        add_kernel_optimizations(). Some of these are currently unused but are left as placeholders because they
+        exist in the kernelgenerator even though they haven't been connected.
+        """
+        self._is_linear   = False
+        self._polynomials = Polynomials.Gauss_Legendre
+        self._basis       = GaussLegendreBasis(order + 1)
+        self._use_kernel_generator = True
+        self._architecture  = "noarch"
+        self._use_libxsmm     = False
+        self._use_BLIS        = False
+        self._use_Eigen       = False
+        self._use_libxsmm_JIT = False
+        self._use_CERK_Guess      = False
+        self._use_vectorized_PDE  = False
+        self._use_split_CK        = False
+        self._predictor_recompute = False
 
-        self._is_linear = is_linear
-        self._polynomials = polynomials
+        self._initialize_patches = False
 
-        self._use_kernel_generator = use_kernel_generator
-        self._use_libxsmm = use_libxsmm
-        self._use_BLIS = use_BLIS
-        self._use_Eigen = use_Eigen
-        self._use_libxsmm_JIT = use_libxsmm_JIT
+        self._predictor_computation_precisions      = [PrecisionType["double"]]
+        self._corrector_computation_precision       = PrecisionType["double"]
+        self._solution_persistent_storage_precision = PrecisionType["double"]
+        self._precompute_picard_precision = False
+        self._use_half_precision          = False
 
-        self._use_half_precision = False
-        precisions = [
-            solution_persistent_storage_precision,
-            corrector_computation_precision,
-        ]
-        precisions.extend(predictor_computation_precisions)
-        for value in precisions:
-            if value not in PrecisionType.keys():
-                raise AssertionError(
-                    "One of the chosen precisions was not a valid choice. valid choices are: "
-                    + ", ".join(PrecisionType.keys())
-                )
-            if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
-              self._use_half_precision = True
-
-        self._predictor_computation_precisions = []
-        for precision in predictor_computation_precisions:
-            if PrecisionType[precision] not in self._predictor_computation_precisions:
-                self._predictor_computation_precisions.append(PrecisionType[precision])
-        self._corrector_computation_precision = PrecisionType[
-            corrector_computation_precision
-        ]
-        self._solution_persistent_storage_precision = PrecisionType[
-            solution_persistent_storage_precision
-        ]
-
-        if precision_criterion_implementation is not PDETerms.None_Implementation:
-            self._precision_criterion_implementation = (
-                precision_criterion_implementation
-            )
-        if (
-            len(self._predictor_computation_precisions) > 1
-            and self._precision_criterion_implementation is PDETerms.None_Implementation
-        ):
-            self._precision_criterion_implementation = (
-                PDETerms.User_Defined_Implementation
-            )
-
-        # Move data to heap if requested.
-        self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
-        self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
-
-        if use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute:
-            raise Exception(
-                "The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion."
-            )
-
-        self._use_vectorized_PDE = use_vectorized_PDE
-        self._architecture = architecture
-        self._use_CERK_Guess = use_CERK_guess
-        self._use_split_CK = use_split_CK
-        self._predictor_recompute = predictor_recompute
-        self._initialize_patches = initialize_patches
+        #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
+        self._hold_cell_data_on_heap_with_smart_pointer = False
+        self._hold_face_data_on_heap_with_smart_pointer = False
 
         """
-        All of the following are mostly used for limiting, they are set of but some classes that inherit from this
-        may turn them on.
-          Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
-            The old value gets overwritten with the new value at the beginning of the predictor step. 
-            This allows rollback of the solution to a previous state if for some reason the computations
-            yield incorrect results.
-            Used for limiting, where troubled cells are rolled back and recomputed with a more robust
-            scheme and neighbouring cells need their old solution to project values with.
-          PMC: if not none, a user-defined physical admissibility criterion should be checked at the end of
-            the correction step which verifies whether or not the produced solution is physically sensible.
-          number_of_pac_observables: number of variables which the physical admisibility criterion should consider
-          number_of_dmp_observables: if greater than zero, a discrete maximum principle should be checked at the
-            end of the corrector step. This essentially verifies whether shocks have formed.
-          use_troubled_markers: use markers to communicate whether cells are troubled, these are then
-            copied to faces to communicate this status to the neighbours.
+        Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
+          The old value gets overwritten with the new value at the beginning of the predictor step. 
+          This allows rollback of the solution to a previous state if for some reason the computations
+          yield incorrect results.
+          Used for limiting, where troubled cells are rolled back and recomputed with a more robust
+          scheme and neighbouring cells need their old solution to project values with.
         """
         self._hold_previous_time_step           = False
-        self._use_troubled_marker               = False
-        self._use_limiting                      = False
-        self._number_of_dmp_observables         = 0
-        self._physical_admissibility_criterion  = PDETerms.None_Implementation
 
-        """
-        If this is turned to true, the solver will provide the user with a function to compute the exact solution
-        and, using this, it will after the last timestep compute the l1, l2 and linf norms of the total error
-        integrated over the entire domain.
-        """
-        self._compute_and_display_solver_error = False
-        self._error_measurement_implementation = PDETerms.None_Implementation
-
-        # Whether or not to plot information about the grid as well as information about the content of the patches.
+        # whether or not to plot information about the grid as well as information about the content of the patches
         self._plot_grid_properties = plot_grid_properties
         self.plot_description = ""
 
         self.plot_metadata = ""
         self.select_dofs_to_print = None
 
-        # Used by children classes or setters in order to add constants or includes to the corresponding part.
+        # used by children classes or setters in order to add constants or includes to the corresponding part
         self._solver_constants = ""
         self.user_action_set_includes = ""
         self.user_solver_includes = ""
 
         """
-        These specify the time step, they must be set by child classes in order to advance the timestepping.
-        These are the main difference between child classes as they all use the same underlying routines.
+        these specify the time step, they must be set by child classes in order to advance the timestepping
+        these are the main difference between child classes as they all use the same underlying routines
         """
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = None
-
-        self._compute_kernel_call_cpu = "#error Not yet defined"
-        self._compute_kernel_call_stateless_cpu = "#error Not yet defined"
-        self._compute_kernel_call_fused_cpu = "#error Not yet defined"
-        self._compute_kernel_call_fused_gpu = "#error Not yet defined"
-        self._pde_terms_without_state = pde_terms_without_state
 
         """
         These are all the optional and mandatory plugins that can be specified by the user.
@@ -292,22 +208,24 @@ class ADERDG(object):
         User_Defined_Implementation creates empty stubs that the user must then manually fill.
         None_implementation leaves out this optional stub and ensures the kernels don't use this function.
         Empty_implementation does... the same thing as user_defined I think?
-        The final option is to fill these with a string, in which case this string is directly taken as
+        The final option is to fill these with a string, in which case this string is directly taken as 
         c++ code and used as the implementation of this function. The user is trusted to provide code that
         compiles and runs properly, it is never checked.
         """
-        self._flux_implementation = PDETerms.None_Implementation
-        self._ncp_implementation = PDETerms.None_Implementation
-        self._eigenvalues_implementation = PDETerms.None_Implementation
-        self._source_term_implementation = PDETerms.None_Implementation
-        self._point_source_implementation = PDETerms.None_Implementation
-        self._number_of_point_sources = 0
-        self._boundary_conditions_implementation = PDETerms.None_Implementation
-        self._refinement_criterion_implementation = PDETerms.None_Implementation
-        self._initial_conditions_implementation = PDETerms.None_Implementation
+        self._flux_implementation           = PDETerms.None_Implementation
+        self._ncp_implementation            = PDETerms.None_Implementation
+        self._source_term_implementation    = PDETerms.None_Implementation
+        self._point_sources_implementation  = PDETerms.None_Implementation
+        self._eigenvalues_implementation    = PDETerms.None_Implementation
         self._material_param_implementation = PDETerms.None_Implementation
-        self._precision_criterion_implementation = PDETerms.None_Implementation
-        self._riemann_solver_implementation = PDETerms.None_Implementation
+
+        self._refinement_criterion_implementation = PDETerms.None_Implementation
+        self._initial_conditions_implementation   = PDETerms.None_Implementation
+        self._boundary_conditions_implementation  = PDETerms.None_Implementation
+
+        self._precision_criterion_implementation  = PDETerms.None_Implementation
+        self._riemann_solver_implementation       = PDETerms.None_Implementation
+        self._number_of_point_sources = 0
 
         """
         These will be used by children of this class to fill them with the declaration and definition of the
@@ -321,17 +239,18 @@ class ADERDG(object):
         """
         Used by child classes, will contain code to be executed at the start and end respectively of the
         time step. Typically specifies some timestep variable and advances the overall timestamp of the
-        entire solver.
+        entire solver. 
         """
-        self._start_time_step_implementation = ""
+        self._start_time_step_implementation  = ""
         self._finish_time_step_implementation = ""
 
         self._constructor_implementation = ""
+        self._destructor_implementation = ""
 
         """
-        These are ADER-DG CFL factors
+        These are ADER-DG CFL factors, they help determine the maximal stable timestep size
         Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
-        [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz,
+        [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
         ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
         they are necessary to compute stable timestep sizes as dt <= c*dx / (lambda_max*(2N+1)
         with c the CFL for given order, lambda_max the maximal eigenvalue, N the order and dx the minimal mesh distance.
@@ -359,159 +278,79 @@ class ADERDG(object):
         self._cflSafetyFactor = 0.0
 
         """
-        Used if the user wants to add some function to postprocessing, meaning
+        used if the user wants to add some function to postprocessing, meaning
         it should be added after every other computation in ADER-DG is done.
         """
         self._action_set_postprocess_solution = None
 
-        # Create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified.
+        # create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified
         self.create_data_structures()
         self.create_action_sets()
 
-
-    def __str__(self):
-        result = (
-            """
-Name:                   """
-            + self._name
-            + """
-Type:                   """
-            + self.__class__.__module__
-            + """
-Stateless PDE terms:    """
-            + str(self._pde_terms_without_state)
-            + """
-DG order:               """
-            + str(self._order)
-            + """
-Linear:                 """
-            + str(self._is_linear)
-            + """
-Kernel generator:       """
-            + str(self._use_kernel_generator)
-            + """
-Architecture:           """
-            + str(self._architecture)
-            + """
-Unknowns:               """
-            + str(self._unknowns)
-            + """
-Auxiliary variables:    """
-            + str(self._auxiliary_variables)
-            + """
-h_cell_min:             """
-            + str(self._min_cell_h)
-            + """
-h_cell_max:             """
-            + str(self._max_cell_h)
-            + """
-Initial conditions:     """
-            + str(self._initial_conditions_implementation)
-            + """
-Boundary conditions:    """
-            + str(self._boundary_conditions_implementation)
-            + """
-Refinement criterion:   """
-            + str(self._refinement_criterion_implementation)
-            + """
-Eigenvalues:            """
-            + str(self._eigenvalues_implementation)
-            + """
-Flux:                   """
-            + str(self._flux_implementation)
-            + """
-NCP:                    """
-            + str(self._ncp_implementation)
-            + """
-Source term:            """
-            + str(self._source_term_implementation)
-            + """
-Point source:           """
-            + str(self._point_source_implementation)
-            + """
-Number point sources:   """
-            + str(self._number_of_point_sources)
-            + """
-Riemann solver:         """
-            + str(self._riemann_solver_implementation)
-            + """
-Material parameters:    """
-            + str(self._material_param_implementation)
-            + """
-"""
-        )
-        return result
-
-    __repr__ = __str__
-
-
     """
-    Creates all the structures which are attached on the Peano grid either in a cell or on the faces.
-    These are defined as Peano patches which have given sizes to contain persistent data as well as
+    Creates all the structures which are attached on the peano grid either in a cell or on the faces.
+    These are defined as peano patches which have given sizes to contain persistent data as well as 
     conditions for when they should be merged, sent, received, stored, loaded, etc.
     """
+
     @abstractmethod
     def create_data_structures(self):
         self._number_of_face_projections = 1
 
-        # Current time step contains the solution, projections are respectively the projection of the solution
-        # and of the fluxes on the faces as predicted by the space-time predictor.
+        #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes on the faces as predicted by the space-time predictor
         self._current_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
             self._unknowns + self._auxiliary_variables,
             self._unknown_identifier(),
             self._solution_persistent_storage_precision,
         )
-        # self._current_update = peano4.datamodel.Patch(
-        #     (self._order + 1, self._order + 1, self._order + 1),
-        #     self._unknowns + self._auxiliary_variables,
-        #     self._unknown_identifier() + "lduh",
-        #     self._solution_persistent_storage_precision,
-        # )
+        self._previous_time_step = peano4.datamodel.Patch(
+            (self._order + 1, self._order + 1, self._order + 1),
+            self._unknowns + self._auxiliary_variables,
+            self._unknown_identifier() + "_old",
+            self._solution_persistent_storage_precision,
+        )
         self._rhs_estimates_projection = peano4.datamodel.Patch(
-            (2, self._order + 1, self._order + 1),
+            (2, self._order+1, self._order+1),
             self._unknowns + self._auxiliary_variables,
             self._unknown_identifier() + "Estimates",
             self._corrector_computation_precision,
         )
         self._flux_estimates_projection = peano4.datamodel.Patch(
-            (2, self._order + 1, self._order + 1),
+            (2, self._order+1, self._order+1),
             self._unknowns,
             self._unknown_identifier() + "FluxEstimates",
             self._corrector_computation_precision,
         )
 
-        # If user has specified that they want the data on the heap.
+        #if user has specified that they want the data on the heap
         if self._hold_cell_data_on_heap_with_smart_pointer:
-         self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-          # self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayOnHeap(
+          self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
               self._current_time_step,
               self._solution_persistent_storage_precision
           )
-          # self._current_update.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
-          #     self._current_update,
-          #     self._solution_persistent_storage_precision
-          # )
+          self._previous_time_step.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
+              self._previous_time_step,
+              self._solution_persistent_storage_precision
+          )
         if self._hold_face_data_on_heap_with_smart_pointer:
           self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-          # self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._rhs_estimates_projection,
               self._corrector_computation_precision
           )
           self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-          # self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
 
-        # Custom merge implementation takes into account that the faces project such
-        # that the left cell projects to the left half of the face and the right cell projects to the right half.
+
+        # custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
         self._rhs_estimates_projection.generator.merge_method_definition = (
             get_face_overlap_merge_implementation(self._rhs_estimates_projection)
         )
         self._rhs_estimates_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h" 
 """
 
         self._flux_estimates_projection.generator.merge_method_definition = (
@@ -519,7 +358,7 @@ Material parameters:    """
         )
         self._flux_estimates_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h" 
 """
 
         self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
@@ -528,11 +367,11 @@ Material parameters:    """
             self._store_cell_data_default_guard(),
         )
 
-        # self._current_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-        #     self._provide_cell_data_to_compute_kernels_default_guard(),
-        #     self._load_cell_data_default_guard(),
-        #     self._store_cell_data_default_guard(),
-        # )
+        self._previous_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
+        )
 
         self._rhs_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
@@ -540,7 +379,7 @@ Material parameters:    """
             self._store_face_data_default_guard()
         )
 
-        # Get overwritten in subclasses to take into account when to send or receive faces.
+        # get overwritten in subclasses to take into account when to send or receive faces
         self._rhs_estimates_projection.generator.send_condition = "false"
         self._rhs_estimates_projection.generator.receive_and_merge_condition = "false"
 
@@ -557,9 +396,9 @@ Material parameters:    """
 #include "../repositories/SolverRepository.h"
 """
 
-#         self._current_update.generator.includes += """
-# #include "../repositories/SolverRepository.h"
-# """
+        self._previous_time_step.generator.includes += """
+#include "../repositories/SolverRepository.h"
+"""
 
         self._rhs_estimates_projection.generator.includes += """
 #include "../repositories/SolverRepository.h"
@@ -572,39 +411,35 @@ Material parameters:    """
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
 
-
     """
-    Creates the action sets, these are actions tied to the grid that are executed at given points of
-    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures that
+    Creates the action sets, these are actions tied to the grid that are executed at given points of 
+    grid generation, construction or steps of the ader-dg solver. Peano handles grid structures that
     contain data as well as operations that are executed on that data. These are the latter.
     The guard here are the conditions for the execution of the operation, as in they are only executed
     if the guard evaluates to true.
     """
+
     @abstractmethod
     def create_action_sets(self):
-        # Sets initial conditions for the solution.
+        # sets initial conditions for the solution
         self._action_set_initial_conditions = (
             exahype2.solvers.aderdg.actionsets.InitialCondition(
                 self, self._store_cell_data_default_guard(), "true"
             )
         )
-        self._action_set_initial_conditions.descend_invocation_order = 1
-
         self._action_set_initial_conditions_for_grid_construction = (
             exahype2.solvers.aderdg.actionsets.InitialCondition(
                 self, self._store_cell_data_default_guard(), "false"
             )
         )
-        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
 
         self._action_set_handle_boundary = (
-            exahype2.solvers.aderdg.actionsets.HandleDGBoundary(
+            exahype2.solvers.aderdg.actionsets.HandleBoundary(
                 self, self._store_boundary_data_default_guard()
             )
         )
-        self._action_set_handle_boundary.descend_invocation_order = 1
 
-        # Handles adaptive mesh refinement.
+        # handles adaptive mesh refinement
         self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard()
@@ -633,24 +468,20 @@ Material parameters:    """
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
-
         if self._action_set_postprocess_solution == None:
             self._action_set_postprocess_solution = (
                 exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
             )
 
-        # Updates faces and cells (whether at boundary, refined etc.)
+        # updates faces and cells (whether at boundary, refined etc.)
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
-        self._action_set_update_face_label.descend_invocation_order = 0
-        self._action_set_update_cell_label.descend_invocation_order = 0
 
-        # All the actual computation of the solution happens in these.
-        # Predictor extrapolates the solution from time t onto time-nodes, then projects this
-        # extrapolated solution to the faces.
-        # Correction uses the extrapolated face solutions from the predictor and the neighboring
-        # cells to compute a solution at the next timestep.
+        # all the actual computation of the solution happens in these
+        # predictor extrapolates the solution from time t onto time-nodes, then projects this
+        #   extrapolated solution to the faces.
+        # correction uses the extrapolated face solutions from the predictor and the neighboring
+        #   cells to compute a solution at the next timestep
         self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
             self, self._store_cell_data_default_guard(), on_hanging_cells=False)
         self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
@@ -658,36 +489,39 @@ Material parameters:    """
         self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
             self, self._store_cell_data_default_guard())
 
+        self._action_set_update_face_label.descend_invocation_order = 0
+        self._action_set_update_cell_label.descend_invocation_order = 0
+
+        self._action_set_initial_conditions.descend_invocation_order = 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+
+        self._action_set_handle_boundary.descend_invocation_order = 1        
         self._action_set_prediction.descend_invocation_order = 1
         self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
-        self._action_set_correction.descend_invocation_order = (
-            1  # Needs to happen after handle_boundary but this is done on faces anyway
-        )
 
-        self._action_set_AMR.descend_invocation_order = 2
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 2
-        self._action_set_postprocess_solution.descend_invocation_order = 2
+        self._action_set_correction.descend_invocation_order = 2  # needs to happen after handle_boundary
 
+        self._action_set_AMR.descend_invocation_order = 3
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
+        self._action_set_postprocess_solution.descend_invocation_order = 3
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
-            """ ExaHyPE 2 ADER-DG solver of order: """
+            """ ExaHyPE 2 Ader-DG solver of order: """
             + str(self._order)
             + """
-            with a domain size of: """
+    with a domain size of: """
             + str(domain_size)
             + """ and a domain offset of: """
             + str(domain_offset)
         )
 
-
     def get_user_action_set_includes(self):
         return self.user_action_set_includes
 
-
     def get_user_solver_includes(self):
         return self.user_solver_includes
-
 
     def add_user_action_set_includes(self, value):
         """
@@ -696,14 +530,12 @@ Material parameters:    """
         """
         self.user_action_set_includes += value
 
-
     def add_user_solver_includes(self, value):
         """
         Add further includes to this property, if your solver requires some additional
         routines from other header files.
         """
         self.user_solver_includes += value
-
 
     def _store_cell_data_default_guard(self):
         return (
@@ -715,7 +547,6 @@ Material parameters:    """
             + "::SolverState::GridConstruction"
         )
 
-
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         return (
                     "not marker.willBeRefined() "
@@ -726,7 +557,6 @@ Material parameters:    """
                     + "::SolverState::GridConstruction"
                 )
 
-
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
                     "not marker.willBeRefined() "
@@ -736,8 +566,7 @@ Material parameters:    """
                     + self._name
                     + "::SolverState::GridConstruction"
                 )
-
-
+            
     def _load_cell_data_default_guard(self):
         return (
             "not marker.hasBeenRefined() "
@@ -753,7 +582,6 @@ Material parameters:    """
             + "::SolverState::GridInitialisation"
         )
 
-
     def _store_face_data_default_guard(self):
         return (
             "not marker.willBeRefined() "
@@ -763,7 +591,6 @@ Material parameters:    """
             + self._name
             + "::SolverState::GridConstruction"
         )
-
 
     def _load_face_data_default_guard(self):
         return (
@@ -780,7 +607,6 @@ Material parameters:    """
             + "::SolverState::GridInitialisation"
         )
 
-
     def _store_boundary_data_default_guard(self):
         return (
             self._store_face_data_default_guard()
@@ -792,7 +618,6 @@ Material parameters:    """
             + "FaceLabel.getBoundary()"
         )
 
-
     def _clear_face_data_default_guard(self):
         return (
             "not marker.willBeRefined()"
@@ -803,7 +628,6 @@ Material parameters:    """
             + "::SolverState::GridConstruction "
         )
 
-
     def _interpolate_face_data_default_guard(self):
         return (
             "repositories::"
@@ -813,18 +637,14 @@ Material parameters:    """
             + "::SolverState::GridInitialisation"
         )
 
-
     def _restrict_face_data_default_guard(self):
         return "true"
-
 
     def _unknown_identifier(self):
         return self._name + "Q"
 
-
     def get_name_of_global_instance(self):
-        return "InstanceOf" + self._name
-
+        return "instanceOf" + self._name
 
     def _get_default_includes(self):
         return """
@@ -838,10 +658,11 @@ Material parameters:    """
 
 
     """
-    The following functions will be called by the Peano4 project,
-    they tell Peano which of our generated data it should attach
+    The following functions will be called by the peano4 project,
+    they tell peano which of our generated data it should attach
     to each grid element and use.
     """
+
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """
         if verbose:
@@ -854,20 +675,20 @@ Material parameters:    """
         """
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
-        # datamodel.add_cell(self._current_update)
+        if(self._hold_previous_time_step):
+          datamodel.add_cell(self._previous_time_step)
         datamodel.add_face(self._face_label)
         datamodel.add_face(self._rhs_estimates_projection)
         datamodel.add_face(self._flux_estimates_projection)
 
-
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
-        # step.use_cell(self._current_update)
+        if(self._hold_previous_time_step):
+          step.use_cell(self._previous_time_step)
         step.use_face(self._face_label)
         step.use_face(self._rhs_estimates_projection)
         step.use_face(self._flux_estimates_projection)
-
 
     def add_actions_to_init_grid(self, step):
         step.add_action_set(self._action_set_initial_conditions)
@@ -875,7 +696,6 @@ Material parameters:    """
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
-
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
@@ -885,7 +705,6 @@ Material parameters:    """
             step.add_action_set(self._action_set_AMR)
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
-
 
     def add_actions_to_plot_solution(self, step, output_path):
         d = {}
@@ -901,7 +720,7 @@ Material parameters:    """
                 for x in self._basis.quadrature_points():
                     mapping.append((x, y, z))
 
-        # Calls a generator which generates a standard plotter that uses the Tarch library.
+        # calls a generator which generates a standard plotter that uses the tarch library
         step.add_action_set(
             peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
                 filename=output_path + "solution-" + self._name,
@@ -917,7 +736,7 @@ Material parameters:    """
 #include "../repositories/SolverRepository.h"
 """,
                 precision="PlotterPrecision",
-                time_stamp_evaluation="repositories::getMinTimeStamp()",
+                time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
                 plot_cell_data=False,
                 dataType=self._solution_persistent_storage_precision,
             )
@@ -939,8 +758,7 @@ Material parameters:    """
             )
         pass
 
-
-    # These actions are executed during each time step.
+    # these actions are executed during each time step
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -948,27 +766,26 @@ Material parameters:    """
             self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
         )
 
-        step.add_action_set(self._action_set_handle_boundary)
-
         step.add_action_set(self._action_set_prediction)
         step.add_action_set(self._action_set_prediction_on_hanging_cells)
+        step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_correction)
 
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
-
     def set_plot_description(self, description):
         self.plot_description = description
 
     """
-    This is only called if the generated kernels are used, it calls the kernel generated to produce all of the files that will be
-    required for the requested ADER-DG implementation and then adds them to the Makefile.
-    """
+  This is only called if the generated kernels are used, it calls the kernelgenerator to produce all of the files that will be
+  required for the requested aderdg implementation and then adds them to the makefile.
+  """
+
     def generate_kernels(self, namespace, output, dimensions):
         if (not self._is_linear) and (
             self._material_param_implementation != PDETerms.None_Implementation
-            or self._point_source_implementation != PDETerms.None_Implementation
+            or self._point_sources_implementation != PDETerms.None_Implementation
         ):
             raise Exception(
                 "Material parameters and point sources are currently only available for linear generated kernels."
@@ -1008,7 +825,7 @@ Material parameters:    """
             useSourceVect=False,
             usePointSources=(
                 self._number_of_point_sources
-                if self._point_source_implementation != PDETerms.None_Implementation
+                if self._point_sources_implementation != PDETerms.None_Implementation
                 else False
             ),
             useMaterialParam=(
@@ -1033,11 +850,12 @@ Material parameters:    """
             predictorStoragePrecision=self._corrector_computation_precision,
             correctorComputePrecision=self._corrector_computation_precision,
             correctorStoragePrecision=self._solution_persistent_storage_precision,
+            precomputePicardPrecision=self._precompute_picard_precision
         )
 
-        """"
-        This is a very ugly fix that should be replaced asap.
-        Essentially, the libxsmm kernel generator generates faulty code if
+        """" 
+        this is a very ugly fix that should be replaced asap ;)
+        essentially, the libxsmm kernel generator generates faulty code if
         'noarch' is specified. This code works fine except that it contains a
         #ifdef which is missing its corresponding #endif.
         This code just inserts that missing endif
@@ -1075,7 +893,7 @@ Material parameters:    """
             + "/fusedSpaceTimePredictorVolumeIntegral.cpp",
             generated=True,
         )
-        if self._point_source_implementation != PDETerms.None_Implementation:
+        if self._point_sources_implementation != PDETerms.None_Implementation:
             output.makefile.add_cpp_file(
                 "generated/kernels/aderdg/"
                 + is_linear
@@ -1109,9 +927,8 @@ Material parameters:    """
                 generated=True,
             )
 
-
     """
-    This tells Peano to add the solver files to the project. It generates any files that are not
+    This tells peano to add the solver files to the project. It generates any files that are not
     specifically cell or face data or grid actions such as the actionsets.
     Currently it generates solver implementation and header files as well as abstract solver
     implementation and header files.
@@ -1119,10 +936,10 @@ Material parameters:    """
     to their variable (e.g., specified their unknowns or aux. variables through a dict) it generates
     a VariableShortcuts file which is then connected to the solver so that users can specify their
     variables through name.
-    Finally, if the kernel generator option is chosen this calls generate_kernels() which then generates
-    optimised ADER-DG kernels and adds these to the Makefile.
+    Finally, if the kernelgenerator option is chosen this calls generate_kernels() which then generates
+    optimized aderdg kernels and adds these to the makefile.
     """
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
         """
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
@@ -1138,6 +955,9 @@ Material parameters:    """
         else:
             templatefile_prefix += self._solver_template_file_class_name
 
+        if(subdirectory):
+            subdirectory += "/"
+
         abstractHeaderDictionary = {}
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
@@ -1151,7 +971,7 @@ Material parameters:    """
                 templatefile_prefix + "Abstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
-                ".",
+                subdirectory + ".",
                 abstractHeaderDictionary,
                 True,
                 True,
@@ -1163,7 +983,7 @@ Material parameters:    """
                 templatefile_prefix + ".template.cpp",
                 self._name,
                 namespace,
-                ".",
+                subdirectory + ".",
                 implementationDictionary,
                 False,
                 True,
@@ -1172,10 +992,10 @@ Material parameters:    """
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
-        output.makefile.add_h_file(self._name + ".h", generated=True)
-        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
 
         if self._use_var_shortcut:
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
@@ -1184,121 +1004,81 @@ Material parameters:    """
                 + "../VariableShortcuts.template.h",
                 "VariableShortcuts",
                 namespace,
-                ".",
+                subdirectory + ".",
                 implementationDictionary,
                 True,
                 True,
             )
             output.add(generated_shortcut_file)
-            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
+            output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
 
         if self._use_kernel_generator:
             self.generate_kernels(namespace, output, dimensions)
-
+        elif (
+            self._material_param_implementation != PDETerms.None_Implementation
+            or self._point_sources_implementation != PDETerms.None_Implementation
+        ):
+            Exception(
+                "Material parameters and point sources are only available with linear generated kernels."
+            )
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
-
     def add_solver_constants(self, datastring):
         self._solver_constants += datastring
 
-
     @property
-    def patch_size(self):
-        return self._patch_size
-
+    def order(self):
+        return (self._order)
 
     @property
     def unknowns(self):
         return self._unknowns
 
-
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
 
-
-    @patch_size.setter
-    def patch_size(self, value):
-        self._patch_size = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-
-    @patch_size.setter
-    def unknowns(self, value):
-        self._unknowns = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-
-    @patch_size.setter
-    def auxiliary_variables(self, value):
-        self._auxiliary_variables = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
-
 
     """
     Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
     information from the solver or which was specified by the user.
     """
     def _init_dictionary_with_default_parameters(self, d):
-        d["ORDER"] = self._order
-        d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
-        d["SOLVER_NAME"] = self._name
+        d["ORDER"]              = self._order
+        d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
+        d["SOLVER_NAME"]        = self._name
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
-        d["NUMBER_OF_UNKNOWNS"] = self._unknowns
-        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
+        d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
+        d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
 
-        d["CFL_SAFETY_FACTOR"] = self._cflSafetyFactor
-        d["CFL_ADER"] = self._cflAder[self._order]  # /(2*(self._order+1)+1)
+        d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
+        d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
 
-        d["NUMBER_OF_DOFS_PER_CELL_2D"] = (self._order + 1) * (self._order + 1)
-        d["NUMBER_OF_DOFS_PER_CELL_3D"] = (
-            (self._order + 1) * (self._order + 1) * (self._order + 1)
-        )
+        d["USE_KERNEL_GENERATOR"] = self._use_kernel_generator
+        d["USE_HALF_PRECISION"]   = self._use_half_precision
+        d["IS_LINEAR"] = self._is_linear
+        d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
 
-        d[
-            "USE_KERNEL_GENERATOR"
-        ] = (
-            self._use_kernel_generator
-        )  # ("True" if self._use_kernel_generator else "False")
-        d["USE_GAUSS_LOBATTO"] = (
-            "true" if self._polynomials is Polynomials.Gauss_Lobatto else "false"
-        )
-        d["POLYNOMIAL_TYPE"] = (
-            "lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre"
-        )
+        d["USE_GAUSS_LOBATTO"] = ( "true" if self._polynomials is Polynomials.Gauss_Lobatto else "false" )
+        d["POLYNOMIAL_TYPE"]   = ( "lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre" )
 
         d["SOLUTION_STORAGE_PRECISION"] = self._solution_persistent_storage_precision
 
         d["PREDICTOR_COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
-        d["CORRECTOR_COMPUTATION_PRECISION"] = self._corrector_computation_precision
+        d["CORRECTOR_COMPUTATION_PRECISION"]  = self._corrector_computation_precision
 
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
+        if self._precompute_picard_precision!=False and self._precompute_picard_precision not in d["COMPUTATION_PRECISIONS"]:
+            d["COMPUTATION_PRECISIONS"].append(self._precompute_picard_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
-
-        d["USE_HALF_PRECISION"]   = self._use_half_precision
-
-        d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
-        d["ASSERTION_WITH_2_ARGUMENTS"] = "nonCriticalAssertion2"
-        d["ASSERTION_WITH_3_ARGUMENTS"] = "nonCriticalAssertion3"
-        d["ASSERTION_WITH_4_ARGUMENTS"] = "nonCriticalAssertion4"
-        d["ASSERTION_WITH_5_ARGUMENTS"] = "nonCriticalAssertion5"
-        d["ASSERTION_WITH_6_ARGUMENTS"] = "nonCriticalAssertion6"
-
-        d["IS_LINEAR"] = self._is_linear
-        d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
 
         if self._min_cell_h > self._max_cell_h:
             raise Exception("min/max h are inconsistent")
@@ -1306,24 +1086,13 @@ Material parameters:    """
         d["MIN_CELL_H"] = self._min_cell_h
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
-        d["SOLVER_INCLUDES"] = self.get_user_solver_includes()
+        d["SOLVER_INCLUDES"]  = self.get_user_solver_includes()
 
-        d[
-            "BOUNDARY_CONDITIONS_IMPLEMENTATION"
-        ] = self._boundary_conditions_implementation
-        d[
-            "REFINEMENT_CRITERION_IMPLEMENTATION"
-        ] = self._refinement_criterion_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
-        d[
-            "ADAPTIVE_PRECISION_IMPLEMENTATION"
-        ] = self._precision_criterion_implementation
-        d[
-            "ERROR_MEASUREMENT_IMPLEMENTATION"
-        ] = self._error_measurement_implementation
+        d["ADAPTIVE_PRECISION_IMPLEMENTATION"] = self._precision_criterion_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
-
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
@@ -1348,59 +1117,48 @@ Material parameters:    """
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
+        d["DESTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
+            self._destructor_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
         d["COMPUTE_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_time_step_size, undefined=jinja2.DebugUndefined
         ).render(**d)
         d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
         ).render(**d)
-        d["ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[
-            self._architecture
-        ]
+        d["ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[self._architecture]
 
-        if self._compute_and_display_solver_error:
-            d["ABSTRACT_SOLVER_USER_DECLARATIONS"] += create_abstract_solver_user_declarations_for_error_measurement()
-            d["ABSTRACT_SOLVER_USER_DEFINITIONS"]  += jinja2.Template(
-                create_abstract_solver_user_definitions_for_error_measurement(), undefined=jinja2.DebugUndefined
-            ).render(**d)
-            d["FINISH_TIME_STEP_IMPLEMENTATION"] += jinja2.Template(
-                create_finish_time_step_implementation_for_error_measurement(), undefined=jinja2.DebugUndefined
-            ).render(**d)
+        d["USE_FLUX"]                 = self._flux_implementation
+        d["USE_NCP"]                  = self._ncp_implementation
+        d["USE_SOURCE"]               = self._source_term_implementation
+        d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation
+        d["USE_POINT_SOURCE"]         = self._point_sources_implementation
+        d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
 
-        d["USE_FLUX"] = self._flux_implementation
-        d["USE_NCP"] = self._ncp_implementation
-        d["USE_SOURCE"] = self._source_term_implementation
-        d["USE_MATERIAL_PARAMETERS"] = self._material_param_implementation
-        d["USE_POINT_SOURCE"] = self._point_source_implementation
-        d["NUMBER_OF_POINT_SOURCES"] = self._number_of_point_sources
-
-        d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
-        d["VARIABLE_NAMES"] = self._variable_names
-        d["VARIABLE_POSITIONS"] = self._variable_pos
+        d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
+        d["VARIABLE_NAMES"]         = self._variable_names
+        d["VARIABLE_POSITIONS"]     = self._variable_pos
 
         self._basis.init_dictionary_with_default_parameters(d)
 
-
     def set_implementation(
         self,
-        flux,
-        ncp,
-        eigenvalues,
-        boundary_conditions,
-        refinement_criterion,
-        initial_conditions,
-        source_term,
-        material_parameters,
-        riemann_solver,
-        number_of_point_sources,
-        point_source,
-        additional_action_set_includes,
-        additional_user_includes,
+        flux=None,
+        ncp=None,
+        eigenvalues=None,
+        boundary_conditions=None,
+        refinement_criterion=None,
+        initial_conditions=None,
+        source_term=None,
+        material_parameters=None,
+        point_source=0,
+        additional_action_set_includes="",
+        additional_user_includes="",
     ):
         """
         If you pass in User_Defined, then the generator will create C++ stubs
         that you have to befill manually. If you pass in None_Implementation, it
-        will create nop, i.e., no implementation or defaults. Any other string
+        will create nop, i.e. no implementation or defaults. Any other string
         is copied 1:1 into the implementation. If you pass in None, then the
         set value so far won't be overwritten.
         """
@@ -1421,17 +1179,15 @@ Material parameters:    """
             self._source_term_implementation = source_term
         if material_parameters is not None:
             self._material_param_implementation = material_parameters
-        if riemann_solver is not None:
-            self._riemann_solver_implementation = riemann_solver
 
-        if type(number_of_point_sources) != int:
+        if type(point_source) != int:
             raise Exception(
-                "number_of_point_sources needs to be an integer, this determines the number of point sources that will be used."
+                "point_source needs to be an integer, this determines the number of point sources that will be used."
             )
 
-        if number_of_point_sources > 0:
-            self._point_source_implementation = point_source
-            self._number_of_point_sources = number_of_point_sources
+        if point_source > 0:
+            self._point_sources_implementation = PDETerms.User_Defined_Implementation
+            self._number_of_point_sources = point_source
 
         self.user_action_set_includes += additional_action_set_includes
         self.user_solver_includes += additional_user_includes
@@ -1439,15 +1195,116 @@ Material parameters:    """
         self.create_data_structures()
         self.create_action_sets()
 
+    """
+    Various options that can be specified in order to optimize the generated code for different options.
+    """
 
-    def add_error_measurement(
+    def add_kernel_optimizations(
         self,
-        error_measurement_implementation=PDETerms.User_Defined_Implementation
+        is_linear=False,
+        polynomials=Polynomials.Gauss_Legendre,
+        use_kernel_generator=True,
+        use_libxsmm=False,
+        use_BLIS=False,
+        use_Eigen=False,
+        use_libxsmm_JIT=False,
+        predictor_computation_precisions=["double"],
+        corrector_computation_precision="double",
+        solution_persistent_storage_precision="double",
+        precompute_picard_precision=False,
+        precision_criterion_implementation=PDETerms.None_Implementation,
+        riemann_solver_implementation=PDETerms.None_Implementation,
+        hold_cell_data_on_heap_with_smart_pointer = False,
+        hold_face_data_on_heap_with_smart_pointer = False,
+        use_vectorized_PDE=False,
+        architecture="noarch",
+        use_CERK_guess=False,
+        use_split_CK=False,
+        predictor_recompute=False,
+        initialize_patches=False
     ):
-        self._compute_and_display_solver_error = True
-        self._error_measurement_implementation = error_measurement_implementation
-        self._action_set_postprocess_solution = (
-            exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
-        )
-        self._action_set_postprocess_solution._compute_kernel += add_final_action_for_error_measurement()
-        self._action_set_postprocess_solution.descend_invocation_order = 3
+        if polynomials is Polynomials.Gauss_Legendre:
+            self._basis = GaussLegendreBasis(self._order + 1)
+        elif polynomials is Polynomials.Gauss_Lobatto:
+            self._basis = GaussLobattoBasis(self._order + 1)
+        else:
+            raise Exception(
+                "No proper basis chosen: {}, valid options are Gauss_Legendre and Gauss_Lobatto nodes".format(
+                    polynomials
+                )
+            )
+
+        self._is_linear = is_linear
+        self._polynomials = polynomials
+
+        self._use_kernel_generator = use_kernel_generator
+        self._use_libxsmm = use_libxsmm
+        self._use_BLIS = use_BLIS
+        self._use_Eigen = use_Eigen
+        self._use_libxsmm_JIT = use_libxsmm_JIT
+
+        precisions = [
+            solution_persistent_storage_precision,
+            corrector_computation_precision,
+        ]
+        precisions.extend(predictor_computation_precisions)
+        if precompute_picard_precision!=False:
+            precisions.append(precompute_picard_precision)
+        for value in precisions:
+            if value not in PrecisionType.keys():
+                raise AssertionError(
+                    "one of the chosen precisions was not a valid choice. valid choices are: "
+                    + ", ".join(PrecisionType.keys())
+                )
+            if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
+              self._use_half_precision = True
+
+        self._predictor_computation_precisions = []
+        for precision in predictor_computation_precisions:
+            if PrecisionType[precision] not in self._predictor_computation_precisions:
+                self._predictor_computation_precisions.append(PrecisionType[precision])
+        self._corrector_computation_precision = PrecisionType[
+            corrector_computation_precision
+        ]
+        self._solution_persistent_storage_precision = PrecisionType[
+            solution_persistent_storage_precision
+        ]
+
+        self._precompute_picard_precision = PrecisionType[
+            precompute_picard_precision
+        ] if precompute_picard_precision != False else False
+
+        if precision_criterion_implementation is not PDETerms.None_Implementation:
+            self._precision_criterion_implementation = (
+                precision_criterion_implementation
+            )
+        if (
+            len(self._predictor_computation_precisions) > 1
+            and self._precision_criterion_implementation is PDETerms.None_Implementation
+        ):
+            self._precision_criterion_implementation = (
+                PDETerms.User_Defined_Implementation
+            )
+
+        if riemann_solver_implementation is not PDETerms.None_Implementation:
+            self._riemann_solver_implementation = riemann_solver_implementation
+
+        #move data to heap if requested
+        self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+        self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+
+        if use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute:
+            raise Exception(
+                "The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion"
+            )
+
+        self._use_vectorized_PDE = use_vectorized_PDE
+        self._architecture = architecture
+        self._use_CERK_Guess = use_CERK_guess
+        self._use_split_CK = use_split_CK
+        self._predictor_recompute = predictor_recompute
+
+        self._initialize_patches = initialize_patches
+
+        self.create_data_structures()
+        self.create_action_sets()

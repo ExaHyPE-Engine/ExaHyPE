@@ -95,8 +95,8 @@ std::string tarch::logging::ChromeTraceFileLogger::constructMessageString(
   std::string result;
 
   result += addSeparators(std::to_string(timestampMS));
-  result += addSeparators("Rank:" + std::to_string(rank) );
-  result += addSeparators("Core:" + std::to_string(threadId) );
+  result += addSeparators("rank:" + std::to_string(rank) );
+  result += addSeparators("core:" + std::to_string(threadId) );
   result += addSeparators(messageType);
   result += message;
   result += "\n";

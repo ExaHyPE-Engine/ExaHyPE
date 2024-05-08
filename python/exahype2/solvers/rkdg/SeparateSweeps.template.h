@@ -29,8 +29,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     /**
      * Refinement criterion
      *
-     * ExaHyPE 2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e., if your
+     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
+     * All (dynamic) AMR is constrained by these values, i.e. if your
      * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
      * automatically refine. If you try to refine further than the
      * minimum mesh size, ExaHyPE 2 will ignore any refinement.

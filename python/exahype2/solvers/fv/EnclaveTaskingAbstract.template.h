@@ -21,6 +21,8 @@
 #include "VariableShortcuts.h"
 {% endif %}
 
+{{SOLVER_INCLUDES}}
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -258,8 +260,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     {% endif %}
     virtual bool patchCanUseStatelessPDETerms(
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
+      const tarch::la::Vector<Dimensions, double>& patchCentre,
+      const tarch::la::Vector<Dimensions, double>& patchH,
       double                                       t,
       double                                       dt
     ) const;

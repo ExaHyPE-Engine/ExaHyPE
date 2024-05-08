@@ -18,9 +18,7 @@
 
 #include <algorithm>
 
-{{SOLVER_INCLUDES}}
-
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
+tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -385,8 +383,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt
 ) const {

@@ -134,22 +134,7 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
     globalNonblockingTasks.tasks.pop_front();
   }
 
-  bool fuseTasks = myTask != nullptr and myTask->canFuse();
-
-  constexpr bool AllThreadsAreAllowedToOffload = true;
-  constexpr bool ThreadsAreAllowedToOffloadConcurrently = true;
-  static_assert(AllThreadsAreAllowedToOffload or not ThreadsAreAllowedToOffloadConcurrently);
-  fuseTasks &= AllThreadsAreAllowedToOffload or (omp_get_thread_num() == 0);
-
-  static tarch::multicore::BooleanSemaphore fusionSemaphore;
-  static int numberOfFusingThreads = 0;
-  {
-    tarch::multicore::Lock fusionLock(fusionSemaphore);
-    fuseTasks &= ThreadsAreAllowedToOffloadConcurrently or (numberOfFusingThreads == 0);
-    numberOfFusingThreads++;
-  }
-
-  if (fuseTasks) {
+  if (myTask != nullptr and myTask->canFuse()) {
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType() and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse()
@@ -166,11 +151,6 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
   } else if (myTask != nullptr and not myTask->canFuse()) {
     lock.free();
     tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
-  }
-
-  {
-    tarch::multicore::Lock fusionLock(fusionSemaphore);
-    numberOfFusingThreads--;
   }
 
   return myTask == nullptr ? 0 : tasksOfSameType.size() + 1;

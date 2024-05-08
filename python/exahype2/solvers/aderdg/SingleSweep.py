@@ -16,28 +16,7 @@ class SingleSweep(ADERDG):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
-        plot_grid_properties,
-        pde_terms_without_state,
-        # Kernel optimisations
-        is_linear,
-        polynomials,
-        use_kernel_generator,
-        use_libxsmm,
-        use_BLIS,
-        use_Eigen,
-        use_libxsmm_JIT,
-        predictor_computation_precisions,
-        corrector_computation_precision,
-        solution_persistent_storage_precision,
-        precision_criterion_implementation,
-        hold_cell_data_on_heap_with_smart_pointer,
-        hold_face_data_on_heap_with_smart_pointer,
-        use_vectorized_PDE,
-        architecture,
-        use_CERK_guess,
-        use_split_CK,
-        predictor_recompute,
-        initialize_patches,
+        plot_grid_properties=False,
     ):
         super(SingleSweep, self).__init__(
             name,
@@ -47,33 +26,12 @@ class SingleSweep(ADERDG):
             min_cell_h,
             max_cell_h,
             plot_grid_properties,
-            pde_terms_without_state,
-            is_linear,
-            polynomials,
-            use_kernel_generator,
-            use_libxsmm,
-            use_BLIS,
-            use_Eigen,
-            use_libxsmm_JIT,
-            predictor_computation_precisions,
-            corrector_computation_precision,
-            solution_persistent_storage_precision,
-            precision_criterion_implementation,
-            hold_cell_data_on_heap_with_smart_pointer,
-            hold_face_data_on_heap_with_smart_pointer,
-            use_vectorized_PDE,
-            architecture,
-            use_CERK_guess,
-            use_split_CK,
-            predictor_recompute,
-            initialize_patches,
         )
 
         self._solver_template_file_class_name = "SingleSweep"
 
         self.create_action_sets()
         self.create_data_structures()
-
 
     def create_data_structures(self):
         super(SingleSweep, self).create_data_structures()
@@ -102,7 +60,7 @@ class SingleSweep(ADERDG):
             + ")"
         )
 
-        # Face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step.
+        # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step
         self._rhs_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
@@ -126,6 +84,7 @@ class SingleSweep(ADERDG):
             + ".getSolverState()=="
             + self._name + "::SolverState::Correction"
         )
+
 
         self._flux_estimates_projection.generator.send_condition = (
             "repositories::"
@@ -154,9 +113,6 @@ class SingleSweep(ADERDG):
 
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
-       #self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
-       #self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
-
 
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
@@ -168,12 +124,18 @@ class SingleSweep(ADERDG):
                 self._name
             )
         )
+        self._action_set_prediction_on_hanging_cells.guard = (
+            self._store_cell_data_default_guard() +
+            " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
+                self.get_name_of_global_instance(),
+                self._name
+            )
+        )
 
         self._action_set_correction.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
             self.get_name_of_global_instance(), self._name
         )
-
-        if self._use_kernel_generator:
+        if(self._use_kernel_generator):
             self._action_set_correction.riemann_guard = (
                 self._store_cell_data_default_guard()
                 + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
@@ -183,13 +145,6 @@ class SingleSweep(ADERDG):
                 + self._name
                 + "FaceLabel.getAboveHanging()"
             )
-            self._action_set_prediction_on_hanging_cells.guard = (
-              self._store_cell_data_default_guard() +
-              " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
-                  self.get_name_of_global_instance(),
-                  self._name
-            )
-        )
         else:
             self._action_set_correction.riemann_guard = (
                 self._store_cell_data_default_guard()
@@ -245,7 +200,7 @@ class SingleSweep(ADERDG):
     def set_preprocess_reconstructed_patch_kernel(self, kernel):
         """
         Most subclasses will redefine/overwrite this operation as they have
-        to incorporate the kernel into their generated stuff.
+        to incorporate the kernel into their generated stuff
         """
         self._preprocess_reconstructed_patch += kernel
         self.create_data_structures()

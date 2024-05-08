@@ -11,8 +11,6 @@
 
 #include <algorithm>
 
-{{SOLVER_INCLUDES}}
-
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
@@ -119,8 +117,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
@@ -136,9 +134,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, int>&    index,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
@@ -150,8 +147,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] int                                          normal
 ) {
@@ -358,9 +355,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt
 ) const {

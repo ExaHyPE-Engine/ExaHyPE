@@ -86,6 +86,8 @@ NVCCFLAGS += {{NVCC_FLAGS_DEBUG}}
 
 FCFLAGS+={{FCFLAGS}}
 
+GPU_OBJS={{GPUOBJS}}
+
 H_HEADERS={% for item in H_HEADERS -%} {{item+" "}} {%- endfor %}
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
@@ -134,8 +136,8 @@ all: solver
 # per step if they are not required anymore. That is: left libraries can
 # depend objects right but not the other way round.
 #
-solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) $(CU_OBJS)
-	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
+solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) $(GPU_OBJS) $(CU_OBJS)
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
 
 {% if USING_CMAKE %}
 clean:

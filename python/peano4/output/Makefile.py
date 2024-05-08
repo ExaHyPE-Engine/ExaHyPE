@@ -36,6 +36,7 @@ CXXFLAGS        = {{CXXFLAGS}}
 FC              = {{FC}}
 FCFLAGS         = {{FCFLAGS}}
 LDFLAGS         = {{LDFLAGS}}
+GPUOBJS         = {{GPUOBJS}}
 LIBS            = {{LIBS}}
 DIM             = {{DIM}}
 CONFIGUREPATH   = {{CONFIGUREPATH}}
@@ -143,6 +144,7 @@ the SISC paper
         self.d["FC"] = ""
         self.d["FCFLAGS"] = ""
         self.d["LDFLAGS"] = ""
+        self.d["GPUOBJS"] = ""
         self.d["LIBS"] = ""
         self.d["DIM"] = "2"
         self.d["CONFIGUREPATH"] = "."
@@ -201,6 +203,15 @@ the SISC paper
         self.d["FCFLAGS"] += " -I" + path
         self.d["GENERATED_INCLUDE_DIRS"].add(path)
 
+    def add_gpu_object(self, object_path):
+        """
+        This is a temporary fix for GPU offloading with OpenMP and LLVM and will
+        be required ntil linking to static libraries is supported. We need to
+        collect all object files that contain offload instructions and later
+        add them to the linker command. NOTE: the order matters i.e. the
+        objects must be left of the static libs later.
+        """
+        self.d["GPUOBJS"] += " {}".format(object_path)
 
     def add_library(self, library_name, library_path=""):
         """

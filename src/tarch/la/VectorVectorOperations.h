@@ -37,7 +37,7 @@ namespace tarch {
      * A temporary vector is created and copied to store return back the result.
      */
     template <int Size, typename Scalar>
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Multiplies every component of the vectors with each other and writes the

@@ -33,7 +33,7 @@ def create_abstract_solver_declarations(
 
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Depending on the implementation, this variant might be slow as it
+     * Depending on the implementation, this variant might be slow as it 
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */

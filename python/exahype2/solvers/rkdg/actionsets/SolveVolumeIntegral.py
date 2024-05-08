@@ -66,11 +66,16 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         QOut
       );
 
-      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
-    }
-    else {
-      assertion( marker.willBeEnclaveCell() );
-      assertion( not marker.willBeRefined() );
+      tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask::applyKernelToCell(
+        marker,
+        timeStamp,
+        timeStepSize,
+        QIn,
+        QOut
+      );
+    } else {
+      assertion(marker.willBeEnclaveCell());
+      assertion(not marker.willBeRefined());
       auto newEnclaveTask = new tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask(
         marker,
         timeStamp,
@@ -78,7 +83,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         QIn
       );
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
-      tarch::multicore::spawnTask( newEnclaveTask );
+      tarch::multicore::spawnTask(newEnclaveTask);
     }
     {% else %}
     #if Dimensions==2

@@ -42,17 +42,12 @@ namespace exahype2::enumerator {
    *   active information, i.e., data you write to.
    */
   struct AoSLexicographicEnumerator {
-    GPUCallableInlineMethod AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    constexpr GPUCallableInlineMethod AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
       _unknowns(unknowns),
-      _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables),
-      _unknownsPlusAuxiliaryVariables(unknowns + numberOfAuxiliaryVariables),
-      _numberOfDofsPerAxisPlusTwoTimesHalo(numberOfDoFsPerAxisInCell + 2 * haloSize),
-      _numberOfDofsPerAxisPlusTwoTimesHaloSquared(_numberOfDofsPerAxisPlusTwoTimesHalo * _numberOfDofsPerAxisPlusTwoTimesHalo),
-      _numberOfDofsPerAxisPlusTwoTimesHaloTimesUnknownsPlusAuxiliaryVariables(_numberOfDofsPerAxisPlusTwoTimesHalo * _unknownsPlusAuxiliaryVariables),
-      _numberOfDofsPerAxisPlusTwoTimesHaloSquaredTimesUnknownsPlusAuxiliaryVariables(_numberOfDofsPerAxisPlusTwoTimesHaloSquared * _unknownsPlusAuxiliaryVariables) {}
+      _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
     /**
      * Access an index
@@ -63,18 +58,10 @@ namespace exahype2::enumerator {
      */
     GPUCallableInlineMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const InlineMethod {
       if constexpr (Dimensions == 2) {
-        int result = (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_unknowns + _numberOfAuxiliaryVariables)
                + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)
                + (volumeIndex(0) + _haloSize) * (_unknowns + _numberOfAuxiliaryVariables) + unknown;
-        /*int newResult = (cellIndex % _numberOfCells)
-                * _numberOfDofsPerAxisPlusTwoTimesHaloSquaredTimesUnknownsPlusAuxiliaryVariables
-                + (volumeIndex(1) + _haloSize) * _numberOfDofsPerAxisPlusTwoTimesHaloTimesUnknownsPlusAuxiliaryVariables
-                + (volumeIndex(0) + _haloSize) * _unknownsPlusAuxiliaryVariables + unknown;
-            if (result != newResult) {
-              printf("Wrong result\n");
-            }*/
-            return result;
       } else {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)
@@ -111,10 +98,5 @@ namespace exahype2::enumerator {
     const int _haloSize;
     const int _unknowns;
     const int _numberOfAuxiliaryVariables;
-    const int _unknownsPlusAuxiliaryVariables;
-    const int _numberOfDofsPerAxisPlusTwoTimesHalo;
-    const int _numberOfDofsPerAxisPlusTwoTimesHaloSquared;
-    const int _numberOfDofsPerAxisPlusTwoTimesHaloTimesUnknownsPlusAuxiliaryVariables;
-    const int _numberOfDofsPerAxisPlusTwoTimesHaloSquaredTimesUnknownsPlusAuxiliaryVariables;
   };
 } // namespace exahype2::enumerator

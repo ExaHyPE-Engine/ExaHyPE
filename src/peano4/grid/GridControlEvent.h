@@ -6,14 +6,13 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#pragma once
+#pragma once 
 
 #include <string>
 
-
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 #include "tarch/la/Vector.h"
@@ -25,7 +24,6 @@
 
 
 
-
 namespace peano4{
 namespace grid{
 
@@ -33,11 +31,8 @@ namespace grid{
 }
 }
 
-
-
 struct peano4::grid::GridControlEvent {
   public:
-
     enum class RefinementControl: int {
       Refine=0, Erase=1
     };
@@ -45,10 +40,8 @@ struct peano4::grid::GridControlEvent {
     GridControlEvent() {}
     GridControlEvent(RefinementControl  __refinementControl, tarch::la::Vector<Dimensions,double>  __offset, tarch::la::Vector<Dimensions,double>  __width, tarch::la::Vector<Dimensions,double>  __h);
 
-
     peano4::grid::GridControlEvent::RefinementControl   getRefinementControl() const;
     void   setRefinementControl(RefinementControl value);
-    const static std::string   castRefinementControlToString(RefinementControl value);
     tarch::la::Vector<Dimensions,double>   getOffset() const;
     void   setOffset(const tarch::la::Vector<Dimensions,double>& value);
     double   getOffset(int index) const;
@@ -65,6 +58,8 @@ struct peano4::grid::GridControlEvent {
 
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -84,21 +79,7 @@ struct peano4::grid::GridControlEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeForkDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeGlobalCommunciationDatatype();
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -155,16 +136,17 @@ struct peano4::grid::GridControlEvent {
     std::string toString() const;
 
   private:
+    PragmaPush
+    SilenceUnknownAttribute
     [[clang::pack]]  RefinementControl   _refinementControl;
     tarch::la::Vector<Dimensions,double>   _offset;
     tarch::la::Vector<Dimensions,double>   _width;
     tarch::la::Vector<Dimensions,double>   _h;
-
-
+    PragmaPop
 
     #ifdef Parallel
     private:
-      int                  _senderDestinationRank;
+      int _senderDestinationRank;
 
       #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
@@ -180,7 +162,3 @@ struct peano4::grid::GridControlEvent {
 
 
 };
-
-  
-
-

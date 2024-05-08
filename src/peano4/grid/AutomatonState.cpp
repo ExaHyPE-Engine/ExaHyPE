@@ -1,22 +1,16 @@
 #include "AutomatonState.h"
 
-
-
 #include <sstream>
 #include <algorithm>
 
-
-
 peano4::grid::AutomatonState::AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber){
-setLevel( __level);
-setX( __x);
-setH( __h);
-setInverted( __inverted);
-setEvenFlags( __evenFlags);
-setAccessNumber( __accessNumber);
+  setLevel( __level);
+  setX( __x);
+  setH( __h);
+  setInverted( __inverted);
+  setEvenFlags( __evenFlags);
+  setAccessNumber( __accessNumber);
 }
-
-
 
 peano4::grid::AutomatonState::AutomatonState( const AutomatonState& copy ) {
   setLevel( copy.getLevel() );
@@ -27,9 +21,20 @@ peano4::grid::AutomatonState::AutomatonState( const AutomatonState& copy ) {
   setAccessNumber( copy.getAccessNumber() );
 }
 
+peano4::grid::AutomatonState& peano4::grid::AutomatonState::operator = (const AutomatonState& other) {
+  if (this == &other) {
+    return *this; // Self-assignment check
+  }
 
+  setLevel(other.getLevel());
+  setX(other.getX());
+  setH(other.getH());
+  setInverted(other.getInverted());
+  setEvenFlags(other.getEvenFlags());
+  setAccessNumber(other.getAccessNumber());
 
-
+  return *this;
+}
 
 std::string peano4::grid::AutomatonState::toString() const {
   std::ostringstream out;
@@ -193,7 +198,7 @@ void   peano4::grid::AutomatonState::setAccessNumber(int index, int value) {
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::grid::AutomatonState::Datatype = MPI_DATATYPE_NULL;
+MPI_Datatype peano4::grid::AutomatonState::Datatype;
 #endif
 
 
@@ -227,55 +232,9 @@ MPI_Datatype peano4::grid::AutomatonState::getMultiscaleDataExchangeDatatype() {
 }
 
 
-[[clang::map_mpi_datatype]]
-void peano4::grid::AutomatonState::freeForkDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::AutomatonState::freeGlobalCommunciationDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::AutomatonState::freeJoinDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::AutomatonState::freeBoundaryExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
-[[clang::map_mpi_datatype]]
-void peano4::grid::AutomatonState::freeMultiscaleDataExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL){
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-
 int peano4::grid::AutomatonState::getSenderRank() const {
   return _senderDestinationRank;
 }
-
 
 
 void peano4::grid::AutomatonState::initDatatype() {
@@ -364,11 +323,17 @@ void peano4::grid::AutomatonState::initDatatype() {
 
 void peano4::grid::AutomatonState::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  freeForkDatatype();
-  freeJoinDatatype();
-  freeBoundaryExchangeDatatype();
-  freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunciationDatatype();
+  MPI_Datatype type;
+  type = getForkDatatype();
+  MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );
