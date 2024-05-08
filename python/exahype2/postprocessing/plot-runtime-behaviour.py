@@ -6,8 +6,6 @@ import argparse
 
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.abspath('../../../python'))
-
 import exahype2.postprocessing
 
 

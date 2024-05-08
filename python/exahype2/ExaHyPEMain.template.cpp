@@ -51,10 +51,10 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 
-tarch::timing::Measurement   timePerMeshSwepMeasurement;
-tarch::timing::Measurement   gridConstructionMeasurement;
-tarch::timing::Measurement   timeStepMeasurement;
-tarch::timing::Measurement   plotMeasurement;
+tarch::timing::Measurement timePerMeshSweepMeasurement;
+tarch::timing::Measurement gridConstructionMeasurement;
+tarch::timing::Measurement timeStepMeasurement;
+tarch::timing::Measurement plotMeasurement;
 
 
 /**
@@ -443,10 +443,10 @@ void step() {
 }
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
-  const int ExitCodeInvalidArguments = 2;
-  const int ExitCodeInvalidBuild     = 3;
+  constexpr int ExitCodeSuccess          = 0;
+  constexpr int ExitCodeUnitTestsFailed  = 1;
+  constexpr int ExitCodeInvalidArguments = 2;
+  constexpr int ExitCodeInvalidBuild     = 3;
 
   static tarch::timing::Watch watch("::", "main()", false);
 
@@ -504,11 +504,11 @@ int main(int argc, char** argv) {
 #endif
 
 #if defined(UseSmartMPI)
-  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
 #else
-  const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+      const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
+      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 #endif
 
       if (isGlobalMaster) {
@@ -517,28 +517,34 @@ int main(int argc, char** argv) {
           step();
           watch.stop();
 
-          timePerMeshSwepMeasurement.setValue(watch.getCalendarTime());
-          logInfo("main()", "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timePerMeshSwepMeasurement.getValue() );
+          timePerMeshSweepMeasurement.setValue(watch.getCalendarTime());
+          logInfo(
+            "main()",
+            "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() <<
+            "s / " << timePerMeshSweepMeasurement.getValue() << "s"
+          );
         }
 
         logInfo("main()", "terminated successfully");
         logInfo(
           "main()",
-          "initial grid construction: " << gridConstructionMeasurement.getAccumulatedValue(
-          ) << "s\t" << gridConstructionMeasurement.toString()
+          "initial grid construction:   " << gridConstructionMeasurement.getAccumulatedValue() <<
+          "s\t" << gridConstructionMeasurement.toString()
         );
         logInfo(
           "main()",
-          "plotting:                    " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
+          "plotting:                    " << plotMeasurement.getAccumulatedValue() <<
+          "s\t" << plotMeasurement.toString()
         );
         logInfo(
           "main()",
-          "time stepping:               " << timeStepMeasurement.getAccumulatedValue(
-          ) << "s\t" << timeStepMeasurement.toString()
+          "time stepping:               " << timeStepMeasurement.getAccumulatedValue() <<
+          "s\t" << timeStepMeasurement.toString()
         );
         logInfo(
           "main()",
-          "average time per mesh sweep: " << timePerMeshSwepMeasurement.getValue() << "\t" << timePerMeshSwepMeasurement.toString()
+          "average time per mesh sweep: " << timePerMeshSweepMeasurement.getValue() <<
+          "s\t" << timePerMeshSweepMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {

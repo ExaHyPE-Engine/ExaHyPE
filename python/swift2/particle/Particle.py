@@ -338,15 +338,16 @@ Particle properties:
                 "EVENT": None,
                 "INVARIANT": None,
             }
-            
+
             step.prepare_traversal_kernel = (
                 """
                 toolbox::particles::assignmentchecks::startMeshSweep( "{}" );
-                """.format( step.name )
-                + 
-                step.prepare_traversal_kernel
+                """.format(
+                    step.name
+                )
+                + step.prepare_traversal_kernel
             )
-            
+
             if (
                 step.touch_vertex_first_time_dependency_policy == None
                 and AlgorithmStep.may_trigger_rerun(step.effect)

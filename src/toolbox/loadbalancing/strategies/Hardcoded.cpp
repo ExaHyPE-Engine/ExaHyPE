@@ -12,25 +12,35 @@
 tarch::logging::Log  toolbox::loadbalancing::strategies::Hardcoded::_log( "toolbox::loadbalancing::strategies::Hardcoded" );
 
 
-toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
+toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(
+  std::initializer_list<int> timeStamps,
+  std::initializer_list<int> splittingTrees,
+  std::initializer_list<int> numberOfCells,
+  std::initializer_list<int> destinationRanks,
+  std::initializer_list<peano4::SplitInstruction::Mode> modes,
+  bool handOutOnePartitionPerCore
+):
   AbstractLoadBalancing( nullptr, nullptr ),
   _currentTimeStamp(0),
   _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
+  assertionEquals4( modes.size(),            numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
 
   auto timeStamp       = timeStamps.begin();
   auto splittingTree   = splittingTrees.begin();
   auto cells           = numberOfCells.begin();
   auto destinationRank = destinationRanks.begin();
+  auto mode            = modes.begin();
 
   while (timeStamp!=timeStamps.end()) {
-    _splits.push( Split( *timeStamp, *splittingTree, *cells, *destinationRank ) );
+    _splits.push( Split( *timeStamp, *splittingTree, *cells, *destinationRank, *mode ) );
     timeStamp++;
     splittingTree++;
     cells++;
     destinationRank++;
+    mode++;
   }
 
   // I would love to have some info output here, but some codes use the lb as static attribute
@@ -45,15 +55,17 @@ toolbox::loadbalancing::strategies::Hardcoded::Split::Split( const Split& split 
   timeStamp( split.timeStamp ),
   splittingTree( split.splittingTree ),
   numberOfCells( split.numberOfCells ),
-  destinationRank( split.destinationRank ) {
+  destinationRank( split.destinationRank ),
+  mode( split.mode ) {
 }
 
 
-toolbox::loadbalancing::strategies::Hardcoded::Split::Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_ ):
+toolbox::loadbalancing::strategies::Hardcoded::Split::Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_, peano4::SplitInstruction::Mode mode_ ):
   timeStamp( timeStamp_),
   splittingTree( splittingTree_),
   numberOfCells( numberOfCells_ ),
-  destinationRank( destinationRank_ ) {
+  destinationRank( destinationRank_ ),
+  mode(mode_) {
 }
 
 
@@ -86,7 +98,7 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
       }
       else if (not peano4::parallel::SpacetreeSet::getInstance().split(
         split.splittingTree,
-        peano4::SplitInstruction{split.numberOfCells,peano4::SplitInstruction::Mode::BottomUp},
+        peano4::SplitInstruction{split.numberOfCells,split.mode},
         split.destinationRank
       )) {
         logWarning(

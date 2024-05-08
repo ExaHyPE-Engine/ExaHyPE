@@ -69,10 +69,10 @@ class Project(object):
         self.additional_action_sets_per_solver_step = []
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -110,6 +110,18 @@ class Project(object):
 
         mode: peano4.output.CompileMode
         """
+
+        swift2dir = os.path.join(src_path, "src", "swift2")
+        peano4dir = os.path.join(src_path, "src", "peano4")
+        tarchdir = os.path.join(src_path, "src", "tarch")
+
+        for d in (swift2dir, peano4dir, tarchdir):
+            if not os.path.exists(d):
+                dir_stripped = d[len(src_path) :]
+                raise FileNotFoundError(
+                    f"Didn't find directory {dir_stripped} in passed peano root dir={src_path}"
+                )
+
         self._Peano_src_directory = src_path
         self._build_mode = mode
 
@@ -404,6 +416,25 @@ levels.
          Peano setup.
 
 
+         ## Initial grid
+
+         The initial grid will be a regular one, spanned through
+
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(...)
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+         According to the documentation of peano4.toolbox.CreateRegularGrid,
+         the action set will produce a mesh that is just finer than the mesh
+         width passed, so we meet the max mesh width, but do not create a
+         mesh that is significantly finer.
+
+         As we insert particles in SPH, we have therefore to make this initial
+         resolution three times coarser than what we allow, as we only insert
+         particles into the finest mesh.
+
+
+
          ## Task graph compiler
 
          The core contribution of the generation is the task graph compiler which
@@ -503,7 +534,9 @@ levels.
                 current_species_set.name
             )
             vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
-                current_species_set.name
+                task_name=current_species_set.name,
+                full_qualified_enumerator_type="::swift2::TaskEnumerator",
+                enumerator_include=""" #include "swift2/TaskEnumerator.h" """,
             )
 
             # Enable cell statistics for this species

@@ -19,9 +19,9 @@ NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% endif %}
 
 {% if MODE=="STATS" and DIM=="2" %}
-# It is important that Peano's includes are enlisted early, as other 3rd part
+# It is important that Peano's includes are enlisted early, as other 3rd party
 # libraries might have their own config.h (if they use autotools, too) and thus
-# might break the Peano installation
+# might break the Peano installation.
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_STATS}} {{LIBS}}
@@ -97,6 +97,7 @@ GENERATED_H_HEADERS={% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endf
 GENERATED_CXX_SOURCES={% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 GENERATED_FORTRAN_SOURCES={% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
 GENERATED_CU_SOURCES={% for item in GENERATED_CU_SOURCES -%} {{item+" "}} {%- endfor %}
+{% if APP_SUBDIRECTORY %}APP_SUBDIRECTORY={{APP_SUBDIRECTORY}}{% endif %}
 
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
 CXX_OBJS+=$(subst .cpp,.o,$(GENERATED_CXX_SOURCES))
@@ -156,12 +157,15 @@ distclean:
 	rm -f $(GENERATED_CXX_SOURCES)
 	rm -f ${GENERATED_FORTRAN_SOURCES}
 	rm -f ${GENERATED_CU_SOURCES}
+	{% if APP_SUBDIRECTORY %}cd ${APP_SUBDIRECTORY}{% endif %}
 	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated __pycache__
 	rm -f Constants.h
+	{% if APP_SUBDIRECTORY %}cd ..
+	rm -rf ${APP_SUBDIRECTORY}{% endif %}
 	rm -f README-*
 	rm -f .gitignore
 	rm -f Makefile
-	rm -f gpu-mpi-launch
+	rm -f gpu-launch
 	{% if USING_CMAKE %}rm -f CMakeLists.txt{% endif %}
 
 maintainer-clean: distclean

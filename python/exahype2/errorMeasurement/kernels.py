@@ -89,6 +89,7 @@ def create_postprocessing_kernel_for_fv_error_measurement():
         volumeX,
         timeStamp,
         timeStepSize,
+        value,
         sol
       );
 
@@ -118,9 +119,12 @@ def create_postprocessing_kernel_for_ader_error_measurement():
         [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
         [[maybe_unused]] const double                                  t,
         [[maybe_unused]] const double                                  dt,
-        [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q,
+        [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q_,
         [[maybe_unused]] double*                                       sol
       )->void {
+
+        double Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}];
+        std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
 
         repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x,t,dt,Q,sol);
 
@@ -158,7 +162,7 @@ def create_solver_user_abstract_declarations(user_defined):
       [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
       [[maybe_unused]] const double                                  t,
       [[maybe_unused]] const double                                  dt,
-      [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
     )""" + (" = 0" if user_defined else " final") + ";"
 
@@ -169,7 +173,7 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
   [[maybe_unused]] const double                                  t,
   [[maybe_unused]] const double                                  dt,
-  [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
 ) {
 """ + error_measurement_implementation + """
@@ -183,7 +187,7 @@ def create_solver_user_declarations():
       [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
       [[maybe_unused]] const double                                  t,
       [[maybe_unused]] const double                                  dt,
-      [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
 """
@@ -195,7 +199,7 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
   [[maybe_unused]] const double                                  t,
   [[maybe_unused]] const double                                  dt,
-  [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith2Arguments( "analyticalSolution(...)", x, t );

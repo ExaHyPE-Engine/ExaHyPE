@@ -4,6 +4,7 @@
 
 
 #include "State.h"
+#include "peano4/grid/grid.h"
 
 
 namespace toolbox {
@@ -51,6 +52,8 @@ class toolbox::loadbalancing::Configuration {
      */
     virtual double getWorstCaseBalancingRatio(State state) = 0;
 
+    virtual peano4::SplitInstruction::Mode getMode(State state) = 0;
+
     /**
      * Minimum tree size.
      */
@@ -59,12 +62,26 @@ class toolbox::loadbalancing::Configuration {
     virtual std::string toString() const;
 };
 
+
 class toolbox::loadbalancing::DefaultConfiguration: public toolbox::loadbalancing::Configuration {
-  virtual bool makeSplitDependOnMemory(State state) override;
+  private:
+    const int _maxTreesPerRank;
+  public:
+    /**
+     * Create default configuration
+     *
+     * If you don't specify how many trees you allow per rank, then the code
+     * will try to maximise the utilisation.
+     */
+    DefaultConfiguration(int maxTreesPerRank=0);
 
-  virtual int getMaxLocalTreesPerRank(State state) override;
+    virtual bool makeSplitDependOnMemory(State state) override;
 
-  virtual double getWorstCaseBalancingRatio(State state) override;
+    virtual int getMaxLocalTreesPerRank(State state) override;
 
-  virtual int getMinTreeSize(State state) override;
+    virtual double getWorstCaseBalancingRatio(State state) override;
+
+    virtual int getMinTreeSize(State state) override;
+
+    virtual peano4::SplitInstruction::Mode getMode(State state) override;
 };

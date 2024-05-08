@@ -33,7 +33,7 @@ try:
   import peano4.toolbox
   
   from .Project import Project
-  from .Project import merge
+  # from .Project import merge
 except ImportError as error:
   print( "Peano core project files cannot be loaded: {}".format(error) )
 

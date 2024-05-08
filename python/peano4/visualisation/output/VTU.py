@@ -207,71 +207,6 @@ def prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_t
       
 
 
-def render_single_file(filename, identifier, display_as_tree = True, filter=None):
-  """
-    Parse a single peano-patch-file and render data 
-    
-    Parameters:
-    ----------
-    filename: String
-      Path to file to be parsed
- 
-    identifier: String
-      Name of the set of unknowns we want to extract  
-      
-    display_as_tree: Boolean
-      Displays multiscale data as tree, i.e. uses the z-axis for the 
-      mesh level. The flag has no meaning for 3d files.
-      
-    filter: List of filter objects
-      If it is None, then we don't apply any filter on the input file.
-     
-      
-      
-    Result:
-    -------
-    
-    Returns an instace of TrivialProducer. You can call Interact
-    on this object, e.g.
-       
-       
-  """
-  
-  parser = OutputFileParser(filename,identifier,0)
-  parser.parse_file()
-  cell_data, dof, dimensions, unknowns, description, is_data_associated_to_cell, mapping = parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.is_data_associated_to_cell, parser.mapping
-  
-  if dimensions != 2 and dimensions != 3:
-    print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
-    return 
-  if dof == 0:
-    print("File parsing unsuccessful. No dof specified")
-    return 
-  if unknowns == 0:
-    print("File parsing unsuccessful. No unknowns specified")
-    return 
-
-  print("Dimensions: ", dimensions)
-  print("Number of variables per cell: ", unknowns)
-  print("Number of cells per patch per direction: ", dof)
- 
-  num_patches = len(cell_data)
-  print("Number of patches:", num_patches)
-  
-  if filter!=None:
-    for p in filter:
-      cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, is_data_associated_to_cell = p.render(cell_data, dof, dimensions, unknowns, is_data_associated_to_cell)
-
-  if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping, verbose) 
-  elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description, is_data_associated_to_cell, mapping, verbose) 
-  else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_to_cell, mapping, verbose) 
-  
-  return grid
-
-
 
 #  if dimensions == 2 and display_as_tree:
 #    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping, verbose ) 
@@ -297,7 +232,8 @@ class VTU(Visualiser):
     self.display_as_tree = False
     self._strip_relative_pathes = strip_relative_pathes
     
-    
+          
+      
   def display(self):
     """
     
@@ -357,6 +293,11 @@ pathes (see documentation/help of your conversion script).
 """ )
 
     
+  def display_single_file(self):
+    self.reload_single_file()  
+    self.write_vtu( self.output_directory + "/" + self._file_name.replace (".peano-patch-file", "") )
+        
+      
   def reload(self):
     """
      
@@ -392,3 +333,26 @@ pathes (see documentation/help of your conversion script).
     print( "Wrote file " + file_name )
     del writer
 
+
+  def reload_single_file(self):
+    """
+     
+     Invokes superclass' reload, converts data into VTU, and then sets 
+     the resulting self._data as output of the client side object of 
+     the trivial producer. Does not work if self._tp is set to None.
+    
+    """
+    super(VTU,self).reload_single_file()
+
+    assert self._dimensions>=2
+    assert self._dimensions<=3
+
+    if self._cell_data!=[]:
+      if self._dimensions == 2 and self.display_as_tree:
+        self._grid = prepare2Dpatches(self._cell_data, self._dof, self._unknowns, 1.0, self._description, self._is_data_associated_to_cell, self._mapping, self.verbose) 
+      elif self._dimensions == 2 and not self.display_as_tree:
+        self._grid = prepare2Dpatches(self._cell_data, self._dof, self._unknowns, 0.0, self._description, self._is_data_associated_to_cell, self._mapping, self.verbose) 
+      else: # Tested above that it can only be 2 or 3
+        self._grid = prepare3Dpatches(self._cell_data, self._dof, self._unknowns, self._description, self._is_data_associated_to_cell, self._mapping, self.verbose) 
+    else:
+      self._grid = None

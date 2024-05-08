@@ -91,7 +91,8 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 #endif
 
 
-void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+void tarch::multicore::native::spawnTask(
+  Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   {
     tarch::multicore::Lock lock(spawnedTasksSemaphore);
 

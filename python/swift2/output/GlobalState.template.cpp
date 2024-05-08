@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include "GlobalState.h"
+#include "Constants.h"
 
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -142,24 +143,24 @@ void startPlotStep() {
 
 
 void finishTimeStep() {
+  logTraceIn( "finishTimeStep()" );
+
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
-  vertexdata::{{PARTICLE}}Set::printParticleStateStatistics();
+  logInfo("finishTimeStep()", vertexdata::{{PARTICLE}}Set::printParticleStateStatistics() );
   {%- endfor %}
-
-  logTraceIn( "finishTimeStep()" );
 
   loadBalancer.finishStep();
 
-  logInfo("TimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
-  logInfo("TimeStep()",
+  logInfo("finishTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
+  logInfo("finishTimeStep()",
     "#local cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalRefinedCells() <<
     ")\t(unrefined/refined)"
    );
-  logInfo("TimeStep()",
+  logInfo("finishTimeStep()",
     "#remote cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteRefinedCells() <<
     ")\t(unrefined/refined)"
@@ -174,7 +175,7 @@ void finishTimeStep() {
 
 void finishGridConstructionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -184,12 +185,10 @@ void finishGridConstructionStep() {
 
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
-  vertexdata::{{PARTICLE}}Set::printReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::printParticleStateStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -199,7 +198,7 @@ void finishInitialisationStep() {
 
 void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
@@ -212,7 +211,7 @@ void finishInitialConditionStep() {
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   {%- endfor %}
   logTraceOut( "PlotStep()" );
 }
@@ -220,11 +219,11 @@ void finishPlotStep() {
 
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
 
   vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
   if (vertexdata::{{PARTICLE}}Set::registeredAnyResorting()) {
-    vertexdata::{{PARTICLE}}Set::printReassignmentStatistics();
+    logInfo( "finishIntermediateStep()", vertexdata::{{PARTICLE}}Set::printReassignmentStatistics() );
   }
   {%- endfor %}
   logTraceOut( "IntermediateStep()" );
