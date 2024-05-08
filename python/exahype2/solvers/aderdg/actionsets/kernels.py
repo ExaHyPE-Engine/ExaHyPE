@@ -5,36 +5,67 @@ import jinja2
 
 def create_predictor_allocations(use_kernelgenerator=True):
     Template_generic = """
-    const int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    const int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
+    constexpr int basisElementsPerFace  = spaceFaceSize * (NumberOfVariables + NumberOfParameters);
+    constexpr int fluxElementsPerFace   = spaceFaceSize * NumberOfVariables;
 
-    constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize;
+    constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters) * spaceTimeBasisSize * (Order + 1);
     constexpr int sizeRhs   = sizeLQi;
-    constexpr int sizeLFi   = (Dimensions + 1)*NumberOfVariables*spaceTimeBasisSize; //Dimensions+1 because this is also used for lShi, which contains source terms. Don't ask me why that isn't it's own variable
-    constexpr int sizeGradQ = Dimensions*NumberOfVariables*spaceBasisSize;
-    
-    constexpr int sizeLQhi = (NumberOfVariables+NumberOfParameters)*spaceBasisSize;
-    constexpr int sizeLFhi = (Dimensions + 1)*NumberOfVariables*spaceBasisSize;
+    constexpr int sizeLFi   = (Dimensions + 1) * NumberOfVariables * spaceTimeBasisSize; // Dimensions + 1 because this is also used for lShi, which contains source terms. TODO: Make its own storage.
+    constexpr int sizeGradQ = Dimensions * NumberOfVariables * spaceBasisSize;
+
+    constexpr int sizeLQhi = (NumberOfVariables + NumberOfParameters) * spaceBasisSize;
+    constexpr int sizeLFhi = (Dimensions + 1) * NumberOfVariables * spaceBasisSize;
 
     constexpr int sizeLduh = sizeLQhi;
-    
+
+/*
     constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
-                          sizeLQhi + sizeLFhi + sizeLduh;
-  
+                              sizeLQhi + sizeLFhi + sizeLduh;
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} block[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* memory = block;
-        
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi   = memory; memory+=sizeLQi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* rhs   = memory; memory+=sizeRhs;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi   = memory; memory+=sizeLFi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ = memory; memory+=sizeGradQ;
-    
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = memory; memory+=sizeLQhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = memory; memory+=sizeLFhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = memory; memory+=sizeLduh;
-    
-    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
-    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
+*/
+
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* rhs = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeRhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeGradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters),
+      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      2*Dimensions*spaceFaceSize*NumberOfVariables,
+      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
 """
 
     Template_kernelgenerator = """
@@ -43,7 +74,7 @@ def create_predictor_allocations(use_kernelgenerator=True):
 
     constexpr int totalSize = generated::kernels::AderDG::{{LINEARITY}}::getFusedSTPVISize();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
-        
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQiShift();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQhiShift();
 
@@ -53,7 +84,7 @@ def create_predictor_allocations(use_kernelgenerator=True):
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = nullptr;
-    {% endif %}    
+    {% endif %}
 
     {% if USE_SOURCE!="<none>" or (LINEARITY=="nonlinear" and USE_NCP!="<none>") %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlSiShift();
@@ -62,13 +93,13 @@ def create_predictor_allocations(use_kernelgenerator=True):
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = nullptr;
     {% endif %}
-    
+
     {% if USE_NCP!="<none>" %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = memory + generated::kernels::AderDG::{{LINEARITY}}::getgradQShift(); 
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = nullptr;
     {% endif %}
-    
+
     {% if LINEARITY=="linear" and USE_POINT_SOURCE!="<none>" %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSiShift();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSderivativesShift();
@@ -76,7 +107,7 @@ def create_predictor_allocations(use_kernelgenerator=True):
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = nullptr;
     {% endif %}
-        
+
     constexpr int sizeLduh = generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} lduh[sizeLduh]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
 
