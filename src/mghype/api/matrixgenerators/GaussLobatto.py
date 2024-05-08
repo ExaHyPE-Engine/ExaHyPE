@@ -286,37 +286,23 @@ class GaussLobatto(MatrixGenerator):
     return np.eye(dim,dim)
 
   def get_face_face_riemann_problem_matrix(self):
-    # modified averaging matrix. set a = b = 0 for original matrix
-    a = 1/2  * 0
-    b = 1/16 * 0
-    return np.array([0.5,  0,  b,  0,0.5,  0, -b,  0,
-                       0,0.5,  0,  b,  0,0.5,  0, -b,
-                       a,  0,0.5,  0, -a,  0,0.5,  0,
-                       0,  a,  0,0.5,  0, -a,  0,0.5]).reshape(4,8)
-  
-  # def get_face_to_face_matrix(self):
-  #   """ Face-face coupling block.
-  #   I provide here the entire block includind identities and zeros, not only the averaging part,
-  #   because later we may want to
-  #   1) use more general definition of the flux,
-  #   2) keep the face-face mass matrices, resulting from L-2 projections, in this block.
-  #   """
-  #   F_qf_qp = self.block_matrix._A_FF[(2,0)]["left"][(0,0)]
-  #   F_qf_qm = self.block_matrix._A_FF[(2,1)]["left"][(0,0)]
-  #   F_qf_qf = self.block_matrix._A_FF[(2,2)]["left"][(0,0)]
-  #   Eye = np.eye(np.shape(F_qf_qf)[0])
-  #   Zeros = np.zeros(np.shape(F_qf_qf))
+    """
+    Averaging matrix.
+    Implement separately for GLMatrixFree class, taking into account solutions_per_face_node and projections_per_face_node.
+    Now assume there are 2 "solutions" (i.e. f-variables: q^f and u^f) and two sets of projections: q^pm an.
+    """
 
-  #   # Let it be like this for a while...
-  #   # We can later import zero and identity blocks of the right shape form BlockMatrix 
-  #   # or decide that we don't need them at all and only supply the flux-defining block (last line) 
-  #   return np.concatenate((np.concatenate((Eye,     Zeros,   Zeros), axis=1),
-  #                          np.concatenate((Zeros,   Eye,     Zeros), axis=1),
-  #                          np.concatenate((F_qf_qp, F_qf_qm, F_qf_qf), axis=1)), axis=0)
-  
-  #   # dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
-  #   # return np.eye(dim,dim)
+    assert self.Dimensions == 2, "Only works for 2D"
 
+    n_rows = 2 * (self.poly_degree + 1)
+    n_cols = 4 * (self.poly_degree + 1)
+    matrix = np.zeros((n_rows, n_cols))
+
+    for row in range(n_rows):
+      matrix[row, [row, row + 2*(self.poly_degree + 1)]] = [0.5, 0.5]
+
+    return matrix
+  
 
 '''
 New class to mimic the one above
@@ -417,7 +403,6 @@ class GLMatrixFree(GaussLobatto):
     #  [ 0.          0.         -0.33333333 -0.16666667 -0.16666667 -0.33333333  0.16666667  0.33333333 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.16666667 -0.33333333]
     #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
     #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
-
 
   def get_projection_matrices(self):
     """
