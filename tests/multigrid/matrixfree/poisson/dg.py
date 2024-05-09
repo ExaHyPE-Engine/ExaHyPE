@@ -101,6 +101,8 @@ project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
+  plot_each_timestep    = False
+
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
@@ -108,6 +110,8 @@ project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.generate()
+
+os.system( "mkdir visualisation" )
 
 os.system( "make clean" )
 if args.j>0:
