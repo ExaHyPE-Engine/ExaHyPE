@@ -34,8 +34,10 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
         # Penalty method parameters
         self._theta = 1.0
-        self._gamma_F = r_press * (r_press + 1) # this should be degree * (degree + 1) / h. 
-                                                # We remove /h here because the contribution of this penalty term cannot be scaled separately from the first penalty term at the moment
+        self._gamma_F = 2 # this gives 2 /h when scaled
+        print('Warning: penalty parameter gamma_F is set to 2/h and does not depend on the polynomial degree!')
+        # self._gamma_F = r_press * (r_press + 1) # this should be degree * (degree + 1) / h. 
+        #                                         # We remove /h here because the contribution of this penalty term cannot be scaled separately from the first penalty term at the moment
  
         # All pairs of function spaces that couple
         self._coupling_CC = [(0, 0)] # _u_u
