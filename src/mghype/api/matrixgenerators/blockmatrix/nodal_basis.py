@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import itertools
 import numpy as np
 from scipy.interpolate import lagrange
+from scipy.special import legendre
 from numpy.polynomial.legendre import leggauss
 
 
@@ -28,15 +29,34 @@ class NodalBasisGaussLegendre(NodalBasis):
     def nodal_points(self, degree):
         """Set nodal points xi_0, xi_1, ..., xi_p"""
 
+        assert degree >= 0, "Negative degree"
+
         # Equidistant points
-        return np.linspace(-1.0, 1.0, degree + 1)
+        # return np.linspace(-1.0, 1.0, degree + 1)
 
         # Gauss-Legendre points
         # print("Gauss-Legendre points are used")
         # return leggauss(degree + 1)[0]
 
-        # Gauss-Lobatto points
-        # ... to be implemented
+        # Gauss-Lobatto points: 
+        # roots of deriv(P_{n-1}), where P_{n-1} is the Legendre polynomial and n is the number of nodal points; 
+        # plus endpoints of the interval
+
+        if degree > 0:
+            poly = legendre(degree) # "n-1" = (degree + 1) - 1
+            deriv = poly.deriv()
+            inter_points = np.sort(np.roots(deriv)) # interior nodal points 
+
+            # result = [-1, inter_points, +1]
+            result = np.zeros(len(inter_points) + 2)
+            result[1:-1] = inter_points
+            result[0]  = -1.0
+            result[-1] = +1.0
+
+        elif degree == 0:
+            result = np.asarray([0.0])
+
+        return result
 
     def node1d(self, degree, j):
         """Return the j-th nodal point of a Lagrange polynomial of given degree
