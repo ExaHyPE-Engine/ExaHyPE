@@ -81,7 +81,7 @@ bool selectNextAlgorithmicStep() {
         {
           {
           if (
-            ++solverSteps >= 100
+            ++solverSteps >= 300
             or
             repositories::terminationCriterionHolds()
           ) plotThenExit = true;
@@ -94,7 +94,10 @@ bool selectNextAlgorithmicStep() {
 
       case repositories::StepRepository::Steps::Plot:
         {
-          if (plotThenExit) continueToSolve = false;
+          if (plotThenExit) {
+            continueToSolve = false;
+            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " steps");
+          }
 
           else 
             peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -107,7 +110,7 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Solve:
         {
           if (
-            ++solverSteps >= 100
+            ++solverSteps >= 300
             or
             repositories::terminationCriterionHolds()
           )
@@ -127,8 +130,10 @@ bool selectNextAlgorithmicStep() {
         break;
       case repositories::StepRepository::Steps::Plot:
         {
-          if ( plotThenExit )
+          if ( plotThenExit ) {
+            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " steps");
             continueToSolve = false;
+          }
           else 
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )

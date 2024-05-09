@@ -251,10 +251,16 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
       {% endfor %}
   };
 
-  // may not be static, as it depends upon h
-  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
+  // In general, this may not be static, due to H-dependence. However, for the time being 
+  // we keep it static for a couple of three reasons:
 
-  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > invertedResult = invert( result );
+  // 1. The only non trivial matrix that we insert here (at time of writing) does not need scaling
+  // 2. The BLAS implementation on COSMA complains whenever we enter this function in an OMP region
+  // 3. We don't refine h any further once we reach the solver region
+
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
+
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > invertedResult = invert( result );
 
   return invertedResult;
 }
