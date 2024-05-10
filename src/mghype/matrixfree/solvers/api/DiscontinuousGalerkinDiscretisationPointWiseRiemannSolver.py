@@ -13,7 +13,7 @@ from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockForma
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
 
-  Discontinuous Galerkin Solver
+  \page matrixfree_dg_solver Discontinuous Galerkin Solver
   
   The text below specifies the semantics and behaviour of this matrix-free
   DG solver. A tutorial running step by step through the steps how to use

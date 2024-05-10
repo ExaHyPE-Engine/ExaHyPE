@@ -16,7 +16,7 @@ from peano4.solversteps.ActionSet import ActionSet
 class CollocatedLowOrderDiscretisation(Solver):
   """!
 
-  Matrix-free remake of the petsc-based collocated solver.
+  \page matrixfree_collocated_solver Matrix-free Collocated Solver.
 
   Mathematical and algorithmic descriptions are to follow later. For now, 
   we describe how to use this solver and a little about how it works under 
@@ -43,6 +43,65 @@ class CollocatedLowOrderDiscretisation(Solver):
 
   At present, it hasn't been decided how to plot the output of multiple
   equations, since only 1 is supported.
+
+  # Data held on the vertices
+
+  ## Solution (formerly named Value)
+  This array holds the actual solution which we later plot. This is updated when we touch a vertex
+  for the last time.
+
+  ## Rhs
+
+  This array holds the right-hand side of the equation. We assign this in 
+  experiment-specific implementation files.
+
+  ## FieldDiagonal
+  This array holds the sum of the diagonals of the local assembly matrix. This is
+  set to 0 at the start of every solver step
+
+  ## Residual
+  This is used to store \f$ Mb - Ax \f$, i.e. the RHS multiplied by the matrix, and subtract
+  the solution multiplied by the assembly matrix.
+  
+  # Solver Steps
+
+  ## Initialisation 
+
+  After the grid is created, we run around the mesh and assign types to the vertices and cells.
+  
+  Vertices:
+  - "Coarse" if the vertex is due to be refined
+  - "Interior" if it's not on the boundary
+  - "Boundary" if it is on the boundary
+
+  Cells:
+  - "Coarse" if it's due to be refined
+  - Otherwise marked as "Interior"
+
+  ## Solve
+
+  There is only one action set in this solver. We do something non-trivial during touchCellFirstTime,
+  touchVertexFirstTime and touchVertexLastTime.
+
+  ### touchVertexFirstTime
+
+  We check that the Vertex is not a coarse grid vertex, then we set the residuals and the diagonals to 0.
+
+  ### touchCellFirstTime
+
+  All four vertices are in scope here. We create three vectors, each of length \f$ 2^D \f$ to hold 
+  one value per vertex. For each vertex in the cell (regardless of whether it is on the boundary), we :
+  - Update the residual to be \f$ Mb - Ax \f$
+  - Increment the diagonal 
+
+  ### touchVertexLastTime
+  We update the solution value (on all vertices) to be equal to the solution at the previous sweep, and we add on
+  \f$ \omega \times r / d \f$
+  where \f$ r \f$  and \f$ d \f$ stand for the residual and diagonal respectively.
+
+  # Enforcement of boundary conditions
+
+  to be completed
 
   """
 
