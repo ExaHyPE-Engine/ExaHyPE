@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 import itertools
 import numpy as np
 from scipy.interpolate import lagrange
+from scipy.special import legendre
 from numpy.polynomial.legendre import leggauss
-
+from functools import lru_cache
 
 class NodalBasis(ABC):
     """Abstract base class for nodal basis functions"""
@@ -28,15 +29,34 @@ class NodalBasisGaussLegendre(NodalBasis):
     def nodal_points(self, degree):
         """Set nodal points xi_0, xi_1, ..., xi_p"""
 
+        assert degree >= 0, "Negative degree"
+
         # Equidistant points
-        return np.linspace(-1.0, 1.0, degree + 1)
+        # return np.linspace(-1.0, 1.0, degree + 1)
 
         # Gauss-Legendre points
         # print("Gauss-Legendre points are used")
         # return leggauss(degree + 1)[0]
 
-        # Gauss-Lobatto points
-        # ... to be implemented
+        # Gauss-Lobatto points: 
+        # roots of deriv(P_{n-1}), where P_{n-1} is the Legendre polynomial and n is the number of nodal points; 
+        # plus endpoints of the interval
+
+        if degree > 0:
+            poly = legendre(degree) # "n-1" = (degree + 1) - 1
+            deriv = poly.deriv()
+            inter_points = np.sort(np.roots(deriv)) # interior nodal points 
+
+            # result = [-1, inter_points, +1]
+            result = np.zeros(len(inter_points) + 2)
+            result[1:-1] = inter_points
+            result[0]  = -1.0
+            result[-1] = +1.0
+
+        elif degree == 0:
+            result = np.asarray([0.0])
+
+        return result
 
     def node1d(self, degree, j):
         """Return the j-th nodal point of a Lagrange polynomial of given degree
@@ -46,6 +66,7 @@ class NodalBasisGaussLegendre(NodalBasis):
         assert j in range(degree+1), f'j must be in range [0, m], m = {degree}'
         return self.nodal_points(degree)[j]
 
+    @lru_cache(maxsize=None)
     def lagrange_polynomial(self, degree, k):
         """Returns k-th basis function L^{(m)}_k(xi) of degree m as a numpy polynomial object
         :arg degree: polynomial degree
@@ -59,6 +80,7 @@ class NodalBasisGaussLegendre(NodalBasis):
 
         return lagrange(x, y) # scipy.interpolate
     
+    @lru_cache(maxsize=None)
     def evaluate(self, degree, k, xi):
         """Evaluate the k-th basis function L^{(m)}_k(xi) of degree m at point xi in [-1,+1],
         return L^{(m)}_k(xi)
@@ -70,6 +92,7 @@ class NodalBasisGaussLegendre(NodalBasis):
         poly = self.lagrange_polynomial(degree, k)
         return poly(xi)
 
+    @lru_cache(maxsize=None)
     def evaluate_derivative(self, degree, k, xi):
         """Evaluate the derivative of the k-basis function L^{(m)}_k(xi) of degree m at point xi in [-1,+1]
         return dL^{(m)}_k(xi)/dxi

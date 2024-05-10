@@ -1,5 +1,6 @@
 #include "DGPoisson.h"
 #include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h"
 
 tests::multigrid::matrixfree::poisson::DGPoisson::DGPoisson() {
 }
@@ -36,7 +37,7 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
   {
     // convert k to double
     tarch::la::Vector<Dimensions, double> kDouble = tarch::la::convertScalar<double, Dimensions, int>(k);
-    auto dofPosition = bottomLeft + h(0)*kDouble;
+    auto dofPosition = bottomLeft + h(0)*kDouble / (double)repositories::instanceOfDGPoisson.PolyDegree;
     double sinSquared = 1;
     for (int i=0; i<Dimensions; i++)
       sinSquared *= std::sin( 2 * tarch::la::PI * dofPosition[i] );

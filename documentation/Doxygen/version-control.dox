@@ -8,7 +8,7 @@ all interested colleagues access to the repository including some write
 permissions, but we do protect some branches.
 
 - Our main branch is called p4, as we work with Peano 4. This one is protected
-  and only writable by the PI. 
+  and serves as our release branch. 
 - p4 has a couple of top-level branches which are editable by a few key
   users. Please assign merge requests to one of these key users if you want your 
   changes to be merged.
@@ -18,6 +18,8 @@ permissions, but we do protect some branches.
   - applications
   - infrastructure
   - documentation
+  Most of these branches are only writable by the PI, though some 
+  responsibilities for very few ranches are delegated.
 - We have multiple subbranches under each top level branch. They are "owned"
   by various colleagues.
 
@@ -27,6 +29,14 @@ numerical techniques or infrastructure features. However, we find it useful to
 maintain them in different branches, as infrastructure changes by definition 
 often affect a lot of different applications, so we want people to be very 
 careful. 
+
+Our merges happen exclusively along the branch tree, i.e. any modification
+should feed at one point into a top-level branch of above. Once we are happy
+with the status quo there, anybody can request a merge into p4 via a merge
+request. The other way round, updates into p4 are not automatically downstreamed
+into the top level branches. If you would like to see updates of the release
+branch before you branch from a top-level branch, please issue another MR and
+assign it to the PI.
 
 
 

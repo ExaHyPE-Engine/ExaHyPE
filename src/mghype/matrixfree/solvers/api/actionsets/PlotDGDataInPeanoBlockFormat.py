@@ -108,18 +108,21 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
 
   __Template_BeginTraversal = """
   tarch::mpi::Lock lock( _semaphore );
+
+  static int counter = -1;
+  counter++;
   
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}";
+  snapshotFileName << "visualisation/{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{VARIABLE}}",
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::NoIndexFile,
-    0.0
+    Dimensions, snapshotFileName.str(), "{{SOLVER_NAME}}.{{VARIABLE}}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    counter
   );
     
   _dataWriter = _writer->createVertexDataWriter( 

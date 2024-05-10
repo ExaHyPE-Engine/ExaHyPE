@@ -7,6 +7,7 @@ import os
 from .Solver                      import Solver
 from .actionsets.InitDofs         import InitDofsCollocated
 from .actionsets.CollocatedSolver import CollocatedSolver
+from .actionsets.PlotVertexDataInPeanoBlockFormat import PlotVertexDataInPeanoBlockFormat
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
@@ -163,24 +164,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
-      filename       = "solution-" + self._name,
-      vertex_unknown = self._vertex_data,
-      getter         = "getValue().data()",
-      description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._unknowns_per_vertex,
-      guard_predicate              = "true", 
-      ))
-    observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
-      filename       = "rhs-" + self._name,
-      vertex_unknown = self._vertex_data,
-      getter         = "getRhs().data()",
-      description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._unknowns_per_vertex,
-      guard_predicate              = "true", 
-      ))
+    observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "value", "getValue") )
+    observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs") )
     pass
 
   def add_to_create_grid(self, observer):

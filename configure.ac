@@ -1065,7 +1065,7 @@ fi
 if test "$toolbox_mghype" != false; then
   AC_DEFINE([UseMGHyPE], [1], [UseMGHyPE])
   if test "$toolbox_finiteelements" == false; then
-    AC_MSG_ERROR([MGHyPE (mghype) requires the matrixfree toolbox (run with --help to see the correct enable statement)])
+    AC_MSG_ERROR([MGHyPE (mghype) requires the finiteelements toolbox (run with --help to see the correct enable statement)])
   fi
 
   LDADD_PEANO_2D_RELEASE=" -lMultigrid2d         $LDADD_PEANO_2D_RELEASE "
