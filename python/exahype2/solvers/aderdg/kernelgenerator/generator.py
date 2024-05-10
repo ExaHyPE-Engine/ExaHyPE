@@ -107,7 +107,9 @@ def generate_aderdg_kernels(
             "predictorStoragePrecision": predictorStoragePrecision,
             "correctorComputePrecision": correctorComputePrecision,
             "correctorStoragePrecision": correctorStoragePrecision,
-            "usePicardIterationSplitPrecisions": precomputePicardPrecision if precomputePicardPrecision!=False else False,
+            "usePicardIterationSplitPrecisions": ( precomputePicardPrecision if 
+              precomputePicardPrecision!=False and (len(predictorComputePrecisions)!=1 or precomputePicardPrecision!=predictorComputePrecisions[0])
+              else False),
             "picardIterationPrecision": precomputePicardPrecision
         }
     )

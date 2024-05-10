@@ -285,7 +285,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   {{picardIterationPrecision}} lQi_picard[getlQiSize()]     __attribute__((aligned(16)));
   {{picardIterationPrecision}} lFi_picard[getlFiSize()]     __attribute__((aligned(16)));
   {{picardIterationPrecision}} rhs_picard[getlQiSize()]     __attribute__((aligned(16)));
-  {{picardIterationPrecision}} new_lQi_slice_picard[30]     __attribute__((aligned(16)));
+  {{picardIterationPrecision}} new_lQi_slice_picard[{{nDof*nVarPad}}]     __attribute__((aligned(16)));
 {% if useSourceOrNCP %}
   {{picardIterationPrecision}} lSi_picard[getlSiSize()]     __attribute__((aligned(16)));
 {% else %}
@@ -436,10 +436,13 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   {% if usePicardIterationSplitPrecisions %}
   // copy data over either way, as it will be required
   std::copy_n(lQi_picard, getlQiSize(), lQi);
+  {% if useFlux %}
+  std::copy_n(lFi_picard, getlFiSize(), lFi);
+  {% endif %}
   {% if useSourceOrNCP %}
   std::copy_n(lSi_picard, getlSiSize(), lSi);
   {% endif %}
-  {% endif %}
+  {% endif %}{# usePicardIterationsSplitPrecisions #}
 
   //***********************
   //****** Predictor ******
