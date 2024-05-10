@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 import jinja2
@@ -33,6 +33,9 @@ def create_predictor_allocations(use_kernelgenerator=True):
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = memory; memory+=sizeLQhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = memory; memory+=sizeLFhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = memory; memory+=sizeLduh;
+
+    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[2 * Dimensions * spaceFaceSize * (NumberOfVariables + NumberOfParameters)]{0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[2 * Dimensions * spaceFaceSize * NumberOfVariables]{0.0};
 */
 
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
@@ -59,11 +62,11 @@ def create_predictor_allocations(use_kernelgenerator=True):
     );
 
     {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-      2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters),
+      2 * Dimensions * spaceFaceSize * (NumberOfVariables + NumberOfParameters),
       tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
     );
     {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-      2*Dimensions*spaceFaceSize*NumberOfVariables,
+      2 * Dimensions * spaceFaceSize * NumberOfVariables,
       tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
     );
 """
@@ -113,6 +116,23 @@ def create_predictor_allocations(use_kernelgenerator=True):
 
     {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
     {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFluxTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
+"""
+    return (Template_kernelgenerator if use_kernelgenerator else Template_generic)
+
+def create_predictor_frees(use_kernelgenerator=True):
+    Template_generic = """
+    tarch::freeMemory(lQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(rhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(gradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lQhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lFhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+"""
+
+    Template_kernelgenerator = """
 """
     return (Template_kernelgenerator if use_kernelgenerator else Template_generic)
 
