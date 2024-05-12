@@ -23,7 +23,7 @@
 #define AlignmentOnHeap 16
 #endif
 
-#if DPeanoDebug == 0
+#if PeanoDebug == 0
 #undef assert
 #define assert(...)
 #endif
