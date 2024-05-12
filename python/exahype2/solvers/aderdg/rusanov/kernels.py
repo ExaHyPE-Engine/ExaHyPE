@@ -191,20 +191,20 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
     #endif
 
     if (tarch::la::smaller(_maxEigenvalue, 0.0)) {
-      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue >= 0", "Invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue >= 0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
       // Keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
     } else if (tarch::la::equals(_maxEigenvalue, 0.0)) {
-      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue > 0", "Max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalue));
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue > 0", "max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalue));
     } else {
       const double minVolumeSize = _minCellHThisTimeStep;
       // The max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction
       _admissibleTimeStepSize = std::min(MinTerminalTime - _minTimeStampThisTimeStep, CFL * PNPM / _maxEigenvalue);
       if (std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize)) {
-        ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_admissibleTimeStepSize > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize));
+        ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_admissibleTimeStepSize > 0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize));
       }
       if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-        logWarning("finishTimeStep(...)", "Degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")");
+        logWarning("finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")");
       }
     }
 """
