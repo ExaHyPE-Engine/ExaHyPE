@@ -1,4 +1,6 @@
-# Tutorial: The Shallow Water Equations (SWE)
+/**
+
+@page page_exahype2_tutorials_swe The Shallow Water Equation (SWE)
 
 ## Define and Build the Project
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the SWE project:
@@ -7,10 +9,10 @@ Assuming we have built the ExaHyPE 2 engine and the core libraries successfully,
 
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
-One file, in particular, is of interest to us now: the file simply named swe is the executable for our implementation.
+One file, in particular, is of interest to us now: the file simply named ExaHyPE2-SWE is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
-    ./swe
+    ./ExaHyPE2-SWE
 
 The solution folder contains the solution of our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
@@ -32,7 +34,7 @@ the implementation, consider the comments in the Python script.
 The shallow water equations describe the flow of fluid given the assumption that the horizontal length scale
 is much higher than the vertical length scale and are defined by the following formula:
 
-$$
+@f$
     \frac{\partial}{\partial t}\left(
     \begin{array}{lr} h \\
         h u_1 \\
@@ -50,12 +52,12 @@ $$
         h g*\partial_x(b+h)   & 0\\
         0                     & h g*\partial_y(b+h) \\
         0                     & 0
-    \end{pmatrix}  = \vec{0}.
-$$
+    \end{pmatrix}  = \vec{0}
+@f$
 
 With eigenvalues:
 
-$$
+@f$
     \left(
     \begin{array}{lr}
         \lambda_1 \\
@@ -67,20 +69,18 @@ $$
         u + \sqrt{g (h+b)} \\
         u \\
         u - \sqrt{g (h+b)} \\
-    \end{array} \right).
-$$
+    \end{array} \right)
+@f$
 
-These depend on the fluid height $`h`$, velocities in x- and y-directions,
-the bathymetry $`b`$ (the height of the floor underneath the fluid) and the gravity $`g`$.
+These depend on the fluid height h, velocities in x- and y-directions,
+the bathymetry b (the height of the floor underneath the fluid) and the gravity g.
 
 To implement this equation, the following things are needed: the initial condition,
-the boundary conditions, the maximal eigenvalue, the flux, the non-conservative term and (optionally) the
-refinement criterion (which we don't use in the tutorial).
+the boundary conditions, the maximal eigenvalue, the flux, the non-conservative term and (optionally) the refinement criterion.
 
 We also have an auxiliary variable since the bathymetry never changes.
 We can define this auxiliary variable by setting the parameter for the auxiliary variables in the solver to 1.
-These auxiliary variables are accessed in the same way as the regular variables,
-except that they are not modified by the solver.
+These auxiliary variables are accessed in the same way as the regular variables, except that they are not modified by the solver.
 Initial- and boundary conditions for these auxiliary variables should be defined, but no flux or non-conservative product can be set,
 as they can never change anyway.
 
@@ -110,38 +110,41 @@ and if the normal is 1, we are computing the flux in y-direction.
 For higher dimensions, there would logically be additional directions to implement the flux.
 
 ### Non-conservative Term
-Finally, we fill in the non-conservative part in the function $`nonconservativeProduct`$.
-This needs to go into the variable $`BTimesDeltaQ`$.
-This function has a parameter $`deltaQ`$ through which you can access the space derivatives of the unknowns and
+Finally, we fill in the non-conservative part in the function nonconservativeProduct.
+This needs to go into the variable BTimesDeltaQ.
+This function has a parameter deltaQ through which you can access the space derivatives of the unknowns and
 auxiliary variables in the direction defined by the normal's current value.
 
-t=0.0             |  t=1.0
-:-------------------------:|:-------------------------:
-![](SWE_start.png)  |  ![](SWE_end.png)
+### Result
+| t=0.0 s                    | t=1.0 s                    |
+| :-------------------------:|:-------------------------: |
+| ![](SWE_start.png)         | ![](SWE_end.png)           |
 
--------------------------*The computed height of the fluid according to our computation of the shallow water equations at times t=0.0s and t=1.0s.
-The fluid has rushed in from the sides to fill the depression at the center.*-------------------------
+The computed height of the fluid according to our computation of the shallow water equations at times t=0.0 s and t=1.0 s.
+The fluid has rushed in from the sides to fill the depression at the center.
 
 ## Increasing Resolution
 If you've completed the implementation, you may have noticed that the resolution is somewhat low.
 We're interested in increasing the resolution so we can see more details in the solution.
 This means we need to consider our volume size, so in the first step, we will discuss how the volume size is calculated.
 
-This determines the maximal allowable size for volumes in our domain, in essence guaranteeing $`max\_volume\_h`$ > $`volume\_size`$.
-However, since Peano is based upon three-partitioning, it refines the domain into $3^d$ volumes,
-where d is the smallest possible integer that satisfies $`max\_volume\_h`$ > $`domain\_size`$ / $3^d$.
-For our tutorial, we have set a domain size of $2.0$ in each direction and $`max\_volume\_h`$ = $0.05$.
-The first three-partition of $2.0$ that is lower than 0.05 is $\frac{2.0}{3^4}\approx0.0247$.
-This means that there are a total of $3^4=81$ volumes in each dimension. Of these, two are used for the boundary conditions,
-which means there are a total of $79$ volumes per dimension inside the domain.
-In total, that makes $79*79=6241$ volumes inside the domain, or (with a parameter $`max\_volume\_h`$ = $0.02$)
-$241*241=58081$ volumes in two dimensions, an increase of factor $9$.
+This determines the maximal allowable size for volumes in our domain, in essence guaranteeing @f$ max\_volume\_h > volume\_size @f$.
+However, since Peano is based upon three-partitioning, it refines the domain into @f$ 3^d @f$ volumes,
+where d is the smallest possible integer that satisfies @f$ max\_volume\_h > domain\_size / 3^d @f$.
+For our tutorial, we have set a domain size of 2.0 in each direction and @f$ max\_volume\_h = 0.05 @f$.
+The first three-partition of 2.0 that is lower than 0.05 is @f$ \frac{2.0}{3^4}\approx0.0247 @f$.
+This means that there are a total of 3^4=81 volumes in each dimension. Of these, two are used for the boundary conditions,
+which means there are a total of 79 volumes per dimension inside the domain.
+In total, that makes 79*79=6241 volumes inside the domain, or (with a parameter @f$ max\_volume\_h = 0.02 @f$)
+241*241=58081 volumes in two dimensions, an increase of factor 9.
 However, because the smallest admissible timesteps are proportional to the size of the mesh,
-the overall computational effort increases by a total factor of about $27$.
+the overall computational effort increases by a total factor of about 27.
 
 In short, if one wishes to increase or decrease the mesh size, one can just modify the parameter
-$`max\_volume\_h`$, but one should be aware that this comes at a significant cost.
-You may have noticed that there is a second parameter $`min\_volume\_h`$ however,
+@f$ max\_volume\_h @f$, but one should be aware that this comes at a significant cost.
+You may have noticed that there is a second parameter @f$ min\_volume\_h @f$ however,
 and this parameter logically determines the minimal mesh size.
-If this parameter is given a value lower or equal to $`max\_volume\_h` / 3$ (again, three-partitioning),
+If this parameter is given a value lower or equal to @f$ max\_volume\_h / 3 @f$ (again, three-partitioning),
 adaptive refinement is switched on, this means the volume size need not be the same in the entire domain.
+
+*/
