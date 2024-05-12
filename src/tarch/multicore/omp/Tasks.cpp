@@ -134,46 +134,48 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   int numberOfLoopTasks = tasks.size(); // Bookkeeping of how many loop tasks
                                         // we have in the system.
 
-#if defined(OpenMPTaskGroup)
-#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
-#endif
+  #if defined(OpenMPTaskGroup)
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
+  #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-#if !defined(OpenMPTaskGroup)
-#pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks)
-#endif
+    #if !defined(OpenMPTaskGroup)
+    #pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
+    #endif
     {
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
       }
       delete tasks[i];
-    }
 
-    int currentNumberOfLoopTasks;                   // Reduce the bookkeeping
-#pragma omp atomic capture                          // counter and create my
-    currentNumberOfLoopTasks = --numberOfLoopTasks; // own loop termination
-                                                    // criterion.
+      int currentNumberOfLoopTasks;                   // Reduce the bookkeeping
+      #pragma omp atomic capture                      // counter and create my
+      currentNumberOfLoopTasks = --numberOfLoopTasks; // own loop termination
+                                                      // criterion.
 
-    while (currentNumberOfLoopTasks > 0) {
-      if (processPendingTasks(1, false)) { // I use FILO to increase cache hit probability
-#pragma omp atomic read
-        currentNumberOfLoopTasks = numberOfLoopTasks;
-      } else {
-        currentNumberOfLoopTasks = 0; // This is not nice. It means that a
-                                      // fast task might finish while ready
-                                      // tasks literally become a available a
-                                      // second later. However, without his
-                                      // statement, another loop task might
-                                      // never be able to run, as the busy
-                                      // polling keeps the thread idle. We
-                                      // starve.
+      while (currentNumberOfLoopTasks > 0) {
+        if (processPendingTasks(1, false)) { // I use FILO to increase cache hit probability
+          #pragma omp atomic read
+          currentNumberOfLoopTasks = numberOfLoopTasks;
+        }
+        else {
+          currentNumberOfLoopTasks = 0; // This is not nice. It means that a
+                                        // fast task might finish while ready
+                                        // tasks literally become a available a
+                                        // second later. However, without his
+                                        // statement, another loop task might
+                                        // never be able to run, as the busy
+                                        // polling keeps the thread idle. We
+                                        // starve.
+        }
       }
-    }
+    } // end of artificial bracket which is only important if
+      // taskloop is not properly supported, i.e. if !defined(OpenMPTaskGroup)
   }
 
-#pragma omp taskwait // Wait for all elements from tasks to complete
-                     // do not wait for the children of tasks
-                     // but do children if you have time (this does not
-                     // happen however).
+  #pragma omp taskwait // Wait for all elements from tasks to complete
+                       // do not wait for the children of tasks
+                       // but do children if you have time (this does not
+                       // happen however).
 
   assertionEquals(numberOfLoopTasks, 0);
 }
