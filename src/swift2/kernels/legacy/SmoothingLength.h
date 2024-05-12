@@ -66,7 +66,7 @@ namespace swift2 {
       /**
        * Wrapper around hydro_update_smoothing_length_and_rerun_if_required()
        * with only one argument. Further to that, it also adds some consistency
-       * checks as discussed @page swift_algorithm "in the context of generic
+       * checks as discussed @ref swift_algorithm "in the context of generic
        * algorithm remarks".
        */
       template <typename Particle>
