@@ -75,7 +75,17 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
 
   if (residualGrows==numberOfChecks) numberOfResidualGrowths++;
 
-  return residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5;
+  bool output = (residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5);
+
+  if (not output) return false;
+
+  if (residualReducedUnderThreshold==numberOfChecks)
+    logInfo( "terminationCriterionHolds()", "terminating because residualReducedUnderThreshold==" << residualReducedUnderThreshold );
+    
+  if (numberOfResidualGrowths > 5)
+    logInfo( "terminationCriterionHolds()", "terminating because numberOfResidualGrowths==" << numberOfResidualGrowths );
+
+  return output;
 }
 
 
