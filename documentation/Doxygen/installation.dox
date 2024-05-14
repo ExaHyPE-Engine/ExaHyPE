@@ -153,7 +153,7 @@ Package Installation
 ----------------------
 
 The easiest way to install the Peano Python packages is to navigate to
-`myPeanoDirectory/python` first (you're in the right place if you see the
+`myPeanoDirectory/` first (you're in the right place if you see the
 `pyproject.toml` file), and then run
 
       pip3 install -e .
@@ -173,7 +173,7 @@ Python Path
 
 As an alternative to installing the packages, you can modify your Python path. There
 are multiple ways to do so.
-The standard way is to set the `PYTHONPATH`:
+The standard way is to set the `PYTHONPATH`, e.g.:
 
        export PYTHONPATH=myPeanoDirectory/python
 
