@@ -52,3 +52,5 @@ dependencies = {file = ["requirements.txt"]}
 where = [
     "python",
 ]
+[tool.setuptools.package-data]
+"*" = ["*.*"]
