@@ -50,12 +50,5 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
 where = [
-    "python/",
-    "src/multigrid/",
-]
-include = [
-    "dastgen2",
-    "peano4",
-    "exahype2",
-    "swift2",
+    "python",
 ]
