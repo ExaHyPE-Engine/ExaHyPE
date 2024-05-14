@@ -175,7 +175,7 @@ As an alternative to installing the packages, you can modify your Python path. T
 are multiple ways to do so.
 The standard way is to set the `PYTHONPATH`, e.g.:
 
-       export PYTHONPATH=myPeanoDirectory/python
+       export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
 
 This can even be done in the `.bashrc`. If you "install" the Peano Python
 packages this way, you will also need to manually install additional
