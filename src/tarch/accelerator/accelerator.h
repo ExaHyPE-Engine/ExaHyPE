@@ -73,18 +73,25 @@ namespace tarch {
 
   std::string toString(MemoryLocation value);
 
-
   namespace internal {
-    void* allocateRawData(int size, MemoryLocation location);
+    void* allocateRawData(
+      std::size_t    size,
+      MemoryLocation location,
+      int            device
+    );
   } // namespace internal
 
   template <class T = double>
-  T* allocateMemory(int size, MemoryLocation location, [[maybe_unused]] int device = -1) {
-    return reinterpret_cast<T*>(internal::allocateRawData(size * static_cast<int>(sizeof(T)), location));
+  T* allocateMemory(std::size_t count, MemoryLocation location, int device = 0) {
+    return reinterpret_cast<T*>(internal::allocateRawData(
+      count * sizeof(T),
+      location,
+      device
+    ));
   }
-  void freeMemory(void* data, MemoryLocation location);
+  void freeMemory(void* data, MemoryLocation location, int device = 0);
 
-  int padSizeToAlignment(int size, int aligment);
+  std::size_t padSizeToAlignment(std::size_t size, std::size_t alignment);
 
   /**
    * Alternative GPU-ready version of memset
