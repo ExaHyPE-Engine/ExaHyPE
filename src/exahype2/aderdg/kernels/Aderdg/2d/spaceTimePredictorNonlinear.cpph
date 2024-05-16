@@ -53,8 +53,8 @@ int aderPicardLoopNonlinear(SolverType& solver,
   
   const tarch::la::Vector<Dimensions, double>& invDx = tarch::la::invertEntries(dx);
   
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
+  constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
+  constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int numberOfData       = numberOfVariables+numberOfParameters;
   constexpr int order              = SolverType::Order;
   constexpr int basisSize          = order+1;
@@ -656,8 +656,8 @@ int spaceTimePredictorNonlinear(
     double t,
     double dt) {
   
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
+  constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
+  constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int basisSize          = SolverType::Order+1;
 
   const int iterations =
