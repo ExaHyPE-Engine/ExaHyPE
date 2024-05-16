@@ -183,6 +183,13 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
+#if defined(UseOtter)
+  auto otter_tasks = std::vector<otter_task_context*>();
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
+    otter_tasks.push_back(otterTaskInitialise(OTTER_NULL_TASK, -1, otter_no_add_to_pool, true, OTTER_SOURCE_LOCATION(), __func__));
+  }
+#endif
+
 #if defined(OpenMPTaskGroup)
 #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
 #endif
@@ -191,17 +198,21 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
 #endif
     {
+      OTTER_TASK_START(otter_tasks[i]);
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
       }
       delete tasks[i];
+      OTTER_TASK_END();
     }
   }
 
+  OTTER_TASK_WAIT_START(children);
 #pragma omp taskwait // Wait for all elements from tasks to complete
                      // do not wait for the children of tasks
                      // but do children if you have time (this does not
                      // happen however).
+  OTTER_TASK_WAIT_END();
 }
 #endif
 
@@ -231,8 +242,10 @@ void tarch::multicore::native::spawnTask(
     numberOfSpawnedTasks++;
 
     logDebug( "spawnTask(...)", "fire totally independent task with " << iterableExistingInDepencencies.size() << " in dependencies" );
+    OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) untied
     {
+      OTTER_TASK_START(task);
       while (job->run()) {
         #pragma omp taskyield
       }
@@ -240,6 +253,7 @@ void tarch::multicore::native::spawnTask(
 
       #pragma omp atomic
       numberOfSpawnedTasks--;
+      OTTER_TASK_END();
     }
   }
   else if ( canServeDependencyEntry(taskNumber)) {
@@ -254,15 +268,20 @@ void tarch::multicore::native::spawnTask(
     #pragma omp atomic
     numberOfSpawnedTasks++;
 
+    OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
     {
+      OTTER_TASK_START(task);
       while (job->run()) {
+        OTTER_TASK_YIELD_START();
         #pragma omp taskyield
+        OTTER_TASK_YIELD_END();
       }
       delete job;
 
       #pragma omp atomic
       numberOfSpawnedTasks--;
+      OTTER_TASK_END();
     }
   }
   else {
@@ -274,9 +293,13 @@ void tarch::multicore::native::spawnTask(
       ", #spawned tasks=" << numberOfSpawnedTasks <<
       ")"
     );
+    OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+    OTTER_TASK_WAIT_END();
     while (job->run()) {
+      OTTER_TASK_YIELD_START();
       #pragma omp taskyield
+      OTTER_TASK_YIELD_END();
     }
     delete job;
   }
@@ -308,15 +331,22 @@ NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variab
 void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
   #if !defined(__NVCOMPILER)
+  OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
   #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
   #endif
   {
+    #if !defined(__NVCOMPILER)
+    OTTER_TASK_START(task);
+    #endif
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
       tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
     } else {
       delete myTask;
     }
+    #if !defined(__NVCOMPILER)
+    OTTER_TASK_END();
+    #endif
   }
 }
 
@@ -333,13 +363,17 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 
   if (not iterableExistingInDepencencies.empty()) {
     logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
+    OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+    OTTER_TASK_WAIT_END();
   }
 }
 
 
 void tarch::multicore::native::waitForAllTasks() {
+  OTTER_TASK_WAIT_START(children);
   #pragma omp taskwait
+  OTTER_TASK_WAIT_END();
 }
 
 #endif
