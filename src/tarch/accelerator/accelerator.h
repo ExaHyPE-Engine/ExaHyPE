@@ -107,7 +107,12 @@ namespace tarch {
       device
     ));
   }
-  void freeMemory(void* data, MemoryLocation location, int device = 0);
+
+  void freeMemory(
+    void* data,
+    MemoryLocation location,
+    int device = accelerator::Device::HostDevice
+  );
 
   std::size_t padSizeToAlignment(std::size_t size, std::size_t alignment);
 
