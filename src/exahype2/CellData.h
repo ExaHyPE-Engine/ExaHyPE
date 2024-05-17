@@ -101,6 +101,12 @@ namespace exahype2 {
     const int  numberOfCells;
 
     /**
+     * We might want to allocate data on an accelerator,
+     * therefore we save the target device id.
+     */
+    const int  targetDevice;
+
+    /**
      * Out values.
      */
     double**   QOut;
@@ -121,21 +127,24 @@ namespace exahype2 {
      * read it later.
      */
     CellData(
-      double*                                       QIn,
+      double*                                       QIn_,
       const tarch::la::Vector<Dimensions,double>&   cellCentre_,
       const tarch::la::Vector<Dimensions,double>&   cellSize_,
-      double    t,
-      double    dt,
-      double*   QOut
+      double    t_,
+      double    dt_,
+      double*   QOut_,
+      int       targetDevice_ = tarch::accelerator::Device::HostDevice
     );
 
-    CellData( int numberOfCells_ );
+    CellData(
+      int       numberOfCells_,
+      int       targetDevice = tarch::accelerator::Device::HostDevice
+    );
 
-    CellData( const CellData& copy ) = delete;
+    CellData(const CellData& copy) = delete;
 
     ~CellData();
 
     std::string toString() const;
   };
 }
-

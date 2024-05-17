@@ -392,12 +392,12 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     // TODO: Does the number of samples change the outcome of the solution?
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
-        ::exahype2::CellData patchData(patches);
+        ::exahype2::CellData patchData(patches, device);
         for (int i = 0; i < patches; i++) {
-          patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
           patchData.t[i]             = TimeStamp;
           patchData.dt[i]            = TimeStepSize;
-          patchData.QOut[i]          = ::tarch::allocateMemory<double>(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QOut[i]          = ::tarch::allocateMemory<double>(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
           patchData.cellCentre[i]    = ::tarch::la::Vector<Dimensions, double>(CellOffset + 0.5 * CellSize);
           patchData.cellSize[i]      = ::tarch::la::Vector<Dimensions, double>(CellSize);
           patchData.maxEigenvalue[i] = 0.0;
@@ -432,8 +432,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         }
 
         for (int i = 0; i < patches; i++) {
-          ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-          ::tarch::freeMemory(patchData.QOut[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
+          ::tarch::freeMemory(patchData.QOut[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
         }
       }
       endParallelFor
