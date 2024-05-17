@@ -13,16 +13,17 @@ void* tarch::internal::allocateRawData(
   void* data = nullptr;
   assertion2(size > 0, size, toString(location));
 
-  ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-
   switch (location) {
   case MemoryLocation::Heap:
+    assertion1(device == accelerator::Device::HostDevice, device);
     data = std::aligned_alloc(
       AlignmentOnHeap,
       tarch::padSizeToAlignment(size, AlignmentOnHeap)
     );
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    assertion1(device >= 0, device);
+    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
     data = ::sycl::malloc_shared<void*>(size, queue);
     break;
   }
@@ -34,13 +35,14 @@ void* tarch::internal::allocateRawData(
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
   assertion(data);
 
-  ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-
   switch (location) {
   case MemoryLocation::Heap:
+    assertion1(device == accelerator::Device::HostDevice, device);
     std::free(data);
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    assertion1(device >= 0, device);
+    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
     ::sycl::free(data, queue);
     break;
   }

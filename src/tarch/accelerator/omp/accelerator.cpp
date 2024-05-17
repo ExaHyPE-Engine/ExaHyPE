@@ -19,12 +19,14 @@ void* tarch::internal::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
+    assertion1(device == accelerator::Device::HostDevice, device);
     data = std::aligned_alloc(
       AlignmentOnHeap,
       tarch::padSizeToAlignment(size, AlignmentOnHeap)
     );
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    assertion1(device >= 0, device);
 #if defined(__NVCOMPILER_CUDA__) // __NVCC__
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaMallocManaged(&data, size));
@@ -47,9 +49,11 @@ void tarch::freeMemory(void* data, MemoryLocation location, int device) {
 
   switch (location) {
   case MemoryLocation::Heap:
+    assertion1(device == accelerator::Device::HostDevice, device);
     std::free(data);
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    assertion1(device >= 0, device);
 #if defined(__NVCOMPILER_CUDA__)
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));
