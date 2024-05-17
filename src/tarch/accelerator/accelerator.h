@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Device.h"
+
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -81,8 +83,24 @@ namespace tarch {
     );
   } // namespace internal
 
+  /**
+   * Allocates memory on the specified memory location
+   *
+   * The device id is an optional argument that is required for
+   * memory allocation on an accelerator. Default is -1 (HostDevice).
+   * For memory allocation on accelerators, passing a device id >= 0 is necessary.
+   *
+   *
+   * @param count Number of elements to allocate memory for.
+   * @param location Location on where to allocate the memory.
+   * @param device (Optional) device id for memory allocation on accelerators.
+  */
   template <class T = double>
-  T* allocateMemory(std::size_t count, MemoryLocation location, int device = 0) {
+  T* allocateMemory(
+    std::size_t count,
+    MemoryLocation location,
+    int device = accelerator::Device::HostDevice
+) {
     return reinterpret_cast<T*>(internal::allocateRawData(
       count * sizeof(T),
       location,
