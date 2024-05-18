@@ -9,9 +9,10 @@ exahype2::CellData::CellData(
   double                                       t_,
   double                                       dt_,
   double*                                      QOut_,
+  tarch::MemoryLocation                        memoryLocation_,
   int                                          targetDevice_
 ):
-  CellData(1, targetDevice_) {
+  CellData(1, memoryLocation_, targetDevice_) {
   QIn[0]        = QIn_;
   cellCentre[0] = cellCentre_;
   cellSize[0]   = cellSize_;
@@ -21,28 +22,33 @@ exahype2::CellData::CellData(
   id[0]         = -1;
 }
 
-exahype2::CellData::CellData(int numberOfCells_, int targetDevice_):
+exahype2::CellData::CellData(
+  int                   numberOfCells_,
+  tarch::MemoryLocation memoryLocation_,
+  int                   targetDevice_
+):
   numberOfCells(numberOfCells_),
+  memoryLocation(memoryLocation_),
   targetDevice(targetDevice_) {
-  QIn           = tarch::allocateMemory<double*>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  cellCentre    = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  cellSize      = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  t             = tarch::allocateMemory<double>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  dt            = tarch::allocateMemory<double>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  id            = tarch::allocateMemory<int>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  QOut          = tarch::allocateMemory<double*>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  maxEigenvalue = tarch::allocateMemory<double>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  QIn           = tarch::allocateMemory<double*>(numberOfCells_, memoryLocation_, targetDevice_);
+  cellCentre    = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+  cellSize      = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+  t             = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
+  dt            = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
+  id            = tarch::allocateMemory<int>(numberOfCells_, memoryLocation_, targetDevice_);
+  QOut          = tarch::allocateMemory<double*>(numberOfCells_, memoryLocation_, targetDevice_);
+  maxEigenvalue = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
 }
 
 exahype2::CellData::~CellData() {
-  tarch::freeMemory(QIn, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(cellCentre, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(cellSize, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(t, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(dt, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(QOut, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(id, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-  tarch::freeMemory(maxEigenvalue, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  tarch::freeMemory(QIn, memoryLocation, targetDevice);
+  tarch::freeMemory(cellCentre, memoryLocation, targetDevice);
+  tarch::freeMemory(cellSize, memoryLocation, targetDevice);
+  tarch::freeMemory(t, memoryLocation, targetDevice);
+  tarch::freeMemory(dt, memoryLocation, targetDevice);
+  tarch::freeMemory(QOut, memoryLocation, targetDevice);
+  tarch::freeMemory(id, memoryLocation, targetDevice);
+  tarch::freeMemory(maxEigenvalue, memoryLocation, targetDevice);
 }
 
 std::string exahype2::CellData::toString() const {

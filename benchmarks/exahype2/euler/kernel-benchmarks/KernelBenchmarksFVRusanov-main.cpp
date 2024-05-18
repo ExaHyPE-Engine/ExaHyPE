@@ -392,7 +392,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     // TODO: Does the number of samples change the outcome of the solution?
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
-        ::exahype2::CellData patchData(patches, device);
+        ::exahype2::CellData patchData(patches, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
         for (int i = 0; i < patches; i++) {
           patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
           patchData.t[i]             = TimeStamp;
