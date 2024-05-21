@@ -25,7 +25,7 @@ double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle) {
   // For now, compute the admissible time step size and throw an error
   // if we exceed it.
   assertion1(
-    dt_cfl <= initialTimeStepSize,
+    dt_cfl >= initialTimeStepSize,
     "particle requires time step smaller than set time step size."
   );
 
@@ -36,7 +36,9 @@ double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle) {
     particle->toString()
   );
 
-  return dt_cfl;
+  // this is what we should return, but we stick with initialTimeStepSize for now.
+  // return dt_cfl;
+  return initialTimeStepSize;
 }
 
 

@@ -29,7 +29,9 @@ void swift2::timestepping::
 template <typename Particle>
 void swift2::timestepping::computeCFLTimeStepSizeSPH() {
 
-  assertion1(false, "Don't use this");
+  assert(false);
+  // Don't use this.
+  // TODO mladen: delete this once other timestepping is done.
 
   const double initialTimeStepSize = Particle::getInitialTimeStepSize();
   const bool   adjustTimeStepSize  = Particle::getAdjustTimeStepSize();
