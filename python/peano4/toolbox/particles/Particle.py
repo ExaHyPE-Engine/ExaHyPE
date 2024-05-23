@@ -89,7 +89,9 @@ class Particle(DaStGen2):
         )
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
         self.data.add_attribute(dastgen2.attributes.Integer("partID"))
-        self.part_id = dastgen2.attributes.Integer("partid", ifdefs=["PeanoDebug > 0"], initval="-1")
+        self.part_id = dastgen2.attributes.Integer(
+            "partid", ifdefs=["PeanoDebug > 0"], initval="-1"
+        )
 
         #
         # Never manipulate as user
