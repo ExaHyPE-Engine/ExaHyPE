@@ -17,11 +17,18 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
     vertex.setOldValue(0.0);
   }
   else {
-    vertex.setDelta(
-      vertex.getValue()
-      -
-      vertex.getOldValue()
-    );
+    if (
+      vertex.getNumberOfRestrictions()<TwoPowerD
+    ) {
+      vertex.setDelta(0.0);
+    }
+    else {
+      vertex.setDelta(
+        vertex.getValue()
+        -
+        vertex.getOldValue()
+      );
+    }
 
     assertion1(
       vertex.getNumberOfRestrictions() == TwoPowerD

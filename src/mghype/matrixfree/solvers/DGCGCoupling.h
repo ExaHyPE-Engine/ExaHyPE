@@ -27,10 +27,13 @@ namespace mghype {
          *
          * First and foremost, we need a case distinction: If a vertex is
          * outside or if we don't have any valid restricted data, then we cannot
-         * realise any data flow from fine to coarse. We don't have the right
-         * data. We could try to evaluate some flags, but that's difficult.
-         * Instead, we rely on the fact that the counter NumberOfRestrictions
-         * will hold invalid values for outer vertices.
+         * realise any data flow from fine to coarse, coarse to fine or only
+         * from one iteration to the other. It makes no sense. So, in this
+         * case, we just set everything zero. We rely on the fact that the
+         * counter NumberOfRestrictions will hold invalid values for the
+         * outer vertices - typically 0.
+         *
+         * Boundary vertices
          *
          * Along the same lines, we don't have to care about special treatment
          * for boundary vertices, i.e. some marker semantics there. If a vertex
@@ -49,6 +52,11 @@ namespace mghype {
          *
          * It does not hurt if we do this for outer or boundary vertices, so we
          * simply do it everywhere.
+         *
+         * @param restrictRhsAndInjectSolution Flag to control the behaviour
+         *   that allows us to use this routine in different context such as
+         *   additive vs multiplicative MG or schemes with multiple coarse
+         *   grid sweeps.
          */
         void rollOverAndPrepareCGVertex(
           auto&  vertex,
