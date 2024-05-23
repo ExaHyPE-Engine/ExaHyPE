@@ -180,6 +180,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+          marker.h(),
           _spacetreeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );

@@ -437,6 +437,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+        marker.h(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );

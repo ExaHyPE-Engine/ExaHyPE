@@ -222,6 +222,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       (*p)->getX(),
       partID,
       false,
+      marker.h(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );

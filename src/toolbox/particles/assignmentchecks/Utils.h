@@ -37,9 +37,11 @@ namespace toolbox {
        */
       template <typename ParticleContainer>
       void traceParticleMovements(
-        const ParticleContainer&             container,
-        const std::vector<ParticlePosition>& recordedPositions,
-        int                                  spacetreeId
+        const ParticleContainer&                     container,
+        const std::vector<ParticlePosition>&         recordedPositions,
+        const tarch::la::Vector<Dimensions, double>& vertexX,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
+        int                                          spacetreeId
       );
     } // namespace assignmentchecks
   }   // namespace particles

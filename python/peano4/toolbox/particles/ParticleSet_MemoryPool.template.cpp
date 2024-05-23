@@ -91,6 +91,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       neighbourParticle->getX(),
       neighbourPartID,
       (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+      marker.h()
       spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
