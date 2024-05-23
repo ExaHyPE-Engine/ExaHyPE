@@ -128,12 +128,15 @@ namespace toolbox {
          * spatially).
          */
         struct ParticleIdentifier {
+
           static double Precision;
 
           friend class Database;
 
           std::string                           particleName;
           tarch::la::Vector<Dimensions, double> particleX;
+          int                                   particleID;
+          double                                positionTolerance;
 
           /**
            * Equals predicate
@@ -156,13 +159,43 @@ namespace toolbox {
            * routine and the comparison operator are not compatible, as the
            * present routine is purely floating point error-aware, while the
            * comparison operator uses bit-wise inequality.
+           *
+           * Note that the `Precision` static member is used for floating point
+           * comparison tolerance. We have however a second tolerance parameter,
+           * the member `positionTolerance`. While the main identifier for
+           * particles is their unique particle ID, this may cause trouble if
+           * particles exist as several copies, e.g. when periodic boundary
+           * conditions are applied. To combat this, we also compare the
+           * particle's position, using the `positionTolerance` parameter as
+           * leeway. Usually, that tolerance is intended to be the size of the
+           * vertex (or something comparable). That is more than accurate
+           * enough, as the assignment checks aren't aware of PBCs.
+           *
+           * However, therere are cases (like in moveParticle()) where we need
+           * a stricter position comparison. For that, use
+           * positionStrictNumericalEquals().
            */
           bool numericalEquals(const ParticleIdentifier& rhs) const;
           bool operator<(const ParticleIdentifier& rhs) const;
 
+          /*
+           * Compare particle identifier positions using `Precision`, not
+           * the (usually intended to be much bigger) `positionTolerance`.
+           */
+          bool positionStrictNumericalEquals(const ParticleIdentifier& rhs) const;
+
           std::string toString() const;
 
+          /**
+           * ToDO Mladen: DOcument this */
+          static void storeMinDx(double dx);
+          static double getMinDx();
+
         private:
+
+          static double _MinDx;
+          /* tarch::multicore::MultiReadSingleWriteSemaphore _semaphore; */
+
           /**
            * Never create a particle identifier manually
            *
@@ -171,7 +204,9 @@ namespace toolbox {
            */
           ParticleIdentifier(
             const std::string&                           particleName__,
-            const tarch::la::Vector<Dimensions, double>& particleX__
+            const tarch::la::Vector<Dimensions, double>& particleX__,
+            const int                                    particleID__,
+            const double                                 positionTolerance__
           );
         };
 
@@ -207,6 +242,7 @@ namespace toolbox {
             Type                                         type_,
             bool                                         isLocal_,
             const tarch::la::Vector<Dimensions, double>& vertexX_,
+            const tarch::la::Vector<Dimensions, double>& particleX,
             const tarch::la::Vector<Dimensions, double>& vertexH_,
             int                                          treeId_,
             const std::string&                           trace_
@@ -220,7 +256,9 @@ namespace toolbox {
            */
           Event(
             Type                                         type_,
-            const tarch::la::Vector<Dimensions, double>& previousParticleX,
+            const tarch::la::Vector<Dimensions, double>& vertexX_,
+            const tarch::la::Vector<Dimensions, double>& previousParticleX_,
+            const tarch::la::Vector<Dimensions, double>& vertexH_,
             int                                          treeId_,
             const std::string&                           trace_
           );
@@ -296,7 +334,7 @@ namespace toolbox {
           void removeTrajectory(
             const ParticleIdentifier& lastIdentifier,
             int                       spacetreeId,
-            int                       firstNRecentEntriesToSkip = 0
+            int firstNRecentEntriesToSkip = 0
           );
 
           /**
@@ -334,13 +372,21 @@ namespace toolbox {
            *
            * Cannot be const as we have a semaphore to be thread-safe.
            *
-           * @param fitToExistingParticles is the search tolerance that we
-           *   use when we crawl through the database.
+           * @param idSearchTolerance is the search tolerance that we
+           *   use to determine the ID of the particle. See the
+           *   `positionTolerance` parameter in ParticleIdentifier.
+           * @param pastSearchTolerance is the search tolerance that we
+           *   use when we crawl through the database to find a previous
+           *   entry of this particle so we can return that entry instead.
+           *   See documentation above.
+           *  @TODO Mladen is pastSearchTolerance still needed?
            */
           ParticleIdentifier createParticleIdentifier(
             const std::string&                           particleName,
             const tarch::la::Vector<Dimensions, double>& particleX,
-            double searchTolerance = ParticleIdentifier::Precision
+            const int                                    particleID,
+            const double                                 idSearchTolerance,
+            const double pastSearchTolerance = ParticleIdentifier::Precision
           );
 
           /**
@@ -387,6 +433,8 @@ namespace toolbox {
            * @param spacetreeId Either a valid spacetree or AnyTree if you don't
            * care
            *
+           * @TODO MLaden: Document parameters.
+           *
            * @return tuple of event and identifier. In most cases, the
            *   identifier returned will equal the parameter identifier.
            *   However, if the particle has moved, the result identifier
@@ -395,9 +443,23 @@ namespace toolbox {
            */
           std::pair<Event, ParticleIdentifier> getEntry(
             const ParticleIdentifier& identifier,
-            int                       spacetreeId,
-            int firstNRecentEntriesToSkip = SearchWholeDatabase
+            const int                       spacetreeId,
+            const double                    idSearchTolerance = 1.,
+            const double                    pastSearchTolerance = 1.,
+            int                             firstNRecentSweepsToSkip = SearchWholeDatabase
           );
+
+
+          /**
+           * ToDo Mladen: Document this
+           */
+          tarch::la::Vector<Dimensions, double> getPreviousParticlePosition(
+            const ParticleIdentifier& identifier,
+            const int                       spacetreeId,
+            const double                    idSearchTolerance = 1.,
+            const double                    pastSearchTolerance = 1.,
+            const int                       firstNRecentSweepsToSkip = SearchWholeDatabase
+            );
 
           /**
            * Print history of one particle
@@ -434,7 +496,7 @@ namespace toolbox {
            * Return number of snapshots
            *
            * These are the active snapshots still held in the database.
-           * addEntry()'s garbage collection might have removed some of
+           * addEvent()'s garbage collection might have removed some of
            * them already.
            */
           int getNumberOfSnapshots() const;
@@ -504,6 +566,14 @@ namespace toolbox {
            * which particles got lost.
            */
           void eliminateExistingParticles();
+
+
+          /**
+           * Delete all entries in the database and reset it to the initial
+           * state. This is intended for use in unit tests only, as running a
+           * new unit test expects an empty database.
+           */
+          void reset();
         };
       } // namespace internal
 
@@ -524,7 +594,9 @@ namespace toolbox {
       void eraseParticle(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
         bool                                         isLocal,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -559,6 +631,9 @@ namespace toolbox {
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& oldParticleX,
         const tarch::la::Vector<Dimensions, double>& newParticleX,
+        const int                                    particleID,
+        const tarch::la::Vector<Dimensions, double>& vertexX,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -684,16 +759,24 @@ namespace toolbox {
        *
        * @param particleIsNew If we know that a particle is new, there's no
        *                      need to search through the database.
+       * @param reassignmentOnSameTreeDepthAllowed If true, assume our
+       *                      particle sorting/bookkeeping algorithm allows
+       *                      for a particle to be reassigned from one vertex
+       *                      to another vertex on the same depth in the tree
+       *                      directly. Otherwise, expect the particle to be
+       *                      sorted either via sieves, lifts, or drops.
        */
       void assignParticleToVertex(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
         bool                                         isLocal,
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace,
-        bool                                         particleIsNew = false
+        bool                                         particleIsNew = false,
+        bool                                         reassignmentOnSameTreeDepthAllowed = false
       );
 
 
@@ -707,6 +790,7 @@ namespace toolbox {
       void detachParticleFromVertex(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
         bool                                         isLocal,
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
@@ -724,7 +808,9 @@ namespace toolbox {
       void assignParticleToSieveSet(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
         bool                                         isLocal,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
       );
@@ -761,6 +847,13 @@ namespace toolbox {
        * This routine uess exit(-1) if no assertions are enabled.
        */
       void ensureDatabaseIsEmpty();
+
+      /**
+       * Get a handle on the database.
+       * You should NEVER need this in your code. This only exists to verify the
+       * database integrity in unit tests.
+       */
+      internal::Database& getDatabase();
     } // namespace assignmentchecks
   }   // namespace particles
 } // namespace toolbox

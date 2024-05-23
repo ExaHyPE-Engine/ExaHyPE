@@ -110,9 +110,17 @@ void toolbox::particles::insertParticleIntoCell(
   );
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
 
+  #if PeanoDebug > 0
+  int partID = newParticle->getPartid();
+  std::cout << "Hello World!" << partID << std::endl;
+  #else
+  int partID = -1;
+  #endif
+
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
     newParticle->getX(),
+    partID,
     true, // is local
     marker.x() - 0.5 * marker.h()
       + tarch::la::multiplyComponents(

@@ -38,6 +38,7 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
         typename ParticleContainer::value_type>::type>(),
       *pRecordedPosition,
       (*pParticle)->getX(),
+      (*pParticle)->getPartid(),
       spacetreeId,
       "toolbox::particles::assignmentchecks::traceParticleMovements()"
     );
