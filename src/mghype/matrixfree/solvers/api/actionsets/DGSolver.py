@@ -38,11 +38,13 @@ class UpdateCell(ActionSet):
     }
 
     // also subtract A^cc u^c
-
     r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
-    
+
     // residual is now complete
-    
+
+    // compute preconditioned max norm; now it's not used in the stopping criterion. todo: add it to updateGlobalResidual()
+    //double precMaxNorm = tarch::la::max( repositories::{{SOLVER_INSTANCE}}.OmegaCell * repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r );
+
     repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
       tarch::la::max( tarch::la::abs(r) ),
       tarch::la::volume(marker.h()) * tarch::la::max(tarch::la::abs(r)),
@@ -56,7 +58,7 @@ class UpdateCell(ActionSet):
     r = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r;
 
     logTraceInWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
-    // scale current entries in solution vector by (1-OmegaCell)
+    // scale current entries in solution vector by OmegaCell
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
     {
       double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i);

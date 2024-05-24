@@ -32,6 +32,9 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   int residualReducedUnderThreshold = 0;
   int residualGrows   = 0;
 
+  // The criterion holds if ALL three norms reach the tolerance 
+  // or if the total numberOfResidualGrowths exceeds a limit
+
   if ( tarch::la::equals(_initialGlobalResidualMaxNorm,0.0) ) {
     _initialGlobalResidualMaxNorm = _globalResidualMaxNorm;
   }
