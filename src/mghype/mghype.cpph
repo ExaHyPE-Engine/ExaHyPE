@@ -9,9 +9,11 @@ tarch::la::Matrix< Rows, Cols, double > mghype::composeMatrixFromHWeightedLinear
 ) {
   assertionEquals( scaleFactors.size(), matrices.size() );
   tarch::la::Matrix<Rows,Cols,double> output(0);
-  auto matrixIter = matrices.begin();
   auto scaleIter  = scaleFactors.begin();
-  for (; matrixIter!=matrices.end(), scaleIter!=scaleFactors.end(); matrixIter++, scaleIter++)
+  auto matrixIter = matrices.begin();
+  // no need to compare both iterators, as the vectors have same size
+  for (; matrixIter!=matrices.end(); matrixIter++, scaleIter++) {
     output = output + (*matrixIter) * std::pow(h(0), *scaleIter);
+  }
   return output;
 }
