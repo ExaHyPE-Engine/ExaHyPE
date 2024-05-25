@@ -12,14 +12,6 @@ tests::multigrid::matrixfree::poisson::DGPoisson::~DGPoisson() {
 }
 
 
-void tests::multigrid::matrixfree::poisson::DGPoisson::initVertex(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< VertexUnknowns, double >&  value,
-  tarch::la::Vector< VertexUnknowns, double >&  rhs
-) { return; }
-
-
 //! [Set initial guess and rhs]
 void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
   const tarch::la::Vector<Dimensions, double>&  x,
