@@ -40,15 +40,23 @@ class DLinear(MatrixGenerator):
  
     
   def get_cell_identity_matrix(self):
+    """!
+        
+    Return identity matrix and a 0 as the identity matrix has no intrinsic
+    scaling, i.e. its scaling is @f$ h^0 @f$.
+        
+    """
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
     #           identity matrix.
     output = np.eye(dim,dim) * 2**(-self.Dimensions)
-    return output
+    return output, 0
 
       
   def get_lumped_mass_matrix(self):
     """!
-    Get this working for 2d. 
+
+     Get this working for 2d. 
+     
     What about 3d? If we select an index for the first dimension
     and then sum over the other two (ie call np.sum( massMatrix[i,] ))
     it will just add up all elements along the 2 other dimensions, as
@@ -82,7 +90,8 @@ class DLinear(MatrixGenerator):
     if self.unknowns_per_vertex_dof > 1:
       output = self.pad_matrix(output)
 
-    return output
+    return output, self.Dimensions
+        
 
   def get_cell_system_matrix_for_laplacian(self):
     '''!
@@ -91,7 +100,7 @@ class DLinear(MatrixGenerator):
     
     Needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h. In a finite element context, this matrix has to be 
-    scaled with @f$ h^{d-2} @f$.
+    scaled with @f$ h^{d-2} @f$. Therefore, we retturn d-2 as second argument.
 
     '''
     # making it 2^D since this is number of vertices per cell
@@ -107,7 +116,8 @@ class DLinear(MatrixGenerator):
     if self.unknowns_per_vertex_dof > 1:
       output = self.pad_matrix(output)
 
-    return output
+    return output, self.Dimensions - 2
+          
 
   def pad_matrix(self, matrix):
     """!

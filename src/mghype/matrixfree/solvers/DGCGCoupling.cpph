@@ -1,5 +1,7 @@
 #include "peano4/utils/Globals.h"
 #include "tarch/la/ScalarOperations.h"
+#include "tarch/la/VectorSlice.h"
+#include "tarch/logging/Log.h"
 
 
 void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
@@ -43,9 +45,9 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
         *
         vertex.getSumOfInjectedValues();
 
-      vertex.setValue(
-        rescaledNewValue
-      );
+//      vertex.setValue(
+//        rescaledNewValue
+//      );
       vertex.setOldValue(
         rescaledNewValue
       );
@@ -53,10 +55,108 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
         vertex.getNewRestrictedRhs()
       );
     }
-
-    logDebug( "touchVertexFirstTime()", "reset vertex to " << vertex.toString() );
   }
   vertex.setSumOfInjectedValues( 0.0 );
   vertex.setNumberOfRestrictions( 0 );
   vertex.setNewRestrictedRhs( 0.0 );
 }
+
+
+void mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters(
+  auto&  vertices
+) {
+  for (int vertex=0; vertex<TwoPowerD; vertex++) {
+    vertices(vertex).setNumberOfRestrictions(
+      vertices(vertex).getNumberOfRestrictions()+1
+    );
+    assertion1( vertices(vertex).getNumberOfRestrictions()>0,          vertices(vertex).toString() );
+    assertion1( vertices(vertex).getNumberOfRestrictions()<=TwoPowerD, vertices(vertex).toString() );
+  }
+}
+
+
+template <class DGSolver, class CGSolver>
+void mghype::matrixfree::solvers::dgcgcoupling::injectSolution(
+  const tarch::la::Matrix< TwoPowerD * CGSolver::VertexUnknowns, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  injectionMatrix,
+  const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+  auto&         cgVertices
+) {
+  static tarch::logging::Log _log( "mghype::matrixfree::solvers::dgcgcoupling" );
+  logDebug( "injectSolution(...)", injectionMatrix.toString() );
+
+  tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > injectedValues = injectionMatrix * dgSolution;
+
+  for (int vertex=0; vertex<TwoPowerD; vertex++) {
+    cgVertices(vertex).setSumOfInjectedValues(
+      cgVertices(vertex).getSumOfInjectedValues()
+      +
+      tarch::la::slice<CGSolver::VertexUnknowns>(injectedValues,vertex*CGSolver::VertexUnknowns)
+    );
+  }
+}
+
+
+template <class DGSolver, class CGSolver>
+void mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictHierarchicalResidual(
+    const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, TwoPowerD * CGSolver::VertexUnknowns, double >&  prolongationMatrix,
+    const tarch::la::Matrix< TwoPowerD * CGSolver::VertexUnknowns, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  restrictionMatrix,
+    const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  massMatrix,
+    const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  systemMatrix,
+    const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+    const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgRhs,
+    auto&           cgVertices
+) {
+  tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > prolongatedValues =
+      prolongationMatrix *getCoarseGridSolution<CGSolver>(cgVertices);
+
+  tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > hierarchicalResidual =
+      massMatrix * dgRhs
+      -
+      systemMatrix * ( prolongatedValues - dgSolution );
+
+  tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > restrictedValues =
+    restrictionMatrix * hierarchicalResidual;
+
+  for (int vertex=0; vertex<TwoPowerD; vertex++) {
+    cgVertices(vertex).setNewRestrictedRhs(
+      cgVertices(vertex).getNewRestrictedRhs()
+      +
+      tarch::la::slice<CGSolver::VertexUnknowns>(restrictedValues,vertex*CGSolver::VertexUnknowns)
+    );
+  }
+}
+
+
+template <class CGSolver>
+tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double >  mghype::matrixfree::solvers::dgcgcoupling::getCoarseGridSolution(
+  auto&           cgVertices
+) {
+  tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > result;
+  for (int vertex=0; vertex<TwoPowerD; vertex++)
+  for (int unknown=0; unknown<CGSolver::VertexUnknowns; unknown++) {
+    result( vertex*CGSolver::VertexUnknowns+unknown ) = cgVertices(vertex).getValue(unknown);
+  }
+  return result;
+}
+
+
+
+/*
+
+    hierarchicalResidual =
+
+
+constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
+constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
+
+tarch::la::Vector< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, double > restrictedValues =
+  composedRestrictionMatrix * hierarchicalResidual;
+
+for (int vertex=0; vertex<TwoPowerD; vertex++) {
+  fineGridVertices{{CG_SOLVER_NAME}}(vertex).setNewRestrictedRhs(
+    fineGridVertices{{CG_SOLVER_NAME}}(vertex).getNewRestrictedRhs()
+    +
+    tarch::la::slice<{{CG_SOLVER_NAME}}::VertexUnknowns>(restrictedValues,vertex*{{CG_SOLVER_NAME}}::VertexUnknowns)
+  );
+}
+*/

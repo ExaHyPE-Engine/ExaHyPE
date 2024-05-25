@@ -54,6 +54,8 @@ bool selectNextAlgorithmicStep() {
 
   static bool plotThenExit = false;
 
+  const int MaxIterations = 10;
+
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
     auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
@@ -81,7 +83,7 @@ bool selectNextAlgorithmicStep() {
         {
           {
           if (
-            ++solverSteps >= 300
+            ++solverSteps >= MaxIterations
             or
             repositories::terminationCriterionHolds()
           ) plotThenExit = true;
@@ -110,7 +112,7 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Solve:
         {
           if (
-            ++solverSteps >= 300
+            ++solverSteps >= MaxIterations
             or
             repositories::terminationCriterionHolds()
           )

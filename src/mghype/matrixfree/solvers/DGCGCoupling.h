@@ -4,6 +4,11 @@
 #pragma once
 
 
+#include "tarch/la/Matrix.h"
+#include "tarch/la/Vector.h"
+#include "peano4/utils/Globals.h"
+
+
 namespace mghype {
   namespace matrixfree {
     namespace solvers {
@@ -33,13 +38,15 @@ namespace mghype {
          * counter NumberOfRestrictions will hold invalid values for the
          * outer vertices - typically 0.
          *
-         * Boundary vertices
+         * Boundary vertices do not really require special treatment. The only
+         * important thing in a multigrid sense is that the delta at the
+         * boundary point is zero. In a correction scheme, we'd furthermore fix
+         * them to homogeneous Dirichlet values, but as we typically favour
+         * FAS we take the injected value. We can identify boundary values as
+         * the number of restrictions there is smaller than @f$ 2^ @f$.
          *
-         * Along the same lines, we don't have to care about special treatment
-         * for boundary vertices, i.e. some marker semantics there. If a vertex
-         * has less than @f$ 2^d @f$ adjacent CG patches, we can assume that it
-         * is a boundary vertex (or outer as sketched above).
-         *
+         * In the very first sweep, we reset the right-hand side, as we don't
+         * know its value yet.
          *
          * To prepare of for the next mesh sweep, we reset the restriction and
          * accumulation variables:
@@ -61,6 +68,66 @@ namespace mghype {
         void rollOverAndPrepareCGVertex(
           auto&  vertex,
           bool   restrictRhsAndInjectSolution
+        );
+
+
+        /**
+         * Restrict counters
+         *
+         * This routine is typically invoked by touchCellLastTime(). We run
+         * through the @f$ 2^d @f$ adjacent vertices of a cell and increment
+         * each of its restriction counters by one. Some sanity checks ensure
+         * they hold valid data.
+         *
+         * The standard invocation of this routine resembles
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters(
+         *   fineGridVertices{{CG_SOLVER_NAME}}
+         * );
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         *
+         * @param vertices Instance of Peano's VertexEnumerator.
+         */
+        void updateRestrictionCounters(
+          auto&  vertices
+        );
+
+        /**
+         *
+         *      constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
+      constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
+         *
+         *
+         * @param injectionMatrix: Of type tarch::la::Matrix< Rows, Cols, double >
+         *   where the constraints above are given on Rows and Cols, i.e. they
+         *   have to match the other types.
+         */
+        template <class DGSolver, class CGSolver>
+        void injectSolution(
+          const tarch::la::Matrix< TwoPowerD * CGSolver::VertexUnknowns, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  injectionMatrix,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+          auto&           cgVertices
+        );
+
+        template <class DGSolver, class CGSolver>
+        void computeAndRestrictHierarchicalResidual(
+          const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, TwoPowerD * CGSolver::VertexUnknowns, double >&  prolongationMatrix,
+          const tarch::la::Matrix< TwoPowerD * CGSolver::VertexUnknowns, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  restrictionMatrix,
+          const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  massMatrix,
+          const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  systemMatrix,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgRhs,
+          auto&           cgVertices
+        );
+
+        /**
+         * Get the vector of course grid solutions
+         */
+        template <class CGSolver>
+        tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > getCoarseGridSolution(
+          auto&           cgVertices
         );
       }
     }
