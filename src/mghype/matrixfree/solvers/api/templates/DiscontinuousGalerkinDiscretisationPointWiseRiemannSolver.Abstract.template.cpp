@@ -1,5 +1,4 @@
 #include "{{CLASSNAME}}.h"
-#include "tarch/multicore/Lock.h"
 #include "mghype/mghype.h"
 #include "tarch/la/LUDecomposition.h"
 

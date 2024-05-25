@@ -90,7 +90,7 @@ class DLinear(MatrixGenerator):
     if self.unknowns_per_vertex_dof > 1:
       output = self.pad_matrix(output)
 
-    return output, self.Dimensions
+    return [output], [self.Dimensions]
         
 
   def get_cell_system_matrix_for_laplacian(self):
@@ -116,7 +116,7 @@ class DLinear(MatrixGenerator):
     if self.unknowns_per_vertex_dof > 1:
       output = self.pad_matrix(output)
 
-    return output, self.Dimensions - 2
+    return [output], [self.Dimensions - 2]
           
 
   def pad_matrix(self, matrix):
