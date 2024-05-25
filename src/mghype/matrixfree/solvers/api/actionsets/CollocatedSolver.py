@@ -6,12 +6,22 @@ import jinja2
 
 class CollocatedSolver(ActionSet):
   templateTouchVertexFirstTime = """ 
-  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
+  if (
+    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
+  ) {
+    auto value = fineGridVertex{{SOLVER_NAME}}.getValue();
+    repositories::{{SOLVER_INSTANCE}}.setBoundaryConditions(
+      marker.x(),
+      marker.h(),
+      value
+    );
+    fineGridVertex{{SOLVER_NAME}}.setValue(value);
+  }
+  else if (fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior)
   {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
-    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
-    {
+    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
       // set residual to 0
       // we can pass the whole vector around, but intent is clearer this way
       fineGridVertex{{SOLVER_NAME}}.setResidual( unknown, 0);
@@ -25,8 +35,9 @@ class CollocatedSolver(ActionSet):
   """
 
   templateTouchVertexLastTime = """
-  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
-  {
+  if (
+    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
+  ) {
     logTraceInWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)

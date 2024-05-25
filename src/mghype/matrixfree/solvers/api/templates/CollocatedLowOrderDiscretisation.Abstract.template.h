@@ -51,6 +51,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
     ) = 0;
 
+    virtual void setBoundaryConditions(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value
+    ) = 0;
+
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
