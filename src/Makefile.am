@@ -32,7 +32,7 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
 
 Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/Enumerator.cpp \
-    tarch/NonCriticalAssertions.cpp \
+	tarch/NonCriticalAssertions.cpp \
 	tarch/UnitTests.cpp \
 	tarch/la/tests/DynamicMatrixTest.cpp \
 	tarch/la/tests/MatrixVectorTest.cpp \
@@ -62,6 +62,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/accelerator/cuda/DeviceInfo.cpp \
 	tarch/accelerator/cuda/Device.cpp \
 	tarch/accelerator/cuda/accelerator.cpp \
+	tarch/accelerator/hip/accelerator.cpp \
 	tarch/multicore/BooleanSemaphore.cpp \
 	tarch/multicore/multicore.cpp \
 	tarch/multicore/Core.cpp \
