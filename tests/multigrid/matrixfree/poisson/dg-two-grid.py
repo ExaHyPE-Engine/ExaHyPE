@@ -98,6 +98,7 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
   mass_matrix                   = correction_equation_matrices.get_cell_identity_matrix(),
   mass_matrix_scaling           = 0,
   solver_tolerance              = 1e-12,
+  smoother_relaxation           = 0.5
 )
 #! [Correction equation solver]
 
