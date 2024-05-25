@@ -27,15 +27,14 @@ project = mghype.matrixfree.api.Project( project_name = "CollocatedFEM",
                                 )
 
 #! [Construct matrices]
-correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
+poisson_equation_matrices = mghype.api.matrixgenerators.DLinear(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
 )
 
-system_matrix, system_matrix_scaling = correction_equation_matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix,   maxx_matrix_scaling   = correction_equation_matrices.get_cell_mass_matrix()
-
+system_matrix, system_matrix_scaling = poisson_equation_matrices.get_cell_system_matrix_for_laplacian()
+mass_matrix,   maxx_matrix_scaling   = poisson_equation_matrices.get_cell_mass_matrix()
 #! [Construct matrices]
 
 solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("CollocatedPoisson",

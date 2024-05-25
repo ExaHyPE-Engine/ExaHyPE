@@ -55,7 +55,7 @@ class CollocatedLowOrderDiscretisation(Solver):
   This array holds the right-hand side of the equation. We assign this in 
   experiment-specific implementation files.
 
-  ## FieldDiagonal
+  ## Diagonal
   This array holds the sum of the diagonals of the local assembly matrix. This is
   set to 0 at the start of every solver step
 
@@ -137,7 +137,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     # already initialised this in superclass!
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
-    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag",  str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "diag",       str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
 
     self._local_assembly_matrix         = local_assembly_matrix

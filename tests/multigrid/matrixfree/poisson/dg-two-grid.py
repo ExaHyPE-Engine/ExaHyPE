@@ -83,6 +83,8 @@ correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
 )
+system_matrix, system_matrix_scaling = correction_equation_matrices.get_cell_system_matrix_for_laplacian()
+mass_matrix,   maxx_matrix_scaling   = correction_equation_matrices.get_cell_mass_matrix()
 #! [Construct correction matrices]
 
 
@@ -93,10 +95,10 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
   dimensions = args.dimensions,
   min_h = args.meshsize,
   max_h = args.meshsize,
-  local_assembly_matrix         = correction_equation_matrices.get_cell_system_matrix_for_laplacian(),
-  local_assembly_matrix_scaling = args.dimensions-2,
-  mass_matrix                   = correction_equation_matrices.get_cell_identity_matrix(),
-  mass_matrix_scaling           = 0,
+  local_assembly_matrix = system_matrix,
+  local_assembly_matrix_scaling=system_matrix_scaling,
+  mass_matrix = mass_matrix,
+  mass_matrix_scaling = maxx_matrix_scaling,
   solver_tolerance              = 1e-12,
   smoother_relaxation           = 0.5
 )

@@ -17,7 +17,7 @@ class CollocatedSolver(ActionSet):
       fineGridVertex{{SOLVER_NAME}}.setResidual( unknown, 0);
 
       // set diag to 0
-      fineGridVertex{{SOLVER_NAME}}.setFieldDiag(unknown, 0.0);
+      fineGridVertex{{SOLVER_NAME}}.setDiag(unknown, 0.0);
     }
     
     logTraceOutWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
@@ -31,14 +31,13 @@ class CollocatedSolver(ActionSet):
 
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
-      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
-      assertion( fineGridVertex{{SOLVER_NAME}}.getFieldDiag(unknown) > 0 );
+      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown), fineGridVertex{{SOLVER_NAME}}.getDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
+      assertion( fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) > 0 );
       
-      double r   = tarch::la::abs(fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
+      double r   = fineGridVertex{{SOLVER_NAME}}.getResidual(unknown);
       double val = fineGridVertex{{SOLVER_NAME}}.getValue(unknown) 
-                  + repositories::{{SOLVER_INSTANCE}}.Omega 
-                    * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(unknown) )
-                    * r;
+                 + repositories::{{SOLVER_INSTANCE}}.Omega 
+                 * 1.0 / fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) * r;
 
       repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
         tarch::la::abs(r),
@@ -98,10 +97,10 @@ class CollocatedSolver(ActionSet):
 
         // increment fieldDiag
         // get current val
-        double diagVal = fineGridVertices{{SOLVER_NAME}}(i).getFieldDiag(unknown);
+        double diagVal = fineGridVertices{{SOLVER_NAME}}(i).getDiag(unknown);
         // increment it
         diagVal += A(i,i);
-        fineGridVertices{{SOLVER_NAME}}(i).setFieldDiag(unknown, diagVal);
+        fineGridVertices{{SOLVER_NAME}}(i).setDiag(unknown, diagVal);
 
         // put new residual values back
         fineGridVertices{{SOLVER_NAME}}(i).setResidual(unknown, residualValues(i));
