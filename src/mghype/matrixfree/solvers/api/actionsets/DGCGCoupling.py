@@ -72,10 +72,11 @@ class DGCGCoupling(ActionSet):
   """
 
 
-  templateTouchVertexFirstTime="""
+  __TemplateTouchVertexFirstTime="""
     mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
       fineGridVertex{{CG_SOLVER_NAME}},
-      true // restrictRhsAndInjectSolution
+      true, // restrictRhsAndInjectSolution
+      {{USE_FAS}}
     );
   """
 
@@ -85,7 +86,7 @@ class DGCGCoupling(ActionSet):
   // Interpolation
   // ============================
   const double additiveMultigridRelaxation = 0.0;
-  if (false and fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -111,26 +112,20 @@ class DGCGCoupling(ActionSet):
     };
   
     tarch::la::Matrix< Rows, Cols, double > composedProlongationMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, marker.h() );
-    
-    tarch::la::Vector< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, double > coarseDeltaValues;
-    for (int vertex=0; vertex<TwoPowerD; vertex++)
-    for (int unknown=0; unknown<{{CG_SOLVER_NAME}}::VertexUnknowns; unknown++) {
-      coarseDeltaValues( vertex*{{CG_SOLVER_NAME}}::VertexUnknowns+unknown ) = fineGridVertices{{CG_SOLVER_NAME}}(vertex).getDelta(unknown);
-    }
 
-    tarch::la::Vector< {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode, double > prolongatedValues = 
-      composedProlongationMatrix * coarseDeltaValues;
-      
     fineGridCell{{DG_SOLVER_NAME}}.setSolution(
-      fineGridCell{{DG_SOLVER_NAME}}.getSolution() + 
-      additiveMultigridRelaxation * prolongatedValues
+      mghype::matrixfree::solvers::dgcgcoupling::prolongate<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
+        composedProlongationMatrix,
+        fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
+        fineGridVertices{{CG_SOLVER_NAME}}
+      )
     );
   }
 """
 
 
 
-  templateTouchCellLastTime="""
+  __TemplateTouchCellLastTime_FAS="""
   if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
     assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
 
@@ -241,6 +236,93 @@ class DGCGCoupling(ActionSet):
   }
 """
 
+  
+  __TemplateTouchCellLastTime_CorrectionScheme="""
+  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+    assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
+
+    // =============================
+    // compute and restrict residual
+    // =============================
+    {
+      static std::vector< tarch::la::Matrix< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode, double > > restrictionMatrices = {
+        {% for MATRIX in RESTRICTION_MATRIX %}
+         {
+          {{MATRIX[0]| join(", ")}}
+            {% for ROW in MATRIX[1:] %}
+            ,{{ROW | join(", ")}}
+            {% endfor %}
+        },
+        {% endfor %}
+      };
+
+      {% if RESTRICTION_MATRIX_SCALING is not defined %}
+      #error No scaling for injection matrix available.
+      {% endif %}
+
+      static std::vector<int> restrictionMatricesScaleFactors = {
+        {% for el in INJECTION_MATRIX_SCALING %}
+         {{el}},
+        {% endfor %}
+      };
+  
+      tarch::la::Matrix< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode, double > composedRestrictionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( restrictionMatrices, restrictionMatricesScaleFactors, marker.h() );
+
+      mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
+        composedRestrictionMatrix,
+        repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
+        repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
+        fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
+        fineGridCell{{DG_SOLVER_NAME}}.getRhs(),
+        fineGridVertices{{CG_SOLVER_NAME}}
+      );    
+    }
+      
+    // ============================
+    // inject solution back (accumulation)
+    // ============================
+    {
+      constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
+      constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
+
+      static std::vector< tarch::la::Matrix< Rows, Cols, double > > injectionMatrices = {
+        {% for MATRIX in INJECTION_MATRIX %}
+         {
+          {{MATRIX[0]| join(", ")}}
+            {% for ROW in MATRIX[1:] %}
+            ,{{ROW | join(", ")}}
+            {% endfor %}
+        },
+        {% endfor %}
+      };
+
+      {% if INJECTION_MATRIX_SCALING is not defined %}
+      #error No scaling for injection matrix available.
+      {% endif %}
+
+      static std::vector<int> injectionMatricesScaleFactors = {
+        {% for el in INJECTION_MATRIX_SCALING %}
+         {{el}},
+        {% endfor %}
+      };
+
+      tarch::la::Matrix< Rows, Cols, double > composedInjectionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( injectionMatrices, injectionMatricesScaleFactors, marker.h() );
+
+      mghype::matrixfree::solvers::dgcgcoupling::injectSolution<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
+        composedInjectionMatrix,
+        fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
+        fineGridVertices{{CG_SOLVER_NAME}}
+      );    
+    }
+    
+    // ==============
+    // Update counter
+    // ==============
+    mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters( 
+      fineGridVertices{{CG_SOLVER_NAME}}
+    );    
+  }
+"""
 
   def __init__(self,
                dg_solver,
@@ -250,7 +332,8 @@ class DGCGCoupling(ActionSet):
                restriction_matrix,
                restriction_matrix_scaling,
                injection_matrix,
-               injection_matrix_scaling
+               injection_matrix_scaling,
+               use_fas
                ):
     """!
     
@@ -276,6 +359,10 @@ class DGCGCoupling(ActionSet):
       injection_matrix will be scaled with  @f$ h^3 @f$ and the second one 
       with one. If you work with a simple function evaluation as injection, 
       then you are fine with one matrix, and its scaline will be [ 0 ].
+      
+    @param use_fas: Boolean
+      If this flag is set, we realise a FAS following the HTMG idea by 
+      Griebel et al.
     
     """  
     super( DGCGCoupling, self ).__init__(
@@ -301,21 +388,28 @@ class DGCGCoupling(ActionSet):
     self.d["PROLONGATION_MATRIX_SCALING"] = prolongation_matrix_scaling
     self.d["RESTRICTION_MATRIX"]          = restriction_matrix
     self.d["RESTRICTION_MATRIX_SCALING"]  = restriction_matrix_scaling
+
+    if use_fas:
+      self.d["USE_FAS"]                   = "true"
+      self._use_fas                       = use_fas
+    else:
+      self.d["USE_FAS"]                   = "false"
+      self._use_fas                       = use_fas
     
 
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
+      result = jinja2.Template(self.__TemplateTouchVertexFirstTime).render(**self.d)
       pass
-#
-# @todo erst a mail a correction scheme
-#
-#    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-#      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
-#      pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = jinja2.Template(self.templateTouchCellLastTime).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      pass
+    if self._use_fas and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      result = jinja2.Template(self.__TemplateTouchCellLastTime_FAS).render(**self.d)
+      pass
+    if not self._use_fas and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      result = jinja2.Template(self.__TemplateTouchCellLastTime_CorrectionScheme).render(**self.d)
       pass
     return result
 

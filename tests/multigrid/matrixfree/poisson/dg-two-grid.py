@@ -14,6 +14,7 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",    dest="j",                  type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pt",   "--plot-timestep",     dest="plot_each_timestep", action="store_true", default=False, help="Plot after each timestep. By default (False) we plot after initialisation and at the end" )
+parser.add_argument("-fas",   "--use-fas",          dest="fas", action="store_true", default=False, help="Switch to FAS" )
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
@@ -127,6 +128,7 @@ solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.DGCGC
     restriction_matrix_scaling,
     injection_matrix,
     injection_matrix_scaling,
+    args.fas
 )
 #! [Coupling]
 

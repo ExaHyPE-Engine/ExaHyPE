@@ -54,7 +54,7 @@ bool selectNextAlgorithmicStep() {
 
   static bool plotThenExit = false;
 
-  const int MaxIterations = 10;
+  const int MaxIterations = 100;
 
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();

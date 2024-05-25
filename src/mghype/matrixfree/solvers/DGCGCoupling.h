@@ -67,7 +67,8 @@ namespace mghype {
          */
         void rollOverAndPrepareCGVertex(
           auto&  vertex,
-          bool   restrictRhsAndInjectSolution
+          bool   restrictRhsAndInjectSolution,
+          bool   fas
         );
 
 
@@ -108,6 +109,23 @@ namespace mghype {
         void injectSolution(
           const tarch::la::Matrix< TwoPowerD * CGSolver::VertexUnknowns, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  injectionMatrix,
           const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+          auto&           cgVertices
+        );
+
+        template <class DGSolver, class CGSolver>
+        tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > prolongate(
+          const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, TwoPowerD * CGSolver::VertexUnknowns, double >&  prolongationMatrix,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+          const auto&           cgVertices
+        );
+
+        template <class DGSolver, class CGSolver>
+        void computeAndRestrictResidual(
+          const tarch::la::Matrix< TwoPowerD * CGSolver::VertexUnknowns, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  restrictionMatrix,
+          const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  massMatrix,
+          const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  systemMatrix,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgRhs,
           auto&           cgVertices
         );
 
