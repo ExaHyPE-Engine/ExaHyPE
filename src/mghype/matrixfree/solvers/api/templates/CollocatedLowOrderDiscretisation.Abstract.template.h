@@ -35,7 +35,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
-    static constexpr double     Omega = 0.6;
+    static constexpr double     Omega = {{SMOOTHER_RELAXATION}};
     static constexpr int        VertexUnknowns = {{VERTEX_CARDINALITY}};
 
     {{CLASSNAME}}();

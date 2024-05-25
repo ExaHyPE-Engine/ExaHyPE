@@ -115,7 +115,8 @@ class CollocatedLowOrderDiscretisation(Solver):
                local_assembly_matrix_scaling,
                mass_matrix,
                mass_matrix_scaling,
-               solver_tolerance
+               solver_tolerance,
+               smoother_relaxation = 0.6
                ):
     """!
    
@@ -147,6 +148,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._solver_tolerance              = solver_tolerance
     
     self._basic_descend_order           = 0
+    
+    self._smoother_relaxation           = smoother_relaxation
     
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -207,10 +210,11 @@ class CollocatedLowOrderDiscretisation(Solver):
         "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling,
         "MASS_MATRIX"         : self._mass_matrix,
         "MASS_MATRIX_SCALING" : self._mass_matrix_scaling,
-        "VERTEX_CARDINALITY": self._unknowns_per_vertex,
-        "SOLVER_NAME":             self.typename(),
-        "SOLVER_TOLERANCE"            : self._solver_tolerance,
-        }
+        "VERTEX_CARDINALITY":            self._unknowns_per_vertex,
+        "SOLVER_NAME":                   self.typename(),
+        "SOLVER_TOLERANCE"            :  self._solver_tolerance,
+        "SMOOTHER_RELAXATION":           self._smoother_relaxation
+    }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
