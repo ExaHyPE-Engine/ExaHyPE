@@ -3,7 +3,6 @@
 #include <map>
 
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/DeviceInfo.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if defined(GPUOffloadingSYCL)
