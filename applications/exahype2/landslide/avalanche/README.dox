@@ -37,6 +37,8 @@ For a general overview on how to retrieve and configure the project, refer to @r
     python3 avalanche.py
     ./ExaHyPE2-Landslide-RusanovGlobalAdaptiveFV-Release
 
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
 ## Visualise the Simulation Output
 
     python3 avalanche.py
