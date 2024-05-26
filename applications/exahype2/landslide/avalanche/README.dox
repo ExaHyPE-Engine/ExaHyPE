@@ -11,6 +11,36 @@
     </div>
 </div>
 
+## How to Build and Run
+
+For a general overview on how to retrieve and configure the project, refer to @ref page_installation.
+
+### Using CMake
+
+    cd myPeanoDirectory && mkdir build && cd build
+    CC=gcc CXX=g++ cmake .. -DWITH_MULTITHREADING=omp -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    make -j && make test
+    cd applications/exahype2/landslide/avalanche/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 avalanche.py
+    ./ExaHyPE2-Landslide-RusanovGlobalAdaptiveFV-Release
+
+### Using Automake
+
+    cd myPeanoDirectory
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    CFLAGS="-fopenmp" CC=gcc CXXFLAGS="-std=c++20 -fopenmp" CXX=g++ LDFLAGS="-fopenmp" \
+    ./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+    make -j && make check
+    cd applications/exahype2/landslide/avalanche/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 avalanche.py
+    ./ExaHyPE2-Landslide-RusanovGlobalAdaptiveFV-Release
+
+## Visualise the Simulation Output
+
+    python3 avalanche.py
+
 ## Simulation of Masonry Sand
 
 ### With Friction
