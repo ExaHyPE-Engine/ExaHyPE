@@ -1,0 +1,34 @@
+/**
+
+@page applications_exahype2_landslide_avalanche Landslide Avalanche
+
+<div style="display: flex;">
+    <div style="flex: 50%; padding: 5px;">
+        \image html Avalanche.gif
+    </div>
+    <div style="flex: 50%; padding: 5px;">
+        \image html Avalanche_Wireframe.gif
+    </div>
+</div>
+
+## Simulation of Masonry Sand
+
+### With Friction
+
+<p align="center">
+  <img src="Sand-theta_35.gif" />
+</p>
+
+### Without Friction
+
+<p align="center">
+  <img src="Sand-Zero-Friction-theta_35.gif" />
+</p>
+
+## Simulation of Carborundum
+
+<p align="center">
+  <img src="Carborundum-theta_35.gif" />
+</p>
+
+*/
