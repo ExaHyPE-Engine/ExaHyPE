@@ -35,7 +35,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
-    static constexpr double     Omega = 0.6;
+    static constexpr double     Omega = {{SMOOTHER_RELAXATION}};
     static constexpr int        VertexUnknowns = {{VERTEX_CARDINALITY}};
 
     {{CLASSNAME}}();
@@ -49,6 +49,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+    ) = 0;
+
+    virtual void setBoundaryConditions(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value
     ) = 0;
 
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(

@@ -72,7 +72,7 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   _previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   _previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
 
-  logInfo( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
+  logDebug( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
   static int numberOfResidualGrowths = 0;
   const int numberOfChecks = 3;
 

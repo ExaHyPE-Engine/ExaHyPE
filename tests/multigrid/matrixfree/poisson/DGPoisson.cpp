@@ -1,6 +1,8 @@
 #include "DGPoisson.h"
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h"
+#include "Scenario.h"
+
 
 tests::multigrid::matrixfree::poisson::DGPoisson::DGPoisson() {
 }
@@ -9,12 +11,6 @@ tests::multigrid::matrixfree::poisson::DGPoisson::DGPoisson() {
 tests::multigrid::matrixfree::poisson::DGPoisson::~DGPoisson() {
 }
 
-void tests::multigrid::matrixfree::poisson::DGPoisson::initVertex(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< VertexUnknowns, double >&  value,
-  tarch::la::Vector< VertexUnknowns, double >&  rhs
-) { return; }
 
 //! [Set initial guess and rhs]
 void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
@@ -29,8 +25,6 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
 
   auto bottomLeft = x - 0.5 * h;
 
-  static constexpr double fourDPiSquared = 4 * Dimensions * tarch::la::PI * tarch::la::PI;
-  
   // we only have one cell unknown, so we can reuse this macro
   int counter = 0;
   dfor( k, PolyDegree + 1 )
@@ -38,18 +32,16 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
     // convert k to double
     tarch::la::Vector<Dimensions, double> kDouble = tarch::la::convertScalar<double, Dimensions, int>(k);
     auto dofPosition = bottomLeft + h(0)*kDouble / (double)repositories::instanceOfDGPoisson.PolyDegree;
-    double sinSquared = 1;
-    for (int i=0; i<Dimensions; i++)
-      sinSquared *= std::sin( 2 * tarch::la::PI * dofPosition[i] );
-    rhs[counter]   = fourDPiSquared * sinSquared;
+    rhs[counter]   = getPointWiseRhs(dofPosition);
     value[counter] = 0;
-    exact[counter] = sinSquared;
+    //exact[counter] = sinSquared;
     counter++;
   }
 
   logTraceOutWith5Arguments("initCell", x, h, value, rhs, exact);
 }
 //! [Set initial guess and rhs]
+
 
 void tests::multigrid::matrixfree::poisson::DGPoisson::initFace(
   const tarch::la::Vector<Dimensions, double>&  x,

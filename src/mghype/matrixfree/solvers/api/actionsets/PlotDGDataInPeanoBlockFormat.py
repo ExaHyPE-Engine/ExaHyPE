@@ -113,7 +113,7 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
   counter++;
   
   std::ostringstream snapshotFileName;
-  snapshotFileName << "visualisation/{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
+  snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();

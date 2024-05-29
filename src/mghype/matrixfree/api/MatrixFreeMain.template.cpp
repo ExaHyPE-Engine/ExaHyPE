@@ -83,7 +83,7 @@ bool selectNextAlgorithmicStep() {
         {
           {
           if (
-            ++solverSteps >= stepLimit
+            ++solverSteps >= MaxIterations
             or
             repositories::terminationCriterionHolds()
           ) plotThenExit = true;
@@ -112,7 +112,7 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Solve:
         {
           if (
-            ++solverSteps >= stepLimit
+            ++solverSteps >= MaxIterations
             or
             repositories::terminationCriterionHolds()
           )
