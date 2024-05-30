@@ -15,8 +15,6 @@ namespace toolbox {
 
         namespace internal {
 
-          constexpr int maxVertexDepth = 5;
-
           /**
            * Does this particle need to be lifted? Yes if particleX
            * is not located in the square with size 2 vertexH around
@@ -28,7 +26,7 @@ namespace toolbox {
             const tarch::la::Vector<Dimensions, double> vertexX,
             const tarch::la::Vector<Dimensions, double> vertexH,
             const int depth
-            );
+          );
 
           /**
            * Does this particle need to be dropped? Yes if particleX
@@ -39,8 +37,9 @@ namespace toolbox {
           bool dropParticle(
             const tarch::la::Vector<Dimensions, double> particleX,
             const tarch::la::Vector<Dimensions, double> vertexH,
-            const int depth
-            );
+            const int depth,
+            const int maxVertexDepth
+          );
 
           /**
            * Find "index" of vertex with size `vertexH` covering position `x`
@@ -72,6 +71,11 @@ class toolbox::particles::assignmentchecks::tests::TestHelpers: public tarch::te
      * and drops.
      */
     void testParticleWalkSameTreeLevel();
+
+    /**
+     * Test a particle being assigned up and down the vertex hierarchy.
+     */
+    void testParticleLiftDrop();
 
     /**
      * Test a particle walking from vertex to vertex, where each time a
