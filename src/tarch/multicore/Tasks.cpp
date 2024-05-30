@@ -492,6 +492,14 @@ void tarch::multicore::internal::configureInternalTaskQueues(int numberOfThreads
   }
 }
 
+void tarch::multicore::internal::shutdownInternalTaskQueues() {
+  for (auto q : localNonblockingTasks){
+    delete q;
+  }
+  localNonblockingTasks.clear();
+}
+
+
 void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue() {
   for (int i = 0; i < localNonblockingTasks.size(); i++) {
     copyInternalTaskQueueOverIntoGlobalQueue(i);
