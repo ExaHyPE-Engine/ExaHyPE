@@ -5,16 +5,62 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/tests/TestCase.h"
+#include "tarch/la/Vector.h"
 
 namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
       namespace tests {
         class TestHelpers;
-      } // namespace assignmentchecks
-    }   // namespace tests
-  }     // namespace particles
-}       // namespace toolbox
+
+        namespace internal {
+
+          constexpr int maxVertexDepth = 5;
+
+          /**
+           * Does this particle need to be lifted? Yes if particleX
+           * is not located in the square with size 2 vertexH around
+           * the closest vertex with size vertexH, and if we're not
+           * at shallowest point in tree (= depth == 0)
+           */
+          bool liftParticle(
+            const tarch::la::Vector<Dimensions, double> particleX,
+            const tarch::la::Vector<Dimensions, double> vertexX,
+            const tarch::la::Vector<Dimensions, double> vertexH,
+            const int depth
+            );
+
+          /**
+           * Does this particle need to be dropped? Yes if particleX
+           * is located in the square with size 2 vertexH around
+           * the closest vertex with size vertexH and while
+           * depth doesn't exceed maxVertexDepth.
+           */
+          bool dropParticle(
+            const tarch::la::Vector<Dimensions, double> particleX,
+            const tarch::la::Vector<Dimensions, double> vertexH,
+            const int depth
+            );
+
+          /**
+           * Find "index" of vertex with size `vertexH` covering position `x`
+           * assuming all vertices start at (0, 0, 0).
+           */
+          int findVertexInd(double x, double vertexH);
+
+          /**
+           * Find position of vertex with size `vertexH` covering position `x`
+           * assuming all vertices start at (0, 0, 0).
+           */
+          tarch::la::Vector<Dimensions, double> findVertexX(
+            const tarch::la::Vector<Dimensions, double> x,
+            const tarch::la::Vector<Dimensions, double> vertexH
+          );
+        } // namespace internal
+      }   // namespace tests
+    }     // namespace assignmentchecks
+  }       // namespace particles
+}         // namespace toolbox
 
 class toolbox::particles::assignmentchecks::tests::TestHelpers: public tarch::tests::TestCase {
 
@@ -26,6 +72,13 @@ class toolbox::particles::assignmentchecks::tests::TestHelpers: public tarch::te
      * and drops.
      */
     void testParticleWalkSameTreeLevel();
+
+    /**
+     * Test a particle walking from vertex to vertex, where each time a
+     * it crosses a vertex boundary, it's assigned to a new vertex via
+     * a lift and a subsequent drop.
+     */
+    void testParticleWalk();
 
     /**
      * Particles are identified in the events database using their unique ID.
