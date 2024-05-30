@@ -32,6 +32,7 @@
 
 #ifdef UseToolboxParticles
 #include "toolbox/particles/UnitTests.h"
+#include "toolbox/particles/assignmentchecks/UnitTests.h"
 #endif
 
 
@@ -88,6 +89,11 @@ void runTests() {
 
 #ifdef UseToolboxParticles
   tests = toolbox::particles::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+
+  tests = toolbox::particles::assignmentchecks::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
