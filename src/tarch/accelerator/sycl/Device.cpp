@@ -1,3 +1,4 @@
+#include "Device.h"
 #include "tarch/accelerator/Device.h"
 
 #include <map>
