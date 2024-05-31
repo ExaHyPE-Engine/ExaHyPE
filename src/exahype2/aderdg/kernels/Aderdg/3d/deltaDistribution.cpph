@@ -73,8 +73,8 @@ void kernels::aderdg::generic::c::deltaDistribution(
     std::vector<int>* pointSources, // will be deleted in the end
     double* PSi
 ) {
-  constexpr int numberOfVariables = SolverType::NumberOfVariables;
-  constexpr int numberOfData = SolverType::NumberOfVariables+SolverType::NumberOfParameters;
+  constexpr int numberOfVariables = SolverType::NumberOfUnknowns;
+  constexpr int numberOfData = SolverType::NumberOfUnknowns+SolverType::NumberOfAuxiliaryVariables;
   constexpr int basisSize = SolverType::Order +1;
   constexpr int order = SolverType::Order;
 

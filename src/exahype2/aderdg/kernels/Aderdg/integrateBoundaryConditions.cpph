@@ -41,7 +41,7 @@ void integrateBoundaryConditions(
     const double * const fluxIn, const double* const stateIn,
     double *fluxOut, double* stateOut) {
 
-  const int nVar = SolverType::NumberOfVariables;
+  const int nVar = SolverType::NumberOfUnknowns;
   const int order = SolverType::Order;
   const int basisSize = order + 1;
   const int nDim = Dimensions;
