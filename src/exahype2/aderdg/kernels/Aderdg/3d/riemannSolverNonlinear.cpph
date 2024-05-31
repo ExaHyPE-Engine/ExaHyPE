@@ -44,8 +44,8 @@ void riemannSolverNonlinear(SolverType& solver, double* FL, double* FR,
   const tarch::la::Vector<Dimensions, double>& dx,
   const int direction) {
 
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
+  constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
+  constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int numberOfData       = numberOfVariables+numberOfParameters;
   constexpr int order              = SolverType::Order;
   constexpr int basisSize          = order+1;

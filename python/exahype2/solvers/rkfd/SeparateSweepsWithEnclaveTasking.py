@@ -655,12 +655,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         output.add(generated_solver_files)
         output.makefile.add_cpp_file(subdirectory + "tasks/" + task_name + ".cpp", generated=True)
 
-        if self._pde_terms_without_state:
-            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
-            # this hack has to suffice
-            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
-            output.makefile.d["PEANODIR"] = peanodir
-            exahype2.gpu.add_exahype_objects(output.makefile)
 
     def add_actions_to_perform_time_step(self, step):
         """!
