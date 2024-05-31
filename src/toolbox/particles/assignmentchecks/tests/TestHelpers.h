@@ -15,6 +15,8 @@ namespace toolbox {
 
         namespace internal {
 
+          /* bool allVerbose; */
+
           /**
            * Does this particle need to be lifted? Yes if particleX
            * is not located in the square with size 2 vertexH around

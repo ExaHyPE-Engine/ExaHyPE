@@ -18,14 +18,26 @@ namespace toolbox {
 } // namespace toolbox
 
 class toolbox::particles::assignmentchecks::tests::TestParticle {
-public:
-  TestParticle(const tarch::la::Vector<Dimensions, double>& x, int particleID);
-
-  tarch::la::Vector<Dimensions, double> getX() const;
-  int                                getPartid() const;
-
-  void setX(const tarch::la::Vector<Dimensions, double>& x);
-
+private:
   tarch::la::Vector<Dimensions, double> _x;
   int                                   _partid;
+  bool                                  _isLocal;
+
+  // helper variables of vertex particle is associated with
+  tarch::la::Vector<Dimensions, double> _vertexH;
+  int                                   _depth;
+
+public:
+  TestParticle(const tarch::la::Vector<Dimensions, double>& x, int particleID, bool local=false);
+
+  int                                   getDepth() const;
+  int                                   getPartid() const;
+  tarch::la::Vector<Dimensions, double> getVertexH() const;
+  tarch::la::Vector<Dimensions, double> getX() const;
+  bool                                  isLocal() const;
+
+  void setDepth(const int depth);
+  void setIsLocal(const bool isLocal);
+  void setVertexH(const tarch::la::Vector<Dimensions, double>& x);
+  void setX(const tarch::la::Vector<Dimensions, double>& x);
 };
