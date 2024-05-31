@@ -2,30 +2,49 @@
 #include "tarch/Assertions.h"
 
 #if defined(GPUOffloadingSYCL)
+
 GPUCallableMethod void tarch::gpuAbort() {}
 
-void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
-  void* result = nullptr;
+void* tarch::internal::allocateRawData(
+  std::size_t           size,
+  MemoryLocation        location,
+  int                   device
+) {
+  void* data = nullptr;
+  assertion2(size > 0, size, toString(location));
+
   switch (location) {
-    case MemoryLocation::Heap:
-      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap)); // Aligned alloc requires size to be a multiple of the aligment
-      break;
-    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      assertionMsg(false, "not implemented yet" );
-      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap));
-      break;
+  case MemoryLocation::Heap:
+    assertion1(device == accelerator::Device::HostDevice, device);
+    data = std::aligned_alloc(
+      AlignmentOnHeap,
+      tarch::padSizeToAlignment(size, AlignmentOnHeap)
+    );
+    break;
+  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    assertion1(device >= 0, device);
+    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
+    data = ::sycl::malloc_shared<void*>(size, queue);
+    break;
   }
-  return result;
+
+  assertion(data);
+  return data;
 }
 
-void tarch::freeMemory(void* data, MemoryLocation location) {
+void tarch::freeMemory(void* data, MemoryLocation location, int device) {
+  assertion(data);
+
   switch (location) {
-    case MemoryLocation::Heap:
-      std::free(data);
-      break;
-    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      std::free(data);
-      break;
+  case MemoryLocation::Heap:
+    assertion1(device == accelerator::Device::HostDevice, device);
+    std::free(data);
+    break;
+  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    assertion1(device >= 0, device);
+    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
+    ::sycl::free(data, queue);
+    break;
   }
 }
 

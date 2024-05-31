@@ -40,7 +40,7 @@ namespace c {
  **/
 template<typename SolverType>
 inline void computeLoehner(double* Xi, const double* const u, const int PhiIndex, const tarch::la::Vector<Dimensions, double>& sizeOfPatch) {
-	constexpr int numberOfVariables = SolverType::NumberOfVariables;
+	constexpr int numberOfVariables = SolverType::NumberOfUnknowns;
 	constexpr int order = SolverType::Order;
 	constexpr int basisSize = order + 1;
 	constexpr int basisX = basisSize;

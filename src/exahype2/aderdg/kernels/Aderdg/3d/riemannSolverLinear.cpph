@@ -41,9 +41,9 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
    * FL,FR,LL,LR
    */
 
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
+  constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
   
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
+  constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int numberOfData       = numberOfVariables+numberOfParameters;
   
   constexpr int basisSize          = SolverType::Order+1;

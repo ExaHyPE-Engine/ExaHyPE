@@ -2,15 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 #include "config.h"
 
-
 #include <functional>
 #include <string>
-
 
 namespace exahype2 {
   /**
@@ -34,13 +31,13 @@ namespace exahype2 {
    * reconstructed data, i.e. the patch data including the halos, by the user.
    * This happens for example in applyKernelToCell() where we create a
    * PatchData object over both allocated input and output data.
-   * 
-   * 
+   *
+   *
    * As the PatchData does maintain some internal tables which are allocated
    * in the constructor and freed in the destructor, I do not provide a copy
-   * constructor. This one is explicitly deleted. Some backends might require 
+   * constructor. This one is explicitly deleted. Some backends might require
    * a copy constructor one day
-   * 
+   *
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    * exahype2::CellData::CellData( const CellData& copy ):
    *   CellData(copy.numberOfCells) {
@@ -56,15 +53,15 @@ namespace exahype2 {
    *   }
    * }
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * 
+   *
    * but for the time being, I do not offer such a variant.
-   * 
-   * 
+   *
+   *
    * ## SYCL
-   * 
+   *
    * If you use SYCL, you might be tempted to declare the class as copyable.
    * This is factually wrong: the class is not trivially copyable.
-   * 
+   *
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    * #if defined(SharedSYCL)
    * #include "tarch/accelerator/sycl/Device.h"
@@ -72,8 +69,8 @@ namespace exahype2 {
    * struct sycl::is_device_copyable<exahype2::CellData>: std::true_type {};
    * #endif
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * 
-   * hence makes the file compile, but in all tests that I ran the code then 
+   *
+   * hence makes the file compile, but in all tests that I ran the code then
    * did crash.
    */
   struct CellData {
@@ -101,10 +98,22 @@ namespace exahype2 {
     const int  numberOfCells;
 
     /**
+     * We might want to allocate data on the heap or an accelerator,
+     * therefore we save the target device id.
+     */
+    const tarch::MemoryLocation memoryLocation;
+
+    /**
+     * We might want to allocate data on an accelerator,
+     * therefore we save the target device id.
+     */
+    const int  targetDevice;
+
+    /**
      * Out values.
      */
     double**   QOut;
-    
+
     /**
      * Out values.
      */
@@ -121,21 +130,26 @@ namespace exahype2 {
      * read it later.
      */
     CellData(
-      double*                                       QIn,
-      const tarch::la::Vector<Dimensions,double>&   cellCentre_,
-      const tarch::la::Vector<Dimensions,double>&   cellSize_,
-      double    t,
-      double    dt,
-      double*   QOut
+      double*                                     QIn_,
+      const tarch::la::Vector<Dimensions,double>& cellCentre_,
+      const tarch::la::Vector<Dimensions,double>& cellSize_,
+      double                t_,
+      double                dt_,
+      double*               QOut_,
+      tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
+      int                   targetDevice_   = tarch::accelerator::Device::HostDevice
     );
 
-    CellData( int numberOfCells_ );
+    CellData(
+      int                   numberOfCells_,
+      tarch::MemoryLocation memoryLocation = tarch::MemoryLocation::Heap,
+      int                   targetDevice   = tarch::accelerator::Device::HostDevice
+    );
 
-    CellData( const CellData& copy ) = delete;
+    CellData(const CellData& copy) = delete;
 
     ~CellData();
 
     std::string toString() const;
   };
 }
-

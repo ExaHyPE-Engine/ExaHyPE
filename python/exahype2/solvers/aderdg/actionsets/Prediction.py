@@ -4,7 +4,8 @@
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (
-  create_predictor_allocations, create_fstpvi_call,
+  create_predictor_allocations, create_predictor_frees,
+  create_fstpvi_call,
   create_includes, create_solution_update,
   copy_estimates_and_perform_riemann_solution_on_hanging_faces,
   copy_estimates_into_faces, number_of_precisions_iterator
@@ -61,22 +62,17 @@ class Prediction(AbstractAderDGActionSet):
     {% if STORE_OLD_SOLUTION %}
     std::copy_n(luh ,sizeLduh, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
     {% endif %}
-
 """
 
     _Template_TouchCellFirstTime_Core = """
-
     {{FUSED_PREDICTOR_VOLUME_INTEGRAL}}
-    
     {{PROJECT_SOLUTION_TO_FACES}}
-
     {{SOLUTION_UPDATE}}
-
 """
 
     _Template_TouchCellFirstTime_Epilogue = """
-
-    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0) );
+    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0));
+    {{CREATE_PREDICTOR_FREES}}
   }
 """
 
@@ -114,6 +110,7 @@ class Prediction(AbstractAderDGActionSet):
                 for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]
             ]
             d["CREATE_PREDICTOR_ALLOCATIONS"]           = create_predictor_allocations(self.use_kernelgenerator)
+            d["CREATE_PREDICTOR_FREES"]                 = create_predictor_frees(self.use_kernelgenerator)
             d["FUSED_PREDICTOR_VOLUME_INTEGRAL"]        = create_fstpvi_call(self.is_linear, self.usePointSource, self.use_kernelgenerator)
             d["SOLUTION_UPDATE"]                        = create_solution_update(self.use_kernelgenerator)
             d["PROJECT_SOLUTION_TO_FACES"]              = (
@@ -121,9 +118,9 @@ class Prediction(AbstractAderDGActionSet):
                 else copy_estimates_into_faces()
             )
 
-            result  = jinja2.Template(self._Template_TouchCellFirstTime_Preamble).render(**d)
+            result = jinja2.Template(self._Template_TouchCellFirstTime_Preamble).render(**d)
             if self.multiple_precisions:
-                result +=  jinja2.Template(number_of_precisions_iterator(self._Template_TouchCellFirstTime_Core)).render(**d)
+                result += jinja2.Template(number_of_precisions_iterator(self._Template_TouchCellFirstTime_Core)).render(**d)
             else:
                 d["PRECISION_NUM"] = 0
                 result += jinja2.Template(self._Template_TouchCellFirstTime_Core).render(**d)
