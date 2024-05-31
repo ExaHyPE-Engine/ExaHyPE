@@ -84,7 +84,7 @@ class DLinear(MatrixGenerator):
 
     for i in range(output.shape[0]):
       for j in range(output.shape[1]):
-        output[i,j] = self.eval_integral(functions=[self.get_polynomial(i), self.get_polynomial(j)])
+        output[i,j] = 0.25 * self.eval_integral(functions=[self.get_polynomial(i), self.get_polynomial(j)])
     
     #pad the output
     if self.unknowns_per_vertex_dof > 1:
