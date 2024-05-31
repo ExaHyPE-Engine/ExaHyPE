@@ -1,4 +1,4 @@
-documentation:
+pages:
   stage: publish
   allow_failure: false
   tags:
