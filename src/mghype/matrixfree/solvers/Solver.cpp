@@ -69,13 +69,23 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   _previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   _previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
 
-  logInfo( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
+  logDebug( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
   static int numberOfResidualGrowths = 0;
   const int numberOfChecks = 3;
 
   if (residualGrows==numberOfChecks) numberOfResidualGrowths++;
 
-  return residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5;
+  bool output = (residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5);
+
+  if (not output) return false;
+
+  if (residualReducedUnderThreshold==numberOfChecks)
+    logInfo( "terminationCriterionHolds()", "terminating because residualReducedUnderThreshold==" << residualReducedUnderThreshold );
+    
+  if (numberOfResidualGrowths > 5)
+    logInfo( "terminationCriterionHolds()", "terminating because numberOfResidualGrowths==" << numberOfResidualGrowths );
+
+  return output;
 }
 
 

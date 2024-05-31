@@ -1,5 +1,4 @@
 #include "{{CLASSNAME}}.h"
-#include "tarch/multicore/Lock.h"
 #include "mghype/mghype.h"
 #include "tarch/la/LUDecomposition.h"
 
@@ -260,7 +259,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
   static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > invertedResult = invert( result );
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > invertedResult = tarch::la::invert( result );
 
   return invertedResult;
 }

@@ -1,4 +1,7 @@
 #include "{{CLASSNAME}}.h"
+#include "mghype/mghype.h"
+
+
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -14,15 +17,32 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  static tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > result = {
-      {{LOCAL_ASSEMBLY_MATRIX[0]| join(", ")}}
-      {% for ROW in LOCAL_ASSEMBLY_MATRIX[1:] %}
+  logTraceInWith2Arguments("getLocalAssemblyMatrix", cellCentre, cellSize);
+  static std::vector< tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > > matrices = {
+    {% for MATRIX in LOCAL_ASSEMBLY_MATRIX %}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
         ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
+    {% endfor %}
+  };
+
+  {% if LOCAL_ASSEMBLY_MATRIX_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
+
+  static std::vector<int> scaleFactors = {
+      {% for el in LOCAL_ASSEMBLY_MATRIX_SCALING %}
+        {{el}},
       {% endfor %}
   };
 
-  // @todo add in scaling
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
+  logTraceOutWith1Argument("getLocalAssemblyMatrix", result);
   return result;
 }
 {% endif %}
@@ -33,14 +53,30 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  static tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > result = {
-      {{MASS_MATRIX[0]| join(", ")}}
-      {% for ROW in MASS_MATRIX[1:] %}
+  static std::vector< tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > > matrices = {
+    {% for MATRIX in MASS_MATRIX %}
+    // {# MASS_MATRIX is an array, possible of length 1 #}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
         ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
+    {% endfor %}
+  };
+
+  {% if MASS_MATRIX_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
+
+  static std::vector<int> scaleFactors = {
+      {% for el in MASS_MATRIX_SCALING %}
+        {{el}},
       {% endfor %}
   };
 
-  // @todo add in scaling
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
   return result;
 }

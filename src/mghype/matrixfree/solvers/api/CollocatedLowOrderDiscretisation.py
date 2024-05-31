@@ -55,7 +55,7 @@ class CollocatedLowOrderDiscretisation(Solver):
   This array holds the right-hand side of the equation. We assign this in 
   experiment-specific implementation files.
 
-  ## FieldDiagonal
+  ## Diagonal
   This array holds the sum of the diagonals of the local assembly matrix. This is
   set to 0 at the start of every solver step
 
@@ -115,7 +115,8 @@ class CollocatedLowOrderDiscretisation(Solver):
                local_assembly_matrix_scaling,
                mass_matrix,
                mass_matrix_scaling,
-               solver_tolerance
+               solver_tolerance,
+               smoother_relaxation = 0.6
                ):
     """!
    
@@ -128,15 +129,16 @@ class CollocatedLowOrderDiscretisation(Solver):
                                                               )
     
     matrix_dims = (2**dimensions) * unknowns_per_vertex
-    assert mass_matrix.shape == (matrix_dims,matrix_dims), f"Wrong shape given for mass matrix - got {mass_matrix.shape}, but we have {2**dimensions} vertices per cell and {unknowns_per_vertex} unknowns per vertex"
-    assert local_assembly_matrix.shape == (matrix_dims,matrix_dims), f"Wrong shape given for mass matrix - got {local_assembly_matrix.shape}, but we have {2**dimensions} vertices per cell and {unknowns_per_vertex} unknowns per vertex"
+# @todo Sean please get these assertions back in but consistent with DG
+#    assert mass_matrix.shape == (matrix_dims,matrix_dims), f"Wrong shape given for mass matrix - got {mass_matrix.shape}, but we have {2**dimensions} vertices per cell and {unknowns_per_vertex} unknowns per vertex"
+#    assert local_assembly_matrix.shape == (matrix_dims,matrix_dims), f"Wrong shape given for mass matrix - got {local_assembly_matrix.shape}, but we have {2**dimensions} vertices per cell and {unknowns_per_vertex} unknowns per vertex"
   
     self._unknowns_per_vertex = unknowns_per_vertex
 
     # already initialised this in superclass!
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
-    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag",  str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "diag",       str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
 
     self._local_assembly_matrix         = local_assembly_matrix
@@ -147,6 +149,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._solver_tolerance              = solver_tolerance
     
     self._basic_descend_order           = 0
+    
+    self._smoother_relaxation           = smoother_relaxation
     
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -207,10 +211,11 @@ class CollocatedLowOrderDiscretisation(Solver):
         "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling,
         "MASS_MATRIX"         : self._mass_matrix,
         "MASS_MATRIX_SCALING" : self._mass_matrix_scaling,
-        "VERTEX_CARDINALITY": self._unknowns_per_vertex,
-        "SOLVER_NAME":             self.typename(),
-        "SOLVER_TOLERANCE"            : self._solver_tolerance,
-        }
+        "VERTEX_CARDINALITY":            self._unknowns_per_vertex,
+        "SOLVER_NAME":                   self.typename(),
+        "SOLVER_TOLERANCE"            :  self._solver_tolerance,
+        "SMOOTHER_RELAXATION":           self._smoother_relaxation
+    }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
