@@ -2,9 +2,9 @@
 # distribution and use, please see the copyright notice at www.peano-framework.org
 import numpy as np
 import peano4
+import mghype
 
-from   .MatrixGenerator import MatrixGenerator
-
+from .MatrixGenerator import MatrixGenerator
 
 
 class DLinear(MatrixGenerator):
@@ -31,6 +31,9 @@ class DLinear(MatrixGenerator):
                                    )
     self.unknowns_per_vertex_dof = unknowns_per_vertex_dof
     
+    # Use matrices for DG Interior Penalty for Poisson equation as we only need the cell-cell and mass matrices, which are identical fro CG
+    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(self.poly_degree)
+    
   @property
   def _cell_dofs(self):
     """!
@@ -51,7 +54,7 @@ class DLinear(MatrixGenerator):
     output = np.eye(dim,dim) * 2**(-self.Dimensions)
     return output, 0
 
-      
+    
   def get_lumped_mass_matrix(self):
     """!
 
@@ -78,13 +81,10 @@ class DLinear(MatrixGenerator):
     This matrix does not couple the individual unknowns per degree of freedom. 
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
-    '''
-    dim    = (self.poly_degree + 1) ** self.Dimensions
-    output = np.zeros((dim,dim))
+    Use the mass matrix generated for DG Interior Penalty for Poisson equation.
 
-    for i in range(output.shape[0]):
-      for j in range(output.shape[1]):
-        output[i,j] = self.eval_integral(functions=[self.get_polynomial(i), self.get_polynomial(j)])
+    '''
+    output = self.block_matrix._RHS_CC[(1,1)]
     
     #pad the output
     if self.unknowns_per_vertex_dof > 1:
@@ -98,19 +98,14 @@ class DLinear(MatrixGenerator):
 
     Create a cell-cell mass matrix
     
-    Needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
-    so normalise by h. In a finite element context, this matrix has to be 
+    In a finite element context, this matrix has to be 
     scaled with @f$ h^{d-2} @f$. Therefore, we retturn d-2 as second argument.
 
-    '''
-    # making it 2^D since this is number of vertices per cell
-    dim    = self._cell_dofs
-    output = np.zeros((dim,dim))
+    Use the cell-cell matrix generated for DG Interior Penalty for Poisson equation.
 
-    for i in range(output.shape[0]):
-      for j in range(output.shape[1]):
-        output[i,j] += self.eval_integral(functions=[self.get_deriv(i, 0), self.get_deriv(j, 0)])
-        output[i,j] += self.eval_integral(functions=[self.get_deriv(i, 1), self.get_deriv(j, 1)])
+    '''
+    
+    output = self.block_matrix._A_CC[(0,0)][(0,0)]
     
     #pad the output
     if self.unknowns_per_vertex_dof > 1:
