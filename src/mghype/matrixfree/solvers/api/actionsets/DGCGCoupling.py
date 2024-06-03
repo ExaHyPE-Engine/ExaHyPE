@@ -23,7 +23,7 @@ def prepare_CG_correction_solvers( dg_solver,
     the solvers new rhs, which we again use for the next iteration, and its 
     previous (old) value which we use to compute the delta.
     
-    @see DGCGCoupling for a description of where the individual values are used.
+    @see AbstractDGCGCoupling for a description of where the individual values are used.
     
     """
     assert cg_solver._unknowns_per_vertex==dg_solver._unknowns_per_cell_node
@@ -34,17 +34,24 @@ def prepare_CG_correction_solvers( dg_solver,
     cg_solver._vertex_data.data.add_attribute( dastgen2.attributes.Integer( "numberOfRestrictions" ) )
 
 
-class DGCGCoupling(ActionSet):
+class AbstractDGCGCoupling(ActionSet):
   """!
 
   Couple the solution and updates of two different solvers
   
-  This action set has to be used as a preprocessing step of the CG.
+ 
+  ## Usage
   
-  This class takes the solution of a DG solver and injects the current solution
-  onto the vertices. For this, it simply averages the @f$ 2^d @f$ different 
-  values of the DG polynomials into the vertex. We do this only for unrefined
-  vertices obviously. 
+  This action set has to be used as a preprocessing step of the CG:
+    
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.AbstractDGCGCoupling(
+      solver,                      # dg_solver
+      ...
+      )
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  I recommend not to use the coupling directly, but one of its subclasses.
   
   
   ## Behaviour
@@ -64,8 +71,13 @@ class DGCGCoupling(ActionSet):
   
   ## Realisation
   
+  This class takes the solution of a DG solver and injects the current solution
+  onto the vertices. For this, it simply averages the @f$ 2^d @f$ different 
+  values of the DG polynomials into the vertex. We do this only for unrefined
+  vertices obviously. 
+  
   To realise this behaviour, we rely on functions held within 
-  DGCGCoupling.h.   
+  AbstractDGCGCoupling.h.   
   It is important that prepare_and_order_DG_CG_solvers() has been invoked for
   the two solvers whenever we use this action set.
    
@@ -365,7 +377,7 @@ class DGCGCoupling(ActionSet):
       Griebel et al.
     
     """  
-    super( DGCGCoupling, self ).__init__(
+    super( AbstractDGCGCoupling, self ).__init__(
       0,     #descend_invocation_order -> will be ignored
       False  # parallel
     )
@@ -450,3 +462,48 @@ class DGCGCoupling(ActionSet):
 #include "mghype/mghype.h"
 #include "mghype/matrixfree/solvers/DGCGCoupling.h"
 """
+
+        
+class AdditiveDGCGCoupling(AbstractDGCGCoupling):
+    """!
+        
+    Introduce additive CC Coupling
+    
+    The control logic here is simplistic and prescripted. We follow the 
+    following steps for the additive solver with one iteration:
+    
+    1. Let the DGSolver project its solution onto the faces.
+    2. Pre step
+       - Restrict residual and inject solution (if FAS)
+       - Suspend CG solver
+       - Let DG solver update solution already (post restriction)
+    3. Compute step
+       - Switch DG solver's state to project-onto-faces
+       - Interpolate delta
+    
+    The pre-step can be identified by the fact that we run into the first
+    
+    """
+    def __init__(self,
+                 dg_solver,
+                 cg_solver,
+                 prolongation_matrix,
+                 prolongation_matrix_scaling,
+                 restriction_matrix,
+                 restriction_matrix_scaling,
+                 injection_matrix,
+                 injection_matrix_scaling,
+                 use_fas
+                 ):        
+        super( AdditiveDGCGCoupling, self ).__init__(
+            dg_solver,
+            cg_solver,
+            prolongation_matrix,
+            prolongation_matrix_scaling,
+            restriction_matrix,
+            restriction_matrix_scaling,
+            injection_matrix,
+            injection_matrix_scaling,
+            use_fas
+            )
+        

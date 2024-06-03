@@ -5,12 +5,19 @@ import jinja2
 
 class UpdateCell(ActionSet):
   """!
-  This is for DG solver.
+
+  This is for DG solver
+  
+  @todo Documntation missing
+  
   """
   templateTouchCellFirstTime="""
-  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
-  {
-    logTraceInWith4Arguments("UpdateCell::touchCellFirstTime", 
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateCell()
+  ) {
+    logTraceInWith4Arguments("touchCellFirstTime", 
       fineGridCell{{SOLVER_NAME}}.getSolution(),
       fineGridCell{{SOLVER_NAME}}.getRhs(),
       marker.toString(),
@@ -128,9 +135,14 @@ class UpdateCell(ActionSet):
 #include "peano4/utils/Loop.h"
 """
 
+
 class ProjectOntoFaces(ActionSet):
   """!
-  This is for DG solver.
+  
+  This is for DG solver
+  
+  @todo There's documentation missing
+  
   """
 
   templateTouchCellFirstTime="""
@@ -138,8 +150,11 @@ class ProjectOntoFaces(ActionSet):
   all we need to do here is project updated solution u^c onto the faces
   */
 
-  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
-  {
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+    and
+    repositories::{{SOLVER_INSTANCE}}.projectOntoFaces()
+  ) {
     // apply cell to face projection, store it in faceProjections
     // no tricky indexing needed here, since the whole of the cell
     // solution vector is in scope here.
@@ -240,12 +255,18 @@ class ProjectOntoFaces(ActionSet):
 class UpdateFaceSolution(ActionSet):
   """!
   This is for DG solver.
+  
+  @todo Docu missing
+  
   """
 
 
   templatetouchFaceFirstTime="""
-  if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior )
-  {
+  if ( 
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior 
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateFace()
+  ) {
     // project the u^\pm into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();

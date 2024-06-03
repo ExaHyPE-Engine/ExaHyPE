@@ -124,5 +124,5 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
-  logInfo( "plotAllSolversToInfo()", toString() );
+  logInfo( "endMeshSweep()", toString() );
 }

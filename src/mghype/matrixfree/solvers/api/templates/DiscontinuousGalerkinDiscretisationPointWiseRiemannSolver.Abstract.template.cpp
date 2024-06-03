@@ -6,7 +6,7 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state( State::ShiftCalculationsByHalfAMeshSweep )
+  _state( State::ProjectOnly )
 {}
 
 
@@ -268,14 +268,13 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() const {
-  return _state == State::ShiftCalculationsByHalfAMeshSweep
-      or _state == State::TriggerVolumetricKernelsAndProject;
+  return _state == State::UpdateAndProjectImmediately;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
-  return _state == State::ShiftCalculationsByHalfAMeshSweep
-      or _state == State::RiemannSolverAndUpdate;
+  return _state == State::UpdateAndProjectImmediately
+      or _state == State::ProjectOnly;
 }
 
 
@@ -285,5 +284,52 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
-  logInfo( "plotAllSolversToInfo()", toString() );
+  switch (_state) {
+    case State::UpdateAndProjectImmediately:
+      {
+        logInfo( "endMeshSweep()", toString() );
+      }
+      break;
+    case State::ProjectOnly:
+      {
+        logInfo( "endMeshSweep()", "projection only, no updates" );
+        _state = State::UpdateAndProjectImmediately;
+      }
+      break;
+      /*
+    case State::RiemannSolverAndUpdate:
+      {
+        logInfo( "endMeshSweep()", toString() );
+        _state = State::TriggerVolumetricKernelsAndProject;
+      }
+      break;
+*/
+    case State::Suspend:
+      {
+        logInfo( "endMeshSweep()", toString() );
+        _state = State::UpdateAndProjectImmediately;
+      }
+      break;
+  }
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
+  return _state == State::UpdateAndProjectImmediately;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
+  return _state == State::UpdateAndProjectImmediately;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
+  return _state == State::UpdateAndProjectImmediately
+      or _state == State::ProjectOnly;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
+  _state = State::Suspend;
 }
