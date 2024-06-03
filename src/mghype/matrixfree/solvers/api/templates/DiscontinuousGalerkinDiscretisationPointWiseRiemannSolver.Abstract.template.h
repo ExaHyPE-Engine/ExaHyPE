@@ -126,20 +126,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
-    /**
-     * Is first sweep of DG cycle
-     */
-    virtual bool isFirstMeshSweepOfSolverCycle() const override;
-
-    /**
-     * Is last sweep of DG cycle
-     *
-     * In the last sweep, we update the solution. Therefore, we have to ensure
-     * afterwards that we project the new solution again onto the faces.
-     */
-    virtual bool isLastMeshSweepOfSolverCycle()  const override;
-
     virtual void beginMeshSweep() override;
+
+    /**
+     * End the mesh sweep
+     *
+     * Toggle the solver's state into the next valid one.
+     */
     virtual void endMeshSweep() override;
 
     bool updateCell() const;
@@ -148,8 +141,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
 
     /**
      * Suspends solver for one sweep
+     *
+     * After this sweep, the solver will toggle back to the normal solver
+     * state.
      */
-    void suspend();
+    void suspend(bool projectOntoFaces);
   protected:
     static tarch::logging::Log  _log;
 

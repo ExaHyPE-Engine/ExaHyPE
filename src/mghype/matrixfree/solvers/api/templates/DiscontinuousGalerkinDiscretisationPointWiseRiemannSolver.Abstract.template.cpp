@@ -267,19 +267,10 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 {% endif %}
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() const {
-  return _state == State::UpdateAndProjectImmediately;
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
-  return _state == State::UpdateAndProjectImmediately
-      or _state == State::ProjectOnly;
-}
-
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  clearGlobalResidual();
+  if (_state==State::UpdateAndProjectImmediately) {
+    clearGlobalResidual();
+  }
 }
 
 
@@ -292,7 +283,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
       break;
     case State::ProjectOnly:
       {
-        logInfo( "endMeshSweep()", "projection only, no updates" );
         _state = State::UpdateAndProjectImmediately;
       }
       break;
@@ -306,7 +296,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
 */
     case State::Suspend:
       {
-        logInfo( "endMeshSweep()", toString() );
         _state = State::UpdateAndProjectImmediately;
       }
       break;
@@ -330,6 +319,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
-  _state = State::Suspend;
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces) {
+  if (projectOntoFaces) {
+    _state = State::ProjectOnly;
+  }
+  else {
+    _state = State::Suspend;
+  }
 }

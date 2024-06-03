@@ -187,9 +187,11 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
         observers::CreateGrid  observer;
+        observers::CreateGrid::prepareTraversal();
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
+        observers::CreateGrid::unprepareTraversal();
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
@@ -199,9 +201,11 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-solution" );
 
         observers::InitSolution  observer;
+        observers::InitSolution::prepareTraversal();
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
+        observers::InitSolution::unprepareTraversal();
         initMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
@@ -211,11 +215,13 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
         
         observers::Solve observer;
+        observers::Solve::prepareTraversal();
         watch.start();
         repositories::beginMeshSweep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::endMeshSweep();
         watch.stop();
+        observers::Solve::unprepareTraversal();
 
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -226,9 +232,11 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
         observers::Plot  observer;
+        observers::Plot::prepareTraversal();
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
+        observers::Plot::unprepareTraversal();
         plotMeasurement.setValue( watch.getCalendarTime() );
       }
       break;

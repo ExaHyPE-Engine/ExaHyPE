@@ -5,7 +5,8 @@
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} )
+  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
+  _state(State::Solve)
 {}
 
 
@@ -108,21 +109,26 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() const {
-  return _state == State::Solve;
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
-  return _state == State::Solve;
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
+  _state = State::Suspend;
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  clearGlobalResidual();
+  if (_state==State::Solve) {
+    clearGlobalResidual();
+  }
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
-  logInfo( "endMeshSweep()", toString() );
+  if (_state == State::Solve) {
+    logInfo( "endMeshSweep()", toString() );
+  }
+  _state = State::Solve;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update() const {
+  return _state == State::Solve;
 }

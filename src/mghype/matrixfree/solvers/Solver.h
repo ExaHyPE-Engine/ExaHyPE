@@ -44,9 +44,6 @@ class mghype::matrixfree::solvers::Solver {
 
     virtual std::string toString() const;
 
-    virtual bool isFirstMeshSweepOfSolverCycle() const = 0;
-    virtual bool isLastMeshSweepOfSolverCycle()  const = 0;
-
     virtual void beginMeshSweep() = 0;
     virtual void endMeshSweep() = 0;
   protected:
