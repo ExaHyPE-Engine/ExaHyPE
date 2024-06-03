@@ -19,8 +19,7 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
   tarch::la::Vector< CellUnknowns, double >&  value,
   tarch::la::Vector< CellUnknowns, double >&  rhs
 ) {
-  
-  logTraceInWith5Arguments("initCell", x, h, value, rhs, exact);
+  logTraceInWith4Arguments("initCell", x, h, value, rhs);
 
   auto bottomLeft = x - 0.5 * h;
 
@@ -36,7 +35,7 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
     counter++;
   }
 
-  logTraceOutWith5Arguments("initCell", x, h, value, rhs, exact);
+  logTraceOutWith4Arguments("initCell", x, h, value, rhs);
 }
 //! [Set initial guess and rhs]
 
