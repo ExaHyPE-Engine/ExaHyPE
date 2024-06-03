@@ -81,11 +81,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if MASS_MATRIX is not defined  %} = 0 {% endif %};
 
-    virtual bool isFirstMeshSweepOfSolverCycle() const override;
-    virtual bool isLastMeshSweepOfSolverCycle()  const override;
-
     virtual void beginMeshSweep() override;
     virtual void endMeshSweep() override;
+
+    /**
+     * Suspend solver for one mesh sweep
+     */
+    void suspend();
+
+    bool update() const;
   protected:
     static tarch::logging::Log  _log;
 
