@@ -30,6 +30,13 @@
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
 
   public:
+    enum class State {
+      ShiftCalculationsByHalfAMeshSweep,
+      TriggerVolumetricKernelsAndProject,
+      RiemannSolverAndUpdate,
+      Suspend
+    };
+
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
@@ -121,7 +128,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
+    virtual bool isFirstMeshSweepOfSolverCycle() const override;
+    virtual bool isLastMeshSweepOfSolverCycle()  const override;
   protected:
     static tarch::logging::Log  _log;
+
+    State _state;
 };
 

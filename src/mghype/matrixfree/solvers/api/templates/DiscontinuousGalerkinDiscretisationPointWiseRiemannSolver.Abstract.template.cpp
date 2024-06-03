@@ -5,7 +5,8 @@
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} )
+  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
+  _state( State::ShiftCalculationsByHalfAMeshSweep )
 {}
 
 
@@ -264,3 +265,16 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   return invertedResult;
 }
 {% endif %}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() const {
+  return _state == State::ShiftCalculationsByHalfAMeshSweep
+      or _state == State::TriggerVolumetricKernelsAndProject;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
+  return _state == State::ShiftCalculationsByHalfAMeshSweep
+      or _state == State::RiemannSolverAndUpdate;
+}
+

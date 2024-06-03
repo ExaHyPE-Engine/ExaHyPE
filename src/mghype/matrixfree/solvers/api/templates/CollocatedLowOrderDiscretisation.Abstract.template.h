@@ -30,13 +30,17 @@
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
-
   public:
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
     static constexpr double     Omega = {{SMOOTHER_RELAXATION}};
     static constexpr int        VertexUnknowns = {{VERTEX_CARDINALITY}};
+
+    enum class State {
+      Solve,
+      Suspend
+    };
 
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -77,7 +81,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if MASS_MATRIX is not defined  %} = 0 {% endif %};
 
+    virtual bool isFirstMeshSweepOfSolverCycle() const override;
+    virtual bool isLastMeshSweepOfSolverCycle()  const override;
   protected:
     static tarch::logging::Log  _log;
+
+    State  _state;
 };
 
