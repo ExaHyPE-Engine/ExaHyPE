@@ -30,6 +30,12 @@
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
 
   public:
+    enum class State {
+      UpdateAndProjectImmediately,
+      ProjectOnly,
+      Suspend
+    };
+
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
@@ -59,8 +65,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< CellUnknowns, double >&  solution,
-      tarch::la::Vector< CellUnknowns, double >&  rhs,
-      tarch::la::Vector< CellUnknowns, double >&  exact
+      tarch::la::Vector< CellUnknowns, double >&  rhs
     ) = 0;
 
     /**
@@ -121,7 +126,33 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
+    /**
+     * Is first sweep of DG cycle
+     */
+    virtual bool isFirstMeshSweepOfSolverCycle() const override;
+
+    /**
+     * Is last sweep of DG cycle
+     *
+     * In the last sweep, we update the solution. Therefore, we have to ensure
+     * afterwards that we project the new solution again onto the faces.
+     */
+    virtual bool isLastMeshSweepOfSolverCycle()  const override;
+
+    virtual void beginMeshSweep() override;
+    virtual void endMeshSweep() override;
+
+    bool updateCell() const;
+    bool updateFace() const;
+    bool projectOntoFaces() const;
+
+    /**
+     * Suspends solver for one sweep
+     */
+    void suspend();
   protected:
     static tarch::logging::Log  _log;
+
+    State _state;
 };
 

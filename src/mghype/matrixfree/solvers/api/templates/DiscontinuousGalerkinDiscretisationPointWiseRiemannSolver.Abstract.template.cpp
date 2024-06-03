@@ -5,7 +5,8 @@
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} )
+  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
+  _state( State::ProjectOnly )
 {}
 
 
@@ -264,3 +265,71 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   return invertedResult;
 }
 {% endif %}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() const {
+  return _state == State::UpdateAndProjectImmediately;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
+  return _state == State::UpdateAndProjectImmediately
+      or _state == State::ProjectOnly;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
+  clearGlobalResidual();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
+  switch (_state) {
+    case State::UpdateAndProjectImmediately:
+      {
+        logInfo( "endMeshSweep()", toString() );
+      }
+      break;
+    case State::ProjectOnly:
+      {
+        logInfo( "endMeshSweep()", "projection only, no updates" );
+        _state = State::UpdateAndProjectImmediately;
+      }
+      break;
+      /*
+    case State::RiemannSolverAndUpdate:
+      {
+        logInfo( "endMeshSweep()", toString() );
+        _state = State::TriggerVolumetricKernelsAndProject;
+      }
+      break;
+*/
+    case State::Suspend:
+      {
+        logInfo( "endMeshSweep()", toString() );
+        _state = State::UpdateAndProjectImmediately;
+      }
+      break;
+  }
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
+  return _state == State::UpdateAndProjectImmediately;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
+  return _state == State::UpdateAndProjectImmediately;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
+  return _state == State::UpdateAndProjectImmediately
+      or _state == State::ProjectOnly;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
+  _state = State::Suspend;
+}

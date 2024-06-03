@@ -17,8 +17,7 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
   tarch::la::Vector< CellUnknowns, double >&  value,
-  tarch::la::Vector< CellUnknowns, double >&  rhs,
-  tarch::la::Vector< CellUnknowns, double >&  exact
+  tarch::la::Vector< CellUnknowns, double >&  rhs
 ) {
   
   logTraceInWith5Arguments("initCell", x, h, value, rhs, exact);
@@ -34,7 +33,6 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
     auto dofPosition = bottomLeft + h(0)*kDouble / (double)repositories::instanceOfDGPoisson.PolyDegree;
     rhs[counter]   = getPointWiseRhs(dofPosition);
     value[counter] = 0;
-    //exact[counter] = sinSquared;
     counter++;
   }
 

@@ -22,8 +22,8 @@ namespace {{N}} {
     {% endfor %}
     
     bool terminationCriterionHolds();
-    void beginTimeStep();
-    void endTimeStep();
+    void beginMeshSweep();
+    void endMeshSweep();
 
 {% for N in NAMESPACE %}
 }

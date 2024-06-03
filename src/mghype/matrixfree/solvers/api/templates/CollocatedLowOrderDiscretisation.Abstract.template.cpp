@@ -99,6 +99,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
   return isOnBoundary(x) ? vertexdata::{{SOLVER_NAME}}::Type::Boundary : vertexdata::{{SOLVER_NAME}}::Type::Interior;
 }
 
+
 {{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
@@ -106,3 +107,22 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
   return celldata::{{SOLVER_NAME}}::Type::Interior;
 }
 
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() const {
+  return _state == State::Solve;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
+  return _state == State::Solve;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
+  clearGlobalResidual();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
+  logInfo( "endMeshSweep()", toString() );
+}

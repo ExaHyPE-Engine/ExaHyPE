@@ -21,19 +21,19 @@ namespace {{N}} {
     }
 
 
-    void beginTimeStep() {
+    void beginMeshSweep() {
       static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
 
       {% for SOLVER in SOLVER_INSTANCES %}
-      {{SOLVER[1]}}.clearGlobalResidual();
+      {{SOLVER[1]}}.beginMeshSweep();
       {% endfor %}
     }
 
-    void endTimeStep() {
+    void endMeshSweep() {
       static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
 
       {% for SOLVER in SOLVER_INSTANCES %}
-      logInfo( "plotAllSolversToInfo()", {{SOLVER[1]}}.toString() );
+      {{SOLVER[1]}}.endMeshSweep();
       {% endfor %}
     }
   }

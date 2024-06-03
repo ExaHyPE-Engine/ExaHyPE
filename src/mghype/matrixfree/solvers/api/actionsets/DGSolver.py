@@ -5,12 +5,19 @@ import jinja2
 
 class UpdateCell(ActionSet):
   """!
-  This is for DG solver.
+
+  This is for DG solver
+  
+  @todo Documntation missing
+  
   """
   templateTouchCellFirstTime="""
-  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
-  {
-    logTraceInWith4Arguments("UpdateCell::touchCellFirstTime", 
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateCell()
+  ) {
+    logTraceInWith4Arguments("touchCellFirstTime", 
       fineGridCell{{SOLVER_NAME}}.getSolution(),
       fineGridCell{{SOLVER_NAME}}.getRhs(),
       marker.toString(),
@@ -38,11 +45,13 @@ class UpdateCell(ActionSet):
     }
 
     // also subtract A^cc u^c
-
     r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
-    
+
     // residual is now complete
-    
+
+    // compute preconditioned max norm; now it's not used in the stopping criterion. todo: add it to updateGlobalResidual()
+    //double precMaxNorm = tarch::la::max( repositories::{{SOLVER_INSTANCE}}.OmegaCell * repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r );
+
     repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
       tarch::la::max( tarch::la::abs(r) ),
       tarch::la::volume(marker.h()) * tarch::la::max(tarch::la::abs(r)),
@@ -56,7 +65,7 @@ class UpdateCell(ActionSet):
     r = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r;
 
     logTraceInWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
-    // scale current entries in solution vector by (1-OmegaCell)
+    // scale current entries in solution vector by OmegaCell
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
     {
       double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i);
@@ -126,9 +135,14 @@ class UpdateCell(ActionSet):
 #include "peano4/utils/Loop.h"
 """
 
+
 class ProjectOntoFaces(ActionSet):
   """!
-  This is for DG solver.
+  
+  This is for DG solver
+  
+  @todo There's documentation missing
+  
   """
 
   templateTouchCellFirstTime="""
@@ -136,8 +150,11 @@ class ProjectOntoFaces(ActionSet):
   all we need to do here is project updated solution u^c onto the faces
   */
 
-  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
-  {
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+    and
+    repositories::{{SOLVER_INSTANCE}}.projectOntoFaces()
+  ) {
     // apply cell to face projection, store it in faceProjections
     // no tricky indexing needed here, since the whole of the cell
     // solution vector is in scope here.
@@ -238,12 +255,18 @@ class ProjectOntoFaces(ActionSet):
 class UpdateFaceSolution(ActionSet):
   """!
   This is for DG solver.
+  
+  @todo Docu missing
+  
   """
 
 
   templatetouchFaceFirstTime="""
-  if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior )
-  {
+  if ( 
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior 
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateFace()
+  ) {
     // project the u^\pm into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();

@@ -54,7 +54,7 @@ bool selectNextAlgorithmicStep() {
 
   static bool plotThenExit = false;
 
-  const int MaxIterations = 100;
+  const int MaxIterations = 5000;
 
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
@@ -212,9 +212,9 @@ void step() {
         
         observers::Solve observer;
         watch.start();
-        repositories::beginTimeStep();
+        repositories::beginMeshSweep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::endTimeStep();
+        repositories::endMeshSweep();
         watch.stop();
 
         solveMeasurement.setValue( watch.getCalendarTime() );
