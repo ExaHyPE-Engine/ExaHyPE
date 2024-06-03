@@ -85,11 +85,13 @@ class AbstractDGCGCoupling(ActionSet):
 
 
   __TemplateTouchVertexFirstTime="""
+  if ( {{PREDICATE_INJECT_AND_RESTRICT}} ) {
     mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
       fineGridVertex{{CG_SOLVER_NAME}},
-      true, // restrictRhsAndInjectSolution
+      true,        // restrictRhsAndInjectSolution
       {{USE_FAS}}
     );
+  }
   """
 
 
@@ -98,7 +100,11 @@ class AbstractDGCGCoupling(ActionSet):
   // Interpolation
   // ============================
   const double additiveMultigridRelaxation = 0.0;
-  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  if (
+    fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
+    and
+    {{PREDICATE_PROLONGATE}}
+  ) {    
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -138,7 +144,11 @@ class AbstractDGCGCoupling(ActionSet):
 
 
   __TemplateTouchCellLastTime_FAS="""
-  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  if (
+    fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
+    and
+    {{PREDICATE_EVALUATE_RHS}}
+  ) {    
     assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
 
     // ==========================================
@@ -250,7 +260,11 @@ class AbstractDGCGCoupling(ActionSet):
 
   
   __TemplateTouchCellLastTime_CorrectionScheme="""
-  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+  if (
+    fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
+    and
+    {{PREDICATE_EVALUATE_RHS}}
+  ) {    
     assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
 
     // =============================
@@ -401,6 +415,10 @@ class AbstractDGCGCoupling(ActionSet):
     self.d["RESTRICTION_MATRIX"]          = restriction_matrix
     self.d["RESTRICTION_MATRIX_SCALING"]  = restriction_matrix_scaling
 
+    self.d["PREDICATE_INJECT_AND_RESTRICT"] = "true"
+    self.d["PREDICATE_PROLONGATE"]          = "true"
+    self.d["PREDICATE_EVALUATE_RHS"]        = "true"
+
     if use_fas:
       self.d["USE_FAS"]                   = "true"
       self._use_fas                       = use_fas
@@ -472,17 +490,33 @@ class AdditiveDGCGCoupling(AbstractDGCGCoupling):
     The control logic here is simplistic and prescripted. We follow the 
     following steps for the additive solver with one iteration:
     
-    1. Let the DGSolver project its solution onto the faces.
-    2. Pre step
-       - Restrict residual and inject solution (if FAS)
-       - Suspend CG solver
-       - Let DG solver update solution already (post restriction)
-    3. Compute step
-       - Switch DG solver's state to project-onto-faces
-       - Interpolate delta
+    1. Pre step
+       - Interpolate correction, i.e. sum all the hierarchies up.
+         This happens in touchCellFirstTime().
+       - Compute and restrict residual and inject solution (if FAS).
+         This happens in touchCellLastTime().
+       - Suspend both solvers, but let DG solver project its solution onto the
+         faces.
+    2. Compute step
+       - All solvers compute.
+       - DG solver can project solution onto faces.
+       - Return to step 1.
+
+    Nothing stops us from repeating the step (2) multiple times, which gives
+    us the opportunity to play around with various multigrid schemes.
+    If we are in the last sweep of (2), the projection onto the faces of the
+    DG solver is not necessary. We'll overwrite this solution a minute later
+    anyway.
     
-    The pre-step can be identified by the fact that we run into the first
+    ## Realisation
     
+    This action set will map onto a class of its own. We give the class a 
+    class attribute which we increment by one in each step. We then make the 
+    actual logic depend upon this counter, as we inject the predicates into
+    the superclass: That is, the superclass has some boolean expressions which 
+    allow us to switch its features on and off. We make those guys depends upon
+    the new counter.
+        
     """
     def __init__(self,
                  dg_solver,
@@ -493,7 +527,8 @@ class AdditiveDGCGCoupling(AbstractDGCGCoupling):
                  restriction_matrix_scaling,
                  injection_matrix,
                  injection_matrix_scaling,
-                 use_fas
+                 use_fas,
+                 smoothing_steps_per_cycle = 1
                  ):        
         super( AdditiveDGCGCoupling, self ).__init__(
             dg_solver,
@@ -506,4 +541,48 @@ class AdditiveDGCGCoupling(AbstractDGCGCoupling):
             injection_matrix_scaling,
             use_fas
             )
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = "CycleCounter==0"
+        self.d["PREDICATE_PROLONGATE"]           = "CycleCounter==0"
+        self.d["PREDICATE_EVALUATE_RHS"]         = "CycleCounter==0"
+        self.d["SMOOTHING_STEPS_PER_CYCLE"]      = smoothing_steps_per_cycle
         
+        assert smoothing_steps_per_cycle>=1, "at least one smoothing step required"
+        
+
+    def get_attributes(self):
+        """!
+    
+        Add a new static attribute to the class.
+    
+        """
+        return """
+  static int CycleCounter;
+"""
+
+    
+    def get_static_initialisations(self, full_qualified_classname):
+        """!
+        
+        Initialise the new counter.
+        
+        """
+        return "int " + full_qualified_classname + "::CycleCounter = -1;"
+    
+    
+    def get_body_of_prepareTraversal(self):
+        return jinja2.Template( """
+  CycleCounter++;
+  
+  if (CycleCounter==0) {
+    logInfo( "prepareTraversal(...)", "pre-step: prolong updates and restrict (new) residual, but do not yet run any solver" );
+    repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+    repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true);
+  }
+  else if (CycleCounter=={{SMOOTHING_STEPS_PER_CYCLE}}) {
+    logInfo( "prepareTraversal(...)", "last smoothing step" );
+    CycleCounter = -1;
+  }
+  else {
+    logInfo( "prepareTraversal(...)", "normal smoothing step" );
+  }
+""").render( **self.d )
