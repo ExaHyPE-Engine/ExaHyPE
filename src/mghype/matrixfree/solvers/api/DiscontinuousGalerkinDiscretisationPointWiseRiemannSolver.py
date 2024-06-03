@@ -366,7 +366,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     # cell stuff
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell) ))
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "exact",    str(self._unknowns_per_cell) ))
 
     # face stuff
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
