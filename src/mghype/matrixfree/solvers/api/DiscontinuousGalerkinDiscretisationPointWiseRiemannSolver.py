@@ -506,7 +506,3 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
     output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
-
-
-
-    

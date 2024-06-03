@@ -116,3 +116,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstMeshSweepOfSolverCycle() 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  const {
   return _state == State::Solve;
 }
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
+  clearGlobalResidual();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
+  logInfo( "plotAllSolversToInfo()", toString() );
+}

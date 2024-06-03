@@ -34,7 +34,7 @@ class mghype::matrixfree::solvers::Solver {
     Solver(const std::string&  name, double tolerance);
 
     virtual bool terminationCriterionHolds();
-    void clearGlobalResidual();
+
     void updateGlobalResidual(
       double residualMaxNorm,
       double residualEukledianNormSquared,
@@ -46,6 +46,9 @@ class mghype::matrixfree::solvers::Solver {
 
     virtual bool isFirstMeshSweepOfSolverCycle() const = 0;
     virtual bool isLastMeshSweepOfSolverCycle()  const = 0;
+
+    virtual void beginMeshSweep() = 0;
+    virtual void endMeshSweep() = 0;
   protected:
 
     static tarch::logging::Log _log;
@@ -88,5 +91,10 @@ class mghype::matrixfree::solvers::Solver {
      * Semaphore for global residual values
      */
     tarch::multicore::BooleanSemaphore  _semaphore;
+
+    /**
+     * Most solvers call this one in beginMeshSweep().
+     */
+    void clearGlobalResidual();
 };
 

@@ -278,3 +278,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastMeshSweepOfSolverCycle()  
       or _state == State::RiemannSolverAndUpdate;
 }
 
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
+  clearGlobalResidual();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
+  logInfo( "plotAllSolversToInfo()", toString() );
+}

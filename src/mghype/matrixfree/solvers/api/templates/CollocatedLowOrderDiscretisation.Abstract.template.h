@@ -83,6 +83,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
 
     virtual bool isFirstMeshSweepOfSolverCycle() const override;
     virtual bool isLastMeshSweepOfSolverCycle()  const override;
+
+    virtual void beginMeshSweep() override;
+    virtual void endMeshSweep() override;
   protected:
     static tarch::logging::Log  _log;
 

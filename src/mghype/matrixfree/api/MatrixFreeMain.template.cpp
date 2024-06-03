@@ -212,9 +212,9 @@ void step() {
         
         observers::Solve observer;
         watch.start();
-        repositories::beginTimeStep();
+        repositories::beginMeshSweep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::endTimeStep();
+        repositories::endMeshSweep();
         watch.stop();
 
         solveMeasurement.setValue( watch.getCalendarTime() );
