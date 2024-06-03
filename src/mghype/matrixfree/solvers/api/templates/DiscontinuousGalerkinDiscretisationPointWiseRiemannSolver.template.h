@@ -38,8 +38,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< CellUnknowns, double >&  value,
-      tarch::la::Vector< CellUnknowns, double >&  rhs,
-      tarch::la::Vector< CellUnknowns, double >&  exact
+      tarch::la::Vector< CellUnknowns, double >&  rhs
     ) override;
 
     virtual void initFace(
