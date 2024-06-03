@@ -8,6 +8,8 @@ class CollocatedSolver(ActionSet):
   templateTouchVertexFirstTime = """ 
   if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
+    and
+    repositories::{{SOLVER_INSTANCE}}.update()
   ) {
     auto value = fineGridVertex{{SOLVER_NAME}}.getValue();
     repositories::{{SOLVER_INSTANCE}}.setBoundaryConditions(
@@ -37,6 +39,8 @@ class CollocatedSolver(ActionSet):
   templateTouchVertexLastTime = """
   if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
+    and
+    repositories::{{SOLVER_INSTANCE}}.update()
   ) {
     logTraceInWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
@@ -65,8 +69,11 @@ class CollocatedSolver(ActionSet):
   """
 
   templateTouchCellFirstTime = """ 
-  if ( fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior )
-  {
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior 
+    and
+    repositories::{{SOLVER_INSTANCE}}.update()
+  ) {
     logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
