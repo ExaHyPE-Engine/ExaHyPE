@@ -49,11 +49,11 @@ namespace tarch {
        *
        * ## Task types and task numbers
        *
-       * Eachtask in Peano has to have a task type. All tasks that do the same,
+       * Each task in Peano has to have a task type. All tasks that do the same,
        * i.e. are of the same type, should have the same task type integer
        * marker. Peano's tarch can use multiple tasks of the same type and
        * fuse/batch them into one task call. However, if you don't want Peano
-       * to even thing about task fusion, pass in DontFuse as argument for the
+       * to even think about task fusion, pass in DontFuse as argument for the
        * type.
        *
        * It is totally up to the user to manage the task type numbers. Peano
@@ -721,9 +721,14 @@ namespace tarch {
        * way better to work with one queue per thread, so we can spawn enclave
        * tasks without any additional locks.
        *
-       * This routine only evermakes the number of queues grow, never shrink.
+       * This routine only ever makes the number of queues grow, never shrink.
        */
       void configureInternalTaskQueues(int numberOfTasks);
+
+      /*
+       * Shut down internal queues and clean up after yourself.
+       */
+      void shutdownInternalTaskQueues();
 
       /**
        * Commit local task queues into global queue

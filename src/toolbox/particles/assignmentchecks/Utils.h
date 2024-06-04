@@ -17,7 +17,9 @@ namespace toolbox {
       using ParticlePosition = tarch::la::Vector<Dimensions, double>;
 
       template <typename ParticleContainer>
-      std::vector< ParticlePosition > recordParticlePositions(const ParticleContainer& container);
+      std::vector<ParticlePosition> recordParticlePositions(
+        const ParticleContainer& container
+      );
 
       /**
        * Record the particle positions
@@ -35,9 +37,9 @@ namespace toolbox {
        */
       template <typename ParticleContainer>
       void traceParticleMovements(
-        const ParticleContainer&                container,
-        const std::vector< ParticlePosition >&  recordedPositions,
-        int                                     spacetreeId
+        const ParticleContainer&             container,
+        const std::vector<ParticlePosition>& recordedPositions,
+        int                                  spacetreeId
       );
     } // namespace assignmentchecks
   }   // namespace particles
@@ -45,4 +47,3 @@ namespace toolbox {
 
 
 #include "Utils.cpph"
-
