@@ -119,7 +119,7 @@ restriction_matrix_scaling = [0]
 injection_matrix = [intergrid_operators.injection()]
 injection_matrix_scaling = [0]
 
-solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.AdditiveDGCGCoupling(
+solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGCoupling(
     solver,                      # dg_solver
     correction_equation_solver,  # cg_solver
     prolongation_matrix,

@@ -586,3 +586,121 @@ class AdditiveDGCGCoupling(AbstractDGCGCoupling):
     logInfo( "prepareTraversal(...)", "normal smoothing step" );
   }
 """).render( **self.d )
+
+  
+  
+class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
+    """!
+          
+      Introduce multiplicative CC Coupling
+      
+      The control logic here is simplistic and prescripted. We follow the 
+      following steps for the additive solver with one iteration:
+      
+      1. Pre First smoothing step
+         - Interpolate correction, i.e. sum all the hierarchies up.
+           This happens in touchCellFirstTime().
+         - Suspend CG solver
+         - Suspend DG solver
+         - Let DG solver project data onto faces
+      2. DG smoothing step
+         - Suspend CG solver
+         - Run DG solver
+      3. Nth DG smoothing step
+         - Still run DG solver (finish smoothing)
+         - Compute hierarchical residual
+         - Restrict
+         - Suspend CG solver
+      4. Any CG solver
+         - Suspend DG solver
+
+      ## Realisation
+      
+      This action set will map onto a class of its own. We give the class a 
+      class attribute which we increment by one in each step. We then make the 
+      actual logic depend upon this counter, as we inject the predicates into
+      the superclass: That is, the superclass has some boolean expressions which 
+      allow us to switch its features on and off. We make those guys depends upon
+      the new counter.
+          
+    """
+    def __init__(self,
+                 dg_solver,
+                 cg_solver,
+                 prolongation_matrix,
+                 prolongation_matrix_scaling,
+                 restriction_matrix,
+                 restriction_matrix_scaling,
+                 injection_matrix,
+                 injection_matrix_scaling,
+                 use_fas,
+                 smoothing_steps_DG = 4,
+                 smoothing_steps_CG = 4,
+                 ):        
+        super( MultiplicativeDGCGCoupling, self ).__init__(
+              dg_solver,
+              cg_solver,
+              prolongation_matrix,
+              prolongation_matrix_scaling,
+              restriction_matrix,
+              restriction_matrix_scaling,
+              injection_matrix,
+              injection_matrix_scaling,
+              use_fas
+              )
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = "DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
+        self.d["PREDICATE_PROLONGATE"]           = "DGCycleCounter==0"
+        self.d["PREDICATE_EVALUATE_RHS"]         = "DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
+          
+        assert smoothing_steps_DG>=1, "at least one smoothing step required"
+        assert smoothing_steps_CG>=1, "at least one smoothing step required"
+        
+        self.smoothing_steps_DG = smoothing_steps_DG
+        self.smoothing_steps_CG = smoothing_steps_CG
+          
+
+    def get_attributes(self):
+        """!
+      
+          Add a new static attribute to the class.
+      
+        """
+        return """
+    static constexpr int DGSmoothingSteps = {};
+    static constexpr int CGSmoothingSteps = {};
+    static int DGCycleCounter;
+    static int CGCycleCounter;
+""".format(self.smoothing_steps_DG,self.smoothing_steps_CG)
+
+      
+    def get_static_initialisations(self, full_qualified_classname):
+        """!
+          
+          Initialise the new counter.
+          
+        """
+        return """
+int """ + full_qualified_classname + """::DGCycleCounter = 0;
+int """ + full_qualified_classname + """::CGCycleCounter = 0;
+"""    
+      
+    def get_body_of_prepareTraversal(self):
+        return jinja2.Template( """
+    if (DGCycleCounter>0 and DGCycleCounter<=DGSmoothingSteps) {
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      DGCycleCounter++;
+      logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
+    }
+    else if (DGCycleCounter>DGSmoothingSteps and CGCycleCounter<CGSmoothingSteps) {
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true);
+      CGCycleCounter++;
+      logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver" );
+    }
+    else {
+      DGCycleCounter = 1;
+      CGCycleCounter = 0;
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true);
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      logInfo( "prepareTraversal(...)", "suspend all solvers, interpolate CG->DG and project new solution onto faces" );
+    }
+""").render( **self.d )

@@ -2,3 +2,4 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .DGCGCoupling   import AdditiveDGCGCoupling
+from .DGCGCoupling   import MultiplicativeDGCGCoupling
