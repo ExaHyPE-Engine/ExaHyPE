@@ -36,6 +36,8 @@ else:
 pvdfile = "particles.pvd"
 reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=time, verbose=False)
 partData = reader.load()
+# update the actual time of the snapshot
+time = reader.get_snapshot_time()
 
 # show me what particle fields are stored
 #  partData.show_attribute_list()
