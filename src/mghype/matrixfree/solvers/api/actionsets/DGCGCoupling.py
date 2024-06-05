@@ -635,8 +635,19 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
                  injection_matrix_scaling,
                  use_fas,
                  smoothing_steps_DG = 4,
-                 smoothing_steps_CG = 4,
+                 smoothing_steps_CG = -1,
                  ):        
+        """!
+
+        Construct the solver
+        
+        @param smoothing_steps_DG: positive integer
+        
+        @param smoothing_steps_CG: positive integer or -1
+          The -1 indicates that we wait for full convergence on the coarse 
+          mesh.
+                 
+        """
         super( MultiplicativeDGCGCoupling, self ).__init__(
               dg_solver,
               cg_solver,
@@ -648,12 +659,12 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
               injection_matrix_scaling,
               use_fas
               )
-        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = "DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = "DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==0"
         self.d["PREDICATE_PROLONGATE"]           = "DGCycleCounter==0"
-        self.d["PREDICATE_EVALUATE_RHS"]         = "DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
+        self.d["PREDICATE_EVALUATE_RHS"]         = "DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==0"
           
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
-        assert smoothing_steps_CG>=1, "at least one smoothing step required"
+        assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
         
         self.smoothing_steps_DG = smoothing_steps_DG
         self.smoothing_steps_CG = smoothing_steps_CG
@@ -665,12 +676,16 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
           Add a new static attribute to the class.
       
         """
+        if self.smoothing_steps_CG==-1:
+          smoothing_steps_CG_string = "std::numeric_limits<int>::max()"
+        else:
+          smoothing_steps_CG_string = self.smoothing_steps_CG
         return """
     static constexpr int DGSmoothingSteps = {};
     static constexpr int CGSmoothingSteps = {};
     static int DGCycleCounter;
     static int CGCycleCounter;
-""".format(self.smoothing_steps_DG,self.smoothing_steps_CG)
+""".format(self.smoothing_steps_DG,smoothing_steps_CG_string)
 
       
     def get_static_initialisations(self, full_qualified_classname):
@@ -691,7 +706,16 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       DGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
     }
-    else if (DGCycleCounter>DGSmoothingSteps and CGCycleCounter<CGSmoothingSteps) {
+    else if (
+      DGCycleCounter>DGSmoothingSteps 
+      and 
+      (CGSmoothingSteps<std::numeric_limits<int>::max() and CGCycleCounter<CGSmoothingSteps 
+       or 
+       CGCycleCounter==0 
+       or 
+       CGSmoothingSteps==std::numeric_limits<int>::max() and repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm()>=1e-8
+      )
+    ) {
       repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true);
       CGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver" );
