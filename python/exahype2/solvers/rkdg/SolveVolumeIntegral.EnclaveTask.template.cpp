@@ -339,7 +339,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
-  logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
   ::exahype2::CellData cellData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
@@ -392,7 +392,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   if (not foundOffloadingBranch) {
-    logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+    logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
       << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
@@ -403,8 +403,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<cellData.numberOfCells; i++) {
-    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i], targetDevice);
+    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
   // Don't rerun, so return false.
