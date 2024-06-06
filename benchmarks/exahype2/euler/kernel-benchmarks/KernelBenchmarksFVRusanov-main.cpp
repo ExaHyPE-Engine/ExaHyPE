@@ -1960,7 +1960,6 @@ int main(int argc, char** argv) {
   ::tarch::multicore::initSmartMPI();
   ::peano4::fillLookupTables();
   repositories::initSharedMemoryAndGPUEnvironment();
-  ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
 
   if constexpr (EnableFPE) {

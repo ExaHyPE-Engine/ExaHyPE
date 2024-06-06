@@ -1,4 +1,4 @@
-documentation:
+pages:
   stage: publish
   allow_failure: false
   tags:
@@ -9,7 +9,7 @@ documentation:
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_IMAGEDIR/${BASE_IMAGE_TAG} doxygen documentation/Doxyfile
     - mkdir public
-    - mv ./doxygen-html/* public/
+    - mv ./doxygen-html/html/* public/
   artifacts:
     paths:
       - public
