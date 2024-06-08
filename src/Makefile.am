@@ -13,12 +13,13 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
-	exahype2 \
-	swift2 \
-	petsc \
 	convert \
-	unittests \
-	tbb
+	exahype2 \
+	mghype \
+	petsc \
+	swift2 \
+	tbb \
+	unittests
 
 #
 # I want Peano to be as fast as possible and thus build it as static library

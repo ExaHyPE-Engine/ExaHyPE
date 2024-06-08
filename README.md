@@ -7,7 +7,7 @@
 
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
-  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html">Documentation</a> •
+  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/index.html">Documentation</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
@@ -55,16 +55,16 @@ We however use a whole set of tools around it.
 
 # Docker
 
-We maintain a collection of [Dockerfiles](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/df/dbb/page_installation_with_docker.html).
+We maintain a collection of [Dockerfiles](https://hpcsoftware.pages.gitlab.lrz.de/Peano/df/dbb/page_installation_with_docker.html).
 
 # Apptainer
 
-We maintain a collection of [Apptainer Definition Files](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/db/d56/page_installation_with_apptainer.html).
+We maintain a collection of [Apptainer Definition Files](https://hpcsoftware.pages.gitlab.lrz.de/Peano/db/d56/page_installation_with_apptainer.html).
 
 # Spack
 
 To considerably alleviate the installation process of Peano, especially on HPC systems,
-we provide [packages](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/d6/db6/page_installation_with_spack.html) that rely on [Spack](https://github.com/spack/spack/wiki).
+we provide [packages](https://hpcsoftware.pages.gitlab.lrz.de/Peano/d6/db6/page_installation_with_spack.html) that rely on [Spack](https://github.com/spack/spack/wiki).
 
 # Contributing
 

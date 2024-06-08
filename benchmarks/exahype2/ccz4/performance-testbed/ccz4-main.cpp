@@ -493,8 +493,6 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  peano4::runTestsAndBenchmarks();
-
   repositories::DataRepository::initDatatypes();
 
   #if PeanoDebug >= 2
