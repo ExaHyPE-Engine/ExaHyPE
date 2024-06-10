@@ -163,9 +163,7 @@ be able to compensate for a poor initial geometric distribution. To assess
 the quality of your partition, Peano's loadbalancing toolbox \ref page_peano_runtime_analysis "provides a script"
 that visualises the distribution of cells. 
 
-
  @image html runtime_analysis_loadbalancing_example00.png 
-
 
 If the cell distribution is similar to the one above, you have subpartitions
 of significantly different sizes. 
@@ -173,7 +171,6 @@ In a profile, such an ill-balanced setup materialises typically in high task
 runtime spin times.
 In OpenMP for example, __kmp_fork_barrier() appears high up in the list of the most expensive routine.
 If you don't want to use the visualisation script, you can also check the program dump of your code.
-
 
        rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
 
@@ -207,11 +204,10 @@ There are some generic ideas that you can try out:
    By default, most load balancing schemes allow the code to use up to twice the
    number of trees than cores. This value can be increased.
 
-
 To motivate most of these considerations, it is important to remember that 
 Peano builds up the grid top-down, i.e. from coarse to fine, and immediately 
 tries to split the mesh over the compute units.
-   
+
 Recursive load balancing schemes yield the best quality partitions, but often 
 fail for rather shallow (3-6 levels of adaptivity) trees with adaptive mesh
 refinement. In this case, it pays off to find a good indicator what a good 
@@ -223,7 +219,42 @@ that there is always a clear tree topology in the splitting, i.e. if you
 recursively split, you can only make as many splits as you have tree levels.
 
 
-### The grid splitting needs to much time
+### The individual trees are well balanced but I don't get any speedup
+
+If you have a well balanced problem, i.e. the trees have all roughly the same amount
+of local cells:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+toolbox::loadbalancing::dumpStatistics()                12 tree(s): (#0:19653/7108)(#1:19644/1365)(#2:19644/2461)(#3:19644/2445)(#4:19644/2525)(#5:19644/2645)(#6:19644/2621)(#7:19644/2789)(#8:19644/2493)(#9:19644/2709)(#10:19644/2485)(#11:19644/1685) total=235737/33331 (local/remote)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and you don't get any speedup, then you should look at the ratio between
+the total number of local cells and the total number of remote cells (granularity).
+
+In the example above, we have 12 trees where each tree holds 19644 cells.
+Therefore, we have very good balanced load. Now, we look into the ratio of
+the total number of local cells (235737) and remote cells (33331):
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+granularity = 235737 / 33331 ~= 7.07
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In some heuristic measurements we deduced a "rule of thumb" where a granularity of greater than ~10
+results in a linear speedup in a strong scaling setup (neglecting other effects like memory bandwidth, etc.).
+If you get a smaller granularity than ~10, you will lose performance
+(in relation to the hardware resources you throw at the problem) that worsens, the smaller the granularity gets.
+
+To remedy this effect you will need to find ways on how to increase the granularity in your simulation.
+
+Possible ways to do so can be:
+- Increase the problem size (particularly number of cells or patches).
+- Decrease the amount of hardware resources (threads, cores, ranks, GPUs, etc.) you are using.
+- Choose another load balancing strategy.
+- Restrict the number of spacetrees (subpartitions) per rank.
+- Try out enclave solvers (with restricted number of trees).
+
+
+### The grid splitting needs too much time
 
 See the comment above on the recursive top-down splitting. In this context:
 
@@ -307,7 +338,7 @@ If tasks make your system slower, there can be multiple reasons:
 1. The tasks are too tiny.
 2. 
 
-@todo THis has to be worked out. Does usually not happen for OpenMP. But TBB/SYCL are different stories.
+@todo This has to be worked out. Does usually not happen for OpenMP. But TBB/SYCL are different stories.
 
 
 
@@ -328,8 +359,8 @@ The scheduler flaw is discussed in @ref peano_performance_optimisation "Peano's 
 ExaHyPE offers a special command line argument to switch between different
 tasking schemes. Run the code with help and use
 
-     ---threading-model native
-     
+     --threading-model native
+
 or another option afterwards to play around with various threading schemes.
 
 If this does not work, switch to task-based kernels.

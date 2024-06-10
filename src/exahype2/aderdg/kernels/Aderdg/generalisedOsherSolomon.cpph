@@ -46,8 +46,8 @@ void generalisedOsherSolomon(
     const double        t,
     const double        dt,
     const int           direction) {
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
+  constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
+  constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int numberOfData       = numberOfVariables+numberOfParameters;
   constexpr int order              = SolverType::Order;
   constexpr int basisSize          = order+1;

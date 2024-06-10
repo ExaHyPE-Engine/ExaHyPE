@@ -67,8 +67,8 @@ void   peano4::parallel::TreeManagementMessage::setAction(Action value) {
 
 #ifdef Parallel
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
-MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype;
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
@@ -99,6 +99,51 @@ MPI_Datatype peano4::parallel::TreeManagementMessage::getBoundaryExchangeDatatyp
 [[clang::map_mpi_datatype]]
 MPI_Datatype peano4::parallel::TreeManagementMessage::getMultiscaleDataExchangeDatatype() {
   return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::parallel::TreeManagementMessage::freeForkDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::parallel::TreeManagementMessage::freeGlobalCommunciationDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::parallel::TreeManagementMessage::freeJoinDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::parallel::TreeManagementMessage::freeBoundaryExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::parallel::TreeManagementMessage::freeMultiscaleDataExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
 }
 
 
@@ -175,17 +220,11 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
 
 void peano4::parallel::TreeManagementMessage::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  MPI_Datatype type;
-  type = getForkDatatype();
-  MPI_Type_free( &type );
-  type = getJoinDatatype();
-  MPI_Type_free( &type );
-  type = getBoundaryExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getMultiscaleDataExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getGlobalCommunciationDatatype();
-  MPI_Type_free( &type );
+  freeForkDatatype();
+  freeJoinDatatype();
+  freeBoundaryExchangeDatatype();
+  freeMultiscaleDataExchangeDatatype();
+  freeGlobalCommunciationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

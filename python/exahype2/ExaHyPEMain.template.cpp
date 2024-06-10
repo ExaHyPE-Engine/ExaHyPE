@@ -462,8 +462,6 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  peano4::runTestsAndBenchmarks();
-
   repositories::DataRepository::initDatatypes();
 
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
