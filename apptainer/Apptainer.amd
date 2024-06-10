@@ -27,6 +27,7 @@ spack:
   - py-pspamm
   - libxsmm+generator
   - slurm
+  - cmake
   - memkind
   - blis
   - boost

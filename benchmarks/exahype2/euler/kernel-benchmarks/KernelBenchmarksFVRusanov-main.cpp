@@ -186,7 +186,7 @@ void wrapPatchwiseHeapFunctorsHostKernel(int device, ::exahype2::CellData& patch
       double* __restrict__ F
     ) -> void {
       if constexpr (EvaluateFlux) {
-        repositories::InstanceOfFVRusanovSolver.flux(Q, x, h, t, dt, normal, F);
+        repositories::instanceOfFVRusanovSolver.flux(Q, x, h, t, dt, normal, F);
       }
     },
     [&](
@@ -200,18 +200,18 @@ void wrapPatchwiseHeapFunctorsHostKernel(int device, ::exahype2::CellData& patch
       double* __restrict__ BTimesDeltaQ
     ) -> void {
       if constexpr (EvaluateNonconservativeProduct) {
-        repositories::InstanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+        repositories::instanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
       }
     },
     [&](
       const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, double* __restrict__ S
     ) -> void {
       if constexpr (EvaluateSource) {
-        repositories::InstanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
+        repositories::instanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
       }
     },
     [&](const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal)
-      -> double { return repositories::InstanceOfFVRusanovSolver.maxEigenvalue(Q, x, h, t, dt, normal); },
+      -> double { return repositories::instanceOfFVRusanovSolver.maxEigenvalue(Q, x, h, t, dt, normal); },
     timingComputeKernel,
     loopParallelism
   );
@@ -248,7 +248,7 @@ void wrapBatchedHeapFunctorHostKernels(int device, ::exahype2::CellData& patchDa
       double* __restrict__ F
     ) -> void {
       if constexpr (EvaluateFlux) {
-        repositories::InstanceOfFVRusanovSolver.flux(Q, x, h, t, dt, normal, F);
+        repositories::instanceOfFVRusanovSolver.flux(Q, x, h, t, dt, normal, F);
       }
     },
     [&](
@@ -262,18 +262,18 @@ void wrapBatchedHeapFunctorHostKernels(int device, ::exahype2::CellData& patchDa
       double* __restrict__ BTimesDeltaQ
     ) -> void {
       if constexpr (EvaluateNonconservativeProduct) {
-        repositories::InstanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+        repositories::instanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
       }
     },
     [&](
       const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, double* __restrict__ S
     ) -> void {
       if constexpr (EvaluateSource) {
-        repositories::InstanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
+        repositories::instanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
       }
     },
     [&](const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal)
-      -> double { return repositories::InstanceOfFVRusanovSolver.maxEigenvalue(Q, x, h, t, dt, normal); },
+      -> double { return repositories::instanceOfFVRusanovSolver.maxEigenvalue(Q, x, h, t, dt, normal); },
     timingComputeKernel,
     loopParallelism
   );
@@ -310,7 +310,7 @@ void wrapVolumewiseFunctorHostKernels(int device, ::exahype2::CellData& patchDat
       double* __restrict__ F
     ) -> void {
       if constexpr (EvaluateFlux) {
-        repositories::InstanceOfFVRusanovSolver.flux(Q, x, h, t, dt, normal, F);
+        repositories::instanceOfFVRusanovSolver.flux(Q, x, h, t, dt, normal, F);
       }
     },
     [&](
@@ -324,18 +324,18 @@ void wrapVolumewiseFunctorHostKernels(int device, ::exahype2::CellData& patchDat
       double* __restrict__ BTimesDeltaQ
     ) -> void {
       if constexpr (EvaluateNonconservativeProduct) {
-        repositories::InstanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+        repositories::instanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
       }
     },
     [&](
       const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, double* __restrict__ S
     ) -> void {
       if constexpr (EvaluateSource) {
-        repositories::InstanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
+        repositories::instanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
       }
     },
     [&](const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal)
-      -> double { return repositories::InstanceOfFVRusanovSolver.maxEigenvalue(Q, x, h, t, dt, normal); },
+      -> double { return repositories::instanceOfFVRusanovSolver.maxEigenvalue(Q, x, h, t, dt, normal); },
     timingComputeKernel,
     loopParallelism
   );
@@ -392,12 +392,12 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     // TODO: Does the number of samples change the outcome of the solution?
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
-        ::exahype2::CellData patchData(patches);
+        ::exahype2::CellData patchData(patches, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
         for (int i = 0; i < patches; i++) {
-          patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
           patchData.t[i]             = TimeStamp;
           patchData.dt[i]            = TimeStepSize;
-          patchData.QOut[i]          = ::tarch::allocateMemory<double>(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QOut[i]          = ::tarch::allocateMemory<double>(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
           patchData.cellCentre[i]    = ::tarch::la::Vector<Dimensions, double>(CellOffset + 0.5 * CellSize);
           patchData.cellSize[i]      = ::tarch::la::Vector<Dimensions, double>(CellSize);
           patchData.maxEigenvalue[i] = 0.0;
@@ -432,8 +432,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         }
 
         for (int i = 0; i < patches; i++) {
-          ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-          ::tarch::freeMemory(patchData.QOut[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
+          ::tarch::freeMemory(patchData.QOut[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, device);
         }
       }
       endParallelFor
@@ -1632,6 +1632,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       device,
       localPatches
     );
+#if defined(__NVCOMPILER_CUDA__) // __NVCC__
     assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
         FVRusanovSolver,
@@ -1683,6 +1684,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       device,
       localPatches
     );
+#endif
 
     assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseHeapStateless<
@@ -1735,6 +1737,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       device,
       localPatches
     );
+#if defined(__NVCOMPILER_CUDA__) // __NVCC__
     assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
         FVRusanovSolver,
@@ -1786,6 +1789,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       device,
       localPatches
     );
+#endif
 
     assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
@@ -1956,10 +1960,9 @@ int main(int argc, char** argv) {
   ::tarch::multicore::initSmartMPI();
   ::peano4::fillLookupTables();
   repositories::initSharedMemoryAndGPUEnvironment();
-  ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
 
-  if (EnableFPE) {
+  if constexpr (EnableFPE) {
     feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
   }
 
