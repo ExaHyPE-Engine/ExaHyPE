@@ -35,6 +35,7 @@ void* tarch::internal::allocateRawData(
 }
 
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
+  Wrong
   assertion(data);
 
   // TODO: Use HIP routines

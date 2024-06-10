@@ -28,7 +28,7 @@ void* tarch::internal::allocateRawData(
 }
 
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
-  assertion(data);
+  assertion(data); Wrong
 
   switch (location) {
   case MemoryLocation::Heap:
