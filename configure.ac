@@ -185,6 +185,25 @@ if test "$multithreading" == tbb; then
   CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS -DTBB_USE_ASSERT -Isrc/tbb"
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   -DTBB_USE_ASSERT -Isrc/tbb"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   -DTBB_USE_ASSERT -Isrc/tbb"
+  
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/tbb "
+
+  LDADD_PEANO_2D_RELEASE+=" -ltbb_extension"
+  LDADD_PEANO_2D_STATS+="   -ltbb_extension"
+  LDADD_PEANO_2D_ASSERTS+=" -ltbb_extension_debug"
+  LDADD_PEANO_2D_TRACE+="   -ltbb_extension_trace"
+  LDADD_PEANO_2D_DEBUG+="   -ltbb_extension_debug"
+
+  LDADD_PEANO_3D_RELEASE+=" -ltbb_extension"
+  LDADD_PEANO_3D_STATS+="   -ltbb_extension"
+  LDADD_PEANO_3D_ASSERTS+=" -ltbb_extension_debug"
+  LDADD_PEANO_3D_TRACE+="   -ltbb_extension_trace"
+  LDADD_PEANO_3D_DEBUG+="   -ltbb_extension_debug"
+
 fi
 AM_CONDITIONAL([UseTBB], [test "x$multithreading" = xtbb])
 
@@ -688,8 +707,6 @@ fi
 if test "$toolchain" == scorep; then
   AC_DEFINE([UseLogService], [ScorePLogger], [ScorePLogger])
   AC_DEFINE([UseScoreP],     [UseScoreP], [UseScoreP])
-  #LDFLAGS+=-ipo
-  #CXXFLAGS+=" -ip -ipo "
 fi
 
 if test "$toolchain" == nvptx; then
@@ -703,7 +720,11 @@ if test "$toolchain" == chrome; then
 fi
 
 if test "$toolchain" == gnu; then
-  LDFLAGS+=-flto
+  LDFLAGS_PEANO_RELEASE+=" -flto "
+  LDFLAGS_PEANO_STATS+="   -flto "
+  LDFLAGS_PEANO_ASSERTS+=" -flto "
+  LDFLAGS_PEANO_TRACE+="   -flto "
+  LDFLAGS_PEANO_DEBUG+="   -flto "
 fi
 
 
