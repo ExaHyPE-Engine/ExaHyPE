@@ -237,7 +237,7 @@ void tarch::multicore::native::spawnTask(
     iterableExistingInDepencencies.push_back(taskNumber);
   }
 
-  if (taskNumber == NoDependencies) {
+  if (taskNumber == NoOutDependencies) {
     #pragma omp atomic
     numberOfSpawnedTasks++;
 
@@ -340,7 +340,7 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
     #endif
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
     } else {
       delete myTask;
     }
