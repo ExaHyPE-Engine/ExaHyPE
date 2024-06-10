@@ -38,6 +38,23 @@ namespace exahype2 {
  * responsibility to destroy it) to the bookkeeping and then can be deleted
  * themselves.
  *
+ * ## Usage:
+ *
+ * Every ExaHyPE solver category defines its own enclave tasks being subclasses
+ * of the present, generic type. Enclave tasks are always to be spawned with
+ * their task number, so we can efficiently wait for them:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+ *   ...
+ * );
+ *
+ * ...
+ *
+ * tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId() );
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ *
  * ## Data ownership
  *
  * - The run() operation allocates the output data and then invokes the functor.
