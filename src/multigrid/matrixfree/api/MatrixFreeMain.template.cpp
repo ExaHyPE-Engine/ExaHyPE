@@ -1,17 +1,24 @@
 #include "{{MAIN_NAME}}.h"
 
-#include "observers/CreateGrid.h"
-#include "observers/InitSolution.h"
-#include "observers/Solve.h"
-#include "observers/Plot.h"
+#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
+#include "{{SUBDIRECTORY}}observers/InitSolution.h"
+#include "{{SUBDIRECTORY}}observers/Solve.h"
+#include "{{SUBDIRECTORY}}observers/Plot.h"
 
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+{% if SUBDIRECTORIES -%}
+{% for subdirectory in SUBDIRECTORIES %}
+#include "{{subdirectory}}repositories/DataRepository.h"
+#include "{{subdirectory}}repositories/StepRepository.h"
+{% endfor -%}
+{% else %}
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
+{%- endif %}
 
 #include "tarch/UnitTests.h"
 #include "tarch/logging/Log.h"
