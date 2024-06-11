@@ -176,7 +176,7 @@ Consult petsc.Project for details
     
 """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 #include "tarch/la/Matrix.h"
 #include "peano4/utils/Loop.h"
 """

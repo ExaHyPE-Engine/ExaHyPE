@@ -123,7 +123,7 @@ in init().
     
     """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 """
 

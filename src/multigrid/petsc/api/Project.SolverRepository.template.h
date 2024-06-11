@@ -19,7 +19,7 @@ namespace {{N}} {
   namespace repositories {
 
     {% for SOLVER in SOLVER_INSTANCES %}
-    extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
+    extern {{SOLVER[0]}}  {{SOLVER[1]}}; // {{NAMESPACE | join("::")}}::
 
     {% endfor %}
 

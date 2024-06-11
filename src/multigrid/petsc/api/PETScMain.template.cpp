@@ -1,11 +1,11 @@
 #include "{{MAIN_NAME}}.h"
 
-#include "observers/Assemble.h"
-#include "observers/CreateGrid.h"
-#include "observers/EnumerateAndInitSolution.h"
-#include "observers/MapSolutionOntoMesh.h"
-#include "observers/Plot.h"
-#include "observers/Solve.h"
+#include "{{SUBDIRECTORY}}observers/Assemble.h"
+#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
+#include "{{SUBDIRECTORY}}observers/EnumerateAndInitSolution.h"
+#include "{{SUBDIRECTORY}}observers/MapSolutionOntoMesh.h"
+#include "{{SUBDIRECTORY}}observers/Plot.h"
+#include "{{SUBDIRECTORY}}observers/Solve.h"
 
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
@@ -15,8 +15,15 @@
 #include "petsc/petsc.h"
 #include "petsc/UnitTests.h"
 
+{% if SUBDIRECTORIES -%}
+{% for subdirectory in SUBDIRECTORIES %}
+#include "{{subdirectory}}repositories/DataRepository.h"
+#include "{{subdirectory}}repositories/StepRepository.h"
+{% endfor -%}
+{% else %}
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
+{%- endif %}
 
 #include "tarch/UnitTests.h"
 #include "tarch/logging/Log.h"
