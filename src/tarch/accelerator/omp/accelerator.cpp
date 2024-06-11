@@ -54,6 +54,7 @@ void tarch::freeMemory(void* data, MemoryLocation location, int device) {
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     assertion1(device >= 0, device);
+    assertion(data!=nullptr);
 #if defined(__NVCOMPILER_CUDA__)
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));

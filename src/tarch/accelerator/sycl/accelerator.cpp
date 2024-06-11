@@ -40,11 +40,12 @@ void tarch::freeMemory(void* data, MemoryLocation location, int device) {
         std::free(data);
       }
       break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    assertion1(device >= 0, device);
-    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-    ::sycl::free(data, queue);
-    break;
+    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+      assertion1(device >= 0, device);
+      assertion(data!=nullptr);
+      ::sycl::queue& queue = accelerator::getSYCLQueue(device);
+      ::sycl::free(data, queue);
+      break;
   }
 }
 
