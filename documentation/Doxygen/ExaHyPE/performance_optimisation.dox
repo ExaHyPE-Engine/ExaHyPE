@@ -2,6 +2,9 @@
 
 @page page_exahype_performance_optimisation Performance optimisation
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
 
 This section discusses some ExaHyPE-specific performance optimisation steps.
 While ExaHyPE and its baseline, Peano, provide simplistic performance analysis 
