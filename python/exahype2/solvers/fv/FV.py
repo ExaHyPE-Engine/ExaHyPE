@@ -1232,7 +1232,7 @@ The finest mesh width of """
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True):
         """
         The ExaHyPE project will call this operation when it sets
         up the overall environment.
@@ -1276,7 +1276,7 @@ The finest mesh width of """
                 namespace,
                 subdirectory + ".",
                 abstractHeaderDictionary,
-                True,
+                abstract_overwrite,
                 True,
             )
         )

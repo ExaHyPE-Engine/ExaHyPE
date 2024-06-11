@@ -35,10 +35,11 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, executable, directory=".", subdirectory=""):
+    def __init__(self, namespace, project_name, executable, directory=".", subdirectory="", abstract_overwrite=True):
         self._project = peano4.Project(namespace, project_name, directory, subdirectory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
         self._subdirectory = subdirectory
+        self._abstract_overwrite = abstract_overwrite
 
         self._solvers = []
         self._domain_offset = [0.0, 0.0, 0.0]
@@ -705,7 +706,7 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
             solver.add_implementation_files_to_project(
-                self._project.namespace, self._project.output, self._dimensions, self._subdirectory
+                self._project.namespace, self._project.output, self._dimensions, self._subdirectory, self._abstract_overwrite
             )
 
         self.__generate_solver_repository()
