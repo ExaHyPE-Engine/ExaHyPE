@@ -48,13 +48,16 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     not marker.willBeRefined() 
     and
     tarch::la::greaterEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
-  ) { 
+    and
+    not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
+ ) { 
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
       nullptr,
       marker.x(),
       marker.h(),
       0.0
     );
+    fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
   }
   else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;

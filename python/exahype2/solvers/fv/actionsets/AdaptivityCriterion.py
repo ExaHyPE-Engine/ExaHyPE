@@ -49,6 +49,8 @@ class AdaptivityCriterion(AbstractFVActionSet):
     not marker.willBeRefined() 
     and
     tarch::la::greaterEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    and
+    not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
   ) { 
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
@@ -58,6 +60,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
           0.0
         );
     }
+    fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
   }
   else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
