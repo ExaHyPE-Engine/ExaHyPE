@@ -14,6 +14,16 @@ effects. The setup is thus convenient to assess properties of different
 numerical schemes.  
 
 
+## Prepare Peano
+
+Peano has to be built with the ExaHyPE extension plus the tracers, i.e.
+with 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+--enable-blockstructured --enable-particles --enable-loadbalancing --enable-finiteelements --enable-mghype --enable-swift --enable-exahype
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
 ## Build executables
 
 It is reasonable to start the Python script with the --help option once to 

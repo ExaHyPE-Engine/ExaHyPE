@@ -97,7 +97,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         // Time stamp is not updated, as this will be done by final linear combination
         // fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
-        tarch::multicore::spawnTask( newEnclaveTask );
+        tarch::multicore::spawnTask( newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId() );
       }
   """
     )

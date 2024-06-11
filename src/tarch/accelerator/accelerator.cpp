@@ -28,8 +28,9 @@ void* tarch::internal::allocateRawData(std::size_t size, MemoryLocation location
 }
 
 void tarch::freeMemory(void* data, MemoryLocation, int) {
-  assertion(data);
-  std::free(data);
+  if (data!=nullptr) {
+    std::free(data);
+  }
 }
 
 void tarch::gpuAbort() { std::abort(); }

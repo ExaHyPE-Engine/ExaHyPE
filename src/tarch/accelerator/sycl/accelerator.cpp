@@ -33,18 +33,19 @@ void* tarch::internal::allocateRawData(
 }
 
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
-  assertion(data);
-
   switch (location) {
-  case MemoryLocation::Heap:
-    assertion1(device == accelerator::Device::HostDevice, device);
-    std::free(data);
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    assertion1(device >= 0, device);
-    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-    ::sycl::free(data, queue);
-    break;
+    case MemoryLocation::Heap:
+      assertion1(device == accelerator::Device::HostDevice, device);
+      if (data!=nullptr) {
+        std::free(data);
+      }
+      break;
+    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+      assertion1(device >= 0, device);
+      assertion(data!=nullptr);
+      ::sycl::queue& queue = accelerator::getSYCLQueue(device);
+      ::sycl::free(data, queue);
+      break;
   }
 }
 
