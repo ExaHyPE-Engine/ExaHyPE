@@ -902,6 +902,7 @@ We use RK("""
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True,
+            called_by_grid_construction=False,
         )
         self._action_set_AMR_commit_without_further_analysis = (
             exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
@@ -909,6 +910,16 @@ We use RK("""
                 guard=self._store_cell_data_default_guard(),
                 build_up_new_refinement_instructions=False,
                 implement_previous_refinement_instructions=True,
+                called_by_grid_construction=False,
+            )
+        )
+        self._action_set_AMR_throughout_grid_construction = (
+            exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
+                solver=self,
+                guard=self._store_cell_data_default_guard(),
+                build_up_new_refinement_instructions=True,
+                implement_previous_refinement_instructions=True,
+                called_by_grid_construction=True,
             )
         )
         self._action_set_linear_combination_of_estimates = (
@@ -984,6 +995,7 @@ We use RK("""
             self._baseline_action_set_descend_invocation_order + 4
         )  # depends on other guys
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
+        self._action_set_AMR_throughout_grid_construction.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
         self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 5
         )
@@ -1191,7 +1203,7 @@ We use RK("""
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR)
+            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
