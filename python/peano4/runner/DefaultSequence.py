@@ -37,8 +37,8 @@ class DefaultSequence(object):
          Main.cpp, but you might want to have different main files for
          different experiments. Please do not give the file an extension.
     """
-    output.makefile.add_h_file( self.project.subdirectory + main_name + ".h", generated=True )
-    output.makefile.add_cpp_file( self.project.subdirectory + main_name + ".cpp", generated=True )
+    output.makefile.add_h_file( main_name + ".h", generated=True )
+    output.makefile.add_cpp_file( main_name + ".cpp", generated=True )
 
     header_file_template = self._get_header_file_template()
     cpp_file_template = self._get_implementation_file_template()
@@ -46,13 +46,21 @@ class DefaultSequence(object):
     self.d[ "HEADER_FILE_TEMPLATE" ] = os.path.basename(header_file_template)
     self.d[ "CPP_FILE_TEMPLATE" ] = os.path.basename(cpp_file_template)
     self.d[ "PROJECT_NAME" ] = self.project.project_name
-
+    self.d[ "SUBNAMESPACE" ] = ""
+    if self.project._subdirectory:
+      self.d[ "SUBNAMESPACE" ] = self.project._subdirectory + "::"
+    self.d[ "SUBDIRECTORY" ] = self.project.subdirectory
+    self.d[ "SUBDIRECTORIES" ] = []
+    if self.project.subdirectories:
+      for subdirectory in self.project.subdirectories:
+          self.d[ "SUBDIRECTORIES" ].append(subdirectory)
+    
     generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       header_file_template,
       cpp_file_template,
       main_name,
-      self.project.namespace,
-      "./" + self.project.subdirectory,
+      self.project.rootnamespace,
+      "./",
       self.d,
       self.overwrite)
     output.add(generated_files)

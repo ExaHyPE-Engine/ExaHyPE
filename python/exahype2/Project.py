@@ -777,3 +777,7 @@ thus appreciate any citation of the original release paper
 
         for tracer_set in self._tracer_particle_sets:
             step.use_vertex(tracer_set)
+
+    @property
+    def subdirectory(self):
+        return self._subdirectory

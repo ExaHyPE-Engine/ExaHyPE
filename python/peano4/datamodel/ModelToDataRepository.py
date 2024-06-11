@@ -39,7 +39,8 @@ class ModelToDataRepository(object):
     self.d[ "MPI_DATAYPE_SHUTDOWN" ]         += i.get_full_qualified_type() + "::shutdownDatatype();\n"
 
       
-  def __parse_data_declarations_in_model(self):
+  def __parse_data_declarations_in_model(self, n):
+    subdirectory = self.model.subdirectories[n]
     self.d[ "DATA_CONTAINER_TYPE_DEFS" ]     = ""
     self.d[ "DATA_CONTAINER_INCLUDES" ]      = ""
     self.d[ "DATA_CONTAINER_DECLARATION" ]   = ""
@@ -49,41 +50,48 @@ class ModelToDataRepository(object):
     self.d[ "DATA_CONTAINER_CLEARS" ]        = ""
 
     self.d[ "FULL_QUALIFIED_CLASS_NAME" ] = ""
-    for i in self.__get_full_namespace():
+    for i in self.__get_full_namespace(n):
       self.d[ "FULL_QUALIFIED_CLASS_NAME" ] += i
       self.d[ "FULL_QUALIFIED_CLASS_NAME" ] += "::"
     self.d[ "FULL_QUALIFIED_CLASS_NAME" ] += self.__get_class_name()
     
     for i in self.model.cell_data:
-      self.__build_up_dictionary_for_one_data_set(i)
+      if i.subdirectory == subdirectory:
+        self.__build_up_dictionary_for_one_data_set(i)
 
     for i in self.model.face_data:
-      self.__build_up_dictionary_for_one_data_set(i)
+      if i.subdirectory == subdirectory:
+        self.__build_up_dictionary_for_one_data_set(i)
 
     for i in self.model.vertex_data:
-      self.__build_up_dictionary_for_one_data_set(i)
+      if i.subdirectory == subdirectory:
+        self.__build_up_dictionary_for_one_data_set(i)
 
-  def __get_full_namespace(self):
-    return self.model.namespace + [ "repositories" ]
+  def __get_full_namespace(self,i):
+    return self.model.namespaces[i] + [ "repositories" ]
       
   def __get_class_name(self):
     return "DataRepository"
 
 
   def construct_output(self,output):
-    self.__parse_data_declarations_in_model()
+    for i in range(len(self.model.namespaces)):
+      self.__parse_data_declarations_in_model(i)
       
-    namespace  = self.__get_full_namespace()
-    class_name = self.__get_class_name()
-    output.makefile.add_cpp_file( self.model.subdirectory + namespace[-1] + "/" + class_name + ".cpp", generated=True )
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
-      templatefile_prefix+".template.h",
-      templatefile_prefix+".template.cpp",
-      class_name, 
-      namespace,
-      self.model.subdirectory + namespace[-1], 
-      self.d,
-      True)
-    output.add(generated_files)
+      namespace  = self.__get_full_namespace(i)
+      # print("model.subdirectory[", i, "]", " = ", self.model.subdirectories[i])
+      # print("model.namespace[", i, "]", " = ", namespace)
+      class_name = self.__get_class_name()
+      output.makefile.add_cpp_file( self.model.subdirectories[i] + namespace[-1] + "/" + class_name + ".cpp", generated=True )
+      templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
+      local_d = self.d.copy()
+      generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
+        templatefile_prefix+".template.h",
+        templatefile_prefix+".template.cpp",
+        class_name, 
+        namespace,
+        self.model.subdirectories[i] + namespace[-1],
+        local_d,
+        True)
+      output.add(generated_files)
     pass

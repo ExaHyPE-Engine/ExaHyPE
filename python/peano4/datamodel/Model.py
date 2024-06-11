@@ -10,8 +10,14 @@ class Model(object):
         self.face_data = []
         self.vertex_data = []
         self.global_data = []
+        self.namespaces = []
+        self.subdirectories = []
         self.namespace = namespace
-        self.subdirectory = subdirectory
+        if namespace:
+            if not namespace in self.namespaces:
+                self.namespaces.append(namespace)
+                self._subdirectory = subdirectory
+                self.subdirectories.append(self.subdirectory)
         self.generator = ModelToDataRepository(self)
 
     def __str__(self):
@@ -62,9 +68,16 @@ class Model(object):
             output.readme.add_package_description(i.readme_package_descriptor)
 
         self.generator.construct_output(output)
-
+    
     def clear(self):
         self.cell_data = []
         self.face_data = []
         self.vertex_data = []
         self.global_data = []
+
+    @property
+    def subdirectory(self):
+        subdirectory = self._subdirectory
+        if subdirectory:
+            subdirectory += "/"
+        return subdirectory

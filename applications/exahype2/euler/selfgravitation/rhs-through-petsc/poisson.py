@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.abspath('../../../../python'))
 import peano4
 import exahype2
 
-# from multigrid.matrixgenerators import DLinear
-# import multigrid.petsc as petsc
+import numpy as np
+import multigrid
 
 modes = {
   "release": peano4.output.CompileMode.Release,
@@ -17,13 +17,14 @@ modes = {
   "debug":   peano4.output.CompileMode.Debug,
 }
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
+# parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
+parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 (default) to use all cores")
 parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../../", help="Peano4 directory")
 parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
 parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=True, help="Verbose")
 parser.add_argument("-d",   "--dimensions",               dest="dimensions",              type=int,   default=2, help="Dimensions")
-parser.add_argument("-upvd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
+parser.add_argument("-upv","--unknowns_per_vertex_dof",  dest="upv", type=int,   default=3, help="unknowns per vertex dof")
 parser.add_argument("-et",  "--end-time",                 dest="end_time",                type=float, default=1.0, help="Number of timesteps")
 parser.add_argument("-amr", "--adaptive-levels",          dest="adaptivity_levels",       type=int,   default=0, help="Number of AMR grid levels on top of hmax (0 by default)")
 parser.add_argument("-t",   "--type",                     dest="type",                    choices=["global-fixed", "global-adaptive"], required=True)
@@ -31,6 +32,10 @@ parser.add_argument("-pdt", "--plot-dt",                  dest="plot_snapshot_in
 parser.add_argument("-cs",  "--cell-size",                dest="h",                       type=float, required=True, help="Mesh size")
 parser.add_argument("-ps",  "--patch-size",               dest="patch_size",              type=int,   default=17, help="Dimensions")
 parser.add_argument("-m",   "--mode",                     dest="mode",                    default="release", help="|".join(modes.keys()))
+parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
+parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
+parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
+parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
 args = parser.parse_args()
 
 if args.dimensions not in [2,3]:
@@ -58,11 +63,31 @@ auxiliary_variables = 0
 euler_solver   = None
 poisson_solver = None
 
-# @note: Trying to think in a modularised way:
-# there is MG code somewhere which I have to use and
-# assuming that we need different local stiffness matrices for LHS for different types of solvers
-matrices = None
+#! [Construct matrices]
+matrices = multigrid.api.matrixgenerators.GLMatrixFree(
+  args.dimensions,
+  args.poly_degree,
+  1,  # Unknowns per cell dof. Scalar PDE here
+  2,  # We use the penalty formulation (see docu in tutorials)
+  2
+)
+assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
+mass_matrix, mass_matrix_scaling         = matrices.get_cell_mass_matrix()
+face_from_cell_projection, \
+face_from_cell_projection_scaling        = matrices.get_face_from_cell_matrix()
+cell_from_face_projection, \
+cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
+approximate_system_matrix, \
+approximate_system_matrix_scaling        = matrices.get_A_tilde()
+#! [Construct matrices]
 
+#! [Instantiate solvers]
+
+## Euler solver
+
+# # @note: Trying to think in a modularised way:
+# # there is MG code somewhere which I have to use and
+# # assuming that we need different local stiffness matrices for LHS for different types of solvers
 if args.type=="global-fixed":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Euler",
@@ -70,13 +95,11 @@ if args.type=="global-fixed":
     5, #unknowns,
     3, #auxiliary_variables,
     min_h, max_h,
-    time_step_size,
+    0.1*min_h,
     flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
-  # class DLinearFixedTimeStep(DLinear) # just the LHS matrix modification?
-  # matrices = DLinearFixedTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
 if args.type=="global-adaptive":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Euler",
@@ -90,51 +113,70 @@ if args.type=="global-adaptive":
     source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
 
-#generate matrices
-  # class DLinearAdaptiveTimeStep(DLinear) # just the LHS matrix modification?
-  # matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
-# matrices = DLinear(args.dimensions, args.unknowns_per_vertex_dof)
+## Poisson solver
 
-# # @note: Is it about an individual CollocatedLowOrderDiscretisation for every type of solver?
-# poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
-#     "Poisson",
-#     1,
-#     args.dimensions,
-#     args.h,
-#     args.h,
-#     matrices.get_cell_system_matrix_for_laplacian(),
-#     matrices.get_cell_mass_matrix(),
-#     1,
-#     1,
-#   )
+poisson_solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+  name = "Poisson",
+  dimensions = args.dimensions,
+  poly_degree = args.poly_degree,
+  unknowns_per_cell_node = 1,
+  solutions_per_face_node = 2,
+  projections_per_face_node = 2,
+  min_h = min_h,
+  max_h = max_h,
+  assembly_matrix= assembly_matrix, 
+  assembly_matrix_scaling = assembly_matrix_scaling, 
+  mass_matrix = mass_matrix, 
+  mass_matrix_scaling = mass_matrix_scaling, 
+  face_from_cell_projection = face_from_cell_projection, 
+  face_from_cell_projection_scaling = face_from_cell_projection_scaling,
+  cell_from_face_projection = cell_from_face_projection, 
+  cell_from_face_projection_scaling = cell_from_face_projection_scaling,
+  riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
+  boundary_matrix = matrices.get_boundary_matrix(),
+  cell_relaxation = args.omega_c,
+  face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
+  approximate_system_matrix = approximate_system_matrix,
+  approximate_system_matrix_scaling = approximate_system_matrix_scaling,
+  solver_tolerance = 0.01,
+)
+
+# local_assembly_matrix = np.array([
+#         0.6666666666666667, -0.16666666666666669, -0.16666666666666663, -0.33333333333333337
+      
+#         ,-0.16666666666666669, 0.6666666666666667, -0.33333333333333337, -0.16666666666666669
+      
+#         ,-0.16666666666666663, -0.33333333333333337, 0.6666666666666667, -0.16666666666666669
+      
+#         ,-0.33333333333333337, -0.16666666666666669, -0.16666666666666669, 0.6666666666666667
+# ]).reshape((4,4))
+
+# mass_matrix = np.eye( 2**args.dimensions )
+
+# poisson_solver = multigrid.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Poisson",
+#                                                               args.upv,
+#                                                               args.dimensions,
+#                                                               args.meshsize,
+#                                                               args.meshsize,
+#                                                               local_assembly_matrix,
+#                                                               local_assembly_matrix_scaling=0,
+#                                                               mass_matrix = mass_matrix,
+#                                                               mass_matrix_scaling = 0
+#                                                             )
+#! [Instantiate solvers]
 
 # assert (
 #     poisson_solver.name != euler_solver.name
 # ), "names the solvers should not be the same"
 
-euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
-
-# peano4_project = peano4.Project(
-#   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
-#   project_name  = "EulerPoisson",
-#   directory     = ".",
-#   executable    = "selfgravitation-with-petsc",
-# )
+# euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus subdirectory).
 #
-#euler_project = exahype2.Project(
-#  namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
-#  # subnamespace  = ["euler"],
-#  project_name  = "Euler",
-#  directory     = ".",
-##  subdirectory  = "euler",
-#  executable    = "selfgravitation-euler"
-#)
 
 euler_project = exahype2.Project(
-  namespace     = ["applications", "exahype2", "euler", "selfgravitation", "euler"],
+  namespace     = ["applications", "exahype2", "euler", "selfgravitation" ],
   project_name  = "Euler",
   directory     = ".",
   subdirectory = "euler",
@@ -149,8 +191,18 @@ euler_project = exahype2.Project(
 #   executable    = "selfgravitation-poisson"
 # )
 
+#! [Create project]
+poisson_project = multigrid.matrixfree.api.Project( 
+  namespace = [ "applications", "exahype2", "euler", "selfgravitation" ],
+  project_name = "Poisson", 
+  directory     = ".",
+  subdirectory  = "poisson",
+  executable    = "selfgravitation-poisson"
+)
+#! [Create project]
+
 euler_project.add_solver(euler_solver)
-# poisson_project.add_solver(poisson_solver)
+poisson_project.add_solver(poisson_solver)
 
 # #
 # # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
@@ -160,12 +212,12 @@ euler_project.add_solver(euler_solver)
 #   poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
 #   "CellLabel.getTimeStamp() )"
 
-#
-# Add the coupling terms
-#
-euler_solver.add_user_action_set_includes( """
-#include "toolbox/blockstructured/Copy.h"
-""")
+# #
+# # Add the coupling terms
+# #
+# euler_solver.add_user_action_set_includes( """
+# #include "toolbox/blockstructured/Copy.h"
+# """)
 
 # euler_solver.postprocess_updated_patch = """
 #  ::toolbox::blockstructured::copyUnknown(
@@ -239,20 +291,23 @@ euler_project.set_global_simulation_parameters(
   time_in_between_plots = args.plot_snapshot_interval,      # snapshots
   periodic_BC = [False, False, False]
 )
-# poisson_project.set_global_simulation_parameters(
-#   dimensions            = args.dimensions,
-#   offset                = offset,
-#   domain_size           = size,
-# )
+poisson_project.set_global_simulation_parameters(
+  dimensions            = args.dimensions,
+  offset                = offset,
+  domain_size           = size,
+)
 
 #
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
+#
+# Configure build
+#
 euler_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 euler_project.set_Peano4_installation(args.peanodir, modes[args.mode])
-# poisson_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
-# poisson_project.set_Peano4_installation(args.peanodir, modes[args.mode])
+poisson_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
+poisson_project.set_Peano4_installation(args.peanodir, modes[args.mode])
 
 #
 # This is the plain variant
@@ -260,12 +315,22 @@ euler_project.set_Peano4_installation(args.peanodir, modes[args.mode])
 # #
 # # Create an 'empty' Peano4 project
 # #
-peano4_project = euler_project.generate_Peano4_project(args.verbose)
+# peano4_project = euler_project.generate_Peano4_project(args.verbose)
+# peano4_project = poisson_project.generate_Peano4_project(args.verbose)
 
-# peano4_project = peano4.Project()
-# peano4_project.add_subproject( euler_project.generate_Peano4_project(args.verbose),
-                              # subnamespace = ["euler"]
-                              # )
+peano4_project = peano4.Project(
+  namespace     = [], # "applications", "exahype2", "euler", "selfgravitation"
+  project_name  = "EulerPoisson", #"EulerPoisson",
+  directory     = ".",
+  executable    = "selfgravitation-new",
+)
+peano4_project.add_subproject(
+  poisson_project.generate_Peano4_project(args.verbose),
+)
+peano4_project.add_subproject(
+  euler_project.generate_Peano4_project(args.verbose),
+  True
+)
 
 # peano4_project.add_subproject(
 #   poisson_project.generate_Peano4_project(args.verbose),
@@ -273,19 +338,20 @@ peano4_project = euler_project.generate_Peano4_project(args.verbose)
 # )
 
 
-# peano4_project.output.makefile.add_h_file("""{}.h""".format(euler_solver.name))
-# peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(euler_solver.name))
-# peano4_project.output.makefile.add_h_file("""{}.h""".format(poisson_solver.name))
-# peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(poisson_solver.name))
-
 peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 peano4_project.output.makefile.add_header_search_path("euler")
+peano4_project.output.makefile.add_header_search_path("poisson")
+peano4_project.output.makefile.add_h_file("""{}/{}.h""".format(euler_project.subdirectory, euler_solver.name))
+peano4_project.output.makefile.add_cpp_file("""{}/{}.cpp""".format(euler_project.subdirectory, euler_solver.name))
+peano4_project.output.makefile.add_h_file("""{}/{}.h""".format(poisson_project.subdirectory, poisson_solver.name))
+peano4_project.output.makefile.add_cpp_file("""{}/{}.cpp""".format(poisson_project.subdirectory, poisson_solver.name))
 if args.j==0:
   peano4_project.generate()
 else:
   peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-print("Euler Peano4 Project built successfully") #Poisson
+print("EulerPoisson Peano4 Project built successfully")
 
-# print("The combined Euler-Poisson Peano4 project built successfully")
+# print("Poisson Peano4 Project built successfully")
+# print("EulerPoisson Peano4 project built successfully") #
 
 # print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
