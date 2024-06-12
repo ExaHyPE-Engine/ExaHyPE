@@ -38,8 +38,8 @@ void kernels::aderdg::generic::c::boundaryConditions(
                         const double t,const double dt,
                         const int faceIndex,
                         const int normalNonZero) {
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
+  constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
+  constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int basisSize          = SolverType::Order+1;
   
   // Determine if face is "left" (0,2,4) or "right" face (1,2,3).

@@ -4,7 +4,6 @@
 import exahype2.tracer
 import exahype2.errorMeasurement
 import exahype2.grid
-import exahype2.gpu
 
 import exahype2.solvers.fv
 import exahype2.solvers.rkfd

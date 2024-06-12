@@ -49,7 +49,7 @@ def find_CMake_build_dir():
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
     return ""
 
-  # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
+  # We iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   while current_iter_dir != project_root_dir:
     found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
@@ -84,7 +84,7 @@ find_configure_log.configure_log_path = ""
 
 def using_cuda_backend():
   """
-  This function checks if the CUDA backend. Caches the result, after the first call calling this
+  This function checks if Peano is built with CUDA. Caches the result, after the first call calling this
   function will have no cost as it returns a cached value. It checks the value for the GPU backend
   saved in the CMakeCache.txt whether it is set to CUDA.
 
@@ -96,7 +96,7 @@ def using_cuda_backend():
 
   using_cuda_backend.using_cuda_backend_check_done = True
   cmake_build_dir_path = find_CMake_build_dir()
-  if cmake_build_dir_path != "":  # Check for CUDA while we are using CMake backend
+  if cmake_build_dir_path != "":  # Check for CUDA while we are using CMake
     try:
       with open(os.path.join(cmake_build_dir_path,"CMakeCache.txt")) as cache:
         for line in cache:
@@ -106,7 +106,7 @@ def using_cuda_backend():
     except Exception:
       using_cuda_backend.using_cuda_backend_cached_value = False
       return using_cuda_backend.using_cuda_backend_cached_value
-  else:  # Check for CUDA while we are using Automake backend
+  else:  # Check for CUDA while we are using Automake
     config_log_path = find_configure_log()
 
     if config_log_path == "":
@@ -135,11 +135,9 @@ def caller_distance_to_build_root():
   call_directory = os.getcwd()
   project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
 
-  # Ensure we call the script under Peano folder.
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
     return -1
 
-  # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   dist = 0
   while current_iter_dir != project_root_dir:
@@ -171,7 +169,7 @@ def get_mpi_implementation(mpicxx):
     # MPICH and Intel oneAPI print information including MPICH and Intel(R) MPI Library.
     # OpenMPI doesn't print any information that enables identification.
     # A workaround can be running mpicxx --showme.
-    mpicxx = mpicxx.strip()  # Remove leading and trailing whitespace, including newline characters
+    mpicxx = mpicxx.strip()  # Remove leading and trailing whitespace, including newline characters.
     bash_command = f"{mpicxx} -v"
     result = subprocess.run(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result_str = ""
@@ -230,7 +228,7 @@ def parse_makefile_for_mpi_and_gpu_vendor():
         cxx = line[len("CXX ="):]
       elif line.startswith("CXXFLAGS ="):
         cxxflags = line[len("CXXFLAGS ="):]
-      elif line.startswith("NVCC ="):  # For CUDA backend
+      elif line.startswith("NVCC ="):
         nvcc = line[len("NVCC ="):]
       if line.startswith("NVCCFLAGS ="):
         nvccflags = line[len("NVCCFLAGS ="):]
@@ -246,7 +244,7 @@ def parse_makefile_for_mpi_and_gpu_vendor():
   cxxflags = cxx + " " +  cxxflags
   nvccflags = nvcc + " " + nvccflags
 
-  # There various ways to pass the GPU architecture as a part of CXXFLAGS.
+  # There are various ways to pass the GPU architecture as a part of CXXFLAGS.
   # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
   cxxflags_tokenized = cxxflags.split()
   nvccflags_tokenized = nvccflags.split()

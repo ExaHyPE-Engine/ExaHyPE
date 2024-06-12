@@ -83,7 +83,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         QIn
       );
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
-      tarch::multicore::spawnTask(newEnclaveTask);
+      tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId());
     }
     {% else %}
     #if Dimensions==2

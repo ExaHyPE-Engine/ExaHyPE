@@ -30,7 +30,7 @@ RUN mkdir /opt/spack-environment \
 &&   echo '  - py-matplotlib' \
 &&   echo '  - py-pspamm' \
 &&   echo '  - libxsmm+generator' \
-&&   echo '  - slurm' \
+&&   echo '  - cmake' \
 &&   echo '  - memkind' \
 &&   echo '  - blis' \
 &&   echo '  - boost' \
@@ -74,6 +74,7 @@ clang-html
 #VTUInterface
 
 FROM peanoframework/base:latest
+
 LABEL peano-framework.org=http://www.peano-framework.org/
 
 ENV FORCE_UNSAFE_CONFIGURE=1 \

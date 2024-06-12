@@ -2,26 +2,26 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "config.h"
 
-#if defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC)
-#include <sstream>
+#if defined(GPUOffloadingCUDA) or defined(__NVCOMPILER_CUDA__) \
+  or defined(__CUDACC__) or defined(NVCC) or defined(_NVHPC_CUDA)
+
 #include <cuda_runtime.h>
 
-#include "tarch/Assertions.h"
-
 namespace tarch::accelerator::cuda {
-  inline void checkError(cudaError_t code, const char *file, int line) {
-    assertion(code == cudaSuccess);
-    if (code != cudaSuccess) {
-      std::stringstream ss;
-      ss << "CUDA assertion: " << cudaGetErrorString(code) << " " << file << " " << line;
-      throw std::runtime_error(ss.str());
-    }
-  }
-}
+  void checkError(cudaError_t code, const char* file, int line);
+  void checkLastError(const char* file, int line);
+} // namespace tarch::accelerator::cuda
 
+#define CHECK_CUDA_ERROR(ans) \
+  { tarch::accelerator::cuda::checkError((ans), __FILE__, __LINE__); }
+#define CHECK_CUDA_LAST_ERROR() \
+  { tarch::accelerator::cuda::checkLastError(__FILE__, __LINE__); }
 
-#define CHECK_CUDA_ERROR(ans) { tarch::accelerator::cuda::checkError((ans), __FILE__, __LINE__); }
 #else
+
 #define CHECK_CUDA_ERROR(ans)
+#define CHECK_CUDA_LAST_ERROR()
+
 #endif

@@ -103,7 +103,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
-    tarch::multicore::spawnTask(newEnclaveTask);
+    tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId());
   }
   """
     )

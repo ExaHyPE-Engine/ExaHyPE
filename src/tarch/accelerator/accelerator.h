@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Device.h"
+
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -73,18 +75,55 @@ namespace tarch {
 
   std::string toString(MemoryLocation value);
 
-
   namespace internal {
-    void* allocateRawData(int size, MemoryLocation location);
+    void* allocateRawData(
+      std::size_t    size,
+      MemoryLocation location,
+      int            device
+    );
   } // namespace internal
 
+  /**
+   * Allocates memory on the specified memory location
+   *
+   * The device id is an optional argument that is required for
+   * memory allocation on an accelerator. Default is -1 (HostDevice).
+   * For memory allocation on accelerators, passing a device id >= 0 is necessary.
+   *
+   *
+   * @param count Number of elements to allocate memory for.
+   * @param location Location on where to allocate the memory.
+   * @param device (Optional) device id for memory allocation on accelerators.
+  */
   template <class T = double>
-  T* allocateMemory(int size, MemoryLocation location, [[maybe_unused]] int device = -1) {
-    return reinterpret_cast<T*>(internal::allocateRawData(size * static_cast<int>(sizeof(T)), location));
+  T* allocateMemory(
+    std::size_t count,
+    MemoryLocation location,
+    int device = accelerator::Device::HostDevice
+) {
+    return reinterpret_cast<T*>(internal::allocateRawData(
+      count * sizeof(T),
+      location,
+      device
+    ));
   }
-  void freeMemory(void* data, MemoryLocation location);
 
-  int padSizeToAlignment(int size, int aligment);
+  /**
+   * Free memory
+   *
+   * This routine is thread-safe in the sense that it checks if data actually
+   * point to something that is not nullptr. If data is the nullptr, the
+   * operation degenerates to nop. This is important as we use the routine
+   * within smart pointers, where we don't want to check manually if data is
+   * actually nullptr or not.
+   */
+  void freeMemory(
+    void* data,
+    MemoryLocation location,
+    int device = accelerator::Device::HostDevice
+  );
+
+  std::size_t padSizeToAlignment(std::size_t size, std::size_t alignment);
 
   /**
    * Alternative GPU-ready version of memset

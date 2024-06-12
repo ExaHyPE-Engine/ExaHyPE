@@ -318,4 +318,4 @@ src/unittests/UnitTests*
 *.sh
 compile_commands.json
 scorep*/
-/documentation/
+

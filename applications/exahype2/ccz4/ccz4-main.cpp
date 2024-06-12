@@ -252,7 +252,7 @@ void step() {
 
     repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::CreateGridButPostponeRefinement observer;
@@ -261,10 +261,9 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
-    OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END();
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
   } break;
@@ -275,7 +274,7 @@ void step() {
 
     repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::CreateGrid observer;
@@ -284,10 +283,9 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
-    OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END();
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
 
@@ -330,7 +328,7 @@ void step() {
 
     repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::CreateGridButPostponeRefinement observer;
@@ -339,10 +337,9 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
-    OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END();
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
 
@@ -372,7 +369,7 @@ void step() {
 
     repositories::startGridInitialisationStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::InitGrid observer;
@@ -381,10 +378,9 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
-    OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END();
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridInitialisationStep();
   } break;
@@ -399,7 +395,7 @@ void step() {
 
     repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::PlotSolution observer;
@@ -408,10 +404,9 @@ void step() {
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
-    OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END();
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishPlottingStep();
   } break;
@@ -433,7 +428,7 @@ void step() {
 
     repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::TimeStep observer;
@@ -442,10 +437,9 @@ void step() {
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
-    OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END();
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishTimeStep();
   } break;
@@ -493,8 +487,6 @@ int main(int argc, char** argv) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
   }
-
-  peano4::runTestsAndBenchmarks();
 
   repositories::DataRepository::initDatatypes();
 

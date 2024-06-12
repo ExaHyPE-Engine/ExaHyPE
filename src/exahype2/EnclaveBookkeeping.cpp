@@ -17,7 +17,6 @@ tarch::logging::Log exahype2::EnclaveBookkeeping::_log("exahype2::EnclaveBookkee
 const std::string exahype2::EnclaveBookkeeping::MemoryAllocationsInLookupTableIdentifier(
   "exahype2::EnclaveBookkeeping::memory-allocations"
 );
-const std::string exahype2::EnclaveBookkeeping::LookupMissesIdentifier("exahype2::EnclaveBookkeeping::lookup-misses");
 
 
 exahype2::EnclaveBookkeeping& exahype2::EnclaveBookkeeping::getInstance() {
@@ -54,24 +53,9 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
 
 
 exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
+  tarch::multicore::waitForTask(number);
+
   tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
-  bool                   isContained = _finishedTasks.count(number) > 0;
-  finishedTasksLock.free();
-
-  while (not isContained) {
-    ::tarch::logging::Statistics::getInstance().inc(LookupMissesIdentifier);
-
-    bool foundTask = ::tarch::multicore::processPendingTasks(1, false);
-    if (not foundTask) {
-      ::tarch::multicore::Core::getInstance().yield();
-    }
-
-    finishedTasksLock.lock();
-    isContained = _finishedTasks.count(number) > 0;
-    finishedTasksLock.free();
-  }
-
-  finishedTasksLock.lock();
   assertionEquals(_finishedTasks.count(number), 1);
   Entry storedData = _finishedTasks.at(number);
   _finishedTasks.erase(number);
