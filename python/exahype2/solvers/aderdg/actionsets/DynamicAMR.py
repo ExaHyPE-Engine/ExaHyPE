@@ -20,35 +20,39 @@ class DynamicAMR(AbstractAderDGActionSet):
         self,
         solver,
         clear_guard="true",
+        shift_guard="true",
         interpolate_guard="true",
         restrict_guard="true",
     ):
         super(DynamicAMR, self).__init__(solver)
         self._clear_guard = clear_guard
+        self._shift_guard = shift_guard
         self._interpolate_guard = interpolate_guard
         self._restrict_guard = restrict_guard
 
         self._Template_TouchFaceFirstTime = """
 
+    constexpr int Order = {{ORDER}};
+    constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    
+    #if Dimensions==2
+    constexpr int spaceFaceSize      = (Order+1);
+    #else
+    constexpr int spaceFaceSize      = (Order+1)*(Order+1);
+    #endif
+
+    constexpr int fluxElementsPerFace = spaceFaceSize*NumberOfVariables;
+
+    const bool isLeftFace = marker.getSelectedFaceNumber()<Dimensions;
+
     if ( {{CLEAR_GUARD}} ) {
-
-      const int Order = {{ORDER}};
-      const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
-      const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-      const int strideQ = NumberOfVariables+NumberOfParameters;
-      
-      #if Dimensions==2
-      constexpr int spaceFaceSize      = (Order+1);
-      #else
-      constexpr int spaceFaceSize      = (Order+1)*(Order+1);
-      #endif
-
-      const int basisElementsPerFace = spaceFaceSize*strideQ;
-      const int fluxElementsPerFace = spaceFaceSize*NumberOfVariables;
-
-      //std::fill_n(fineGridFace{{SOLVER_NAME}}QEstimates.value, 2*basisElementsPerFace, 0.0);
-      std::fill_n(fineGridFace{{SOLVER_NAME}}QFluxEstimates.value, 2*fluxElementsPerFace, 0.0);
-
+      auto* FOut  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? fluxElementsPerFace : 0);
+      std::fill_n(FOut, fluxElementsPerFace, 0.0);
+    }
+    else if( {{SHIFT_GUARD}} ){
+      auto* FIn   = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : fluxElementsPerFace);
+      auto* FOut  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? fluxElementsPerFace : 0);
+      std::copy_n(FOut, fluxElementsPerFace, FIn);
     }
 
     """
@@ -73,12 +77,11 @@ class DynamicAMR(AbstractAderDGActionSet):
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
     #endif
 
-    const int normal = marker.getSelectedFaceNumber()%Dimensions;
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : spaceFaceSize;
 
     if(!marker.isInteriorFaceWithinPatch()){
 
-      //Prolongate estimations, then compute flux on the fine face using these estimations
+      //Prolongate estimations
       kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation<
         {{SOLVER_NAME}},
         {{CORRECTOR_COMPUTATION_PRECISION}},
@@ -89,23 +92,16 @@ class DynamicAMR(AbstractAderDGActionSet):
           marker.getRelativePositionWithinFatherFace()
       );
 
-      {{CORRECTOR_COMPUTATION_PRECISION}}* nodeValuesFine = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value+facePosition*NumberOfData;
-      {{CORRECTOR_COMPUTATION_PRECISION}}* nodeFluxesFine = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value+facePosition*NumberOfVariables;
-
-      for(int i=0; i<spaceFaceSize; i++){
-        repositories::{{SOLVER_INSTANCE}}.flux(
-          nodeValuesFine,
-          marker.x(),
-          marker.h(),
-          timeStamp,
-          timeStepSize,
-          normal,
-          nodeFluxesFine
-        );
-
-        nodeValuesFine  += NumberOfData;
-        nodeFluxesFine  += NumberOfVariables;
-      }
+      //Prolongate fluxes
+      kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation<
+        {{SOLVER_NAME}},
+        {{CORRECTOR_COMPUTATION_PRECISION}},
+        NumberOfData,
+        Order+1>(
+          fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*NumberOfVariables,
+          coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfVariables,
+          marker.getRelativePositionWithinFatherFace()
+      );
 
     }
 
@@ -144,7 +140,7 @@ class DynamicAMR(AbstractAderDGActionSet):
       {{CORRECTOR_COMPUTATION_PRECISION}}, //pStoreType      
       NumberOfVariables,      //numberOfVariables
       Order+1>(
-        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition*fluxElementsPerFace, //const double* lQhbndCoarse
+        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+(1-facePosition)*fluxElementsPerFace, //const double* lQhbndCoarse
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine          
         marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
     );
@@ -163,6 +159,7 @@ class DynamicAMR(AbstractAderDGActionSet):
         self._solver.add_entries_to_text_replacement_dictionary(d)
         if operation_name == ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
             d["CLEAR_GUARD"] = self._clear_guard
+            d["SHIFT_GUARD"] = self._shift_guard
             result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
             pass
         if operation_name == ActionSet.OPERATION_CREATE_HANGING_FACE:

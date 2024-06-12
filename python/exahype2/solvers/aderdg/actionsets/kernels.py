@@ -489,7 +489,7 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
             {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
             {{CORRECTOR_COMPUTATION_PRECISION}}* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
             {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
-            int orientation = 0;
+            int orientation = 1;
             int faceNumber  = d+Dimensions;
             bool isBoundary = false;
             tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
