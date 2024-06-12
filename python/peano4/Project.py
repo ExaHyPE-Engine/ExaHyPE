@@ -382,7 +382,6 @@ class Project (object):
     for flag in subproject.output.makefile.d["LDFLAGS"].split():
       self.output.makefile.add_linker_flag(flag)
 
-    # result_project.output.makefile.add_gpu_object()
     # result_project.output.makefile.d["CMAKE_LIBS"]
 
     self.output.makefile.d["LIBS"] += subproject.output.makefile.d["LIBS"]

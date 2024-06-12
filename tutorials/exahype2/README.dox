@@ -1,0 +1,13 @@
+/**
+
+@page page_exahype2_tutorials Tutorials
+
+These tutorials are meant to be an introduction into ExaHyPE 2:
+
+\li \subpage page_exahype2_tutorials_acoustic
+\li \subpage page_exahype2_tutorials_advection
+\li \subpage page_exahype2_tutorials_elastic
+\li \subpage page_exahype2_tutorials_euler
+\li \subpage page_exahype2_tutorials_swe
+
+*/

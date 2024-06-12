@@ -214,7 +214,7 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::triggerSplit(
   for (int i = 0; i < numberOfSplits; i++) {
     bool success = peano4::parallel::SpacetreeSet::getInstance().split(
       sourceTree,
-      peano4::SplitInstruction{numberOfSplitCells, peano4::SplitInstruction::Mode::AggressiveTopDown},
+      peano4::SplitInstruction{numberOfSplitCells, _configuration->getMode(_state)},
       targetRank
     );
     if (not success) {

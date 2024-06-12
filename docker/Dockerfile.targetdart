@@ -1,0 +1,46 @@
+FROM peanoframework/llvm:latest
+
+LABEL peano-framework.org=http://www.peano-framework.org/
+
+RUN { \
+      echo '#!/bin/sh' \
+      && echo '.' /opt/spack-environment/activate.sh \
+      && echo export LLVM_DIR=/opt/targetdart \
+      && echo export LLVM_ROOT=/opt/targetdart \
+      && echo export PATH=/opt/targetdart/bin:'$PATH' \
+      && echo export LIBRARY_PATH=/opt/targetdart/lib:/opt/targetdart/lib/x86_64-unknown-linux-gnu:'$LIBRARY_PATH' \
+      && echo export LD_LIBRARY_PATH=/opt/targetdart/lib:/opt/targetdart/lib/x86_64-unknown-linux-gnu:'$LD_LIBRARY_PATH' \
+      && echo export CPATH=/opt/targetdart/include:'$CPATH' \
+      && echo export CC=/opt/targetdart/bin/clang \
+      && echo export CXX=/opt/targetdart/bin/clang++ \
+      && echo export OMPI_CC=/opt/targetdart/bin/clang \
+      && echo export OMPI_CXX=/opt/targetdart/bin/clang++ \
+      && echo 'exec "$@"'; \
+    } > /entrypoint.sh \
+&& chmod a+x /entrypoint.sh
+
+RUN mkdir /opt/targetdart && \
+git clone --depth 1 https://github.com/targetDART/llvm-project.git --recursive /opt/targetdart/llvm-project && \
+mv /opt/targetdart/llvm-project/Applications /opt/targetdart/Applications
+
+RUN . /entrypoint.sh && \
+mkdir /opt/targetdart/llvm-project/llvm/build && cd /opt/targetdart/llvm-project/llvm/build && \
+CC=clang CXX=clang++ cmake -G Ninja .. \
+-DCMAKE_BUILD_TYPE=Release \
+-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;' \
+-DLLVM_ENABLE_RUNTIMES='compiler-rt;libcxx;libcxxabi;libunwind' \
+-DCMAKE_INSTALL_PREFIX=/opt/targetdart \
+-DLLVM_INSTALL_UTILS=ON && \
+ninja install
+
+RUN . /entrypoint.sh && \
+mkdir /opt/targetdart/llvm-project/openmp/build && cd /opt/targetdart/llvm-project/openmp/build && \
+CC=mpicc CXX=mpicxx cmake -G Ninja .. \
+-DCMAKE_BUILD_TYPE=Release \
+-DCMAKE_INSTALL_PREFIX=/opt/targetdart && \
+ninja install
+
+RUN rm -rf /opt/targetdart/llvm-project
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]

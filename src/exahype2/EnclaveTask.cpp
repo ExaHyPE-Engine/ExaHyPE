@@ -5,7 +5,6 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Lock.h"
-#include "tarch/multicore/otter.h"
 
 
 tarch::logging::Log exahype2::EnclaveTask::_log("exahype2::EnclaveTask");
@@ -50,22 +49,13 @@ exahype2::EnclaveTask::EnclaveTask(
   _maxEigenvalue(-1.0) {
   logTraceIn("EnclaveTask(...)");
   logTraceOut("EnclaveTask(...)");
-  OTTER_DEFINE_TASK(
-    enclave_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::enclave_with_typeid, enclaveTaskTypeId
-  );
 }
 
 
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument("run()", getTaskId());
-
-  OTTER_POOL_DECL_POP(enclave_task, otter::label::enclave_with_typeid, getTaskId());
-
-  OTTER_TASK_START(enclave_task);
   computeTask();
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(), _numberOfResultValues, _outputValues, _maxEigenvalue);
-  OTTER_TASK_END(enclave_task);
-
   logTraceOut("run()");
   return false;
 }
