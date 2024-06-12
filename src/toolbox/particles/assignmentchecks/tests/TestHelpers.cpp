@@ -168,7 +168,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalkS
     localPart.setX(localPartX);
 
     // Trace the movement.
-    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexH, spacetreeId);
+    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexX, vertexH, spacetreeId);
     if (verbose)
       std::cout << ">>>>>>>>>>>> Moving particle to " << localPartX << std::endl;
 
@@ -230,7 +230,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalkS
 void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk() {
 
 #if PeanoDebug > 0
-  const bool verbose = true;
+  const bool verbose = false;
 
   namespace ac = toolbox::particles::assignmentchecks;
 
@@ -309,7 +309,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
     localPart.setX(localPartX);
 
     // Trace the movement.
-    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexH, spacetreeId);
+    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexX, vertexH, spacetreeId);
     if (verbose)
       std::cout << ">>>>>>>>>>>> Moving particle to " << localPartX << std::endl;
 
@@ -539,10 +539,183 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleLiftD
 
 
 
-void toolbox::particles::assignmentchecks::tests::TestHelpers::testPeriodicBoundaryConditions() {
+
+void toolbox::particles::assignmentchecks::tests::TestHelpers::testLongParticleWalk() {
 
 #if PeanoDebug > 0
   const bool verbose = true;
+
+  namespace ac = toolbox::particles::assignmentchecks;
+
+  if (verbose) std::cout << ">>>>>>>>>>>> RUNNING testLongParticleWalk() in " << Dimensions << "D" << std::endl;
+
+  ac::internal::Database& eventDatabase = ac::getDatabase();
+
+  // IMPORTANT: Needs to be the same as the particle class name you use!
+  // In traceParticleMovements(), this will be derived from the class name.
+  std::string particleName = "TestParticle";
+
+  // coordinates of particles
+  tarch::la::Vector<Dimensions, double> localPartX;
+  // particle displacement each step
+  tarch::la::Vector<Dimensions, double> dx;
+  tarch::la::Vector<Dimensions, double> vertexH, prevVertexH;
+  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+
+  // Initialise values
+  double vertexH_default = 3.;
+  double dt = 0.001;
+  int depth = 4;
+  int maxVertexDepth = 6;
+
+  for (int i = 0; i < Dimensions; i++){
+    localPartX(i) = 51.5;
+    dx(i) = -1.;
+    vertexH(i) = vertexH_default;
+  }
+
+  int particleID = 1;
+  int spacetreeId = 1;
+
+  // Find initial pseudo-"vertex" particle is assigned to.
+  vertexX = internal::findVertexX(localPartX, vertexH);
+
+  // generate (minimal) particle
+  ac::tests::TestParticle localPart = ac::tests::TestParticle(localPartX, particleID);
+  // pretend to have a ParticleContainer
+  std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
+
+  // First assignments
+  ac::startMeshSweep( "InitUnitTest" );
+  ac::assignParticleToVertex(
+      particleName,
+      localPartX,
+      particleID,
+      true, // this particle is always local
+      vertexX,
+      vertexH,
+      spacetreeId,
+      "initialAssign"
+  );
+
+
+  // Do some mesh sweeps.
+  // NOTE: The database only keeps up to 16 sweeps in memory by default.
+  // After that, entries will be purged. One sweep is added by default ('init').
+  // We've already added another sweep ('InitUnitTest'). So if you go beyond 14,
+  // it'll start deleting stuff before the end.
+  for (int sweep = 0; sweep < 1000; sweep++){
+
+    ac::startMeshSweep( "MySweep" + std::to_string(sweep) );
+
+    // record old particle positions.
+    auto oldParticlePositions = ac::recordParticlePositions(assignedParticles);
+
+    // insert tiny movement steps, make sure movement isn't recorded.
+    double dt_use = dt;
+    // if (sweep > 8 and sweep < 12) {
+    //   dt_use *= ac::internal::ParticleIdentifier::Precision * 1e-2;
+    // }
+
+    // update particle position.
+    localPartX += dt_use * dx;
+    localPart.setX(localPartX);
+
+    // Trace the movement.
+    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexX, vertexH, spacetreeId);
+    if (verbose)
+      std::cout << ">>>>>>>>>>>> Moving particle to " << localPartX << std::endl;
+
+    if (verbose) std::cout << ">>>>>>>>>>>> Checking vertex H=" << vertexH <<
+          " X=" << vertexX << std::endl;
+
+    // Does the particle need lifting from the current vertex?
+    while (internal::liftParticle(localPartX, vertexX, vertexH, depth)){
+      depth--;
+      prevVertexH = vertexH;
+      prevVertexX = vertexX;
+      vertexH *= 3.;
+      vertexX = internal::findVertexX(localPartX, vertexH);
+
+      if (verbose)
+        std::cout << ">>>>>>>>>>>>>>> Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth << std::endl;
+
+      ac::detachParticleFromVertex(
+          particleName,
+          localPart.getX(),
+          localPart.getPartid(),
+          true, // this particle is always local
+          prevVertexX,
+          prevVertexH,
+          spacetreeId,
+          "vertexDetachLift"
+      );
+
+      ac::assignParticleToVertex(
+          particleName,
+          localPart.getX(),
+          localPart.getPartid(),
+          true, // this particle is always local
+          vertexX,
+          vertexH,
+          spacetreeId,
+          "vertexAssignLift"
+      );
+    }
+
+    // Now drop it in the correct vertex.
+    while (internal::dropParticle(localPartX, vertexH, depth, maxVertexDepth)){
+      depth++;
+      prevVertexH = vertexH;
+      prevVertexX = vertexX;
+      vertexH /= 3.;
+      vertexX = internal::findVertexX(localPartX, vertexH);
+      if (verbose)
+        std::cout << ">>>>>>>>>>>>>>> Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth << std::endl;
+
+      ac::detachParticleFromVertex(
+          particleName,
+          localPart.getX(),
+          localPart.getPartid(),
+          true, // this particle is always local
+          prevVertexX,
+          prevVertexH,
+          spacetreeId,
+          "vertexDetachDrop"
+      );
+
+      ac::assignParticleToVertex(
+          particleName,
+          localPart.getX(),
+          localPart.getPartid(),
+          true, // this particle is always local
+          vertexX,
+          vertexH,
+          spacetreeId,
+          "vertexAssignDrop"
+      );
+    }
+  }
+
+  if (verbose) {
+    std::cout << ">>>>>>>>>>>> DATA DUMP END " << std::endl;
+    std::cout << eventDatabase.toString() << std::endl;
+  }
+
+  // Clean up after yourself
+  eventDatabase.reset();
+
+#endif
+}
+
+
+
+
+
+void toolbox::particles::assignmentchecks::tests::TestHelpers::testPeriodicBoundaryConditions() {
+
+#if PeanoDebug > 0
+  const bool verbose = false;
 
   namespace ac = toolbox::particles::assignmentchecks;
 
@@ -643,7 +816,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testPeriodicBound
       p->setX(partX);
 
       // Trace the movement.
-      ac::traceParticleMovements(particleSet, oldParticlePositions, p->getVertexH(), spacetreeId);
+      ac::traceParticleMovements(particleSet, oldParticlePositions, vertexX, p->getVertexH(), spacetreeId);
       if (verbose) std::cout << ">>>>>>>>>>>> Moving particle to " << partX << std::endl;
 
       if (verbose) std::cout << ">>>>>>>>>>>> Checking vertex H=" << p->getVertexH() << " X=" << vertexX << std::endl;
@@ -885,7 +1058,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   // testMethod(testParticleWalkSameTreeLevel);
   // testMethod(testParticleLiftDrop);
   // testMethod(testParticleWalk);
-  testMethod(testPeriodicBoundaryConditions);
+  testMethod(testLongParticleWalk);
+  // testMethod(testPeriodicBoundaryConditions);
 }
 
 #ifdef UseTestSpecificCompilerSettings

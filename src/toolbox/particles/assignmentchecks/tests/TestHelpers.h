@@ -86,6 +86,8 @@ class toolbox::particles::assignmentchecks::tests::TestHelpers: public tarch::te
      */
     void testParticleWalk();
 
+    void testLongParticleWalk();
+
     /**
      * Particles are identified in the events database using their unique ID.
      * However, if we have periodic boundary conditions, we may find that
