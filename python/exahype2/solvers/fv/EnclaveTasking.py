@@ -98,7 +98,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       marker,
       timeStamp,
       timeStepSize,
-      oldQWithHalo
+      oldQWithHalo,
+      {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+      nullptr
+      {% else %}
+      newQ
+      {% endif %}
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
@@ -345,6 +350,9 @@ class EnclaveTasking(FV):
         self.add_user_action_set_includes(additional_includes)
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
+        # Needs to be set by optimistic solvers        
+        self.make_copy_of_enclave_task_data = False
+
 
     def _create_guards(self):
         """!
@@ -526,20 +534,29 @@ class EnclaveTasking(FV):
         If you want to have this optimisation, you have to call this routine
         explicitly in create_data_structures(). By default, we always store the
         patches all the time.
-
-        @todo There's no equivalent routine for FD4 and RKDG yet
+        
+        If we work with smart pointers, it is a bad idea to call this routine,
+        as the enclave framework does not(!) use smart pointers. So we rely on 
+        the fact that someone holds the raw pointers alive. If we don't store 
+        data here, we run risk that the smart pointer becomes zero and the 
+        underlying memory is freed while the enclave task still works against it.
+        
+        As I don't know what storage scheme we employ, I decided to disable 
+        this routine. Notably as I don't think storing makes much of a 
+        difference if data are held on the heap anyway.
         """
-        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard()
-            + " and ("
-            + self._primary_sweep_or_plot_guard
-            + " or marker.hasBeenSkeletonCell())",
-            self._store_cell_data_default_guard()
-            + " and ("
-            + self._secondary_sweep_or_grid_initialisation_or_plot_guard
-            + " or marker.willBeSkeletonCell())",
-        )
+        return 
+        #self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        #    self._provide_cell_data_to_compute_kernels_default_guard(),
+        #    self._load_cell_data_default_guard()
+        #    + " and ("
+        #    + self._primary_sweep_or_plot_guard
+        #    + " or marker.hasBeenSkeletonCell())",
+        #    self._store_cell_data_default_guard()
+        #    + " and ("
+        #    + self._secondary_sweep_or_grid_initialisation_or_plot_guard
+        #    + " or marker.willBeSkeletonCell())",
+        #)
 
 
     def create_action_sets(self):
@@ -719,6 +736,7 @@ class EnclaveTasking(FV):
             self._name
         )
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
+        d["MAKE_COPY_OF_ENCLAVE_TASK_DATA"] = self.make_copy_of_enclave_task_data
 
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
