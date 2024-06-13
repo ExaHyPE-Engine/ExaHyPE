@@ -409,7 +409,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
         use_heap_storage: Boolean
           By default, we place the patches on the heap but administer them through
-          a smart pointer. You can switch this default and enforce a "proper"
+          a smart pointer. You can switch this default off and enforce a "proper"
           storage of the data on the heap. This usually introduces more memory
           movements, though you might end up with a better memory alignment, i.e.
           memory closer to the compute kernels.
