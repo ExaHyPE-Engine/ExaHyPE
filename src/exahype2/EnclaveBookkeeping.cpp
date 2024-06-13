@@ -80,16 +80,22 @@ void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int number) {
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
   int number, double* destination, double& maxEigenvalue
 ) {
-  logTraceInWith1Argument("waitForTaskToTerminateAndCopyResultOver(int,double,double&)", number);
+  logTraceInWith1Argument("waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", number);
 
   Entry storedData = waitForTaskToTerminateAndReturnResult(number);
 
-  std::copy_n(storedData.data, storedData.numberOfResultValues, destination);
+  if ( destination!=storedData.data ) {
+    std::copy_n(storedData.data, storedData.numberOfResultValues, destination);
+    tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  }
+  else {
+    logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", "target memory and enclave memory region seem to be the same, so no need to free memory on bookkeeping's side")
+  }
+
   maxEigenvalue = storedData.maxEigenvalue;
 
-  tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
   logTraceOutWith2Arguments(
-    "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", maxEigenvalue, storedData.toString()
+    "waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", maxEigenvalue, storedData.toString()
   );
 }
 
@@ -102,11 +108,13 @@ void exahype2::EnclaveBookkeeping::finishedTask(
   tarch::multicore::Lock lockFinishedTasks(_finishedTasksSemaphore);
   assertionEquals1(_finishedTasks.count(taskNumber), 0, taskNumber);
   if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
+    logWarning( "finishedTask(...)", "task entry for task " << taskNumber << " does exist already" );
     _tasksThatHaveToBeCancelled.erase(taskNumber);
     delete[] data;
     lockFinishedTasks.free();
     exahype2::EnclaveTask::releaseTaskNumber(taskNumber);
   } else {
+    logDebug( "finishedTask(...)", "bookmarked new outcome for task " << taskNumber << " at memory location " << data );
     auto  oldBucketCount = _finishedTasks.bucket_count();
     Entry newEntry(numberOfResultValues, data, maxEigenvalue);
     _finishedTasks.insert(std::pair<int, Entry>(taskNumber, newEntry));
