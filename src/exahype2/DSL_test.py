@@ -1,6 +1,8 @@
 from exahypype import kernel as xhpp
+import numpy as np
 
-test = xhpp(dim=2,patch_size=4)
+test = xhpp(dim=2,patch_size=4,namespace="exahype2::fv::rusanov::internal")
+dt = 0.01
 
 Qcopy   =   test.Evaluate("Qcopy", "Q[]")
 
@@ -13,6 +15,6 @@ YFlux   =   test.Evaluate("flux_y", "Flux_y(Qcopy[],kwargs)", ynum)
 XEig   =   test.Evaluate("tmp_x_eigen", "X_max_eigenvalues(Qcopy[],kwargs)", xnum)
 YEig   =   test.Evaluate("tmp_y_eigen", "Y_max_eigenvalues(Qcopy[],kwargs)", ynum)
 
-test.Stencil(Qcopy,[XFlux,YFlux],"0[010],0[0-10],1[001],1[00-1]",[1,-1,1,-1])
+test.Stencil(Qcopy,[XFlux,YFlux],"0[010],0[0-10],1[001],1[00-1]",dt*np.array([1,-1,1,-1]))
 test.Stencil(Qcopy,[XEig,YEig],"0[010],0[0-10],1[001],1[00-1]",[0.5,0.5,0.5,0.5])
 

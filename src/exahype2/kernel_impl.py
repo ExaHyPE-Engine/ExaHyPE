@@ -1,18 +1,24 @@
+import warnings
+
 class Enumerator:
-    def __init__(self,start,end,iterators=["i","j","k"]):
-        self.start = start
-        self.end = end
+    def __init__(self,its=[[0]],iterators=["patch","i","j","k"],depth=0):
+        self.its = its
+        self.start = [i[0] for i in its]
+        self.end = [i[-1] for i in its]
         self.iterators = iterators
         self.size = []
-        for i in range(len(start)):
-            self.size.append(end[i]-start[i])
-        self.depth = 0
-        self.max_depth = len(start)
+        for i in range(len(self.start)):
+            self.size.append(self.end[i]-self.start[i]+1)
+        self.depth = depth
+        self.max_depth = len(self.start)
 
-        self.i = iterators[0]
-        self.s = self.size[0]
-        self.S = start[0]
-        self.E = end[0]
+        self.i = self.iterators[depth]
+        self.s = self.size[depth]
+        self.S = self.start[depth]
+        self.E = self.end[depth] + 1
+
+        self.shifted = False
+        self.offset = ["" for _ in range(len(self.iterators))]
     
     def lower(self):
         if self.depth == self.max_depth-1:
@@ -21,24 +27,72 @@ class Enumerator:
         self.i = self.iterators[self.depth]
         self.s = self.size[self.depth]
         self.S = self.start[self.depth]
-        self.E = self.end[self.depth]
+        self.E = self.end[self.depth] + 1
+        return self
+
+    def upper(self):
+        self.depth -= 1
+        self.i = self.iterators[self.depth]
+        self.s = self.size[self.depth]
+        self.S = self.start[self.depth]
+        self.E = self.end[self.depth] + 1
         return self
 
     def index(self):
         string = "["
-        string += self.iterators[0]
+        string += self.iterators[0]+self.offset[0]
         for i in range(len(self.iterators)-1):
-            string += "," + self.iterators[i+1]
+            string += "," + self.iterators[i+1] + self.offset[i+1]
         string += "]"
         return string
 
+    def shift(self,enum):
+        self.shifted=True
+        # self.offset = ["" for _ in range(len(self.iterators))]
+        for i in range(len(self.iterators)):
+                temp = enum.start[i] - self.start[i]
+                if temp == 0:
+                    self.offset[i] = ""
+                elif temp > 0:
+                    self.offset[i] = f"+{temp}"
+                elif temp < 0:
+                    self.offset[i] = f"-{temp}"
+        # return self.shifted, self.offset
+            
+    def fetch(self,enum):
+        its,iterators,depth = enum[0],enum[1],enum[2]
+        self.its = its
+        self.start = [i[0] for i in its]
+        self.end = [i[-1] for i in its]
+        self.iterators = iterators
+        self.size = []
+        for i in range(len(self.start)):
+            self.size.append(self.end[i]-self.start[i]+1)
+        self.depth = depth
+        self.max_depth = len(self.start)
+
+        self.i = iterators[depth]
+        self.s = self.size[depth]
+        self.S = self.start[depth]
+        self.E = self.end[depth] + 1
+        return self
+
+    def RETURN(self):
+        return [self.its,self.iterators,self.depth]
+
 class impl:
-    def __init__(self,upper):
-        self.file = upper.file
-        self.debug = upper.debug
-        self.code = upper.code
+    def __init__(self,xhpp):
+        self.file = xhpp.file
+        self.debug = xhpp.debug
+        self.code = xhpp.code
         
         self.INDENT = 0
+        self.SCOPE = 0
+
+    def namespace(self,location):
+        self.code += f"namespace {location}" + "{" + "\n"
+        self.SCOPE += 1
+        self.INDENT += 1
 
     def indent(self,val=0,force=False):
         self.INDENT += val
@@ -55,39 +109,58 @@ class impl:
             self.code += f",{size[_+1]}"
         self.code += "];\n"
 
-    def loop(self,name,expression,enum,below):
+    def loop(self,name,expression,enums,below):
         if self.debug: print("Hello from impl.loop")
+        enum = enums[name]
+        enum = Enumerator().fetch(enum)
         self.indent()
-        self.code += f"for (int {enum.i} = {enum.S}; {enum.i} < {enum.E}; {enum.i}++)" + " {\n"
+        self.code += f"for (int {enum.i} = {0}; {enum.i} < {enum.E-enum.S}; {enum.i}++)" + " {\n"
         if below > 0:
             self.indent(1)
-            self.loop(name,expression,enum.lower(),below-1)
+            enum.lower()
+            enums[name] = enum.RETURN()
+            self.loop(name,expression,enums,below-1)
             self.indent(-1)
         else:
             self.indent(1,True)
-            self.code += name + enum.index() + " = " + self.express(expression,enum) + ";\n"
+            self.code += name + enum.index() + " = " + self.express(expression,enum,enums) + ";\n"
             self.indent(-1)
         self.indent()
         self.code += "}\n"
 
-    def express(self,expression,enum):
+    def express(self,expression,enum,enums):
+        var_start = 0
         string = ""
-        for char in expression:
-            if char == "[":
-                string += enum.index()
+        for i in range(len(expression)):
+            char = expression[i]
+            if char == "(":
+                string += char
+                var_start = i+1
+            elif char == "[":
+                temp_enum = expression[var_start:i]
+                if temp_enum in enums:
+                    temp_enum = Enumerator().fetch(enums[temp_enum])
+                else:
+                    temp_enum = enum
+                temp_enum.shift(enum)
+                string += temp_enum.index()
             elif char == "]":
                 pass
             else:
                 string += char
         return string
 
-    def stencil(self,out_name,names,stencil,scales,enum,below):
+    def stencil(self,out_name,names,stencil,scales,enums,below,enum=None):
         if self.debug: print("Hello from impl.stencil")
+        if enum==None:
+            enum = Enumerator().fetch(enums[out_name])
         self.indent()
         self.code += f"for (int {enum.i} = {enum.S}; {enum.i} < {enum.E}; {enum.i}++)" + " {\n"
         if below > 0:
             self.indent(1)
-            self.stencil(out_name,names,stencil,scales,enum.lower(),below-1)
+            enum.lower()
+            enums[out_name] = enum.RETURN()
+            self.stencil(out_name,names,stencil,scales,enums,below-1)
             self.indent(-1)
         else:
             self.indent(1)
