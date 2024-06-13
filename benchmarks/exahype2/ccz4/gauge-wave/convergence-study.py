@@ -20,11 +20,26 @@ from CCZ4Solver import (
 
 from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
 
+storage_types = {
+    "CallStack": exahype2.solvers.fv.Storage.CallStack,
+    "Heap": exahype2.solvers.fv.Storage.Heap,
+    "SmartPointers": exahype2.solvers.fv.Storage.SmartPointers,
+}
+
+
 parser = argparse.ArgumentParser(
     description="ExaHyPE 2 - CCZ4-GaugeWave benchmarking script"
 )
 parser.add_argument(
     "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
+)
+parser.add_argument(
+    "-st",
+    "--storage",
+    dest="storage",
+    choices=storage_types.keys(),
+    required=True,
+    help="|".join(storage_types.keys()),
 )
 parser.add_argument(
     "-pd",
@@ -108,14 +123,6 @@ parser.add_argument(
     default=False,
     help="Activate tracer",
 )
-parser.add_argument(
-    "-hs",
-    "--heap-storage",
-    dest="use_heap_storage",
-    action="store_true",
-    default=False,
-    help="Store user data on heap via normal pointers instead of smart pointers",
-)
 
 args = parser.parse_args()
 
@@ -141,7 +148,6 @@ if args.solver == "fv" and args.enclave:
         patch_size=9,
         min_volume_h=args.cell_size / 5,
         max_volume_h=args.cell_size / 5,
-        use_heap_storage=args.use_heap_storage,
         pde_terms_without_state=True,
     )
     my_solver.set_implementation(
@@ -156,7 +162,6 @@ if args.solver == "fv" and not args.enclave:
         patch_size=9,
         min_volume_h=args.cell_size / 5,
         max_volume_h=args.cell_size / 5,
-        use_heap_storage=args.use_heap_storage,
         pde_terms_without_state=True,
     )
     my_solver.set_implementation(
@@ -176,7 +181,6 @@ if "fd4-rk" in args.solver or "sofd4-rk" in args.solver:
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
             second_order = second_order_formulation,
-            use_heap_storage=args.use_heap_storage,
             pde_terms_without_state=False
         )
     else:
@@ -204,7 +208,6 @@ if "rk" in args.solver and "dg" in args.solver and not args.enclave_solver:
         rk_order=time_order,
         min_cell_h=args.cell_size * space_order,
         max_cell_h=args.cell_size * space_order,
-        use_heap_storage=args.use_heap_storage,
         pde_terms_without_state=True,
     )
     my_solver.set_implementation(
@@ -213,6 +216,12 @@ if "rk" in args.solver and "dg" in args.solver and not args.enclave_solver:
                                                        ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
                                                      """
     )
+
+
+my_solver.switch_storage_scheme(
+    cell_data_storage=storage_types[args.storage],
+    face_data_storage=storage_types[args.storage],
+)
 
 
 assert my_solver != None
@@ -278,7 +287,7 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
-    "(new ::exahype2::LoadBalancingConfiguration(0.98))",
+    "(new ::exahype2::LoadBalancingConfiguration(0.98,27,true))",
 )
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)

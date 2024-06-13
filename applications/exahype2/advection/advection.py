@@ -306,7 +306,7 @@ if args.solver in fv_rusanov_solvers and "Adaptive" in args.solver:
         pde_terms_without_state=args.use_stateless_pde_terms
     )
     # self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
-    my_solver.switch_to_heap_storage(
+    my_solver.switch_storage_scheme(
         cell_data_storage=storage_types[args.storage],
         face_data_storage=storage_types[args.storage],
     )

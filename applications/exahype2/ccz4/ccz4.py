@@ -179,10 +179,6 @@ if __name__ == "__main__":
             kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
             KOSigma                                  = self._KO_Sigma
           )
-
-          self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
-            )
         
         self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
    
