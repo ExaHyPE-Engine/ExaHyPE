@@ -31,7 +31,8 @@ exahype2::EnclaveTask::EnclaveTask(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__ inputValues,
+  double* __restrict__                        inputValues,
+  double* __restrict__                        outputValues,
   int     numberOfInputValues,
   int     numberOfResultValues,
   Functor functor
@@ -42,7 +43,7 @@ exahype2::EnclaveTask::EnclaveTask(
   _t(t),
   _dt(dt),
   _inputValues(inputValues),
-  _outputValues(nullptr),
+  _outputValues(outputValues),
   _numberOfInputValues(numberOfInputValues),
   _numberOfResultValues(numberOfResultValues),
   _functor(functor),
@@ -62,11 +63,15 @@ bool exahype2::EnclaveTask::run() {
 
 
 void exahype2::EnclaveTask::computeTask() {
-  assertion(_outputValues == nullptr);
   assertion(_numberOfResultValues > 0);
   assertion(_inputValues != nullptr);
 
-  _outputValues = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  if (_outputValues==nullptr) {
+    _outputValues = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  }
+  else {
+    logDebug( "computeTask()", "enclave task " << _taskNumber << " writes directly into mesh data structure at " << _outputValues << " (uses data from " << _inputValues << ")" );
+  }
 
   logDebug("computeTask()", "lambda=" << _maxEigenvalue);
   _functor();
