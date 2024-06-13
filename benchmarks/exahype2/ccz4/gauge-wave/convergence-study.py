@@ -114,7 +114,7 @@ parser.add_argument(
     dest="use_heap_storage",
     action="store_true",
     default=False,
-    help="Store user data on heap via smart pointers",
+    help="Store user data on heap via normal pointers instead of smart pointers",
 )
 
 args = parser.parse_args()
@@ -276,7 +276,6 @@ project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-# project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
     "(new ::exahype2::LoadBalancingConfiguration(0.98))",
