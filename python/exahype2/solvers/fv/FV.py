@@ -319,9 +319,6 @@ class FV(object):
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
         self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
-        
-        self.create_data_structures()
-        self.create_action_sets()
 
 
     def __str__(self):
