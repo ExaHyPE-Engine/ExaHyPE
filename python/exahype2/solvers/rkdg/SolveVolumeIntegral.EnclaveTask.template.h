@@ -122,7 +122,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
-      const double* __restrict__                  copyOfLinearCombinationOfPreviousShots
+      const double* __restrict__                  copyOfLinearCombinationOfPreviousShots,
+      double* __restrict__                        output
     );
 
 #ifdef UseSmartMPI

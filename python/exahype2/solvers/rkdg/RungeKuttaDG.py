@@ -32,11 +32,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
     compute_number_of_face_projection_quantities,
 )
 
-
-class Storage(Enum):
-    CallStack = 0
-    Heap = 1
-    SmartPointers = 2
+from exahype2.solvers.Storage import Storage
 
 
 class RungeKuttaDG(object):
@@ -376,9 +372,7 @@ class RungeKuttaDG(object):
         self._face_data_storage = Storage.CallStack
 
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
-
-        self.create_data_structures()
-        self.create_action_sets()
+        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
 
 
     def __str__(self):
@@ -1751,7 +1745,7 @@ We use RK("""
         self.create_action_sets()
 
 
-    def switch_to_heap_storage(
+    def switch_storage_scheme(
         self,
         cell_data_storage: Storage,
         face_data_storage: Storage,

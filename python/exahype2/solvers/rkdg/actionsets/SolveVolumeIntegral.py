@@ -48,15 +48,15 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+    #if Dimensions==2
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    #elif Dimensions==3
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    #endif
+
 
     {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
     if (marker.willBeSkeletonCell()) {
-      #if Dimensions==2
-      double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
-      #elif Dimensions==3
-      double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
-      #endif
-
       ::exahype2::CellData cellData(
         QIn,
         marker.x(),
@@ -80,7 +80,12 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         marker,
         timeStamp,
         timeStepSize,
-        QIn
+        QIn,
+        {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+        nullptr
+        {% else %}
+        QOut
+        {% endif %}
       );
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
       tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId());
