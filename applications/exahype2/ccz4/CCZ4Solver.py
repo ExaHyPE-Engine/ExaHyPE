@@ -1167,7 +1167,7 @@ def construct_DG_ncp():
     dQdxSerialised[i+1*NumberOfUnknowns] = 0.0;
     dQdxSerialised[i+2*NumberOfUnknowns] = 0.0;
 
-    dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
+    dQdxSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
   ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """
@@ -1176,7 +1176,7 @@ def construct_DG_ncp():
 def construct_DG_source_term():
     return """
   tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
