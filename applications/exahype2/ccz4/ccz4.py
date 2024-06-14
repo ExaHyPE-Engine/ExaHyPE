@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",            help="|".join(modes.keys()) )
     parser.add_argument(         "--gpu",             dest="GPU",             default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-adaptive", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk2-adaptive", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
     parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",   dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -68,7 +68,9 @@ if __name__ == "__main__":
     SuperClass = None
 
     print(args.implementation)
-    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
+    if args.implementation=="fv-adaptive":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk2-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
@@ -104,10 +106,20 @@ if __name__ == "__main__":
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
 """
-
-        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
-          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_mesh_unit_h, max_volume_h=max_mesh_unit_h,
+            time_step_relaxation=cfl
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+          if args.implementation=="fd4-rk1-adaptive":
             rk_order = 1
+          elif args.implementation=="fd4-rk2-adaptive":
+            rk_order = 2
           else:
             rk_order = 4
           SuperClass.__init__(
@@ -120,7 +132,7 @@ if __name__ == "__main__":
             KOSigma=KOSig
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
-          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+          if args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
             rk_order = 4
@@ -180,7 +192,30 @@ if __name__ == "__main__":
             KOSigma                                  = self._KO_Sigma
           )
         
-        self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          self.postprocess_updated_patch += """{
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+
+
+        else:
+          self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)

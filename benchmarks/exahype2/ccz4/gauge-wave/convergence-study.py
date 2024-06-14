@@ -319,11 +319,8 @@ if "sofd4" in args.solver:
                                                                                     my_solver._store_face_data_default_guard(),
                                                                                     )
 
-#
-# @todo Han: I don't think this is good that we switch off enclave solvers always
-#
     additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
-                                                                            is_enclave_solver = False,
+                                                                            is_enclave_solver = args.enclave,
                                                                             ))
     additional_mesh_traversal.add_action_set( project_patch_onto_faces )
     additional_mesh_traversal.add_action_set( roll_over_projected_faces )
