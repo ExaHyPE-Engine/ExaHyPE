@@ -18,7 +18,9 @@ namespace tarch {
   namespace multicore {
     using TaskNumber = int;
 
-    constexpr TaskNumber NoDependencies = -1;
+    constexpr TaskNumber NoOutDependencies = -1;
+
+    const std::set<TaskNumber> NoInDependencies = std::set<TaskNumber>();
 
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
@@ -319,11 +321,22 @@ namespace tarch {
      *   tasks that have no outgoing dependencies.
      * @see processPendingTasks(int) describing how we handle pending tasks.
      *
+     * @param task Pointer to a task. The responsibility for this task is
+     *   handed over to the tasking system, i.e. you are not allowed to delete
+     *   it.
+     * @param inDependencies Set of incoming tasks that have to finish before
+     *   the present task is allowed to run. You can pass the alias
+     *   tarch::multicore::Tasks::NoInDependencies to make clear what's
+     *   going on.
+     * @param taskNumber Allow the runtime to track out dependencies. Only
+     *   numbers handed in here may be in inDependencies in an upcoming call.
+     *   If you do not expect to construct any follow-up in-dependencies, you
+     *   can pass in the default, i.e. NoOutDependencies.
      */
     void spawnTask(
       Task*                        task,
-      const std::set<TaskNumber>&  inDependencies = std::set<TaskNumber>(),
-      const TaskNumber&            taskNumber = NoDependencies
+      const std::set<TaskNumber>&  inDependencies = tarch::multicore::NoInDependencies,
+      const TaskNumber&            taskNumber = tarch::multicore::NoOutDependencies
     );
 
     /**
@@ -547,7 +560,7 @@ namespace tarch {
        *    - Execute the task object.
        *    - Free its memory.
        * 3. We store the shared_future returned by the task. If the task number
-       *    equals NoDependencies, we know that noone will ever be able to wait
+       *    equals NoOutDependencies, we know that noone will ever be able to wait
        *    for this task. In this case, we skip the storing.
        *
        *
