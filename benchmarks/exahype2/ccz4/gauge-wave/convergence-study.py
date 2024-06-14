@@ -11,8 +11,9 @@ import numpy as np
 # See comments in README.dox
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
-from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
+from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
+from CCZ4Solver import CCZ4Solver_RKDG_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import (
     CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking,
@@ -199,17 +200,27 @@ if "fd4-rk" in args.solver or "sofd4-rk" in args.solver:
     """
     )
 
-if "rk" in args.solver and "dg" in args.solver and not args.enclave_solver:
+if "rk" in args.solver and "dg" in args.solver:
     space_order = int(args.solver[2])
     time_order = int(args.solver[6])
-    my_solver = CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
-        name="CCZ4DG" + str(space_order) + "RK" + str(time_order),
-        polynomials=exahype2.solvers.GaussLegendreBasis(space_order),
-        rk_order=time_order,
-        min_cell_h=args.cell_size * space_order,
-        max_cell_h=args.cell_size * space_order,
-        pde_terms_without_state=True,
-    )
+    if args.enclave:
+        my_solver = CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
+            name="CCZ4DG" + str(space_order) + "RK" + str(time_order),
+            polynomials=exahype2.solvers.GaussLegendreBasis(space_order),
+            rk_order=time_order,
+            min_cell_h=args.cell_size * space_order,
+            max_cell_h=args.cell_size * space_order,
+            pde_terms_without_state=True,
+        )
+    else:
+        my_solver = CCZ4Solver_RKDG_GlobalAdaptiveTimeStep(
+            name="CCZ4DG" + str(space_order) + "RK" + str(time_order),
+            polynomials=exahype2.solvers.GaussLegendreBasis(space_order),
+            rk_order=time_order,
+            min_cell_h=args.cell_size * space_order,
+            max_cell_h=args.cell_size * space_order,
+            pde_terms_without_state=True,
+        )
     my_solver.set_implementation(
         initial_conditions="""
                                                        for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
