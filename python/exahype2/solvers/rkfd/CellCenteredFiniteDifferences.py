@@ -20,12 +20,8 @@ import exahype2.solvers.rkfd.actionsets
 from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
+from exahype2.solvers.Storage import Storage
 
-
-class Storage(Enum):
-    CallStack = 0
-    Heap = 1
-    SmartPointers = 2
 
 
 class CellCenteredFiniteDifferences(object):
@@ -237,13 +233,10 @@ class CellCenteredFiniteDifferences(object):
         self._interpolation = "#error Not yet defined"
         self._restriction = "#error Not yet defined"
 
-        self._cell_data_storage = Storage.CallStack
-        self._face_data_storage = Storage.CallStack
-
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
-        self.create_data_structures()
-        self.create_action_sets()
+        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
+        
 
     def __str__(self):
         result = (
@@ -1522,7 +1515,7 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
-    def switch_to_heap_storage(
+    def switch_storage_scheme(
         self,
         cell_data_storage: Storage,
         face_data_storage: Storage,
