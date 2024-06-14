@@ -14,6 +14,9 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
 )
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
+from exahype2.solvers.Storage import Storage
+
+
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
     """!
@@ -192,7 +195,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
-
+        
         self.functor_implementation = self.TemplateUpdateCell.render(**d)
 
         super(UpdateCell, self)._add_action_set_entries_to_dictionary(d)
@@ -350,8 +353,9 @@ class EnclaveTasking(FV):
         self.add_user_action_set_includes(additional_includes)
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
-        # Needs to be set by optimistic solvers        
-        self.make_copy_of_enclave_task_data = False
+        # Needs to be set by optimistic solvers and generally
+        # works only for smart pointers     
+        self.make_copy_of_enclave_task_data = True
 
 
     def _create_guards(self):
@@ -814,3 +818,19 @@ class EnclaveTasking(FV):
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)
+
+
+    def switch_storage_scheme(
+        self,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
+    ):
+        if cell_data_storage == Storage.SmartPointers:
+            self.make_copy_of_enclave_task_data = False
+        else:
+            self.make_copy_of_enclave_task_data = True
+            
+        super(EnclaveTasking, self).switch_storage_scheme(
+            cell_data_storage,
+            face_data_storage
+        )

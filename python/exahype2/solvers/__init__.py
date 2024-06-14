@@ -10,3 +10,5 @@ from .AdaptiveSubcyclingTimeSteppingCodeSnippets import AdaptiveSubcyclingTimeSt
 from .LocalTimeSteppingCodeSnippets              import LocalTimeSteppingCodeSnippets
 
 from .LagrangeBasisWithDiagonalMassMatrix        import GaussLegendreBasis
+
+from .Storage import Storage

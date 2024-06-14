@@ -15,13 +15,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import exahype2.solvers.fv.actionsets
 
 from exahype2.solvers.PDETerms import PDETerms
-
-
-class Storage(Enum):
-    CallStack = 0
-    Heap = 1
-    SmartPointers = 2
-
+from exahype2.solvers.Storage import Storage
 
 class FV(object):
     """!
@@ -322,11 +316,10 @@ class FV(object):
 
         self._kernel_namespace = kernel_namespace
 
-        self._cell_data_storage = Storage.CallStack
-        self._face_data_storage = Storage.CallStack
-
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
+        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
+        
         self.create_data_structures()
         self.create_action_sets()
 
@@ -1627,7 +1620,7 @@ The finest mesh width of """
         self.create_action_sets()
 
 
-    def switch_to_heap_storage(
+    def switch_storage_scheme(
         self,
         cell_data_storage: Storage,
         face_data_storage: Storage,
