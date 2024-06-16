@@ -84,25 +84,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  const double* __restrict__                  copyOfLinearCombinationOfPreviousShots,
-  double* __restrict__                        output
+  const double* __restrict__                  linearCombinationOfPreviousShots
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
     marker,
     t,
     dt,
-#if Dimensions==2
+    #if Dimensions==2
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
-    output,
+    nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
-#else
+    #else
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
-    output,
+    nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
-#endif
+    #endif
     [&]() -> void {
       applyKernelToCell(
         _marker,
@@ -114,15 +113,56 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
       tarch::freeMemory( _inputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     }
-  )
+  ),
 #ifdef UseSmartMPI
-  , smartmpi::Task(_enclaveTaskTypeId)
+  smartmpi::Task(_enclaveTaskTypeId),
 #endif
-{
+  _linearCombinationOfPreviousShots(nullptr) {
   // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
   //       distinguish different task types once we map other steps onto tasks, too
   setPriority({{ENCLAVE_TASK_PRIORITY}});
-  std::copy_n(copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues);
+  std::copy_n(linearCombinationOfPreviousShots, _numberOfInputValues, _inputValues);
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
+  const ::peano4::datamanagement::CellMarker& marker,
+  double                                      t,
+  double                                      dt,
+  std::shared_ptr< double[] >                 linearCombinationOfPreviousShots,
+  double* __restrict__                        output
+):
+  ::exahype2::EnclaveTask(
+    _enclaveTaskTypeId,
+    marker,
+    t,
+    dt,
+    linearCombinationOfPreviousShots.get(),
+    output,
+    #if Dimensions==2
+    {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
+    #else
+    {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
+    #endif
+    [&]() -> void {
+      applyKernelToCell(
+        _marker,
+        _t,
+        _dt,
+        _inputValues,
+        _outputValues
+      );
+    }
+  ),
+#ifdef UseSmartMPI
+  smartmpi::Task(_enclaveTaskTypeId),
+#endif
+  _linearCombinationOfPreviousShots(linearCombinationOfPreviousShots) {
+  // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
+  //       distinguish different task types once we map other steps onto tasks, too
+  setPriority({{ENCLAVE_TASK_PRIORITY}});
 }
 
 

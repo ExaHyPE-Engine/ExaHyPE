@@ -802,16 +802,15 @@ We use RK("""
 #include "repositories/SolverRepository.h"
 """
 
-        self._rhs_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        self._linear_combination_of_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
+            "false",
+            "false",
+        )        
         self._linear_combination_of_estimates.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h"
 """
-
         self._estimate_projection.generator.send_condition = "false"
         self._estimate_projection.generator.receive_and_merge_condition = "false"
 

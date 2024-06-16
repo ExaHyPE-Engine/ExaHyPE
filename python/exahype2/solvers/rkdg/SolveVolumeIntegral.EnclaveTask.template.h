@@ -66,6 +66,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     int          _remoteTaskId = -1;
 #endif
 
+    std::shared_ptr< double[] >                 _linearCombinationOfPreviousShots;
+
     /**
      * This is a unique static id which we use both for task fusion and within
      * SmartMPI to distinguish different task types.
@@ -82,8 +84,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      *
      * The finite volume solver assumes that _inputValues are reconstructed
      * values, i.e. a temporary data field on the heap. So we don't have to
-     * allocate anything but we have to free stuff after the run. This is
-     * done here in the Finite Volume solver.
+     * allocate anything but we have to free stuff after the run.
+     *
+     * For DG, things are different: Here, we do not operate on a guess but
+     * actually on a given solution which is persistently stored. All the
+     * guesses will eventually be combined into one linear combination
+     * yieldign the new time step solution. So we have to keep it.
+     * Consequently, there's no need for us to delete anything.
      */
     static void applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker,
@@ -116,13 +123,54 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * does not free anything, our task functor not only calls
      * applyKernelToCell(). It also has to free the input data.
      *
+     * ## Remarks on tree traversals using smart pointers
+     *
+     * If we have a tree traversal which uses smart pointers, it means that the
+     * mesh moves around pointers, but the actual data resides at the same
+     * place in memory. Consequently, the volume integral solve can write
+     * directly into the output. The fact that this is ok is indicated by
+     * the output argument. If it equals nullptr, we have to create our own
+     * data on the heap to store the output and hand that one over to the
+     * enclave solver. If output is however properly set, this is the flag
+     * that we can directly write into the output.
+     *
+     * I originally thought that I could use the same rationale to avoid to 
+     * copy the input data as well. However, this does not work. I want to 
+     * give the traversal the opportunity to throw away the linear combination
+     * after each mesh traversal. So I have to copy the data in this case as
+     * well. It is not that dramatic as with the output: 
+     * 
+     * We may assume that the tasks are pending only relatively shortly, so 
+     * the data will be freed quickly again. It is not like the output which
+     * will stay alive for almost a whole mesh traversal.
+     * 
+     * See other constructor which is to be used if we employ smart pointers.
+     *
      * @see applyKernelToCell()
+     * @param output Pointer to output data structure. We pass that one through
+     *   to the superclass. According to the definition there, a nullptr is ok,
+     *   in which case the superclass will prepare the output data structure
+     *   and eventually tell the enclave bookkeeping to free it again.
+     * @param linearCombinationOfPreviousShots This is a the linear combination
+     *   over the previous Runge-Kutta shots subject to the weightings from the
+     *   Butcher tableau. If output is nullptr, we know that the enclave
+     *   solver may not write directly into the output. This is likely as the
+     *   data within the mesh is moved around. In this case, we may also not
+     *   use linearCombinationOfPreviousShots later within the task but rather
+     *   have to create a copy. See description above.
      */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
-      const double* __restrict__                  copyOfLinearCombinationOfPreviousShots,
+      const double* __restrict__                  linearCombinationOfPreviousShots
+    );
+    
+    {{CLASSNAME}}(
+      const ::peano4::datamanagement::CellMarker& marker,
+      double                                      timeStamp,
+      double                                      timeStepSize,
+      std::shared_ptr< double[] >                 linearCombinationOfPreviousShots,
       double* __restrict__                        output
     );
 
