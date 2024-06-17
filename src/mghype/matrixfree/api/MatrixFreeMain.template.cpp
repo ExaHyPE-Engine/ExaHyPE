@@ -133,7 +133,7 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Plot:
         {
           if ( plotThenExit ) {
-            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " steps");
+            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " sweeps");
             continueToSolve = false;
           }
           else 

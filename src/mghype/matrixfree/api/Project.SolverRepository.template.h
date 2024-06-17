@@ -4,11 +4,11 @@
 //
 #pragma once
 
-
 {% for SOLVER in SOLVER_INSTANCES %}
-
 #include "{{SOLVER[0]}}.h"
-
+{% endfor %}
+{% for SOLVER in AUX_SOLVER_INSTANCES %}
+#include "{{SOLVER[0]}}.h"
 {% endfor %}
 
 {% for N in NAMESPACE %}
@@ -18,7 +18,9 @@ namespace {{N}} {
 
     {% for SOLVER in SOLVER_INSTANCES %}
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
-
+    {% endfor %}
+    {% for SOLVER in AUX_SOLVER_INSTANCES %}
+    extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
     
     bool terminationCriterionHolds();

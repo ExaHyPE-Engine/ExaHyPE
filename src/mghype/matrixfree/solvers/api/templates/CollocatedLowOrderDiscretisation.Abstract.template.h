@@ -89,6 +89,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      */
     void suspend();
 
+    bool isSuspended() const;
+
     bool update() const;
   protected:
     static tarch::logging::Log  _log;

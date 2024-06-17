@@ -279,8 +279,11 @@ class UpdateFaceSolution(ActionSet):
       );
   }
 
-  else if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary )
-  {
+  else if (
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateFace()
+  ) {
     logTraceInWith1Argument( "InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
     // Essentially what we do here is fix the solution on the boundary to be 
     // the inner-side projection.

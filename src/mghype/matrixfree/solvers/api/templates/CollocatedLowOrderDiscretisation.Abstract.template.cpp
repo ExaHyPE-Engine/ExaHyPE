@@ -113,6 +113,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
   _state = State::Suspend;
 }
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const {
+  return _state == State::Suspend;
+}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
   if (_state==State::Solve) {

@@ -31,8 +31,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
 
   public:
     enum class State {
-      UpdateAndProjectImmediately,
-      ProjectOnly,
+      Solve,
+      ProjectOntoFacesOnly,
       Suspend
     };
 
@@ -139,6 +139,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     bool updateFace() const;
     bool projectOntoFaces() const;
 
+    bool isSuspended() const;
+    
     /**
      * Suspends solver for one sweep
      *

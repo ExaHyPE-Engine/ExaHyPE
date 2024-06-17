@@ -658,10 +658,15 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
               injection_matrix,
               injection_matrix_scaling,
               use_fas
+
               )
-        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = "DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==0"
-        self.d["PREDICATE_PROLONGATE"]           = "DGCycleCounter==0"
-        self.d["PREDICATE_EVALUATE_RHS"]         = "DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==0"
+        
+        # f-string isn't happy unless i do it like this
+        cg_solver_name = self.d["CG_SOLVER_NAME"]
+        dg_solver_name = self.d["DG_SOLVER_NAME"]
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"repositories::instanceOf{dg_solver_name}.isSuspended() and CGCycleCounter==0"
+        self.d["PREDICATE_PROLONGATE"]           = f"DGCycleCounter==1 and repositories::instanceOf{cg_solver_name}.isSuspended()"
+        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==0"
           
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
         assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
@@ -698,7 +703,7 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
 int """ + full_qualified_classname + """::DGCycleCounter = 0;
 int """ + full_qualified_classname + """::CGCycleCounter = 0;
 """    
-      
+
     def get_body_of_prepareTraversal(self):
         return jinja2.Template( """
     if (DGCycleCounter>0 and DGCycleCounter<=DGSmoothingSteps) {
@@ -706,17 +711,31 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       DGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
     }
+
+    else if (
+      DGCycleCounter>DGSmoothingSteps // finished DG stage
+      and
+      CGCycleCounter==0               // not started CG yet
+    ) {
+      logInfo( "prepareTraversal(...)", "finished DG smoothing. Disable all solvers and restrict DG->CG" );
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false); // do not project onto faces
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      CGCycleCounter++; // to make sure we end up on pure CG solver next traversal
+    }
+
     else if (
       DGCycleCounter>DGSmoothingSteps 
       and 
-      (CGSmoothingSteps<std::numeric_limits<int>::max() and CGCycleCounter<CGSmoothingSteps 
-       or 
-       CGCycleCounter==0 
-       or 
-       CGSmoothingSteps==std::numeric_limits<int>::max() and repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm()>=1e-8
-      )
+      CGCycleCounter<CGSmoothingSteps
+      and
+      (
+        not repositories::instanceOf{{CG_SOLVER_NAME}}.terminationCriterionHolds()
+      ) 
     ) {
-      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true);
+      /*
+      We haven't reached our termination condition for CG solver yet
+      */
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false);
       CGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver" );
     }

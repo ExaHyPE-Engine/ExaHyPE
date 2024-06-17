@@ -6,7 +6,7 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state( State::ProjectOnly )
+  _state( State::ProjectOntoFacesOnly )
 {}
 
 
@@ -268,7 +268,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  if (_state==State::UpdateAndProjectImmediately) {
+  if (_state==State::Solve) {
     clearGlobalResidual();
   }
 }
@@ -276,14 +276,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   switch (_state) {
-    case State::UpdateAndProjectImmediately:
+    case State::Solve:
       {
         logInfo( "endMeshSweep()", toString() );
       }
       break;
-    case State::ProjectOnly:
+    
+    /*
+    This means we just prolongated from CG -> DG and projected
+    the new solution back to the faces. So let's continue to solve
+    as normal, remembering that the Riemann problem will be solved first.
+    */
+    case State::ProjectOntoFacesOnly:
       {
-        _state = State::UpdateAndProjectImmediately;
+        _state = State::Solve;
       }
       break;
       /*
@@ -294,9 +300,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
       }
       break;
 */
+    // Remain suspended. CG solver or some coupling is happening
     case State::Suspend:
       {
-        _state = State::UpdateAndProjectImmediately;
+        _state = State::Suspend;
       }
       break;
   }
@@ -304,24 +311,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
-  return _state == State::UpdateAndProjectImmediately;
+  return _state == State::Solve;
 }
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const{
+  return _state == State::Suspend;
+}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
-  return _state == State::UpdateAndProjectImmediately;
+  return _state == State::Solve;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
-  return _state == State::UpdateAndProjectImmediately
-      or _state == State::ProjectOnly;
+  return _state == State::Solve
+      or _state == State::ProjectOntoFacesOnly;
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces) {
   if (projectOntoFaces) {
-    _state = State::ProjectOnly;
+    _state = State::ProjectOntoFacesOnly;
   }
   else {
     _state = State::Suspend;

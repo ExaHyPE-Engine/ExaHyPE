@@ -19,8 +19,11 @@ class CollocatedSolver(ActionSet):
     );
     fineGridVertex{{SOLVER_NAME}}.setValue(value);
   }
-  else if (fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior)
-  {
+  else if (
+    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
+    and
+    repositories::{{SOLVER_INSTANCE}}.update()
+  ) {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {

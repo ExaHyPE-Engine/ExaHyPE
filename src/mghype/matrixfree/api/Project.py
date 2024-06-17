@@ -56,7 +56,8 @@ class Project:
     self._executable_name = executable
     self._output_path   = "./" 
 
-    self._solvers = []
+    self._solvers     = []
+    self._aux_solvers = []
 
     self.algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
     self.algorithm_step_init_solution  = peano4.solversteps.Step( "InitSolution", False )
@@ -172,6 +173,7 @@ you require to run this Peano4 application with PETSc.
   def __generate_solver_repository(self):
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+    dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
@@ -189,12 +191,16 @@ you require to run this Peano4 application with PETSc.
     self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h", generated=True )
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
 
-  def add_solver( self, solver ):
-    """
+  def add_solver( self, solver, auxiliary=False ):
+    """!
     
     Takes the solver and runs through the individual steps of the algorithm.
     Per step, it tells the solver to inject its particular stuff to the 
     underlying observers.
+
+    The auxiliary flag allows us to distinguish the "main" solver from the
+    helpers. The rationale for this is that we only want to measure the
+    termination conditions for a subset of the solvers.
     
     """  
     print( "---------------------------------------")
@@ -217,7 +223,10 @@ you require to run this Peano4 application with PETSc.
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
     
-    self._solvers.append( solver )
+    if auxiliary:
+      self._aux_solvers.append( solver )
+    else:
+      self._solvers.append( solver )
 
     pass
 
