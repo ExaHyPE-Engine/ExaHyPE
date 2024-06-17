@@ -77,7 +77,7 @@ theSolver = exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
   ncp         = scenario._equation.ncp()
 )
 
-theSolver.add_kernel_optimizations(polynomials = polynomials)
+theSolver.add_kernel_optimizations(polynomials = polynomials, is_linear=scenario._equation.is_linear)
 
 if(scenario.analytical_solution()!=exahype2.solvers.PDETerms.None_Implementation):
     exahype2.errorMeasurement.ADERErrorMeasurement(
@@ -99,8 +99,8 @@ scenario.set_global_simulation_parameters(project)
 # prototype we did start off with.
 #
 project.set_load_balancing(
-  "toolbox::loadbalancing::strategies::RecursiveBipartition",
-  "new ::exahype2::LoadBalancingConfiguration()",
+  "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+  "new ::exahype2::LoadBalancingConfiguration(0.98)"
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
 peano4_project = project.generate_Peano4_project("False")

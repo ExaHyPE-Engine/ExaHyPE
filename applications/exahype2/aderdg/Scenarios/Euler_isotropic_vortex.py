@@ -18,10 +18,12 @@ class Euler_isotropic_vortex(Scenario):
     _periodic_bc = True
 
     def __init__(
-        self
+        self,
+        velocity=1.
     ):
         self._dimensions  = 2
         self._equation    = Euler(dimensions=2, gamma=1.4)
+        self._velocity    = velocity
 
     def initial_conditions(self):
         return """
@@ -40,8 +42,8 @@ class Euler_isotropic_vortex(Scenario):
 
   constexpr double rho_inf = 1.;
   constexpr double p_inf = 1.;
-  constexpr double u_inf = 1.;
-  constexpr double v_inf = 1.;
+  constexpr double u_inf = """ + str(self._velocity) + """;
+  constexpr double v_inf = """ + str(self._velocity) + """;
 
 	Q[0] = rho_inf + drho; // fluid density
 	Q[1] = Q[0] * (u_inf + du); // momentum
@@ -61,8 +63,8 @@ class Euler_isotropic_vortex(Scenario):
   */
   constexpr double rho_inf = 1.;
   constexpr double p_inf = 1.;
-  constexpr double u_inf = 1.;
-  constexpr double v_inf = 1.;
+  constexpr double u_inf = """ + str(self._velocity) + """;
+  constexpr double v_inf = """ + str(self._velocity) + """;
 
   const double t_capped = t  - (int) t / 10;
   tarch::la::Vector<Dimensions,double> pos = { (x[0] - u_inf*t_capped) < -5.0 ? (x[0] - u_inf*t_capped) + 10. : (x[0] - u_inf*t_capped), 

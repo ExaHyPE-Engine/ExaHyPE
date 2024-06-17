@@ -118,7 +118,7 @@ def create_compute_time_step_size_for_adaptive_time_stepping():
 
 def create_compute_new_time_step_size_for_adaptive_time_stepping():
     return """
-    const double maxEigenvalue = generated::kernels::AderDG::{{LINEARITY}}::maxScaledEigenvalue(
+    const double maxEigenvalue = generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::maxScaledEigenvalue(
       repositories::{{SOLVER_INSTANCE}},
       luh,
       marker.x(),

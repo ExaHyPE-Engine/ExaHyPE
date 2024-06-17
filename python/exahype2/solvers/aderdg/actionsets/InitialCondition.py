@@ -24,7 +24,7 @@ class InitialCondition(AbstractAderDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
-          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, generated::kernels::AderDG::{{LINEARITY}}::Quadrature<double>::nodes
+          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::Quadrature<double>::nodes
         ),
         marker.h(),
         index,
@@ -79,6 +79,6 @@ class InitialCondition(AbstractAderDGActionSet):
   def get_includes(self):
     return (
       super(InitialCondition, self).get_includes() + """
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+#include "generated/kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Quadrature.h"
+#include "generated/kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Kernels.h"
 """)
