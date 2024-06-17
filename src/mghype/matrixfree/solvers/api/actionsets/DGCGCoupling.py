@@ -85,12 +85,18 @@ class AbstractDGCGCoupling(ActionSet):
 
 
   __TemplateTouchVertexFirstTime="""
-  if ( {{PREDICATE_INJECT_AND_RESTRICT}} ) {
+  if (
+    fineGridVertex{{CG_SOLVER_NAME}}.getType() != vertexdata::{{CG_SOLVER_NAME}}::Type::Coarse
+    and
+    {{PREDICATE_INJECT_AND_RESTRICT}}
+  ) {
+    logTraceInWith1Argument("Restriction", fineGridVertex{{CG_SOLVER_NAME}}.toString())
     mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
       fineGridVertex{{CG_SOLVER_NAME}},
       true,        // restrictRhsAndInjectSolution
       {{USE_FAS}}
     );
+    logTraceOutWith1Argument("Restriction", fineGridVertex{{CG_SOLVER_NAME}}.toString())
   }
   """
 
@@ -104,7 +110,8 @@ class AbstractDGCGCoupling(ActionSet):
     fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
     and
     {{PREDICATE_PROLONGATE}}
-  ) {    
+  ) {
+    logTraceInWith2Arguments("Prolongate()", (bool)({{PREDICATE_PROLONGATE}}), fineGridCell{{DG_SOLVER_NAME}}.toString());
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -138,6 +145,7 @@ class AbstractDGCGCoupling(ActionSet):
         fineGridVertices{{CG_SOLVER_NAME}}
       )
     );
+  logTraceOutWith1Argument("Prolongate()", fineGridCell{{DG_SOLVER_NAME}}.toString());
   }
 """
 
@@ -727,9 +735,11 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       DGCycleCounter>DGSmoothingSteps 
       and 
       CGCycleCounter<CGSmoothingSteps
-      and
+      and not
       (
-        not repositories::instanceOf{{CG_SOLVER_NAME}}.terminationCriterionHolds()
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() > 0
+        and
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() <= 1e-8
       ) 
     ) {
       /*

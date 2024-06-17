@@ -100,7 +100,7 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
   local_assembly_matrix_scaling=system_matrix_scaling,
   mass_matrix = mass_matrix,
   mass_matrix_scaling = maxx_matrix_scaling,
-  solver_tolerance              = 1e-8,
+  solver_tolerance              = 1e-12,
   smoother_relaxation           = 0.5
 )
 #! [Correction equation solver]
