@@ -118,16 +118,14 @@ def create_compute_time_step_size_for_adaptive_time_stepping():
 
 def create_compute_new_time_step_size_for_adaptive_time_stepping():
     return """
-    const double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
-      {{SOLVER_NAME}}
-      >(
-        repositories::{{SOLVER_INSTANCE}},
-        luh,
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        timeStepSize
-      );
+    const double maxEigenvalue = generated::kernels::AderDG::{{LINEARITY}}::maxScaledEigenvalue(
+      repositories::{{SOLVER_INSTANCE}},
+      luh,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize
+    );
 
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
 

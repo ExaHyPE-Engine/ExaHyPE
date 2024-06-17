@@ -35,6 +35,13 @@ class EmptyPostprocessSolution(AbstractAderDGActionSet):
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
+    def get_includes(self):
+        return (
+            super(EmptyPostprocessSolution, self).get_includes()
+            + """
+#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+"""
+        )
 
 class DoFWisePostprocessSolution(AbstractAderDGActionSet):
     """
@@ -99,7 +106,9 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
     dfor( index, {{ORDER}}+1 ) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + enumerator(0,index,0);
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
-        marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+        marker.x(), marker.h(), index, 
+        repositories::{{SOLVER_INSTANCE}}.Order+1,
+        generated::kernels::AderDG::{{LINEARITY}}::Quadrature<double>::nodes
       );
       """
             + operation_per_point
@@ -137,6 +146,8 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
+#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
 """
         )
 

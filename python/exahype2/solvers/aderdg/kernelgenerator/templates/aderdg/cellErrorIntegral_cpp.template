@@ -1,0 +1,69 @@
+#include "{{pathToOptKernel}}/Kernels.h"
+#include "{{pathToOptKernel}}/Quadrature.h"
+#include "exahype2/dg/DGUtils.h"
+#include "peano4/utils/Loop.h"
+
+void {{codeNamespace}}::computeCellErrorIntegral(
+  std::function< void(
+    const tarch::la::Vector<Dimensions,double>&   position,
+    const double                                  t,
+    const double                                  dt,
+    double*                                       sol
+  ) >   exactSolution,
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  double                                       t,
+  double                                       dt,
+  {{correctorStoragePrecision}}* __restrict__   Q,
+  double                                       errors[3]
+){
+
+  errors[0] = 0.0;
+  errors[1] = 0.0;
+  errors[2] = 0.0;
+
+#if Dimensions==2
+  const double cellVolume = cellSize[0]*cellSize[1];
+#else
+  const double cellVolume = cellSize[0]*cellSize[1]*cellSize[2];
+#endif
+  const int spaceBasisSize = {{nDof**nDim}};
+
+  double sol[{{nVarPad}}];
+  int linearisedIndex = 0;
+
+  //iterate over all quadrature points in the cell
+    dfor( index, {{nDof}} ) {
+
+#if Dimensions==2
+      double weight = cellVolume*Quadrature<{{correctorStoragePrecision}}>::weights1[index[0]]
+        * Quadrature<{{correctorStoragePrecision}}>::weights1[index[1]];
+#else
+      double weight = cellVolume*Quadrature<{{correctorStoragePrecision}}>::weights1[index[0]]
+        * Quadrature<{{correctorStoragePrecision}}>::weights1[index[1]]
+        * Quadrature<{{correctorStoragePrecision}}>::weights1[index[2]];
+#endif
+
+      //compute the exact solution
+      exactSolution(
+        ::exahype2::dg::getQuadraturePoint(
+          cellCentre, cellSize, index, {{nDof}}, Quadrature<{{correctorStoragePrecision}}>::nodes
+        ),
+        t,
+        dt,
+        sol
+      );
+
+      //increment the respective errors
+      for(int v=0; v<{{nVarPad}}; v++){
+        double error = std::abs(Q[linearisedIndex+v]-sol[v]);
+        errors[0] += weight*error; //L1 norm
+        errors[1] += weight*error*error; //L2 norm
+        errors[2] = std::max(errors[2], error); //L_inf norm
+      }
+
+      linearisedIndex += {{nDataPad}};
+    }
+
+}
+

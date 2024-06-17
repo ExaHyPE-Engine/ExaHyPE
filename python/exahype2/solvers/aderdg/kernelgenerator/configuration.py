@@ -80,16 +80,16 @@ class Configuration:
 
     # set to false to use standard loops instead of libxsmm
 #    useLibxsmm = True;
-    useLibxsmm = False;
+    useLibxsmm = False
 
-    useBLIS = False;
+    useBLIS = False
 
-    useEigen = False;
+    useEigen = False
 
-    useLibxsmmJIT = False;
+    useLibxsmmJIT = False
 
     # set to true to print models runtime
-    runtimeDebug = False;
+    runtimeDebug = False
 
 
 

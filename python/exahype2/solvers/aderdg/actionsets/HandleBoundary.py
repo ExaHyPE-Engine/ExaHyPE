@@ -57,7 +57,7 @@ class HandleBoundary(AbstractAderDGActionSet):
         int basis         = 1;
         for (int d=0; d<Dimensions; d++) {
           nodePosition(d)  = faceOffset(d);
-          nodePosition(d) += (d==normal) ? 0.0 : repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[dof(d)] * marker.h()(d);
+          nodePosition(d) += (d==normal) ? 0.0 : generated::kernels::AderDG::{{LINEARITY}}::Quadrature<double>::nodes[dof(d)] * marker.h()(d);
           dofSerialised += (d==normal) ? 0 : dof(d)*basis;
           basis *= (d==normal) ? 1 : (Order+1);
         }
@@ -128,6 +128,6 @@ class HandleBoundary(AbstractAderDGActionSet):
         return (
             super(HandleBoundary, self).get_includes()
             + """
-#include "exahype2/aderdg/kernels/Kernels.h"
+#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
       """
         )

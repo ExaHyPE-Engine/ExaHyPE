@@ -76,6 +76,7 @@ class DynamicAMR(AbstractAderDGActionSet):
     const int normal = marker.getSelectedFaceNumber()%Dimensions;
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : spaceFaceSize;
 
+    /*
     if(!marker.isInteriorFaceWithinPatch()){
 
       //Prolongate estimations, then compute flux on the fine face using these estimations
@@ -108,6 +109,7 @@ class DynamicAMR(AbstractAderDGActionSet):
       }
 
     }
+    */
 
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)) );
@@ -139,6 +141,7 @@ class DynamicAMR(AbstractAderDGActionSet):
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
 
     //fluxes
+    /*
     kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<
       {{SOLVER_NAME}}, //SolverType
       {{CORRECTOR_COMPUTATION_PRECISION}}, //pStoreType      
@@ -148,6 +151,7 @@ class DynamicAMR(AbstractAderDGActionSet):
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine          
         marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
     );
+    */
 
   }
 

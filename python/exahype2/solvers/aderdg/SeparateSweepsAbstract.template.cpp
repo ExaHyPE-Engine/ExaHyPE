@@ -17,7 +17,7 @@
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
-
+/*
 double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                           = kernels::{{POLYNOMIAL_TYPE}}::weights;
 double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                             = kernels::{{POLYNOMIAL_TYPE}}::nodes;
 double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                               = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
@@ -29,10 +29,12 @@ double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector           
 kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                  = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
 kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative   = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
 kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
-
+*/
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
+/*
 {{BASIS_INITIALIZERS | indent(2,True) }}
+*/
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
@@ -57,40 +59,6 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
   {% endfor %}
   {% endif %}
-  
-  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
-  double maxDSize = std::numeric_limits<double>::min();
-  double minDSize = std::numeric_limits<double>::max();
-  tarch::la::Vector<Dimensions, double> sizes = {{NAMESPACE | join("::")}}::DomainSize;
-  
-  for(int i=0; i<Dimensions; i++){
-    if(sizes[i]>maxDSize){
-      maxDSize = sizes[i];
-    }
-    if(sizes[i]<minDSize){
-      minDSize = sizes[i];
-    }    
-  }
-  
-  int depth = 0;
-  
-  //finding coarsest possible Mesh level
-  while(maxDSize>MaxAdmissibleCellH){
-    depth += 1;
-    maxDSize /= 3.0;
-  }
-  
-  realCoarsestMeshSize = maxDSize;
-  coarsestMeshLevel = depth;  
-  
-  depth = 0;
-  while(minDSize>MinAdmissibleCellH){
-    depth += 1;
-    minDSize /= 3.0;
-  }
-  
-  maxAdaptiveMeshLevel = depth;
-  
 
 }
 
@@ -115,37 +83,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
-}
-
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDomainSize() const {
-  return {{NAMESPACE | join("::")}}::DomainSize;
-
-}
-
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDomainOffset() const {
-  return {{NAMESPACE | join("::")}}::DomainOffset;
-}
-
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCoarsestMeshSize() const {
-  return realCoarsestMeshSize;
-}
-
-
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCoarsestMeshLevel() const {
-  return coarsestMeshLevel;
-}
-
-
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaximumAdaptiveMeshLevel() const {
-  return maxAdaptiveMeshLevel;
-}
-
-
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaximumAdaptiveMeshDepth() const {
-  return (maxAdaptiveMeshLevel- coarsestMeshLevel);
 }
 
 

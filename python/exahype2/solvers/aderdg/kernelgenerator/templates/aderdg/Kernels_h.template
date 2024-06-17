@@ -163,12 +163,6 @@ namespace {{namespaceName}} {
     const double dt
   );
   
-  void surfaceIntegral( 
-    double* __restrict__ lduh, 
-    const double* __restrict__ const lFhbnd, 
-    const double inverseDx //Assume dx[0] == dx[1] == dx[2]
-  );
-  
   template <typename solutionType, typename cCompType>
   void faceIntegral(
     solutionType *lduh, 
@@ -178,16 +172,7 @@ namespace {{namespaceName}} {
     const double inverseDxDirection
   );
 
-  void solutionAdjustment(
-    {{solverName}}& solver,
-    double* luh,
-    const double* const center,
-    const double dx, //Assume dx[0] == dx[1] == dx[2]
-    const double t,
-    const double dt
-  );
-
-template <typename cCompType>
+  template <typename cCompType>
   void riemannSolver( 
     {{solverName}}& solver,
     cCompType* __restrict__ FL,
@@ -201,28 +186,28 @@ template <typename cCompType>
     const int direction
   );
 
-  double stableTimeStepSize(
-    {{solverName}}& solver,
-    const double* __restrict__ const luh,
+  double maxScaledEigenvalue(
+    {{solverName}}&                              solver,
+    const {{correctorStoragePrecision}}* const   luh,
     const tarch::la::Vector<Dimensions, double>& cellCentre,
     const tarch::la::Vector<Dimensions, double>& dx,
-    const double t,
-    const double last_dt
+    const double                                 t,
+    const double                                 dt
   );
 
-  template <typename cCompType>
-  void boundaryConditions(
-    {{solverName}}& solver,
-    cCompType* fluxOut, 
-    cCompType* stateOut, 
-    const cCompType* const fluxIn, 
-    const cCompType* const stateIn, 
-    const cCompType* const gradStateIn, 
-    const tarch::la::Vector<Dimensions,double>& cellCentre,
-    const tarch::la::Vector<Dimensions,double>& cellSize,
-    const double t,const double dt, 
-    const int faceIndex, 
-    const int normalNonZero 
+  void computeCellErrorIntegral(
+    std::function< void(
+      const tarch::la::Vector<Dimensions,double>&   position,
+      const double                                  t,
+      const double                                  dt,
+      double*                                       sol
+    ) >   exactSolution,
+    const tarch::la::Vector<Dimensions,double>&  cellCentre,
+    const tarch::la::Vector<Dimensions,double>&  cellSize,
+    double                                       t,
+    double                                       dt,
+    {{correctorStoragePrecision}}* __restrict__   Q,
+    double                                       errors[3]
   );
 
 {% if usePointSources %}
@@ -232,44 +217,6 @@ template <typename cCompType>
     const tarch::la::Vector<Dimensions,double>& dx
   );
 {% endif %}
-  
-//AMR Routines
-//------------
-
-  void faceUnknownsProlongation(
-    double* __restrict__ lQhbndFine,
-    double* __restrict__ lFhbndFine,
-    const double* const __restrict__ lQhbndCoarse,
-    const double* const __restrict__ lFhbndCoarse,
-    const int coarseGridLevel,
-    const int fineGridLevel,
-    const int* const subfaceIndex
-  );
-  
-  // used by faceIntegral, only __restrict__ the flux on the face
-  void faceFlux__restrict__ion(
-    double* __restrict__ lFhbndCoarse,
-    const double* const __restrict__ lFhbndFine,
-    const int* const subfaceIndex,
-    const int levelDelta
-  );
-
-  void volumeUnknownsProlongation(
-    double* __restrict__ luhFine,
-    const double* const __restrict__ luhCoarse,
-    const int coarseGridLevel,
-    const int fineGridLevel,
-    const int* const subcellIndex
-  );
-  
-  void volumeUnknowns__restrict__ion(
-    double* __restrict__ luhCoarse,
-    const double* const __restrict__ luhFine,
-    const int coarseGridLevel,
-    const int fineGridLevel,
-    const int* const subcellIndex
-  );
-
   
 {% for namespaceName in codeNamespaceList %}
 }

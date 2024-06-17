@@ -893,17 +893,10 @@ class ADERDG(object):
             + "/fusedSpaceTimePredictorVolumeIntegral.cpp",
             generated=True,
         )
-        if self._point_sources_implementation != PDETerms.None_Implementation:
-            output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/"
-                + is_linear
-                + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp",
-                generated=True,
-            )
-            output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp",
-                generated=True,
-            )
+        output.makefile.add_cpp_file(
+            "generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp",
+            generated=True,
+        )
         output.makefile.add_cpp_file(
             "generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp",
             generated=True,
@@ -917,10 +910,24 @@ class ADERDG(object):
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/boundaryConditions.cpp",
+            "generated/kernels/aderdg/" + is_linear + "/maxScaledEigenvalue.cpp",
             generated=True,
         )
-
+        output.makefile.add_cpp_file(
+            "generated/kernels/aderdg/" + is_linear + "/cellErrorIntegral.cpp",
+            generated=True,
+        )
+        if self._point_sources_implementation != PDETerms.None_Implementation:
+            output.makefile.add_cpp_file(
+                "generated/kernels/aderdg/"
+                + is_linear
+                + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp",
+                generated=True,
+            )
+            output.makefile.add_cpp_file(
+                "generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp",
+                generated=True,
+            )
         if self._use_libxsmm:
             output.makefile.add_cpp_file(
                 "generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp",

@@ -7,7 +7,7 @@ from exahype2.solvers.PDETerms import PDETerms
 import jinja2
 
 
-class SingleSweep(ADERDG):
+class SeparateSweeps(ADERDG):
     def __init__(
         self,
         name,
@@ -18,7 +18,7 @@ class SingleSweep(ADERDG):
         max_cell_h,
         plot_grid_properties=False,
     ):
-        super(SingleSweep, self).__init__(
+        super(SeparateSweeps, self).__init__(
             name,
             order,
             unknowns,
@@ -28,13 +28,13 @@ class SingleSweep(ADERDG):
             plot_grid_properties,
         )
 
-        self._solver_template_file_class_name = "SingleSweep"
+        self._solver_template_file_class_name = "SeparateSweeps"
 
         self.create_action_sets()
         self.create_data_structures()
 
     def create_data_structures(self):
-        super(SingleSweep, self).create_data_structures()
+        super(SeparateSweeps, self).create_data_structures()
 
         self.initialisation_sweep_guard = (
             "("
@@ -115,7 +115,7 @@ class SingleSweep(ADERDG):
         self._postprocess_updated_patch = ""
 
     def create_action_sets(self):
-        super(SingleSweep, self).create_action_sets()
+        super(SeparateSweeps, self).create_action_sets()
 
         self._action_set_prediction.guard = (
             self._store_cell_data_default_guard()
@@ -157,7 +157,7 @@ class SingleSweep(ADERDG):
 
     def get_user_action_set_includes(self):
         return (
-            super(SingleSweep, self).get_user_action_set_includes()
+            super(SeparateSweeps, self).get_user_action_set_includes()
             + """
 """
         )
@@ -165,7 +165,7 @@ class SingleSweep(ADERDG):
 
     def _store_boundary_data_default_guard(self):
         return super(
-            SingleSweep, self
+            SeparateSweeps, self
         )._store_boundary_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
             self.get_name_of_global_instance(), self._name
         )
@@ -173,7 +173,7 @@ class SingleSweep(ADERDG):
 
     def _clear_face_data_default_guard(self):
         return super(
-            SingleSweep, self
+            SeparateSweeps, self
         )._clear_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
@@ -181,7 +181,7 @@ class SingleSweep(ADERDG):
 
     def _restrict_face_data_default_guard(self):
         return super(
-            SingleSweep, self
+            SeparateSweeps, self
         )._restrict_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         )
@@ -189,7 +189,7 @@ class SingleSweep(ADERDG):
 
     def _interpolate_face_data_default_guard(self):
         return super(
-            SingleSweep,
+            SeparateSweeps,
             self
         )._interpolate_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(),

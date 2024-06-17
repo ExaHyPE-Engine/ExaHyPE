@@ -10,15 +10,13 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
-#include "exahype2/aderdg/solvers/ADERDGSolver.h"
-
+#include "exahype2/Solver.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
 
-#include "exahype2/aderdg/kernels/Kernels.h"
 {% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
@@ -44,28 +42,8 @@
   }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::aderdg::ADERDGSolver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    /**
-     * This is a "fake" enum, i.e. we do not use it to distinguish different
-     * variants. Instead, we use it as a fix that allows us to "overload"
-     * operations:
-     *
-     * In C++ you cannot overload w.r.t. static. We however need functions which
-     * exist twice in ExaHyPE: Once as standard (virtual) member functions and
-     * once at static version which an be offloaded to a GPU as it does not
-     * have a state. Both function variants, in theory, have the same signature
-     * but if they had, a compiler could not distinguish them. So I use this
-     * enum for the GPU version.
-     *
-     * If you create a solver without GPU support, this enum will not be used.
-     * It is however always created. Once you write a GPU version and then compile
-     * without GPU support, you will thus still be able to have all your GPU
-     * function variants, and you don't have to work with ifdefs.
-     */
-    enum class Offloadable {
-      Yes
-    };
 
     enum class SolverState {
       GridConstruction,
@@ -110,24 +88,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
     
-    
-    /*
-     * Maximal mesh size that can actually be reached, this is the greatest size
-     * that can be reached by 3-subdivision of the domain size but is still lower
-     * than MaxAdmissibleCellH
-     * Minimal and maximal levels of the mesh, i.e upper and lower limits
-     * for how many times the mesh can be divided in order to keep it in
-     * between the maximal and minimal admissible cell sizes
-     */
-    double realCoarsestMeshSize;
-    double coarsestMeshLevel;
-    double maxAdaptiveMeshLevel;
-    
 
     /**
      * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
      */
+    /*
     {{BASIS_DECLARATIONS | indent(4,True) }}
+    */
 
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
@@ -339,20 +306,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
-    
-    /**
-     * Functions inherited from Solver.h in the aderdg context, these provide
-     * information to ExaSeis expansions
-     *
-     * @todo Should not be here
-     */    
-    virtual tarch::la::Vector<Dimensions,double> getDomainSize()    const override final;
-    virtual tarch::la::Vector<Dimensions,double> getDomainOffset()  const override final;
-    virtual double getCoarsestMeshSize()                            const override final;
-    virtual int getCoarsestMeshLevel()                              const override final;
-    virtual int getMaximumAdaptiveMeshLevel()                       const override final;
-    virtual int getMaximumAdaptiveMeshDepth()                       const override final;
-    
 
     /**
      * Update the global solver state, i.e. inform the solver about some

@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.ADERDG import PrecisionType
-from exahype2.solvers.aderdg.SingleSweep import SingleSweep
+from exahype2.solvers.aderdg.SeparateSweeps import SeparateSweeps
 
 from exahype2.solvers.aderdg.kernels import create_abstract_solver_declarations
 from exahype2.solvers.aderdg.kernels import create_abstract_solver_definitions
@@ -35,7 +35,7 @@ from exahype2.solvers.aderdg.rusanov.kernels import (
 )
 
 
-class GlobalAdaptiveTimeStep(SingleSweep):
+class GlobalAdaptiveTimeStep(SeparateSweeps):
     def __init__(
         self,
         name,

@@ -25,7 +25,6 @@
 
 from .abstractModelBaseClass import AbstractModelBaseClass
 
-
 class DeltaDistributionModel(AbstractModelBaseClass):
 
     def generateCode(self):

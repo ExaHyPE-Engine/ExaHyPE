@@ -173,31 +173,6 @@ class Controller:
                 }
             )
             self.config["computePrecisions"] = ["double"]
-        elif self.config["kernelType"] == "fv":
-            self.config.update(
-                {
-                    "nVar": args["numberOfVariables"],
-                    "nPar": args["numberOfParameters"],
-                    "nData": args["numberOfVariables"] + args["numberOfParameters"],
-                    "nDof": args["patchSize"],
-                    "nDim": args["dimension"],
-                    "useFlux": args["useFlux"] or args["useViscousFlux"],
-                    "useViscousFlux": args["useViscousFlux"],
-                    "useNCP": args["useNCP"],
-                    "useSource": args["useSource"] or args["useFusedSource"],
-                    "useFusedSource": args["useFusedSource"],
-                    "useRobustDiagLim": args["useRobustDiagLim"],
-                    "nPointSources": args["usePointSources"],
-                    "usePointSources": args["usePointSources"] >= 0,
-                    "useMaterialParam": args["useMaterialParam"],
-                    "finiteVolumesType": args["finiteVolumesType"],
-                    "ghostLayerWidth": 2,  # hard coded musclhancock value
-                    "slopeLimiter": args["slopeLimiter"],
-                }
-            )
-            self.config["useSourceOrNCP"] = (
-                self.config["useSource"] or self.config["useNCP"]
-            )
 
         self.validateConfig(Configuration.simdWidth.keys())
         self.config["vectSize"] = Configuration.simdWidth[
@@ -248,9 +223,6 @@ class Controller:
                 "One of the chosen storage precisions was not a valid choice, valid choices are: "
                 + ", ".join(Configuration.validPrecisions.keys())
               )
-        if self.config["kernelType"] == "fv":
-            if self.config["finiteVolumesType"] != "musclhancock":
-                raise ValueError("Only musclhancock scheme is supported")
 
     def printConfig(self):
         print(self.config)
@@ -279,12 +251,6 @@ class Controller:
             context["useVectPDEs"] = (
                 context["useFluxVect"] or True
             )  # TODO JMG add other vect
-        elif self.config["kernelType"] == "fv":
-            context["ghostLayerWidth3D"] = (
-                0 if context["nDim"] == 2 else context["ghostLayerWidth"]
-            )
-            context["nDofG"] = context["ghostLayerWidth"] * 2 + context["nDof"]
-            context["nDofG3D"] = 1 if context["nDim"] == 2 else context["nDofG"]
         return context
 
     def getSizeWithPadding(self, sizeWithoutPadding):
@@ -330,75 +296,22 @@ class Controller:
             )
 
         if self.config["kernelType"] == "aderdg":
-            self.runModel("converter", converterModel.ConverterModel(self.baseContext))
-            self.runModel(
-                "amrRoutines", amrRoutinesModel.AMRRoutinesModel(self.baseContext, self)
-            )
-            self.runModel(
-                "deltaDistribution",
-                deltaDistributionModel.DeltaDistributionModel(self.baseContext),
-            )
-            self.runModel(
-                "faceIntegral", faceIntegralModel.FaceIntegralModel(self.baseContext)
-            )
             self.runModel(
                 "fusedSTPVI",
                 fusedSpaceTimePredictorVolumeIntegralModel.FusedSpaceTimePredictorVolumeIntegralModel(
                     self.baseContext, self
                 ),
             )
-            self.runModel(
-                "matrixUtils", matrixUtilsModel.MatrixUtilsModel(self.baseContext)
-            )
             self.runModel("dgMatrix", dgMatrixModel.DGMatrixModel(self.baseContext))
-            self.runModel(
-                "solutionUpdate",
-                solutionUpdateModel.SolutionUpdateModel(self.baseContext),
-            )
-            self.runModel(
-                "surfaceIntegral",
-                surfaceIntegralModel.SurfaceIntegralModel(self.baseContext),
-            )
+            self.runModel("riemannSolver", riemannModel.RiemannModel(self.baseContext))
+            self.runModel("matrixUtils", matrixUtilsModel.MatrixUtilsModel(self.baseContext))
+            self.runModel("faceIntegral", faceIntegralModel.FaceIntegralModel(self.baseContext))
+            self.runModel("cellErrorIntegral", cellErrorIntegral.CellErrorIntegral(self.baseContext))
+            self.runModel("solutionUpdate", solutionUpdateModel.SolutionUpdateModel(self.baseContext))
+            self.runModel("maxScaledEigenvalue", maxScaledEigenvalue.MaxScaledEigenvalue(self.baseContext))
 
         if self.config["kernelType"] == "limiter":
             self.runModel("limiter", limiterModel.LimiterModel(self.baseContext, self))
-
-        if self.config["kernelType"] == "fv":
-            self.runModel(
-                "ghostLayerFilling",
-                fvGhostLayerFillingModel.FVGhostLayerFillingModel(self.baseContext),
-            )
-            self.runModel(
-                "ghostLayerFillingAtBoundary",
-                fvGhostLayerFillingAtBoundaryModel.FVGhostLayerFillingAtBoundaryModel(
-                    self.baseContext
-                ),
-            )
-            self.runModel(
-                "boundaryLayerExtraction",
-                fvBoundaryLayerExtractionModel.FVBoundaryLayerExtractionModel(
-                    self.baseContext
-                ),
-            )
-            self.runModel(
-                "solutionUpdate",
-                fvSolutionUpdateModel.FVSolutionUpdateModel(self.baseContext, self),
-            )
-
-        if self.config["kernelType"] in ["aderdg", "fv"]:
-            self.runModel(
-                "boundaryConditions",
-                boundaryConditionsModel.BoundaryConditionsModel(self.baseContext),
-            )
-            self.runModel(
-                "stableTimeStepSize",
-                stableTimeStepSizeModel.StableTimeStepSizeModel(self.baseContext),
-            )
-            self.runModel(
-                "adjustSolution",
-                adjustSolutionModel.AdjustSolutionModel(self.baseContext),
-            )
-            self.runModel("riemannSolver", riemannModel.RiemannModel(self.baseContext))
 
         ## must be run only after all gemm's configurations have been generated
         gemmsContext = copy.copy(self.baseContext)

@@ -32,9 +32,8 @@ class AbstractAderDGActionSet( ActionSet ):
   def user_should_modify_template(self):
     return False
 
-#TODO: duplicate DGUtils into aderdg?
   def get_includes(self):
     return """
 #include <functional>
-#include "exahype2/aderdg/kernels/AderUtils.h"
+#include "exahype2/dg/DGUtils.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_action_set_includes() 

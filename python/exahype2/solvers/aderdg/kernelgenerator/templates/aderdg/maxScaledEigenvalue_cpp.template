@@ -1,0 +1,62 @@
+#include "exahype2/dg/DGUtils.h"
+#include "peano4/utils/Loop.h"
+#include "{{pathToOptKernel}}/Kernels.h"
+#include "{{pathToOptKernel}}/Quadrature.h"
+
+#include "{{solverHeader}}"
+
+double {{codeNamespace}}::maxScaledEigenvalue(
+  {{solverName}}&                              solver,
+  const {{correctorStoragePrecision}}* const   luh,
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& dx,
+  const double                                 t,
+  const double                                 dt
+) {
+
+  const double invDx[Dimensions] = {1.0 / dx[0], 1.0 / dx[1]
+{% if nDim == 3 %}
+  ,1.0 / dx[2]
+{% endif %}
+  };
+
+  double maxEigenvalue = 0.0;
+  for (int i = 0; i < {{nDof}}; i++) {
+    for (int j = 0; j < {{nDof}}; j++) {
+{% if nDim == 3 %}
+      for (int k = 0; k < {{nDof}}; k++) {
+        int                                      linearisedIndex = i + {{nDof}} * j + {{nDof}} * {{nDof}} * k;
+        const tarch::la::Vector<Dimensions, int> index           = {i, j, k};
+{% else %}
+        int                                      linearisedIndex = i + {{nDof}} * j;
+        const tarch::la::Vector<Dimensions, int> index           = {i, j};
+{% endif %}
+
+        double denominator = 0.0;
+        for (int d = 0; d < Dimensions; d++) {
+          denominator
+            += solver.{{solverName}}::maxEigenvalue(
+                 &luh[linearisedIndex * {{nDataPad}}],
+                 ::exahype2::dg::getQuadraturePoint(
+                   cellCentre,
+                   dx,
+                   index, // index
+                   {{nDof}}-1,
+                   Quadrature<{{correctorStoragePrecision}}>::nodes
+                 ), // faceCentre
+                 dx,
+                 t,
+                 dt,
+                 d
+               )
+               * invDx[d];
+        }
+
+        maxEigenvalue = std::max(maxEigenvalue, denominator);
+{% if nDim == 3 %}
+      }
+{% endif %}
+    }
+  }
+  return maxEigenvalue;
+}

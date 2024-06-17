@@ -23,8 +23,8 @@ class InitialCondition(AbstractAderDGActionSet):
     dfor( index, {{ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
-        ::exahype2::aderdg::getQuadraturePoint(
-          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+        ::exahype2::dg::getQuadraturePoint(
+          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, generated::kernels::AderDG::{{LINEARITY}}::Quadrature<double>::nodes
         ),
         marker.h(),
         index,
@@ -33,7 +33,7 @@ class InitialCondition(AbstractAderDGActionSet):
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
     {% endif %}
-    
+
     {% if USE_POINT_SOURCE!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
     {% endif %}
@@ -75,3 +75,10 @@ class InitialCondition(AbstractAderDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+  
+  def get_includes(self):
+    return (
+      super(InitialCondition, self).get_includes() + """
+#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
+#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+""")
