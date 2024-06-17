@@ -1,3 +1,4 @@
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/mpi/Rank.h"

@@ -18,7 +18,8 @@ import exahype2.solvers.fv.rusanov.kernels
 from enum import Enum
 
 # See comments in README.dox
-# export PYTHONPATH=$PYTHONPATH:~/Peano/applications/exahype2/ccz4
+# export PYTHONPATH=../../../../python
+# export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import (
@@ -143,7 +144,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         return (
             """("""
             + super(Limiter, self)._store_cell_data_default_guard()
-            + " and repositories::InstanceOf"
+            + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
@@ -152,7 +153,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         return (
             """("""
             + super(Limiter, self)._load_cell_data_default_guard()
-            + " and repositories::InstanceOf"
+            + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
@@ -161,25 +162,25 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         return (
             """("""
             + super(Limiter,self)._provide_cell_data_to_compute_kernels_default_guard()
-            + " and repositories::InstanceOf"
+            + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
       
     def _provide_face_data_to_compute_kernels_default_guard(self):
-        return "{} and repositories::InstanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
+        return "{} and repositories::instanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
                 super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard(),
                 self._name
             )
         
     def _store_face_data_default_guard(self):
-        return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+        return "({} and repositories::instanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
                 super(Limiter, self)._store_face_data_default_guard(),
                 self._name
             )
 
     def _load_face_data_default_guard(self):
-        return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+        return "({} and repositories::instanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
                 super(Limiter, self)._load_face_data_default_guard(),
                 self._name
             )
@@ -202,10 +203,10 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         """
         super(Limiter, self).create_action_sets()
 
-        self._action_set_update_cell.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
+        self._action_set_update_cell.guard = "({} and repositories::instanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
             self._action_set_update_cell.guard, self._name
         )
-        self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
+        self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::instanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
             self._action_set_merge_enclave_task_outcome.guard, self._name
         )
 
@@ -286,9 +287,9 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
 
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 self._action_set_update_cell.additional_skeleton_guard = " " "(
-          repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
           and
-          not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+          not repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
         )
         " " "
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -355,30 +356,30 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(
             self,
             """
-const int sizeOfPatch = (repositories::InstanceOf"""
+const int sizeOfPatch = (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
+            + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables);
 const int sizeOfFace = 2
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-  * (repositories::InstanceOf"""
+  * (repositories::instanceOf"""
             + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
+            + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables);
   
@@ -391,17 +392,17 @@ double* dummyFace4 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
 double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 
 ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
   3, // halo in FD4
   1, // halo in FV
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
+            + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
   oldQWithHalo, 
@@ -410,43 +411,43 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
 );
 
 ::toolbox::blockstructured::projectPatchHaloOntoFaces(
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
   1,      // int    haloSize,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfUnknowns,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
   interpolatedFVDataWithHalo,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(0).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(1).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(2).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(3).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
             + self._name_without_FD4_extension
             + """_FVQNew(4).value,
-  repositories::InstanceOf"""
+  repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
             + self._name_without_FD4_extension
@@ -468,10 +469,10 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             + self._action_set_preprocess_solution.guard
             + """
                                                   and 
-                                                  repositories::InstanceOf"""
+                                                  repositories::instanceOf"""
             + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
                                                   and
-                                                  not repositories::InstanceOf"""
+                                                  not repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
                                                   and
@@ -483,28 +484,28 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             self,
             """
 if (
-  repositories::InstanceOf{0}_FV.isCellOverlappingWithBHImpactArea(marker) 
+  repositories::instanceOf{0}_FV.isCellOverlappingWithBHImpactArea(marker) 
   and
   not marker.willBeRefined()
 ) {{
   logTraceIn( "touchCellFirstTime(...)-inject" );
 
-  repositories::InstanceOf{0}_FV.incNumberOfPatches();
+  repositories::instanceOf{0}_FV.incNumberOfPatches();
   
-  //if ( repositories::InstanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
+  //if ( repositories::instanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
-      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      repositories::instanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::instanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::instanceOf{0}_FV.NumberOfUnknowns + repositories::instanceOf{0}_FV.NumberOfAuxiliaryVariables,
       fineGridCell{0}_FVQ.value,
       fineGridCell{0}_FD4Q.value
     );
   /*}}
   else {{
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(
-      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
-      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      repositories::instanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::instanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::instanceOf{0}_FV.NumberOfUnknowns + repositories::instanceOf{0}_FV.NumberOfAuxiliaryVariables,
       fineGridCell{0}_FVQ.value,
       fineGridCell{0}_FD4Q.value
     );
@@ -553,6 +554,15 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
         ## For compatibility. Name makes no sense. But the value
         ## guides the AMR pattern
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+
+        self.set_implementation(
+            initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
+        )
+
+        self.add_all_solver_constants()
+        update_solver_parameters_for_single_black_hole(self)
         
 
     def create_action_sets(self):
@@ -567,9 +577,9 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 self._action_set_update_cell.additional_skeleton_guard = " " "(
-          repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
           and
-          not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+          not repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
         )
         " " "
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -579,7 +589,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
                 solver.
 
         """
-        super(Solver, self).create_action_sets()
+        super(FD4SolverWithoutLimiter, self).create_action_sets()
 
         self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = (
             """
@@ -632,6 +642,101 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
       );
       """
         )
+
+
+class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
+    """!
+
+    A finite volume solver
+    
+    This solver is not appropriate to simulate black holes as a stand-alone 
+    solver, as it is way too diffusive. If you use it without another scheme, 
+    you typically see the black hole disappear after a brief period. So we 
+    have it in here merely for performance tests.
+    
+    """
+
+    def __init__(self, 
+                 name, 
+                 patch_size,
+                 min_cell_size, 
+                 max_cell_size, 
+                 use_heap_storage=False,
+                 ):
+        """!
+        
+        Construct the Finite Volume solver
+        
+        @param patch_size: Integer
+           Defines how big the individual patches are. If you pass in 10, each
+           Finite Volume patch will have the dimensions 10x10x10.
+        @param min_cell_size: Float
+           This parameter refers to the cell size, i.e. the size of a whole 
+           patch. We use this one here, to make the signature the same as for 
+           the FD and DG solver variants. The superclass constructor argues 
+           over finite volume sizes, and we hence have to recalibrate this 
+           parameter with patch_size.
+        @param use_heap_storage: Boolean
+           Please see superclass. If this is set to false, it does not(!) mean
+           that we do not(!) store data on the heap. It merely says we use 
+           different variants how to store data on the heap. See 
+           CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking.
+        
+        """
+
+        super(FVSolver, self).__init__(
+            name=name + "_FV",
+            patch_size=patch_size,
+            min_volume_h=min_cell_size / patch_size,
+            max_volume_h=max_cell_size / patch_size,
+            use_heap_storage=False,
+            pde_terms_without_state=True
+        )
+
+        self._user_action_set_includes += """
+#include "toolbox/blockstructured/Projection.h"        
+#include "toolbox/blockstructured/Restriction.h"        
+#include "toolbox/blockstructured/Interpolation.h"        
+#include "toolbox/blockstructured/Copy.h"        
+"""
+        ## For compatibility. Name makes no sense. But the value
+        ## guides the AMR pattern
+        self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+        
+        self.set_implementation(
+            initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
+        )
+
+        self.add_all_solver_constants()
+        update_solver_parameters_for_single_black_hole(self)
+
+    def create_action_sets(self):
+        """!
+
+                Tailor action set behaviour
+
+                We first make a few additional cells skeleton cells. The rationale
+                behind additional skeletons is given in the @ref benchmarks_exahype2_ccz4_single_black_hole "generic overview".
+                Given the first remark there on FD4-FV coupling, one would be tempted
+                to use the predicate
+
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                self._action_set_update_cell.additional_skeleton_guard = " " "(
+          repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker)
+          and
+          not repositories::instanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker)
+        )
+        " " "
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                Once we study the other items (notably the fourth), we see that it is
+                reasonable to make all the overlap region a skeleton within the FD4
+                solver.
+
+        """
+        super(FVSolver, self).create_action_sets()
 
 
 

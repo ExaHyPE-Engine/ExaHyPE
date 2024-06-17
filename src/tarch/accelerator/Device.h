@@ -7,7 +7,6 @@
 #include <string>
 
 #include "tarch/logging/Log.h"
-#include "accelerator.h"
 
 namespace tarch {
   namespace accelerator{

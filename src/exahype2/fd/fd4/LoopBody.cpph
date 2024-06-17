@@ -72,28 +72,28 @@ namespace {
                             gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,54) ];
       }
       // Q[26+normal] is \partial_{normal}B[normal][x] = \partial_{normal}\partial_{normal}\beta^x
-      else if (unknown==26+normal) {
-        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal-9) ] +
-                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal-9) ] + 
-                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal-9) ] + 
-                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal-9) ] +
-                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal-9) ];
+      else if (unknown==26+normal*3) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal*3-9) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal*3-9) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal*3-9) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal*3-9) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal*3-9) ];
       }
-      // Q[29+normal] is \partial_{normal}B[normal][y] = \partial_{normal}\partial_{normal}\beta^y
-      else if (unknown==29+normal) {
-        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal-11) ] +
-                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal-11) ] + 
-                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal-11) ] + 
-                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal-11) ] +
-                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal-11) ];
+      // Q[27+normal*3] is \partial_{normal}B[normal][y] = \partial_{normal}\partial_{normal}\beta^y
+      else if (unknown==27+normal*3) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal*3-9) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal*3-9) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal*3-9) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal*3-9) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal*3-9) ];
       }
-      // Q[32+normal] is \partial_{normal}B[normal][z] = \partial_{normal}\partial_{normal}\beta^z
-      else if (unknown==32+normal) {
-        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal-13) ] +
-                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal-13) ] + 
-                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal-13) ] + 
-                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal-13) ] +
-                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal-13) ];
+      // Q[28+normal*3] is \partial_{normal}B[normal][z] = \partial_{normal}\partial_{normal}\beta^z
+      else if (unknown==28+normal*3) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal*3-9) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal*3-9) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal*3-9) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal*3-9) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal*3-9) ];
       }
       // Q[35+6*normal] to Q[40+6*normal] are \partial_{normal}DD[normal][i][j] = \partial_{normal}\partial_{normal}\frac{1}{2}\tilde{gamma}_{ij}
       // note that the coefficients are multiplied by 0.5 because of the 1/2 factor
@@ -209,6 +209,7 @@ namespace {
     double*                                   QDifferentialSourceTermGathered
   ) {
     double* AdvectionDeltaQ = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
+    double AdvectionDeltaTem;
 
     tarch::la::Vector<Dimensions, int> centralVolume        = volumeIndex;
     tarch::la::Vector<Dimensions, int> leftAdjacentVolume1  = volumeIndex;
@@ -260,7 +261,37 @@ namespace {
                                                     * AdvectionDeltaQ[unknown];
       }
     }
-
+/*
+    for (int unknown = 20; unknown < 23; unknown++) {
+      if (QIn[QInEnumerator(patchIndex, centralVolume, 17 + normal)] > 0) {
+        AdvectionDeltaQ[unknown] = (-3.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, unknown)]
+                                     + (-10.0 / 12.0) * QIn[QInEnumerator(patchIndex, centralVolume, unknown)]
+                                     + (18.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)]
+                                     + (-6.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, unknown)]
+                                     + (1.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume3, unknown)];
+        AdvectionDeltaTem = (-3.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 13+normal)]
+                                     + (-10.0 / 12.0) * QIn[QInEnumerator(patchIndex, centralVolume, 13+normal)]
+                                     + (18.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, 13+normal)]
+                                     + (-6.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, 13+normal)]
+                                     + (1.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume3, 13+normal)];
+      } else{
+        AdvectionDeltaQ[unknown] = (3.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)]
+                                     + (10.0 / 12.0) * QIn[QInEnumerator(patchIndex, centralVolume, unknown)]
+                                     + (-18.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, unknown)]
+                                     + (6.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, unknown)]
+                                     + (-1.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume3, unknown)];
+        AdvectionDeltaTem = (3.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, 13+normal)]
+                                     + (10.0 / 12.0) * QIn[QInEnumerator(patchIndex, centralVolume, 13+normal)]
+                                     + (-18.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 13+normal)]
+                                     + (6.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, 13+normal)]
+                                     + (-1.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume3, 13+normal)];
+      }
+      QDifferentialSourceTermGathered[unknown] += QIn[QInEnumerator(patchIndex, centralVolume, 17 + normal)]
+                                                    * AdvectionDeltaQ[unknown];
+      QDifferentialSourceTermGathered[unknown] -= QIn[QInEnumerator(patchIndex, centralVolume, 17 + normal)]
+                                                    * AdvectionDeltaTem;                                            
+    }
+*/
     delete[] AdvectionDeltaQ;
   }
 } // namespace

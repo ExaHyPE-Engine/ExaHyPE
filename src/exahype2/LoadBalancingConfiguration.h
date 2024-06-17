@@ -24,6 +24,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
     const int      _minSizeOfTree;
     const int      _maxNumberOfTreesThroughoutInitialDistribution;
     const int      _maxNumberOfTrees;
+    const peano4::SplitInstruction::Mode _mode;
 
     /**
      * Return how many trees to use if value is picked by user
@@ -75,7 +76,8 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
       double loadBalancingQuality=0.9,
       int    minSizeOfTree = 0,
       int    maxNumberOfTreesThroughoutInitialDistribution=UseNumberOfThreads,
-      int    maxNumberOfTrees=UseTwiceTheNumberOfThreads
+      int    maxNumberOfTrees=UseTwiceTheNumberOfThreads,
+      peano4::SplitInstruction::Mode mode = peano4::SplitInstruction::Mode::BottomUp
     );
 
     virtual ~LoadBalancingConfiguration() = default;
@@ -93,6 +95,8 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
     virtual int getMinTreeSize(toolbox::loadbalancing::State state) override;
 
     virtual std::string toString() const override;
+
+    virtual peano4::SplitInstruction::Mode getMode(toolbox::loadbalancing::State state) override;
 };
 
 
