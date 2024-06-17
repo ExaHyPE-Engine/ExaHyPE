@@ -18,9 +18,6 @@ ExaHyPE2Sources = \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
-  aderdg/kernels/Basis/GaussLegendreBasis.cpp \
-  aderdg/kernels/Basis/GaussLobattoBasis.cpp \
-  aderdg/kernels/AderUtils.cpp \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
