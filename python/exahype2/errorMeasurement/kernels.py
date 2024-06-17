@@ -113,7 +113,7 @@ def create_postprocessing_kernel_for_ader_error_measurement():
 
     double errors[3];
 
-    ::exahype2::aderdg::computeCellErrorIntegral(
+    generated::kernels::AderDG::{{LINEARITY}}::computeCellErrorIntegral(
       [&](
         const tarch::la::Vector<Dimensions,double>&   x,
         const double                                  t,
@@ -128,11 +128,6 @@ def create_postprocessing_kernel_for_ader_error_measurement():
       marker.h(),
       fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
-      repositories::{{SOLVER_INSTANCE}}.Order,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.NumberOfUnknowns,
-      repositories::{{SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables,
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       errors
     );
