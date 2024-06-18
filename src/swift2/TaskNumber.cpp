@@ -9,16 +9,16 @@ const swift2::TaskNumber swift2::TaskNumber::Max{
   std::numeric_limits<int>::max(), swift2::TaskNumber::TaskAssociation::NumberOfEntries};
 
 
-const swift2::TaskNumber swift2::TaskNumber::NoDependencies{tarch::multicore::NoDependencies, TaskAssociation::TouchVertexFirstTime};
+const swift2::TaskNumber swift2::TaskNumber::NoOutDependencies{tarch::multicore::NoOutDependencies, TaskAssociation::TouchVertexFirstTime};
 
 
 swift2::TaskNumber::TaskNumber(int number0, TaskAssociation number1):
   _taskCounter(number0),
   _taskAssociation(number1) {
-  if (_taskCounter == ::tarch::multicore::NoDependencies) {
-    *this = NoDependencies;
+  if (_taskCounter == ::tarch::multicore::NoOutDependencies) {
+    *this = NoOutDependencies;
   } else if (number0 != std::numeric_limits<int>::max()) {
-    assertion1(number0 >= 0 or number0 == tarch::multicore::NoDependencies, toString());
+    assertion1(number0 >= 0 or number0 == tarch::multicore::NoOutDependencies, toString());
     assertion1(number1 != TaskAssociation::NumberOfEntries, toString());
     assertion1(number0 <= Max._taskCounter, toString());
   }
@@ -50,7 +50,7 @@ bool operator!=(const swift2::TaskNumber& lhs, const swift2::TaskNumber& rhs) {
 
 
 std::string swift2::TaskNumber::toString() const {
-  if (_taskCounter == tarch::multicore::NoDependencies) {
+  if (_taskCounter == tarch::multicore::NoOutDependencies) {
     return "no-dep";
   } else {
     std::string result = "(" + std::to_string(_taskCounter) + ",";
@@ -75,8 +75,8 @@ std::string swift2::TaskNumber::toString() const {
 
 
 tarch::multicore::TaskNumber swift2::TaskNumber::flatten() const {
-  if (_taskCounter == tarch::multicore::NoDependencies) {
-    return tarch::multicore::NoDependencies;
+  if (_taskCounter == tarch::multicore::NoOutDependencies) {
+    return tarch::multicore::NoOutDependencies;
   } else {
     return _taskCounter * static_cast<int>(Max._taskAssociation)
            + static_cast<int>(_taskAssociation);
@@ -107,7 +107,7 @@ int swift2::flatten(const TaskNumber& number) { return number.flatten(); }
 std::set<int> swift2::flatten(const std::set<TaskNumber>& numbers) {
   std::set<int> result;
   for (auto& p : numbers) {
-    if (p != swift2::TaskNumber::NoDependencies) {
+    if (p != swift2::TaskNumber::NoOutDependencies) {
       result.insert(p.flatten());
     }
   }

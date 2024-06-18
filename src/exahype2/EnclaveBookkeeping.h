@@ -24,11 +24,6 @@ namespace exahype2 {
  * The enclave bookkeeping is basically a big map which stores results of 
  * enclave tasks.
  * 
- *
-@todo Das Ergebnis muss lokal gepuffert werden im bookkeeping.
-      Ich brauche zwei Adapter: einen fuer primaer, einen fuer sekundaer. Sonst rekonstruier ich dei Loesung jedes Mal (ist teuer)
-      Die Adapter muessen alle das gleiche Bookkeeping verwenden -> singleton
-      Ein Task muss sich, sobald er zuende ist, in den Bookkeeping einreihen, d.h. hier gibt es zwei Datenstrukturen: Semaphoren (set) + Tasks (map)
  */
 class exahype2::EnclaveBookkeeping {
   public:
@@ -44,7 +39,6 @@ class exahype2::EnclaveBookkeeping {
     static tarch::logging::Log          _log;
 
     const static std::string MemoryAllocationsInLookupTableIdentifier;
-    const static std::string LookupMissesIdentifier;
 
     /**
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask

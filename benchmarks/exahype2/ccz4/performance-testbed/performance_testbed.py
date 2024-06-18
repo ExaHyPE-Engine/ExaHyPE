@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4","phy-debug", "PT"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  default="fd4-rk1-adaptive", choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  default="fd4-rk1-adaptive", choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave"], help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
     parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",      dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
@@ -462,13 +462,14 @@ if __name__ == "__main__":
     else:
       pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
-
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,500,16))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95,1000,16))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.98,1000,16))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOutOnceGridStagnates_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
     #    "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
 
@@ -481,7 +482,7 @@ if __name__ == "__main__":
     if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge" or args.scenario=="flat":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
-      peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
+      peano4_project.output.makefile.add_linker_flag( "-lm -lgsl -lgslcblas" )
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp" )
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp" )
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp" )
@@ -492,7 +493,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp" )
       peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
     else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")        
+      raise Exception( "Scenario " + args.scenario + " is now unknown")
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
 
@@ -519,13 +520,13 @@ if __name__ == "__main__":
         )
 
       additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
-                                                                             is_enclave_solver = False,
+                                                                             is_enclave_solver = ("enclave" in args.implementation),
                                                                              ))
       additional_mesh_traversal.add_action_set( project_patch_onto_faces )
       additional_mesh_traversal.add_action_set( roll_over_projected_faces )
       additional_mesh_traversal.add_action_set( dynamic_AMR )
       
-      project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+      project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
 
       peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
