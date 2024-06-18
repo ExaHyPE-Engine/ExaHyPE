@@ -18,13 +18,12 @@ from abc import abstractmethod
 from enum import IntEnum
 import jinja2
 
+
 """
-used to have a central way for all of this class' descendants to differentiate between gauss-legendre
-and gauss-lobatto nodes, helps avoid having to constantly pass a string and ensure that this string is
+Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
+and Gauss-Lobatto nodes, helps avoid having to constantly pass a string and ensure that this string is
 the same everywhere.
 """
-
-
 class Polynomials(IntEnum):
     Gauss_Legendre = (0,)
     Gauss_Lobatto = 1
@@ -58,7 +57,6 @@ PrecisionType = {
 
 
 class ADERDG(object):
-    # initialization stores the key information about the solver and initializes a number of variables for later usage
     def __init__(
         self,
         name,
@@ -69,7 +67,6 @@ class ADERDG(object):
         max_cell_h,
         plot_grid_properties=False,
     ):
-        # name of the solver
         self._name = name
 
         """
@@ -79,7 +76,7 @@ class ADERDG(object):
         self._order = order
 
         """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
         auxiliary variables in the equation to be computed. Unknowns are variables that change over
         time whereas auxiliary variables can be space-dependent but don't vary over time.
         These can be specified either as simple ints or by a dictionary
@@ -109,7 +106,7 @@ class ADERDG(object):
             self._unknowns = unknowns
         else:
             raise Exception(
-                "not a valid type for parameter unknowns, needs to be int or dictionary"
+                "not a valid type for parameter unknowns, needs to be int or dictionary."
             )
 
         if type(auxiliary_variables) is dict:
@@ -122,7 +119,7 @@ class ADERDG(object):
             self._auxiliary_variables = auxiliary_variables
         else:
             raise Exception(
-                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
+                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
             )
 
         """
@@ -133,7 +130,7 @@ class ADERDG(object):
         self._max_cell_h = max_cell_h
         if min_cell_h > max_cell_h:
             raise Exception(
-                "Error: min_cell_h ("
+                "min_cell_h ("
                 + str(min_cell_h)
                 + ") is bigger than max_cell_h ("
                 + str(max_cell_h)

@@ -60,7 +60,7 @@ class SeparateSweeps(ADERDG):
             + ")"
         )
 
-        # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step
+        # Face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step.
         self._rhs_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
@@ -200,7 +200,7 @@ class SeparateSweeps(ADERDG):
     def set_preprocess_reconstructed_patch_kernel(self, kernel):
         """
         Most subclasses will redefine/overwrite this operation as they have
-        to incorporate the kernel into their generated stuff
+        to incorporate the kernel into their generated stuff.
         """
         self._preprocess_reconstructed_patch += kernel
         self.create_data_structures()
