@@ -39,7 +39,10 @@ double one_d = 1.0;
 
 #include "{{solverHeader}}"
 
-//NOTE lFi/gradQ swap nDim to lowest coordinate compared to generic
+
+{% if usePointSources %}
+{{basisFunctions}}
+{% endif %}
 
 
 /*
@@ -144,10 +147,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
               // Map point source location onto reference element
               const double* const x_ps = solver.pointSourceLocation[p];
-              const pCompType update =   solver.basisFunction[{{nDof-1}}][x]((x_ps[0] - volumeCentre[0]) * invDx + 0.5)
-                                    * solver.basisFunction[{{nDof-1}}][y]((x_ps[1] - volumeCentre[1]) * invDx + 0.5)
+              const pCompType update =   basisFunction[x]((x_ps[0] - volumeCentre[0]) * invDx + 0.5)
+                                    * basisFunction[y]((x_ps[1] - volumeCentre[1]) * invDx + 0.5)
 {% if nDim == 3 %}
-                                    * solver.basisFunction[{{nDof-1}}][z]((x_ps[2] - volumeCentre[2]) * invDx + 0.5)
+                                    * basisFunction[z]((x_ps[2] - volumeCentre[2]) * invDx + 0.5)
 {% endif %}
                                     * Quadrature<pCompType>::iweights3[(z*{{nDof3D}}+y)*{{nDof}}+x] * ivolume ; //division by weights product and volume
 

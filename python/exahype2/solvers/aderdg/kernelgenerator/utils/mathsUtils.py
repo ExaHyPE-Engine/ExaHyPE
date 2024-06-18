@@ -14,8 +14,10 @@
 # Released under the BSD 3 Open Source License.
 # For the full license text, see LICENSE.txt
 
-
+import mpmath as mp
 import math
+import sympy
+import re
 
 
 class MathsUtils:
@@ -436,6 +438,63 @@ class MathsUtils:
             for m in range(0, N): # DG basis
                 fineGridProjector1d[m][i] = phi_i[m]
         return fineGridProjector1d
+
+    @staticmethod
+    def LagrangBasisPoly(x,order,i,xi=None):
+        """
+        Returns the i-th Lagrange basis polynomial as symbolic expression.
+        Algorithm was obtained from https://wanglongqi.github.io/python/2014/03/24/implement-of-lagrange-polynomial/.
+
+        Parameters
+        ----------
+        x: symbolic variable
+        Symbolic variable.
+        order : number
+        Order of the Lagrange basis polynomial.
+        xi : number
+        The node the basis polynomial should pass through
+        i : number
+        The node we are interested in.
+        Returns
+        -------
+        Li: symbolic expression
+        The i-th Lagrange basis polynomial as symbolic expression.
+        """
+        if xi==None:
+            print("Please specify some quadrature nodes")
+            raise 
+        index = list(range(order+1))
+        index.pop(i)
+        symbolic_function=sympy.prod([(x-xi[j])/(xi[i]-xi[j]) for j in index])
+        return symbolic_function
+
+    @staticmethod
+    def assembleBasisFunction(quadNodes):
+        order = len(quadNodes)-1
+        mp2 = mp.mp.clone()
+        mp2.dps=64
+        x2 = quadNodes.copy()
+
+        for i, xi in enumerate(x2): 
+            x2[i] = mp2.mpf(xi)
+ 
+        res = ""
+
+        for m in range(0,order+1):
+            s=sympy.symbols('s')
+            res += "\ndouble basisFunction_"+str(m)+"(const double& s) {\n"
+            refphi = MathsUtils.LagrangBasisPoly(s,order,m,x2)
+
+            ret = "  return %s;" % sympy.simplify(refphi)
+            ret = re.sub(r"s\*\*([0-9]+)", r"pow(s,\1)", ret)
+            res += ret + "\n}\n"
+
+        res += "\ndouble (*basisFunction["+str(order+1)+"])(const double& s){\n"
+        for m in range(0,order):
+            res += "  basisFunction_"+str(m)+","
+        res += "  basisFunction_"+str(order)+"\n};\n"
+
+        return res
 
 
     #****************************************

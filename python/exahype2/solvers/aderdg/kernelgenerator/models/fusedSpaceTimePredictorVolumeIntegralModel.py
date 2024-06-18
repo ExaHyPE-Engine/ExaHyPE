@@ -27,7 +27,7 @@ from .abstractModelBaseClass import AbstractModelBaseClass
 
 import copy
 
-from ..utils import MatmulConfig
+from ..utils import MatmulConfig, MathsUtils
 
 
 class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
@@ -35,20 +35,26 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
     def generateCode(self):
         self.context["nVarMinusOne_seq"] = range(self.context["nVar"] - 1)
         self.context["nDataMinusOne_seq"] = range(self.context["nData"] - 1)
-        
+
+
         if self.context["isLinear"]:
             # size of the tmpArray
             self.context["tmpArraySize"] = max((self.context["nDof"]*self.context["nVarPad"] if self.context["useFlux"]          else 0), \
                                                 (self.context["nDim"]*self.context["nVarPad"] if self.context["useNCP"]           else 0))
-            
-            self.render(("aderdg", "fusedSPTVI_linear_cpp.template"), "fusedSpaceTimePredictorVolumeIntegral.cpp")
-            
+
             if self.context["usePointSources"]:
                 localContext = copy.copy(self.context)
                 localContext["usePointSources"] = False
                 localContext["nameSuffix"] = "_WithoutPS"
                 
                 self.render(("aderdg", "fusedSPTVI_linear_cpp.template"), "fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp", localContext)
+
+                #Assembling the basis function for the point source
+                QuadratureWeights, QuadratureNodes = MathsUtils.getGaussLegendre(self.context["nDof"])
+                self.context["basisFunctions"] = MathsUtils.assembleBasisFunction(QuadratureNodes)
+
+            self.render(("aderdg", "fusedSPTVI_linear_cpp.template"), "fusedSpaceTimePredictorVolumeIntegral.cpp")
+
                 
         else: #nonlinear
             self.context["nDof_seq"] = range(0,self.context["nDof"])
