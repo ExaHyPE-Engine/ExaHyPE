@@ -30,7 +30,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
       constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
       double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
 
-      generated::kernels::limiter::findCellLocalMinAndMax(
+      kernels::limiter::findCellLocalMinAndMax(
         fineGridCell{{UNKNOWN_IDENTIFIER}}_regularOld.value,
         repositories::{{SOLVER_INSTANCE}},
         localMinPerVariables, localMaxPerVariables
@@ -99,6 +99,6 @@ class SaveNewCellData(AbstractLimiterActionSet):
       return (
           super(SaveNewCellData, self).get_includes()
           + """
-#include "../generated/kernels/limiter/fv/Kernels.h"
+#include "../kernels/limiter/fv/Kernels.h"
     """
       )

@@ -10,10 +10,8 @@ from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
 class DynamicAMR(AbstractAderDGActionSet):
     """
-
-    The ExaHyPE 2 AderDG handling of adaptive meshes.
+    ExaHyPE 2 ADER-DG handling of adaptive meshes.
     Despite the name this currently only handles static AMR, so this probably desperately needs to be renamed.
-
     """
 
     def __init__(
@@ -79,10 +77,9 @@ class DynamicAMR(AbstractAderDGActionSet):
 
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : spaceFaceSize;
 
-    if(!marker.isInteriorFaceWithinPatch()){
-
-      //Interpolate both estimates and fluxes
-      generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::faceUnknownsProlongation(
+    if (!marker.isInteriorFaceWithinPatch()) {
+      // Interpolate both estimates and fluxes
+      kernels::{{SOLVER_NAME}}::faceUnknownsProlongation(
         fineGridFace{{SOLVER_NAME}}QEstimates.value+facePosition*NumberOfData,
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*NumberOfVariables,
         coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfData,
@@ -96,20 +93,17 @@ class DynamicAMR(AbstractAderDGActionSet):
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1)) );
-
   }
-
     """
 
         self._Template_DestroyHangingFace = """
 
-  if({{RESTRICT_GUARD}}){
-
+  if ({{RESTRICT_GUARD}}){
     const int Order = {{ORDER}};
     const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
     const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     const int strideQ = NumberOfVariables+NumberOfParameters;
-    
+
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
     #else
@@ -121,15 +115,13 @@ class DynamicAMR(AbstractAderDGActionSet):
 
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
 
-    //fluxes
-    generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::faceFlux__restrict__ion(
+    // Fluxes
+    kernels::{{SOLVER_NAME}}::faceFlux__restrict__ion(
       coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+(1-facePosition)*fluxElementsPerFace, //const double* lQhbndCoarse
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine          
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine
       marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
     );
-
   }
-
     """
 
     def get_action_set_name(self):
@@ -158,5 +150,5 @@ class DynamicAMR(AbstractAderDGActionSet):
     def get_includes(self):
         return (
             super(DynamicAMR, self).get_includes() + """
-#include "kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Kernels.h"
+#include "kernels/""" + self._solver._name + """/Kernels.h"
 """)

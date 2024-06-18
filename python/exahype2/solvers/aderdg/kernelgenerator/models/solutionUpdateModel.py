@@ -1,8 +1,0 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
-from .abstractModelBaseClass import AbstractModelBaseClass
-
-class SolutionUpdateModel(AbstractModelBaseClass):
-
-    def generateCode(self):
-        self.render(("aderdg", "solutionUpdate_cpp.template"), "solutionUpdate.cpp")

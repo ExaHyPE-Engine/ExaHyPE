@@ -24,7 +24,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
 
         {% if USE_PAC %}
-        isUnTroubled &= generated::kernels::limiter::isPhysicallyAdmissible(
+        isUnTroubled &= kernels::limiter::isPhysicallyAdmissible(
           luh,
           repositories::{{SOLVER_INSTANCE}},
           marker.x(),
@@ -47,7 +47,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
             std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+3*numberOfObservables, numberOfObservables, &boundaryMaxPerVariables[(d+Dimensions)*numberOfObservables]);
         }
 
-        isUnTroubled &= generated::kernels::limiter::discreteMaximumPrincipleAndMinAndMaxSearch(
+        isUnTroubled &= kernels::limiter::discreteMaximumPrincipleAndMinAndMaxSearch(
           luh,
           repositories::{{SOLVER_INSTANCE}},
           repositories::{{SOLVER_INSTANCE}}.RelaxationParameter, //const double relaxationParameter
@@ -103,6 +103,6 @@ class VerifyTroubledness(AbstractLimiterActionSet):
       return (
           super(VerifyTroubledness, self).get_includes()
           + """
-#include "../generated/kernels/limiter/fv/Kernels.h"
+#include "../kernels/limiter/fv/Kernels.h"
     """
       )

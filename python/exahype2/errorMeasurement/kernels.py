@@ -115,15 +115,14 @@ def create_postprocessing_kernel_for_ader_error_measurement():
 
     double errors[3];
 
-    generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::computeCellErrorIntegral(
+    kernels::{{SOLVER_NAME}}::computeCellErrorIntegral(
       [&](
-        [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
-        [[maybe_unused]] const double                                  t,
-        [[maybe_unused]] const double                                  dt,
-        [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q_,
-        [[maybe_unused]] double*                                       sol
+        const tarch::la::Vector<Dimensions,double>&   x,
+        const double                                  t,
+        const double                                  dt,
+        const {{SOLUTION_STORAGE_PRECISION}}*         Q_,
+        double*                                       sol
       )->void {
-
         double Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}];
         std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
 
@@ -139,7 +138,6 @@ def create_postprocessing_kernel_for_ader_error_measurement():
     );
 
     repositories::{{SOLVER_INSTANCE}}.setError(errors);
-
   }
 """
 

@@ -379,12 +379,12 @@ Type:                   """ + self.__class__.__name__
         )
 
         output.makefile.add_cpp_file(
-          "generated/kernels/limiter/fv/Quadrature.cpp",
+          "kernels/limiter/fv/Quadrature.cpp",
           generated=True,
         )
 
         output.makefile.add_cpp_file(
-          "generated/kernels/limiter/fv/limiter.cpp",
+          "kernels/limiter/fv/limiter.cpp",
           generated=True,
         )
 

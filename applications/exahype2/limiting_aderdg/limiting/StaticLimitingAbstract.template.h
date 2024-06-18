@@ -18,7 +18,7 @@
 
 #include "Constants.h"
 
-#include "generated/kernels/limiter/fv/Quadrature.h"
+#include "kernels/limiter/fv/Quadrature.h"
 
 {{SOLVER_INCLUDES}}
 

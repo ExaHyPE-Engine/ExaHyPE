@@ -39,8 +39,8 @@ class EmptyPostprocessSolution(AbstractAderDGActionSet):
         return (
             super(EmptyPostprocessSolution, self).get_includes()
             + """
-#include "kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Quadrature.h"
-#include "kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Kernels.h"
+#include "kernels/""" + self._solver._name + """/Quadrature.h"
+#include "kernels/""" + self._solver._name + """/Kernels.h"
 """
         )
 
@@ -89,14 +89,14 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
 {    
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
+
   if (
-    not marker.hasBeenRefined() 
-    and 
+    not marker.hasBeenRefined()
+    and
     {{PREDICATE}}
-  ) { 
+  ) {
     logTraceIn( "touchCellFirstTime(...)" );
-    
+
     ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
       1, // only one patch
       {{ORDER}}+1,
@@ -107,16 +107,16 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
     dfor( index, {{ORDER}}+1 ) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + enumerator(0,index,0);
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
-        marker.x(), marker.h(), index, 
+        marker.x(), marker.h(), index,
         repositories::{{SOLVER_INSTANCE}}.Order+1,
-        generated::kernels::AderDG::{{LINEARITY}}::Quadrature<double>::nodes
+        kernels::Quadrature<double>::nodes
       );
       """
             + operation_per_point
             + """
     }
     logTraceOut( "touchCellFirstTime(...)" );
-  } 
+  }
 }
 """
         )
@@ -147,8 +147,8 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Quadrature.h"
-#include "kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Kernels.h"
+#include "kernels/""" + self._solver._name + """/Quadrature.h"
+#include "kernels/""" + self._solver._name + """/Kernels.h"
 """
         )
 

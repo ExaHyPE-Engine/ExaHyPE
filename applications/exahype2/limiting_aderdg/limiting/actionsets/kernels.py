@@ -18,7 +18,7 @@ def compute_local_min_and_max_and_project():
     return """
     constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
     double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
-    generated::kernels::limiter::findCellLocalMinAndMax(
+    kernels::limiter::findCellLocalMinAndMax(
       fineGridCell{{SOLVER_NAME}}Q_old.value,
       repositories::{{SOLVER_INSTANCE}},
       localMinPerVariables, localMaxPerVariables
@@ -35,7 +35,7 @@ def compute_local_min_and_max_and_project():
 
 def check_troubledness(usePAC, useDMP, useTroubledMarkers):
     templatePAC = """
-    isUnTroubled &= generated::kernels::limiter::isPhysicallyAdmissible(
+    isUnTroubled &= kernels::limiter::isPhysicallyAdmissible(
       luh,
       repositories::{{SOLVER_INSTANCE}},
       marker.x(),
@@ -56,12 +56,12 @@ def check_troubledness(usePAC, useDMP, useTroubledMarkers):
         std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+3*numberOfObservables, numberOfObservables, &boundaryMaxPerVariables[(d+Dimensions)*numberOfObservables]);
     }
 
-    isUnTroubled &= generated::kernels::limiter::discreteMaximumPrincipleAndMinAndMaxSearch(
+    isUnTroubled &= kernels::limiter::discreteMaximumPrincipleAndMinAndMaxSearch(
       luh,
       repositories::{{SOLVER_INSTANCE}},
       repositories::{{SOLVER_INSTANCE}}.RelaxationParameter, //const double relaxationParameter
       repositories::{{SOLVER_INSTANCE}}.DifferencesScaling, //const double differenceScaling
-      boundaryMinPerVariables, 
+      boundaryMinPerVariables,
       boundaryMaxPerVariables
     );
 """

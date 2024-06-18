@@ -21,16 +21,13 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
   _cellUpdates(0),
   _numberOfTroubledCellsThisTimeStep(0) {
 
-  generated::kernels::limiter::Quadrature<double>::initQuadratureNodesAndWeights();
+  kernels::limiter::Quadrature<double>::initQuadratureNodesAndWeights();
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
-  
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
-
-  generated::kernels::limiter::Quadrature<double>::freeQuadratureNodesAndWeights();
-
+  kernels::limiter::Quadrature<double>::freeQuadratureNodesAndWeights();
 }
 
 

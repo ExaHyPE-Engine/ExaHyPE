@@ -54,9 +54,9 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
   {% if USE_KERNEL_GENERATOR==True %}
   //initialise nodes, weights and matrices for use of the kernels
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}    
-  generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
-  generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
   {% endfor %}
   {% endif %}
 
@@ -68,9 +68,9 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
   {% if USE_KERNEL_GENERATOR==True %}
   //free the generated nodes, weights and matrices
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
-  generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
-  generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
   {% endfor %}
   {% endif %}
 }

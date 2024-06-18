@@ -25,7 +25,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
 
       //TODO: replace with more general conversion, probably from kernels
       //converts DG into fv
-      generated::kernels::limiter::projectOnFVLimiterSpaceWithoutHalo(regularSolverOldValues, limiterSolverNewValues);
+      kernels::limiter::projectOnFVLimiterSpaceWithoutHalo(regularSolverOldValues, limiterSolverNewValues);
 
   }"""
 
@@ -37,7 +37,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
   if ( {{CONVERT_FROM_LIMITER_TO_REGULAR_PREDICATE}} ) {
 
       //TODO: make this prettier and maybe put it in a kernel
-      generated::kernels::limiter::projectOnDGSpaceFromFVWithoutHalo(
+      kernels::limiter::projectOnDGSpaceFromFVWithoutHalo(
         fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.value,
         fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value
       );
@@ -74,7 +74,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
       return (
           super(CopyAndConvertPatch, self).get_includes()
           + """
-#include "../generated/kernels/limiter/fv/Kernels.h"
+#include "../kernels/limiter/fv/Kernels.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "exahype2/fv/rusanov/rusanov.h"
     """

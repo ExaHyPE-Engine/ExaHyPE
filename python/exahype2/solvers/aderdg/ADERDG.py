@@ -10,7 +10,8 @@ import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from exahype2.solvers.PDETerms import PDETerms
 from .kernels import get_face_overlap_merge_implementation
-from .kernelgenerator import generate_aderdg_kernels, Configuration
+from .KernelGenerator import generate_aderdg_kernels
+from .Configuration import Configuration
 
 import os
 from abc import abstractmethod
@@ -871,81 +872,76 @@ class ADERDG(object):
         This code just inserts that missing endif
         """
         if self._use_libxsmm and self._architecture == "noarch":
-            file = open("kernels/" + self._name + "/" + is_linear + "/asm_fstpvi.c", "r")
+            file = open("kernels/" + self._name + "/asm_fstpvi.c", "r")
             content = file.read()
             file.close()
-            file = open("kernels/" + self._name + "/" + is_linear + "/asm_fstpvi.c", "w")
+            file = open("kernels/" + self._name + "/asm_fstpvi.c", "w")
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
             file = open(
-                "kernels/" + self._name + "/" + is_linear + "/asm_amrRoutines.c", "r"
+                "kernels/" + self._name + "/asm_amrRoutines.c", "r"
             )
             content = file.read()
             file.close()
             file = open(
-                "kernels/" + self._name + "/" + is_linear + "/asm_amrRoutines.c", "w"
+                "kernels/" + self._name + "/asm_amrRoutines.c", "w"
             )
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/Quadrature.cpp", generated=True
+            "kernels/" + self._name + "/Quadrature.cpp", generated=True
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/DGMatrices.cpp", generated=True
+            "kernels/" + self._name + "/DGMatrices.cpp", generated=True
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear
-            + "/fusedSpaceTimePredictorVolumeIntegral.cpp",
+            "kernels/" + self._name
+            + "/FusedSpaceTimePredictorVolumeIntegral.cpp",
             generated=True,
         )
 
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/solutionUpdate.cpp",
-            generated=True,
-        )
-
-        output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/riemannSolver.cpp",
+            "kernels/" + self._name + "/RiemannSolver.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/faceIntegral.cpp",
+            "kernels/" + self._name + "/FaceIntegral.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/solutionUpdate.cpp",
+            "kernels/" + self._name + "/SolutionUpdate.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/maxScaledEigenvalue.cpp",
+            "kernels/" + self._name + "/MaxScaledEigenvalue.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/CellErrorIntegral.cpp",
+            "kernels/" + self._name + "/CellErrorIntegral.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "kernels/" + self._name + "/" + is_linear + "/amrRoutines.cpp",
+            "kernels/" + self._name + "/AMRRoutines.cpp",
             generated=True,
         )
         if self._point_sources_implementation != PDETerms.None_Implementation:
             output.makefile.add_cpp_file(
                 "kernels/"
-                + self._name + "/" + is_linear
-                + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp",
+                + self._name
+                + "/FusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp",
                 generated=True,
             )
             output.makefile.add_cpp_file(
-                "kernels/" + self._name + "/" + is_linear + "/deltaDistribution.cpp",
+                "kernels/" + self._name + "/DeltaDistribution.cpp",
                 generated=True,
             )
         if self._use_libxsmm:
             output.makefile.add_cpp_file(
-                "kernels/" + self._name + "/" + is_linear + "/gemmsCPP.cpp",
+                "kernels/" + self._name + "/Gemms.cpp",
                 generated=True,
             )
 

@@ -12,7 +12,7 @@ import exahype2.grid
 import exahype2.solvers
 
 from exahype2.solvers.aderdg.ADERDG import ADERDG
-from exahype2.solvers.aderdg.kernelgenerator import Configuration
+from exahype2.solvers.aderdg.Configuration import Configuration
 
 
 class Project(object):
@@ -20,13 +20,13 @@ class Project(object):
 
     ExaHyPE 2 project
 
-    Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
+    Represents an ExaHyPE 2 project. An ExaHyPE2 project is a Peano 4
     project with a particular set of actions (algorithmic phases)
     that you can choose from and with particular solver types. It
-    realises a builder mechanism, i.e. you build up your ExaHyPE2
-    project and then you finally tell the project "give me the Peano4
-    project". From hereon, you can use this Peano4 project to actually
-    set up the Peano4 application.
+    realises a builder mechanism, i.e. you build up your ExaHyPE 2
+    project and then you finally tell the project "give me the Peano 4
+    project". From hereon, you can use this Peano 4 project to actually
+    set up the Peano 4 application.
 
     The project will have a marker per cell that encodes stuff alike
     a boundary marker. But it is also used to coordinate different
@@ -55,7 +55,7 @@ class Project(object):
         self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
         self._timeout                 = 3600
         self._gpus                    = []
-        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", 
+        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
                                           "tarch/multicore/orchestration/StrategyFactory.h",
                                           "tarch/accelerator/Device.h"
                                         ]
@@ -316,7 +316,7 @@ thus appreciate any citation of the original release paper
           Set to zero if you don't want to have any plots
 
         max_end_time: Float
-          If you set it zero (or actually any value msmaller than min_end_time), then
+          If you set it zero (or actually any value smaller than min_end_time), then
           the code will run until the cell that lags behind the most hits the min time.
           If you specify a valid max time however, you can stop the sim as soon as the
           most advanced cell exceeds this threshold.
@@ -352,7 +352,7 @@ thus appreciate any citation of the original release paper
                 print("Couldn't create the defined output path, please ensure that this path exists")
         if not self._output_path.endswith("/"):
             self._output_path += "/"
-            
+
     def add_mainfile_include(self,value):
         self._additional_includes.append( value )
 
@@ -415,7 +415,7 @@ thus appreciate any citation of the original release paper
         """!
 
         Add a tracer to the project
-        
+
         Tracers have to be the very last thing you add to your project.
         At this point, all solvers have to be added to the project.
         However, you have to add the tracers prior to any user-defined
@@ -429,20 +429,20 @@ thus appreciate any citation of the original release paper
         thus is always sieved through to the finest grid level.
 
         @see peano4.toolbox.particles.Particle
-        
-        
+
+
         ## Projection of data onto particles and database dumping
-        
-        The projection onto the particle has to be realised separatedly, as
-        it depends on the solver variant chosen. The same holds for the 
-        dump of particle data into a database if this shall happen 
-        on-the-fly. 
-        
+
+        The projection onto the particle has to be realised separately, as
+        it depends on the solver variant chosen. The same holds for the
+        dump of particle data into a database if this shall happen
+        on-the-fly.
+
         Most bigger applications add their solvers an add_tracer() operation,
-        which takes all of this domain knowledge into account. This 
-        add_tracer() then forwards to this routine, adding further 
+        which takes all of this domain knowledge into account. This
+        add_tracer() then forwards to this routine, adding further
         behaviour.
-        
+
         See the class application.exahype2.ccz.CCZ4Solver and its derived
         variants for examples.
 
@@ -459,15 +459,15 @@ thus appreciate any citation of the original release paper
         particle update routines. Obviously, nothing stops you from adding
         a separate velocity field to the tracer object and thus to redefine
         this behaviour.
-        
-        
+
+
         ## ExaHyPE-specific particle attributes
 
         We add each
         particle a number which is a tuple consisting of the tree number
-        (on which tree has a particle been generationed plus what was the
+        (on which tree has a particle been generated plus what was the
         tree-local number of this particle at the time). Through this
-        tuple, we can track tracers later on even if they move accross
+        tuple, we can track tracers later on even if they move across
         domains.
 
         We can plot the data - if there is data to be tracked - directly,
@@ -577,7 +577,7 @@ thus appreciate any citation of the original release paper
         # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It
         # really should be the time stamp of the underlying solver. However, tracers are
         # not tied to one solver, so I have to find a quantity that makes sense. If the
-        # user requres the time stamp, they have to add this one as data field to the
+        # user requires the time stamp, they have to add this one as data field to the
         # particle
         #
         if plot:
@@ -631,16 +631,16 @@ thus appreciate any citation of the original release paper
 
     def add_action_set_to_create_grid(self, action_set):
         """!
-        
+
         Add an action set to create grid
-        
+
         This routine actually adds an action set to each and every grid
         creation routine. After all, we distinguish three flavours of it
-        
+
         - with refinement;
         - without refinement as we've just refined or split up domain;
         - without refinement to let load balancing converge.
-        
+
         """
         self.create_grid.add_action_set(action_set)
         self.create_grid_but_postpone_refinement.add_action_set(action_set)
@@ -648,11 +648,11 @@ thus appreciate any citation of the original release paper
 
     def generate_Peano4_project(self, verbose=False):
         """!
-        
+
         Construct a Peano 4 project and return it
-        
-        Build the Peano4 project, i.e., all the action sets et al that you require
-        to run this ExaHyPE2 application. The project is built within self._project
+
+        Build the Peano 4 project, i.e., all the action sets et al that you require
+        to run this ExaHyPE 2 application. The project is built within self._project
         and eventually returned.
 
         This routine generates a Peano project, i.e. the domain-specific ExaHyPE
@@ -753,24 +753,24 @@ thus appreciate any citation of the original release paper
                                                step,
                                                ):
         """! Inform ExaHyPE 2 that there is an additional solver step not resulting from vanilla solver versions
-        
-        Use this routine whenever you have created your own 
+
+        Use this routine whenever you have created your own
         @ref page_architecture "algorithmic step". Please note that the routine
-        should be called after you have created all of your solvers. Otherwise, 
-        we'll miss out a few of your solvers and the data access patterns 
-        will/might be corrupted. Also all tracers have to be added at this 
+        should be called after you have created all of your solvers. Otherwise,
+        we'll miss out a few of your solvers and the data access patterns
+        will/might be corrupted. Also all tracers have to be added at this
         point already.
 
-        The routine has no side-effects, i.e. does not alter the underlying 
-        project. It only manipulates the step. Therefore, you can even call it 
-        after you have distilled the Peano project from the ExaHyPE project, 
+        The routine has no side-effects, i.e. does not alter the underlying
+        project. It only manipulates the step. Therefore, you can even call it
+        after you have distilled the Peano project from the ExaHyPE project,
         i.e. after you have called exahype2.Project.generate_Peano4_project().
         In return, you however still have to add the new step manually to the
         Peano project. That is, this routine merely initialises the new step,
         but it does not yet add it to the sweeps known by Peano.
 
         @param step: peano4.solversteps.Step
-  
+
         """
         for solver in self._solvers:
             solver.add_use_data_statements_to_Peano4_solver_step(step)
