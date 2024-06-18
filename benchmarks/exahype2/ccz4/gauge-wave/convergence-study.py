@@ -22,9 +22,9 @@ from CCZ4Solver import (
 from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
 
 storage_types = {
-    "CallStack": exahype2.solvers.fv.Storage.CallStack,
-    "Heap": exahype2.solvers.fv.Storage.Heap,
-    "SmartPointers": exahype2.solvers.fv.Storage.SmartPointers,
+    "CallStack":     exahype2.solvers.Storage.CallStack,
+    "Heap":          exahype2.solvers.Storage.Heap,
+    "SmartPointers": exahype2.solvers.Storage.SmartPointers,
 }
 
 
