@@ -212,7 +212,7 @@ class Controller:
         context["nDofPad"] = self.getSizeWithPadding(context["nDof"])
         context["nDof3D"] = 1 if context["nDim"] == 2 else context["nDof"]
         context["solverHeader"] = (
-            "../../../../" + context["solverName"].split("::")[-1] + ".h"
+            "../../../" + context["solverName"].split("::")[-1] + ".h"
         )
         context["codeNamespaceList"] = context["codeNamespace"].split("::")
         context["guardNamespace"] = "_".join(context["codeNamespaceList"]).upper()

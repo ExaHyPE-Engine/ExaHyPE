@@ -599,7 +599,7 @@ def create_includes(use_kernelgenerator, is_linear):
 #include "exahype2/aderdg/kernels/Kernels.h"
 """
     template_kernelgenerator = """
-#include "../generated/kernels/aderdg/""" + ("linear" if is_linear else "nonlinear") + """/Kernels.h"
+#include "../kernels/aderdg/""" + ("linear" if is_linear else "nonlinear") + """/Kernels.h"
 """
     if use_kernelgenerator:
         return template_kernelgenerator

@@ -128,6 +128,6 @@ class HandleBoundary(AbstractAderDGActionSet):
         return (
             super(HandleBoundary, self).get_includes()
             + """
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+#include "kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
       """
         )

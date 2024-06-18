@@ -79,6 +79,6 @@ class InitialCondition(AbstractAderDGActionSet):
   def get_includes(self):
     return (
       super(InitialCondition, self).get_includes() + """
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+#include "kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
+#include "kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
 """)

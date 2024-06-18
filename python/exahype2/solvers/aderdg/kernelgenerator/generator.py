@@ -43,8 +43,8 @@ def generate_aderdg_kernels(
     InputConfig = {
         "kernelType": "aderdg",
         "pathToOptKernel": ".",
-        "pathToApplication": "generated/kernels/aderdg/" + numerics,
-        "pathToOutputDirectory": "generated/kernels/aderdg/" + numerics,
+        "pathToApplication": "kernels/aderdg/" + numerics,
+        "pathToOutputDirectory": "kernels/aderdg/" + numerics,
         "solverName": solverName,
         "namespace": "generated::kernels::AderDG::" + numerics,
         "useLibxsmm": useLibxsmm,
@@ -122,8 +122,8 @@ def generate_limiter_kernels(
     InputConfig = {
         "kernelType": "limiter",
         "pathToOptKernel": ".",
-        "pathToApplication": "generated/kernels/limiter/fv/",
-        "pathToOutputDirectory": "generated/kernels/limiter/fv/",
+        "pathToApplication": "kernels/limiter/fv/",
+        "pathToOutputDirectory": "kernels/limiter/fv/",
         "solverName": solverName,
         "namespace": "generated::kernels::limiter",
         "useLibxsmm": useLibxsmm,

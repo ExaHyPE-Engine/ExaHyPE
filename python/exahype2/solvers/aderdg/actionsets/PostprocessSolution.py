@@ -39,7 +39,7 @@ class EmptyPostprocessSolution(AbstractAderDGActionSet):
         return (
             super(EmptyPostprocessSolution, self).get_includes()
             + """
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+#include "kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
 """
         )
 
@@ -146,8 +146,8 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
-#include "generated/kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
+#include "kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Quadrature.h"
+#include "kernels/aderdg/""" + ("linear" if self._solver._is_linear else "nonlinear") + """/Kernels.h"
 """
         )
 

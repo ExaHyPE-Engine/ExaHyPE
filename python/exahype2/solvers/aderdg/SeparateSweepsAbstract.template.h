@@ -18,8 +18,8 @@
 #include "peano4/utils/Globals.h"
 
 {% if USE_KERNEL_GENERATOR %}
-#include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
-#include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
+#include "kernels/aderdg/{{LINEARITY}}/Quadrature.h"
+#include "kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
 {% endif %}
 
 {% if USE_HALF_PRECISION==True %}

@@ -858,76 +858,76 @@ class ADERDG(object):
         This code just inserts that missing endif
         """
         if self._use_libxsmm and self._architecture == "noarch":
-            file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "r")
+            file = open("kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "r")
             content = file.read()
             file.close()
-            file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "w")
+            file = open("kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "w")
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
             file = open(
-                "generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", "r"
+                "kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", "r"
             )
             content = file.read()
             file.close()
             file = open(
-                "generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", "w"
+                "kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", "w"
             )
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp", generated=True
+            "kernels/aderdg/" + is_linear + "/Quadrature.cpp", generated=True
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp", generated=True
+            "kernels/aderdg/" + is_linear + "/DGMatrices.cpp", generated=True
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/"
+            "kernels/aderdg/"
             + is_linear
             + "/fusedSpaceTimePredictorVolumeIntegral.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp",
+            "kernels/aderdg/" + is_linear + "/solutionUpdate.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp",
+            "kernels/aderdg/" + is_linear + "/riemannSolver.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp",
+            "kernels/aderdg/" + is_linear + "/faceIntegral.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp",
+            "kernels/aderdg/" + is_linear + "/solutionUpdate.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/maxScaledEigenvalue.cpp",
+            "kernels/aderdg/" + is_linear + "/maxScaledEigenvalue.cpp",
             generated=True,
         )
         output.makefile.add_cpp_file(
-            "generated/kernels/aderdg/" + is_linear + "/cellErrorIntegral.cpp",
+            "kernels/aderdg/" + is_linear + "/cellErrorIntegral.cpp",
             generated=True,
         )
         if self._point_sources_implementation != PDETerms.None_Implementation:
             output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/"
+                "kernels/aderdg/"
                 + is_linear
                 + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp",
                 generated=True,
             )
             output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp",
+                "kernels/aderdg/" + is_linear + "/deltaDistribution.cpp",
                 generated=True,
             )
         if self._use_libxsmm:
             output.makefile.add_cpp_file(
-                "generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp",
+                "kernels/aderdg/" + is_linear + "/gemmsCPP.cpp",
                 generated=True,
             )
 
