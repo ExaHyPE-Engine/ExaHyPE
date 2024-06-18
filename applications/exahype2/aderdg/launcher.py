@@ -1,6 +1,7 @@
 import peano4, exahype2
 import os, sys
 import argparse, string
+import subprocess
 
 sys.path.insert(0, os.path.abspath("./Scenarios"))
 import Scenarios
@@ -31,9 +32,9 @@ parser.add_argument("-o",     "--order",            dest="order",               
 parser.add_argument("-p",     "--p",                dest="polynomials",             type=int,     default=0,          help="Polynomial type, 0 is gauss-legendre, 1 is gauss-lobatto",)
 parser.add_argument("-m",     "--mode",             dest="mode",                                  default="release",  help="|".join(modes.keys()))
 parser.add_argument("-s",     "--scenario",         dest="s",                                     default=None,       help="|".join(available_scenarios.keys()))
+parser.add_argument("-v",     "--visualise",        action="store_true",                          default=False,      help="Visualise the output data using the postprocessor.",)
 
 args = parser.parse_args()
-
 
 if args.s is None:
   while True:
@@ -49,10 +50,21 @@ if args.s is None:
 else:
   scenario = available_scenarios[args.s]
 
+if args.visualise:
+    output_patch_file = f"solutions/solution-{scenario.__class__.__name__}.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                f"../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 order = args.order
 
-max_h = 1.1 * scenario._domain_size / (3.0**args.md) 
+max_h = 1.1 * scenario._domain_size / (3.0**args.md)
 min_h = max_h * 3.0 ** (-args.adaptivity_levels)
 
 polynomials = (
@@ -99,7 +111,7 @@ scenario.set_global_simulation_parameters(project)
 # prototype we did start off with.
 #
 project.set_load_balancing(
-  "toolbox::loadbalancing::strategies::RecursiveBipartition",
+  "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
   "new ::exahype2::LoadBalancingConfiguration()",
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
