@@ -19,7 +19,8 @@ import CCZ4Helper
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts, 
+  "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
