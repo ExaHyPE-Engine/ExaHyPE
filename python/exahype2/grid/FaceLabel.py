@@ -156,7 +156,9 @@ def create_face_label(solver_name):
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
-        _Boundary = _Boundary or neighbour._Boundary;
+
+        _Boundary     = _Boundary or neighbour._Boundary;
+        _AboveHanging = _AboveHanging or neighbour._AboveHanging;
   
         const int normal         = marker.getSelectedFaceNumber() % Dimensions;
         const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;

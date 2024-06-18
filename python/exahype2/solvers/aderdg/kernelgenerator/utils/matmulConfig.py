@@ -9,7 +9,9 @@ precisionTranslate = {
     "SP": "SP",
     "float": "SP",
     "single": "SP",
+    "_Float16": "HP",
     "std::float16_t": "HP",
+    "__bf16": "HP",
     "std::bfloat16_t": "HP",
     "half_float::half": "HP"
 }

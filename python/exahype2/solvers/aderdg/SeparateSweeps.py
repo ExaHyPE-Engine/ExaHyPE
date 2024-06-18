@@ -178,6 +178,12 @@ class SeparateSweeps(ADERDG):
             self.get_name_of_global_instance(), self._name
         ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
 
+    def _shift_face_data_default_guard(self):
+        return super(
+            SeparateSweeps, self
+        )._shift_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
+            self.get_name_of_global_instance(), self._name
+        ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
 
     def _restrict_face_data_default_guard(self):
         return super(

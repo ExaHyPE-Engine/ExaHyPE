@@ -69,14 +69,12 @@ class ConfigurationParametersModel(AbstractModelBaseClass):
                         self.context["PSiSize"] = nDof * (nDof**nDim) * nVarPad
                 else:
                     # default linear
-                    self.context["lQiSize"] = nDataPad * (nDof**nDim) * (1 + nDof)
+                    self.context["lQiSize"] = nDataPad * (nDof**nDim)
                     self.context["lQhiSize"] = nDataPad * (nDof**nDim)
-                    self.context["lFiSize"] = (
-                        nDim * nDof * (nDof**nDim) * nVarPad
-                    )  # nVarPad*(nDof**(nDim+1))*(2*nDim+1) # Todo JMG see if 2dim+1 or 2dim
+                    self.context["lFiSize"] = nDim * (nDof**nDim) * nVarPad
                     self.context["lFhiSize"] = nVarPad * (nDof**nDim) * nDim
                     if self.context["useSource"]:
-                        self.context["lSiSize"] = nVarPad * (nDof ** (nDim + 1))
+                        self.context["lSiSize"] = nVarPad * (nDof**nDim)
                         self.context["lShiSize"] = nVarPad * (nDof**nDim)
                     if self.context["useNCP"]:
                         self.context["gradQSize"] = nVarPad * (nDof**nDim) * nDim

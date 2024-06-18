@@ -11,20 +11,20 @@
 #include "peano4/utils/Loop.h"
 
 void {{codeNamespace}}::computeCellErrorIntegral(
-  std::function< void(
-    const tarch::la::Vector<Dimensions,double>&   position,
+  std::function<void(
+    const tarch::la::Vector<Dimensions,double>&   x,
     const double                                  t,
     const double                                  dt,
+    const {{correctorStoragePrecision}}*          Q,
     double*                                       sol
-  ) >   exactSolution,
+  )> exactSolution,
   const tarch::la::Vector<Dimensions,double>&  cellCentre,
   const tarch::la::Vector<Dimensions,double>&  cellSize,
   double                                       t,
   double                                       dt,
-  {{correctorStoragePrecision}}* __restrict__   Q,
+  {{correctorStoragePrecision}}* __restrict__  Q,
   double                                       errors[3]
-){
-
+) {
   errors[0] = 0.0;
   errors[1] = 0.0;
   errors[2] = 0.0;
@@ -58,6 +58,7 @@ void {{codeNamespace}}::computeCellErrorIntegral(
         ),
         t,
         dt,
+        &Q[linearisedIndex],
         sol
       );
 
@@ -71,6 +72,4 @@ void {{codeNamespace}}::computeCellErrorIntegral(
 
       linearisedIndex += {{nDataPad}};
     }
-
 }
-

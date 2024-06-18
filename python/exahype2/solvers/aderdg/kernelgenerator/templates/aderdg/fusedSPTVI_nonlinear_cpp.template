@@ -279,7 +279,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   {{picardIterationPrecision}} lQi_picard[getlQiSize()]     __attribute__((aligned(16)));
   {{picardIterationPrecision}} lFi_picard[getlFiSize()]     __attribute__((aligned(16)));
   {{picardIterationPrecision}} rhs_picard[getlQiSize()]     __attribute__((aligned(16)));
-  {{picardIterationPrecision}} new_lQi_slice_picard[30]     __attribute__((aligned(16)));
+  {{picardIterationPrecision}} new_lQi_slice_picard[{{nDof*nVarPad}}]     __attribute__((aligned(16)));
 {% if useSourceOrNCP %}
   {{picardIterationPrecision}} lSi_picard[getlSiSize()]     __attribute__((aligned(16)));
 {% else %}
@@ -376,11 +376,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 
   int iter = 0;
 
-  {% if usePicardIterationSplitPrecisions %}
-  for (; iter < MaxIterations-1; iter++) {
-  {% else %}
   for (; iter < MaxIterations; iter++) {
-  {% endif %}
 
     {% if usePicardIterationSplitPrecisions %}
     pCompType sq_res = picard_iteration<cStoreType,{{picardIterationPrecision}}>(
@@ -432,39 +428,15 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   }  // end iter
 
   {% if usePicardIterationSplitPrecisions %}
-
   // copy data over either way, as it will be required
   std::copy_n(lQi_picard, getlQiSize(), lQi);
+  {% if useFlux %}
+  std::copy_n(lFi_picard, getlFiSize(), lFi);
+  {% endif %}
   {% if useSourceOrNCP %}
   std::copy_n(lSi_picard, getlSiSize(), lSi);
   {% endif %}
-
-  // if the picard loop hasn't broken, e.g. the tolerance hasn't yet been reached, perform another iteration in full precision
-  //if(iter==MaxIterations-1){
-
-    picard_iteration<cStoreType,pCompType>(
-      solver,
-      lQi,
-      rhs,
-      lFi,
-      lSi,   // for NCP or Source
-      gradQ, // for NCP or Source or viscousFlux
-      new_lQi_slice,
-      {% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
-      dudxT_by_dx,
-      {% else %}
-      nullptr,
-      {% endif %}
-      luh,
-      volumeCentre,
-      dx,
-      timeStamp,
-      dt
-    );
-
-    iter++;
-  //}
-  {% endif %}
+  {% endif %}{# usePicardIterationsSplitPrecisions #}
 
   //***********************
   //****** Predictor ******

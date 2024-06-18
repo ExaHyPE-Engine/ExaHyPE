@@ -12,6 +12,7 @@ def create_constructor_implementation_for_error_measurement(deltaBetweenDatabase
     _errorDatabase.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
     _errorDatabase.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
     _errorDatabase.clearDatabaseAfterFlush( {{CLEAR_DATABASE_AFTER_FLUSH}} );
+    std::fill_n(_errors, 3, 0.0);
   }
 """,
         undefined=jinja2.DebugUndefined,
@@ -67,7 +68,7 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
       tarch::mpi::Rank::getInstance().isGlobalMaster()
     ) {
       _errors[1] = std::sqrt(_errors[1]);
-      _errorDatabase.addGlobalSnapshot(_minTimeStampThisTimeStep, 3, _errors);
+      _errorDatabase.addGlobalSnapshot(_minTimeStampThisTimeStep+_maxTimeStepSizeThisTimeStep, 3, _errors);
     }
 
     std::fill_n(_errors, 3, 0.0);
@@ -89,6 +90,7 @@ def create_postprocessing_kernel_for_fv_error_measurement():
         volumeX,
         timeStamp,
         timeStepSize,
+        value,
         sol
       );
 
@@ -106,22 +108,26 @@ def create_postprocessing_kernel_for_fv_error_measurement():
 def create_postprocessing_kernel_for_ader_error_measurement():
     return """
   if (
-       repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
-    or repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+       (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+    or repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep())
     and not marker.willBeRefined() and not marker.hasBeenRefined()
   ) {
 
     double errors[3];
 
-    generated::kernels::AderDG::{{LINEARITY}}::computeCellErrorIntegral(
+    generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::computeCellErrorIntegral(
       [&](
-        const tarch::la::Vector<Dimensions,double>&   x,
-        const double                                  t,
-        const double                                  dt,
-        double*                                       sol
+        [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
+        [[maybe_unused]] const double                                  t,
+        [[maybe_unused]] const double                                  dt,
+        [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}*         Q_,
+        [[maybe_unused]] double*                                       sol
       )->void {
 
-        repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x,t,dt,sol);
+        double Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}];
+        std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
+
+        repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x,t,dt,Q,sol);
 
       },
       marker.x(),
@@ -152,6 +158,7 @@ def create_solver_user_abstract_declarations(user_defined):
       [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
       [[maybe_unused]] const double                                  t,
       [[maybe_unused]] const double                                  dt,
+      [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
     )""" + (" = 0" if user_defined else " final") + ";"
 
@@ -162,6 +169,7 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
   [[maybe_unused]] const double                                  t,
   [[maybe_unused]] const double                                  dt,
+  [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
 ) {
 """ + error_measurement_implementation + """
@@ -175,6 +183,7 @@ def create_solver_user_declarations():
       [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
       [[maybe_unused]] const double                                  t,
       [[maybe_unused]] const double                                  dt,
+      [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
 """
@@ -186,6 +195,7 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
   [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&   x,
   [[maybe_unused]] const double                                  t,
   [[maybe_unused]] const double                                  dt,
+  [[maybe_unused]] const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double*                                       sol // sol[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith2Arguments( "analyticalSolution(...)", x, t );
