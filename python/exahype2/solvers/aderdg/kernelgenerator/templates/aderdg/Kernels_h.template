@@ -218,7 +218,42 @@ namespace {{namespaceName}} {
     const tarch::la::Vector<Dimensions,double>& dx
   );
 {% endif %}
+
+//AMR Routines
+//------------
+
+  void faceUnknownsProlongation(
+    {{correctorComputePrecision}}* __restrict__ lQhbndFine,
+    {{correctorComputePrecision}}* __restrict__ lFhbndFine,
+    const {{correctorComputePrecision}}* const __restrict__ lQhbndCoarse,
+    const {{correctorComputePrecision}}* const __restrict__ lFhbndCoarse,
+    const tarch::la::Vector<Dimensions - 1, int>& subfaceIndex
+  );
+
+  void faceFlux__restrict__ion(
+    {{correctorComputePrecision}}* __restrict__ lFhbndCoarse,
+    const {{correctorComputePrecision}}* const __restrict__ lFhbndFine,
+    const tarch::la::Vector<Dimensions - 1, int>& subfaceIndex
+  );
+
+/*
+  void volumeUnknownsProlongation(
+    double* __restrict__ luhFine,
+    const double* const __restrict__ luhCoarse,
+    const int coarseGridLevel,
+    const int fineGridLevel,
+    const int* const subcellIndex
+  );
   
+  void volumeUnknowns__restrict__ion(
+    double* __restrict__ luhCoarse,
+    const double* const __restrict__ luhFine,
+    const int coarseGridLevel,
+    const int fineGridLevel,
+    const int* const subcellIndex
+  );
+*/
+
 {% for namespaceName in codeNamespaceList %}
 }
 {% endfor %}

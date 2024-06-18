@@ -302,13 +302,16 @@ class Controller:
                     self.baseContext, self
                 ),
             )
+
             self.runModel("dgMatrix", dgMatrixModel.DGMatrixModel(self.baseContext))
             self.runModel("riemannSolver", riemannModel.RiemannModel(self.baseContext))
             self.runModel("matrixUtils", matrixUtilsModel.MatrixUtilsModel(self.baseContext))
             self.runModel("faceIntegral", faceIntegralModel.FaceIntegralModel(self.baseContext))
+            self.runModel("amrRoutines", amrRoutinesModel.AMRRoutinesModel(self.baseContext, self))
             self.runModel("cellErrorIntegral", cellErrorIntegral.CellErrorIntegral(self.baseContext))
             self.runModel("solutionUpdate", solutionUpdateModel.SolutionUpdateModel(self.baseContext))
             self.runModel("maxScaledEigenvalue", maxScaledEigenvalue.MaxScaledEigenvalue(self.baseContext))
+            self.runModel("deltaDistribution",deltaDistributionModel.DeltaDistributionModel(self.baseContext),)
 
         if self.config["kernelType"] == "limiter":
             self.runModel("limiter", limiterModel.LimiterModel(self.baseContext, self))

@@ -79,33 +79,18 @@ class DynamicAMR(AbstractAderDGActionSet):
 
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : spaceFaceSize;
 
-    /*
     if(!marker.isInteriorFaceWithinPatch()){
 
-      //Prolongate estimations
-      kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation<
-        {{SOLVER_NAME}},
-        {{CORRECTOR_COMPUTATION_PRECISION}},
-        NumberOfData,
-        Order+1>(
-          fineGridFace{{SOLVER_NAME}}QEstimates.value+facePosition*NumberOfData,
-          coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfData,
-          marker.getRelativePositionWithinFatherFace()
-      );
-
-      //Prolongate fluxes
-      kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation<
-        {{SOLVER_NAME}},
-        {{CORRECTOR_COMPUTATION_PRECISION}},
-        NumberOfData,
-        Order+1>(
-          fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*NumberOfVariables,
-          coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfVariables,
-          marker.getRelativePositionWithinFatherFace()
+      //Interpolate both estimates and fluxes
+      generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::faceUnknownsProlongation(
+        fineGridFace{{SOLVER_NAME}}QEstimates.value+facePosition*NumberOfData,
+        fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*NumberOfVariables,
+        coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfData,
+        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfVariables,
+        marker.getRelativePositionWithinFatherFace()
       );
 
     }
-    */
 
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)) );
@@ -137,17 +122,11 @@ class DynamicAMR(AbstractAderDGActionSet):
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
 
     //fluxes
-    /*
-    kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<
-      {{SOLVER_NAME}}, //SolverType
-      {{CORRECTOR_COMPUTATION_PRECISION}}, //pStoreType      
-      NumberOfVariables,      //numberOfVariables
-      Order+1>(
-        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+(1-facePosition)*fluxElementsPerFace, //const double* lQhbndCoarse
-        fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine          
-        marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
+    generated::kernels::AderDG::{{SOLVER_NAME}}::{{LINEARITY}}::faceFlux__restrict__ion(
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+(1-facePosition)*fluxElementsPerFace, //const double* lQhbndCoarse
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine          
+      marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
     );
-    */
 
   }
 
@@ -178,8 +157,6 @@ class DynamicAMR(AbstractAderDGActionSet):
 
     def get_includes(self):
         return (
-            super(DynamicAMR, self).get_includes()
-            + """
-#include <cstring>
-"""
-        )
+            super(DynamicAMR, self).get_includes() + """
+#include "generated/kernels/""" + self._solver._name + ("/linear" if self._solver._is_linear else "/nonlinear") + """/Kernels.h"
+""")

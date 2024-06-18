@@ -931,6 +931,10 @@ class ADERDG(object):
             "generated/kernels/" + self._name + "/" + is_linear + "/cellErrorIntegral.cpp",
             generated=True,
         )
+        output.makefile.add_cpp_file(
+            "generated/kernels/" + self._name + "/" + is_linear + "/amrRoutines.cpp",
+            generated=True,
+        )
         if self._point_sources_implementation != PDETerms.None_Implementation:
             output.makefile.add_cpp_file(
                 "generated/kernels/"
