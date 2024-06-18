@@ -27,6 +27,7 @@ spack:
   - py-pspamm
   - libxsmm+generator
   - slurm
+  - cmake
   - memkind
   - blis
   - boost
@@ -36,6 +37,7 @@ spack:
   - papi+cuda
   - scorep+cuda+papi+mpi
   - likwid+cuda
+  - easi+asagi
   - eigen+ipo
   - babelstream+cuda cuda_arch=70
   - hwloc+cuda

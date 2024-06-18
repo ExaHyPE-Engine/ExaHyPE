@@ -62,9 +62,9 @@ tarch::la::Vector<Dimensions + 1, int> exahype2::fv::rusanov::internal::rangeOve
 }
 
 
-tarch::la::Vector<Dimensions, int> exahype2::fv::rusanov::internal::rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize) {
+tarch::la::Vector<Dimensions, int> exahype2::fv::rusanov::internal::rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize, bool extendInBothDirections) {
   return tarch::la::Vector<Dimensions, int>({
-    numberOfVolumesPerAxisInPatch + 2 * haloSize, numberOfVolumesPerAxisInPatch
+    numberOfVolumesPerAxisInPatch + (extendInBothDirections ? 2 : 1) * haloSize, numberOfVolumesPerAxisInPatch
 #if Dimensions == 3
       ,
       numberOfVolumesPerAxisInPatch
@@ -73,9 +73,9 @@ tarch::la::Vector<Dimensions, int> exahype2::fv::rusanov::internal::rangeOverVol
 }
 
 
-tarch::la::Vector<Dimensions, int> exahype2::fv::rusanov::internal::rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize) {
+tarch::la::Vector<Dimensions, int> exahype2::fv::rusanov::internal::rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize, bool extendInBothDirections) {
   return tarch::la::Vector<Dimensions, int>({
-    numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * haloSize
+    numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + (extendInBothDirections ? 2 : 1) * haloSize
 #if Dimensions == 3
       ,
       numberOfVolumesPerAxisInPatch
@@ -84,8 +84,8 @@ tarch::la::Vector<Dimensions, int> exahype2::fv::rusanov::internal::rangeOverVol
 }
 
 
-tarch::la::Vector<3, int> exahype2::fv::rusanov::internal::rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int haloSize) {
-  return tarch::la::Vector<3, int>({numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * haloSize});
+tarch::la::Vector<3, int> exahype2::fv::rusanov::internal::rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int haloSize, bool extendInBothDirections) {
+  return tarch::la::Vector<3, int>({numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + (extendInBothDirections ? 2 : 1) * haloSize});
 }
 
 

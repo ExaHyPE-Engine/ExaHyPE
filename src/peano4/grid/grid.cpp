@@ -76,6 +76,9 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   result.setBackupOfAdjacentRanks(adjacentRanks);
   result.setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(not isNewFineGridVertex);
   result.setIsAntecessorOfRefinedVertexInCurrentTreeSweep(not isNewFineGridVertex);
+  result.setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(false);
+  result.setIsParentOfSubtreeVertexInCurrentTreeSweep(false);
+
 #if PeanoDebug > 0
   result.setX(x);
 #endif
