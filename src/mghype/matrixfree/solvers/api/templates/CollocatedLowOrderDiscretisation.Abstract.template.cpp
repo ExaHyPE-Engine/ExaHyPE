@@ -118,8 +118,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  // needs to be cleared every sweep, or else control flow is messed up
-  clearGlobalResidual();
+  if (_state==State::Solve) {
+    clearGlobalResidual();
+  }
 }
 
 

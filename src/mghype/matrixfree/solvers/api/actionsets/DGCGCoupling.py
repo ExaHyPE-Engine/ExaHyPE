@@ -90,13 +90,13 @@ class AbstractDGCGCoupling(ActionSet):
     and
     {{PREDICATE_INJECT_AND_RESTRICT}}
   ) {
-    logTraceInWith1Argument("Restriction", fineGridVertex{{CG_SOLVER_NAME}}.toString())
+    logTraceInWith2Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs());
     mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
       fineGridVertex{{CG_SOLVER_NAME}},
       true,        // restrictRhsAndInjectSolution
       {{USE_FAS}}
     );
-    logTraceOutWith1Argument("Restriction", fineGridVertex{{CG_SOLVER_NAME}}.toString())
+    logTraceOutWith2Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs());
   }
   """
 
@@ -272,7 +272,8 @@ class AbstractDGCGCoupling(ActionSet):
     fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
     and
     {{PREDICATE_EVALUATE_RHS}}
-  ) {    
+  ) {
+    logTraceIn("ComputeAndRestrictResidual");
     assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
 
     // =============================
@@ -355,6 +356,7 @@ class AbstractDGCGCoupling(ActionSet):
     mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters( 
       fineGridVertices{{CG_SOLVER_NAME}}
     );    
+  logTraceOut("ComputeAndRestrictResidual");
   }
 """
 
@@ -672,9 +674,11 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         # f-string isn't happy unless i do it like this
         cg_solver_name = self.d["CG_SOLVER_NAME"]
         dg_solver_name = self.d["DG_SOLVER_NAME"]
-        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"repositories::instanceOf{dg_solver_name}.isSuspended() and CGCycleCounter==0"
+        # set CGCycleCounter==2 because we increment when we prepare traversal, and we want to make sure results from restriction are sent to the variables we care about
+        # injection/restriction doesn't send the new results into rhs; the prepareCGVertex routine does.
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"repositories::instanceOf{dg_solver_name}.isSuspended() and CGCycleCounter==2"
         self.d["PREDICATE_PROLONGATE"]           = f"DGCycleCounter==1 and repositories::instanceOf{cg_solver_name}.isSuspended()"
-        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==0"
+        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==1"
           
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
         assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
@@ -747,7 +751,7 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       */
       repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false);
       CGCycleCounter++;
-      logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver" );
+      logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver. CG residual="<< repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
     }
     else {
       DGCycleCounter = 1;

@@ -9,6 +9,8 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
   bool   restrictRhsAndInjectSolution,
   bool   fas
 ) {
+  static tarch::logging::Log _log( "mghype::matrixfree::solvers::dgcgcoupling" );
+  logTraceInWith7Arguments("rollOver", vertex.getValue(), vertex.getRhs(), vertex.getNumberOfRestrictions(), vertex.getNewRestrictedRhs(), vertex.getDelta(), restrictRhsAndInjectSolution, fas);
   if (
     vertex.getNumberOfRestrictions()<=0
     or
@@ -65,18 +67,22 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
   vertex.setSumOfInjectedValues( 0.0 );
   vertex.setNumberOfRestrictions( 0 );
   vertex.setNewRestrictedRhs( 0.0 );
+  logTraceOutWith5Arguments("rollOver", vertex.getValue(), vertex.getRhs(), vertex.getNumberOfRestrictions(), vertex.getNewRestrictedRhs(), vertex.getDelta());
 }
 
 
 void mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters(
   auto&  vertices
 ) {
+  static tarch::logging::Log _log( "mghype::matrixfree::solvers::dgcgcoupling" );
   for (int vertex=0; vertex<TwoPowerD; vertex++) {
+    logTraceInWith1Argument("RestrictionCounters", vertices(vertex).getNumberOfRestrictions());
     vertices(vertex).setNumberOfRestrictions(
       vertices(vertex).getNumberOfRestrictions()+1
     );
     assertion1( vertices(vertex).getNumberOfRestrictions()>0,          vertices(vertex).toString() );
     assertion1( vertices(vertex).getNumberOfRestrictions()<=TwoPowerD, vertices(vertex).toString() );
+    logTraceOutWith1Argument("RestrictionCounters", vertices(vertex).getNumberOfRestrictions());
   }
 }
 
@@ -179,15 +185,22 @@ tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, doubl
   const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
   const auto&           cgVertices
 ) {
+  static tarch::logging::Log _log( "mghype::matrixfree::solvers::dgcgcoupling" );
+
   tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > coarseDeltaValues;
   for (int vertex=0; vertex<TwoPowerD; vertex++)
   for (int unknown=0; unknown<CGSolver::VertexUnknowns; unknown++) {
     coarseDeltaValues( vertex*CGSolver::VertexUnknowns+unknown ) = cgVertices(vertex).getDelta(unknown);
   }
 
+  logTraceInWith3Arguments("prolongate", dgSolution, coarseDeltaValues, prolongationMatrix);
+
   tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > prolongatedValues =
     prolongationMatrix * coarseDeltaValues;
+  
+  auto output = dgSolution + prolongatedValues;
 
-  return dgSolution + prolongatedValues;
+  logTraceOutWith2Arguments("prolongate", prolongatedValues, output);
+  return output;
 }
 
