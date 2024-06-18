@@ -99,11 +99,11 @@ void {{codeNamespace}}::faceFlux__restrict__ion(
 {% else %}{# nDim == 2#}
     for (int y = 0; y < {{nDof}}; y++) {
       // will overwrite tmpX, no need to set to 0
-      {{ m.matmul('face_F_x', 'lFhbndFine', 'restrictor[subFaceIndex[0]]', 'tmpX', 'y*'~nDof*nVarPad, '0', 'y*'~nDof*nVarPad) | indent(6) }}{##}
+      {{ m.matmul('face_F_x', 'lFhbndFine', 'restrictor[subfaceIndex[0]]', 'tmpX', 'y*'~nDof*nVarPad, '0', 'y*'~nDof*nVarPad) | indent(6) }}{##}
     }
     for (int x = 0; x < {{nDof}}; x++) {
       // will overwrite lFhbndCoarse, no need to set to 0
-      {{ m.matmul('face_F_y', 'tmpX', 'restrictor[subFaceIndex[1]]', 'lFhbndCoarse', 'x*'~nVarPad, '0', 'x*'~nVarPad) | indent(6) }}{##}
+      {{ m.matmul('face_F_y', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lFhbndCoarse', 'x*'~nVarPad, '0', 'x*'~nVarPad) | indent(6) }}{##}
     }
 {% endif %}
 
