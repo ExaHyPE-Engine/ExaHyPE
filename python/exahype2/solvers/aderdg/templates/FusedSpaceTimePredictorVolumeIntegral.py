@@ -5,25 +5,33 @@ from .AbstractKernelTemplate import AbstractKernelTemplate
 import copy
 
 from .MatmulConfig import MatmulConfig
+from .MathUtils import MathUtils
 
 class FusedSpaceTimePredictorVolumeIntegral(AbstractKernelTemplate):
     def generateCode(self):
         self.context["nVarMinusOne_seq"] = range(self.context["nVar"] - 1)
         self.context["nDataMinusOne_seq"] = range(self.context["nData"] - 1)
 
+
         if self.context["isLinear"]:
             # size of the tmpArray
             self.context["tmpArraySize"] = max((self.context["nDof"]*self.context["nVarPad"] if self.context["useFlux"]          else 0), \
                                                 (self.context["nDim"]*self.context["nVarPad"] if self.context["useNCP"]           else 0))
-            self.render("FusedSpaceTimePredictorVolumeIntegralLinear.template.cpp", "FusedSpaceTimePredictorVolumeIntegral.cpp")
 
             if self.context["usePointSources"]:
                 localContext = copy.copy(self.context)
                 localContext["usePointSources"] = False
                 localContext["nameSuffix"] = "_WithoutPS"
+
                 self.render("FusedSpaceTimePredictorVolumeIntegralLinear.template.cpp", "FusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp", localContext)
 
-        else: # nonlinear
+                # Assembling the basis function for the point source
+                QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(self.context["nDof"])
+                self.context["basisFunctions"] = MathUtils.assembleBasisFunction(QuadratureNodes)
+
+            self.render("FusedSpaceTimePredictorVolumeIntegralLinear.template.cpp", "FusedSpaceTimePredictorVolumeIntegral.cpp")
+
+        else:  # nonlinear
             self.context["nDof_seq"] = range(0,self.context["nDof"])
             self.context["i_seq"] = range(0,self.context["nDof"])
             self.context["j_seq"] = range(0,self.context["nDof"]) if (self.context["nDim"] >= 3) else [0]
