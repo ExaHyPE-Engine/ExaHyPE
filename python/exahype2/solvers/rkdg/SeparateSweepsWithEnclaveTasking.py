@@ -138,7 +138,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._fused_Riemann_compute_kernel_call_stateless_gpu = "#error Not yet defined. Set self._fused_Riemann_compute_kernel_call_stateless_gpu in your Python solver class."
 
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
-        self.make_copy_of_enclave_task_data = True
 
         self.create_action_sets()
         self.create_data_structures()

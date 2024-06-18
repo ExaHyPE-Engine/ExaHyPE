@@ -425,7 +425,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
 
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
-        self.make_copy_of_enclave_task_data = True
             
         self.create_action_sets()
         self.create_data_structures()
@@ -701,7 +700,8 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
         d["MAKE_COPY_OF_ENCLAVE_TASK_DATA"] = self.make_copy_of_enclave_task_data
-
+        
+        
     @property
     def user_action_set_includes(self):
         return (

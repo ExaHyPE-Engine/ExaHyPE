@@ -353,10 +353,6 @@ class EnclaveTasking(FV):
         self.add_user_action_set_includes(additional_includes)
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
-        # Needs to be set by optimistic solvers and generally
-        # works only for smart pointers     
-        self.make_copy_of_enclave_task_data = True
-
 
     def _create_guards(self):
         """!
