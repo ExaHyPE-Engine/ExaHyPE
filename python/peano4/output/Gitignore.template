@@ -19,7 +19,8 @@ vertexdata/
 observers/
 repositories/
 tasks/
-generated/
+kernels/
+tracers/
 solution-*
 
 Constants.h

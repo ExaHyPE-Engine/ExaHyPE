@@ -282,7 +282,7 @@ class Controller:
             self.runModel("riemannSolver", riemannModel.RiemannModel(self.baseContext))
             self.runModel("matrixUtils", matrixUtilsModel.MatrixUtilsModel(self.baseContext))
             self.runModel("faceIntegral", faceIntegralModel.FaceIntegralModel(self.baseContext))
-            self.runModel("cellErrorIntegral", cellErrorIntegral.CellErrorIntegral(self.baseContext))
+            self.runModel("CellErrorIntegral", CellErrorIntegral.CellErrorIntegral(self.baseContext))
             self.runModel("solutionUpdate", solutionUpdateModel.SolutionUpdateModel(self.baseContext))
             self.runModel("maxScaledEigenvalue", maxScaledEigenvalue.MaxScaledEigenvalue(self.baseContext))
 
