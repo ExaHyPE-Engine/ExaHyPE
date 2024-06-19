@@ -1,13 +1,14 @@
+include:
+  - .continuous_integration/gitlab-templates.yml
+
 pages:
-  stage: publish
+  extends: .BeforeScript
+  stage: Publish
   allow_failure: false
-  tags:
-    - ${RUNNER_TAG}
   dependencies: []
-  before_script:
-    - module load singularity/3.9.2
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_IMAGEDIR/${BASE_IMAGE_TAG} doxygen documentation/Doxyfile
+    - singularity exec -e --bind "$PWD" $SINGULARITY_IMAGEDIR/${IMAGE_TAG_BASE} doxygen documentation/Doxyfile
+    - rm -rf public
     - mkdir public
     - mv ./doxygen-html/html/* public/
   artifacts:
