@@ -57,7 +57,7 @@ class HandleBoundary(AbstractAderDGActionSet):
         int basis         = 1;
         for (int d=0; d<Dimensions; d++) {
           nodePosition(d)  = faceOffset(d);
-          nodePosition(d) += (d==normal) ? 0.0 : kernels::{{SOLVER_NAME}}::Quadrature<double>::nodes[dof(d)] * marker.h()(d);
+          nodePosition(d) += (d==normal) ? 0.0 : kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[dof(d)] * marker.h()(d);
           dofSerialised += (d==normal) ? 0 : dof(d)*basis;
           basis *= (d==normal) ? 1 : (Order+1);
         }

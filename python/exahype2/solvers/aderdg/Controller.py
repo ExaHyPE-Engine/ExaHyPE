@@ -188,12 +188,12 @@ class Controller:
               if precision not in Configuration.validPrecisions:
                 raise ValueError(
                     "One of the chosen computation precisions was not a valid choice, you have specified: " + precision
-                    + ", valid choices are: " + ", ".join(Configuration.validPrecisions.keys())
+                    + ", valid choices are: " + ", ".join(Configuration.validPrecisions)
                 )
             if self.config["predictorStoragePrecision"] not in Configuration.validPrecisions:
               raise ValueError(
                 "One of the chosen storage precisions was not a valid choice, valid choices are: "
-                + ", ".join(Configuration.validPrecisions.keys())
+                + ", ".join(Configuration.validPrecisions)
               )
 
     def printConfig(self):

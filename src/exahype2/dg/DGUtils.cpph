@@ -28,3 +28,22 @@ QStoreType exahype2::dg::evaluatePolynomial(
   }
   return result;
 }
+
+template<typename T>
+tarch::la::Vector<Dimensions,double>  exahype2::dg::getQuadraturePoint(
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  const tarch::la::Vector<Dimensions,int>&     index,
+  int                                 polynomialOrder,
+  const T* __restrict__          quadraturePoints
+) {
+  tarch::la::Vector<Dimensions,double> result;
+
+  result(0) = quadraturePoints[index(0)];
+  result(1) = quadraturePoints[index(1)];
+#if Dimensions==3
+  result(Dimensions) = quadraturePoints[index(Dimensions)];
+#endif
+
+  return tarch::la::multiplyComponents(result,cellSize) + cellCentre - 0.5*cellSize;
+}

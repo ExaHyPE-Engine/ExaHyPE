@@ -131,7 +131,6 @@ class Correction(AbstractAderDGActionSet):
         self.riemann_guard  = guard
 
         self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
-        self.use_kernelgenerator        = solver._use_kernel_generator
         self.is_linear                  = solver._is_linear
 
     def get_body_of_operation(self, operation_name):
@@ -144,7 +143,7 @@ class Correction(AbstractAderDGActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
         ):
             d[ "PREDICATE" ]    = self.riemann_guard
-            d["RIEMANN_SOLVER"] = jinja2.Template(riemann_solver(self.use_custom_riemann_solver, self.use_kernelgenerator, self.is_linear)).render(**d)
+            d["RIEMANN_SOLVER"] = jinja2.Template(riemann_solver(self.use_custom_riemann_solver, self.is_linear)).render(**d)
             result = jinja2.Template(self.Template_TouchFaceFirstTime).render(**d)
             pass
         if (
@@ -152,9 +151,9 @@ class Correction(AbstractAderDGActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
             d["PREDICATE" ]             = self.guard
-            d["CORRECTOR_ALLOCATIONS"]  = jinja2.Template(create_corrector_allocations(self.use_kernelgenerator)).render(**d)
-            d["SOLUTION_UPDATE"]        = jinja2.Template(create_solution_update(self.use_kernelgenerator)).render(**d)
-            d["FACE_INTEGRAL"]          = jinja2.Template(face_integral(self.use_kernelgenerator, self.is_linear)).render(**d)
+            d["CORRECTOR_ALLOCATIONS"]  = jinja2.Template(create_corrector_allocations()).render(**d)
+            d["SOLUTION_UPDATE"]        = jinja2.Template(create_solution_update()).render(**d)
+            d["FACE_INTEGRAL"]          = jinja2.Template(face_integral(self.is_linear)).render(**d)
             result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
             pass
         return result
@@ -166,5 +165,5 @@ class Correction(AbstractAderDGActionSet):
         linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
             super(Correction, self).get_includes()
-            + create_includes(self.use_kernelgenerator, self._solver._name, self._solver._is_linear)
+            + create_includes(self._solver._name, self._solver._is_linear)
         )

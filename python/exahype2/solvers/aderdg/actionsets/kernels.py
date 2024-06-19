@@ -3,74 +3,7 @@
 
 import jinja2
 
-def create_predictor_allocations(use_kernelgenerator=True):
-    Template_generic = """
-    constexpr int basisElementsPerFace  = spaceFaceSize * (NumberOfVariables + NumberOfParameters);
-    constexpr int fluxElementsPerFace   = spaceFaceSize * NumberOfVariables;
-
-    constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters) * spaceTimeBasisSize * (Order + 1);
-    constexpr int sizeRhs   = sizeLQi;
-    constexpr int sizeLFi   = (Dimensions + 1) * NumberOfVariables * spaceTimeBasisSize; // Dimensions + 1 because this is also used for lShi, which contains source terms. TODO: Make its own storage.
-    constexpr int sizeGradQ = Dimensions * NumberOfVariables * spaceBasisSize;
-
-    constexpr int sizeLQhi = (NumberOfVariables + NumberOfParameters) * spaceBasisSize;
-    constexpr int sizeLFhi = (Dimensions + 1) * NumberOfVariables * spaceBasisSize;
-
-    constexpr int sizeLduh = sizeLQhi;
-
-/*
-    constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
-                              sizeLQhi + sizeLFhi + sizeLduh;
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} block[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* memory = block;
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi   = memory; memory+=sizeLQi;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* rhs   = memory; memory+=sizeRhs;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi   = memory; memory+=sizeLFi;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ = memory; memory+=sizeGradQ;
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = memory; memory+=sizeLQhi;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = memory; memory+=sizeLFhi;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = memory; memory+=sizeLduh;
-
-    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[2 * Dimensions * spaceFaceSize * (NumberOfVariables + NumberOfParameters)]{0.0};
-    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[2 * Dimensions * spaceFaceSize * NumberOfVariables]{0.0};
-*/
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeLQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* rhs = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeRhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeLFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeGradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeLQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeLFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
-      sizeLduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-      2 * Dimensions * spaceFaceSize * (NumberOfVariables + NumberOfParameters),
-      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-      2 * Dimensions * spaceFaceSize * NumberOfVariables,
-      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
-    );
-"""
-
+def create_predictor_allocations():
     Template_kernelgenerator = """
     const int basisElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFaceSize();
     const int fluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
@@ -118,95 +51,10 @@ def create_predictor_allocations(use_kernelgenerator=True):
     {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
     {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
 """
-    return (Template_kernelgenerator if use_kernelgenerator else Template_generic)
+    return Template_kernelgenerator
 
-def create_predictor_frees(use_kernelgenerator=True):
-    Template_generic = """
-    tarch::freeMemory(lQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(rhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(lFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(gradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(lQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(lFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(lduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(lQhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::freeMemory(lFhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-"""
+def create_fstpvi_call(is_linear, usePointSource):
 
-    Template_kernelgenerator = """
-"""
-    return (Template_kernelgenerator if use_kernelgenerator else Template_generic)
-
-def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
-    Template_generic_linear = """
-    //template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType>
-    kernels::aderdg::generic::c::spaceTimePredictorLinear<
-      false, //usePointSource
-      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-      false, //useMM
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
-      {{CORRECTOR_COMPUTATION_PRECISION}} //predictor_storage_precision
-      >(
-        repositories::{{SOLVER_INSTANCE}},
-        lQhbnd, lFhbnd,
-        lQi, lFi, gradQ,
-        nullptr, nullptr, nullptr, //PSi, PSderivatives, tmp_PSderivatives
-        lQhi, lFhi,
-        luh,
-        marker.x(), marker.h(), timeStamp, timeStepSize
-    );
-
-    //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
-    kernels::aderdg::generic::c::volumeIntegralLinear<
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
-      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      {{NUMBER_OF_UNKNOWNS}},
-      {{ORDER}}+1>(
-        lduh,
-        lFhi,
-        marker.h() //cellSize
-    );
-    """
-
-    Template_generic_nonlinear = """
-    //template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType>
-    int numberOfIterations = kernels::aderdg::generic::c::spaceTimePredictorNonlinear<
-      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      false, //viscousFlux
-      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-      false, //noTimeAveraging
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
-      {{CORRECTOR_COMPUTATION_PRECISION}} //predictor_storage_precision
-      >(
-        repositories::{{SOLVER_INSTANCE}},
-        lQhbnd, nullptr, lFhbnd,
-        lQi, rhs, lFi,
-        gradQ, lQhi, lFhi,
-        luh,
-        marker.x(), marker.h(), timeStamp, timeStepSize
-    );
-
-    //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
-    kernels::aderdg::generic::c::volumeIntegralNonlinear<
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
-      {{ "true" if USE_NCP!="<none>" or USE_SOURCE!="<none>" else "false" }}, //useSourceOrNCP
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      false, //noTimeAveraging
-      {{NUMBER_OF_UNKNOWNS}},
-      {{ORDER}}+1>(
-        lduh,
-        lFhi,
-        marker.h() //cellSize
-    );
-"""
     Template_kernelgenerator_linear_no_ps = """
     //linear, no pointSources
     int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
@@ -268,32 +116,17 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
         );
     }
 """
-    #decides which of the five options to provide
-    if(useKernelGenerator):
-        if(is_linear):
-            if(usePointSource):
-                return Template_kernelgenerator_linear_w_ps
-            else:
-                return Template_kernelgenerator_linear_no_ps
+
+    if(is_linear):
+        if(usePointSource):
+            return Template_kernelgenerator_linear_w_ps
         else:
-            return Template_kernelgenerator_nonlinear
+            return Template_kernelgenerator_linear_no_ps
     else:
-        if(is_linear):
-            return Template_generic_linear
-        else:
-            return Template_generic_nonlinear
+        return Template_kernelgenerator_nonlinear
 
 
-def create_solution_update(use_kernelgenerator):
-    template_generic = """
-    kernels::aderdg::generic::c::solutionUpdate(
-      repositories::{{SOLVER_INSTANCE}},
-      luh,
-      luh,
-      lduh,
-      timeStepSize
-    );
-"""
+def create_solution_update():
     template_kernelgenerator = """
     kernels::{{SOLVER_NAME}}::solutionUpdate(
       luh,
@@ -302,7 +135,7 @@ def create_solution_update(use_kernelgenerator):
       timeStepSize
     );
 """
-    return (template_kernelgenerator if use_kernelgenerator else template_generic)
+    return template_kernelgenerator
 
 
 def copy_estimates_into_faces():
@@ -368,7 +201,7 @@ def number_of_precisions_iterator(iterator_content):
     return Template.render(**d)
 
 
-def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
+def riemann_solver(use_custom_riemann_solver, is_linear):
     template_custom = """
     repositories::{{SOLVER_INSTANCE}}.riemannSolver(
       FL,
@@ -382,42 +215,6 @@ def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
       direction,
       isBoundary,
       faceNumber
-    );
-"""
-    template_generic_linear = """
-    //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
-    kernels::aderdg::generic::c::riemannSolverLinear<
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-      false, //useMM
-      {{SOLVER_NAME}}>(
-        repositories::{{SOLVER_INSTANCE}},
-        FL,
-        FR,
-        QL,
-        QR,
-        timeStamp,
-        timeStepSize,
-        faceCentre,
-        marker.h(),
-        direction
-    );
-"""
-    template_generic_nonlinear = """
-    //template <bool useNCP, bool useViscousFlux, typename SolverType>
-    kernels::aderdg::generic::c::riemannSolverNonlinear<
-      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-      {{SOLVER_NAME}}>(
-        repositories::{{SOLVER_INSTANCE}},
-        FL,
-        FR,
-        QL,
-        QR,
-        timeStamp,
-        timeStepSize,
-        faceCentre,
-        marker.h(),
-        direction
     );
 """
     template_kernelgenerator = """
@@ -436,38 +233,11 @@ def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
 """
     if use_custom_riemann_solver:
         return template_custom
-    elif use_kernelgenerator:
-        return template_kernelgenerator
-    elif is_linear:
-        return template_generic_linear
     else:
-        return template_generic_nonlinear
+        return template_kernelgenerator
 
-def face_integral(use_kernelgenerator, is_linear):
-    template_generic_linear = """
-        kernels::aderdg::generic::c::faceIntegralLinear<
-          {{SOLVER_NAME}},
-          {{NUMBER_OF_UNKNOWNS}},
-          {{ORDER}}+1>(
-            lduh,
-            FIN,
-            direction,
-            orientation,
-            marker.h()
-        );
-"""
-    template_generic_nonlinear = """
-        kernels::aderdg::generic::c::faceIntegralNonlinear<
-          {{SOLVER_NAME}},
-          {{NUMBER_OF_UNKNOWNS}},
-          {{ORDER}}+1>(
-            lduh,
-            FIN,
-            direction,
-            orientation,
-            marker.h()
-        );
-"""
+
+def face_integral(is_linear):
     template_kernelgenerator = """
         const double inverseDxDirection = 1/marker.h()[d];
         kernels::{{SOLVER_NAME}}::faceIntegral(
@@ -478,14 +248,9 @@ def face_integral(use_kernelgenerator, is_linear):
           inverseDxDirection
         );
 """
-    if use_kernelgenerator:
-        return template_kernelgenerator
-    elif is_linear:
-        return template_generic_linear
-    else:
-        return template_generic_nonlinear
+    return template_kernelgenerator
     
-def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riemann_solver, use_kernelgenerator, is_linear):
+def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riemann_solver, is_linear):
     Template = """
     /*
     Copy the estimates into the face data containers. Note that peano uses a different ordering of
@@ -521,11 +286,11 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
             tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
             faceCentre[d] -= 0.5*marker.h()[d];
 
-    """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
+    """ + riemann_solver(use_custom_riemann_solver, is_linear) + """
 
             {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = FR;
 
-    """ + face_integral(use_kernelgenerator, is_linear) + """
+    """ + face_integral(is_linear) + """
 
         }
         else{
@@ -547,11 +312,11 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
             tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
             faceCentre[d] += 0.5*marker.h()[d];
         
-    """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
+    """ + riemann_solver(use_custom_riemann_solver, is_linear) + """
 
             {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = FL;
 
-    """ + face_integral(use_kernelgenerator, is_linear) + """
+    """ + face_integral(is_linear) + """
         
         }
         else{
@@ -565,36 +330,19 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
 """
     d = {}
-    d["RIEMANN_SOLVER"] = riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear)
-    d["FACE_INTEGRAL"] = face_integral(use_kernelgenerator, is_linear)
-    return Template#Template.render(**d)
+    d["RIEMANN_SOLVER"] = riemann_solver(use_custom_riemann_solver, is_linear)
+    d["FACE_INTEGRAL"] = face_integral(is_linear)
+    return Template
 
-def create_corrector_allocations(use_kernelgenerator):
-    template_generic = """
-    const int Order = {{ORDER}};
-    const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
-
-    #if Dimensions==2
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1);
-    constexpr int spaceFaceSize      = (Order+1);
-    #else
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1)*(Order+1);
-    constexpr int spaceFaceSize      = (Order+1)*(Order+1);
-    #endif
-
-    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[spaceBasisSize*NumberOfVariables]{0.0};
-    const int fluxElementsPerFace = spaceFaceSize*NumberOfVariables;
-"""
+def create_corrector_allocations():
     template_kernelgenerator = """
     {{CORRECTOR_COMPUTATION_PRECISION}} lduh[kernels::{{SOLVER_NAME}}::getUpdateSize()]{0.0};
     const int fluxElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 """
-    if use_kernelgenerator:
-        return template_kernelgenerator
-    else:
-        return template_generic
 
-def create_includes(use_kernelgenerator, solver_name, is_linear):
+    return template_kernelgenerator
+
+def create_includes(solver_name, is_linear):
     return """
 #include "../kernels/""" + solver_name + """/Kernels.h"
 """

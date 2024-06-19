@@ -135,25 +135,16 @@ class SeparateSweeps(ADERDG):
         self._action_set_correction.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
             self.get_name_of_global_instance(), self._name
         )
-        if(self._use_kernel_generator):
-            self._action_set_correction.riemann_guard = (
-                self._store_cell_data_default_guard()
-                + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
-                    self.get_name_of_global_instance(),self._name
-                    )
-                + " and not fineGridFace"
-                + self._name
-                + "FaceLabel.getAboveHanging()"
-            )
-        else:
-            self._action_set_correction.riemann_guard = (
-                self._store_cell_data_default_guard()
-                + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
-                    self.get_name_of_global_instance(),
-                    self._name
-                )
-            )
 
+        self._action_set_correction.riemann_guard = (
+            self._store_cell_data_default_guard()
+            + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
+                self.get_name_of_global_instance(),self._name
+                )
+            + " and not fineGridFace"
+            + self._name
+            + "FaceLabel.getAboveHanging()"
+        )
 
     def get_user_action_set_includes(self):
         return (

@@ -147,16 +147,11 @@ class ADERDG(object):
         self._is_linear   = False
         self._polynomials = Polynomials.Gauss_Legendre
         self._basis       = GaussLegendreBasis(order + 1)
-        self._use_kernel_generator = True
         self._architecture  = "noarch"
         self._use_libxsmm     = False
         self._use_BLIS        = False
         self._use_Eigen       = False
         self._use_libxsmm_JIT = False
-        self._use_CERK_Guess      = False
-        self._use_vectorized_PDE  = False
-        self._use_split_CK        = False
-        self._predictor_recompute = False
 
         self._initialize_patches = False
 
@@ -852,11 +847,11 @@ class ADERDG(object):
             useBLIS=self._use_BLIS,
             useEigen=self._use_Eigen,
             useLibxsmmJIT=self._use_libxsmm_JIT,
-            useVectPDE=self._use_vectorized_PDE,
+            useVectPDE=False,
             architecture=self._architecture,
-            useCERKGuess=self._use_CERK_Guess,
-            useSplitCK=self._use_split_CK,
-            predictorRecompute=self._predictor_recompute,
+            useCERKGuess=False,
+            useSplitCK=False,
+            predictorRecompute=False,
             predictorComputePrecisions=self._predictor_computation_precisions,
             predictorStoragePrecision=self._corrector_computation_precision,
             correctorComputePrecision=self._corrector_computation_precision,
@@ -1030,15 +1025,8 @@ class ADERDG(object):
             output.add(generated_shortcut_file)
             output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
 
-        if self._use_kernel_generator:
-            self.generate_kernels(namespace, output, dimensions)
-        elif (
-            self._material_param_implementation != PDETerms.None_Implementation
-            or self._point_sources_implementation != PDETerms.None_Implementation
-        ):
-            Exception(
-                "Material parameters and point sources are only available with linear generated kernels."
-            )
+
+        self.generate_kernels(namespace, output, dimensions)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -1077,7 +1065,6 @@ class ADERDG(object):
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
         d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
 
-        d["USE_KERNEL_GENERATOR"] = self._use_kernel_generator
         d["USE_HALF_PRECISION"]   = self._use_half_precision
         d["IS_LINEAR"] = self._is_linear
         d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
@@ -1157,7 +1144,9 @@ class ADERDG(object):
         d["VARIABLE_NAMES"]         = self._variable_names
         d["VARIABLE_POSITIONS"]     = self._variable_pos
 
-        self._basis.init_dictionary_with_default_parameters(d)
+        d["QUADRATURE_POINTS"]      = ", ".join(self._basis.quadrature_points())
+
+        # self._basis.init_dictionary_with_default_parameters(d)
 
     def set_implementation(
         self,
@@ -1219,27 +1208,23 @@ class ADERDG(object):
 
     def add_kernel_optimizations(
         self,
-        is_linear=False,
-        polynomials=Polynomials.Gauss_Legendre,
-        use_kernel_generator=True,
-        use_libxsmm=False,
-        use_BLIS=False,
-        use_Eigen=False,
-        use_libxsmm_JIT=False,
-        predictor_computation_precisions=["double"],
-        corrector_computation_precision="double",
-        solution_persistent_storage_precision="double",
-        precompute_picard_precision=False,
-        precision_criterion_implementation=PDETerms.None_Implementation,
-        riemann_solver_implementation=PDETerms.None_Implementation,
+        is_linear = False,
+        polynomials = Polynomials.Gauss_Legendre,
+        use_libxsmm     = False,
+        use_BLIS        = False,
+        use_Eigen       = False,
+        use_libxsmm_JIT = False,
+        precision = False,
+        predictor_computation_precisions        = False,
+        corrector_computation_precision         = False,
+        solution_persistent_storage_precision   = False,
+        precompute_picard_precision             = False,
+        precision_criterion_implementation = PDETerms.User_Defined_Implementation,
+        riemann_solver_implementation = PDETerms.None_Implementation,
         hold_cell_data_on_heap_with_smart_pointer = False,
         hold_face_data_on_heap_with_smart_pointer = False,
-        use_vectorized_PDE=False,
-        architecture="noarch",
-        use_CERK_guess=False,
-        use_split_CK=False,
-        predictor_recompute=False,
-        initialize_patches=False
+        architecture = "noarch",
+        initialize_patches = False
     ):
         if polynomials is Polynomials.Gauss_Legendre:
             self._basis = GaussLegendreBasis(self._order + 1)
@@ -1255,54 +1240,63 @@ class ADERDG(object):
         self._is_linear = is_linear
         self._polynomials = polynomials
 
-        self._use_kernel_generator = use_kernel_generator
-        self._use_libxsmm = use_libxsmm
-        self._use_BLIS = use_BLIS
-        self._use_Eigen = use_Eigen
-        self._use_libxsmm_JIT = use_libxsmm_JIT
+        self._use_libxsmm       = use_libxsmm
+        self._use_BLIS          = use_BLIS
+        self._use_Eigen         = use_Eigen
+        self._use_libxsmm_JIT   = use_libxsmm_JIT
 
-        precisions = [
-            solution_persistent_storage_precision,
-            corrector_computation_precision,
-        ]
-        precisions.extend(predictor_computation_precisions)
-        if precompute_picard_precision!=False:
-            precisions.append(precompute_picard_precision)
-        for value in precisions:
-            if value not in PrecisionType.keys():
+        print(type(PrecisionType))
+
+        #Set all utilized precisions to the specified value
+        if precision!=False:
+            if precision not in PrecisionType.keys():
                 raise AssertionError(
-                    "one of the chosen precisions was not a valid choice. valid choices are: "
+                    "The chosen precision was not a valid choice. valid choices are: "
                     + ", ".join(PrecisionType.keys())
                 )
-            if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
-              self._use_half_precision = True
+            else:
+                self._predictor_computation_precisions      = [PrecisionType[precision]]
+                self._precompute_picard_precision           = PrecisionType[precision]
+                self._solution_persistent_storage_precision = PrecisionType[precision]
+                self._corrector_computation_precision       = PrecisionType[precision]
 
-        self._predictor_computation_precisions = []
-        for precision in predictor_computation_precisions:
-            if PrecisionType[precision] not in self._predictor_computation_precisions:
-                self._predictor_computation_precisions.append(PrecisionType[precision])
-        self._corrector_computation_precision = PrecisionType[
-            corrector_computation_precision
-        ]
-        self._solution_persistent_storage_precision = PrecisionType[
-            solution_persistent_storage_precision
-        ]
+        precisions = []
+        if solution_persistent_storage_precision != False:
+            if solution_persistent_storage_precision not in PrecisionType.keys():
+                raise AssertionError(
+                    "The chosen precision was not a valid choice. valid choices are: "
+                    + ", ".join(PrecisionType.keys())
+                )
+            self._solution_persistent_storage_precision = PrecisionType[solution_persistent_storage_precision]
 
-        self._precompute_picard_precision = PrecisionType[
-            precompute_picard_precision
-        ] if precompute_picard_precision != False else False
+        if corrector_computation_precision != False:
+            if corrector_computation_precision not in PrecisionType.keys():
+                raise AssertionError(
+                    "The chosen precision was not a valid choice. valid choices are: "
+                    + ", ".join(PrecisionType.keys())
+                )
+            self._corrector_computation_precision = PrecisionType[corrector_computation_precision]
 
-        if precision_criterion_implementation is not PDETerms.None_Implementation:
-            self._precision_criterion_implementation = (
-                precision_criterion_implementation
-            )
-        if (
-            len(self._predictor_computation_precisions) > 1
-            and self._precision_criterion_implementation is PDETerms.None_Implementation
-        ):
-            self._precision_criterion_implementation = (
-                PDETerms.User_Defined_Implementation
-            )
+        if precompute_picard_precision != False:
+            if precompute_picard_precision not in PrecisionType.keys():
+                raise AssertionError(
+                    "The chosen precision was not a valid choice. valid choices are: "
+                    + ", ".join(PrecisionType.keys())
+                )
+            self._precompute_picard_precision = PrecisionType[precompute_picard_precision]
+
+        if predictor_computation_precisions != False:
+            self._predictor_computation_precisions = []
+            for prec in predictor_computation_precisions:
+                if prec not in PrecisionType.keys():
+                    raise AssertionError(
+                        "The chosen precision was not a valid choice. valid choices are: "
+                        + ", ".join(PrecisionType.keys())
+                    )
+                self._predictor_computation_precisions.append(PrecisionType[prec])
+
+        if len(self._predictor_computation_precisions) > 1:
+            self._precision_criterion_implementation = precision_criterion_implementation
 
         if riemann_solver_implementation is not PDETerms.None_Implementation:
             self._riemann_solver_implementation = riemann_solver_implementation
@@ -1311,16 +1305,7 @@ class ADERDG(object):
         self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
         self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
 
-        if use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute:
-            raise Exception(
-                "The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion"
-            )
-
-        self._use_vectorized_PDE = use_vectorized_PDE
         self._architecture = architecture
-        self._use_CERK_Guess = use_CERK_guess
-        self._use_split_CK = use_split_CK
-        self._predictor_recompute = predictor_recompute
 
         self._initialize_patches = initialize_patches
 

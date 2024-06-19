@@ -17,24 +17,8 @@
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
-/*
-double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                           = kernels::{{POLYNOMIAL_TYPE}}::weights;
-double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                             = kernels::{{POLYNOMIAL_TYPE}}::nodes;
-double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                               = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
-double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                              = kernels::{{POLYNOMIAL_TYPE}}::dudx;
-double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                               = kernels::{{POLYNOMIAL_TYPE}}::iK1;
-double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                          = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
-double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                            = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
-double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                                 = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                  = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative   = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
-*/
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-/*
-{{BASIS_INITIALIZERS | indent(2,True) }}
-*/
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
@@ -52,13 +36,11 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
-  {% if USE_KERNEL_GENERATOR==True %}
   //initialise nodes, weights and matrices for use of the kernels
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
   {% endfor %}
-  {% endif %}
 
 }
 
@@ -66,13 +48,12 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
   {{DESTRUCTOR_IMPLEMENTATION}}
 
-  {% if USE_KERNEL_GENERATOR==True %}
   //free the generated nodes, weights and matrices
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
   {% endfor %}
-  {% endif %}
+
 }
 
 

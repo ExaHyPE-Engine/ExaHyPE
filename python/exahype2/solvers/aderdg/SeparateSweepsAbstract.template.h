@@ -17,10 +17,8 @@
 
 #include "peano4/utils/Globals.h"
 
-{% if USE_KERNEL_GENERATOR %}
 #include "kernels/{{SOLVER_NAME}}/Quadrature.h"
 #include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
-{% endif %}
 
 {% if USE_HALF_PRECISION==True %}
 #include <stdfloat>
@@ -88,14 +86,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
     
-
-    /**
-     * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
-     */
-    /*
-    {{BASIS_DECLARATIONS | indent(4,True) }}
-    */
-
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
 

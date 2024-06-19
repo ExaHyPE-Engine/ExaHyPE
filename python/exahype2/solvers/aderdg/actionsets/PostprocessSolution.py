@@ -109,7 +109,7 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
         marker.x(), marker.h(), index,
         repositories::{{SOLVER_INSTANCE}}.Order+1,
-        kernels::Quadrature<double>::nodes
+        kernels::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
       );
       """
             + operation_per_point
