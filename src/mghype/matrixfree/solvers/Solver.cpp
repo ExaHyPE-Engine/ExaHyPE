@@ -97,6 +97,10 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
 
 void mghype::matrixfree::solvers::Solver::clearGlobalResidual() {
   tarch::multicore::Lock lock( _semaphore );
+  logInfo(
+    "clearGlobalResidual()", 
+    "resetting residuals to 0. _globalResidualMaxNorm = " << _globalResidualMaxNorm
+  );
 
   _globalResidualMaxNorm              = 0.0;
   _globalResidualEukledianNormSquared = 0.0;

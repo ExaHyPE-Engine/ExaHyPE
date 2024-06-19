@@ -88,7 +88,7 @@ class AbstractDGCGCoupling(ActionSet):
   if (
     fineGridVertex{{CG_SOLVER_NAME}}.getType() != vertexdata::{{CG_SOLVER_NAME}}::Type::Coarse
   ) {
-    logTraceInWith2Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs());
+    logTraceInWith4Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs(), (bool)({{PREDICATE_INJECT_AND_RESTRICT}}), (bool)({{PREDICATE_PROLONGATE}}));
     
     if ({{PREDICATE_INJECT_AND_RESTRICT}}) {
       mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
@@ -687,7 +687,9 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         cg_solver_name = self.d["CG_SOLVER_NAME"]
         dg_solver_name = self.d["DG_SOLVER_NAME"]
 
-        # We incremented CGCycleCounter when we suspended both solvers post DG. 
+        # We have finished DG smoothing, and are on first stage of CG Smoothing. Everything important
+        # happens during touchVertexFirstTime, so we can combine. We incremented CGCycleCounter after
+        # we disabled the DG solver.
         self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==1"
 
         # We've just reset everything, so it's time to interpolate.
@@ -734,15 +736,15 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
 
     def get_body_of_prepareTraversal(self):
         return jinja2.Template( """
-    logTraceInWith2Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter);
-    if (DGCycleCounter>0 and DGCycleCounter<=DGSmoothingSteps) {
+    logTraceInWith3Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
+    if (DGCycleCounter>0 and DGCycleCounter<DGSmoothingSteps) {
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       DGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
     }
 
     else if (
-      DGCycleCounter>DGSmoothingSteps // finished DG stage
+      DGCycleCounter==DGSmoothingSteps // finished DG stage
       and
       CGCycleCounter==0               // not started CG yet
     ) {
@@ -754,6 +756,9 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       // is working correctly.
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       CGCycleCounter++; // to make sure we end up on pure CG solver next traversal
+
+      // We test for DGCycleCounter > DGSmoothingSteps later. So increment here.
+      DGCycleCounter++;
     }
 
     else if (
@@ -781,5 +786,5 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       logInfo( "prepareTraversal(...)", "suspend all solvers, interpolate CG->DG and project new solution onto faces" );
     }
-    logTraceInWith4Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{DG_SOLVER_NAME}}.isSuspended(), repositories::instanceOf{{CG_SOLVER_NAME}}.isSuspended());
+    logTraceOutWith4Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{DG_SOLVER_NAME}}.isSuspended(), repositories::instanceOf{{CG_SOLVER_NAME}}.isSuspended());
 """).render( **self.d )
