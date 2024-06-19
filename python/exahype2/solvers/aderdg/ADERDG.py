@@ -1245,8 +1245,6 @@ class ADERDG(object):
         self._use_Eigen         = use_Eigen
         self._use_libxsmm_JIT   = use_libxsmm_JIT
 
-        print(type(PrecisionType))
-
         #Set all utilized precisions to the specified value
         if precision!=False:
             if precision not in PrecisionType.keys():
