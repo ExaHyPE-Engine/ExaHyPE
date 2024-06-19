@@ -696,7 +696,9 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         self.d["PREDICATE_PROLONGATE"]           = f"DGCycleCounter==1 and CGCycleCounter==0"
         
         # final DG stage. This is where we compute the residual for the CG vertices.
-        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter==DGSmoothingSteps and CGCycleCounter==0"
+        # we compare with > because the final time we enter prepareTraversal, DGCycleCounter==DGSmoothingSteps.
+        # Then we increment and continue on the DG solver anyway.
+        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
           
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
         assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
@@ -737,28 +739,10 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
     def get_body_of_prepareTraversal(self):
         return jinja2.Template( """
     logTraceInWith3Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
-    if (DGCycleCounter>0 and DGCycleCounter<DGSmoothingSteps) {
+    if (DGCycleCounter>0 and DGCycleCounter<=DGSmoothingSteps) {
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       DGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
-    }
-
-    else if (
-      DGCycleCounter==DGSmoothingSteps // finished DG stage
-      and
-      CGCycleCounter==0               // not started CG yet
-    ) {
-      logInfo( "prepareTraversal(...)", "finished DG smoothing. Disable all solvers and restrict DG->CG" );
-      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false); // do not project onto faces
-
-      // Not algorithmically necessary, since touchVertexFirstTime happens before anything else.
-      // So we could prepare the vertex and use it all in one sweep. But that will come once it
-      // is working correctly.
-      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
-      CGCycleCounter++; // to make sure we end up on pure CG solver next traversal
-
-      // We test for DGCycleCounter > DGSmoothingSteps later. So increment here.
-      DGCycleCounter++;
     }
 
     else if (
