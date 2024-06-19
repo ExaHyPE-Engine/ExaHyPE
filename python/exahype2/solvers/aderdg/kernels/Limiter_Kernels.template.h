@@ -6,9 +6,6 @@
 // **********************************************************************************************
 #pragma once
 
-#ifndef __INTEL_COMPILER
-#include <mm_malloc.h>
-#endif
 #include <vector>
 
 #include "tarch/la/Vector.h"

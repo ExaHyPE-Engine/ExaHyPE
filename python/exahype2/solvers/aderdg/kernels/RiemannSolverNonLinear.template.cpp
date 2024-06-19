@@ -33,18 +33,10 @@ void {{codeNamespace}}::riemannSolver(
 {% endif %}
 ) {
 
-#ifdef __INTEL_COMPILER
-  __assume_aligned(Quadrature<cCompType>::weights2, {{alignmentSize}});
-  __assume_aligned(FL, {{alignmentSize}});
-  __assume_aligned(FR, {{alignmentSize}});
-  __assume_aligned(QL, {{alignmentSize}});
-  __assume_aligned(QR, {{alignmentSize}});
-#endif
-
   {{m.allocateArray('tmp_bnd', nVarPad*nDof*nDof3D, precision="cCompType") | indent(2)}}{##}
   cCompType QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   cCompType QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
-  
+
   for (int xy = 0; xy < {{nDof*nDof3D}}; xy++) { //xy = 1 or 2 spatial dim (1 in 2D, 2 in 3D)
     #pragma omp simd aligned(QavL,QavR,QL,QR:{{alignmentSize}})
     for (int n = 0; n < {{nDataPad}}; n++) {
@@ -52,28 +44,16 @@ void {{codeNamespace}}::riemannSolver(
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy*{{nDataPad}}+n];
     }
   }
-  
+
   // Check hyperbolic eigenvalues.
-#ifdef USE_IPO
-  #pragma forceinline recursive
-#endif
   cCompType smaxL = solver.{{solverName}}::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
-#ifdef USE_IPO
-  #pragma forceinline recursive
-#endif
   cCompType smaxR = solver.{{solverName}}::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
   cCompType smax = std::max(smaxL, smaxR);
-  
+
   {% if useViscousFlux %}
   // Check viscous eigenvalues.
   cCompType maxViscousEigenvalue = 0.0;
-#ifdef USE_IPO
-  #pragma forceinline recursive
-#endif
   solver.{{solverName}}::viscousEigenvalues(&QavL[0], direction, &lambdaL[0]);
-#ifdef USE_IPO
-  #pragma forceinline recursive
-#endif
   solver.{{solverName}}::viscousEigenvalues(&QavR[0], direction, &lambdaR[0]);
   for (int ivar = 0; ivar < {{nVar}}; ivar++) {
     maxViscousEigenvalue = std::max(maxViscousEigenvalue, std::max(std::abs(lambdaL[ivar]), std::abs(lambdaR[ivar])));
@@ -81,27 +61,23 @@ void {{codeNamespace}}::riemannSolver(
   const auto pi = std::acos(-1); // not constexpr for intel compilers
   const cCompType factor = 2 * (2 * {{nDof - 1}} + 1) / (dx * std::sqrt(0.5 * pi));
   smax += factor * maxViscousEigenvalue;
-  {% endif %}{# useViscousFlux #} 
-  
-  
+  {% endif %}{# useViscousFlux #}
+
   for (int xy = 0; xy < {{nDof*nDof3D}}; xy++){
     #pragma omp simd aligned(tmp_bnd,QL,QR:{{alignmentSize}})
     for (int n = 0; n < {{nVar}}; n++) { //skip parameters
       tmp_bnd[xy*{{nVarPad}}+n] = smax * (QL[xy*{{nDataPad}}+n]-QR[xy*{{nDataPad}}+n]);
     }
   }
-  
-//  #pragma omp simd aligned(FL,FR,tmp_bnd:{{alignmentSize}})
+
   #pragma omp simd aligned(tmp_bnd:{{alignmentSize}})
   for (int xyn = 0; xyn < {{nVarPad*nDof*nDof3D}}; xyn++) {
     FL[xyn] = 0.5 * (FL[xyn] + FR[xyn] + tmp_bnd[xyn]);
   }
   std::copy_n(FL, {{nVarPad*nDof*nDof3D}}, FR);
   {{m.freeArray("tmp_bnd")}}{##}
-  
-{% if useNCP %}
-  //add non-conservative product part
 
+{% if useNCP %}
 {% if useNCPVect %}
   {{m.vectPDEsArrays('Qavgt', nData, False) | indent(2)}}{##}
   {{m.vectPDEsArrays('gradQt', nVar, True) | indent(2)}}{##}
@@ -113,9 +89,6 @@ void {{codeNamespace}}::riemannSolver(
         gradQt[direction][n][s] = QR[(xy+s)*{{nDataPad}}+n] - QL[(xy+s)*{{nDataPad}}+n];
       }
     }
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif
     solver.{{solverName}}::nonConservativeProduct_vect(Qavgt, gradQt, ncpt, {{vectSize}});
     for (int s = 0; s < {{vectSize}}; s++) {
       for (int n = 0; n < {{nVar}}; n++) {
@@ -136,9 +109,6 @@ void {{codeNamespace}}::riemannSolver(
         gradQt[direction][n][s] = gradQt[direction][n][0];
       }
     }
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif
     solver.{{solverName}}::nonConservativeProduct_vect(Qavgt, gradQt, ncpt, {{(nDof*nDof3D)%vectSize}});
     for (int s = 0; s < {{(nDof*nDof3D)%vectSize}}; s++) {
       for (int n = 0; n < {{nVar}}; n++) {
@@ -163,12 +133,9 @@ void {{codeNamespace}}::riemannSolver(
       Qavg[n] = 0.5 * (QL[xy*{{nDataPad}}+n] + QR[xy*{{nDataPad}}+n]);
     }
 {% endif %}
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif
     solver.{{solverName}}::nonconservativeProduct(
-      Qavg, 
-      gradQ, 
+      Qavg,
+      gradQ,
       faceCentre,
       dx,
       t,

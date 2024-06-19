@@ -37,14 +37,10 @@ String time_var        : name of the var used in the outer time loop (use '0' is
 for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSize}}) {
   //transpose to SoA
   AoS2SoA<{{nData}}, {% if timeInterleaved %}{{inputQ_dataSize*nDof}}{% else %}{{inputQ_dataSize}}{% endif %}>({{inputQ}}+{{inputQ_iterator}}, Qt_block);{% if timeInterleaved %} //time dimension is in between{% endif %}
-  
+
   // Call PDE fluxes
   // Expected solver PDE signature: void flux_vect(const double* const * const Q, double* const * const * const F, const int s);
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
   solver.{{solverName}}::flux_vect(Qt, Ft, {{vectSize}});
-  
   //transpose back to AoS
   SoA2AoS<{{nVar}}, {{nVarPad}}>(Ft_x_block, {{outputF}}+{{nVarPad}}*(xyz{% if useTime %}+{{nDof**nDim}}*{{time_var}}{% endif %}));
   SoA2AoS<{{nVar}}, {{nVarPad}}>(Ft_y_block, {{outputF}}+{{nVarPad}}*(xyz{% if useTime %}+{{nDof**nDim}}*{{time_var}}{% endif %})+{{1*outputF_BlockSize}});
@@ -56,14 +52,10 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
 // rest
 {
   AoS2SoA_rest<{{nVar}},{% if timeInterleaved %}{{inputQ_dataSize*nDof}}{% else %}{{inputQ_dataSize}}{% endif %}, {{rest_size}}>({{inputQ}}+{{inputQ_iterator_rest}}, Qt_block);{% if timeInterleaved %} //time dimension is in between{% endif %}
-  
+
   // Call PDE fluxes
   // Expected solver PDE signature: void flux_vect(const double* const * const Q, double* const * const * const F, const int s);
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
   solver.{{solverName}}::flux_vect(Qt, Ft, {{rest_size}});
-  
   //transpose back to AoS
   SoA2AoS_rest<{{nVar}}, {{nVarPad}}, {{rest_size}}>(Ft_x_block, {{outputF}}+{{nVarPad}}*({{rest_start}}{% if useTime %}+{{nDof**nDim}}*{{time_var}}{% endif %}));
   SoA2AoS_rest<{{nVar}}, {{nVarPad}}, {{rest_size}}>(Ft_y_block, {{outputF}}+{{nVarPad}}*({{rest_start}}{% if useTime %}+{{nDof**nDim}}*{{time_var}}{% endif %})+{{1*outputF_BlockSize}});
@@ -86,20 +78,14 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
     {% if useViscousFlux %}
     // TODO(Lukas): Is this correct?
     // Remove padding to use the same user function as generic kernel
-    pCompType gradQ_PDE[{{nVar*nDim}}]; 
+    pCompType gradQ_PDE[{{nVar*nDim}}];
     std::copy_n(gradQ+{{nVarPad}}*xyz, {{nVar}}, gradQ_PDE); //x
     std::copy_n(gradQ+{{nVarPad}}*xyz+{{1*nVarPad*(nDof**nDim)}}, {{nVar}}, gradQ_PDE+{{1*nVar}}); //y
     {% if nDim==3 %}
     std::copy_n(gradQ+{{nVarPad}}*xyz+{{2*nVarPad*(nDof**nDim)}}, {{nVar}}, gradQ_PDE+{{2*nVar}}); //z
     {% endif %}
-    #ifdef USE_IPO
-        #pragma forceinline recursive
-    #endif
     solver.{{solverName}}::viscousFlux({{inputQ}}+{{inputQ_iterator}}, gradQ_PDE, F);
     {% else %}
-    #ifdef USE_IPO
-        #pragma forceinline recursive
-    #endif
     for(int d=0; d<Dimensions; d++){
       solver.{{solverName}}::flux(
         {{inputQ}}+{{inputQ_iterator}},

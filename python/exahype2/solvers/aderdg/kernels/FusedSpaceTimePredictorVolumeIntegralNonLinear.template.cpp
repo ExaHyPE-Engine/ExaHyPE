@@ -214,32 +214,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   //****** Picard ******
   //********************
 
-#ifdef __INTEL_COMPILER
-  __assume_aligned(lQi, {{alignmentSize}});
-  __assume_aligned(rhs, {{alignmentSize}});
-{% if useFlux %}
-  __assume_aligned(lFi, {{alignmentSize}});
-{% endif %}
-  __assume_aligned(DGMatrices<pCompType>::FLCoeff, {{alignmentSize}}); // == F0
-  __assume_aligned(Kxi, {{alignmentSize}});
-  __assume_aligned(iK1_T, {{alignmentSize}});
-  __assume_aligned(Quadrature<pCompType>::nodes, {{alignmentSize}});
-  __assume_aligned(Quadrature<pCompType>::weights1, {{alignmentSize}});
-  __assume_aligned(Quadrature<pCompType>::weights3, {{alignmentSize}});
-  __assume_aligned(Quadrature<pCompType>::iweights3, {{alignmentSize}});
-  __assume_aligned(luh, {{alignmentSize}}); //luh should be aligned, see Solver.h
-{% if useSourceOrNCP %}
-  __assume_aligned(lSi, {{alignmentSize}});
-{% endif %}
-{% if useNCP or useViscousFlux %}
-  __assume_aligned(gradQ, {{alignmentSize}});
-{% endif %}
-{% if useViscousFlux %}
-  __assume_aligned(gradQAvg, {{alignmentSize}});
-{% endif %}
-
-#endif
-
   // 0. Allocate local variable
 {% if useFluxVect %}
   // transposed F slice for flux_vect
@@ -262,16 +236,11 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   const pCompType dtBydx = inverseDx * dt; //Assume dx[0] == dx[1] == dx[2]
 {% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
   pCompType dudxT_by_dx[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
-  
   // 0. precompute 1/dx * dudx_T. Assume dx[0] == dx[1] == dx[2]
-//  #pragma omp simd aligned(dudxT_by_dx,DGMatrices<pCompType>::dudx_T:{{alignmentSize}})
   for(int it=0;it<{{nDof*nDofPad}};it++) {
     dudxT_by_dx[it] = inverseDx * DGMatrices<pCompType>::dudx_T[it];
   }
 {% if useLibxsmm %}
-#if defined(USE_IPO) && ! defined(UNSAFE_IPO)
-  volatile pCompType doNotOptimizeAway_dudx_by_dt = dudxT_by_dx[0]; //used to prevent the compiler from optimizing temp array away. Needs to be volatile
-#endif
 {% endif %}
 {% endif %}
 
@@ -293,14 +262,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
   {{picardIterationPrecision}} dudxT_by_dx_picard[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
   // 0. precompute 1/dx * dudx_T. Assume dx[0] == dx[1] == dx[2]
-//  #pragma omp simd aligned(dudxT_by_dx,DGMatrices<pCompType>::dudx_T:{{alignmentSize}})
   for(int it=0;it<{{nDof*nDofPad}};it++) {
     dudxT_by_dx_picard[it] = inverseDx * DGMatrices<{{picardIterationPrecision}}>::dudx_T[it];
   }
 {% if useLibxsmm %}
-#if defined(USE_IPO) && ! defined(UNSAFE_IPO)
-  volatile pCompType doNotOptimizeAway_dudx_by_dt_picard = dudxT_by_dx_picard[0]; //used to prevent the compiler from optimizing temp array away. Needs to be volatile
-#endif
 {% endif %} {# useLibxsmm #}
 {% endif %} {# useNCP or ... #}
 {% endif %} {# usePicardIterationSplitPrecisions #}
@@ -441,21 +406,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   //***********************
   //****** Predictor ******
   //***********************
-  
-#ifdef __INTEL_COMPILER
-  __assume_aligned(lQi, {{alignmentSize}});
-  __assume_aligned(lQhi, {{alignmentSize}});
-{% if useFlux %}
-  __assume_aligned(lFi, {{alignmentSize}});
-  __assume_aligned(lFhi, {{alignmentSize}});
-{% endif %}
-  __assume_aligned(Quadrature<pCompType>::weights1, {{alignmentSize}});
-{% if useSourceOrNCP %}
-  __assume_aligned(lSi, {{alignmentSize}});
-  __assume_aligned(lShi, {{alignmentSize}});
-{% endif %}
-#endif  
-
   std::memset(lQhi, 0, {{(nDof**nDim)*nDataPad    }} * sizeof(pCompType));
 {% if useFlux %}
   std::memset(lFhi, 0, {{nDim*(nDof**nDim)*nVarPad}} * sizeof(pCompType));
@@ -498,7 +448,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
           }
 {% endif %}
 {% endif %}{# useFlux #}
-            
 {% if useSourceOrNCP %}
           #pragma omp simd aligned(lShi,lSi:{{alignmentSize}})
           for (int n=0; n<{{nVarPad}}; n++) {
@@ -508,28 +457,12 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
           }
 {% endif %}
         }
-      
       }
     }
   }
-  
   //**************************
   //****** Extrapolator ******
   //**************************
-  
-#ifdef __INTEL_COMPILER
-  __assume_aligned(lQhi, {{alignmentSize}});
-{% if useViscousFlux %}
-  __assume_aligned(lQhbnd, {{alignmentSize}});
-{% endif %}
-{% if useFlux %}
-  __assume_aligned(lFhi, {{alignmentSize}});
-  __assume_aligned(lFhbnd, {{alignmentSize}});
-{% endif %}
-  __assume_aligned(DGMatrices<pCompType>::FRCoeff, {{alignmentSize}});
-  __assume_aligned(DGMatrices<pCompType>::FLCoeff, {{alignmentSize}});
-#endif
-  
   std::memset(lQhbnd, 0, {{2*nDim*nDataPad*nDof*nDof3D}} * sizeof(pStoreType));
   std::memset(lFhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D}} * sizeof(pStoreType));
 
@@ -681,32 +614,16 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   }
 {% endif %}{# nDim == 3#}
 {% endif %}{# useViscousFlux #}
-  
+
   //*****************************
   //****** Volume Integral ******
   //*****************************
-  
-
   memset(lduh, 0, {{nVarPad*(nDof**nDim)}}*sizeof(pCompType));
 
-#ifdef __INTEL_COMPILER
 {% if useFlux %}
-  __assume_aligned(lFhi,     {{alignmentSize}});
-  __assume_aligned(Kxi_T,    {{alignmentSize}});
-  __assume_aligned(Quadrature<pCompType>::weights2, {{alignmentSize}});
-{% endif %}{# useFlux #}
-  __assume_aligned(lduh,     {{alignmentSize}}); //lduh should be aligned, see Solver.h
-{% if useSourceOrNCP %}
-  __assume_aligned(Quadrature<pCompType>::weights3, {{alignmentSize}});
-  __assume_aligned(lShi,     {{alignmentSize}});
-{% endif %}
-#endif
-{% if useFlux %}
-  
   // Assume equispaced mesh, dx[0] == dx[1] == dx[2]
   for (int j=0; j<{{nDof3D}}; j++) {
     for (int i=0; i<{{nDof}}; i++) {
-      
       //x, also define coefficient matrix coeffVolume
       {{ m.matmul('lduh_x', 'lFhi', 'coeffVolume', 'lduh', '(j*'~nDof~'+i)*'~(nVarPad*nDof)~'+'~(0*nVarPad*(nDof**nDim)), '0', '(j*'~nDof~'+i)*'~(nVarPad*nDof), trueB='Kxi_T', trueAlpha='Quadrature<pCompType>::weights2[i+j*'~nDof~'] * inverseDx', forceCoeffMatrix=True) | indent(6) }}{##}
 

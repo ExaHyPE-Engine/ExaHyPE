@@ -35,17 +35,9 @@ void {{codeNamespace}}::riemannSolver(
    * do not use them in the max eigenvalue calculation.
    */
 
-#ifdef __INTEL_COMPILER
-  __assume_aligned(Quadrature<cCompType>::weights2, {{alignmentSize}});
-  __assume_aligned(FL, {{alignmentSize}});
-  __assume_aligned(FR, {{alignmentSize}});
-  __assume_aligned(QL, {{alignmentSize}});
-  __assume_aligned(QR, {{alignmentSize}});
-#endif
-  
   std::memset(FL, 0, {{nVarPad*nDof*nDof3D}}*sizeof(cCompType));
   std::memset(FR, 0, {{nVarPad*nDof*nDof3D}}*sizeof(cCompType));
-  
+
   // Compute the average variables and parameters from the left and the right
   cCompType QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   cCompType QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
@@ -58,14 +50,7 @@ void {{codeNamespace}}::riemannSolver(
     }
   }
 
-  //get abs max eigenvalue 
-#ifdef USE_IPO
-  #pragma forceinline recursive
-#endif
   cCompType smaxL = solver.{{solverName}}::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
-#ifdef USE_IPO
-  #pragma forceinline recursive
-#endif
   cCompType smaxR = solver.{{solverName}}::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
   cCompType smax = std::max(smaxL, smaxR);
 
@@ -74,7 +59,7 @@ void {{codeNamespace}}::riemannSolver(
   for (int n = 0; n < {{nDataPad}}; n++) {
     Qavg[n] = 0.5 *  (QavR[n] + QavL[n]);
   }
-  
+
   //used by NCP or Flux (at least one is used)
   cCompType Qdiff[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))); 
 {% if nPar > 0 %}
@@ -82,14 +67,14 @@ void {{codeNamespace}}::riemannSolver(
   //These must not be overritten !
   std::copy_n(Qavg+{{nVar}},{{nDataPad-nVar}}, Qdiff+{{nVar}});
 {% endif %}
-  
+
 {% if useNCP %}
   cCompType ncp[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
 {% endif %}
 {% if useFlux %}
   cCompType flux_values[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
 {% endif %}
-  
+
   for (int ij = 0; ij < {{nDof*nDof3D}}; ij++) {
     #pragma omp simd aligned(Qdiff,QR,QL:{{alignmentSize}})
     for (int n = 0 ; n < {{nVar}} ; n++){ 
@@ -97,10 +82,6 @@ void {{codeNamespace}}::riemannSolver(
     }
 
 {% if useNCP %}
-    //NCP
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif
     solver.{{solverName}}::nonconservativeProduct(
       Qavg,
       Qdiff,
@@ -112,22 +93,14 @@ void {{codeNamespace}}::riemannSolver(
       ncp
     );
 {% if useMaterialParam %}
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif
     solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, faceCentre, dx, t, dt, direction, ncp);
 {% endif %}{# useMaterialParam #}
     #pragma omp simd aligned(FL,ncp:{{alignmentSize}})
     for (int n = 0; n < {{nVarPad}}; n++) {
-      FL[ij*{{nVarPad}}+n] += ncp[n]; 
+      FL[ij*{{nVarPad}}+n] += ncp[n];
     }
 {% endif %}{# useNCP #}
-    
 {% if useFlux %}
-    //Flux
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif  
     solver.{{solverName}}::flux(
       Qdiff,
       faceCentre,
@@ -138,9 +111,6 @@ void {{codeNamespace}}::riemannSolver(
       flux_values
     );
 {% if useMaterialParam %}
-#ifdef USE_IPO
-    #pragma forceinline recursive
-#endif
     solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, faceCentre, dx, t, dt, direction, flux_values);
 {% endif %}{# useMaterialParam #}
     #pragma omp simd aligned(FL,flux_values:{{alignmentSize}})
@@ -155,15 +125,13 @@ void {{codeNamespace}}::riemannSolver(
       FL[ij*{{nVarPad}}+n] -= smax*Qdiff[n];
     }
   } //ij
-  
 }
-
 
 template void {{codeNamespace}}::riemannSolver(
   {{solverName}}& solver,
-  {{correctorComputePrecision}}* __restrict__ FL, 
+  {{correctorComputePrecision}}* __restrict__ FL,
   {{correctorComputePrecision}}* __restrict__ FR,
-  const {{correctorComputePrecision}}* const __restrict__ QL, 
+  const {{correctorComputePrecision}}* const __restrict__ QL,
   const {{correctorComputePrecision}}* const __restrict__ QR,
   const double t,
   const double dt,

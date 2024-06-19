@@ -78,9 +78,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   pCompType tmpArray[{{tmpArraySize}}] __attribute__((aligned({{alignmentSize}}))); //used by flux (nDof*nVarPad) and ncp (nVarPad*nDim)
   pCompType dudxT_by_dx[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
 {% if useLibxsmm %}
-#if defined(USE_IPO) && ! defined(UNSAFE_IPO)
-  pCompType doNotOptimizeAway = dudxT_by_dx[0]; // used to prevent the compiler from optimizing dudxT_by_dx away
-#endif
 {% endif %}
 
   // 0. precompute 1/dx * dudx_T. Assume dx[0] == dx[1] == dx[2]
@@ -134,9 +131,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
             //loop over all point sources
             for (int p : *pointSources) {
               // get the source vector located at quadrature node x at time tn
-#ifdef USE_IPO
-              #pragma forceinline recursive
-#endif
               solver.{{solverName}}::pointSource(luh + ((z*{{nDof3D}}+y)*{{nDof}}+x)*{{nData}}, x1, tn, dt, forceVectorSource, p);
 
               // Map point source location onto reference element
@@ -300,11 +294,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
         G[2] = gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}; //z
 {% endif %}
         std::memset(tmpArray, 0, {{nDim*nVarPad}}*sizeof(pCompType)); // zero out ncpResult (stored in tmpArray)
-#ifdef USE_IPO
-        #pragma forceinline recursive
-#endif
         for(int d = 0; d < {{nDim}}; d++) {
-
           solver.{{solverName}}::nonconservativeProduct(
             lQi+xyz*{{nDataPad}},
             G[d],
@@ -320,7 +310,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
           for (int n = 0; n < {{nVarPad}}; n++) {
             lFi[(d*{{nDof**nDim}}+xyz)*{{nVarPad}}+n] += tmpArray[d*{{nVarPad}}+n];
           }
-          
         }
       }
     }
@@ -337,11 +326,8 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
         F[2]      = lFi+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}; //z
 {% endif %}
         for(int d=0; d<Dimensions; d++){
-#ifdef USE_IPO
-        #pragma forceinline recursive
-#endif
           solver.{{solverName}}::multiplyMaterialParameterMatrix(
-            lQi+xyz*{{nDataPad}}, 
+            lQi+xyz*{{nDataPad}},
             volumeCentre,
             dx,
             timeStamp,
@@ -355,10 +341,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
 {% if useSource %}
     for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
-#ifdef USE_IPO
-      #pragma forceinline recursive
-#endif
-      // TODO(JMG): Pass correct x here
       solver.{{solverName}}::algebraicSource(
         volumeCentre[0],
         timeStamp,
@@ -367,7 +349,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
       );
     }
 {% endif %}{# useSource #}
-
 
     //Averaging lFhi (and if necessary lShi over time directly in the CK-loop)
     for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
@@ -542,16 +523,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   //****** Volume Integral ******
   //*****************************
 
-  #ifdef __INTEL_COMPILER
-{% if useFlux or useNCP %}
-  __assume_aligned(lFhi,     {{alignmentSize}});
-{% endif %}{# useFlux #}
-  __assume_aligned(lduh,     {{alignmentSize}}); //lduh should be aligned, see Solver.h
-{% if useSource %}
-  __assume_aligned(Quadrature<pCompType>::weights3, {{alignmentSize}});
-  __assume_aligned(lShi,     {{alignmentSize}});
-{% endif %}
-#endif
   // for linear non-conservative PDE, the volume integral is trivial, since it
   // only involves the element mass matrix, which later will cancel
   memset(lduh, 0, {{nVarPad*(nDof**nDim)}}*sizeof(pCompType));

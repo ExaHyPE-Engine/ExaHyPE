@@ -14,13 +14,6 @@ void {{codeNamespace}}::solutionUpdate(
   const compType* __restrict__ const lduh, 
   const double dt
 ) {
-#ifdef __INTEL_COMPILER
-  __assume_aligned(Quadrature<compType>::iweights3, {{alignmentSize}});
-  __assume_aligned(luh,       {{alignmentSize}}); //luh    should be aligned, see Solver.h
-  __assume_aligned(luhOld,    {{alignmentSize}}); //luhOld should be aligned, see Solver.h
-  __assume_aligned(lduh,      {{alignmentSize}}); //lduh   should be aligned, see Solver.h
-#endif
-
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
     const compType coeff = dt*Quadrature<compType>::iweights3[xyz];
     #pragma omp simd aligned(luh,luhOld,lduh:{{alignmentSize}})
@@ -28,7 +21,6 @@ void {{codeNamespace}}::solutionUpdate(
       luh[xyz*{{nData}}+n] = luhOld[xyz*{{nData}}+n] + coeff*lduh[xyz*{{nVarPad}}+n]; //simd+fma
     }
   }
- 
 }
 
 {% for precision_num in range(0,computePrecisions|length) %}

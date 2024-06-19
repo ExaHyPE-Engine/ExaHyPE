@@ -18,15 +18,6 @@ void {{codeNamespace}}::faceIntegral(
 ) {
   const cCompType* const FCoeff = (orientation == 0 ? DGMatrices<cCompType>::FLCoeff : DGMatrices<cCompType>::FRCoeff);
 
-#ifdef __INTEL_COMPILER
-  __assume_aligned(DGMatrices<cCompType>::FRCoeff,  {{alignmentSize}});
-  __assume_aligned(DGMatrices<cCompType>::FLCoeff,  {{alignmentSize}});
-  __assume_aligned(FCoeff,   {{alignmentSize}});
-  __assume_aligned(Quadrature<cCompType>::weights2, {{alignmentSize}});
-  __assume_aligned(lFhbnd,   {{alignmentSize}});
-  __assume_aligned(lduh,     {{alignmentSize}});
-#endif
-  
 {% if isLinear %}
   const cCompType scaling = inverseDxDirection;
 {% else %}

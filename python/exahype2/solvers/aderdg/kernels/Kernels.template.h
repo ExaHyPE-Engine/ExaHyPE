@@ -6,9 +6,6 @@
 // **********************************************************************************************
 #pragma once
 
-#ifndef __INTEL_COMPILER
-#include <mm_malloc.h>
-#endif
 #include <vector>
 
 #include "tarch/la/Vector.h"
@@ -21,13 +18,10 @@
 {% for namespaceName in solverNamespaceList %}
 namespace {{namespaceName}} {
 {% endfor %}
-
   class {{solverClass}};
-  
 {% for namespaceName in solverNamespaceList %}
 }
 {% endfor %}
-
 
 {% for namespaceName in codeNamespaceList %}
 namespace {{namespaceName}} {
@@ -59,8 +53,8 @@ namespace {{namespaceName}} {
     pCompType* __restrict__ PSderivatives, // for pointSource
 {% endif %}
     const cStoreType* const __restrict__ luh,
-    const tarch::la::Vector<Dimensions,double>&  x,
-    const tarch::la::Vector<Dimensions,double>&  dx,  
+    const tarch::la::Vector<Dimensions,double>& x,
+    const tarch::la::Vector<Dimensions,double>& dx,
     const double tStep, // == t
     const double dt,
     std::vector<int>* pointSources // will be deleted in the end if set
@@ -148,24 +142,24 @@ namespace {{namespaceName}} {
 {% endif %}
 
   template<typename cStoreType, typename compType>
-  void solutionUpdate( 
+  void solutionUpdate(
     cStoreType* __restrict__ luh,
-    const cStoreType* __restrict__ const luhOld, 
-    const compType* __restrict__ const lduh, 
+    const cStoreType* __restrict__ const luhOld,
+    const compType* __restrict__ const lduh,
     const double dt
   );
-  
+
   template <typename solutionType, typename cCompType>
   void faceIntegral(
-    solutionType *lduh, 
+    solutionType *lduh,
     const cCompType *const lFhbnd,
-    const int direction, 
+    const int direction,
     const int orientation,
     const double inverseDxDirection
   );
 
   template <typename cCompType>
-  void riemannSolver( 
+  void riemannSolver(
     {{solverName}}& solver,
     cCompType* __restrict__ FL,
     cCompType* __restrict__ FR,

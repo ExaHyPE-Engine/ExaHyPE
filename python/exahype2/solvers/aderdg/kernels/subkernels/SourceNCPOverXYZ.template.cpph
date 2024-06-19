@@ -84,10 +84,6 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
 {% endif %}
 {% endif %}
 {% if useFusedSource %}
-  // FusedSource
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
   solver.{{solverName}}::fusedSource_vect(Qt, gradQt, St, {{vectSize}});
 {% else %}{# useFusedSource #}
 {% endif %}
@@ -124,10 +120,6 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
 {% endif %}
 {% endif %}
 {% if useFusedSource %}
-  // FusedSource
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
   solver.{{solverName}}::fusedSource_vect(Qt, gradQt, St, {{rest_size}});
 {% else %}{# useFusedSource #}
 {% endif %}
@@ -175,19 +167,12 @@ for(int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
   std::copy_n(gradQ+{{nVarPad}}*xyz+{{2*nVarPad*(nDof**nDim)}}, {{nVar}}, gradQ_PDE+{{2*nVar}}); //z
 {% endif %}
 {% endif %}{# useNCP #}
-  
+
 {% if useFusedSource %}
-  // FusedSource
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
   solver.{{solverName}}::fusedSource({{inputQ}}+{{inputQ_iterator}}, gradQ_PDE, {{sourceArray}}{{addShift}});
 {% else %}{# useFusedSource #}
 {% if useSource %}
   // Source
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
   // TODO(JMG): Pass x/t here to enable spatio-temporal source terms.
   solver.{{solverName}}::algebraicSource({0.0}, 0.0, {{inputQ}}+{{inputQ_iterator}}, {{sourceArray}}{{addShift}});
 {% else %}
@@ -196,18 +181,15 @@ std::fill_n(&{{sourceArray}}[0{{addShift}}], {{nVarPad}}, 0.0);
 {% if useNCP %}
   // NCP
   for(int d=0; d<Dimensions; d++){
-    #ifdef USE_IPO
-      #pragma forceinline recursive
-    #endif
     solver.{{solverName}}::nonconservativeProduct(
-      {{inputQ}}+{{inputQ_iterator}}, 
-      gradQ_PDE+{{nVarPad}}*d, 
+      {{inputQ}}+{{inputQ_iterator}},
+      gradQ_PDE+{{nVarPad}}*d,
       volumeCentre,
       dx,
       timeStamp,
       dt,
       d,
-      tmp_ncp_output  
+      tmp_ncp_output
     );
     #pragma omp simd aligned({{sourceArray}},tmp_ncp_output:{{alignmentSize}})
     for(int n = 0; n<{{nVarPad}}; n++) {
