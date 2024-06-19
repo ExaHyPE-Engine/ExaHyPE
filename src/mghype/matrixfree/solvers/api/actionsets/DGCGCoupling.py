@@ -87,15 +87,24 @@ class AbstractDGCGCoupling(ActionSet):
   __TemplateTouchVertexFirstTime="""
   if (
     fineGridVertex{{CG_SOLVER_NAME}}.getType() != vertexdata::{{CG_SOLVER_NAME}}::Type::Coarse
-    and
-    {{PREDICATE_INJECT_AND_RESTRICT}}
   ) {
     logTraceInWith2Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs());
-    mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
-      fineGridVertex{{CG_SOLVER_NAME}},
-      true,        // restrictRhsAndInjectSolution
-      {{USE_FAS}}
-    );
+    
+    if ({{PREDICATE_INJECT_AND_RESTRICT}}) {
+      mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
+        fineGridVertex{{CG_SOLVER_NAME}},
+        true,        // restrictRhsAndInjectSolution
+        {{USE_FAS}}
+      );
+    }
+
+    else if ( {{PREDICATE_PROLONGATE}} ) {
+      mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
+        fineGridVertex{{CG_SOLVER_NAME}},
+        false,        // restrictRhsAndInjectSolution
+        {{USE_FAS}}
+      );
+    }
     logTraceOutWith2Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs());
   }
   """
@@ -342,12 +351,15 @@ class AbstractDGCGCoupling(ActionSet):
       };
 
       tarch::la::Matrix< Rows, Cols, double > composedInjectionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( injectionMatrices, injectionMatricesScaleFactors, marker.h() );
-
+      
+      /* 
+      // ignore this stuff whilst in development...
       mghype::matrixfree::solvers::dgcgcoupling::injectSolution<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedInjectionMatrix,
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridVertices{{CG_SOLVER_NAME}}
-      );    
+      );
+      */
     }
     
     // ==============
@@ -674,11 +686,15 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         # f-string isn't happy unless i do it like this
         cg_solver_name = self.d["CG_SOLVER_NAME"]
         dg_solver_name = self.d["DG_SOLVER_NAME"]
-        # set CGCycleCounter==2 because we increment when we prepare traversal, and we want to make sure results from restriction are sent to the variables we care about
-        # injection/restriction doesn't send the new results into rhs; the prepareCGVertex routine does.
-        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"repositories::instanceOf{dg_solver_name}.isSuspended() and CGCycleCounter==2"
-        self.d["PREDICATE_PROLONGATE"]           = f"DGCycleCounter==1 and repositories::instanceOf{cg_solver_name}.isSuspended()"
-        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>=DGSmoothingSteps and CGCycleCounter==1"
+
+        # We incremented CGCycleCounter when we suspended both solvers post DG. 
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==1"
+
+        # We've just reset everything, so it's time to interpolate.
+        self.d["PREDICATE_PROLONGATE"]           = f"DGCycleCounter==1 and CGCycleCounter==0"
+        
+        # final DG stage. This is where we compute the residual for the CG vertices.
+        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter==DGSmoothingSteps and CGCycleCounter==0"
           
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
         assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
@@ -718,6 +734,7 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
 
     def get_body_of_prepareTraversal(self):
         return jinja2.Template( """
+    logTraceInWith2Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter);
     if (DGCycleCounter>0 and DGCycleCounter<=DGSmoothingSteps) {
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       DGCycleCounter++;
@@ -731,6 +748,10 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
     ) {
       logInfo( "prepareTraversal(...)", "finished DG smoothing. Disable all solvers and restrict DG->CG" );
       repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false); // do not project onto faces
+
+      // Not algorithmically necessary, since touchVertexFirstTime happens before anything else.
+      // So we could prepare the vertex and use it all in one sweep. But that will come once it
+      // is working correctly.
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       CGCycleCounter++; // to make sure we end up on pure CG solver next traversal
     }
@@ -760,4 +781,5 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       logInfo( "prepareTraversal(...)", "suspend all solvers, interpolate CG->DG and project new solution onto faces" );
     }
+    logTraceInWith4Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{DG_SOLVER_NAME}}.isSuspended(), repositories::instanceOf{{CG_SOLVER_NAME}}.isSuspended());
 """).render( **self.d )
