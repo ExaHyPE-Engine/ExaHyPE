@@ -8,7 +8,7 @@
   
   To use without having to specify Lx everytime, define a local macro in your template
   Assuming the macro where imported with 
-    {% import "subtemplates/Index.template.cpph" as i with context %}
+    {% import "subkernels/Index.template.cpph" as i with context %}
   then for example
     {% macro idxB(t,z,y,x) %}{{i.index_4(t,z,y,x,nData,nDataPad,2)}}{% endmacro %}
   such as

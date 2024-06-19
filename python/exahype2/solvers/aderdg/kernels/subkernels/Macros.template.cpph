@@ -2,7 +2,7 @@
   This subtemplate contain macros used in other template/subtemplate
   
   Include it at the start of a template to be able to use the macros
-  {% import "subtemplates/Macros.template.cpph" as m with context %}
+  {% import "subkernels/Macros.template.cpph" as m with context %}
   
   To use macros with indentation use {{ m.XXmacr(XXargs...) | indent(XXsize) }}
   and put a jinja comment afterward otherwise you'll get a whitespace after the 
@@ -45,7 +45,7 @@ _mm_free({{name}});
 */
 #}
 {% macro matmul(matmulKey, A, B, C, A_shift, B_shift, C_shift, overrideUseLibxsmm="BoolNotDefined", trueAlpha="", trueB="", forceCoeffMatrix=False) %}
-{% include "subtemplates/Matmul.template.cpph" %}
+{% include "subkernels/Matmul.template.cpph" %}
 {% endmacro %}
 {#
 
@@ -57,7 +57,7 @@ _mm_free({{name}});
 */
 #}
 {% macro vectPDEsArrays(array, size, blockedDim) %}
-{% include "subtemplates/VectPDEsArrays.template.cpph" %}
+{% include "subkernels/VectPDEsArrays.template.cpph" %}
 {% endmacro %}
 {#
 
@@ -66,7 +66,7 @@ _mm_free({{name}});
 */
 #}
 {% macro printSlopeLimiterFunction() %}
-{% include "subtemplates/SlopeLimiter.template.cpph" %}
+{% include "subkernels/SlopeLimiter.template.cpph" %}
 {% endmacro %}
 {#
 

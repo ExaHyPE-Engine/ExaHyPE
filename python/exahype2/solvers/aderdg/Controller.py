@@ -8,7 +8,7 @@ import errno
 from .Configuration import Configuration
 from .ArgumentParser import ArgumentParser
 
-from .templates import *
+from .kernels import *
 
 
 class Controller:

@@ -6,7 +6,7 @@
 {# /********************
    **** Subtemplate ****
    *********************/ #}
-{% import 'subtemplates/Macros.template.cpph' as m with context %}{# get template macros #}
+{% import 'subkernels/Macros.template.cpph' as m with context %}{# get template macros #}
 {% if useFlux %}
 
   // Flux component
@@ -15,7 +15,7 @@
    **** call to flux function over {{inputLuh}} into lF_guess ****
    ******************************************************/ #}
 {% with inputQ=inputLuh, inputQ_dataSize=nData, outputF='lF_guess', timeInterleaved=False, time_var='0' %}
-{% filter indent(width=2, first=True) %}{% include 'subtemplates/FluxOverXYZ.template.cpph' %}{% endfilter %}
+{% filter indent(width=2, first=True) %}{% include 'subkernels/FluxOverXYZ.template.cpph' %}{% endfilter %}
 {% endwith %}
 
   // x direction
@@ -67,7 +67,7 @@
    **** call to Source and NCP (or FusedSource) functions ****
    ***********************************************************/ #}
 {% with time_var='0', inputQ=inputLuh, output=outputKi, writeSource=False, multiplyByWeights=False, substractToOutput=True, inputQ_dataSize=inputLuh_dataSize, timeInterleaved=False %}
-{% filter indent(width=4, first=True) %}{% include 'subtemplates/SourceNCPOveXYZ.template.cpph' %}{% endfilter %}
+{% filter indent(width=4, first=True) %}{% include 'subkernels/SourceNCPOveXYZ.template.cpph' %}{% endfilter %}
 {% endwith %}
   }
 {% endif %}
