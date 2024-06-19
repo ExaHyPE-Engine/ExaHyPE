@@ -10,18 +10,21 @@ class Hhs1 : public Scenario<Shortcuts, basisSize>{
  public:
     
   Hhs1(DomainInformation* info):Scenario<Shortcuts,basisSize>(info){
-      //place point source in center of topography 2km below surface
+      //place point source in center of topography 0.693km below surface
       m_pointSourceLocation[0] = 0.0;
-      m_pointSourceLocation[1] = 0.693;
-      m_pointSourceLocation[2] = 0.0;
+      // m_pointSourceLocation[1] = 0.693;
+      // m_pointSourceLocation[2] = 0.0;
+      m_pointSourceLocation[1] = 0.0;
+      m_pointSourceLocation[2] = 0.693;
   };
 
-  void initUnknownsPointwise(const double* const x,
-                             const tarch::la::Vector<Dimensions,double>& center,
-			     const double t,
-			     const double dt, 
-			     double* Q
-                             ){
+  void initUnknownsPointwise(
+    const double* const x,
+    const tarch::la::Vector<Dimensions,double>& center,
+    const double t,
+    const double dt, 
+    double* Q
+  ){
     Shortcuts s;
     
 #ifdef ISOTROPIC
@@ -29,7 +32,7 @@ class Hhs1 : public Scenario<Shortcuts, basisSize>{
       Q[s.cp ] = 6.0;
       Q[s.cs ] = 3.464;
 #elif defined ANISOTROPIC
-    assertion1(false,"Hhs1_transposed Not implemented in the Anisotropic case" );
+    assertion1(false,"Hhs1 Not implemented in the Anisotropic case" );
 #else
 #error Whole space problem only defined for Isotropic and Anisotropic Scenario
 #endif
@@ -45,7 +48,7 @@ class Hhs1 : public Scenario<Shortcuts, basisSize>{
 			    const double* const x,const double t,const double dt,
 			    double* forceVector, int n){
 
-    assertion2(n == 0, "Only a single pointSource for Hhs1_transposed",n);
+    assertion2(n == 0, "Only a single pointSource for Hhs1",n);
 
     constexpr double t0 = 0.1;
     constexpr double M0 = 1000.0;
@@ -53,7 +56,7 @@ class Hhs1 : public Scenario<Shortcuts, basisSize>{
     double f = M0*t/(t0*t0)*std::exp(-t/t0);
     
     Shortcuts s;
-    forceVector[s.sigma + 4] = f;
+    forceVector[s.sigma + 3] = f;
   }
 
   void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,

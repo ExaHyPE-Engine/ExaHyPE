@@ -40,7 +40,7 @@ parser.add_argument(
     "--x",
     dest="x",
     type=float,
-    default=7.348,
+    default=None,
     help="x position of tracer which should be considered",
 )
 parser.add_argument(
@@ -82,7 +82,9 @@ vyIndex = csvData[0].index(" data ") + args.v + 1
 vzIndex = csvData[0].index(" data ") + args.v + 2
 firstNumberIndex = csvData[0].index("number(0)")
 secondNumberIndex = csvData[0].index(" number(1)")
+dim = 2
 if " x(2)" in csvData[0]:
+    dim = 3
     positionIndexes = [
         csvData[0].index(" x(0)"),
         csvData[0].index(" x(1)"),
@@ -112,7 +114,7 @@ def position_check(a):
         value = value and float(a[positionIndexes[0]]) == args.x
     if args.y != None:
         value = value and float(a[positionIndexes[1]]) == args.y
-    if args.z != None:
+    if dim==3 and args.z != None:
         value = value and float(a[positionIndexes[2]]) == args.z
     return value
 
@@ -184,19 +186,20 @@ plt.plot(
     label="velocity in y-direction as a function of time",
 )
 
-plt.plot(
-    dt,
-    vz,
-    color="b",
-    linestyle="dashed",
-    marker="o",
-    label="velocity in z-direction as a function of time",
-)
+if dim==3:
+  plt.plot(
+      dt,
+      vz,
+      color="b",
+      linestyle="dashed",
+      marker="o",
+      label="velocity in z-direction as a function of time",
+  )
 
 plt.xticks(rotation=25)
 plt.xlabel("t")
 plt.ylabel("velocities")
-plt.title("velocites as a function of time", fontsize=20)
+plt.title("velocities as a function of time", fontsize=20)
 plt.grid()
 plt.legend()
 plt.show()

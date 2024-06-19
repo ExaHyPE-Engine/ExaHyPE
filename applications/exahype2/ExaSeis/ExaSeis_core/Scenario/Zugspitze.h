@@ -15,7 +15,7 @@ class Zugspitze : public Scenario<Shortcuts,basisSize>{
     info->getCenter(center);
     m_pointSourceLocation[0] = 4424.756;
     //    m_pointSourceLocation[1] =   11.320;
-    m_pointSourceLocation[1] =   10.0;
+    m_pointSourceLocation[1] = 10.0;
     m_pointSourceLocation[2] = 2675.783;
   };
   
