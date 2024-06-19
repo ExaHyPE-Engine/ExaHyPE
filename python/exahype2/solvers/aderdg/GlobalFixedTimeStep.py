@@ -1,12 +1,13 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.aderdg.SeparateSweeps import SeparateSweeps
 
-from exahype2.solvers.aderdg.AbstractSolverDeclarations import create_abstract_solver_declarations
-from exahype2.solvers.aderdg.AbstractSolverDefinitions import create_abstract_solver_definitions
-from exahype2.solvers.aderdg.SolverDeclarations import create_solver_declarations
-from exahype2.solvers.aderdg.SolverDefinitions import create_solver_definitions
+from .SeparateSweeps import SeparateSweeps
+
+from .AbstractSolverDeclarations import create_abstract_solver_declarations
+from .AbstractSolverDefinitions import create_abstract_solver_definitions
+from .SolverDeclarations import create_solver_declarations
+from .SolverDefinitions import create_solver_definitions
 
 class GlobalFixedTimeStep(SeparateSweeps):
     def __init__(

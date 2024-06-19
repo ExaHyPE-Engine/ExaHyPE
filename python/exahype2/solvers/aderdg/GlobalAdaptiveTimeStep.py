@@ -1,38 +1,38 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.aderdg.SeparateSweeps import SeparateSweeps
 
-from exahype2.solvers.aderdg.AbstractSolverDeclarations import create_abstract_solver_declarations
-from exahype2.solvers.aderdg.AbstractSolverDefinitions import create_abstract_solver_definitions
-from exahype2.solvers.aderdg.SolverDeclarations import create_solver_declarations
-from exahype2.solvers.aderdg.SolverDefinitions import create_solver_definitions
+from .SeparateSweeps import SeparateSweeps
 
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .AbstractSolverDeclarations import create_abstract_solver_declarations
+from .AbstractSolverDefinitions import create_abstract_solver_definitions
+from .SolverDeclarations import create_solver_declarations
+from .SolverDefinitions import create_solver_definitions
+
+from .CodeSnippets import (
     create_abstract_solver_user_declarations_for_adaptive_time_stepping,
 )
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .CodeSnippets import (
     create_abstract_solver_user_definitions_for_adaptive_time_stepping,
 )
 
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .CodeSnippets import (
     create_compute_time_step_size_for_adaptive_time_stepping,
 )
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .CodeSnippets import (
     create_compute_new_time_step_size_for_adaptive_time_stepping,
 )
 
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .CodeSnippets import (
     create_start_time_step_implementation_for_adaptive_time_stepping,
 )
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .CodeSnippets import (
     create_finish_time_step_implementation_for_adaptive_time_stepping,
 )
 
-from exahype2.solvers.aderdg.rusanov.kernels import (
+from .CodeSnippets import (
     create_constructor_implementation_for_adaptive_time_stepping,
 )
-
 
 class GlobalAdaptiveTimeStep(SeparateSweeps):
     def __init__(

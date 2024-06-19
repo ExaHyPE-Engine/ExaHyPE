@@ -76,7 +76,7 @@ project = exahype2.Project(
   ["exahype2", "aderdg", scenario._equation.__class__.__name__], ".", executable=scenario.__class__.__name__.upper()
 )
 
-theSolver = exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
+theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name  = scenario.__class__.__name__, order = order,
   min_cell_h = min_h, max_cell_h = max_h,
   time_step_relaxation  = 0.5,
