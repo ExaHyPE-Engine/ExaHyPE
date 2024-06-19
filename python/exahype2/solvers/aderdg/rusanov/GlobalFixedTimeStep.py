@@ -3,29 +3,10 @@
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.SeparateSweeps import SeparateSweeps
 
-from exahype2.solvers.aderdg.kernels import create_abstract_solver_declarations
-from exahype2.solvers.aderdg.kernels import create_abstract_solver_definitions
-from exahype2.solvers.aderdg.kernels import create_solver_declarations
-from exahype2.solvers.aderdg.kernels import create_solver_definitions
-
-from exahype2.solvers.aderdg.kernels import (
-    create_abstract_solver_user_declarations_for_fixed_time_stepping,
-)
-from exahype2.solvers.aderdg.kernels import (
-    create_abstract_solver_user_definitions_for_fixed_time_stepping,
-)
-
-from exahype2.solvers.aderdg.kernels import (
-    create_compute_time_step_size_for_fixed_time_stepping,
-)
-
-from exahype2.solvers.aderdg.kernels import (
-    create_finish_time_step_implementation_for_fixed_time_stepping,
-)
-from exahype2.solvers.aderdg.kernels import (
-    create_start_time_step_implementation_for_fixed_time_stepping,
-)
-
+from exahype2.solvers.aderdg.AbstractSolverDeclarations import create_abstract_solver_declarations
+from exahype2.solvers.aderdg.AbstractSolverDefinitions import create_abstract_solver_definitions
+from exahype2.solvers.aderdg.SolverDeclarations import create_solver_declarations
+from exahype2.solvers.aderdg.SolverDefinitions import create_solver_definitions
 
 class GlobalFixedTimeStep(SeparateSweeps):
     def __init__(

@@ -33,9 +33,9 @@ class Advection_linear(Scenario):
 
     def boundary_conditions(self):
         return """
-  Qoutside[0] = faceCentre[0] - t;
-  Qoutside[1] = faceCentre[1] - t;
+  Qoutside[0] = x[0] - t;
+  Qoutside[1] = x[1] - t;
 #if Dimensions==3
-  Qoutside[2] = faceCentre[2] - t;
+  Qoutside[2] = x[2] - t;
 #endif
 """

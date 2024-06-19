@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 import dastgen2
 import peano4.toolbox.blockstructured
 import peano4.datamodel
@@ -9,7 +8,6 @@ import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from exahype2.solvers.PDETerms import PDETerms
-from .kernels import get_face_overlap_merge_implementation
 from .KernelGenerator import generate_aderdg_kernels
 from .Configuration import Configuration
 
@@ -18,6 +16,162 @@ from abc import abstractmethod
 
 from enum import IntEnum
 import jinja2
+
+def create_compute_time_step_size_for_fixed_time_stepping():
+    """
+
+    If you work with fixed time stepping, the computation of the next
+    time step size per cell or patch is trivial: You simply read out
+    the solver. Therefore, this computation can trivially be a generic
+    one which is the same for all solver flavours.
+
+    """
+    return """
+    const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
+"""
+
+
+def create_finish_time_step_implementation_for_fixed_time_stepping(
+    normalised_time_step_size,
+):
+    return (
+        """
+  assertion( _minCellH >= 0.0 );
+  assertion( MaxAdmissibleCellH > 0.0 );
+  if (_minCellH <= MaxAdmissibleCellH) {
+    _timeStepSize  = """
+        + str(normalised_time_step_size)
+        + """ * _minCellH;
+  }
+  else {
+    _timeStepSize = 0.0;
+  }
+"""
+    )
+
+
+def create_start_time_step_implementation_for_fixed_time_stepping():
+    """
+
+    The outcome is used before we actually roll over the accumulation variables
+    and other stuff.
+
+    """
+    return """
+  if (
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxCellH>0.0
+    and
+    isLastGridSweepOfTimeStep()
+  ) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << globalMinTimeStamp );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+  }
+"""
+
+
+def create_abstract_solver_user_declarations_for_fixed_time_stepping(timeStep):
+    return (
+        """
+private:
+  double _timeStepSize ="""
+        + str(timeStep)
+        + """;
+public:
+  double getTimeStepSize() const;  
+    """
+    )
+
+
+def create_abstract_solver_user_definitions_for_fixed_time_stepping():
+    return """
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
+  return _timeStepSize;
+}
+    """
+
+
+def get_face_overlap_merge_implementation(patch_overlap):
+    d = {
+        "OVERLAP": patch_overlap.dim[0]
+        / 2,  # assumed to always be two, but present here anyway
+        "DOFS_PER_AXIS": patch_overlap.dim[1],
+        "UNKNOWNS": patch_overlap.no_of_unknowns,
+    }
+    template = """
+  
+  #if Dimensions==2
+  constexpr int spaceFaceSize = {DOFS_PER_AXIS}*{UNKNOWNS}; //Order+1
+  #else
+  constexpr int spaceFaceSize = {DOFS_PER_AXIS}*{DOFS_PER_AXIS}*{UNKNOWNS}; //(Order+1)^2
+  #endif
+  
+  const int faceDimension = marker.getSelectedFaceNumber()%Dimensions;
+  //if the outer normal is positive, the normal points to the right so the face is on the right
+  const int faceLR = (marker.outerNormal()[faceDimension]>0.0 ? 0 : 1);
+
+  //  std::copy_n(from, how_many, to);
+  std::copy_n(
+      &neighbour.value[(1-faceLR)*spaceFaceSize],
+      spaceFaceSize,
+      &value[(1-faceLR)*spaceFaceSize]
+     );
+  
+"""
+
+    return template.format(**d)
+
+
+# function which fills an array of one type with elements of a different array, converting them via explicit conversion
+def convert_array_from_type(from_name, to_name, type_to, array_size):
+    template = (
+        """  
+      for(int i=0; i<"""
+        + array_size
+        + """; i++){
+      """
+        + to_name
+        + """[i] = ( """
+        + type_to
+        + """ ) """
+        + from_name
+        + """[i];
+      }  
+  """
+    )
+    return template
+
+
+# creates an array toName with array_size elements of type typeTo, then fills then with values from array fromName
+def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
+    template = (
+        """
+      """
+        + type_to
+        + " "
+        + to_name
+        + "["
+        + array_size
+        + "];"
+        + """
+      for(int i=0; i<"""
+        + array_size
+        + """; i++){
+        """
+        + to_name
+        + """[i] = ( """
+        + type_to
+        + """ ) """
+        + from_name
+        + """[i];
+      }  
+  """
+    )
+    return template
 
 
 """
