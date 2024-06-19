@@ -98,6 +98,13 @@ class AbstractDGCGCoupling(ActionSet):
       );
     }
 
+
+    /*
+    We aim to visit this section just before we prolongate. Passing false to
+    restrictRhsAndInjectSolution has the effect of setting delta to the "value"
+    parameter, ie we pick up the final solution to be interpolated during
+    touchCellFirstTime.
+    */
     else if ( {{PREDICATE_PROLONGATE}} ) {
       mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
         fineGridVertex{{CG_SOLVER_NAME}},
@@ -620,6 +627,10 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
       following steps for the additive solver with one iteration:
       
       1. Pre First smoothing step
+         - When we touchVertexFirstTime, we pass over rollOverAndPrepareCGVertex,
+           which has the effect of taking whatever is in the CG solution
+            and writing it into the Delta. This is then interpolated during 
+            touchCellFirstTime.
          - Interpolate correction, i.e. sum all the hierarchies up.
            This happens in touchCellFirstTime().
          - Suspend CG solver
@@ -630,10 +641,16 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
          - Run DG solver
       3. Nth DG smoothing step
          - Still run DG solver (finish smoothing)
+        During touchCellLastTime, we:
          - Compute hierarchical residual
          - Restrict
          - Suspend CG solver
+        These steps will set newRestrictedRhs correctly
       4. Any CG solver
+        On the first CG smoothing step, we should, during
+        touchVertexFirstTime, pass over rollOverAndPrepareCGVertex
+        which takes newRestrictedRhs and writes it into rhs, and
+        we reset value to 0.
          - Suspend DG solver
 
       ## Realisation
@@ -688,8 +705,10 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         dg_solver_name = self.d["DG_SOLVER_NAME"]
 
         # We have finished DG smoothing, and are on first stage of CG Smoothing. Everything important
-        # happens during touchVertexFirstTime, so we can combine. We incremented CGCycleCounter after
-        # we disabled the DG solver.
+        # happens during touchVertexFirstTime, so we can combine. In particular, touchVertexFirstTime
+        # on the DGCGCoupling action set is where we bring the restrictedRhs to the acutal rhs, ie 
+        # prepare us to solve the CG problem again.
+        # We incremented CGCycleCounter after we disabled the DG solver, hence the comparison with 1.
         self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==1"
 
         # We've just reset everything, so it's time to interpolate.
@@ -697,7 +716,8 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         
         # final DG stage. This is where we compute the residual for the CG vertices.
         # we compare with > because the final time we enter prepareTraversal, DGCycleCounter==DGSmoothingSteps.
-        # Then we increment and continue on the DG solver anyway.
+        # Then we increment and continue on the DG solver anyway. Here we compute and restrict the residual
+        # during touchCellLastTime.
         self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
           
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
@@ -770,5 +790,5 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       logInfo( "prepareTraversal(...)", "suspend all solvers, interpolate CG->DG and project new solution onto faces" );
     }
-    logTraceOutWith4Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{DG_SOLVER_NAME}}.isSuspended(), repositories::instanceOf{{CG_SOLVER_NAME}}.isSuspended());
+    logTraceOutWith5Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{DG_SOLVER_NAME}}.isSuspended(), repositories::instanceOf{{DG_SOLVER_NAME}}.projectOntoFaces(), repositories::instanceOf{{CG_SOLVER_NAME}}.isSuspended());
 """).render( **self.d )
