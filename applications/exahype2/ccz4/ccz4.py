@@ -19,7 +19,8 @@ import CCZ4Helper
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts, 
+  "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
@@ -191,10 +192,6 @@ if __name__ == "__main__":
             kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
             KOSigma                                  = self._KO_Sigma
           )
-
-          self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
-            )
         
         if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
           self.postprocess_updated_patch += """{

@@ -59,6 +59,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
 }
 
 
+std::shared_ptr< {{FLOAT_TYPE}}[] > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSmartPointer() const {
+  return _dataSmartPointer;
+}
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=(const {{CLASSNAME}}& other) {
   #if PeanoDebug>=1
   _debugX = other._debugX;

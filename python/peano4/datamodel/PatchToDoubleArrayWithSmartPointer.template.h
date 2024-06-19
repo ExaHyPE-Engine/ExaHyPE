@@ -173,6 +173,8 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    */
   void clone(const {{CLASSNAME}}& other);
 
+  std::shared_ptr< {{FLOAT_TYPE}}[] > getSmartPointer() const;
+
   /**
    * Shallow copy
    */

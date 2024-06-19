@@ -16,6 +16,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
 )
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
+from exahype2.solvers.Storage import Storage
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
@@ -91,7 +92,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           marker,
           timeStamp,
           timeStepSize,
-          oldQWithHalo
+          oldQWithHalo,
+          {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+          nullptr
+          {% else %}
+          newQ
+          {% endif %}
         );
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
         // Time stamp is not updated, as this will be done by final linear combination
@@ -693,7 +699,9 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         )
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
-
+        d["MAKE_COPY_OF_ENCLAVE_TASK_DATA"] = self.make_copy_of_enclave_task_data
+        
+        
     @property
     def user_action_set_includes(self):
         return (
@@ -705,3 +713,18 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)
+
+    def switch_storage_scheme(
+        self,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
+    ):
+        if cell_data_storage == Storage.SmartPointers:
+            self.make_copy_of_enclave_task_data = False
+        else:
+            self.make_copy_of_enclave_task_data = True
+            
+        super(SeparateSweepsWithEnclaveTasking, self).switch_storage_scheme(
+            cell_data_storage,
+            face_data_storage
+        )
