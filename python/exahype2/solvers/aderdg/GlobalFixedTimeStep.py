@@ -3,12 +3,10 @@
 from exahype2.solvers.PDETerms import PDETerms
 
 from .SeparateSweeps import SeparateSweeps
-
-from .AbstractSolverDeclarations import create_abstract_solver_declarations
-from .AbstractSolverDefinitions import create_abstract_solver_definitions
-from .SolverDeclarations import create_solver_declarations
-from .SolverDefinitions import create_solver_definitions
-
+from .AbstractSolverDeclarations import AbstractSolverDeclarations
+from .AbstractSolverDefinitions import AbstractSolverDefinitions
+from .SolverDeclarations import SolverDeclarations
+from .SolverDefinitions import SolverDefinitions
 from .FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
 class GlobalFixedTimeStep(SeparateSweeps):
@@ -93,56 +91,59 @@ class GlobalFixedTimeStep(SeparateSweeps):
             computation_precisions.append(self._solution_persistent_storage_precision)
 
         solver_code_snippets = FixedTimeSteppingCodeSnippets(self._time_step_size)
-
-        self._abstract_solver_user_declarations = create_abstract_solver_declarations(
-            self._flux_implementation,
-            self._ncp_implementation,
-            self._eigenvalues_implementation,
-            self._source_term_implementation,
-            self._material_param_implementation,
-            self._point_sources_implementation,
-            self._is_linear,
-            computation_precisions,
-            False,
+        abstract_solver_declarations = AbstractSolverDeclarations(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            source_term_implementation=self._source_term_implementation,
+            material_parameters_implementation=self._material_param_implementation,
+            point_source_implementation=self._point_sources_implementation,
+            is_linear=self._is_linear,
+            computation_precisions=computation_precisions,
+            pde_terms_without_state=False,
         )
+        abstract_solver_definitions = AbstractSolverDefinitions(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            source_term_implementation=self._source_term_implementation,
+            material_parameters_implementation=self._material_param_implementation,
+            point_source_implementation=self._point_sources_implementation,
+            is_linear=self._is_linear,
+            computation_precisions=computation_precisions,
+            pde_terms_without_state=False,
+        )
+        solver_declarations = SolverDeclarations(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            source_term_implementation=self._source_term_implementation,
+            material_parameters_implementation=self._material_param_implementation,
+            point_source_implementation=self._point_sources_implementation,
+            is_linear=self._is_linear,
+            computation_precisions=computation_precisions,
+            pde_terms_without_state=False,
+        )
+        solver_definitions = SolverDefinitions(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            source_term_implementation=self._source_term_implementation,
+            material_parameters_implementation=self._material_param_implementation,
+            point_source_implementation=self._point_sources_implementation,
+            is_linear=self._is_linear,
+            computation_precisions=computation_precisions,
+            pde_terms_without_state=False,
+        )
+
+        self._abstract_solver_user_declarations = abstract_solver_declarations.create_abstract_solver_user_declarations()
         self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
 
-        self._abstract_solver_user_definitions = create_abstract_solver_definitions(
-            self._flux_implementation,
-            self._ncp_implementation,
-            self._eigenvalues_implementation,
-            self._source_term_implementation,
-            self._material_param_implementation,
-            self._point_sources_implementation,
-            self._is_linear,
-            computation_precisions,
-            False,
-        )
+        self._abstract_solver_user_definitions = abstract_solver_definitions.create_abstract_solver_user_definitions()
         self._abstract_solver_user_definitions += solver_code_snippets.create_abstract_solver_user_definitions()
 
-        self._solver_user_declarations = create_solver_declarations(
-            self._flux_implementation,
-            self._ncp_implementation,
-            self._eigenvalues_implementation,
-            self._source_term_implementation,
-            self._material_param_implementation,
-            self._point_sources_implementation,
-            self._is_linear,
-            computation_precisions,
-            False,
-        )
-
-        self._solver_user_definitions = create_solver_definitions(
-            self._flux_implementation,
-            self._ncp_implementation,
-            self._eigenvalues_implementation,
-            self._source_term_implementation,
-            self._material_param_implementation,
-            self._point_sources_implementation,
-            self._is_linear,
-            computation_precisions,
-            False,
-        )
+        self._solver_user_declarations = solver_declarations.create_solver_user_declarations()
+        self._solver_user_definitions = solver_definitions.create_solver_user_definitions()
 
         self._compute_time_step_size = solver_code_snippets.create_compute_time_step_size()
         self._compute_new_time_step_size = solver_code_snippets.create_compute_new_time_step_size()
