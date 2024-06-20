@@ -69,7 +69,7 @@ max_eval = """
   return std::max(std::abs(u-c), std::abs(u+c));
 """
 
-aderSolver = exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
+aderSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name                  = "aderSolver", 
   order                 = order,
   unknowns              = 4,

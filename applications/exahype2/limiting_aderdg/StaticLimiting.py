@@ -82,7 +82,7 @@ bool isBoundaryCell = (
 return !isBoundaryCell;
 """
 
-aderSolver = exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
+aderSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name                  = "aderSolver", 
   order                 = order,
   unknowns              = 4,

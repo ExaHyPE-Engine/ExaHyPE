@@ -40,8 +40,8 @@ rkdg_rusanov_solvers = {
 }
 
 aderdg_rusanov_solvers = {
-    "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
-    "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep,
+    "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.GlobalFixedTimeStep,
+    "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
 }
 
 solvers = {}
@@ -420,7 +420,7 @@ elif args.solver in aderdg_rusanov_solvers and "Fixed" in args.solver:
         time_step_size=admissible_time_step_size,
     )
     my_solver.add_kernel_optimizations(
-        is_linear=True, use_kernel_generator=True, architecture="noarch"
+        is_linear=True, architecture="noarch"
     )
 elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
     my_solver = solvers[args.solver](
@@ -433,7 +433,7 @@ elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
         time_step_relaxation=0.5,
     )
     my_solver.add_kernel_optimizations(
-        is_linear=True, use_kernel_generator=True, architecture="noarch"
+        is_linear=True, architecture="noarch"
     )
 
 my_solver.set_implementation(

@@ -41,8 +41,8 @@ rkdg_rusanov_solvers = {
 }
 
 aderdg_rusanov_solvers = {
-    "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
-    "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep,
+    "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.GlobalFixedTimeStep,
+    "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
 }
 
 solvers = {}
@@ -415,7 +415,6 @@ elif args.solver in aderdg_rusanov_solvers and "Fixed" in args.solver:
     )
     my_solver.add_kernel_optimizations(
         polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
-        use_kernel_generator=True,
         architecture="noarch",
     )
 elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
@@ -430,7 +429,6 @@ elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
     )
     my_solver.add_kernel_optimizations(
         polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
-        use_kernel_generator=True,
         architecture="noarch",
     )
 
