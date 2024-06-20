@@ -29,7 +29,7 @@ class Acoustic_planar_waves(Scenario):
     def initial_conditions(self):
         return """
   // simple translation in positive diagonal direction
-  const double val = cos( - std::numbers::pi*( 
+  const double val = cos( - std::numbers::pi*(
       x[0] + x[1]
 #if Dimensions==3
       + x[2]
@@ -47,9 +47,9 @@ class Acoustic_planar_waves(Scenario):
 
   //These are defined by the eigenvector of the plane wave operator
 #if Dimensions==3
-  constexpr double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
+  const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
 #else
-  constexpr double kr = std::sqrt(2*K0*rho);
+  const double kr = std::sqrt(2*K0*rho);
 #endif
 
   Q[0] = kr*val;
@@ -57,9 +57,9 @@ class Acoustic_planar_waves(Scenario):
 
     def analytical_solution(self):
         return """
-  constexpr double w = 2*std::sqrt(Dimensions)*M_PI;
+  const double w = 2*std::sqrt(Dimensions)*M_PI;
 
-  const double val = cos( w*t - std::numbers::pi*( 
+  const double val = cos( w*t - std::numbers::pi*(
       x[0] + x[1]
 #if Dimensions==3
     + x[2]
@@ -74,9 +74,9 @@ class Acoustic_planar_waves(Scenario):
 
 #if Dimensions==3
   sol[3] = val;
-  constexpr double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
+  const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
 #else
-  constexpr double kr = std::sqrt(2*K0*rho);
+  const double kr = std::sqrt(2*K0*rho);
 #endif
 
   sol[0] = kr*val;
