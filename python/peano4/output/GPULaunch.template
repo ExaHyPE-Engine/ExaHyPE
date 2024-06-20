@@ -42,5 +42,5 @@ export ROCR_VISIBLE_DEVICES="$node_local_mpi_rank"
 export OPENCL_VISIBLE_DEVICES="$node_local_mpi_rank"
 {% endif %}
 
-# Usage mpirun -n <num_proc> ./gpu-launch <your_executable>
+# Usage: mpirun -n <num_proc> ./gpu-launch <your_executable>
 $1

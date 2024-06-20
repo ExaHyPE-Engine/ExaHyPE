@@ -5,6 +5,7 @@ from .Visualiser import Visualiser
 try:
   from .VTU                import VTU
   from .Interactive        import Interactive
+  from .VTU_legacy         import VTU_legacy
 except ModuleNotFoundError:
   print("postprocessing tools imported without paraview/pvpython modules")
 

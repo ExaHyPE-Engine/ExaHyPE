@@ -19,7 +19,7 @@ module load gsl
 
 export UCX_TLS=ud,sm,self
 
-export OMP_NUM_THREADS=32
+export OMP_NUM_THREADS=16
 
 mpirun ./peano4_test --timeout 3600
 

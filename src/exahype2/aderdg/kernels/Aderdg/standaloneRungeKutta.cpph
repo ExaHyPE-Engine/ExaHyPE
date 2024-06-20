@@ -47,8 +47,8 @@ template <typename SolverType>
 struct RungeKuttaIntegrator {
 	using dvec = tarch::la::Vector<Dimensions,double>;
 	
-	static constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-	static constexpr int numberOfParameters = SolverType::NumberOfParameters;
+	static constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
+	static constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
 	static constexpr int numberOfData       = numberOfVariables+numberOfParameters;
 	static constexpr int order              = SolverType::Order;
 	static constexpr int basisSize          = order+1;

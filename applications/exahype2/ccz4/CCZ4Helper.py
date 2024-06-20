@@ -26,8 +26,8 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable):
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::InstanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
-    //if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
+    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
+    //if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
@@ -65,8 +65,8 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable):
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::InstanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
-    //if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
+    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
+    //if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 

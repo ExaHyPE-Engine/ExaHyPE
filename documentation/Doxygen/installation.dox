@@ -13,7 +13,7 @@ software and where it is actively used and developed. If you do not
 intend to modify the core code base, you can just clone the code
 anonymously.
 
-         git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
+    git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
 
 I still maintain the "old" Peano in the repository (version 3).
 However, we now work with the fourth generation of Peano (p4).
@@ -63,14 +63,14 @@ Prepare the Configure Environment (Autotools)
   `libtool`.
 - Set up the configure environment:
 
-        libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
-        automake --add-missing
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
+    automake --add-missing
 
   These steps should only be required once, unless you push major
   revisions to the development branch.
 - Next, type in
 
-        ./configure --help
+    ./configure --help
 
   The `--help` option should give you some information about the available
   variants of Peano, its extensions and toolboxes.
@@ -103,13 +103,13 @@ Build
 
 Once the configuration has been successful, a simple
 
-     make
+    make
 
 should build the core. It also builds some examples and all the
 extensions and toolboxes you have manually enabled. All of these go into
 static libraries. The code is not small and you thus might prefer
 
-     make -jx
+    make -jx
 
 with x being the number of parallel builds to use.
 
@@ -119,7 +119,7 @@ Installation Test
 
 Once you have compiled, I recommend that you run all tests using
 
-     make check
+    make check
 
 The call launches Peano's unit test, i.e. all the unit tests for the
 core plus the extensions that you have enabled.
@@ -134,8 +134,8 @@ so manually.
 
 To run 2D and 3D tests individually, use
 
-       src/unittests/UnitTests2d
-       src/unittests/UnitTests3d
+    src/unittests/UnitTests2d
+    src/unittests/UnitTests3d
 
 You can run these builds with different core counts and also MPI support
 if you have compiled with MPI. The executables contain both node
@@ -156,7 +156,7 @@ The easiest way to install the Peano Python packages is to navigate to
 `myPeanoDirectory/` first (you're in the right place if you see the
 `pyproject.toml` file), and then run
 
-      pip3 install -e .
+    pip3 install -e .
 
 to install the packages.
 
@@ -175,7 +175,7 @@ As an alternative to installing the packages, you can modify your Python path. T
 are multiple ways to do so.
 The standard way is to set the `PYTHONPATH`, e.g.:
 
-       export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
 
 This can even be done in the `.bashrc`. If you "install" the Peano Python
 packages this way, you will also need to manually install additional
@@ -189,26 +189,26 @@ Peano currently relies on the following Python packages/projects:
 - jinja2 for all the templated glue code. Most Linux distributions ship this
   one as
 
-        python3-jinja2
+    python3-jinja2
 
 - numpy for numeric operations. Most Linux distributions ship this
   one as
 
-        python3-numpy
+    python3-numpy
 
 - sympy for the symbolic modelling of partial differential equations. Most
   Linux distributions ship it through
 
-        python3-sympy
+    python3-sympy
 
 - matplotlib for plotting:
 
-        python3-matplotlib
+    python3-matplotlib
 
 - Optional: Some scripts in the particles/swift2 make use of the Python HDF5
   package:
 
-        python3-h5py
+    python3-h5py
 
 - Optional: Some scripts in the particles/swift2 make use of the VTUinterface
   package for visualisation. The package is available <a
@@ -301,9 +301,6 @@ make test
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Install Peano Using the Container Infrastructure
-===============================
 
 \li \subpage page_installation_with_spack
 \li \subpage page_installation_with_docker
