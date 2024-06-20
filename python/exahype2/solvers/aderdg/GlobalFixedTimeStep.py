@@ -9,6 +9,8 @@ from .AbstractSolverDefinitions import create_abstract_solver_definitions
 from .SolverDeclarations import create_solver_declarations
 from .SolverDefinitions import create_solver_definitions
 
+from .FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
+
 class GlobalFixedTimeStep(SeparateSweeps):
     def __init__(
         self,
@@ -82,9 +84,6 @@ class GlobalFixedTimeStep(SeparateSweeps):
             point_source=point_source,
         )
 
-        # self._source_term_call    = create_source_term_kernel(self._source_term_implementation)
-        # self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
-
         computation_precisions = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in computation_precisions:
             computation_precisions.append(self._corrector_computation_precision)
@@ -92,6 +91,8 @@ class GlobalFixedTimeStep(SeparateSweeps):
             computation_precisions.append(self._precompute_picard_precision)
         if self._solution_persistent_storage_precision not in computation_precisions:
             computation_precisions.append(self._solution_persistent_storage_precision)
+
+        solver_code_snippets = FixedTimeSteppingCodeSnippets(self._time_step_size)
 
         self._abstract_solver_user_declarations = create_abstract_solver_declarations(
             self._flux_implementation,
@@ -104,12 +105,8 @@ class GlobalFixedTimeStep(SeparateSweeps):
             computation_precisions,
             False,
         )
+        self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
 
-        self._abstract_solver_user_declarations += (
-            create_abstract_solver_user_declarations_for_fixed_time_stepping(
-                self._time_step_size
-            )
-        )
         self._abstract_solver_user_definitions = create_abstract_solver_definitions(
             self._flux_implementation,
             self._ncp_implementation,
@@ -121,9 +118,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             computation_precisions,
             False,
         )
-        self._abstract_solver_user_definitions += (
-            create_abstract_solver_user_definitions_for_fixed_time_stepping()
-        )
+        self._abstract_solver_user_definitions += solver_code_snippets.create_abstract_solver_user_definitions()
 
         self._solver_user_declarations = create_solver_declarations(
             self._flux_implementation,
@@ -136,6 +131,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             computation_precisions,
             False,
         )
+
         self._solver_user_definitions = create_solver_definitions(
             self._flux_implementation,
             self._ncp_implementation,
@@ -148,17 +144,10 @@ class GlobalFixedTimeStep(SeparateSweeps):
             False,
         )
 
-        # Nothing fancy to be done for fixed time stepping
-        # self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
+        self._compute_time_step_size = solver_code_snippets.create_compute_time_step_size()
+        self._compute_new_time_step_size = solver_code_snippets.create_compute_new_time_step_size()
 
-        self._compute_time_step_size = (
-            create_compute_time_step_size_for_fixed_time_stepping()
-        )
-        self._compute_new_time_step_size = (
-            "const double newTimeStepSize = timeStepSize;"
-        )
+        self._start_time_step_implementation = solver_code_snippets.create_start_time_step_implementation()
+        self._finish_time_step_implementation = solver_code_snippets.create_finish_time_step_implementation()
 
-        self._start_time_step_implementation = (
-            create_start_time_step_implementation_for_fixed_time_stepping()
-        )
-        self._finish_time_step_implementation = ""  # create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
+        self._constructor_implementation = solver_code_snippets.create_abstract_solver_constructor_statements()

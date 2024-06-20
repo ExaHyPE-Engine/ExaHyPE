@@ -75,11 +75,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 
   def create_finish_time_step_implementation(self):
     """
-  
     This routine is inserted after we have reduced all global quantities. These
     are the quantities with the postfix ThisTimeStep.
-  
-    """ 
+    """
     return """
   if ( isLastGridSweepOfTimeStep() ) {
     #ifdef Parallel
@@ -89,19 +87,18 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
         &_maxEigenvalue,
         1,
         MPI_DOUBLE,
-        MPI_MAX, 
+        MPI_MAX,
         [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
         );
     #endif
 
-    if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-      ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-      // keep time step size invariant
+    if (tarch::la::smaller(_maxEigenvalue, 0.0 )) {
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
+      // Keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
-    }
-    else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-      logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
+    } else if (tarch::la::equals(_maxEigenvalue, 0.0)) {
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue > 0", "max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalue));
       _admissibleTimeStepSize = 0.0;
     }
   }
-"""  
+"""
