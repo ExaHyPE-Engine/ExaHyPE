@@ -29,9 +29,7 @@ public:
 #endif
   }
 
-  void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
-  ) override {
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override {
     //    criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
     double left_edge[3];
     left_edge[0] = 19.9;
@@ -42,9 +40,7 @@ public:
     right_edge[1] = 7.6;
     right_edge[2] = 20.1;
 
-    criteria.push_back(
-      new Refinement::RefineBetweenPositions<Shortcuts>(solver->getMaximumAdaptiveMeshLevel(), left_edge, right_edge)
-    );
+    criteria.push_back(new Refinement::RefineBetweenPositions<Shortcuts>(left_edge, right_edge));
     criteria.push_back(new Refinement::trackVelocity<Shortcuts>(basisSize, -0.00001, 0.25));
   }
 };

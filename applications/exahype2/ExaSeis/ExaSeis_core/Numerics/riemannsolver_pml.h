@@ -1,5 +1,4 @@
-
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "./idx.h"
 
 namespace Numerics{
 

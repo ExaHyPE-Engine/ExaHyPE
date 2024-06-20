@@ -9,7 +9,7 @@
 #include "curvi/geometry/block.h"
 #include "curvi/interface/interface.h"
 #include "curvi/kdTree/root.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+// #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class ContextCurvilinear: public Context<Shortcuts, basisSize> {

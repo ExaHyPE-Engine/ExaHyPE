@@ -55,11 +55,10 @@ class Hsp1 : public Scenario<Shortcuts, basisSize>{
     forceVector[s.sigma + 4] = f;
   }
 
-  void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,
-                          std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+
     criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
-    criteria.push_back(new Refinement::RefineCubeAroundPosition<Shortcuts>(m_pointSourceLocation,
-									   9.0));
+    criteria.push_back(new Refinement::RefineCubeAroundPosition<Shortcuts>(m_pointSourceLocation, 9.0));
 
   }
 };

@@ -79,16 +79,17 @@ class Zugspitze_noTopo : public Scenario<Shortcuts,basisSize>{
     forceVector[s.sigma + 4] = f;
   }
 
-  void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,
-                          std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+
     criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
     double position_lower[3] = {4305.0 ,-5.0 , 2650.0};
     double position_upper[3] = {4445.0 , 0.0 , 2750.0};
 
-    criteria.push_back(new Refinement::RefineBetweenPositions<Shortcuts>(
-                                                              solver->getMaximumAdaptiveMeshLevel(),
-                                                              position_lower,
-                                                              position_upper));
+    criteria.push_back(
+      new Refinement::RefineBetweenPositions<Shortcuts>(
+      position_lower,
+      position_upper)
+    );
 
   }
 };

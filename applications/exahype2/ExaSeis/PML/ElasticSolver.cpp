@@ -2,13 +2,10 @@
 
 #include "exahype2/RefinementControl.h"
 
-// #include "../ExaSeis_core/Context/SolverInformationADERDG.h"
-// #include "../ExaSeis_core/Context/DomainInformation.h"
 #include "curvi/kdTree/innerNode.h"
 #include "curvi/kdTree/root.h"
 #include "../ExaSeis_core/Context/DomainInformation.h"
 #include "../ExaSeis_core/Context/SolverInformationADERDG.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
 
 tarch::logging::Log exahype2::elastic::ElasticSolver::_log("exahype2::elastic::ElasticSolver");
 
@@ -29,9 +26,49 @@ exahype2::elastic::ElasticSolver::ElasticSolver():
   pml_alpha_scalar = 0.0;
   pml_rel_error    = 0.001;
 
-  DomainInformation* domain_info = new DomainInformation(this);
+  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
+  double maxDSize = std::numeric_limits<double>::min();
+  double minDSize = std::numeric_limits<double>::max();
+  tarch::la::Vector<Dimensions, double> sizes = DomainSize;
+  
+  for(int i=0; i<Dimensions; i++){
+    if(sizes[i]>maxDSize){
+      maxDSize = sizes[i];
+    }
+    if(sizes[i]<minDSize){
+      minDSize = sizes[i];
+    }    
+  }
+  
+  int depth = 0;
+  
+  //finding coarsest possible Mesh level
+  while(maxDSize>MaxAdmissibleCellH){
+    depth += 1;
+    maxDSize /= 3.0;
+  }
+  
+  double realCoarsestMeshSize = maxDSize;
+  double coarsestMeshLevel = depth;  
+  
+  depth = 0;
+  while(minDSize>MinAdmissibleCellH){
+    depth += 1;
+    minDSize /= 3.0;
+  }
 
-  SolverInformationADERDG<Order>* solver_info = new SolverInformationADERDG<Order>(this);
+  DomainInformation*              domain_info = new DomainInformation(
+    coarsestMeshLevel,//int coarsestMeshLevel,
+    realCoarsestMeshSize,//double coarsestMeshSize,
+    depth,//double maxAdaptiveDepth,
+    DomainOffset, DomainSize
+  );
+
+  SolverInformationADERDG<Order>* solver_info = new SolverInformationADERDG<Order>(
+    this,
+    kernels::ElasticSolver::Quadrature<double>::nodes,
+    kernels::ElasticSolver::DGMatrices<double>::dudx
+  );
 
   logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
 
@@ -41,7 +78,7 @@ exahype2::elastic::ElasticSolver::ElasticSolver():
 
   context->initTransformation();
   context->initTree();
-  context->setRefinementCriteria(this, this->refinementCriteria);
+  context->setRefinementCriteria(this->refinementCriteria);
 
   std::cout << "PML is using " << pml_cell_width << " elements\n";
   std::cout << "Freesurface set at " << _TOP * 2 << "\n";
@@ -76,7 +113,7 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   bool                                         gridIsConstructed
 ) {
 
-  std::fill_n(luh, (s.SizeParameters + s.SizeVariables) * (Order + 1) * (Order + 1) * (Order + 1), 0);
+  std::fill_n(luh, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
 
   context->initUnknownsPatch(luh, x, h, 0.0, 0.0);
 
@@ -86,13 +123,13 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   double dmp_pml_width_y = pml_cell_width * h[1];
   double dmp_pml_width_z = pml_cell_width * h[2];
 
-  double dmp_pml_right_x = getDomainOffset()[0] + getDomainSize()[0] - dmp_pml_width_x;
-  double dmp_pml_right_y = getDomainOffset()[1] + getDomainSize()[1] - dmp_pml_width_y;
-  double dmp_pml_right_z = getDomainOffset()[2] + getDomainSize()[2] - dmp_pml_width_z;
+  double dmp_pml_right_x = DomainOffset[0] + DomainSize[0] - dmp_pml_width_x;
+  double dmp_pml_right_y = DomainOffset[1] + DomainSize[1] - dmp_pml_width_y;
+  double dmp_pml_right_z = DomainOffset[2] + DomainSize[2] - dmp_pml_width_z;
 
-  double dmp_pml_left_x = getDomainOffset()[0] + dmp_pml_width_x;
-  double dmp_pml_left_y = getDomainOffset()[1] + dmp_pml_width_y;
-  double dmp_pml_left_z = getDomainOffset()[2] + dmp_pml_width_z;
+  double dmp_pml_left_x = DomainOffset[0] + dmp_pml_width_x;
+  double dmp_pml_left_y = DomainOffset[1] + dmp_pml_width_y;
+  double dmp_pml_left_z = DomainOffset[2] + dmp_pml_width_z;
 
   // constexpr double amplitude_nominator =   6.0;
   // constexpr int dmp_power = 2;
@@ -107,14 +144,15 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   double offset_y = x[1] - h[1] * 0.5;
   double offset_z = x[2] - h[2] * 0.5;
 
-  kernels::idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfVariables + NumberOfParameters);
+  kernels::idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
-  for (int k = 0; k < Order + 1; k++) {
-    double computational_z = (offset_z + h[2] * nodes[Order][k]);
+  for (int k = 0; k < Order + 1; k++) { 
+    double computational_z = (offset_z + h[2] * QuadraturePoints1d[Order-k]); //QuadPoints are in opposite order to exa1
     for (int j = 0; j < Order + 1; j++) {
-      double computational_y = (offset_y + h[1] * nodes[Order][j]);
+      double computational_y = (offset_y + h[1] * QuadraturePoints1d[Order-j]); //QuadPoints are in opposite order to exa1
       for (int i = 0; i < Order + 1; i++) {
-        double computational_x = (offset_x + h[0] * nodes[Order][i]);
+        double computational_x = (offset_x + h[0] * QuadraturePoints1d[Order-i]); //QuadPoints are in opposite order to exa1
+
         if (_TOP != 0) { //  No PML on surface
           if (computational_x < dmp_pml_left_x) {
             luh[idx(
@@ -165,7 +203,7 @@ void exahype2::elastic::ElasticSolver::boundaryConditions(
   int                                          normal
 ) {
 
-  for (int i = 0; i < s.SizeVariables; i++) {
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     Qoutside[i] = Qinside[i];
   }
 }
@@ -235,7 +273,7 @@ void ::exahype2::elastic::ElasticSolver::flux(
   double rho     = Q[s.rho];
   double rho_inv = 1.0 / rho;
 
-  std::fill_n(F, NumberOfVariables, 0.0);
+  std::fill_n(F, NumberOfUnknowns, 0.0);
 
   kernels::idx2 idx_pml(Dimensions, 9);
 
@@ -299,7 +337,7 @@ void ::exahype2::elastic::ElasticSolver::nonconservativeProduct(
   double        lambda    = rho * cp * cp - 2 * mu;
   double        rho_inv   = 1.0 / (rho * jacobian);
 
-  std::fill_n(BgradQ, NumberOfVariables, 0.0);
+  std::fill_n(BgradQ, NumberOfUnknowns, 0.0);
 
   switch (normal) {
   case 0: {
@@ -473,11 +511,11 @@ void ::exahype2::elastic::ElasticSolver::pointSource(
   double* const       forceVector, // Q[36]
   int                 n
 ) {
-  std::fill_n(forceVector, NumberOfVariables, 0.0);
+  std::fill_n(forceVector, NumberOfUnknowns, 0.0);
   double jacobian = Q[s.jacobian];
   context->setPointSourceVector(Q, x, t, dt, forceVector, n);
 
-  for (int i = 0; i < s.SizeVariables; i++) {
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;
   }
 }
@@ -513,32 +551,10 @@ void exahype2::elastic::ElasticSolver::riemannSolver(
   if (isBoundaryFace) {
     double* FIn  = faceIndex < Dimensions ? FR : FL;
     double* FOut = faceIndex < Dimensions ? FL : FR;
-    std::copy_n(FIn, s.Size, FOut);
+    std::copy_n(FIn, s.NumberOfUnknowns*(Order+1)*(Order+1), FOut);
   }
 
-  int myFaceIndex = 0;
-  switch (faceIndex) {
-  case 0:
-    myFaceIndex = 0;
-    break;
-  case 1:
-    myFaceIndex = 2;
-    break;
-  case 2:
-    myFaceIndex = 4;
-    break;
-  case 3:
-    myFaceIndex = 1;
-    break;
-  case 4:
-    myFaceIndex = 3;
-    break;
-  case 5:
-    myFaceIndex = 5;
-    break;
-  }
-
-  Numerics::riemannSolver<VariableShortcuts, Order, NumberOfVariables, NumberOfParameters, _TOP * 2>(
-    FL, FR, QL, QR, dt, direction, isBoundaryFace, myFaceIndex
+  Numerics::riemannSolver<VariableShortcuts, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
+    FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 }

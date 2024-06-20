@@ -59,8 +59,8 @@ class Hhs1 : public Scenario<Shortcuts, basisSize>{
     forceVector[s.sigma + 3] = f;
   }
 
-  void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,
-                          std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override {
+
     Shortcuts s;
     
     criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
@@ -75,10 +75,11 @@ class Hhs1 : public Scenario<Shortcuts, basisSize>{
     upper[1] =   3.0;
     upper[2] =  12.0;
     
-    criteria.push_back(new Refinement::RefineBetweenPositions<Shortcuts>(
-                                                                         solver->getMaximumAdaptiveMeshLevel(),
-                                                                         lower,
-                                                                         upper));
+    criteria.push_back(
+      new Refinement::RefineBetweenPositions<Shortcuts>(
+      lower,
+      upper)
+    );
   };
 };
 #endif

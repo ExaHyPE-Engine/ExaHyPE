@@ -2,22 +2,22 @@
 #define EXASEIS_SOLVERADERDG_INFORMATION_HEADER
 
 #include <algorithm>
-// #include "exahype/solvers/ADERDGSolver.h"
 #include "SolverInformation.h"
-#include "exahype2/aderdg/solvers/ADERDGSolver.h"
-// #include "kernels/GaussLegendreBasis.h"
-// #include "kernels/GaussLobattoBasis.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLobattoBasis.h"
+
 
 template <int order>
 class SolverInformationADERDG: public SolverInformation {
 public:
-  SolverInformationADERDG(exahype2::solvers::aderdg::ADERDGSolver* a_solver):
+  SolverInformationADERDG(exahype2::Solver* a_solver, double* _nodes, double* _dudx):
     SolverInformation(a_solver) {
 
-    std::copy_n(kernels::lobatto::nodes[order], order + 1, nodes);
-    for (int i = 0; i < order + 1; i++) {
-      std::copy_n(kernels::lobatto::dudx[order][i], order + 1, dudx[i]);
+    const int ndof = order+1;
+    //Invert order because kernelgenerator stores these in opposite order
+    for(int i=0; i<ndof; i++){
+      nodes[i] = _nodes[order-i];
+      for(int j=0; j<ndof; j++){
+        dudx[i][j] = _dudx[(order-j)*ndof+(order-i)];
+      }
     }
 
 #ifdef Asserts

@@ -3,6 +3,7 @@
 
 // #include "kernels/GaussLegendreBasis.h"
 #include "exahype2/RefinementControl.h"
+#include "../Numerics/idx.h"
 
 namespace Refinement {
   template <class Shortcuts>
@@ -94,8 +95,7 @@ namespace Refinement {
   template <class Shortcuts>
   class RefineBetweenPositions: public RefinementCriterion<Shortcuts> {
   public:
-    RefineBetweenPositions(int level, double a_left[3], double a_right[3]):
-      max_level(level) {
+    RefineBetweenPositions(double a_left[3], double a_right[3]){
       rectangle_left[0] = a_left[0];
       rectangle_left[1] = a_left[1];
       rectangle_left[2] = a_left[2];
@@ -123,7 +123,7 @@ namespace Refinement {
         elementBetweenPoints &= ((left_vertex[i] < rectangle_right[i]) && (right_vertex[i] > rectangle_left[i]));
       }
 
-      if (elementBetweenPoints && (max_level > level)) { // solver->getMaximumAdaptiveMeshLevel()-1
+      if (elementBetweenPoints) { // solver->getMaximumAdaptiveMeshLevel()-1
         refine = ::exahype2::RefinementCommand::Refine;
         return true;
       }
@@ -133,7 +133,6 @@ namespace Refinement {
   private:
     double rectangle_left[3];
     double rectangle_right[3];
-    int    max_level;
   };
 
   template <class Shortcuts>

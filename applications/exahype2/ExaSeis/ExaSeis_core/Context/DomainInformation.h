@@ -3,18 +3,30 @@
 
 #include <algorithm>
 // #include "exahype/solvers/Solver.h"
-#include "exahype2/aderdg/solvers/Solver.h"
+// #include "exahype2/aderdg/solvers/Solver.h"
 
 class DomainInformation {
 public:
-  DomainInformation(exahype2::solvers::aderdg::Solver* solver):
-    meshLevel(solver->getCoarsestMeshLevel()),
-    dx(solver->getCoarsestMeshSize()) {
+  DomainInformation(
+    int coarsestMeshLevel,
+    double coarsestMeshSize, 
+    double maxAdaptiveDepth, 
+    tarch::la::Vector<Dimensions,double> _domainOffset, 
+    tarch::la::Vector<Dimensions,double> _domainSize):
 
-    std::copy_n(&(solver->getDomainOffset()[0]), 3, domainOffset);
-    std::copy_n(&(solver->getDomainSize()[0]), 3, domainSize);
+    dx(coarsestMeshSize),
+    meshLevel(coarsestMeshLevel),
+    maxAdaptiveDepth(maxAdaptiveDepth){
 
-    max_dx = dx * std::pow(1 / 3.0, solver->getMaximumAdaptiveMeshDepth());
+    domainOffset[0] = _domainOffset[0];
+    domainOffset[1] = _domainOffset[1];
+    domainOffset[2] = _domainOffset[2];
+
+    domainSize[0] = _domainSize[0];
+    domainSize[1] = _domainSize[1];
+    domainSize[2] = _domainSize[2];
+
+    max_dx = dx * std::pow(1 / 3.0, maxAdaptiveDepth);
 
     elements[0] = std::round(domainSize[0] / dx);
     elements[1] = std::round(domainSize[1] / dx);
@@ -45,6 +57,7 @@ public:
   double getDx() { return dx; }
 
   const int    meshLevel;
+  const int    maxAdaptiveDepth;
   const double dx;
   double       domainOffset[3];
   double       domainSize[3];

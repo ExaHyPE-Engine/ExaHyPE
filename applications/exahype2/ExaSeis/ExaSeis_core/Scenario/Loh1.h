@@ -65,8 +65,7 @@ class Loh1 : public Scenario<Shortcuts, basisSize>{
     forceVector[s.sigma + 4] = f;
   }
 
-  void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,
-                          std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
     criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
     /*    criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
                                                            solver->getMaximumAdaptiveMeshLevel(),
@@ -78,14 +77,14 @@ class Loh1 : public Scenario<Shortcuts, basisSize>{
     double lower[3];
     double upper[3];
 
-    criteria.push_back(
-      new Refinement::RefineDownToPosition<Shortcuts>(
-        basisSize,
-        solver->getMaximumAdaptiveMeshLevel(),
-        m_pointSourceLocation,
-        1
-      )
-    );
+    // criteria.push_back(
+    //   new Refinement::RefineDownToPosition<Shortcuts>(
+    //     basisSize,
+    //     solver->getMaximumAdaptiveMeshLevel(),
+    //     m_pointSourceLocation,
+    //     1
+    //   )
+    // );
 
   }
 };

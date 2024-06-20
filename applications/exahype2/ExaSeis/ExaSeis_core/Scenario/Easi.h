@@ -50,9 +50,7 @@ public:
     Q[s.cp]  = sqrt((material[0].lambda + 2 * material[0].mu) / material[0].rho);
     Q[s.cs]  = sqrt(material[0].mu / material[0].rho);
   }
-  void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
-  ) override {}
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override {}
 
 private:
   AsagiReader*     asagiReader;

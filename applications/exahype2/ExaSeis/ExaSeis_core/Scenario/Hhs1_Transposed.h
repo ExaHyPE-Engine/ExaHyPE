@@ -59,55 +59,51 @@ public:
   }
 
 #if defined _EXASEIS_DYNAMIC
-  void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
   ) override {
     Shortcuts s;
 
     criteria.push_back(new Refinement::RefinePosition<Shortcuts>(m_pointSourceLocation));
     criteria.push_back(new Refinement::trackVelocity<Shortcuts>(basisSize, 0.5, 0.2));
 
-    criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
-      solver->getMaximumAdaptiveMeshLevel(),
-      solver->getCoarsestMeshLevel(),
-      solver->getCoarsestMeshSize(),
-      0,
-      &(solver->getDomainSize()[0]),
-      &(solver->getDomainOffset()[0])
-    ));
+    // criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
+    //   solver->getMaximumAdaptiveMeshLevel(),
+    //   solver->getCoarsestMeshLevel(),
+    //   solver->getCoarsestMeshSize(),
+    //   0,
+    //   &(solver->getDomainSize()[0]),
+    //   &(solver->getDomainOffset()[0])
+    // ));
 
-    criteria.push_back(new Refinement::RefineDownToPosition<Shortcuts>(
-      basisSize, solver->getMaximumAdaptiveMeshLevel(), m_pointSourceLocation, 0
-    ));
+    // criteria.push_back(new Refinement::RefineDownToPosition<Shortcuts>(
+    //   basisSize, solver->getMaximumAdaptiveMeshLevel(), m_pointSourceLocation, 0
+    // ));
   }
 #else
-  void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
-  ) override {
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override {
     Shortcuts s;
 
     criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
-    criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
-      solver->getMaximumAdaptiveMeshLevel(),
-      solver->getCoarsestMeshLevel(),
-      solver->getCoarsestMeshSize(),
-      0,
-      &(solver->getDomainSize()[0]),
-      &(solver->getDomainOffset()[0])
-    ));
+    // criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
+    //   solver->getMaximumAdaptiveMeshLevel(),
+    //   solver->getCoarsestMeshLevel(),
+    //   solver->getCoarsestMeshSize(),
+    //   0,
+    //   &(solver->getDomainSize()[0]),
+    //   &(solver->getDomainOffset()[0])
+    // ));
 #ifdef _CUSTOM_COORDINATES
-    criteria.push_back(new Refinement::RefineDownToPositionCustomCoordinates<Shortcuts>(
-      basisSize,
-      solver->getMaximumAdaptiveMeshLevel(),
-      m_pointSourceLocation,
-      0,
-      static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0]
-    ));
-
+    // criteria.push_back(new Refinement::RefineDownToPositionCustomCoordinates<Shortcuts>(
+    //   basisSize,
+    //   solver->getMaximumAdaptiveMeshLevel(),
+    //   m_pointSourceLocation,
+    //   0,
+    //   static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0]
+    // ));
 #else
-    criteria.push_back(new Refinement::RefineDownToPosition<Shortcuts>(
-      basisSize, solver->getMaximumAdaptiveMeshLevel(), m_pointSourceLocation, 0
-    ));
+    // criteria.push_back(new Refinement::RefineDownToPosition<Shortcuts>(
+    //   basisSize, solver->getMaximumAdaptiveMeshLevel(), m_pointSourceLocation, 0
+    // ));
 #endif
   };
 #endif

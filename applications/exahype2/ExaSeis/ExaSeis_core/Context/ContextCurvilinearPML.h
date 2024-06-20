@@ -1,9 +1,7 @@
 #ifndef EXASEIS_CONTEXT_CURVILINEAR_PML_HEADER
 #define EXASEIS_CONTEXT_CURVILINEAR_PML_HEADER
 
-// #include "kernels/GaussLegendreBasis.h"
 #include "ContextCurvilinear.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class ContextCurvilinearPML: public ContextCurvilinear<Shortcuts, basisSize> {

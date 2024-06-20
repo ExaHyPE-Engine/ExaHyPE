@@ -66,45 +66,43 @@ public:
     forceVector[s.sigma + 5] = f;
   }
 
-  void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
-  ) override {
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override {
     Shortcuts s;
 
     criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
-    criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
-      solver->getMaximumAdaptiveMeshLevel(),
-      solver->getCoarsestMeshLevel(),
-      solver->getCoarsestMeshSize(),
-      0,
-      &(solver->getDomainSize()[0]),
-      &(solver->getDomainOffset()[0])
-    ));
-#ifdef _CUSTOM_COORDINATES
-    criteria.push_back(new Refinement::RefineDownToPositionCustomCoordinates<Shortcuts>(
-      basisSize,
-      solver->getMaximumAdaptiveMeshLevel(),
-      m_pointSourceLocation,
-      0,
-      static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0]
-    ));
+//     criteria.push_back(new Refinement::CoarseBoundaryLayer<Shortcuts>(
+//       solver->getMaximumAdaptiveMeshLevel(),
+//       solver->getCoarsestMeshLevel(),
+//       solver->getCoarsestMeshSize(),
+//       0,
+//       &(solver->getDomainSize()[0]),
+//       &(solver->getDomainOffset()[0])
+//     ));
+// #ifdef _CUSTOM_COORDINATES
+//     criteria.push_back(new Refinement::RefineDownToPositionCustomCoordinates<Shortcuts>(
+//       basisSize,
+//       solver->getMaximumAdaptiveMeshLevel(),
+//       m_pointSourceLocation,
+//       0,
+//       static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0]
+//     ));
 
-#else
-    double left[3];
-    double right[3];
+// #else
+//     double left[3];
+//     double right[3];
 
-    left[0] = -0.0;
-    left[1] = -3.0;
-    left[2] = -3.0;
+//     left[0] = -0.0;
+//     left[1] = -3.0;
+//     left[2] = -3.0;
 
-    right[0] = 3.0;
-    right[1] = 12.0;
-    right[2] = 12.0;
+//     right[0] = 3.0;
+//     right[1] = 12.0;
+//     right[2] = 12.0;
 
-    criteria.push_back(
-      new Refinement::RefineBetweenPositions<Shortcuts>(solver->getMaximumAdaptiveMeshLevel(), left, right)
-    );
-#endif
+//     criteria.push_back(
+//       new Refinement::RefineBetweenPositions<Shortcuts>(solver->getMaximumAdaptiveMeshLevel(), left, right)
+//     );
+// #endif
   };
 };
 #endif
