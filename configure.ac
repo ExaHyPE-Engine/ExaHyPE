@@ -102,14 +102,14 @@ srcdir_full_path=`cd $srcdir && pwd`
 #
 CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 "
 CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics "
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g "
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0 "
 
 CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 "
 CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics "
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g "
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 
 # Note: the flag "-g" is essentially a flag for the compiler driver.
@@ -803,6 +803,20 @@ AM_CONDITIONAL([UseSWIFT],[test "x$toolbox_swift" = xtrue])
 
 
 #
+# Multigrid
+#
+AC_ARG_ENABLE(mghype,
+  AS_HELP_STRING([--enable-mghype],[enable MGHyPE [default=false]]),
+  [ AC_MSG_CHECKING(for mghype)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_mghype=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_mghype=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for mghype); AC_MSG_RESULT(no); toolbox_mghype=false ])
+AM_CONDITIONAL([UseMGHyPE],[test "x$toolbox_mghype" = xtrue])
+
+
+#
 # Blockstructured
 #
 AC_ARG_ENABLE(blockstructured,
@@ -982,7 +996,7 @@ fi
 if test "$petsc" != false; then
   AC_DEFINE([UsePETSc], [1], [UsePETSc])
   if test "$toolbox_finiteelements" == false; then
-    AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
+    AC_MSG_ERROR([PETSc requires the finiteelements toolbox (run with --help to see the correct enable statement)])
   fi
   AC_CHECK_HEADER([petsc.h], [
   ], [
@@ -1042,6 +1056,35 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
+fi
+
+
+#
+# Multigrid
+#
+if test "$toolbox_mghype" != false; then
+  AC_DEFINE([UseMGHyPE], [1], [UseMGHyPE])
+  if test "$toolbox_finiteelements" == false; then
+    AC_MSG_ERROR([MGHyPE (mghype) requires the finiteelements toolbox (run with --help to see the correct enable statement)])
+  fi
+
+  LDADD_PEANO_2D_RELEASE=" -lMultigrid2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lMultigrid2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lMultigrid2d_asserts $LDADD_PEANO_2D_ASSERTS "
+  LDADD_PEANO_2D_TRACE="   -lMultigrid2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lMultigrid2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lMultigrid3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lMultigrid3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lMultigrid3d_asserts $LDADD_PEANO_3D_ASSERTS "
+  LDADD_PEANO_3D_TRACE="   -lMultigrid3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lMultigrid3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/mghype "
 fi
 
 
@@ -1335,6 +1378,7 @@ AC_CONFIG_FILES([Makefile
   src/tbb/Makefile
   src/convert/Makefile
   src/exahype2/Makefile
+  src/mghype/Makefile
   src/petsc/Makefile
   src/swift2/Makefile
   src/unittests/Makefile

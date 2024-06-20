@@ -30,13 +30,13 @@ RUN mkdir /opt/spack-environment \
 &&   echo '  - py-matplotlib' \
 &&   echo '  - py-pspamm' \
 &&   echo '  - libxsmm+generator' \
-&&   echo '  - slurm' \
+&&   echo '  - cmake' \
 &&   echo '  - memkind' \
 &&   echo '  - blis' \
 &&   echo '  - boost' \
 &&   echo '  - openblas' \
 &&   echo '  - gsl' \
-&&   echo '  - llvm+clang+libomptarget+libomptarget_debug+gold' \
+&&   echo '  - llvm+clang+libomptarget+libomptarget_debug' \
 &&   echo '  - nvtop+cuda' \
 &&   echo '  - papi+cuda' \
 &&   echo '  - scorep+cuda+papi+mpi' \
@@ -55,7 +55,7 @@ RUN mkdir /opt/spack-environment \
 &&   echo '  - netcdf-fortran+pic+shared' \
 &&   echo '  - parallel-netcdf+cxx+fortran+pic+shared' \
 &&   echo '  - petsc+mpi+memkind+metis+cuda+hwloc+openmp' \
-&&   echo '  - paraview+mpi+osmesa+ipo+python+hdf5 ^llvm+clang+libomptarget+libomptarget_debug+gold' \
+&&   echo '  - paraview+mpi+osmesa+ipo+python+hdf5' \
 &&   echo '' \
 &&   echo '  concretizer:' \
 &&   echo '    unify: true' \
@@ -73,6 +73,7 @@ clang-html
 #VTUInterface
 
 FROM peanoframework/base:latest
+
 LABEL peano-framework.org=http://www.peano-framework.org/
 
 ENV FORCE_UNSAFE_CONFIGURE=1 \
