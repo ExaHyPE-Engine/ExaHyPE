@@ -46,9 +46,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
-      Prediction,
+      InitialPrediction,
       PredictionOnHangingCells,
-      Correction,
+      Timestep,
       Plotting,
       Suspended
     };

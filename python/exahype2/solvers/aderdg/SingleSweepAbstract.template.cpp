@@ -245,29 +245,32 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::GridInitialisation;
       break;
     case SolverState::GridInitialisation:
-      _solverState = SolverState::Prediction;
+      _solverState = SolverState::InitialPrediction;
       break;
     case SolverState::Suspended:
-      _solverState = SolverState::Prediction;
+      _solverState = (_minTimeStamp==0) ?
+        SolverState::InitialPrediction : _solverState = SolverState::Timestep;
       break;
     case SolverState::Plotting:
-      _solverState = SolverState::Prediction;
+      _solverState = (_minTimeStamp==0) ?
+        SolverState::InitialPrediction : _solverState = SolverState::Timestep;
       break;
-    case SolverState::Prediction:
+    case SolverState::InitialPrediction:
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
-        SolverState::PredictionOnHangingCells : _solverState = SolverState::Correction;
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::Timestep;
       break;
     case SolverState::PredictionOnHangingCells:
-      _solverState = SolverState::Correction;
+      _solverState = SolverState::Timestep;
       break;
-    case SolverState::Correction:
-      _solverState = SolverState::Prediction;
+    case SolverState::Timestep:
+      _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::Timestep;
       break;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  if (_solverState==SolverState::Prediction) {
+  if (_solverState==SolverState::Timestep) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
 
@@ -420,14 +423,14 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
-    case SolverState::Prediction:
-      return "prediction";
+    case SolverState::InitialPrediction:
+      return "Initial Prediction";
       break;
     case SolverState::PredictionOnHangingCells:
-      return "prediction on hanging cells";
+      return "Prediction on hanging cells";
       break;
-    case SolverState::Correction:
-			return "correction";
+    case SolverState::Timestep:
+			return "timestep";
       break;
     }
   return "<undef>";
@@ -435,18 +438,17 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return (_solverState!=SolverState::Prediction
-      and _solverState!=SolverState::PredictionOnHangingCells);
+  return _solverState==SolverState::Timestep;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Prediction;
+  return _solverState==SolverState::Timestep;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Correction;
+  return _solverState==SolverState::Timestep;
 }
 
 

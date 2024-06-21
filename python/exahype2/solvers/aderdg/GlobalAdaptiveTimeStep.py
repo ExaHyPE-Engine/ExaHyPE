@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
 
-from .SeparateSweeps import SeparateSweeps
+from .SingleSweep import SingleSweep
 
 from .AbstractSolverDeclarations import create_abstract_solver_declarations
 from .AbstractSolverDefinitions import create_abstract_solver_definitions
@@ -34,7 +34,7 @@ from .CodeSnippets import (
     create_constructor_implementation_for_adaptive_time_stepping,
 )
 
-class GlobalAdaptiveTimeStep(SeparateSweeps):
+class GlobalAdaptiveTimeStep(SingleSweep):
     def __init__(
         self,
         name,

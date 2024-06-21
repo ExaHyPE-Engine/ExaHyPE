@@ -2,14 +2,14 @@
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
 
-from .SeparateSweeps import SeparateSweeps
+from .SingleSweep import SingleSweep
 
 from .AbstractSolverDeclarations import create_abstract_solver_declarations
 from .AbstractSolverDefinitions import create_abstract_solver_definitions
 from .SolverDeclarations import create_solver_declarations
 from .SolverDefinitions import create_solver_definitions
 
-class GlobalFixedTimeStep(SeparateSweeps):
+class GlobalFixedTimeStep(SingleSweep):
     def __init__(
         self,
         name,

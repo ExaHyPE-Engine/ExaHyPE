@@ -133,7 +133,7 @@ def create_postprocessing_kernel_for_ader_error_measurement():
       marker.h(),
       fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value,
       errors
     );
 

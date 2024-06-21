@@ -58,9 +58,7 @@ class Prediction(AbstractAderDGActionSet):
 
     {{CREATE_PREDICTOR_ALLOCATIONS}}
 
-    {% if STORE_OLD_SOLUTION %}
     std::copy_n(luh ,sizeLduh, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
-    {% endif %}
 """
 
     _Template_TouchCellFirstTime_Core = """
@@ -89,7 +87,6 @@ class Prediction(AbstractAderDGActionSet):
         self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
         self.usePointSource             = solver._point_sources_implementation!=PDETerms.None_Implementation
         self.multiple_precisions        = len(solver._predictor_computation_precisions) > 1
-        self.store_old_solution         = solver._hold_previous_time_step
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -101,7 +98,6 @@ class Prediction(AbstractAderDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"]                = self.guard
-            d["STORE_OLD_SOLUTION"]       = self.store_old_solution
             d["PRECISIONS_CAPITALIZED"]   = [
                 x.replace(" ", "_").replace("std::", "").capitalize()
                 for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]

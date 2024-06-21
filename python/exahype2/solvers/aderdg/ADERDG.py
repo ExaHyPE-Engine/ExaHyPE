@@ -319,16 +319,6 @@ class ADERDG(object):
         self._hold_cell_data_on_heap_with_smart_pointer = False
         self._hold_face_data_on_heap_with_smart_pointer = False
 
-        """
-        Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
-          The old value gets overwritten with the new value at the beginning of the predictor step. 
-          This allows rollback of the solution to a previous state if for some reason the computations
-          yield incorrect results.
-          Used for limiting, where troubled cells are rolled back and recomputed with a more robust
-          scheme and neighbouring cells need their old solution to project values with.
-        """
-        self._hold_previous_time_step           = False
-
         # whether or not to plot information about the grid as well as information about the content of the patches
         self._plot_grid_properties = plot_grid_properties
         self.plot_description = ""
@@ -644,16 +634,16 @@ class ADERDG(object):
         self._action_set_initial_conditions.descend_invocation_order = 1
         self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
-
-        self._action_set_handle_boundary.descend_invocation_order = 1        
-        self._action_set_prediction.descend_invocation_order = 1
-        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
+        self._action_set_handle_boundary.descend_invocation_order = 1
 
         self._action_set_correction.descend_invocation_order = 2  # needs to happen after handle_boundary
 
-        self._action_set_AMR.descend_invocation_order = 3
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
-        self._action_set_postprocess_solution.descend_invocation_order = 3
+        self._action_set_prediction.descend_invocation_order = 3
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 3
+
+        self._action_set_AMR.descend_invocation_order = 4
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 4
+        self._action_set_postprocess_solution.descend_invocation_order = 4
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -834,8 +824,7 @@ class ADERDG(object):
         """
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
-        if(self._hold_previous_time_step):
-          datamodel.add_cell(self._previous_time_step)
+        datamodel.add_cell(self._previous_time_step)
         datamodel.add_face(self._face_label)
         datamodel.add_face(self._rhs_estimates_projection)
         datamodel.add_face(self._flux_estimates_projection)
@@ -843,8 +832,7 @@ class ADERDG(object):
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
-        if(self._hold_previous_time_step):
-          step.use_cell(self._previous_time_step)
+        step.use_cell(self._previous_time_step)
         step.use_face(self._face_label)
         step.use_face(self._rhs_estimates_projection)
         step.use_face(self._flux_estimates_projection)
@@ -883,7 +871,7 @@ class ADERDG(object):
         step.add_action_set(
             peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
                 filename=output_path + "solution-" + self._name,
-                patch=self._current_time_step,
+                patch=self._previous_time_step,
                 dataset_name=self._unknown_identifier(),
                 description=self.plot_description,
                 mapping=mapping,
@@ -925,10 +913,10 @@ class ADERDG(object):
             self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
         )
 
-        step.add_action_set(self._action_set_prediction)
-        step.add_action_set(self._action_set_prediction_on_hanging_cells)
         step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_correction)
+        step.add_action_set(self._action_set_prediction)
+        step.add_action_set(self._action_set_prediction_on_hanging_cells)
 
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
