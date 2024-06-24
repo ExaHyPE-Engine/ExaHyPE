@@ -3,7 +3,7 @@ import exahype2
 import os
 
 import exahype2.solvers.aderdg
-from exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep import (
+from exahype2.solvers.aderdg.GlobalAdaptiveTimeStep import (
     GlobalAdaptiveTimeStep,
 )
 from exahype2.solvers.aderdg.ADERDG import Polynomials
