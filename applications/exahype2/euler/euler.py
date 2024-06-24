@@ -413,7 +413,7 @@ elif args.solver in aderdg_rusanov_solvers and "Fixed" in args.solver:
         min_cell_h=min_h,
         time_step_size=admissible_time_step_size,
     )
-    my_solver.add_kernel_optimizations(
+    my_solver.add_kernel_optimisations(
         polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
         architecture="noarch",
     )
@@ -427,7 +427,7 @@ elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
         min_cell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
         time_step_relaxation=0.5,
     )
-    my_solver.add_kernel_optimizations(
+    my_solver.add_kernel_optimisations(
         polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
         architecture="noarch",
     )

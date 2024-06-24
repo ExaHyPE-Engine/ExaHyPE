@@ -10,35 +10,21 @@
 namespace {{namespaceName}} {
 {% endfor %}
 
-  // ADERDG configuration 
-  constexpr int getNumberOfVariable()        {return {{nVar}};}
-  constexpr int getNumberOfVariablePadded()  {return {{nVarPad}};}
-                                             
   constexpr int getNumberOfParameter()       {return {{nPar}};}
   constexpr int getNumberOfParameterPadded() {return {{nParPad}};}
-  
+
   constexpr int getNumberOfData()            {return {{nData}};}
   constexpr int getNumberOfDataPadded()      {return {{nDataPad}};}
-                                             
+
   constexpr int getBasisSize()               {return {{nDof}};}
   constexpr int getBasisSizePadded()         {return {{nDofPad}};}
-                                             
+
   constexpr int getDimension()               {return {{nDim}};}
-  
-  // Limiter/FV configuration
+
   constexpr int getBasisSizeLimiter()        {return {{nDofLim}};}
   constexpr int getBasisSizeLimiterPadded()  {return {{nDofLimPad}};}
   constexpr int getGhostLayerWidth()         {return {{ghostLayerWidth}};}
   constexpr int getNumberOfObservable()      {return {{nObs}};}
-  
-  
-  // Approx flops, not up to date
-  // constexpr unsigned long  projectOnFVLimiterSpace_flops = {{nDofLim*nDofLim3D*nDof*nDofLim*(nDofLim*nDofPad*(nDim-1)+2*nVar*nDofLim*nDof)}};
-  // constexpr unsigned long  projectOnDGSpace_flops = {{nDofLim*nDofLim3D*nDof*nDofLim*(nDofLimPad*nDof*(nDim-1)+2*nVar*nDofLim*nDof)}};
-  // constexpr unsigned long  discreteMaximumPrincipleAndMinAndMaxSearch_flops = {{4*nObs+nDof*nDof*nDof3D*nDof3D*(nDofPad*nDof*(nDim-1)+nVar*nDof*nDof)+nDof*nDof3D*nDofLim*nDofLim3D*(nDofLim*nDofPad*(nDim-1)+nVar*nDof*nDofLim)}};
-  // constexpr unsigned long  findCellLocalMinAndMax_flops = {{nDof*nDof*nDof3D*nDof3D*(nDofPad*nDof*(nDim-1)+nVar*nDof*nDof)+nDof*nDof3D*nDofLim*nDofLim3D*(nDofLim*nDofPad*(nDim-1)+nVar*nDof*nDofLim)}};
-  // constexpr unsigned long  findCellLocalLimiterMinAndMax_flops = 0; //only min and max
-
 {% for namespaceName in codeNamespaceList %}
 }
 {% endfor %}

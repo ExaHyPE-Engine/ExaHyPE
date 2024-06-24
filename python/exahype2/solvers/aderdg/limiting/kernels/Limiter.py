@@ -1,8 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .AbstractKernelTemplate import AbstractKernelTemplate
+from ..AbstractKernelTemplate import AbstractKernelTemplate
 
-from .MatmulConfig import MatmulConfig
+from ..MatmulConfig import MatmulConfig
 
 class Limiter(AbstractKernelTemplate):
     def generateCode(self):

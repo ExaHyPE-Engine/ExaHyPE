@@ -6,36 +6,28 @@
 // **********************************************************************************************
 #pragma once
 
-#include <mm_malloc.h> //g++
-#include <set>
-{% if "std::float16_t" in computePrecisions or "std::bfloat16_t" in computePrecisions %}
-#include <stdfloat>
-{% endif %}
+{% for item in NAMESPACE -%}
+namespace {{ item }} {
+{%- endfor %}
 
-
-{% for namespaceName in codeNamespaceList %}
-namespace {{namespaceName}} {
-{% endfor %}
-// All matrices are stored as column major array, _T denote a transposed
-
+// All matrices are stored as column major array, _T denote a transposed.
 template <typename T>
-class DGMatrices{
-  public:
-    static void initDGMatrices();
-    static void freeDGMatrices();
+class DGMatrices {
+public:
+  static void initDGMatrices();
+  static void freeDGMatrices();
 
-    static T *Kxi;
-    static T *Kxi_T;
-    static T *iK1_T; //note: the generic version of iK1 is actually transposed
-    static T *dudx;
-    static T *dudx_T;
-    static T *FLCoeff;
-    static T *FRCoeff;
-    static T ** fineGridProjector1d;
-    static T ** fineGridProjector1d_T_weighted; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
+  static T* Kxi;
+  static T* Kxi_T;
+  static T* iK1_T; // Note: The generic version of iK1 is actually transposed
+  static T* dudx;
+  static T* dudx_T;
+  static T* FLCoeff;
+  static T* FRCoeff;
+  static T** fineGridProjector1d;
+  static T** fineGridProjector1d_T_weighted; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
 };
 
-{% for namespaceName in codeNamespaceList %}
+{% for item in NAMESPACE -%}
 }
-{% endfor %}
-
+{%- endfor %}

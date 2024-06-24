@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 from sys import exit
 
 precisionTranslate = {
@@ -15,7 +14,6 @@ precisionTranslate = {
     "std::bfloat16_t": "HP",
     "half_float::half": "HP"
 }
-
 
 class MatmulConfig:
     """Specification of a dense matrix-matrix multiplication

@@ -6,12 +6,11 @@
 // **********************************************************************************************
 #pragma once
 
-{% if useLibxsmm %}
+{% for item in NAMESPACE -%}
+namespace {{ item }} {
+{%- endfor %}
 
-{% for namespaceName in codeNamespaceList %}
-namespace {{namespaceName}} {
-{% endfor %}
-
+{% if USE_LIBXSMM %}
 {% for gemm,precision in gemmList %}
 {% if precision == "DP" %}
 void {{gemm}}(const double* A, const double* B, double* C);
@@ -21,9 +20,107 @@ void {{gemm}}(const float* A, const float* B, float* C);
 void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% endif %}
 {% endfor %}
+{% endif %}{# USE_LIBXSMM #}
 
-{% for namespaceName in codeNamespaceList %}
+{% for item in NAMESPACE -%}
 }
-{% endfor %}
+{%- endfor %}
 
-{% endif %}{# useLibxsmm #}
+{% macro gemm(gemm_key, A, B, C, A_shift, B_shift, C_shift, true_alpha="", true_B="", force_coeff_matrix=False) %}
+{#
+      C       = alpha  *   A   *    B   + beta  *  C
+   (M x N)              (M x K)  (K x N)
+  The gemm config (fetched through gemm_key) contains M, N, K, LDA, LDB, LDC, alpha and beta
+
+  String gemm_key   : name of the associated config
+  String A         : name of A
+  String B         : name of B
+  String C         : name of C
+  String A_shift   : shift to the zero of A
+  String B_shift   : shift to the zero of B
+  String C_shift   : shift to the zero of C
+
+  optional
+  String true_B             : true array B, B must b a true matrix, not a tensor slice
+  String true_alpha         : true value of the coefficent alpha (note: it will be multiplicated by the configuration alpha, /!\ sign error)
+  bool force_coeff_matrix   : only when using true_B, true_alpha, force the no libxsmm case to also generate the coeff matrix
+
+  If true_B is used, a temporary array true_alpha*true_B is generated
+#}
+{% with %}
+{% set conf = matmulConfigs[matmulKey] %}
+{% if trueB is not defined or trueB == "" %}
+  {% set trueB = B %}
+  {% set useTrueB = False %}
+{% else %}
+  {% set useTrueB = True %}
+{% endif %}
+{% if forceCoeffMatrix is not defined %}
+  {% set forceCoeffMatrix = False %}
+{% endif %}
+{# set arrays' name for pragma by removing eventual index #}
+{% set Ap = (A.split("["))[0] %}
+{% set Bp = (B.split("["))[0] %}
+{% set Cp = (C.split("["))[0] %}
+{% set trueBp = (trueB.split("["))[0] %}
+{% set M = matmulConfigs[matmulKey].M %}
+{% set N = matmulConfigs[matmulKey].N %}
+{% set K = matmulConfigs[matmulKey].K %}
+{% set LDA = matmulConfigs[matmulKey].LDA %}
+{% set LDB = matmulConfigs[matmulKey].LDB %}
+{% set LDC = matmulConfigs[matmulKey].LDC %}
+{% set alpha = matmulConfigs[matmulKey].alpha %}
+{% set beta = matmulConfigs[matmulKey].beta %}
+{% set precision = matmulConfigs[matmulKey].precision[0] %}
+{% if precision == "DP" %}
+{% set precisionPrefix = "d" %}
+{% set precisionType = "double" %}
+{% elif precision== "SP" %}
+{% set precisionPrefix = "s" %}
+{% set precisionType = "float" %}
+{% endif %}
+{% if matmulConfigs[matmulKey].alignment_A == 1 %}
+{% set alignmentA = "Aligned" %}
+{% else %}
+{% set alignmentA = "Unaligned" %}
+{% endif %}
+{% if matmulConfigs[matmulKey].alignment_C == 1 %}
+{% set alignmentC = "Aligned" %}
+{% else %}
+{% set alignmentC = "Unaligned" %}
+{% endif %}
+{% if matmulConfigs[matmulKey].beta == 1 %}
+{% set eigenOp = "+=" %}
+{% else %}
+{% set eigenOp = "=" %}
+{% endif %}
+
+{% if forceCoeffMatrix %}
+double {{B}}[{{conf.LDB*conf.K}}] __attribute__((aligned({{alignmentSize}})));
+#pragma omp simd aligned({{Bp}},{{trueBp}}:{{alignmentSize}})
+for (int it = 0; it < {{conf.LDB*conf.K}}; it++) {
+  {{B}}[it] = {{trueAlpha}} * {{trueB}}[it];
+}
+{% set trueB = B %}
+{% endif %}
+{% if conf.beta == 0 %}
+// reset {{C}}
+for (int it_1 = 0; it_1 < {{conf.N}}; it_1++) {
+  #pragma omp simd aligned({{Cp}}:{{alignmentSize}})
+  for (int it_3 = 0; it_3 < {{conf.M}}; it_3++) {
+    {{C}}[{{C_shift}}+it_1*{{conf.LDC}}+it_3] = 0.;
+  }
+}
+{% endif %}
+for (int it_1 = 0; it_1 < {{conf.N}}; it_1++) {
+  for (int it_2 = 0; it_2 < {{conf.K}}; it_2++) {
+    #pragma omp simd aligned({{Cp}},{{Ap}},{{trueBp}}:{{alignmentSize}})
+    for (int it_3 = 0; it_3 < {{conf.M}}; it_3++) {
+      {{C}}[{{C_shift}}+it_1*{{conf.LDC}}+it_3] {{ '+' if conf.alpha == 1 else '-' }}= {{A}}[{{A_shift}}+it_2*{{conf.LDA}}+it_3] * {% if (useTrueB and not forceCoeffMatrix) %}{{trueAlpha}}* {% endif %}{{trueB}}[{% if B_shift != '0' %}{{B_shift}}+{% endif %}it_1*{{conf.LDB}}+it_2];
+    }
+  }
+}
+{% endif %}
+{% endwith %}
+{% endmacro %}
+{#

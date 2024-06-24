@@ -1,17 +1,17 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 import peano4.solversteps
 import jinja2
-class InitialCondition(AbstractAderDGActionSet):
+
+class InitialCondition(AbstractADERDGActionSet):
   TemplateInitialCondition = """
-  if ({{PREDICATE}}) { 
+  if ({{PREDICATE}}) {
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     int linearisedIndex = 0;
-    
-    {% if INITIALIZE_PATCHES is sameas True %}
+
+    {% if INITIALISE_PATCHES is sameas True %}
     repositories::{{SOLVER_INSTANCE}}.initialCondition(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       marker.x(),
@@ -35,14 +35,13 @@ class InitialCondition(AbstractAderDGActionSet):
     }
     {% endif %}
 
-    {% if USE_POINT_SOURCE!="<none>" %}
+    {% if USE_POINT_SOURCE %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
     {% endif %}
 
-
     const double timeStamp = 0.0;
     const double timeStepSize = 0.0;
-    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;    
+    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     // relevant for tracing et al which kicks in if and only if cell has been
@@ -50,14 +49,14 @@ class InitialCondition(AbstractAderDGActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
-  } 
+  }
 """
-  
+
   def __init__(self,solver,guard,grid_is_constructed):
     super(InitialCondition,self).__init__(solver)
     self.guard               = guard
     self.grid_is_constructed = grid_is_constructed
-    self._initialize_patches = solver._initialize_patches
+    self._initialise_patches = solver._initialise_patches
 
 
   def get_body_of_operation(self,operation_name):
@@ -68,18 +67,17 @@ class InitialCondition(AbstractAderDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATE" ]           = self.guard
       d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed
-      d[ "INITIALIZE_PATCHES" ]  = self._initialize_patches
+      d[ "INITIALISE_PATCHES" ]  = self._initialise_patches
       result = jinja2.Template(self.TemplateInitialCondition).render(**d)
-      pass 
+      pass
     return result
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
-  
+
   def get_includes(self):
     return (
       super(InitialCondition, self).get_includes() + """
 #include "kernels/""" + self._solver._name + """/Quadrature.h"
-#include "kernels/""" + self._solver._name + """/Kernels.h"
+#include "kernels/""" + self._solver._name + """/MaxScaledEigenvalue.h"
 """)

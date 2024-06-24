@@ -1,14 +1,9 @@
 import os
 import sys
-
-sys.path.insert(0, os.path.abspath("../../../python"))
-sys.path.insert(0, os.path.abspath("./limiting"))
-
 import peano4
 import exahype2
-from limiting import PosterioriLimiting
 
-project = exahype2.Project(["examples", "limiting", "euler2D"], "limitedEuler", executable="SodShock")
+project = exahype2.Project(["exahype2", "aderdg", "limiting"], "Euler", executable="SodShock")
 
 dimensions          = 2
 min_level           = 3
@@ -70,7 +65,7 @@ max_eval = """
 """
 
 aderSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-  name                  = "aderSolver", 
+  name                  = "aderSolver",
   order                 = order,
   unknowns              = 4,
   auxiliary_variables   = 0,
@@ -100,7 +95,7 @@ fvSolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 project.add_solver(fvSolver)
 
 #actual limiting solver
-limiter = PosterioriLimiting(
+limiter = exahype2.solvers.aderdg.limiting.PosterioriLimiting(
   name            = "limitingSolver",
   regularSolver   = aderSolver,
   limitingSolver  = fvSolver,
@@ -127,12 +122,8 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False, False][0:dimensions]
 )
 
-#
-# So here's the parallel stuff. This is new compared to the serial
-# prototype we did start off with.
-#
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 project.set_Peano4_installation("../../../", build_mode)

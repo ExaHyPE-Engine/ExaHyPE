@@ -12,7 +12,6 @@
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
-
 {%- endfor %}
 
   class {{CLASSNAME}};

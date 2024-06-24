@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (
   create_predictor_allocations, create_fstpvi_call,
@@ -14,14 +13,11 @@ from .kernels import (
 import peano4.solversteps
 import jinja2
 
-
-class Prediction(AbstractAderDGActionSet):
+class Prediction(AbstractADERDGActionSet):
     """
-
     The extrapolated solution from the space-time predictor has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
-
     """
 
     _Template_TouchCellFirstTime_Preamble = """
@@ -35,17 +31,16 @@ class Prediction(AbstractAderDGActionSet):
   }
 
   if ({{PREDICATE}}) {
-
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     // needs to declare and define timeStepSize
-    {{COMPUTE_TIME_STEP_SIZE}}  
-  
+    {{COMPUTE_TIME_STEP_SIZE}}
+
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
     const int Order = {{ORDER}};
     const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
     const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    
+
     #if Dimensions==2
     constexpr int spaceBasisSize     = (Order+1)*(Order+1);
     constexpr int spaceFaceSize      = (Order+1);

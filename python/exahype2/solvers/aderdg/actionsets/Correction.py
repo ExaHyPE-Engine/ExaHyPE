@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
 # import peano4
 import peano4.solversteps
@@ -13,15 +12,11 @@ from .kernels import (
     create_solution_update
 )
 
-
-class Correction(AbstractAderDGActionSet):
+class Correction(AbstractADERDGActionSet):
     """
-
-    The linear combination of the Runge Kutta trials has to be projected onto
+    The linear combination of the Runge-Kutta trials has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
-
-
     """
 
     Template_TouchFaceFirstTime = """

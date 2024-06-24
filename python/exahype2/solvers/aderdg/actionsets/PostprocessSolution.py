@@ -1,25 +1,21 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 import peano4.solversteps
 import jinja2
 
-class EmptyPostprocessSolution(AbstractAderDGActionSet):
+class EmptyPostprocessSolution(AbstractADERDGActionSet):
     """
-    
-    PostprocessSolution differs from other action sets, as I only create it once. See 
+    PostprocessSolution differs from other action sets, as I only create it once. See
     FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
-    
     """
 
     def __init__(self,solver):
         super(EmptyPostprocessSolution,self).__init__(solver)
         # Is there for compatibility reasons
         self._compute_kernel     = ""
-      
 
     def get_body_of_operation(self,operation_name):
         result = ""
@@ -28,9 +24,8 @@ class EmptyPostprocessSolution(AbstractAderDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
-            pass 
+            pass
         return result
-
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -40,13 +35,11 @@ class EmptyPostprocessSolution(AbstractAderDGActionSet):
             super(EmptyPostprocessSolution, self).get_includes()
             + """
 #include "kernels/""" + self._solver._name + """/Quadrature.h"
-#include "kernels/""" + self._solver._name + """/Kernels.h"
 """
         )
 
-class DoFWisePostprocessSolution(AbstractAderDGActionSet):
+class DoFWisePostprocessSolution(AbstractADERDGActionSet):
     """
-
     PostprocessSolution differs from other action sets, as I only create it once. See
     FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
@@ -60,7 +53,6 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
     postprocessing's first time. By making the postprocessing use touchCellLastTime(),
     I ensure that any additional action set added by a subclass can still precede the
     postprocessing.
-
     """
 
     def __init__(self, solver):
@@ -86,7 +78,7 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
         """
         self._compute_kernel += (
             """
-{    
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -148,12 +140,10 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
             + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "kernels/""" + self._solver._name + """/Quadrature.h"
-#include "kernels/""" + self._solver._name + """/Kernels.h"
 """
         )
 
-
-class CellWisePostprocessSolution(AbstractAderDGActionSet):
+class CellWisePostprocessSolution(AbstractADERDGActionSet):
     """ """
 
     def __init__(self, solver):
@@ -178,23 +168,23 @@ class CellWisePostprocessSolution(AbstractAderDGActionSet):
         """
         self._compute_kernel += (
             """
-{    
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
+
   if (
-    not marker.hasBeenRefined() 
-    and 
+    not marker.hasBeenRefined()
+    and
     {{PREDICATE}}
-  ) { 
+  ) {
     logTraceIn( "touchCellFirstTime(...)" );
-    
+
     """
             + operation_per_cell
             + """
 
     logTraceOut( "touchCellFirstTime(...)" );
-  } 
+  }
 }
 """
         )

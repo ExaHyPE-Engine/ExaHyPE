@@ -3,18 +3,7 @@
 
 __all__ = [
     "AMRRoutines",
-    "CellErrorIntegral",
-    "DeltaDistribution",
     "DGMatrices",
-    "FaceIntegral",
     "FusedSpaceTimePredictorVolumeIntegral",
-    "Gemms",
-    "Kernels",
-    "Limiter",
-    "MatrixUtils",
-    "MaxScaledEigenvalue",
-    "Parameters",
     "Quadrature",
-    "RiemannSolver",
-    "SolutionUpdate"
 ]

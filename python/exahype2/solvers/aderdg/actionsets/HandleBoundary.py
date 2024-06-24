@@ -1,14 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 # import peano4
 import peano4.solversteps
 import jinja2
 
-
-class HandleBoundary(AbstractAderDGActionSet):
+class HandleBoundary(AbstractADERDGActionSet):
     """
 
     The linear combination of the Runge Kutta trials has to be projected onto
@@ -46,7 +44,7 @@ class HandleBoundary(AbstractAderDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : fluxElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? fluxElementsByFace : 0);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : basisElementsByFace);
-    {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);    
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);
 
     tarch::la::Vector<Dimensions,double> faceOffset = marker.x() - 0.5 * marker.h();
     faceOffset(normal) += 0.5 * marker.h()(normal);
@@ -71,7 +69,7 @@ class HandleBoundary(AbstractAderDGActionSet):
           normal
         );
 
-        {% if USE_FLUX!="<none>" %}
+        {% if USE_FLUX %}
         repositories::{{SOLVER_INSTANCE}}.flux(
           QOut + dofSerialised*NumberOfData,
           nodePosition,
@@ -128,6 +126,6 @@ class HandleBoundary(AbstractAderDGActionSet):
         return (
             super(HandleBoundary, self).get_includes()
             + """
-#include "kernels/""" + self._solver._name + """/Kernels.h"
+#include "kernels/""" + self._solver._name + """/Quadrature.h"
       """
         )

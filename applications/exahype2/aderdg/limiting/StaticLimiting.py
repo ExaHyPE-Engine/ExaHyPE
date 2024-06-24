@@ -96,7 +96,7 @@ aderSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   initial_conditions    = initial_conditions("x"),
   boundary_conditions   = boundary_conditions
 )
-aderSolver.add_kernel_optimizations(polynomials=Polynomials.Gauss_Lobatto)
+aderSolver.add_kernel_optimisations(polynomials=Polynomials.Gauss_Lobatto)
 project.add_solver(aderSolver)
 
 fvSolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(

@@ -11,12 +11,12 @@ import os
 from abc import abstractmethod
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.aderdg.kernels  import get_face_overlap_merge_implementation
+from exahype2.solvers.aderdg.ADERDG import get_face_overlap_merge_implementation
 
 from .actionsets import ( SaveNewCellData, SpreadLimiterStatus,
     CopyAndConvertPatch, VerifyTroubledness)
 from exahype2.solvers.aderdg import Polynomials
-from exahype2.solvers.aderdg.kernelgenerator import generate_limiter_kernels
+from exahype2.solvers.aderdg.KernelGenerator import generate_limiter_kernels
 
 class PosterioriLimiting(object):
     # initialization stores the key information about the solver and initializes a number of variables for later usage
@@ -155,7 +155,7 @@ class PosterioriLimiting(object):
         #       self._min_and_max_projection,
         #       self._corrector_computation_precision
         # )
-          
+
         self._min_and_max_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._min_and_max_projection)
 
         self._min_and_max_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(

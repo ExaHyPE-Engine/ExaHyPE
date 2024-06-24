@@ -2,3 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .PosterioriLimiting  import PosterioriLimiting
 from .StaticLimiting      import StaticLimiting
+
+#import exahype2.solvers.aderdg.limiting.kernels
+import kernels

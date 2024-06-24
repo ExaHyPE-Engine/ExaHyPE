@@ -17,9 +17,6 @@
 
 #include "peano4/utils/Globals.h"
 
-#include "kernels/{{SOLVER_NAME}}/Quadrature.h"
-#include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
-
 {% if USE_HALF_PRECISION==True %}
 #include <stdfloat>
 {% endif %}
@@ -63,8 +60,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}};
     static constexpr double CFL                        = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                       = {{CFL_ADER}};
-    
-    {% if USE_POINT_SOURCE!="<none>" %}
+
+    {% if USE_POINT_SOURCE %}
     static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
     double pointSourceLocation[NumberOfPointSources][Dimensions];
     {% endif %}

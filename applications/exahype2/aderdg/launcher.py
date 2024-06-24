@@ -89,7 +89,7 @@ theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   ncp         = scenario._equation.ncp()
 )
 
-theSolver.add_kernel_optimizations(polynomials = polynomials, is_linear=scenario._equation.is_linear)
+theSolver.add_kernel_optimisations(polynomials = polynomials, is_linear=scenario._equation.is_linear)
 
 if(scenario.analytical_solution()!=exahype2.solvers.PDETerms.None_Implementation):
     exahype2.errorMeasurement.ADERErrorMeasurement(

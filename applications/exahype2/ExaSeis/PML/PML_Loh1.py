@@ -45,11 +45,11 @@ theSolver = GlobalAdaptiveTimeStep(
     point_source=1,
 )
 
-theSolver.add_kernel_optimizations(
+theSolver.add_kernel_optimisations(
     is_linear=True,
     architecture="noarch",
     polynomials=Polynomials.Gauss_Lobatto,
-    initialize_patches=True,
+    initialise_patches=True,
     riemann_solver_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 

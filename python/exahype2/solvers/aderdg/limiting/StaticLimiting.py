@@ -11,12 +11,12 @@ import os
 from abc import abstractmethod
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.aderdg.kernels  import get_face_overlap_merge_implementation
+from exahype2.solvers.aderdg.ADERDG import get_face_overlap_merge_implementation
 
 from .actionsets import ( SaveNewCellData, SpreadLimiterStatus,
     CopyAndConvertPatch, VerifyTroubledness)
 from exahype2.solvers.aderdg import Polynomials
-from exahype2.solvers.aderdg.kernelgenerator import generate_limiter_kernels
+from exahype2.solvers.aderdg.KernelGenerator import generate_limiter_kernels
 
 class StaticLimiting(object):
     # initialization stores the key information about the solver and initializes a number of variables for later usage

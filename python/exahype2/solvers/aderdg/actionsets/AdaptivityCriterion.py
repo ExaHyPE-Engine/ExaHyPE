@@ -1,13 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 # import peano4
 import peano4.solversteps
 import jinja2
 
-
-class AdaptivityCriterion(AbstractAderDGActionSet):
+class AdaptivityCriterion(AbstractADERDGActionSet):
     """
 
     The action set to realise AMR
@@ -32,24 +31,24 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
 
     """
 
-    TemplateAMR = """  
+    TemplateAMR = """
   logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.willBeRefined(), marker.hasBeenRefined() );
 
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-  if ( 
-    not marker.willBeRefined() 
+  if (
+    not marker.willBeRefined()
     and
-    tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  
+    tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
+    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
-  } 
-  else if ( 
+  }
+  else if (
     {{PREDICATE}}
     and
-    not marker.willBeRefined() 
+    not marker.willBeRefined()
     and
     tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
   ) {

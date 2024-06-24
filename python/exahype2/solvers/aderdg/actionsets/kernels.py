@@ -9,12 +9,12 @@ def create_predictor_allocations():
     const int fluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 
     constexpr int totalSize = kernels::{{SOLVER_NAME}}::getFusedSTPVISize();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} memory[totalSize] __attribute__((aligned({{ALIGNMENT}})));
 
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi           = memory + kernels::{{SOLVER_NAME}}::getlQiShift();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi          = memory + kernels::{{SOLVER_NAME}}::getlQhiShift();
 
-    {% if LINEARITY=="linear" or USE_FLUX!="<none>" %}
+    {% if IS_LINEARITY=="linear" or USE_FLUX %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = memory + kernels::{{SOLVER_NAME}}::getlFiShift();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = memory + kernels::{{SOLVER_NAME}}::getlFhiShift();
     {% else %}
@@ -22,7 +22,7 @@ def create_predictor_allocations():
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = nullptr;
     {% endif %}
 
-    {% if USE_SOURCE!="<none>" or (LINEARITY=="nonlinear" and USE_NCP!="<none>") %}
+    {% if USE_SOURCE or (LINEARITY=="nonlinear" and USE_NCP) %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = memory + kernels::{{SOLVER_NAME}}::getlSiShift();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = memory + kernels::{{SOLVER_NAME}}::getlShiShift();
     {% else %}
@@ -30,13 +30,13 @@ def create_predictor_allocations():
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = nullptr;
     {% endif %}
 
-    {% if USE_NCP!="<none>" %}
+    {% if USE_NCP %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = memory + kernels::{{SOLVER_NAME}}::getgradQShift();
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = nullptr;
     {% endif %}
 
-    {% if LINEARITY=="linear" and USE_POINT_SOURCE!="<none>" %}
+    {% if LINEARITY=="linear" and USE_POINT_SOURCE %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + kernels::{{SOLVER_NAME}}::getPSiShift();
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + kernels::{{SOLVER_NAME}}::getPSderivativesShift();
     {% else %}
@@ -104,7 +104,7 @@ def create_fstpvi_call(is_linear, usePointSource):
           pointSources // will be deleted in the end if set
         );
     } else {
-        int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral_WithoutPS<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh, lQhbnd, lFhbnd,
           lQi, lFi, lSi,

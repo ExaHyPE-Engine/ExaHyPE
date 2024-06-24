@@ -1,98 +1,95 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .AbstractKernelTemplate import AbstractKernelTemplate
+from copy import deepcopy
+
+import peano4.output
 
 from .MathUtils import MathUtils
+from ..Architectures import Architectures
 
-class Quadrature(AbstractKernelTemplate):
-    def generateCode(self):
-        if self.context["quadratureType"] == "Gauss-Legendre":
-            QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(self.context["nDof"])
-            OtherQuadratureWeights, OtherQuadratureNodes = MathUtils.getGaussLobatto(self.context["nDof"])
-        elif self.context["quadratureType"] == "Gauss-Lobatto":
-            QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(self.context["nDof"])
-            OtherQuadratureWeights, OtherQuadratureNodes = MathUtils.getGaussLobatto(self.context["nDof"])
+class Quadrature(object):
+    def __init__(self, dictionary):
+        self.d = deepcopy(dictionary)
+
+    def generate_kernels(self, namespace, output, subdirectory, template_prefix, output_path):
+        if self.d["POLYNOMIAL_TYPE"] == "legendre":
+            QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(self.d["NUMBER_OF_DOF"])
+            OtherQuadratureWeights, OtherQuadratureNodes = MathUtils.getGaussLobatto(self.d["NUMBER_OF_DOF"])
+        elif ["POLYNOMIAL_TYPE"] == "lobatto":
+            QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(self.d["NUMBER_OF_DOF"])
+            OtherQuadratureWeights, OtherQuadratureNodes = MathUtils.getGaussLobatto(self.d["NUMBER_OF_DOF"])
             QuadratureNodes=QuadratureNodes[::-1]
         else:
-            raise ValueError("Quadrature type " + self.context["quadratureType"] + " not supported." )
+            raise ValueError("Quadrature type " + self.d["POLYNOMIAL_TYPE"] + " not supported." )
 
-        weightsVector = MathUtils.vectorPad(QuadratureWeights, self.context["nDofPad"] - self.context["nDof"])
-        self.context["weights1"] = weightsVector
-        self.context["w1Size"] = len(self.context["weights1"])
-        self.context["w1_seq"] = range(self.context["w1Size"])
+        weightsVector = MathUtils.vectorPad(QuadratureWeights, self.d["NUMBER_OF_DOF_PADDED"] - self.d["NUMBER_OF_DOF"])
+        self.d["weights1"] = weightsVector
+        self.d["w1Size"] = len(self.d["weights1"])
+        self.d["w1_seq"] = range(self.d["w1Size"])
 
         #inverse of weights1
-        self.context["iweights1"] = [1.0/self.context["weights1"][i] if self.context["weights1"][i] != 0. else 0. for i in self.context["w1_seq"]]
+        self.d["iweights1"] = [1.0/self.d["weights1"][i] if self.d["weights1"][i] != 0. else 0. for i in self.d["w1_seq"]]
 
-        if(self.context["nDim"] == 2):
+        if self.d["DIMENSIONS"] == 2:
             # weightsVector is QuadratureWeights itself
-            weightsVector = MathUtils.vectorPad(QuadratureWeights, self.controller.getPadSize(len(QuadratureWeights)))
-            self.context["weights2"] = weightsVector
-            self.context["w2Size"] = len(self.context["weights2"])
-            self.context["w2_seq"] = range(self.context["w2Size"])
+            weightsVector = MathUtils.vectorPad(QuadratureWeights, Architectures.get_pad_size(self.d["ARCHITECTURE"], len(QuadratureWeights)))
+            self.d["weights2"] = weightsVector
+            self.d["w2Size"] = len(self.d["weights2"])
+            self.d["w2_seq"] = range(self.d["w2Size"])
 
             # all combinations of two weights, written as an 1D array
-            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] for i in range(self.context["nDof"]) for j in range(self.context["nDof"])]
-            weightsVector = MathUtils.vectorPad(weightsVector, self.controller.getPadSize(len(weightsVector)))
-            self.context["weights3"] = weightsVector
-            self.context["w3Size"] = len(self.context["weights3"])
-            self.context["w3_seq"] = range(self.context["w3Size"])
+            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] for i in range(self.d["NUMBER_OF_DOF"]) for j in range(self.d["NUMBER_OF_DOF"])]
+            weightsVector = MathUtils.vectorPad(weightsVector, Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)))
+            self.d["weights3"] = weightsVector
+            self.d["w3Size"] = len(self.d["weights3"])
+            self.d["w3_seq"] = range(self.d["w3Size"])
 
             # all combinations of three weights, written as an 1D array
-            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k] for i in range(self.context["nDof"]) for j in range(self.context["nDof"]) for k in range(self.context["nDof"])]
-            weightsVector = MathUtils.vectorPad(weightsVector, self.controller.getPadSize(len(weightsVector)))
-            self.context["weights4"] = weightsVector
-            self.context["w4Size"] = len(self.context["weights4"])
-            self.context["w4_seq"] = range(self.context["w4Size"])
-
-        elif(self.context["nDim"] == 3):
+            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k] for i in range(self.d["NUMBER_OF_DOF"]) for j in range(self.d["NUMBER_OF_DOF"]) for k in range(self.d["NUMBER_OF_DOF"])]
+            weightsVector = MathUtils.vectorPad(weightsVector, Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)))
+            self.d["weights4"] = weightsVector
+            self.d["w4Size"] = len(self.d["weights4"])
+            self.d["w4_seq"] = range(self.d["w4Size"])
+        else:
             # all combinations of two weights, written as an 1D array
-            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] for i in range(self.context["nDof"]) for j in range(self.context["nDof"])]
-            weightsVector = MathUtils.vectorPad(weightsVector, self.controller.getPadSize(len(weightsVector)))
-            self.context["weights2"] = weightsVector
-            self.context["w2Size"] = len(self.context["weights2"])
-            self.context["w2_seq"] = range(self.context["w2Size"])
+            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] for i in range(self.d["NUMBER_OF_DOF"]) for j in range(self.d["NUMBER_OF_DOF"])]
+            weightsVector = MathUtils.vectorPad(weightsVector, Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)))
+            self.d["weights2"] = weightsVector
+            self.d["w2Size"] = len(self.d["weights2"])
+            self.d["w2_seq"] = range(self.d["w2Size"])
 
             # all combination of three weights, written as an 1D array
-            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k] for i in range(self.context["nDof"]) for j in range(self.context["nDof"]) for k in range(self.context["nDof"])]
-            weightsVector = MathUtils.vectorPad(weightsVector, self.controller.getPadSize(len(weightsVector)))
-            self.context["weights3"] = weightsVector
-            self.context["w3Size"] = len(self.context["weights3"])
-            self.context["w3_seq"] = range(self.context["w3Size"])
+            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k] for i in range(self.d["NUMBER_OF_DOF"]) for j in range(self.d["NUMBER_OF_DOF"]) for k in range(self.d["NUMBER_OF_DOF"])]
+            weightsVector = MathUtils.vectorPad(weightsVector, Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)))
+            self.d["weights3"] = weightsVector
+            self.d["w3Size"] = len(self.d["weights3"])
+            self.d["w3_seq"] = range(self.d["w3Size"])
 
             # all combination of four weights, written as an 1D array
-            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k] * QuadratureWeights[l] for i in range(self.context["nDof"]) for j in range(self.context["nDof"]) for k in range(self.context["nDof"]) for l in range(self.context["nDof"])]
-            weightsVector = MathUtils.vectorPad(weightsVector, self.controller.getPadSize(len(weightsVector)))
-            self.context["weights4"] = weightsVector
-            self.context["w4Size"] = len(self.context["weights4"])
-            self.context["w4_seq"] = range(self.context["w4Size"])
-        else:
-            print("QuadratureModel: nDim not supported")
+            weightsVector = [QuadratureWeights[i] * QuadratureWeights[j] * QuadratureWeights[k] * QuadratureWeights[l] for i in range(self.d["NUMBER_OF_DOF"]) for j in range(self.d["NUMBER_OF_DOF"]) for k in range(self.d["NUMBER_OF_DOF"]) for l in range(self.d["NUMBER_OF_DOF"])]
+            weightsVector = MathUtils.vectorPad(weightsVector, Architectures.get_pad_size(self.d["ARCHITECTURE"], len(weightsVector)))
+            self.d["weights4"] = weightsVector
+            self.d["w4Size"] = len(self.d["weights4"])
+            self.d["w4_seq"] = range(self.d["w4Size"])
 
         # inverse of weight3
-        self.context["iweights3"] = [1.0/self.context["weights3"][i] if self.context["weights3"][i] != 0. else 0. for i in self.context["w3_seq"]]
+        self.d["iweights3"] = [1.0/self.d["weights3"][i] if self.d["weights3"][i] != 0. else 0. for i in self.d["w3_seq"]]
 
-        self.context["QuadratureWeights"], self.context["QuadratureNodes"] = QuadratureWeights, QuadratureNodes
-        self.context["quadrature_seq"] = range(self.context["nDof"])
+        self.d["QuadratureWeights"], self.d["QuadratureNodes"] = QuadratureWeights, QuadratureNodes
+        self.d["quadrature_seq"] = range(self.d["NUMBER_OF_DOF"])
 
-        if(self.context["kernelType"]=="limiter"):
-            l_padSize = self.context["nDofPad"] - self.context["nDof"]
-            uh2lob = MathUtils.assembleQuadratureConversion(QuadratureNodes, OtherQuadratureNodes, self.context["nDof"]) #TODO JMG adapt when allowing Lobatto as node
-            self.context["uh2lob"] = MathUtils.matrixPadAndFlatten_ColMajor(uh2lob,l_padSize)
-            self.context["uh2lobSize"] = len(self.context["uh2lob"])
-            self.context["uh2lob_seq"] = range(self.context["uh2lobSize"])
-
-            l_padSize = self.context["nDofPad"] - self.context["nDof"]
-            dg2fv = MathUtils.assembleDGToFV(QuadratureNodes, QuadratureWeights, self.context["nDof"], self.context["nDofLim"])
-            self.context["dg2fv"] = MathUtils.matrixPadAndFlatten_ColMajor(dg2fv,l_padSize)
-            self.context["dg2fvSize"] = len(self.context["dg2fv"])
-            self.context["dg2fv_seq"] = range(self.context["dg2fvSize"])
-
-            l_padSize = self.context["nDofLimPad"] - self.context["nDofLim"]
-            fv2dg = MathUtils.assembleFVToDG(dg2fv, QuadratureWeights, self.context["nDof"], self.context["nDofLim"])
-            self.context["fv2dg"] = MathUtils.matrixPadAndFlatten_ColMajor(fv2dg,l_padSize)
-            self.context["fv2dgSize"] = len(self.context["fv2dg"])
-            self.context["fv2dg_seq"] = range(self.context["fv2dgSize"])
-
-        self.render("Quadrature.template.h",   "Quadrature.h")
-        self.render("Quadrature.template.cpp", "Quadrature.cpp")
+        generated_kernels = (
+            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                headfile_template=template_prefix + "Quadrature.template.h",
+                cppfile_template=template_prefix + "Quadrature.template.cpp",
+                classname=output_path + "/Quadrature",
+                namespace=namespace,
+                subdirectory=subdirectory + ".",
+                dictionary=self.d,
+                default_overwrite=True,
+                apply_iteratively=True,
+            )
+        )
+        output.add(generated_kernels)
+        output.makefile.add_h_file(output_path + "/Quadrature.h", generated=True)
+        output.makefile.add_cpp_file(output_path + "/Quadrature.cpp", generated=True)

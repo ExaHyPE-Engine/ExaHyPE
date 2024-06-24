@@ -13,6 +13,8 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 
+#include "kernels/{{SOLVER_NAME}}/Quadrature.h"
+#include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 

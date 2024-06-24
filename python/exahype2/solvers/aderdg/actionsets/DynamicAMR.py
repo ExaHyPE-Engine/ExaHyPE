@@ -5,10 +5,10 @@ import exahype2
 import jinja2
 
 from peano4.solversteps.ActionSet import ActionSet
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 
-class DynamicAMR(AbstractAderDGActionSet):
+class DynamicAMR(AbstractADERDGActionSet):
     """
     ExaHyPE 2 ADER-DG handling of adaptive meshes.
     Despite the name this currently only handles static AMR, so this probably desperately needs to be renamed.
@@ -150,5 +150,5 @@ class DynamicAMR(AbstractAderDGActionSet):
     def get_includes(self):
         return (
             super(DynamicAMR, self).get_includes() + """
-#include "kernels/""" + self._solver._name + """/Kernels.h"
+#include "kernels/""" + self._solver._name + """/AMRRoutines.h"
 """)
