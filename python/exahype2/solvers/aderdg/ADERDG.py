@@ -497,6 +497,12 @@ Material parameters:    """
     """
     @abstractmethod
     def create_action_sets(self):
+        # Updates faces and cells (whether at boundary, refined etc.)
+        self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
+        self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
+        self._action_set_update_face_label.descend_invocation_order = 0
+        self._action_set_update_cell_label.descend_invocation_order = 0
+
         # Sets initial conditions for the solution
         self._action_set_initial_conditions = (
             exahype2.solvers.aderdg.actionsets.InitialCondition(
@@ -519,6 +525,32 @@ Material parameters:    """
         )
         self._action_set_handle_boundary.descend_invocation_order = 1
 
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
+            solver=self,
+            clear_guard=self._clear_face_data_default_guard(),
+            shift_guard=self._shift_face_data_default_guard(),
+            interpolate_guard=self._interpolate_face_data_default_guard(),
+            restrict_guard=self._restrict_face_data_default_guard(),
+        )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+
+        # All the actual computation of the solution happens in the prediction and correction action sets.
+        # Predictor extrapolates the solution from time t onto time-nodes, then projects this
+        # extrapolated solution to the faces.
+        # Correction uses the extrapolated face solutions from the predictor and the neighboring
+        # cells to compute a solution at the next timestep.
+        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
+            self, self._store_cell_data_default_guard())
+        self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
+
+        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
+        self._action_set_prediction.descend_invocation_order = 3
+
+        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 3
+
         # Handles adaptive mesh refinement
         self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
             solver=self,
@@ -533,7 +565,7 @@ Material parameters:    """
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True
         )
-        self._action_set_AMR.descend_invocation_order = 3
+        self._action_set_AMR.descend_invocation_order = 4
 
         self._action_set_AMR_commit_without_further_analysis = (
             exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
@@ -543,44 +575,13 @@ Material parameters:    """
                 implement_previous_refinement_instructions=True
             )
         )
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
-
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
-            solver=self,
-            clear_guard=self._clear_face_data_default_guard(),
-            shift_guard=self._shift_face_data_default_guard(),
-            interpolate_guard=self._interpolate_face_data_default_guard(),
-            restrict_guard=self._restrict_face_data_default_guard(),
-        )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 4
 
         if self._action_set_postprocess_solution == None:
             self._action_set_postprocess_solution = (
                 exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
             )
-        self._action_set_postprocess_solution.descend_invocation_order = 3
-
-        # Updates faces and cells (whether at boundary, refined etc.)
-        self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
-        self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
-        self._action_set_update_face_label.descend_invocation_order = 0
-        self._action_set_update_cell_label.descend_invocation_order = 0
-
-        # All the actual computation of the solution happens in these.
-        # Predictor extrapolates the solution from time t onto time-nodes, then projects this
-        # extrapolated solution to the faces.
-        # Correction uses the extrapolated face solutions from the predictor and the neighboring
-        # cells to compute a solution at the next timestep.
-        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
-            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
-        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
-            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
-        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
-            self, self._store_cell_data_default_guard())
-
-        self._action_set_prediction.descend_invocation_order = 1
-        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
-        self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
+        self._action_set_postprocess_solution.descend_invocation_order = 4
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
