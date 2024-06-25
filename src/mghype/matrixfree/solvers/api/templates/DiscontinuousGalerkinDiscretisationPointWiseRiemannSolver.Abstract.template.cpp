@@ -300,38 +300,53 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
       }
       break;
 */
-    // Remain suspended. CG solver or some coupling is happening
     case State::Suspend:
       {
-        _state = State::Suspend;
+        _state = State::ProjectOntoFacesOnly;
+      }
+      break;
+
+    case State::UpdateAndRestrictResidual:
+      {
+        _state = State::Suspend; 
       }
       break;
   }
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
-  return _state == State::Solve;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const{
   return _state == State::Suspend;
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
-  return _state == State::Solve;
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
   return _state == State::Solve
       or _state == State::ProjectOntoFacesOnly;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
+  return _state == State::Solve
+      or _state == State::UpdateAndRestrictResidual;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
+  return _state == State::Solve
+      or _state == State::ProjectOntoFacesOnly
+      or _state == State::UpdateAndRestrictResidual;
+}
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoCells() const {
+  return _state == State::Solve
+      or _state == State::UpdateAndRestrictResidual;
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, bool updateAndRestrictResidual) {
   if (projectOntoFaces) {
     _state = State::ProjectOntoFacesOnly;
+  }
+  else if (updateAndRestrictResidual) {
+    _state = State::UpdateAndRestrictResidual;
   }
   else {
     _state = State::Suspend;

@@ -15,6 +15,7 @@ class UpdateCell(ActionSet):
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
     and
+    // only one condition here - ensures that we don't do this when restricting the residual
     repositories::{{SOLVER_INSTANCE}}.updateCell()
   ) {
     logTraceInWith4Arguments("touchCellFirstTime", 
@@ -214,7 +215,7 @@ class ProjectOntoCells(ActionSet):
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
     and
-    repositories::{{SOLVER_INSTANCE}}.updateCell()
+    repositories::{{SOLVER_INSTANCE}}.projectOntoCells()
   ) {
     // we intend that the internal residual vector should be reset and updated in the 
     // cell update procedure

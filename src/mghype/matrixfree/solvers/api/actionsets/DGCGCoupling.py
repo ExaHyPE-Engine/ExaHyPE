@@ -759,10 +759,20 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
     def get_body_of_prepareTraversal(self):
         return jinja2.Template( """
     logTraceInWith3Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
-    if (DGCycleCounter>0 and DGCycleCounter<=DGSmoothingSteps) {
+    if (DGCycleCounter>0 and DGCycleCounter<DGSmoothingSteps) {
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       DGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
+    }
+    else if (
+      DGCycleCounter>0 and DGCycleCounter==DGSmoothingSteps
+    ) {
+      // same as above, but we need to make sure final update residual is halted
+      logInfo( "prepareTraversal(...)", "run final DG smoother step, disable CG solver" );
+      DGCycleCounter++;
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false, true);
+
     }
 
     else if (
@@ -779,14 +789,14 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       /*
       We haven't reached our termination condition for CG solver yet
       */
-      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false);
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false, false);
       CGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver. CG residual="<< repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
     }
     else {
       DGCycleCounter = 1;
       CGCycleCounter = 0;
-      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true);
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true, false);
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       logInfo( "prepareTraversal(...)", "suspend all solvers, interpolate CG->DG and project new solution onto faces" );
     }
