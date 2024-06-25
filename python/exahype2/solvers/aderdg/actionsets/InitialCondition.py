@@ -58,7 +58,6 @@ class InitialCondition(AbstractADERDGActionSet):
     self.grid_is_constructed = grid_is_constructed
     self._initialise_patches = solver._initialise_patches
 
-
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:

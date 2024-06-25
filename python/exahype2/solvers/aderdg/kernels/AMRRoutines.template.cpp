@@ -7,7 +7,12 @@
 #include "AMRRoutines.h"
 #include "DGMatrices.h"
 #include "Quadrature.h"
+
+{% if USE_LIBXSMM %}
 #include "Gemms.h"
+{% endif %}
+
+{% import 'Gemms.template.h' as m with context %}{# get template macros #}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
   {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__             lQhbndFine,

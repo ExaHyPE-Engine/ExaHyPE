@@ -341,8 +341,3 @@ def create_corrector_allocations():
 """
 
     return template_kernelgenerator
-
-def create_includes(solver_name, is_linear):
-    return """
-#include "../kernels/""" + solver_name + """/Kernels.h"
-"""

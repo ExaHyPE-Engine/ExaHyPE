@@ -580,26 +580,26 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   return -1; // No picard iteration in linear case
 }
 
-{% for precision_num in range(0,predictorComputePrecisions|length) %}
-template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
-    {{solverName}}& solver,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lduh,
-    {{predictorStoragePrecision}}* __restrict__ lQhbnd,
-    {{predictorStoragePrecision}}* __restrict__ lFhbnd,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lQi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lFi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lSi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lQhi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lFhi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ lShi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ gradQ,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ PSi,
-    {{predictorComputePrecisions[precision_num]}}* __restrict__ PSderivatives,
-    const {{correctorStoragePrecision}}* const __restrict__ luh,
-    const tarch::la::Vector<Dimensions, double>&  x,
-    const tarch::la::Vector<Dimensions, double>&  h,
-    const double t,
-    const double dt,
-    std::vector<int>* pointSources
+{% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
+template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                                   solver,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lduh,
+  {{SOLUTION_STORAGE_PRECISION}}* __restrict__                      lQhbnd,
+  {{SOLUTION_STORAGE_PRECISION}}* __restrict__                      lFhbnd,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lSi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQhi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFhi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lShi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ gradQ,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ PSi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ PSderivatives,
+  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__          luh,
+  const tarch::la::Vector<Dimensions, double>&                      x,
+  const tarch::la::Vector<Dimensions, double>&                      h,
+  const double                                                      t,
+  const double                                                      dt,
+  std::vector<int>*                                                 pointSources
 );
 {% endfor %}

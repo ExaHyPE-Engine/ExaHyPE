@@ -9,7 +9,6 @@
 #include <cstring>
 #include <algorithm>
 
-#include "{{pathToOptKernel}}/Kernels.h"
 #include "{{pathToOptKernel}}/DGMatrices.h"
 #include "{{pathToOptKernel}}/Quadrature.h"
 {% if useLibxsmm %}

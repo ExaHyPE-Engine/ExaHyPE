@@ -8,7 +8,6 @@ import jinja2
 
 class AdaptivityCriterion(AbstractADERDGActionSet):
     """
-
     The action set to realise AMR
 
     AMR is a multistep process in ExaHyPE. Most of the relevant documentation
@@ -28,7 +27,6 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
 
     Please consult EnclaveTasking.create_action_sets for details regarding
     the handling of AMR within the enclave tasking concept.
-
     """
 
     TemplateAMR = """
@@ -207,13 +205,11 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
 
     def set_event_lifetime(self, value):
         """
-
         By default, a refinement/coarsening event is only alive for one grid sweep.
         After that one, the set of refine/coarsen commands is reset and we start
         again. If you work with local time stepping, subcycling, multiphysics codes,
         you might want to keep an event for more steps. In this case, you have to
         invoke this setter.
-
         """
         self._event_lifetime = value
 

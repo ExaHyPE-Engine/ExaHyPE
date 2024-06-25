@@ -310,6 +310,9 @@ Type:                   """
 DG order:               """
             + str(self._order)
             + """
+Basis size:             """
+            + str(self._order + 1)
+            + """
 Linear:                 """
             + str(self._is_linear)
             + """
@@ -966,6 +969,9 @@ Material parameters:    """
         output.makefile.add_cpp_file(kernels_output_path + "/RiemannSolver.cpp", generated=True)
 
         AMRRoutines.AMRRoutines(d).generate_kernels(
+            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+        )
+        CellData.CellData(d).generate_kernels(
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
         DGMatrices.DGMatrices(d).generate_kernels(

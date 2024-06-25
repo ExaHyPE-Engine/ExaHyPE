@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from sys import exit
-
 precisionTranslate = {
     "DP": "DP",
     "double": "DP",
@@ -15,7 +13,7 @@ precisionTranslate = {
     "half_float::half": "HP"
 }
 
-class MatmulConfig:
+class Gemms:
     """Specification of a dense matrix-matrix multiplication
 
         C       = alpha  *   A   *    B   + beta  *  C
@@ -85,21 +83,13 @@ class MatmulConfig:
             precision = [precision]
         for key in precision:
             if key not in precisionTranslate.keys():
-                print("MatmulConfig: Unknown precision")
-                exit()
+                raise("Unknown precision")
         if (M > LDC) or (K > LDB) or (M > LDA):
-            print("MatmulConfig: Incompatible matrix sizes and leading dimensions")
-            exit()
+            raise("Incompatible matrix sizes and leading dimensions")
         if alignment_A not in [0, 1]:
-            print(
-                "MatmulConfig: Something is wrong with the alignment choice of matrix A"
-            )
-            exit()
+            raise("Something is wrong with the alignment choice of matrix A")
         if alignment_C not in [0, 1]:
-            print(
-                "MatmulConfig: Something is wrong with the alignment choice of matrix C"
-            )
-            exit()
+            raise("Something is wrong with the alignment choice of matrix C")
 
         self.M = M
         self.N = N

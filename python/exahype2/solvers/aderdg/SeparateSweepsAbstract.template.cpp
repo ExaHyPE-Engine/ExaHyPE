@@ -410,8 +410,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
-}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
@@ -424,13 +423,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting";
     case SolverState::Prediction:
       return "prediction";
-      break;
     case SolverState::PredictionOnHangingCells:
-      return "prediction on hanging cells";
-      break;
+      return "prediction-on-hanging-cells";
     case SolverState::Correction:
-			return "correction";
-      break;
+      return "correction";
     }
   return "<undef>";
 }

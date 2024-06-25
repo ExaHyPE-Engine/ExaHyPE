@@ -4,7 +4,7 @@ from .AbstractADERDGActionSet import AbstractADERDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (
   create_predictor_allocations, create_fstpvi_call,
-  create_includes, create_solution_update,
+  create_solution_update,
   copy_estimates_and_perform_riemann_solution_on_hanging_faces,
   copy_estimates_into_faces, number_of_precisions_iterator
 )
@@ -21,7 +21,6 @@ class Prediction(AbstractADERDGActionSet):
     """
 
     _Template_TouchCellFirstTime_Preamble = """
-
   bool isHangingCell = false;
   for(int d=0; d<2*Dimensions; d++){
     if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
@@ -122,11 +121,14 @@ class Prediction(AbstractADERDGActionSet):
         return result
 
     def get_action_set_name(self):
-        return (__name__ + ("_on_hanging_cells" if self.onHangingCells else "")).replace(".py", "").replace(".", "_")
+        return (__name__ + ("OnHangingCells" if self.onHangingCells else "")).replace(".py", "").replace(".", "_")
 
     def get_includes(self):
-        linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
-            super(Prediction, self).get_includes()
-            + create_includes(self._solver._name, self._solver._is_linear)
-        )
+            super(Prediction, self).get_includes() + """
+#include "kernels/""" + self._solver._name + """/CellData.h"
+#include "kernels/""" + self._solver._name + """/FaceIntegral.h"
+#include "kernels/""" + self._solver._name + """/RiemannSolver.h"
+#include "kernels/""" + self._solver._name + """/SolutionUpdate.h"
+#include "kernels/""" + self._solver._name + """/FusedSpaceTimePredictorVolumeIntegral.h"
+""")

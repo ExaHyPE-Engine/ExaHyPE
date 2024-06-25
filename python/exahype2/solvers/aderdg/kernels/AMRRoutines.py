@@ -4,13 +4,15 @@ from copy import deepcopy
 
 import peano4.output
 
-from .MatmulConfig import MatmulConfig
+from .Gemms import Gemms
 
 class AMRRoutines(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(self, namespace, output, subdirectory, template_prefix, output_path):
+        self._build_gemms()
+
         generated_kernels = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 headfile_template=template_prefix + "AMRRoutines.template.h",
@@ -27,35 +29,33 @@ class AMRRoutines(object):
         output.makefile.add_h_file(output_path + "/AMRRoutines.h", generated=True)
         output.makefile.add_cpp_file(output_path + "/AMRRoutines.cpp", generated=True)
 
-        self._build_gemms_config(self)
-        if self.d["USE_LIBXSMM"]:
-            self.controller.generate_gemms("asm_amrRoutines.c", self.context["matmulConfigs"].values())
-
-    def _build_gemms_config(self):
-        # Define a sequence of matmul configs
-        self.context["matmulConfigs"] = {}
-        nVar     = self.context["nVar"]
-        nVarPad  = self.context["nVarPad"]
-        nData    = self.context["nData"]
-        nDataPad = self.context["nDataPad"]
-        nDof     = self.context["nDof"]
+    def _build_gemms(self):
+        # Define a sequence of gemms
+        self.d["GEMMS"] = {}
+        nData    = self.d["NUMBER_OF_DATA"]
+        nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
+        nDof     = self.d["NUMBER_OF_DOF"]
         nDof2    = nDof*nDof
-        nDofPad  = self.context["nDofPad"]
-        nDim     = self.context["nDim"]
+        nDofPad  = self.d["NUMBER_OF_DOF_PADDED"]
+        nDim     = self.d["DIMENSIONS"]
+        nUnknownsPad  = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
 
         # Always overwrite input (no need to set to 0), except if add.
         # nDim-1 face projection, inputs are padded.
-        self.context["matmulConfigs"]["face_Q_x"] =     MatmulConfig(nDataPad, nDof, nDof, nDataPad, nDofPad, nDataPad, 1, 0, 1, 1, "face_Q_x", "nopf", "gemm", self.context["correctorStoragePrecision"])
-        self.context["matmulConfigs"]["face_F_x"] =     MatmulConfig(nVarPad , nDof, nDof, nVarPad , nDofPad, nVarPad , 1, 0, 1, 1, "face_F_x", "nopf", "gemm", self.context["correctorStoragePrecision"])
-        if(nDim == 3):
-            self.context["matmulConfigs"]["face_Q_y"] = MatmulConfig(nDataPad, nDof, nDof, nDataPad*nDof, nDofPad, nDataPad*nDof, 1, 0, 1, 1, "face_Q_y", "nopf", "gemm", self.context["correctorStoragePrecision"])
-            self.context["matmulConfigs"]["face_F_y"] = MatmulConfig(nVarPad , nDof, nDof, nVarPad*nDof , nDofPad, nVarPad*nDof , 1, 0, 1, 1, "face_F_y", "nopf", "gemm", self.context["correctorStoragePrecision"])
+        self.d["GEMMS"]["face_Q_x"] =     Gemms(nDataPad, nDof, nDof, nDataPad, nDofPad, nDataPad, 1, 0, 1, 1, "face_Q_x", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"])
+        self.d["GEMMS"]["face_F_x"] =     Gemms(nUnknownsPad , nDof, nDof, nUnknownsPad , nDofPad, nUnknownsPad , 1, 0, 1, 1, "face_F_x", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"])
+        if nDim == 3:
+            self.d["GEMMS"]["face_Q_y"] = Gemms(nDataPad, nDof, nDof, nDataPad*nDof, nDofPad, nDataPad*nDof, 1, 0, 1, 1, "face_Q_y", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"])
+            self.d["GEMMS"]["face_F_y"] = Gemms(nUnknownsPad , nDof, nDof, nUnknownsPad*nDof , nDofPad, nUnknownsPad*nDof , 1, 0, 1, 1, "face_F_y", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"])
         # nDim volume projection, luh (input/output) is not padded.
-        self.context["matmulConfigs"]["volume_x"] =      MatmulConfig(nData   , nDof, nDof, nData         , nDofPad, nDataPad     , 1, 0, 0, 1, "volume_x", "nopf", "gemm", self.context["correctorStoragePrecision"]) # input slice not aligned
-        if(nDim==3):
-            self.context["matmulConfigs"]["volume_y"] =  MatmulConfig(nDataPad, nDof, nDof, nDataPad*nDof , nDofPad, nDataPad*nDof, 1, 0, 1, 1, "volume_y", "nopf", "gemm", self.context["correctorStoragePrecision"])
-            self.context["matmulConfigs"]["volume_z"] =  MatmulConfig(nData   , nDof, nDof, nDataPad*nDof2, nDofPad, nData*nDof2  , 1, 0, 1, 0, "volume_z", "nopf", "gemm", self.context["correctorStoragePrecision"]) # output slice not aligned
-            self.context["matmulConfigs"]["volume_z_add"] = MatmulConfig(nData, nDof, nDof, nDataPad*nDof2, nDofPad, nData*nDof2  , 1, 1, 1, 0, "volume_z_add", "nopf", "gemm", self.context["correctorStoragePrecision"]) # output slice not aligned, add to result
+        self.d["GEMMS"]["volume_x"] =      Gemms(nData   , nDof, nDof, nData         , nDofPad, nDataPad     , 1, 0, 0, 1, "volume_x", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"]) # input slice not aligned
+        if nDim==3:
+            self.d["GEMMS"]["volume_y"] =  Gemms(nDataPad, nDof, nDof, nDataPad*nDof , nDofPad, nDataPad*nDof, 1, 0, 1, 1, "volume_y", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"])
+            self.d["GEMMS"]["volume_z"] =  Gemms(nData   , nDof, nDof, nDataPad*nDof2, nDofPad, nData*nDof2  , 1, 0, 1, 0, "volume_z", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"]) # output slice not aligned
+            self.d["GEMMS"]["volume_z_add"] = Gemms(nData, nDof, nDof, nDataPad*nDof2, nDofPad, nData*nDof2  , 1, 1, 1, 0, "volume_z_add", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"]) # output slice not aligned, add to result
         else:
-            self.context["matmulConfigs"]["volume_y"] =  MatmulConfig(nData   , nDof, nDof, nDataPad*nDof , nDofPad, nData*nDof   , 1, 0, 1, 0, "volume_y", "nopf", "gemm", self.context["correctorStoragePrecision"]) # output slice not aligned
-            self.context["matmulConfigs"]["volume_y_add"] = MatmulConfig(nData, nDof, nDof, nDataPad*nDof , nDofPad, nData*nDof   , 1, 1, 1, 0, "volume_y_add", "nopf", "gemm", self.context["correctorStoragePrecision"]) # output slice not aligned, add to result
+            self.d["GEMMS"]["volume_y"] =  Gemms(nData   , nDof, nDof, nDataPad*nDof , nDofPad, nData*nDof   , 1, 0, 1, 0, "volume_y", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"]) # output slice not aligned
+            self.d["GEMMS"]["volume_y_add"] = Gemms(nData, nDof, nDof, nDataPad*nDof , nDofPad, nData*nDof   , 1, 1, 1, 0, "volume_y_add", "nopf", "gemm", self.d["SOLUTION_STORAGE_PRECISION"]) # output slice not aligned, add to result
+
+        if self.d["USE_LIBXSMM"]:
+            self.controller.generate_gemms("asm_amrRoutines.c", self.context["GEMMS"].values())

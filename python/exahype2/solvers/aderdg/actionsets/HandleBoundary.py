@@ -8,33 +8,29 @@ import jinja2
 
 class HandleBoundary(AbstractADERDGActionSet):
     """
-
-    The linear combination of the Runge Kutta trials has to be projected onto
+    The linear combination of the Runge-Kutta trials has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
-
-
     """
 
     TemplateHandleBoundary = """
   if ({{PREDICATE}}) {
-  
     const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
-  
+
     // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
-    
+
     const int Order = {{ORDER}};
     const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
     const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     const int NumberOfData = NumberOfVariables+NumberOfParameters;
-    
+
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
     #else
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
     #endif
-    
+
     const int basisElementsByFace = spaceFaceSize*NumberOfData;
     const int fluxElementsByFace = spaceFaceSize*NumberOfVariables;
 
@@ -87,20 +83,17 @@ class HandleBoundary(AbstractADERDGActionSet):
         std::fill_n(FOut + dofSerialised*NumberOfVariables, NumberOfVariables, 0.0);
         {% endif %}
     }
-   
   }
 """
 
     def __init__(self, solver, guard):
         """
-
         guard_project: String (C++ code)
           Predicate which controls if the solution is actually projected
 
         guard_safe_old_time_step: String (C++ code)
           Predicate which controls if the projection should be copied into
           the old solution and the time step should also be moved over
-
         """
         super(HandleBoundary, self).__init__(solver)
         self.guard = guard

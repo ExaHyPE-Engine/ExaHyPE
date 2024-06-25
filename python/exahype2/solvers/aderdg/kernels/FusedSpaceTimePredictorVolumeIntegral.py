@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import peano4.output
 
+from .Gemms import Gemms
 from .MathUtils import MathUtils
-from .MatmulConfig import MatmulConfig
 
 class FusedSpaceTimePredictorVolumeIntegral(object):
     def __init__(self, dictionary):
@@ -38,10 +38,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                 QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(self.d["NUMBER_OF_DOF"])
                 self.d["BASIS_FUNCTIONS"] = MathUtils.assembleBasisFunction(QuadratureNodes)
 
-        # Generate GEMMS
-        if self.d["USE_LIBXSMM"]:
-            self.controller.generateGemms("asm_fstpvi.c", self.d["matmulConfigs"].values())
-
         generated_kernels = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 headfile_template=template_prefix + "FusedSpaceTimePredictorVolumeIntegral.template.h",
@@ -59,8 +55,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         output.makefile.add_h_file(output_path + "/FusedSpaceTimePredictorVolumeIntegral.h", generated=True)
         output.makefile.add_cpp_file(output_path + "/FusedSpaceTimePredictorVolumeIntegral.cpp", generated=True)
 
-    def build_gemms_config(self):
-        # MatmulConfig: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type
+    def _build_gemms(self):
+        # Gemms: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type
         self.d["matmulConfigs"] = {}
         nVar     = self.d["nVar"]
         nVarPad  = self.d["nVarPad"]
@@ -116,3 +112,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         self.d["matmulConfigs"]["gradQ_z_RKLoop"] = MatmulConfig(nVar, nDof, nDof, nData*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 0, 1, "gradQ_z_RKLoop", "nopf", "gemm", self.d["predictorComputePrecisions"])
 
             self.d["matmulConfigs"]["lqi"] = MatmulConfig(nVarPad, nDof, nDof, nVarPad*(nDof**nDim), nDofPad, nVarPad, 1, 0, 1, 1, "lqi", "nopf", "gemm", self.d["predictorComputePrecisions"]) # beta, 0 => overwrite C
+
+        if self.d["USE_LIBXSMM"]:
+            self.controller.generateGemms("asm_fstpvi.c", self.d["matmulConfigs"].values())

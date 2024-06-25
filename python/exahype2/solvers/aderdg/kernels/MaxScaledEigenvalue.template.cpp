@@ -63,5 +63,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
 {% endif %}
     }
   }
+
   return maxEigenvalue;
 }

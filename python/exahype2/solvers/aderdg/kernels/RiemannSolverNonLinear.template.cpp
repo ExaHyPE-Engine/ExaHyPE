@@ -10,7 +10,6 @@
 #include <cstring>
 #include <cmath>
 
-#include "{{pathToOptKernel}}/Kernels.h"
 #include "{{pathToOptKernel}}/DGMatrices.h"
 #include "{{pathToOptKernel}}/Quadrature.h"
 
