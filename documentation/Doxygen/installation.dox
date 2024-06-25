@@ -2,6 +2,10 @@
 
 \page page_installation Installation
 
+\li \subpage page_installation_with_spack
+\li \subpage page_installation_with_docker
+\li \subpage page_installation_with_apptainer
+
 \tableofcontents
 
 Peano is typically acquired through a git clone.
@@ -303,9 +307,5 @@ make test
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-\li \subpage page_installation_with_spack
-\li \subpage page_installation_with_docker
-\li \subpage page_installation_with_apptainer
 
 */
