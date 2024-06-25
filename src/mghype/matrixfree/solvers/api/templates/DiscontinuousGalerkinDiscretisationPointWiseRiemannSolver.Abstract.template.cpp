@@ -328,7 +328,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
   return _state == State::Solve
-      or _state == State::ProjectOntoFacesOnly;
+      or _state == State::ProjectOntoFacesOnly
       or _state == State::UpdateAndRestrictResidual;
 }
 
