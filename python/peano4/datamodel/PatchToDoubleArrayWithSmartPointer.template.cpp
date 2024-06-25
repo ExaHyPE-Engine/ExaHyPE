@@ -44,7 +44,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   assertion2( value==nullptr, toString(), other.toString() );
 
   if (other.value!=nullptr) {
-    _dataSmartPointer = other._dataSmartPointer;
+    _dataSmartPointer = std::shared_ptr< {{FLOAT_TYPE}}[] >(
+      tarch::allocateMemory< {{FLOAT_TYPE}} >( {{MPI_ELEMENTS_PER_FLOAT}}*Cardinality, tarch::MemoryLocation::Heap ),
+      [] (auto p) {
+        tarch::freeMemory( p, tarch::MemoryLocation::Heap );
+      }
+    );
     value = _dataSmartPointer.get();
 
     #if Dimensions==2
