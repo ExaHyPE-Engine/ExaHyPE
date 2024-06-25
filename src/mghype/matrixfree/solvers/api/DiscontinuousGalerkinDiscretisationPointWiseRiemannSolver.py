@@ -7,7 +7,7 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution
+from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution, ProjectOntoCells
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
@@ -31,7 +31,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   ## Storage 
   
   This solver holds \f$ K^c (p+1)^d \f$ unknowns (doubles) per cell for the
-  solution, \f$  K^c (p+1)^d \f$ per cell for the right-hand side.
+  solution, \f$  K^c (p+1)^d \f$ per cell for the right-hand side, and the 
+  same number for the residual. Holding the residual in the cell allows us
+  to separate some algorithm steps into different action sets. In particular,
+  we project the face solution back into the cells after updating the cell
+  solution (in separate sweeps).
   These are the primary variables, i.e. those directly resulting from the
   PDE formulation. The correspond to the unknowns directly from @f$ u @f$
   and the right-hand side.
@@ -182,7 +186,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   ### Under the hood
   
-  Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
+  Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs
+  and residual. We store the residual in the cell so that we can calculate the update to the cell solution
+  separately from the projection of face solution back into the cells, but crucially are able to update
+  the global residual before we apply the preconditioner.
   On each face we store \f$ K^f (p+1)^{d-1} \f$ values
   for the solution, and then \f$ 2K^f_{f \gets c} (p+1)^{d-1} \f$ for the projections in a separate array.
   We note that this factor of two comes from the fact that we have projections from cells on both the left 
@@ -204,15 +211,21 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   Code for this is in actionsets.DGSolver.UpdateFaceSolution. This action set only contains something nontrivial at 
   touchFaceFirstTime. We apply the Riemann matrix that is present in the Abstract Solver class. This action set goes first,
   the idea being that we updated the face solution using the updated face projections from the previous sweep.
-  On the first sweep, this does nothing.
+
+  ### ProjectOntoCells
+  Code for this is in actionsets.DGSolver.ProjectOntoCells. This action set works when we touch the cell for the first time.
+  We project the newly updated face solution back into the cells. In particular we:
+   - Write the updated face solution into the residual stored in the cell. This finishes the cell update from the previous sweep.
+   - Update the global residual
+   - Update the cell solution, which is projected back onto faces in the next action set.
+
+  ### ProjectOntoFaces
+  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after ProjectOntoCells, so that we project
+  freshly updated Cell values onto the Faces.
 
   ### UpdateCell
   Code for this is in actionsets.DGSolver.UpdateCell. We do something nontrivial in touchCellFirstTime, namely perform the cell update
-  rule as above. 
-
-  ### ProjectOntoFaces
-  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after UpdateCell, so that we project
-  freshly updated Cell values onto the Faces.
+  rule as above. We set the residual to be \f$ Mb - A^{cc} u^c \f$.
 
     
   """
@@ -365,6 +378,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     # cell stuff
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell) ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell) ))
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
 
     # face stuff
@@ -427,8 +441,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       self.preprocessing_action_set.descend_invocation_order = descend_order + 0
       observer.add_action_set( self.preprocessing_action_set )
     observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
-    observer.add_action_set( UpdateCell(self, descend_order+2, False) )
+    observer.add_action_set( ProjectOntoCells(self, descend_order+2, False) )
     observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
+    observer.add_action_set( UpdateCell(self, descend_order+4, False) )
     if self.postprocessing_action_set != None:
       self.postprocessing_action_set.descend_invocation_order = descend_order + 4
       observer.add_action_set( self.postprocessing_action_set )
