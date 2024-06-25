@@ -1,12 +1,9 @@
-[build-system]
-requires = [
-    "setuptools>=61.0",
-]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "Peano"
 version = "4.0.0"
+description = "Peano Python API"
+license = {file = "LICENSE"}
+requires-python = ">=3.7"
 authors = [
   { name="Tobias Weinzierl", email="tobias.weinzierl@durham.ac.uk" },
   { name="Sean Baccas" },
@@ -31,34 +28,29 @@ authors = [
   { name="Budanaz Yakup" },
   { name="Han Zhang" },
 ]
-description = "Peano Python API"
-readme="README"
-requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "Jinja2",
-    "mpmath",
-    "numpy",
-    "matplotlib",
-    "scipy",
-    "sympy",
-    "h5py",
-    "VTUinterface",
-]
+dynamic = ["readme", "dependencies"]
 
 [project.urls]
 "Homepage" = "http://www.peano-framework.org"
 
-[tool.setuptools]
-packages=[
-    "dastgen2",
-    "exahype2",
-    "multigrid",
-    "peano4",
-    "petsc",
-    "swift2",
+[build-system]
+requires = [
+    "setuptools>=61.0",
 ]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = [
+    "python",
+]
+[tool.setuptools.package-data]
+"*" = ["*.*"]
