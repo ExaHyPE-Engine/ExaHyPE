@@ -10,7 +10,6 @@ import subprocess
 parser = argparse.ArgumentParser(
     description="Configuration helper script for GNU Automake"
 )
-parser.add_argument("--ninja", action="store_true", help="Use the Ninja generator")
 parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE 2")
 parser.add_argument("--swift", action="store_true", help="Enable Swift 2")
 parser.add_argument("--particles", action="store_true", help="Enable particles support")
@@ -39,7 +38,7 @@ parser.add_argument(
     "--gpu", choices=["no", "omp", "sycl", "cpp", "hip", "cuda"], help="Enable GPU support"
 )
 parser.add_argument("--asm", action="store_true", help="Dump generated assembly code")
-#parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
+parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
@@ -270,41 +269,11 @@ if args.petsc:
 if args.libxsmm:
     configure_args.append("--with-libxsmm")
 
-if args.cmake:
-    if args.ninja:
-        configure_args.append("-G Ninja")
-
-    # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
-    if args.scorep:
-        env_vars = {
-            "CC": "scorep-{}".format(cc),
-            "CXX": "scorep-{}".format(cxx),
-        }
-    else:
-        env_vars = {
-            "CC": "{}".format(cc),
-            "CXX": "{}".format(cxx),
-        }
-
-    # Create a string to display environment variables like in a terminal
-    if args.scorep:
-        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
-    else:
-        env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
-
-    print(f"{env_vars_str} cmake .. {' '.join(configure_args)}")
-
-    # Update the current environment with the specified variables
-    new_env = os.environ.copy()
-    new_env.update(env_vars)
-
-    if not os.path.exists(args.cmake) and not os.path.isdir(args.cmake):
-        subprocess.run("mkdir {}".format(args.cmake), cwd=os.getcwd(), shell=True)
-
-    os.chdir(args.cmake)
-    args_str = " ".join(configure_args)
-    args_list = shlex.split(args_str)
-    subprocess.check_call(["cmake", ".."] + args_list, cwd=os.getcwd(), env=new_env)
+# Prepare the environment variables
+# Read existing C(XX)FLAGS and LDFLAGS to not overwrite them
+env_cflags = os.environ.get("CFLAGS")
+env_cxxflags = os.environ.get("CXXFLAGS")
+env_ldflags = os.environ.get("LDFLAGS")
 
 if env_cflags is not None:
     env_cflags += " " + cflags
