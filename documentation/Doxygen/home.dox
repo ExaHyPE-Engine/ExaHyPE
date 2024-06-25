@@ -1,6 +1,9 @@
 /**
 
-@mainpage Peano 4
+@mainpage Peano
+
+<!-- Table of contents need to appear as very first item in the page -->
+\tableofcontents
 
 @image html documentation/logos/Peano-logo.png
 
@@ -16,8 +19,6 @@
 \li @subpage page_dastgen
 \li @subpage page_third_party
 \li @subpage page_faq
-
-\tableofcontents
 
 This is the documentation of Peano which is generated automatically through Doxygen.
 Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
@@ -44,7 +45,7 @@ This third generation of the code ended around 2019 when we released the
 ExaHyPE code - a hyperbolic equation system solver engine which uses Peano's
 AMR meshes.
 The documentation discusses Peano 4, which reuses ideas and lessons learned
-from Peano 3 as well as lots of code buildling blocks, but can be seen as a
+from Peano 3 as well as lots of code building blocks, but can be seen as a
 major rewrite starting from scratch.
 
 Peano has been the code base for multiple projects over the past years.

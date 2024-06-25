@@ -2,6 +2,8 @@
 
 \page page_installation Installation
 
+\tableofcontents
+
 Peano is typically acquired through a git clone.
 You have to clone this archive first.
 We grant access free of charge, and the repository is public. However,
