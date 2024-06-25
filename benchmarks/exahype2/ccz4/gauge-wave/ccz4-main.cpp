@@ -157,7 +157,8 @@ bool selectNextAlgorithmicStep() {
   } else {
     //! [Additional mesh sweep case distinction]
     #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
-    if (repositories::isFirstGridSweepOfTimeStep()
+    if (
+      repositories::isLastGridSweepOfTimeStep()
       and
       repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
       ) {

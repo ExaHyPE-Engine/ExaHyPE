@@ -33,14 +33,13 @@ me to track the simulation behaviour in time elegantly (see postprocessing
 discussion below):
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=$PYTHONPATH:../../../../python
-export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+export PYTHONPATH=$PYTHONPATH:../../../../python:../../../../applications/exahype2/ccz4
 
-python3 convergence-study.py -s fv -tracer
-python3 convergence-study.py -s dg1-rk1 -tracer
-python3 convergence-study.py -s dg2-rk2 -tracer
-python3 convergence-study.py -s dg3-rk3 -tracer
-python3 convergence-study.py -s dg4-rk4 -tracer
+python3 convergence-study.py -s fv      -tracer -enclave --storage SmartPointers
+python3 convergence-study.py -s dg1-rk1 -tracer -enclave --storage SmartPointers
+python3 convergence-study.py -s dg2-rk2 -tracer -enclave --storage SmartPointers
+python3 convergence-study.py -s dg3-rk3 -tracer -enclave --storage SmartPointers
+python3 convergence-study.py -s dg4-rk4 -tracer -enclave --storage SmartPointers
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The initial export is important, as we use the bespoke CCZ4 solvers from the
