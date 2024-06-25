@@ -80,7 +80,6 @@ class Parameters(AbstractKernelTemplate):
                         self.context["gradQSize"] = nVarPad * (nDof**nDim) * nDim
                     if self.context["usePointSources"]:
                         self.context["PSiSize"] = (nDof + 1) * (nDof**nDim) * nVarPad
-                        self.context["PSiDerivativeSize"] = self.context["PSiSize"]
             else:
                 # nonlinear
                 if self.context["predictorRecompute"]:

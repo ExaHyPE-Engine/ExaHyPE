@@ -159,7 +159,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   // Add point source to the zeroth time derivative
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
     for (int t = 0; t < {{nDof}}; t++) {
-      #pragma omp simd aligned(lQi)
+      #pragma omp simd aligned(lQi, PSi:{{alignmentSize}})
       for (int n = 0; n < {{nVar}}; n++) { //skip parameters
         lQi[xyz*{{nDataPad}}+n] += dt*Quadrature<pCompType>::weights1[t]*PSi[((t+1)*{{nDof**nDim}}+xyz)*{{nVarPad}}+n];
       }

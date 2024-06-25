@@ -27,7 +27,7 @@ max_h               = 1.1 * min(size) / (3.0**min_level)
 min_h               = max_h / (3.0**max_depth)
 
 project = exahype2.Project( ["examples", "exahype2", "elastic"], ".", 
-  executable="HHS_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision) )
+  executable="LOH_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision) )
 
 theSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="elastic",  order=order,

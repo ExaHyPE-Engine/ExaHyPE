@@ -37,8 +37,6 @@ def create_predictor_allocations():
     {% endif %}
 
     {% if LINEARITY=="linear" and USE_POINT_SOURCE!="<none>" %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + kernels::{{SOLVER_NAME}}::getPSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + kernels::{{SOLVER_NAME}}::getPSderivativesShift();
     {% else %}
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = nullptr;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = nullptr;
@@ -92,13 +90,14 @@ def create_fstpvi_call(is_linear, usePointSource):
     );
 
     if(pointSources != nullptr) {
+        {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} PSi[kernels::{{SOLVER_NAME}}::getPSiSize()] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
         // perform pointsource
         int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh, lQhbnd, lFhbnd,
           lQi, lFi, lSi,
           lQhi, lFhi, lShi,
-          gradQ, PSi, PSderivatives,
+          gradQ, PSi, nullptr,
           luh,
           marker.x(), marker.h(), timeStamp, timeStepSize,
           pointSources // will be deleted in the end if set
