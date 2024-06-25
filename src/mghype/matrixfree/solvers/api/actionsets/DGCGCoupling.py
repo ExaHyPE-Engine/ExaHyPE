@@ -359,14 +359,11 @@ class AbstractDGCGCoupling(ActionSet):
 
       tarch::la::Matrix< Rows, Cols, double > composedInjectionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( injectionMatrices, injectionMatricesScaleFactors, marker.h() );
       
-      /* 
-      // ignore this stuff whilst in development...
       mghype::matrixfree::solvers::dgcgcoupling::injectSolution<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedInjectionMatrix,
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridVertices{{CG_SOLVER_NAME}}
       );
-      */
     }
     
     // ==============

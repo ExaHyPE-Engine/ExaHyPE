@@ -20,6 +20,11 @@ class Project:
 
   The rest is yet to be fleshed out.
 
+  Now that we have multiple solvers in a project, we may not
+  want to use all of them for stopping criteria. Hence, we
+  have a second array for solvers which participate, but are
+  not asked if their stopping criteria have been reached.
+
   """
 
   """

@@ -314,10 +314,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   }
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const{
-  return _state == State::Suspend;
-}
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
   return _state == State::Solve
       or _state == State::ProjectOntoFacesOnly;

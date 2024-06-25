@@ -140,11 +140,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     bool updateFace() const;
     bool projectOntoFaces() const;
     bool projectOntoCells() const;
-    /**
-    * Make sure we don't update the cell residual
-    * during the final DG sweep...
-    */
-    bool restrictResidual() const;
 
     bool isSuspended() const;
     
