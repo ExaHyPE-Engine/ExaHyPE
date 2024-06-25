@@ -181,7 +181,7 @@ elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   add_compile_definitions(UseNVTX)
   add_compile_definitions(UseLogService=NVTXLogger)
   set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseLogService=NVTXLogger UseNVTX CACHE INTERNAL "")
-elseif(NOT WITH_TOOLCHAIN STREQUAL "")
+elseif(NOT WITH_TOOLCHAIN STREQUAL "no")
   message(FATAL_ERROR "CMake build system currently does not support the logger ${WITH_TOOLCHAIN}")
 endif()
 
@@ -206,7 +206,7 @@ if(WITH_MULTITHREADING STREQUAL "omp")
   check_include_files(omp.h HAVE_OMP_H)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
   set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} ${OpenMP_CXX_FLAGS} CACHE INTERNAL "")
-  # The -fopenmp is also required at the linking step, but it is not often set in the linker flags therefore cxx flags is passed twice
+  # The -fopenmp is also required at the linking step, but it is not often set in the linker flags therefore cxx flags are passed twice
   set(_PROJECT_OPTIONS_LINK_OPTIONS ${_PROJECT_OPTIONS_LINK_OPTIONS} ${OpenMP_EXE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS} CACHE INTERNAL "")
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
@@ -229,7 +229,7 @@ list(APPEND ACCELERATOR_BACKENDS
   "sycl"
   "cpp"
   "hip"
-#  "cuda"
+  "cuda"
 )
 set(WITH_GPU "no" CACHE STRING "${ACCELERATOR_BACKENDS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
@@ -511,7 +511,7 @@ install(FILES
   DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
 )
 
-set(PYTHON_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/python/peano4/output/ParseCMakeCache.py")
+set(PYTHON_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/parse_cache.py")
 
 add_custom_target(run_script ALL
      COMMAND echo "${PYTHON3_EXECUTABLE} ${PYTHON_SCRIPT} ${CMAKE_BINARY_DIR}/CMakeCache.txt"

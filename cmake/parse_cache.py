@@ -82,7 +82,7 @@ def search_and_copy_strings(input_file_path, predefined_strings, output_file_pat
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python script.py input_file_path")
+        print("Usage: python parse_cache.py input_file_path")
         sys.exit(1)
 
     input_file_path = sys.argv[1]
