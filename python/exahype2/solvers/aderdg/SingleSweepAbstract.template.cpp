@@ -270,7 +270,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  if (_solverState==SolverState::Timestep) {
+  if (isFirstGridSweepOfTimeStep()) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
 
@@ -438,17 +438,22 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return _solverState==SolverState::Timestep;
+  return _solverState==SolverState::InitialPrediction or _solverState==SolverState::GridInitialisation or
+   ( (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? _solverState==SolverState::PredictionOnHangingCells : _solverState==SolverState::Timestep);
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Timestep;
+  return ( _solverState==SolverState::Timestep
+        // or _solverState==SolverState::Plotting
+        or _solverState==SolverState::InitialPrediction);
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Timestep;
+  return ( _solverState==SolverState::Timestep
+        // or _solverState==SolverState::Plotting
+        );
 }
 
 

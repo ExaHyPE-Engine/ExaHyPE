@@ -35,10 +35,17 @@ class InitialCondition(AbstractAderDGActionSet):
     }
     {% endif %}
 
+    #if Dimensions==2
+    constexpr int spaceBasisSize     = {{ORDER+1}}*{{ORDER+1}}*{{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
+    #else
+    constexpr int spaceBasisSize     = {{ORDER+1}}*{{ORDER+1}}*{{ORDER+1}}*{{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
+    #endif
+    
+    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, spaceBasisSize, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
+
     {% if USE_POINT_SOURCE!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
     {% endif %}
-
 
     const double timeStamp = 0.0;
     const double timeStepSize = 0.0;

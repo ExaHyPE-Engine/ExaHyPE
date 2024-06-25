@@ -42,9 +42,9 @@ class Prediction(AbstractAderDGActionSet):
   
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
-    const int Order = {{ORDER}};
-    const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
-    const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    constexpr int Order = {{ORDER}};
+    constexpr int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
+    constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     #if Dimensions==2
     constexpr int spaceBasisSize     = (Order+1)*(Order+1);
@@ -58,7 +58,7 @@ class Prediction(AbstractAderDGActionSet):
 
     {{CREATE_PREDICTOR_ALLOCATIONS}}
 
-    std::copy_n(luh ,sizeLduh, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
+    std::copy_n(luh, spaceBasisSize*(NumberOfVariables+NumberOfParameters), fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
 """
 
     _Template_TouchCellFirstTime_Core = """
@@ -68,6 +68,8 @@ class Prediction(AbstractAderDGActionSet):
 """
 
     _Template_TouchCellFirstTime_Epilogue = """
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
+
     repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0));
   }
 """

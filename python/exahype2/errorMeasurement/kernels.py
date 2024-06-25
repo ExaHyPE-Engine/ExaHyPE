@@ -68,7 +68,7 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
       tarch::mpi::Rank::getInstance().isGlobalMaster()
     ) {
       _errors[1] = std::sqrt(_errors[1]);
-      _errorDatabase.addGlobalSnapshot(_minTimeStampThisTimeStep+_maxTimeStepSizeThisTimeStep, 3, _errors);
+      _errorDatabase.addGlobalSnapshot(_minTimeStampThisTimeStep, 3, _errors);
     }
 
     std::fill_n(_errors, 3, 0.0);

@@ -872,7 +872,7 @@ class ADERDG(object):
             peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
                 filename=output_path + "solution-" + self._name,
                 patch=self._previous_time_step,
-                dataset_name=self._unknown_identifier(),
+                dataset_name=self._unknown_identifier()+"_old",
                 description=self.plot_description,
                 mapping=mapping,
                 select_dofs=self.select_dofs_to_print,
