@@ -16,6 +16,8 @@
 {{SOLVER_INCLUDES}}
 
 #include <vector>
+#include <memory>
+
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"

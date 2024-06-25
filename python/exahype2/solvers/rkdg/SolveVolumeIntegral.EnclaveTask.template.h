@@ -16,6 +16,7 @@
 #include "repositories/SolverRepository.h"
 
 #include <vector>
+#include <memory>
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
