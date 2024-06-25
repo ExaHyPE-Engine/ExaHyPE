@@ -27,7 +27,7 @@ class Exahype2(CMakePackage, CudaPackage):
 
     maintainers("hpcsoftware")
 
-    version("cmake-install", branch="cmake-install")
+    version("p4", branch="p4")
 
     # Config options
     variant(
