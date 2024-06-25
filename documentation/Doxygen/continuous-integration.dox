@@ -14,36 +14,14 @@ However, it only runs fully on the `p4` branch.
 For all other branches, the pipeline only executes the build and test (unit tests) stages.
 
 At time of writing, ```gitlab-runner``` is installed as a service on multiple nodes of DINE.
-After pushing to one of the branches listed above, you can run the pipeline as follows:
+The workers are kept alive by recurring slurm jobs. Peano developers should not need to do
+anything other than push to a branch, and [check the pipelines page on the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines)
+to check that their code has correctly built for each compiler toolchain. Of course,
+this will only check that the core of Peano has been built correctly. See below for info
+on how to write custom tests.
 
-## Make sure gitlab-runner is in your path
 
-The directory needed is ```/var/local/gitlab-runner```.
-
-## Load the module for singularity, and make sure that the image directory is in your path
-
-Singularity is our container platform, as opposed to docker.
-Load the singularity module with: ```module load singularity```.
-
-You will also need to ensure that ```SINGULARITY_CACHEDIR``` is set correctly. This environment
-variable is used throughout the CI script. It indicates where the singularity images are located.
-Currently, we store the images at ```/cosma5/data/do009/dc-bacc2/peano_images```, with the aim
-of changing this once a common storage location has been chosen.
-
-## Log in to the b116 node
-
-A valid command is as follows:
-
-```srun --pty -p bluefield1 -w b116 -A do009 -t 1:00:00 $SHELL```
-
-This will invoke a shell session on the b116 node that lasts an hour.
-
-##Run the pipeline
-
-Just type ```gitlab-runner run```. If you check the repository website, you should see some
-progress being made.
-
-# How does the pipeline work?
+## How does the pipeline work?
 
 Within the repo, we have various scripts to build the code. ```configure.py``` in the top-level
 of Peano will ```configure``` and ```make``` the code according to whatever requirements are
@@ -54,5 +32,12 @@ automatically.
 This is planned to change, however, as this isn't so clean. In the future, we either plan
 to mirror the repo to GitHub and use GitHub actions, or make an executor for gitlab-runner
 that can handle singularity images directly.
+
+## How do I write my own tests?
+
+Unfortunately, the use of the singularity containers is not pretty, and
+so the best thing to do is describe your desired actions in a bash script and ask for help on the
+continuous-integration channel of the Slack. This is due to change in the near future.
+
 
 */
