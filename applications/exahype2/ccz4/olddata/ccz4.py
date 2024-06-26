@@ -1027,10 +1027,10 @@ if __name__ == "__main__":
       #
       # There are two different things to do when we pick a scneario: We have
       # to configure the solver accordingly (and keep in mind that every solver
-      # needs its own config), and then we might have to adopt the build 
+      # needs its own config), and then we might have to adopt the build
       # environment.
       #
-      peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
+      peano4_project.output.makefile.add_linker_flag( "-lm -lgsl -lgslcblas" )
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Utilities.cpp" )
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Parameters.cpp" )
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Logging.cpp" )
@@ -1041,7 +1041,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Newton.cpp" )
       peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
     else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")        
+      raise Exception( "Scenario " + args.scenario + " is now unknown")
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )

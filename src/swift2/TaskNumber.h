@@ -40,8 +40,8 @@ namespace swift2 {
      *
      * @param number0 Typically the "real" task counter, i.e. a unique number
      *   from a very vast range which distinguishes different task types.
-     *   Pass in ::tarch::multicore::NoDependencies if you want to actually
-     *   construct the object NoDependencies. In this case, the other
+     *   Pass in ::tarch::multicore::NoOutDependencies if you want to actually
+     *   construct the object NoOutDependencies. In this case, the other
      *   arguments are ignored.
      * @param number1 Typically the type of mesh entity to which the task is
      *   tied to.
@@ -53,7 +53,7 @@ namespace swift2 {
      * Defines the max indices for each entry in TaskNumber.
      */
     static const TaskNumber Max;
-    static const TaskNumber NoDependencies;
+    static const TaskNumber NoOutDependencies;
 
     std::string toString() const;
 

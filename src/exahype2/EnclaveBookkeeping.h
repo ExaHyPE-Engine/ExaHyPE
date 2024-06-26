@@ -22,13 +22,19 @@ namespace exahype2 {
  * Enclave bookkeeping
  *
  * The enclave bookkeeping is basically a big map which stores results of 
- * enclave tasks.
+ * enclave tasks. Most of the documentation around enclave tasks can be
+ * found in exahype2::EnclaveTask.
  * 
+ * The bookkeeping can be used in two ways by the underlying enclave task
+ * object: The enclave tasks can allocate data for their results on the heap,
+ * hand that heap object over to the bookkeeping, and the bookkeeping then
+ * hands out the results to the actual solver by copying it into the right
+ * place in the mesh and subsequently freeing the tasks's output.
  *
-@todo Das Ergebnis muss lokal gepuffert werden im bookkeeping.
-      Ich brauche zwei Adapter: einen fuer primaer, einen fuer sekundaer. Sonst rekonstruier ich dei Loesung jedes Mal (ist teuer)
-      Die Adapter muessen alle das gleiche Bookkeeping verwenden -> singleton
-      Ein Task muss sich, sobald er zuende ist, in den Bookkeeping einreihen, d.h. hier gibt es zwei Datenstrukturen: Semaphoren (set) + Tasks (map)
+ * Alternatively, we can work directly on the heap, i.e. the mesh tells us
+ * where the result should end up. In our tests, it is not always clear
+ * which variant is faster. Which is kind of a surprise. Likely it has to
+ * do with memory/cache issues.
  */
 class exahype2::EnclaveBookkeeping {
   public:
@@ -44,7 +50,6 @@ class exahype2::EnclaveBookkeeping {
     static tarch::logging::Log          _log;
 
     const static std::string MemoryAllocationsInLookupTableIdentifier;
-    const static std::string LookupMissesIdentifier;
 
     /**
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask
@@ -57,6 +62,17 @@ class exahype2::EnclaveBookkeeping {
     tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
 
     EnclaveBookkeeping() = default;
+
+    /**
+     * Wait for a task result to become available
+     *
+     * We wait for the task to terminate, and then return the meta object
+     * which describes the task properties.
+     *
+     * @return Entry with all meta data plus a pointer to the actual
+     *   task result.
+     */
+    Entry waitForTaskToTerminateAndReturnResult(int number);
   public:
     static constexpr int NoEnclaveTaskNumber = -1;
     /**
@@ -74,6 +90,21 @@ class exahype2::EnclaveBookkeeping {
 
     /**
      * Wait for a task and copy outcome into destination
+     *
+     * We use waitForTaskToTerminateAndReturnResult() to obtain a handle to
+     * the task outcome. Once we get it, we have to check what to do next:
+     *
+     * If an enclave task had been given the memory location where to dump
+     * the result directly, we simply return. In this case, the task outcome
+     * pointer and destination point to the same address.
+     *
+     * If the task had allocated its own output data area on the heap,
+     * we copy the content from there into destination and then delete the
+     * task's memory location via
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * tarch::freeMemory( result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
     void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue);
 
@@ -81,37 +112,20 @@ class exahype2::EnclaveBookkeeping {
      * Wait for a task and copy outcome into destination
      */
     void waitForTaskAndDiscardResult(int number);
-    
-    /**
-     * Wait for a task result to become available
-     *
-     * We check the internal database for the result. If the result is not
-     * there yet, we process one task. This processing should be done LIFO,
-     * as we assume that traversals produce tasks and the follow-up traversal
-     * then consumes the outcome. In the Peano world, two subsequent mesh
-     * traversals run through the grid in inverted order, so searching for
-     * task outcomes LIFO makes sense. If there are no tasks left in Peano's
-     * queues and we still haven't got the result, we yield to give other
-     * threads of the runtime the opportunity to do their stuff.
-     *
-     *
-     * You have the sole ownership of the result which should be deleted 
-     * later via 
-     * 
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * tarch::freeMemory( result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * @return Entry
-     */
-    Entry waitForTaskToTerminateAndReturnResult(int number);
 
     void cancelTask(int number);
 
     /**
      * Usually called directly by EnclaveTask.
      *
-     * Once this routine is called, the ownership of data goes
+     * Once this routine is called, the ownership of data passes over into the
+     * enclave bookkeeping. Basically, the enclave bookkeepting stores the
+     * passed pointer into a map and returns.
+     *
+     * There is one exception to this: If we use optimistic time stepping, then
+     * we might run into a situation where a task overwrites a previous result.
+     * At the moment, this variant yields a warning, but in any case, the old
+     * data is first released, before we store the new pointer.
      *
      * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
      */
