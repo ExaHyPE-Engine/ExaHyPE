@@ -88,7 +88,6 @@ class AbstractDGCGCoupling(ActionSet):
   if (
     fineGridVertex{{CG_SOLVER_NAME}}.getType() != vertexdata::{{CG_SOLVER_NAME}}::Type::Coarse
   ) {
-    logTraceInWith4Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs(), (bool)({{PREDICATE_INJECT_AND_RESTRICT}}), (bool)({{PREDICATE_PROLONGATE}}));
     
     if ({{PREDICATE_INJECT_AND_RESTRICT}}) {
       mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
@@ -112,7 +111,6 @@ class AbstractDGCGCoupling(ActionSet):
         {{USE_FAS}}
       );
     }
-    logTraceOutWith2Arguments("rollOverAndPrepareCGVertex", fineGridVertex{{CG_SOLVER_NAME}}.getValue(), fineGridVertex{{CG_SOLVER_NAME}}.getRhs());
   }
   """
 
@@ -769,7 +767,6 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       DGCycleCounter++;
       repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
       repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false, true);
-
     }
 
     else if (
