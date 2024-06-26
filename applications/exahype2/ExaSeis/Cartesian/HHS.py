@@ -35,7 +35,7 @@ theSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9
 )
 
-theSolver.add_kernel_optimizations(
+theSolver.add_kernel_optimisations(
   is_linear=True, polynomials=(Polynomials.Gauss_Lobatto if polynomials=="lobatto" else Polynomials.Gauss_Legendre)
   ,solution_persistent_storage_precision=precision
   ,predictor_computation_precisions=[precision]
