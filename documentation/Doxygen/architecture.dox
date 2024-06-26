@@ -191,7 +191,6 @@ Peano's core is a collection of static libraries.
 A Peano application consists of C++ glue code which combines all of these
 libraries.  This glue code is generated through the Python API.
 
-
 - **documentation** Hosts the sources of the document that you hold
   in your hands.
 - **python** Holds the Python API scripts. Within the `python`
@@ -199,6 +198,10 @@ libraries.  This glue code is generated through the Python API.
   large-scale Peano applications.
 - **src** Holds the C++ Peano sources of the Peano core and all the
   toolboxes.
+- **src/api** Holds the Python API scripts. Within the `api`
+  subdirectory, you find scripts for both the Peano core API, toolboxes and
+  large-scale Peano applications.
+- **tests** Collection of small test cases that can be automised.
 - **benchmarks** Collection of benchmark scripts.
 - **applications** Proper, real-world applications.
 

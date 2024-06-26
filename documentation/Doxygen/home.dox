@@ -10,7 +10,7 @@
 
 \li @subpage page_installation
 \li @subpage page_version_control
-\li @subpage page_documentation
+\li @subpage page_doxygen
 \li @subpage page_architecture
 \li @subpage page_continuous_integration
 \li @subpage page_compiler_specific_settings
@@ -64,6 +64,6 @@ This document therefore covers ExaHyPE 2, too.
 - Skim through the high-level @ref page_architecture "architecture"
 - Pick your project of interest and run through the tutorials and documentation there.
 - Consult the @ref page_conventions "coding conventions" and the info on
-  @ref page_documentation "Peano's documentation" before you continue.
+  @ref page_doxygen "Peano's documentation" before you continue.
 
 */

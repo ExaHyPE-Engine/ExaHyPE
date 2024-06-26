@@ -244,9 +244,8 @@ Sample Installation Script for Autotools
 ===============================
 
 Please find below a sample shell script for Autotools that will install Peano with ExaHyPE
-enabled. Here we use GCC-12 and G++-12 as the C and C++ compiler, as well as
-OpenMP for the multithreading support. We also include some flags to suppress
-warnings.
+enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
+OpenMP for the multithreading support. We also include some flags to suppress warnings.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
 #!/bin/sh
@@ -258,7 +257,7 @@ make clean && make distclean
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
 
 # Configure Peano with whatever we need
-./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp" CC=gcc-12 CXX=g++-12
+CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp"
 
 # Get number of threads available for quicker compilation
 THREADS_NUM=$(nproc --all)
@@ -278,9 +277,8 @@ Sample Installation Script for CMake
 ===============================
 
 Please find below a sample shell script for CMake that will install Peano with ExaHyPE
-enabled. Here we use GCC-12 and G++-12 as the C and C++ compiler, as well as
-OpenMP for the multithreading support. We also include some flags to suppress
-warnings.
+enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
+OpenMP for the multithreading support. All required flags are automatically added by CMake.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
 #!/bin/sh
@@ -292,7 +290,7 @@ rm -rf build
 mkdir build && cd build
 
 # Configure Peano with whatever we need
-./CC=gcc-12 CXX=g++-12 cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
+/CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
 
 # Get number of threads available for quicker compilation
 THREADS_NUM=$(nproc --all)
