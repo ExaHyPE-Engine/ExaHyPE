@@ -268,7 +268,10 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  if (_state==State::Solve) {
+  if (_state==State::Solve
+      or
+      _state==State::UpdateAndRestrictResidual
+  ) {
     clearGlobalResidual();
   }
 }
