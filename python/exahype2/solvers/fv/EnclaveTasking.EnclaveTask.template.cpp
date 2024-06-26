@@ -88,7 +88,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        output
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
@@ -96,6 +97,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     t,
     dt,
     reconstructedPatch,
+    output,
     #if Dimensions==2
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
@@ -332,7 +334,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
-  logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
   ::exahype2::CellData patchData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
@@ -392,7 +394,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
 
   if (not foundOffloadingBranch) {
-    logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+    logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
       << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }

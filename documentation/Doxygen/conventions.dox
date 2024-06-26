@@ -2,6 +2,8 @@
 
  \page page_conventions Coding conventions and IDEs
 
+\tableofcontents
+
  We follow the convention that the header files only hold the declarations, while
  the cpp files hold the actual implementations. We kind of gave up on this convention
  in few particular places for speed, i.e. whenever a compiler should do inlining,

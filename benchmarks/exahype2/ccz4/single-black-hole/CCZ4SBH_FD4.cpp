@@ -79,7 +79,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
 
 #if defined(CoupleWithFV)
   if (isFirstGridSweepOfTimeStep()) {
-    double fvTimeStepSize  = repositories::InstanceOfCCZ4SBH_FV.getAdmissibleTimeStepSize();
+    double fvTimeStepSize  = repositories::instanceOfCCZ4SBH_FV.getAdmissibleTimeStepSize();
     double newTimeStepSize = std::min(fvTimeStepSize, _admissibleTimeStepSize);
     if (tarch::la::smaller(newTimeStepSize, fvTimeStepSize)) {
       logInfo(
@@ -90,7 +90,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
       );
     }
     _admissibleTimeStepSize = newTimeStepSize;
-    repositories::InstanceOfCCZ4SBH_FV.reduceAdmissibleTimeStepSize(newTimeStepSize);
+    repositories::instanceOfCCZ4SBH_FV.reduceAdmissibleTimeStepSize(newTimeStepSize);
   }
 #endif
 }

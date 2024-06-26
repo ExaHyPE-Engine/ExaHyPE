@@ -28,12 +28,12 @@ void* tarch::internal::allocateRawData(
 }
 
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
-  assertion(data);
-
   switch (location) {
   case MemoryLocation::Heap:
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    std::free(data);
+    if (data!=nullptr) {
+      std::free(data);
+    }
     break;
   }
 }

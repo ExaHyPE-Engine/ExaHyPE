@@ -232,7 +232,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+    logInfo("startTimeStep()", "phase " + toString(_solverState));
   }
 }
 
