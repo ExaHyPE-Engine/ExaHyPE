@@ -308,6 +308,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
 
     case State::UpdateAndRestrictResidual:
       {
+        logInfo( "endMeshSweep()", toString() );
         _state = State::Suspend; 
       }
       break;
