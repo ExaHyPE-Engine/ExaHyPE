@@ -152,6 +152,7 @@ the SISC paper
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
         self.d["CMAKE_LDFLAGS"] = []
+        self.d["CMAKE_CXXFLAGS"] = []
         self.d["CMAKE_COMPILE_DEFINITIONS"] = []
         self.d["USING_CMAKE"] = False
         self.d["APP_SUBDIRECTORY"] = ""
@@ -257,6 +258,8 @@ the SISC paper
             self.d["CXXFLAGS"] += " " + value
             if find_CMake_build_dir() != "" and "-D" in value:
                 self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
+            else:
+                self.d["CMAKE_CXXFLAGS"].append(value)
 
     def set_Fortran_compiler(self, value):
         self.d["FC"] = value
@@ -641,21 +644,13 @@ then this message can typically be ignored.
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
         self.d["USING_CMAKE"] = cmake_build_dir != ""
+        self.d["PROJECT_ROOT_DIR"]  = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../..', ))
         self.d["APP_SUBDIRECTORY"] = subdirectory
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
-        # In CMake, we add a command that allows to build the generated project in the project's directory.
-        # For that, we need to change the directory to the project's build directory and
-        # invoke 'make' from there with the project's target name, so that we do not build every project.
-        # Furthermore, we need to propagate every make flag given with $(MAKEFLAGS).
-        # See the Makefile.template for the resulting command.
         if cmake_build_dir != "":
-            dist = caller_distance_to_build_root()
-            command = 'cd '
-            if dist != 0:
-                command += '../' * dist
-            else:
-                command += '.'
+            command = 'cd . '
+            self.d["CMAKE_MAKE_PATH"] = "."
             self.d["CMAKE_MAKE_COMMAND"] = command
 
         # Anonymous function that generates the output_file_path from input_file_path template.
@@ -708,20 +703,6 @@ then this message can typically be ignored.
         cmake_list_output_pair = (
                 os.path.join(file_dir, "CMakeLists.txt.template"),
                 os.path.join(directory, "CMakeLists.txt"),)
-
-        # Currently we support one generated project at a time.
-        # To add the generated project's sub-directory to the CMake build tree,
-        # we write it to a file called 'GeneratedSubdirectory.cmake' in the build directory.
-        if cmake_build_dir != "":
-          generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
-
-          print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
-
-          with open(generated_paths_filepath, "w") as subdir_cmake:
-              subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
-
-        for template, output_file in template_output_pairs:
-            generate_build_file(template, output_file)
 
         # Generate CMakeLists.txt only if we are using CMake (CMake build directory found).
         if cmake_build_dir != "":

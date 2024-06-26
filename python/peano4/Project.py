@@ -7,6 +7,7 @@ import re
 import sys
 import subprocess
 import multiprocessing
+import inspect
 
 import peano4.output
 import peano4.datamodel
@@ -190,7 +191,21 @@ class Project (object):
           # Configuring twice with CMake is necessary because of the following:
           # - Generated application needs to be added as a target, this forces cmake .. unless the user calls from the bash.
           # - Generated applications CMakeLists might change the CMAKE_BUILD_TYPE to reflect the user's chosen build mode.
-          command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+          cmake_build_path = "."
+          # if standalone we need to find where the original peano application script is and go there
+          def get_caller_path():
+            # Get the frame of the caller of this function
+            caller_frame = inspect.stack()[-1]
+            # Extract the filename of the caller
+            caller_filename = caller_frame.filename
+            # Get the absolute path of the caller
+            caller_path = os.path.abspath(caller_filename)
+            return caller_path
+          caller_path = os.path.dirname(get_caller_path())
+          cmake_build_dir = caller_path
+
+          command = f"cd {cmake_build_dir} && cmake {cmake_build_path} && cmake {cmake_build_path} && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+          print("COMMAND: ", command)
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

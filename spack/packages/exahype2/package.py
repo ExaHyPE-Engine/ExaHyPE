@@ -51,7 +51,6 @@ class Exahype2(CMakePackage, CudaPackage):
     variant("netcdf", default=False, description="Build with NetCDF support")
 
     depends_on("cmake", type="build")
-    depends_on('libxsmm+generator')
 
     depends_on("mpi", when="+mpi")
 
@@ -62,12 +61,19 @@ class Exahype2(CMakePackage, CudaPackage):
     depends_on("netcdf-c +shared +mpi", when="+mpi +netcdf")
 
     depends_on('py-pip')
+    depends_on('py-h5py')
     depends_on('py-numpy')
     depends_on('py-scipy')
-    depends_on('py-matplotlib')
     depends_on('py-sympy')
     depends_on('py-mpmath')
     depends_on('py-jinja2')
+    depends_on('py-matplotlib')
+
+    depends_on('gsl')
+    depends_on('blis')
+    depends_on('libxsmm+generator')
+    #depends_on('paraview+ipo+python')
+    #depends_on('paraview+mpi+osmesa+ipo+python+hdf5')
 
     variant("omp", default=False, description="Build with OpenMP multithreading support")
     variant("sycl", default=False, description="Build with SYCL multithreading support")
