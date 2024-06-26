@@ -43,9 +43,11 @@ ExaHyPE2Sources = \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
   fd/tests/SommerfeldBCTest.cpp\
+  fd/tests/CCZ4KernelTest.cpp\
   fv/tests/InterpolationRestrictionTest.cpp \
   fd/fd4/LoopBody.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
+  fv/riemann/Riemann.cpp \
   fv/rusanov/rusanov.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   dg/rusanov/tests/RiemannTest.cpp \

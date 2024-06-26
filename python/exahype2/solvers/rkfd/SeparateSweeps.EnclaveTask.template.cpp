@@ -96,7 +96,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        output
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
@@ -104,6 +105,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     t,
     dt,
     reconstructedPatch,
+    output,
     #if Dimensions==2
     ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}},
@@ -409,8 +411,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i], targetDevice);
+    tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 
   // Don't rerun, so return false
