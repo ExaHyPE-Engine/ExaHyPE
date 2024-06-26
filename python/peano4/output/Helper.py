@@ -62,7 +62,7 @@ def find_CMake_build_dir():
     find_CMake_build_dir.saved_CMake_build_dir = env_value
     return find_CMake_build_dir.saved_CMake_build_dir
 
-  # At project root we gotta try one last time, only for Config.cmake tho
+  # At project root we try one last time, only for Config.cmake.
   found_config_file = os.path.exists(os.path.join(project_root_dir, "Config.cmake"))
   if found_config_file:
     find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir

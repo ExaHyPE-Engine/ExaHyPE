@@ -47,9 +47,6 @@ set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# The cache variables used the save the project configuration for standalone projects
-# Initialize them with default empty values so that reconfiguration does not result with
-# repeated flags
 set(PEANO_COMPILE_DEFINITIONS "" CACHE INTERNAL "")
 set(PEANO_COMPILE_OPTIONS "" CACHE INTERNAL "")
 set(PEANO_LINK_OPTIONS "" CACHE INTERNAL "")
