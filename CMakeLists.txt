@@ -508,13 +508,14 @@ install(FILES
   DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
 )
 
-set(PYTHON_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/parse_cache.py")
-
-add_custom_target(run_script ALL
-     COMMAND echo "${PYTHON3_EXECUTABLE} ${PYTHON_SCRIPT} ${CMAKE_BINARY_DIR}/CMakeCache.txt"
-     COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_SCRIPT} "${CMAKE_BINARY_DIR}/CMakeCache.txt"
-     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-     COMMENT "Running Python script after build")
+set(PARSE_CACHE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/parse_cache.py")
+file(CHMOD "${PARSE_CACHE_SCRIPT}" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+add_custom_target(parse_cache ALL
+  COMMAND echo "${PYTHON_EXECUTABLE} ${PARSE_CACHE_SCRIPT} ${CMAKE_BINARY_DIR}/CMakeCache.txt"
+  COMMAND ${PYTHON_EXECUTABLE} ${PARSE_CACHE_SCRIPT} "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMENT "Parse CMake cache after build"
+)
 
 add_subdirectory(src)
 
