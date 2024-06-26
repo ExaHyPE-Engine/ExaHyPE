@@ -507,24 +507,18 @@ Material parameters:    """
         self._action_set_update_cell_label.descend_invocation_order = 0
 
         # Sets initial conditions for the solution
-        self._action_set_initial_conditions = (
-            exahype2.solvers.aderdg.actionsets.InitialCondition(
-                self, self._store_cell_data_default_guard(), "true"
-            )
+        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(
+            self, self._store_cell_data_default_guard(), "true"
         )
         self._action_set_initial_conditions.descend_invocation_order = 1
 
-        self._action_set_initial_conditions_for_grid_construction = (
-            exahype2.solvers.aderdg.actionsets.InitialCondition(
-                self, self._store_cell_data_default_guard(), "false"
-            )
+        self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.aderdg.actionsets.InitialCondition(
+            self, self._store_cell_data_default_guard(), "false"
         )
         self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
 
-        self._action_set_handle_boundary = (
-            exahype2.solvers.aderdg.actionsets.HandleBoundary(
-                self, self._store_boundary_data_default_guard()
-            )
+        self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.HandleBoundary(
+            self, self._store_boundary_data_default_guard()
         )
         self._action_set_handle_boundary.descend_invocation_order = 1
 
@@ -542,17 +536,17 @@ Material parameters:    """
         # extrapolated solution to the faces.
         # Correction uses the extrapolated face solutions from the predictor and the neighboring
         # cells to compute a solution at the next timestep.
-        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
-            self, self._store_cell_data_default_guard())
-        self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
-
         self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
             self, self._store_cell_data_default_guard(), on_hanging_cells=False)
-        self._action_set_prediction.descend_invocation_order = 3
+        self._action_set_prediction.descend_invocation_order = 1
 
         self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
             self, self._store_cell_data_default_guard(), on_hanging_cells=True)
-        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 3
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
+
+        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
+            self, self._store_cell_data_default_guard())
+        self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
 
         # Handles adaptive mesh refinement
         self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
@@ -568,23 +562,19 @@ Material parameters:    """
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True
         )
-        self._action_set_AMR.descend_invocation_order = 4
+        self._action_set_AMR.descend_invocation_order = 3
 
-        self._action_set_AMR_commit_without_further_analysis = (
-            exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
-                solver=self,
-                guard=self._store_cell_data_default_guard(),
-                build_up_new_refinement_instructions=False,
-                implement_previous_refinement_instructions=True
-            )
+        self._action_set_AMR_commit_without_further_analysis = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
+            solver=self,
+            guard=self._store_cell_data_default_guard(),
+            build_up_new_refinement_instructions=False,
+            implement_previous_refinement_instructions=True
         )
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 4
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
 
         if self._action_set_postprocess_solution == None:
-            self._action_set_postprocess_solution = (
-                exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
-            )
-        self._action_set_postprocess_solution.descend_invocation_order = 4
+            self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
+        self._action_set_postprocess_solution.descend_invocation_order = 3
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (

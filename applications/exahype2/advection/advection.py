@@ -41,7 +41,7 @@ solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(aderdg_rusanov_solvers)
-solver = "ADERDGRusanovGlobalFixed"
+solver = "ADERDGRusanovGlobalAdaptive"
 
 build_modes = {
     "Release": peano4.output.CompileMode.Release,
