@@ -21,11 +21,11 @@ void cellErrorIntegral(
     const double                                  dt,
     const {{SOLUTION_STORAGE_PRECISION}}*         Q,
     double*                                       solution
-  )>                                              exactSolution,
-  const tarch::la::Vector<Dimensions, double>&    x,
-  const tarch::la::Vector<Dimensions, double>&    h,
-  double                                          t,
-  double                                          dt,
+  )>                                              exactSolutionFunctor,
+  const tarch::la::Vector<Dimensions, double>&    cellCentre,
+  const tarch::la::Vector<Dimensions, double>&    cellSize,
+  double                                          timeStamp,
+  double                                          timeStepSize,
   {{SOLUTION_STORAGE_PRECISION}}* __restrict__    Q,
   double                                          errors[3]
 );

@@ -2,33 +2,36 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
 
-class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCodeSnippets):
-  def __init__(self):
-    pass
 
-  def create_compute_new_time_step_size(self):
-      return """
-      const double maxEigenvalue = kernels::{{SOLVER_NAME}}::maxScaledEigenvalue(
-        repositories::{{SOLVER_INSTANCE}},
-        luh,
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        timeStepSize
-      );
+class AdaptiveTimeSteppingCodeSnippets(
+    exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
+):
+    def __init__(self):
+        pass
 
-      repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
+    def create_compute_new_time_step_size(self):
+        return """
+    const double maxEigenvalue = kernels::{{SOLVER_NAME}}::maxScaledEigenvalue(
+      repositories::{{SOLVER_INSTANCE}},
+      luh,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize
+    );
 
-      // This is a value set for stats reasons. We'll ignore it later as we
-      // ask for a new valid time step size from getAdmissibleTimeStepSize().
-      //const double newTimeStepSize = 0.0;
-      const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false)>0.0 ?
-        repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
-        0.0;
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
+
+    // This is a value set for stats reasons. We'll ignore it later as we
+    // ask for a new valid time step size from getAdmissibleTimeStepSize().
+    //const double newTimeStepSize = 0.0;
+    const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) > 0.0 ?
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
+      0.0;
 """
 
-  def create_start_time_step_implementation(self):
-      return """
+    def create_start_time_step_implementation(self):
+        return """
       if (
         tarch::mpi::Rank::getInstance().isGlobalMaster()
         and
@@ -49,12 +52,16 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
       }
 """
 
-  def create_finish_time_step_implementation(self):
-      """
-      This routine is inserted after we have reduced all global quantities. These
-      are the quantities with the postfix ThisTimeStep.
-      """
-      return super(AdaptiveTimeSteppingCodeSnippets, self).create_finish_time_step_implementation() + """
+    def create_finish_time_step_implementation(self):
+        """
+        This routine is inserted after we have reduced all global quantities. These
+        are the quantities with the postfix ThisTimeStep.
+        """
+        return (
+            super(
+                AdaptiveTimeSteppingCodeSnippets, self
+            ).create_finish_time_step_implementation()
+            + """
       if (
         isLastGridSweepOfTimeStep()
         and
@@ -71,3 +78,4 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
         }
       }
 """
+        )

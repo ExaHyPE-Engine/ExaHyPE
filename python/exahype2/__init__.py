@@ -1,8 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 import exahype2.tracer
-import exahype2.errorMeasurement
 import exahype2.grid
 
 import exahype2.solvers.fv
@@ -50,7 +48,7 @@ except ImportError:
 if havematplotlib:
     import exahype2.postprocessing
 
-from .ExaHyPEMain import ExaHyPEMain
 from .Project import Project
+from .ExaHyPEMain import ExaHyPEMain
 
 print("ExaHyPE 2 (C) www.peano-framework.org")

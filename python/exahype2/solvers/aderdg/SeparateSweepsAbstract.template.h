@@ -17,6 +17,9 @@
 
 #include "peano4/utils/Globals.h"
 
+#include "kernels/{{SOLVER_NAME}}/Quadrature.h"
+#include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
+
 {% if USE_HALF_PRECISION==True %}
 #include <stdfloat>
 {% endif %}
@@ -28,13 +31,13 @@
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
-
+namespace {{ item }} {
 {%- endfor %}
+
   class {{CLASSNAME}};
 
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
@@ -328,7 +331,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishSimulation() override;
 
-
+    {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
     static tarch::logging::Log  _log;
@@ -359,9 +362,4 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     int        _cellUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
-
-
-  {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };
-
-

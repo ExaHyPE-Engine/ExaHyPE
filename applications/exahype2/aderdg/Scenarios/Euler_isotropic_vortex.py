@@ -83,9 +83,9 @@ class Euler_isotropic_vortex(Scenario):
   const double drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
   const double dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
 
-	sol[0] = rho_inf + drho; // fluid density
-	sol[1] = sol[0] * (u_inf + du); // momentum
-	sol[2] = sol[0] * (v_inf + dv);
+	solution[0] = rho_inf + drho; // fluid density
+	solution[1] = solution[0] * (u_inf + du); // momentum
+	solution[2] = solution[0] * (v_inf + dv);
 	// total energy = internal energy + kinetic energy
-	sol[3] = (p_inf + dp) / (eos_gamma-1) + 0.5*sol[0] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+	solution[3] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[0] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """

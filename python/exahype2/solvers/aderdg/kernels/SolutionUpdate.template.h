@@ -15,7 +15,7 @@ void solutionUpdate(
   cStoreType* __restrict__              luh,
   const cStoreType* __restrict__ const  luhOld,
   const compType* __restrict__ const    lduh,
-  const double                          dt
+  const double                          timeStepSize
 );
 
 {% for item in NAMESPACE -%}

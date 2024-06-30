@@ -11,41 +11,13 @@ import peano4.datamodel
 import peano4.toolbox.blockstructured
 
 import exahype2.grid
+import exahype2.solvers.aderdg.kernels
 import exahype2.solvers.aderdg.actionsets
 
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
-from exahype2.solvers.aderdg.kernels import *
 
 from .Architectures import Architectures
-
-def get_face_overlap_merge_implementation(patch_overlap):
-    d = {
-        "OVERLAP": patch_overlap.dim[0]
-        / 2,  # Assumed to always be two, but present here anyway.
-        "DOFS_PER_AXIS": patch_overlap.dim[1],
-        "UNKNOWNS": patch_overlap.no_of_unknowns,
-    }
-    template = """
-  #if Dimensions==2
-  constexpr int spaceFaceSize = {DOFS_PER_AXIS}*{UNKNOWNS}; //Order+1
-  #else
-  constexpr int spaceFaceSize = {DOFS_PER_AXIS}*{DOFS_PER_AXIS}*{UNKNOWNS}; // (Order + 1)^2
-  #endif
-
-  const int faceDimension = marker.getSelectedFaceNumber()%Dimensions;
-  // If the outer normal is positive, the normal points to the right so the face is on the right.
-  const int faceLR = (marker.outerNormal()[faceDimension]>0.0 ? 0 : 1);
-
-  // std::copy_n(from, how_many, to);
-  std::copy_n(
-      &neighbour.value[(1-faceLR)*spaceFaceSize],
-      spaceFaceSize,
-      &value[(1-faceLR)*spaceFaceSize]
-     );
-"""
-
-    return template.format(**d)
 
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
@@ -209,7 +181,7 @@ class ADERDG(object):
         These are the main difference between child classes as they all use the same underlying routines.
         """
         self._compute_time_step_size = "#error Not yet defined"
-        self._compute_new_time_step_size = None
+        self._compute_new_time_step_size = "#error Not yet defined"
 
         """
         These are all the optional and mandatory plugins that can be specified by the user.
@@ -220,7 +192,7 @@ class ADERDG(object):
         None_implementation leaves out this optional stub and ensures the kernels don't use this function.
         Empty_implementation does... the same thing as user_defined I think?
         The final option is to fill these with a string, in which case this string is directly taken as
-        c++ code and used as the implementation of this function. The user is trusted to provide code that
+        C++ code and used as the implementation of this function. The user is trusted to provide code that
         compiles and runs properly, it is never checked.
         """
         self._flux_implementation           = PDETerms.None_Implementation
@@ -426,7 +398,7 @@ Material parameters:    """
         # Custom merge implementation takes into account that the faces project such that
         # the left cell projects to the left half of the face and the right cell projects to the right half.
         self._rhs_estimates_projection.generator.merge_method_definition = (
-            get_face_overlap_merge_implementation(self._rhs_estimates_projection)
+            self.get_face_overlap_merge_implementation(self._rhs_estimates_projection)
         )
         self._rhs_estimates_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
@@ -434,7 +406,7 @@ Material parameters:    """
 """
 
         self._flux_estimates_projection.generator.merge_method_definition = (
-            get_face_overlap_merge_implementation(self._flux_estimates_projection)
+            self.get_face_overlap_merge_implementation(self._flux_estimates_projection)
         )
         self._flux_estimates_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
@@ -865,10 +837,7 @@ Material parameters:    """
         self.add_entries_to_text_replacement_dictionary(d)
         d["DIMENSIONS"] = dimensions
         d["NUMBER_OF_DOF_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF"]
-        d["FULL_QUALIFIED_SOLVER_NAME"] = ""
-        for i in namespace:
-          d["FULL_QUALIFIED_SOLVER_NAME"] += i + "::"
-        d["FULL_QUALIFIED_SOLVER_NAME"] += self._name
+        d["FULL_QUALIFIED_SOLVER_NAME"] ="::".join(namespace) + "::" + self._name
 
         kernels_namespace = namespace + ["kernels", self._name]
         kernels_output_path = subdirectory + "kernels/" + self._name
@@ -945,7 +914,7 @@ Material parameters:    """
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 headfile_template=kernels_templates_prefix + "RiemannSolver.template.h",
                 cppfile_template=kernels_templates_prefix + "RiemannSolverLinear.template.cpp" if self._is_linear
-                else "RiemannSolverNonLinear.template.cpp",
+                else kernels_templates_prefix + "RiemannSolverNonLinear.template.cpp",
                 classname=kernels_output_path + "/RiemannSolver",
                 namespace=kernels_namespace,
                 subdirectory=subdirectory + ".",
@@ -958,28 +927,28 @@ Material parameters:    """
         output.makefile.add_h_file(kernels_output_path + "/RiemannSolver.h", generated=True)
         output.makefile.add_cpp_file(kernels_output_path + "/RiemannSolver.cpp", generated=True)
 
-        AMRRoutines.AMRRoutines(d).generate_kernels(
+        exahype2.solvers.aderdg.kernels.AMRRoutines(d).generate_kernels(
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
-        CellData.CellData(d).generate_kernels(
+        exahype2.solvers.aderdg.kernels.CellData(d).generate_kernels(
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
-        DGMatrices.DGMatrices(d).generate_kernels(
+        exahype2.solvers.aderdg.kernels.DGMatrices(d).generate_kernels(
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
-        Quadrature.Quadrature(d).generate_kernels(
+        exahype2.solvers.aderdg.kernels.Quadrature(d).generate_kernels(
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
-        FusedSpaceTimePredictorVolumeIntegral.FusedSpaceTimePredictorVolumeIntegral(d).generate_kernels(
+        exahype2.solvers.aderdg.kernels.FusedSpaceTimePredictorVolumeIntegral(d).generate_kernels(
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
 
         if self._point_sources_implementation != PDETerms.None_Implementation:
           generated_kernels = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "DeltaDistribution.template.h",
-                cppfile_template=kernels_templates_prefix + "DeltaDistribution.template.cpp",
-                classname=kernels_output_path + "/DeltaDistribution",
+                headfile_template=kernels_templates_prefix + "PointSources.template.h",
+                cppfile_template=kernels_templates_prefix + "PointSources.template.cpp",
+                classname=kernels_output_path + "/PointSources",
                 namespace=kernels_namespace,
                 subdirectory=subdirectory + ".",
                 dictionary=d,
@@ -988,8 +957,8 @@ Material parameters:    """
             )
           )
           output.add(generated_kernels)
-          output.makefile.add_h_file(kernels_output_path + "/DeltaDistribution.h", generated=True)
-          output.makefile.add_cpp_file(kernels_output_path + "/DeltaDistribution.cpp", generated=True)
+          output.makefile.add_h_file(kernels_output_path + "/PointSources.h", generated=True)
+          output.makefile.add_cpp_file(kernels_output_path + "/PointSources.cpp", generated=True)
 
         if self._use_libxsmm:
           generated_kernels = (
@@ -1399,3 +1368,30 @@ Material parameters:    """
 
         self.create_data_structures()
         self.create_action_sets()
+
+    def get_face_overlap_merge_implementation(self, patch_overlap):
+        d = {
+            "OVERLAP": patch_overlap.dim[0]
+            / 2,  # Assumed to always be two, but present here anyway.
+            "DOFS_PER_AXIS": patch_overlap.dim[1],
+            "UNKNOWNS": patch_overlap.no_of_unknowns,
+        }
+        Template = """
+  #if Dimensions == 2
+  constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {UNKNOWNS}; // Order + 1
+  #else
+  constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {DOFS_PER_AXIS} * {UNKNOWNS}; // (Order + 1)^2
+  #endif
+
+  const int faceDimension = marker.getSelectedFaceNumber() % Dimensions;
+  // If the outer normal is positive, the normal points to the right so the face is on the right.
+  const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
+
+  // std::copy_n(from, how_many, to);
+  std::copy_n(
+    &neighbour.value[(1 - faceLR) * SpaceFaceSize],
+    SpaceFaceSize,
+    &value[(1 - faceLR) * SpaceFaceSize]
+  );
+"""
+        return Template.format(**d)

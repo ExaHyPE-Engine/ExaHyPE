@@ -36,7 +36,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
   
   def create_compute_time_step_size(self):
     return """
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
+    const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
 
   

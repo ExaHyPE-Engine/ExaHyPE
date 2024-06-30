@@ -68,8 +68,8 @@ class SWE_resting_lake(Scenario):
       true
   );
 
-  sol[0] = _Q[0];
-  sol[1] = _Q[1];
-  sol[2] = _Q[2];
-  sol[3] = _Q[3];
+  solution[0] = _Q[0];
+  solution[1] = _Q[1];
+  solution[2] = _Q[2];
+  solution[3] = _Q[3];
   """

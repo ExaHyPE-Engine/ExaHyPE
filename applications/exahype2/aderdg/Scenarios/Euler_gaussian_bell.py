@@ -51,15 +51,15 @@ class Euler_gaussian_bell(Scenario):
   tarch::la::Vector<Dimensions,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]), 
                                                (x[1] - t) + (int)(t + .5 - x[1]) };
 
-  sol[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
+  solution[0] = 0.02*(1.0+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
 
-  sol[1] = 1.0*sol[0];
-  sol[2] = 1.0*sol[0];
-  sol[3] = 0.;
+  solution[1] = 1.0*solution[0];
+  solution[2] = 1.0*solution[0];
+  solution[3] = 0.;
 
   constexpr double gamma = 1.4;
   constexpr double p = 1.0;
 
   //Should lead to a constant p over the domain given the initial conditions
-  sol[3] = p/(gamma-1.0) + 0.5*(sol[1]*sol[1]+sol[2]*sol[2]) / sol[0];
+  solution[3] = p/(gamma-1.0) + 0.5*(solution[1]*solution[1]+solution[2]*solution[2]) / solution[0];
 """

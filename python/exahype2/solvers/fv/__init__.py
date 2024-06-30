@@ -5,3 +5,5 @@ import exahype2.solvers.fv.musclhancock
 import exahype2.solvers.fv.riemann
 
 from .FV import Storage
+
+from .ErrorMeasurement import ErrorMeasurement

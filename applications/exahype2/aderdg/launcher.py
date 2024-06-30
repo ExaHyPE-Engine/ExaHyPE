@@ -1,6 +1,6 @@
 import peano4, exahype2
 import os, sys
-import argparse, string
+import argparse
 import subprocess
 
 sys.path.insert(0, os.path.abspath("./Scenarios"))
@@ -92,10 +92,10 @@ theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 theSolver.add_kernel_optimisations(polynomials = polynomials, is_linear=scenario._equation.is_linear)
 
 if(scenario.analytical_solution()!=exahype2.solvers.PDETerms.None_Implementation):
-    exahype2.errorMeasurement.ADERErrorMeasurement(
+    exahype2.solvers.aderdg.ErrorMeasurement(
       theSolver,
       error_measurement_implementation = scenario.analytical_solution(),
-      outputFileName = "err_" + scenario.__class__.__name__
+      output_file_name = "Error_" + scenario.__class__.__name__
     )
 
 if(scenario._plot_dt>0.0):

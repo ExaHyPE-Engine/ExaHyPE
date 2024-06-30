@@ -20,7 +20,6 @@ observers/
 repositories/
 tasks/
 kernels/
-tracers/
 solution-*
 
 Constants.h

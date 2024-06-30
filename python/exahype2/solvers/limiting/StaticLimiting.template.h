@@ -34,5 +34,4 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions,double>& h,
       const double timeStamp) override;
   {% endif %}
-
 };

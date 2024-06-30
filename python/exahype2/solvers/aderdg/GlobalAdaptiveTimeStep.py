@@ -9,6 +9,7 @@ from .SolverDeclarations import SolverDeclarations
 from .SolverDefinitions import SolverDefinitions
 from .AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
+
 class GlobalAdaptiveTimeStep(SeparateSweeps):
     def __init__(
         self,
@@ -51,7 +52,7 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
             initial_conditions=initial_conditions,
             source_term=source_term,
             point_source=point_source,
-            material_parameters=material_parameters
+            material_parameters=material_parameters,
         )
 
     def set_implementation(
@@ -72,8 +73,8 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
             boundary_conditions=boundary_conditions,
             refinement_criterion=refinement_criterion,
             initial_conditions=initial_conditions,
-            additional_action_set_includes="",
-            additional_user_includes="",
+            additional_action_set_includes=additional_action_set_includes,
+            additional_user_includes=additional_user_includes,
             flux=flux,
             ncp=ncp,
             eigenvalues=eigenvalues,
@@ -85,7 +86,10 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
         computation_precisions = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in computation_precisions:
             computation_precisions.append(self._corrector_computation_precision)
-        if self._precompute_picard_precision!=False and self._precompute_picard_precision not in computation_precisions:
+        if (
+            self._precompute_picard_precision != False
+            and self._precompute_picard_precision not in computation_precisions
+        ):
             computation_precisions.append(self._precompute_picard_precision)
         if self._solution_persistent_storage_precision not in computation_precisions:
             computation_precisions.append(self._solution_persistent_storage_precision)
@@ -136,19 +140,41 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
             pde_terms_without_state=False,
         )
 
-        self._abstract_solver_user_declarations = abstract_solver_declarations.create_abstract_solver_user_declarations()
-        self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
+        self._abstract_solver_user_declarations = (
+            abstract_solver_declarations.create_abstract_solver_user_declarations()
+        )
+        self._abstract_solver_user_declarations += (
+            solver_code_snippets.create_abstract_solver_user_declarations()
+        )
 
-        self._abstract_solver_user_definitions = abstract_solver_definitions.create_abstract_solver_user_definitions()
-        self._abstract_solver_user_definitions += solver_code_snippets.create_abstract_solver_user_definitions()
+        self._abstract_solver_user_definitions = (
+            abstract_solver_definitions.create_abstract_solver_user_definitions()
+        )
+        self._abstract_solver_user_definitions += (
+            solver_code_snippets.create_abstract_solver_user_definitions()
+        )
 
-        self._solver_user_declarations = solver_declarations.create_solver_user_declarations()
-        self._solver_user_definitions = solver_definitions.create_solver_user_definitions()
+        self._solver_user_declarations = (
+            solver_declarations.create_solver_user_declarations()
+        )
+        self._solver_user_definitions = (
+            solver_definitions.create_solver_user_definitions()
+        )
 
-        self._compute_time_step_size = solver_code_snippets.create_compute_time_step_size()
-        self._compute_new_time_step_size = solver_code_snippets.create_compute_new_time_step_size()
+        self._compute_time_step_size = (
+            solver_code_snippets.create_compute_time_step_size()
+        )
+        self._compute_new_time_step_size = (
+            solver_code_snippets.create_compute_new_time_step_size()
+        )
 
-        self._start_time_step_implementation = solver_code_snippets.create_start_time_step_implementation()
-        self._finish_time_step_implementation = solver_code_snippets.create_finish_time_step_implementation()
+        self._start_time_step_implementation = (
+            solver_code_snippets.create_start_time_step_implementation()
+        )
+        self._finish_time_step_implementation = (
+            solver_code_snippets.create_finish_time_step_implementation()
+        )
 
-        self._constructor_implementation = solver_code_snippets.create_abstract_solver_constructor_statements()
+        self._constructor_implementation = (
+            solver_code_snippets.create_abstract_solver_constructor_statements()
+        )

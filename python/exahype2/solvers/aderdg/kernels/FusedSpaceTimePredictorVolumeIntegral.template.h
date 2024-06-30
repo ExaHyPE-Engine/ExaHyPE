@@ -18,7 +18,7 @@ namespace {{ item }} {
 {% if IS_LINEAR %}
 
 template <typename cStoreType, typename pCompType, typename pStoreType>
-int fusedSpaceTimePredictorVolumeIntegral(
+int fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   pCompType* __restrict__                       lduh,
   pStoreType* __restrict__                      lQhbnd,
@@ -33,11 +33,11 @@ int fusedSpaceTimePredictorVolumeIntegral(
   pCompType* __restrict__                       PSi,
   pCompType* __restrict__                       PSderivatives,
   const cStoreType* const __restrict__          luh,
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  const double                                  t,
-  const double                                  dt,
-  std::vector<int>*                             pointSources
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const std::vector<int>&                       pointSources // Empty vector if no point sources are set
 );
 
 {% else %}{# IS_LINEAR #}
@@ -47,7 +47,6 @@ int fusedSpaceTimePredictorVolumeIntegral(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   pCompType* __restrict__                       lduh,
   pStoreType* __restrict__                      lQhbnd,
-  pStoreType* __restrict__                      lGradQhbnd,
   pStoreType* __restrict__                      lFhbnd,
   pCompType* __restrict__                       lQi,
   pCompType* __restrict__                       rhs,
@@ -58,30 +57,13 @@ int fusedSpaceTimePredictorVolumeIntegral(
   pCompType* __restrict__                       lShi,
   pCompType* __restrict__                       gradQ,
   const cStoreType* const __restrict__          luh,
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  const double                                  t,
-  const double                                  dt
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize
 );
 
-template <typename cStoreType, typename pCompType>
-pCompType picardIteration(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pCompType* __restrict__                       lQi,
-  pCompType* __restrict__                       rhs,
-  pCompType* __restrict__                       lFi,
-  pCompType* __restrict__                       lSi,
-  pCompType* __restrict__                       gradQ,
-  pCompType* __restrict__                       new_lQi_slice,
-  const pCompType* __restrict__                 dudxT_by_dx,
-  const cStoreType* const __restrict__          luh,
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  const double                                  t,
-  const double                                  dt
-);
-
-{% endif %}
+{% endif %}{# IS_LINEAR #}
 
 {% for item in NAMESPACE -%}
 }

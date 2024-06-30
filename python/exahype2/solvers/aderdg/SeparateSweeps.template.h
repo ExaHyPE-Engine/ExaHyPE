@@ -11,19 +11,19 @@
 #include "tarch/logging/Log.h"
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
+namespace {{ item }} {
 {%- endfor %}
 
   class {{CLASSNAME}};
 
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
 
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   private:
-    static tarch::logging::Log   _log;
+    static tarch::logging::Log _log;
 
   public:
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
@@ -51,7 +51,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       const {{SOLUTION_STORAGE_PRECISION}} * __restrict__                  Q,    //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
-			double                                       t
+      double                                       t
     ) override;
     {% endif %}
 
@@ -71,7 +71,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
       const tarch::la::Vector<Dimensions,int>&     index,
-			bool                                         gridIsConstructed
+      bool                                         gridIsConstructed
     ) override;
     {% endif %}
 
@@ -93,15 +93,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const double t,
-      const double dt, 
+      const double dt,
       const tarch::la::Vector<Dimensions, double>& x,
       const tarch::la::Vector<Dimensions, double>& h,
-      const int direction, 
-      bool isBoundaryFace, 
+      const int direction,
+      bool isBoundaryFace,
       int faceIndex) final override;
     {% endif %}
 
     {{SOLVER_USER_DECLARATIONS}}
 };
-
-

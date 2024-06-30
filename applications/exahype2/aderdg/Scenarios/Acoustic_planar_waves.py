@@ -66,18 +66,18 @@ class Acoustic_planar_waves(Scenario):
 #endif
   ));
 
-  sol[1] = val;
-  sol[2] = val;
+  solution[1] = val;
+  solution[2] = val;
 
   constexpr double K0  = """ + str(self._K0) + """;
   constexpr double rho = """ + str(self._rho) + """;
 
 #if Dimensions==3
-  sol[3] = val;
+  solution[3] = val;
   const double kr = K0*std::sqrt(rho/(3.0*K0)) + 2*std::sqrt(K0*rho/3.0);
 #else
   const double kr = std::sqrt(2*K0*rho);
 #endif
 
-  sol[0] = kr*val;
+  solution[0] = kr*val;
 """

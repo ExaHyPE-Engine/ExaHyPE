@@ -4,21 +4,24 @@ from copy import deepcopy
 
 import peano4.output
 
+
 class CellData(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)
 
-    def generate_kernels(self, namespace, output, subdirectory, template_prefix, output_path):
-        nUnknowns  = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
-        nUnknownsPad  = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
+    def generate_kernels(
+        self, namespace, output, subdirectory, template_prefix, output_path
+    ):
+        nUnknowns = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
+        nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
         nAuxVar = self.d["NUMBER_OF_AUXILIARY_VARIABLES"]
         nAuxVarPad = self.d["NUMBER_OF_AUXILIARY_VARIABLES"]
-        nData    = self.d["NUMBER_OF_DATA"]
+        nData = self.d["NUMBER_OF_DATA"]
         nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
-        nDof     = self.d["NUMBER_OF_DOF"]
-        nDofPad  = self.d["NUMBER_OF_DOF_PADDED"]
+        nDof = self.d["NUMBER_OF_DOF"]
+        nDofPad = self.d["NUMBER_OF_DOF_PADDED"]
         nDof3D = self.d["NUMBER_OF_DOF_3D"]
-        nDim     = self.d["DIMENSIONS"]
+        nDim = self.d["DIMENSIONS"]
 
         # SPT buffer sizes
         # default values
@@ -65,17 +68,15 @@ class CellData(object):
         self.d["BndFluxSize"] = nUnknownsPad * (nDof * nDof3D)
         self.d["BndFluxTotalSize"] = 2 * nDim * self.d["BndFluxSize"]
 
-        generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=template_prefix + "CellData.template.h",
-                cppfile_template=template_prefix + "CellData.template.cpp",
-                classname=output_path + "/CellData",
-                namespace=namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=self.d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
+        generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            headfile_template=template_prefix + "CellData.template.h",
+            cppfile_template=template_prefix + "CellData.template.cpp",
+            classname=output_path + "/CellData",
+            namespace=namespace,
+            subdirectory=subdirectory + ".",
+            dictionary=self.d,
+            default_overwrite=True,
+            apply_iteratively=True,
         )
         output.add(generated_kernels)
         output.makefile.add_h_file(output_path + "/CellData.h", generated=True)

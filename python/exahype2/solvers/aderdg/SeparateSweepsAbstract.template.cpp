@@ -13,10 +13,7 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 
-#include "kernels/{{SOLVER_NAME}}/Quadrature.h"
-#include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
-
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -431,31 +428,21 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return (_solverState!=SolverState::Prediction
       and _solverState!=SolverState::PredictionOnHangingCells);
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return _solverState==SolverState::Prediction;
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return _solverState==SolverState::Correction;
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
-
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

@@ -10,8 +10,9 @@ precisionTranslate = {
     "std::float16_t": "HP",
     "__bf16": "HP",
     "std::bfloat16_t": "HP",
-    "half_float::half": "HP"
+    "half_float::half": "HP",
 }
+
 
 class Gemms:
     """Specification of a dense matrix-matrix multiplication
@@ -83,13 +84,13 @@ class Gemms:
             precision = [precision]
         for key in precision:
             if key not in precisionTranslate.keys():
-                raise("Unknown precision")
+                raise ("Unknown precision")
         if (M > LDC) or (K > LDB) or (M > LDA):
-            raise("Incompatible matrix sizes and leading dimensions")
+            raise ("Incompatible matrix sizes and leading dimensions")
         if alignment_A not in [0, 1]:
-            raise("Something is wrong with the alignment choice of matrix A")
+            raise ("Something is wrong with the alignment choice of matrix A")
         if alignment_C not in [0, 1]:
-            raise("Something is wrong with the alignment choice of matrix C")
+            raise ("Something is wrong with the alignment choice of matrix C")
 
         self.M = M
         self.N = N

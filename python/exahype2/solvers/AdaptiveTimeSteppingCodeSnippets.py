@@ -50,7 +50,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   
   def create_compute_time_step_size(self):
     return """
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+    double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
   
@@ -92,7 +92,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
         );
     #endif
 
-    if (tarch::la::smaller(_maxEigenvalue, 0.0 )) {
+    if (tarch::la::smaller(_maxEigenvalue, 0.0)) {
       ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
       // Keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;

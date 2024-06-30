@@ -17,10 +17,10 @@ namespace {{ item }} {
 double maxScaledEigenvalue(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   const {{SOLUTION_STORAGE_PRECISION}}* const   luh,
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  const double                                  t,
-  const double                                  dt
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize
 );
 
 {% for item in NAMESPACE -%}

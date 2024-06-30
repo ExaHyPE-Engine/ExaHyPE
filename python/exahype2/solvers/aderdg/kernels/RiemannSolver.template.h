@@ -20,10 +20,10 @@ void riemannSolver(
   cCompType* __restrict__                       FR,
   const cCompType* __restrict__ const           QL,
   const cCompType* __restrict__ const           QR,
-  const double                                  t,
-  const double                                  dt,
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&  faceCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
   const int                                     direction
 );
 

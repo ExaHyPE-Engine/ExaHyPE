@@ -2,28 +2,33 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
-import peano4.solversteps
 import jinja2
+import peano4.solversteps
+
 
 class EmptyPostprocessSolution(AbstractADERDGActionSet):
     """
-    PostprocessSolution differs from other action sets, as I only create it once. See
-    FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
+    PostprocessSolution differs from other action sets, as we only create it once. See
+    ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
     """
 
-    def __init__(self,solver):
-        super(EmptyPostprocessSolution,self).__init__(solver)
-        # Is there for compatibility reasons
-        self._compute_kernel     = ""
+    def __init__(self, solver):
+        super(EmptyPostprocessSolution, self).__init__(solver)
+        self._compute_kernel = ""
 
-    def get_body_of_operation(self,operation_name):
+    def get_body_of_operation(self, operation_name):
         result = ""
-        if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
+        ):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
-            result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
+            result = jinja2.Template(
+                self._compute_kernel, undefined=jinja2.DebugUndefined
+            ).render(**d)
             pass
         return result
 
@@ -34,14 +39,20 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
         return (
             super(EmptyPostprocessSolution, self).get_includes()
             + """
-#include "kernels/""" + self._solver._name + """/Quadrature.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/Quadrature.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/CellErrorIntegral.h"
 """
         )
+
 
 class DoFWisePostprocessSolution(AbstractADERDGActionSet):
     """
     PostprocessSolution differs from other action sets, as I only create it once. See
-    FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
+    ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
 
     The postprocessing plugs into touch cell last time. It is the last action set added
@@ -57,13 +68,12 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
 
     def __init__(self, solver):
         super(DoFWisePostprocessSolution, self).__init__(solver)
-        self.guard = "true"
+        self._guard = "true"
         self._compute_kernel = ""
         self.descend_invocation_order = 1
 
     def add_postprocessing_kernel(self, operation_per_point):
         """
-
         Add a code snippet which is applied to each and every point. You have the following
         variables which are well-defined:
 
@@ -71,10 +81,8 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
         - x: A tarch::la::Vector over doubles
         - marker.h(): A tarch::la::Vector over doubles
 
-
         operation_per_point: String
           C/C++ code snippet
-
         """
         self._compute_kernel += (
             """
@@ -87,27 +95,30 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
     and
     {{PREDICATE}}
   ) {
-    logTraceIn( "touchCellFirstTime(...)" );
+    logTraceIn("touchCellFirstTime(...)");
 
     ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
-      1, // only one patch
-      {{ORDER}}+1,
-      0, // int haloSize,
+      1, // Only one patch
+      {{ORDER}} + 1,
+      0, // Halo size,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}}
     );
-    dfor( index, {{ORDER}}+1 ) {
-      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + enumerator(0,index,0);
+
+    dfor(index, {{ORDER}} + 1) {
+      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + enumerator(0, index, 0);
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
-        marker.x(), marker.h(), index,
-        repositories::{{SOLVER_INSTANCE}}.Order+1,
+        marker.x(),
+        marker.h(),
+        index,
+        repositories::{{SOLVER_INSTANCE}}.Order + 1,
         kernels::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
       );
       """
             + operation_per_point
             + """
     }
-    logTraceOut( "touchCellFirstTime(...)" );
+    logTraceOut("touchCellFirstTime(...)");
   }
 }
 """
@@ -123,12 +134,11 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = jinja2.Template(
-                self.guard, undefined=jinja2.DebugUndefined
+                self._guard, undefined=jinja2.DebugUndefined
             ).render(**d)
             result = jinja2.Template(
                 self._compute_kernel, undefined=jinja2.DebugUndefined
             ).render(**d)
-            pass
         return result
 
     def get_action_set_name(self):
@@ -139,21 +149,21 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "kernels/""" + self._solver._name + """/Quadrature.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/Quadrature.h"
 """
         )
 
-class CellWisePostprocessSolution(AbstractADERDGActionSet):
-    """ """
 
+class CellWisePostprocessSolution(AbstractADERDGActionSet):
     def __init__(self, solver):
         super(CellWisePostprocessSolution, self).__init__(solver)
-        self.guard = "true"
+        self._guard = "true"
         self._compute_kernel = ""
 
     def add_postprocessing_kernel(self, operation_per_cell):
         """
-
         Add a code snippet which is applied to each and every point. You have the following
         variables which are well-defined:
 
@@ -161,10 +171,8 @@ class CellWisePostprocessSolution(AbstractADERDGActionSet):
         - x: A tarch::la::Vector over doubles
         - marker.h(): A tarch::la::Vector over doubles
 
-
         operation_per_point: String
           C/C++ code snippet
-
         """
         self._compute_kernel += (
             """
@@ -177,13 +185,12 @@ class CellWisePostprocessSolution(AbstractADERDGActionSet):
     and
     {{PREDICATE}}
   ) {
-    logTraceIn( "touchCellFirstTime(...)" );
-
+    logTraceIn("touchCellFirstTime(...)");
     """
             + operation_per_cell
             + """
 
-    logTraceOut( "touchCellFirstTime(...)" );
+    logTraceOut("touchCellFirstTime(...)");
   }
 }
 """
@@ -199,12 +206,11 @@ class CellWisePostprocessSolution(AbstractADERDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = jinja2.Template(
-                self.guard, undefined=jinja2.DebugUndefined
+                self._guard, undefined=jinja2.DebugUndefined
             ).render(**d)
             result = jinja2.Template(
                 self._compute_kernel, undefined=jinja2.DebugUndefined
             ).render(**d)
-            pass
         return result
 
     def get_action_set_name(self):

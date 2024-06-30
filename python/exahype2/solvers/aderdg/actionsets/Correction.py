@@ -2,15 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractADERDGActionSet import AbstractADERDGActionSet
 from exahype2.solvers.PDETerms import PDETerms
-# import peano4
-import peano4.solversteps
-import jinja2
 
-from .kernels import (
-    create_corrector_allocations,
-    riemann_solver, face_integral,
-    create_solution_update
-)
+import jinja2
+import peano4.solversteps
+
 
 class Correction(AbstractADERDGActionSet):
     """
@@ -19,35 +14,31 @@ class Correction(AbstractADERDGActionSet):
     happens in one grid sweep, the corresponding Riemann solve in the next one.
     """
 
-    Template_TouchFaceFirstTime = """
+    _Template_TouchFaceFirstTime = """
   if ({{PREDICATE}}) {
     const double timeStamp = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    constexpr int Order = {{ORDER}};
-    constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
-    constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-
-    #if Dimensions==2
-    constexpr int spaceFaceSize      = (Order+1);
+    #if Dimensions == 2
+    constexpr int SpaceFaceSize      = {{ORDER}} + 1;
     #else
-    constexpr int spaceFaceSize      = (Order+1)*(Order+1);
+    constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
     #endif
 
-    constexpr int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    constexpr int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
+    constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
 
     /*
      * 2d: 0,1,2,3 -> 0,2,1,3
      * 3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
      */
     {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value;
-    {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + FluxElementsPerFace;
     {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
-    {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace;
-    const int direction = marker.getSelectedFaceNumber()%Dimensions;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value + BasisElementsPerFace;
+    const int direction = marker.getSelectedFaceNumber() % Dimensions;
     const int faceNumber  = marker.getSelectedFaceNumber();
     const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
     tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
@@ -56,7 +47,7 @@ class Correction(AbstractADERDGActionSet):
   }
 """
 
-    Template_TouchCellFirstTime = """
+    _Template_TouchCellFirstTime = """
   if ({{PREDICATE}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -72,15 +63,15 @@ class Correction(AbstractADERDGActionSet):
 
       // Negative face
       if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + fluxElementsPerFace;
         const int orientation = 0;
 
         {{FACE_INTEGRAL}}
       }
 
       // Positive face
-      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
+      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).getIsHanging()) {
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value;
         const int orientation = 1;
 
         {{FACE_INTEGRAL}}
@@ -91,12 +82,68 @@ class Correction(AbstractADERDGActionSet):
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0));
   }
+"""
+
+    _Template_SolutionUpdate = """
+    kernels::{{SOLVER_NAME}}::solutionUpdate(
+      luh,
+      luh,
+      lduh,
+      timeStepSize
+    );
+"""
+
+    _Template_RiemannSolver = """
+    kernels::{{SOLVER_NAME}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      repositories::{{SOLVER_INSTANCE}},
+      FL,
+      FR,
+      QL,
+      QR,
+      timeStamp,
+      timeStepSize,
+      faceCentre,
+      marker.h(),
+      direction
+    );
+"""
+
+    _Template_CustomRiemannSolver = """
+    repositories::{{SOLVER_INSTANCE}}.riemannSolver(
+      FL,
+      FR,
+      QL,
+      QR,
+      timeStamp,
+      timeStepSize,
+      marker.x(),
+      faceCentre,
+      direction,
+      isBoundary,
+      faceNumber
+    );
+"""
+
+    _Template_FaceIntegral = """
+        const double inverseDxDirection = 1.0 / marker.h()[d];
+        kernels::{{SOLVER_NAME}}::faceIntegral(
+          lduh,
+          FIn,
+          direction,
+          orientation,
+          inverseDxDirection
+        );
+"""
+
+    _Template_CorrectorAllocations = """
+    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[kernels::{{SOLVER_NAME}}::getUpdateSize()]{0.0};
+    const int fluxElementsPerFace = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 """
 
     def __init__(self, solver, guard):
@@ -110,11 +157,13 @@ class Correction(AbstractADERDGActionSet):
         """
         super(Correction, self).__init__(solver)
 
-        self.guard = guard
-        self.riemann_guard  = guard
+        self._guard = guard
+        self._riemann_guard = guard
 
-        self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
-        self.is_linear                  = solver._is_linear
+        self._use_custom_riemann_solver = (
+            solver._riemann_solver_implementation != PDETerms.None_Implementation
+        )
+        self._is_linear = solver._is_linear
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -125,19 +174,31 @@ class Correction(AbstractADERDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
         ):
-            d["PREDICATE"]    = self.riemann_guard
-            d["RIEMANN_SOLVER"] = jinja2.Template(riemann_solver(self.use_custom_riemann_solver, self.is_linear)).render(**d)
-            result = jinja2.Template(self.Template_TouchFaceFirstTime).render(**d)
-            pass
+            d["PREDICATE"] = self.riemann_guard
+            if self._use_custom_riemann_solver:
+                d["RIEMANN_SOLVER"] = jinja2.Template(
+                    self._Template_CustomRiemannSolver
+                ).render(**d)
+            else:
+                d["RIEMANN_SOLVER"] = jinja2.Template(
+                    self._Template_RiemannSolver
+                ).render(**d)
+            result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
         if (
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            d["PREDICATE"]              = self.guard
-            d["CORRECTOR_ALLOCATIONS"]  = jinja2.Template(create_corrector_allocations()).render(**d)
-            d["SOLUTION_UPDATE"]        = jinja2.Template(create_solution_update()).render(**d)
-            d["FACE_INTEGRAL"]          = jinja2.Template(face_integral(self.is_linear)).render(**d)
-            result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
+            d["PREDICATE"] = self.guard
+            d["CORRECTOR_ALLOCATIONS"] = jinja2.Template(
+                self._Template_CorrectorAllocations
+            ).render(**d)
+            d["SOLUTION_UPDATE"] = jinja2.Template(
+                self._Template_SolutionUpdate
+            ).render(**d)
+            d["FACE_INTEGRAL"] = jinja2.Template(self._Template_FaceIntegral).render(
+                **d
+            )
+            result = jinja2.Template(self._Template_TouchCellFirstTime).render(**d)
             pass
         return result
 
@@ -146,10 +207,22 @@ class Correction(AbstractADERDGActionSet):
 
     def get_includes(self):
         return (
-            super(Correction, self).get_includes() + """
-#include "kernels/""" + self._solver._name + """/CellData.h"
-#include "kernels/""" + self._solver._name + """/FaceIntegral.h"
-#include "kernels/""" + self._solver._name + """/RiemannSolver.h"
-#include "kernels/""" + self._solver._name + """/SolutionUpdate.h"
-#include "kernels/""" + self._solver._name + """/MaxScaledEigenvalue.h"
-""")
+            super(Correction, self).get_includes()
+            + """
+#include "kernels/"""
+            + self._solver._name
+            + """/CellData.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/FaceIntegral.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/RiemannSolver.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/SolutionUpdate.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/MaxScaledEigenvalue.h"
+"""
+        )

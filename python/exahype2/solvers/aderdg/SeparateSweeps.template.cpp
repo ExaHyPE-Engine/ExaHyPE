@@ -92,8 +92,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
   bool isBoundaryFace, 
   int faceIndex) {
 
-  // @todo Implement your stuff here    
-
+  // @todo Implement your stuff here
 }
 {% endif %}
 

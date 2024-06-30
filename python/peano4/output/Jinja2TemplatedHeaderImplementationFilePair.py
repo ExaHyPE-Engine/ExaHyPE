@@ -47,11 +47,9 @@ dictionary entries besides the ones manually handed over by the user.
     self.d = deepcopy(dictionary)
     self.d[ "CLASSNAME" ] = classname
     self.d[ "NAMESPACE" ] = []
-    self.d[ "FULL_QUALIFIED_NAMESPACE" ] = ""
-
     for i in namespace:
       self.d["NAMESPACE"].append(i)
-      self.d[ "FULL_QUALIFIED_NAMESPACE" ] += "::" + i
+    self.d["FULL_QUALIFIED_NAMESPACE"] = "::".join(namespace)
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):

@@ -49,15 +49,18 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 #}
 {% with %}
 {% set gemms = GEMMS[gemm_key] %}
+
 {% if true_B is not defined or true_B == "" %}
   {% set true_B = B %}
   {% set use_true_B = False %}
 {% else %}
   {% set use_true_B = True %}
 {% endif %}
+
 {% if force_coeff_matrix is not defined %}
   {% set force_coeff_matrix = False %}
 {% endif %}
+
 {# set arrays' name for pragma by removing eventual index #}
 {% set Ap = (A.split("["))[0] %}
 {% set Bp = (B.split("["))[0] %}
@@ -105,7 +108,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% endif %}
 
 {% if gemms.beta == 0 %}
-  // reset {{C}}
+  // Reset {{C}}
   for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
     #ifdef SharedOMP
     #pragma omp simd aligned({{Cp}}:{{ALIGNMENT}})
