@@ -12,6 +12,7 @@
 \li @subpage page_conventions_home
 \li @subpage page_version_control_home
 \li @subpage page_documentation_home
+\li @subpage page_continuous_integration
 \li @subpage page_architecture_home
 \li @subpage page_dastgen_home
 \li @subpage page_tarch_home
@@ -20,7 +21,6 @@
 \li @subpage page_exahype2_home
 \li @subpage page_multigrid_home
 \li @subpage page_swift2_home
-\li @subpage page_continuous_integration
 \li @subpage page_faq_home
 
 This is the documentation of Peano which is generated automatically through Doxygen.

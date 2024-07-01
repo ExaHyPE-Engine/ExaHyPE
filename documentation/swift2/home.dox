@@ -23,7 +23,7 @@
 
 
 
-@image html documentation/excalibur.png
+@image html documentation/Excalibur-logo.png
 
 Swift 2 is a <a href="https://swift.strw.leidenuniv.nl/">SWIFT (SPH With Inter-dependent Fine-grained
 Tasking)</a> clone which combines the SWIFT SPH kernels
