@@ -1,0 +1,145 @@
+/**
+
+@page swift_graph_compiler SWIFT's task graph compiler
+
+SWIFT's graph compiler takes the @ref swift_particle_new_solver "lifecycle of all particle species" and
+maps them onto mesh traversals. That is, it takes the lifecycles and answers 
+the following questions:
+
+1. How many times do we have to run through the mesh per time step?
+2. What steps does each run-through have to complete?
+
+We create the @ref page_architecture_home "Peano action sets" required to realise 
+the SPH algorithm that's specific to the chosen number of species and their
+character. The clear separation of a specification of the particles' lifecycle
+(what is to be done in which order per particle) from its realisation allows us
+to swap different realisation paradigms. The translation logic from 
+specification into realisation is encapsuled in our ***graph compilers*** which
+take the lifecycle graph and yield a compute graph.
+
+
+# Graph translator flavours
+
+
+## A direct 1:1 mapping
+
+The simplest graph compilers do not use any task graph as output. They simply
+take the lifecycle per species and map each step there onto one mesh traversal.
+
+@image html particle-lifecycle.png
+
+The above lifecycle will consequently be mapped onto six separate mesh 
+traversals. Depending on the data layout you want to use (see the documentation 
+on @ref page_swift_performance_optimisation "various optimisation approaches"),
+the graph compiler might add additional mesh sweeps on top of this.
+
+All the direct translators are held within python/swift2/graphcompiler/Sequential.py.
+The file name reflects that the fact that we do not exploit any additional 
+(task) parallelism besides the core domain decomposition coming along with 
+Peano anyway.
+
+
+## Task tree
+
+A more sophisticated of the task tree recognises that each and every step which
+does not change the particles' position or its radius works with invariant sets
+of active and local particles: The sets are built up top-down throughout the 
+mesh traversal but do not change. We therefore can create a producer-consumer
+pattern, where we still run trough the mesh once per species per lifecycle 
+step. However, the mesh traversals do not issue any operations. Instead, they 
+create tasks. 
+
+The hope here is that few mesh traversals serve as task producers and the tasks
+are then consumed by all the other (idle) threads. The resulting task graph 
+resembles a tree. It is not really a tree, as the updates plug into 
+touchVertexFirstTime(), touchCellFirstTime() and touchVertexLastTime(). The
+dependency graph hence resembles a superposition of a tree task graph with a 
+(multiscale) Cartesian mesh where cell tasks are connected via two types 
+(touch first vs touch last) of vertex tasks.  
+
+This whole approach has to be used with care:
+
+- If an algorithm step changes a particle's position, the touchVertexLastTime()
+  step will trigger a resort. This resort will potentially affect the 
+  subsequent construction of active and local sets. Therefore, the task 
+  generation has to be disabled for steps which alter the particles. 
+  
+  This is not a problem for sweeps following a resort. We might still drop 
+  particles and sort them into the vertices, but this happens before we build
+  up the active sets and trigger any action for a vertex in a preamble. So all
+  particles are in the right place once we think about constructing the graph.
+- For a vertex which is adjacent to an MPI boundary, we may not just fire a 
+  task and continue. The outcome of this task feeds into MPI directly and 
+  we therefore have to wait for it to complete.
+  
+The latter observation is one similar to the idea of enclave tasking in 
+ExaHyPE. However, it refers to vertices and has nothing to do with AMR. So it 
+is another materialisation of the same observation/rationale but something
+different to enclave tasking.
+
+As the arising task graph reflects the multiscale mesh 1:1, we can kind of 
+hard-code the task graph management into the mesh:
+
+- There is a global task pool of task indices (positive integers). Depending
+  on your back-end, these integers map onto memory locations (OpenMP), TBB 
+  tasks, or SYCL events.
+- Each vertex is assigned two indices when we hit it for the first time. One
+  index corresponds to touchVertexFirstTime(), one to touchVertexLastTime().
+
+@image html task-graph-tree.png
+
+We see that this scheme basically throws away the (partial) serialisation with 
+the space-filling curves for which Peano is built. However, we might argue
+that the serialisation is preserved along the subdomain boundaries and 
+reflected in the task creation pattern, where it might serve as task 
+scheduling/optimisation heuristics as long as the scheduler has some notion 
+of FIFO.
+
+The tree translators are held within python/swift2/graphcompiler/TaskTree.py.
+
+
+# Different particle species
+
+SWIFT supports multiple particle species. There are two fundamentally different
+ways to handle the species:
+
+1. Run the species one by one after each other.
+2. Merge the update of the species.
+
+The two approaches have their pros and cons. If you run the species one by one,
+it is possible to skip whole species whenever you know that they won't be 
+updated. This is very useful for local time stepping for example. At the same
+time, merging multiple species is advantageous whenever we frequently update
+multiple species: In this case, the arising concurrency level and work per cell
+will be higher as we fuse multiple species updates.
+
+
+We support both flavours in SWIFT 2 through two mechanisms. Both are realised
+within swift2/graphcompiler/SpeciesStepOrdering.py.
+
+1. The graph compiler supports a list of tuples of species plus steps. By
+   resorting this list, you can generate steps. 
+2. A step can completely be left out in the total scheme if a step will not 
+   perform any operations anyway.
+
+If you append all steps
+for species 2 to all steps of 1, i.e. if you merely concatenate the 
+sequences, the result will resemble an outer loop looping through the 
+species. If you zip the steps of the different particles, you get a mixture of 
+different particle updates, and potentially fewer mesh traversals with more
+operations.
+
+
+There is a disadvantage though: If a species is not updated at all, the 
+zipper version might still check each and every cell if the species is to be 
+updated. In the worst case, there are three species per traversal as none of
+them does anything. 
+
+
+
+@todo Skip mechanism does not exist yet I think.
+      Not sure if we need it at all. 
+      Not sure if the disadvantage is still there.
+
+ */
+ 
