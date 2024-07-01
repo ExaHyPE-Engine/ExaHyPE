@@ -21,7 +21,7 @@ surrounding the patch (blue). The outer (blue) cells are subsequentially
 used to determine a flow through the boundary into the domain.
 [\[figure:exahype:boundary-conditions\]]{#figure:exahype:boundary-conditions
 label="figure:exahype:boundary-conditions"}
-](boundary.pdf){#figure:exahype:boundary-conditions
+](documentation/exahype2/boundary.pdf){#figure:exahype:boundary-conditions
 width="20%"}
 
 Boundary conditions in general are realised via their own callback
