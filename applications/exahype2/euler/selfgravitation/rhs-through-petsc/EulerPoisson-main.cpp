@@ -60,59 +60,61 @@ tarch::timing::Measurement plotMeasurement;
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {
-  static bool                                  gridConstructed                       = false;
-  static bool                                  gridInitialised                       = false;
-  static bool                                  gridBalanced                          = false;
-  static double                                nextMaxPlotTimeStamp                  = euler::FirstPlotTimeStamp;
-  static double                                nextMinPlotTimeStamp                  = euler::FirstPlotTimeStamp;
-  static bool                                  haveJustWrittenSnapshot               = false;
-  static bool                                  haveReceivedNoncriticialAssertion     = false;
-  static bool                                  addGridSweepWithoutGridRefinementNext = false;
+  static bool                                  euler_gridConstructed                       = false;
+  static bool                                  poisson_gridCreated                         = false;
+  static bool                                  euler_gridInitialised                       = false;
+  static bool                                  euler_gridBalanced                          = false;
+  static double                                euler_nextMaxPlotTimeStamp                  = euler::FirstPlotTimeStamp;
+  static double                                euler_nextMinPlotTimeStamp                  = euler::FirstPlotTimeStamp;
+  static int                                   poisson_solverSteps;
+  static bool                                  euler_haveJustWrittenSnapshot               = false;
+  static bool                                  euler_haveReceivedNoncriticialAssertion     = false;
+  static bool                                  euler_addGridSweepWithoutGridRefinementNext = false;
   static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
     std::numeric_limits<double>::max()
   );
   static int globalNumberOfTrees = 0;
   bool       continueToSolve     = true;
 
-  if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
+  if (tarch::hasNonCriticalAssertionBeenViolated() and not euler_haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       euler::repositories::StepRepository::toProgramStep(euler::repositories::StepRepository::Steps::PlotSolution)
     );
-    haveReceivedNoncriticialAssertion = true;
+    euler_haveReceivedNoncriticialAssertion = true;
     logError(
-      "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate"
+      "selectNextAlgorithmicStep_euler()", "non-critical assertion has been triggered in code. Dump final state and terminate"
     );
   } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
-  } else if (gridConstructed and not gridBalanced) {
+  } else if (euler_gridConstructed and not euler_gridBalanced) {
     if (not euler::repositories::loadBalancer.isEnabled(true) and not euler::repositories::loadBalancer.hasSplitRecently()) {
-      logInfo("selectNextAlgorithmicStep()", "all ranks have switched off their load balancing");
-      gridBalanced = true;
+      logInfo("selectNextAlgorithmicStep_euler()", "all ranks have switched off their load balancing");
+      euler_gridBalanced = true;
     } else {
       logInfo(
-        "selectNextAlgorithmicStep()", "wait for load balancing to become stable: " << euler::repositories::loadBalancer
+        "selectNextAlgorithmicStep_euler()", "wait for load balancing to become stable: " << euler::repositories::loadBalancer
       );
     }
 
     peano4::parallel::Node::getInstance().setNextProgramStep(euler::repositories::StepRepository::toProgramStep(
       euler::repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing
     ));
-  } else if (gridBalanced and not gridInitialised) {
+  } else if (euler_gridBalanced and not euler_gridInitialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       euler::repositories::StepRepository::toProgramStep(euler::repositories::StepRepository::Steps::InitGrid)
     );
 
-    gridInitialised = true;
-  } else if (not gridConstructed) {
+    euler_gridInitialised = true;
+  } else if (not euler_gridConstructed) {
     if (tarch::la::max(peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()) < tarch::la::max(minH)) {
       minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
       logDebug(
-        "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement"
+        "selectNextAlgorithmicStep_euler()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement"
       );
-      addGridSweepWithoutGridRefinementNext = true;
+      euler_addGridSweepWithoutGridRefinementNext = true;
     } else if (euler::repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
-      logInfo("selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement)");
-      addGridSweepWithoutGridRefinementNext = true;
+      logInfo("selectNextAlgorithmicStep_euler()", "mesh has rebalanced recently, so postpone further refinement)");
+      euler_addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees                   = euler::repositories::loadBalancer.getGlobalNumberOfTrees();
     }
     else if (
@@ -123,22 +125,22 @@ bool selectNextAlgorithmicStep() {
       euler::repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == euler::repositories::StepRepository::Steps::CreateGrid
     ) {
       logInfo(
-        "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction"
+        "selectNextAlgorithmicStep_euler()", "grid has been stationary for quite some time. Terminate grid construction"
       );
-      addGridSweepWithoutGridRefinementNext = false;
-      gridConstructed                       = true;
+      euler_addGridSweepWithoutGridRefinementNext = false;
+      euler_gridConstructed                       = true;
     } else {
       logInfo(
-        "selectNextAlgorithmicStep()",
+        "selectNextAlgorithmicStep_euler()",
         "mesh rebalancing seems to be stationary, so study whether to refine mesh further in next sweep: "
           << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString()
       );
-      addGridSweepWithoutGridRefinementNext = false;
+      euler_addGridSweepWithoutGridRefinementNext = false;
       globalNumberOfTrees                   = euler::repositories::loadBalancer.getGlobalNumberOfTrees();
     }
 
     // Actual grid traversal choice
-    if (addGridSweepWithoutGridRefinementNext) {
+    if (euler_addGridSweepWithoutGridRefinementNext) {
       peano4::parallel::Node::getInstance().setNextProgramStep(euler::repositories::StepRepository::toProgramStep(
         euler::repositories::StepRepository::Steps::CreateGridButPostponeRefinement
       ));
@@ -150,55 +152,55 @@ bool selectNextAlgorithmicStep() {
 
     continueToSolve = true;
   } else {
-    if (euler::TimeInBetweenPlots > 0.0 and euler::repositories::getMinTimeStamp() < euler::MinTerminalTime and euler::repositories::getMaxTimeStamp() < euler::MaxTerminalTime and (euler::repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or euler::repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and euler::repositories::mayPlot()) {
-      if (euler::repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
-        nextMinPlotTimeStamp += euler::TimeInBetweenPlots;
+    if (euler::TimeInBetweenPlots > 0.0 and euler::repositories::getMinTimeStamp() < euler::MinTerminalTime and euler::repositories::getMaxTimeStamp() < euler::MaxTerminalTime and (euler::repositories::getMinTimeStamp() >= euler_nextMinPlotTimeStamp or euler::repositories::getMaxTimeStamp() >= euler_nextMaxPlotTimeStamp) and euler::repositories::mayPlot()) {
+      if (euler::repositories::getMinTimeStamp() >= euler_nextMinPlotTimeStamp) {
+        euler_nextMinPlotTimeStamp += euler::TimeInBetweenPlots;
       }
-      if (euler::repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-        nextMaxPlotTimeStamp += euler::TimeInBetweenPlots;
+      if (euler::repositories::getMaxTimeStamp() >= euler_nextMaxPlotTimeStamp) {
+        euler_nextMaxPlotTimeStamp += euler::TimeInBetweenPlots;
       }
 
-      if (nextMinPlotTimeStamp < euler::repositories::getMinTimeStamp()) {
+      if (euler_nextMinPlotTimeStamp < euler::repositories::getMinTimeStamp()) {
         logWarning(
-          "selectNextAlgorithmicStep()",
+          "selectNextAlgorithmicStep_euler()",
           "code is asked to plot every dt="
             << euler::TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
             << "So postpone next plot to t=" << (euler::repositories::getMinTimeStamp() + euler::TimeInBetweenPlots)
         );
-        nextMinPlotTimeStamp = euler::repositories::getMinTimeStamp() + euler::TimeInBetweenPlots;
-      } else if (nextMaxPlotTimeStamp < euler::repositories::getMaxTimeStamp()) {
+        euler_nextMinPlotTimeStamp = euler::repositories::getMinTimeStamp() + euler::TimeInBetweenPlots;
+      } else if (euler_nextMaxPlotTimeStamp < euler::repositories::getMaxTimeStamp()) {
         logWarning(
-          "selectNextAlgorithmicStep()",
+          "selectNextAlgorithmicStep_euler()",
           "code is asked to plot every dt="
             << euler::TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
             << "So postpone next plot to t=" << (euler::repositories::getMaxTimeStamp() + euler::TimeInBetweenPlots)
         );
-        nextMaxPlotTimeStamp = euler::repositories::getMaxTimeStamp() + euler::TimeInBetweenPlots;
+        euler_nextMaxPlotTimeStamp = euler::repositories::getMaxTimeStamp() + euler::TimeInBetweenPlots;
       }
 
-      nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
+      euler_nextMaxPlotTimeStamp = std::max(euler_nextMaxPlotTimeStamp, euler_nextMinPlotTimeStamp);
 
       peano4::parallel::Node::getInstance().setNextProgramStep(
         euler::repositories::StepRepository::toProgramStep(euler::repositories::StepRepository::Steps::PlotSolution)
       );
-      haveJustWrittenSnapshot = true;
+      euler_haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     } else if (euler::repositories::getMinTimeStamp() < euler::MinTerminalTime and euler::repositories::getMaxTimeStamp() < euler::MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
         euler::repositories::StepRepository::toProgramStep(euler::repositories::StepRepository::Steps::TimeStep)
       );
       continueToSolve         = true;
-      haveJustWrittenSnapshot = false;
+      euler_haveJustWrittenSnapshot = false;
     } else {
-      if (not haveJustWrittenSnapshot and euler::TimeInBetweenPlots > 0.0 and euler::repositories::mayPlot()) {
+      if (not euler_haveJustWrittenSnapshot and euler::TimeInBetweenPlots > 0.0 and euler::repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(
           euler::repositories::StepRepository::toProgramStep(euler::repositories::StepRepository::Steps::PlotSolution)
         );
         continueToSolve         = true; // don't want to terminate immediately
-        haveJustWrittenSnapshot = true;
-        nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
-        nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
-      } else if (not haveJustWrittenSnapshot and euler::TimeInBetweenPlots > 0.0 and not euler::repositories::mayPlot()) {
+        euler_haveJustWrittenSnapshot = true;
+        euler_nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
+        euler_nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
+      } else if (not euler_haveJustWrittenSnapshot and euler::TimeInBetweenPlots > 0.0 and not euler::repositories::mayPlot()) {
         continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete
       } else {
         continueToSolve = false;
@@ -219,9 +221,9 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << euler::repositories::StepRepository::toString(stepName));
+  logInfo("step_euler()", "run " << euler::repositories::StepRepository::toString(stepName));
 
-  static tarch::timing::Watch watch("::", "step()", false);
+  static tarch::timing::Watch watch("::", "step_euler()", false);
 
   static int creepingNumberOfLocalCells = 0;
 
@@ -233,7 +235,7 @@ void step() {
 
     euler::repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     euler::observers::CreateGridButPostponeRefinement observer;
@@ -242,9 +244,10 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
+    OTTER_POOL_POP(step_task, otter::label::step);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     euler::repositories::finishGridConstructionStep();
   } break;
@@ -255,7 +258,7 @@ void step() {
 
     euler::repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     euler::observers::CreateGrid observer;
@@ -264,9 +267,10 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
+    OTTER_POOL_POP(step_task, otter::label::step);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     euler::repositories::finishGridConstructionStep();
 
@@ -278,7 +282,7 @@ void step() {
   case euler::repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing: {
     if (creepingNumberOfLocalCells < ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1) {
       logInfo(
-        "step()",
+        "step_euler()",
         "it seems the grid has just refined before we switched to the phase where we make the load balancing converge. Wait for a few iterations more to give load balancing chance to catch up"
       );
       creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
@@ -291,7 +295,7 @@ void step() {
 
     // The smaller here corresponds to the -1 below
     if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and euler::repositories::loadBalancer.isEnabled(false)) {
-      logInfo("step()", "rank is degenerated so disable load balancing temporarily");
+      logInfo("step_euler()", "rank is degenerated so disable load balancing temporarily");
       euler::repositories::loadBalancer.enable(false);
     }
     if (
@@ -300,7 +304,7 @@ void step() {
           euler::repositories::loadBalancer.isEnabled(false)
         ) {
       logInfo(
-        "step()",
+        "step_euler()",
         "grid construction and decomposition on this rank seem to be stable as we have around "
           << creepingNumberOfLocalCells << " local cells in the heaviest tree. Disable load balancing temporarily"
       );
@@ -309,7 +313,7 @@ void step() {
 
     euler::repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     euler::observers::CreateGridButPostponeRefinement observer;
@@ -318,9 +322,10 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
+    OTTER_POOL_POP(step_task, otter::label::step);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     euler::repositories::finishGridConstructionStep();
 
@@ -332,7 +337,7 @@ void step() {
           euler::repositories::loadBalancer.isEnabled(false)
         ) {
       logInfo(
-        "step()",
+        "step_euler()",
         "have to decrement local cell counter "
           << creepingNumberOfLocalCells << " as maximum weight is "
           << ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
@@ -350,7 +355,7 @@ void step() {
 
     euler::repositories::startGridInitialisationStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     euler::observers::InitGrid observer;
@@ -359,9 +364,10 @@ void step() {
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
+    OTTER_POOL_POP(step_task, otter::label::step);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     euler::repositories::finishGridInitialisationStep();
   } break;
@@ -376,7 +382,7 @@ void step() {
 
     euler::repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     euler::observers::PlotSolution observer;
@@ -385,16 +391,17 @@ void step() {
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
+    OTTER_POOL_POP(step_task, otter::label::step);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     euler::repositories::finishPlottingStep();
   } break;
   case euler::repositories::StepRepository::Steps::TimeStep: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("time-step");
     if (euler::repositories::loadBalancer.isEnabled(false)) {
-      logInfo("step()", "disable load balancing throughout initialisation (to be removed in later releases)");
+      logInfo("step_euler()", "disable load balancing throughout initialisation (to be removed in later releases)");
       euler::repositories::loadBalancer.enable(false);
     }
 
@@ -409,7 +416,7 @@ void step() {
 
     euler::repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     euler::observers::TimeStep observer;
@@ -418,9 +425,10 @@ void step() {
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_TASK_WAIT_IMPLICIT(descendants);
+    OTTER_POOL_POP(step_task, otter::label::step);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     euler::repositories::finishTimeStep();
   } break;
@@ -455,6 +463,8 @@ int main(int argc, char** argv) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
   }
+
+  peano4::runTestsAndBenchmarks();
 
   euler::repositories::DataRepository::initDatatypes();
 
