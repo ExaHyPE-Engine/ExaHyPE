@@ -125,17 +125,10 @@ class SingleSweep(ADERDG):
         )
 
 
-    def _clear_face_data_default_guard(self):
-        return super(
-            SingleSweep, self
-        )._clear_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
-            self.get_name_of_global_instance(), self._name
-        ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
-
     def _shift_face_data_default_guard(self):
         return super(
             SingleSweep, self
-        )._shift_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Timestep".format(
+        )._shift_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
 
@@ -145,7 +138,6 @@ class SingleSweep(ADERDG):
         )._restrict_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         )
-
 
     def _interpolate_face_data_default_guard(self):
         return super(

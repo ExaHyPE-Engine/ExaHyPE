@@ -602,7 +602,6 @@ class ADERDG(object):
 
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
             solver=self,
-            clear_guard=self._clear_face_data_default_guard(),
             shift_guard=self._shift_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
@@ -755,16 +754,6 @@ class ADERDG(object):
             + " and not marker.hasBeenRefined() and fineGridFace"
             + self._name
             + "FaceLabel.getBoundary()"
-        )
-
-    def _clear_face_data_default_guard(self):
-        return (
-            "not marker.willBeRefined()"
-            + "and repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridConstruction "
         )
 
     def _shift_face_data_default_guard(self):
