@@ -7,10 +7,7 @@ import peano4.solversteps
 import jinja2
 class SaveNewCellData(AbstractLimiterActionSet):
   TemplateSaveNewCellData = """
-
   if ( {{PREDICATE}} ) {
-
-
     {% if COPY_OLD_VALUES %}
       //copying old values
       std::copy_n(
@@ -24,15 +21,14 @@ class SaveNewCellData(AbstractLimiterActionSet):
       );
     {% endif %}
 
-
     {% if USE_DMP %}
       //resetting local min and max
       constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
       double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
 
-      kernels::limiter::findCellLocalMinAndMax(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_regularOld.value,
+      kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
         repositories::{{SOLVER_INSTANCE}},
+        fineGridCell{{UNKNOWN_IDENTIFIER}}_regularOld.value,
         localMinPerVariables, localMaxPerVariables
       );
 
@@ -44,7 +40,6 @@ class SaveNewCellData(AbstractLimiterActionSet):
           std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+2*numberOfObservables);
       }
     {% endif %}
-
 
     {% if RESET_TROUBLED_MARKERS %}
       //resetting troubled markers
@@ -63,13 +58,11 @@ class SaveNewCellData(AbstractLimiterActionSet):
       fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
       fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
     {% endif %}
-
   }
-
 """
-  
+
   def __init__(self, solver, guard, copy_old_values=False, use_dmp=False, reset_troubled_markers=False, transmit_cell_timestamps=False):
-    super(SaveNewCellData,self).__init__(solver)
+    super(SaveNewCellData, self).__init__(solver)
     self.guard                      = guard
     self._copy_old_values           = copy_old_values
     self._use_dmp                   = use_dmp
@@ -88,17 +81,17 @@ class SaveNewCellData(AbstractLimiterActionSet):
       d["RESET_TROUBLED_MARKERS"]   = self._reset_troubled_markers
       d["TRAMSMIT_CELL_TIMESTAMPS"] = self._transmit_cell_timestamps
       result = jinja2.Template(self.TemplateSaveNewCellData).render(**d)
-      pass 
     return result
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
-  
+
   def get_includes(self):
       return (
           super(SaveNewCellData, self).get_includes()
           + """
-#include "../kernels/limiter/fv/Kernels.h"
+#include "kernels/"""
+            + self._solver._name
+            + """/Limiter.h"
     """
       )

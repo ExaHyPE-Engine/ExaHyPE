@@ -93,7 +93,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     #endif
 
     if (tarch::la::smaller(_maxEigenvalue, 0.0)) {
-      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue >= 0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
       // Keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
     } else if (tarch::la::equals(_maxEigenvalue, 0.0)) {

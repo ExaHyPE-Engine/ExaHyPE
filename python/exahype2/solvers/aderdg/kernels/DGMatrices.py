@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import peano4.output
 
-from .MathUtils import MathUtils
+from exahype2.solvers.MathUtils import MathUtils
 
 
 class DGMatrices(object):

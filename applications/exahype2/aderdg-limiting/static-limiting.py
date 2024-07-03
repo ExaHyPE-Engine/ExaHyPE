@@ -1,15 +1,11 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../../python"))
-sys.path.insert(0, os.path.abspath("./limiting"))
-
 import peano4
 import exahype2
-from limiting import StaticLimiting
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-project = exahype2.Project(["examples", "limiting", "SWE"], "limitedSWE", executable="AbsorbingBoundary")
+project = exahype2.Project(["applications", "limiting", "SWE"], "limitedSWE", executable="AbsorbingBoundary")
 
 dimensions = 2
 min_level  = 3
@@ -116,10 +112,10 @@ fvSolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 project.add_solver(fvSolver)
 
 #actual limiting solver
-limiter = StaticLimiting(
+limiter = exahype2.solvers.limiting.StaticLimiting(
   name            = "limitingSolver",
-  regularSolver   = aderSolver,
-  limitingSolver  = fvSolver,
+  regular_solver   = aderSolver,
+  limiting_solver  = fvSolver,
   limiting_criterion_implementation = limiting_criterion
 )
 project.add_solver(limiter)

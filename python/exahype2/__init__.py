@@ -27,6 +27,7 @@ except ImportError:
 if havenumpy and havempmath:
     import exahype2.solvers.rkdg
     import exahype2.solvers.aderdg
+    import exahype2.solvers.limiting
 
 havesympy = False
 try:

@@ -11,7 +11,9 @@ namespace {{ item }} {
 {%- endfor %}
 
 {% if USE_LIBXSMM %}
+
 {% for gemm,precision in gemmList %}
+
 {% if precision == "DP" %}
 void {{gemm}}(const double* A, const double* B, double* C);
 {% elif precision == "SP"%}
@@ -19,7 +21,9 @@ void {{gemm}}(const float* A, const float* B, float* C);
 {% else %}
 void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% endif %}
+
 {% endfor %}
+
 {% endif %}{# USE_LIBXSMM #}
 
 {% for item in NAMESPACE -%}
@@ -32,7 +36,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
    (M x N)              (M x K)  (K x N)
   The gemms (fetched through gemm_key) contains M, N, K, LDA, LDB, LDC, alpha and beta
 
-  String gemm_key   : name of the associated GEMMS
+  String gemm_key  : name of the associated GEMMS
   String A         : name of A
   String B         : name of B
   String C         : name of C

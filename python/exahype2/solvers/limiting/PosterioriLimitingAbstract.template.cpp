@@ -14,81 +14,64 @@
 
 #include "repositories/SolverRepository.h"
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _cellUpdates(0),
   _numberOfTroubledCellsThisTimeStep(0) {
-
-  kernels::limiter::Quadrature<double>::initQuadratureNodesAndWeights();
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
+
+  kernels::{{SOLVER_NAME}}::Quadrature<double>::initQuadratureNodesAndWeights();
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
-  kernels::limiter::Quadrature<double>::freeQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::Quadrature<double>::freeQuadratureNodesAndWeights();
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinTimeStamp();
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxTimeStamp();
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinTimeStepSize();
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxTimeStepSize();
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMaxMeshSize();
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinMeshSize();
 }
-
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
   return _solverState;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
 }
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   _solverState = SolverState::GridInitialisation;
 }
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
-
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
@@ -119,14 +102,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   if (_solverState==SolverState::RegularSolver) {
-
     _cellUpdates    = 0;
     _numberOfTroubledCellsThisTimeStep = 0;
-
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
-
 
   if (_solverState==SolverState::RegularSolver) {
     repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
@@ -141,60 +121,48 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   if(_solverState==SolverState::LimiterStatusSpreadingToNeighbours
     or _solverState==SolverState::LimiterStatusSpreadingToSecondNeighbours
-    ){
+    ) {
     repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
     repositories::{{REGULAR_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
   }
 
   if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster()
+    ::tarch::mpi::Rank::getInstance().isGlobalMaster()
 //    and ( _solverState==SolverState::RegularSolver or _solverState==SolverState::LimiterSolver )
   ) {
 
-    logInfo( "startTimeStep(...)", "LIMITING SOLVER" );
-    logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
-    logInfo( "startTimeStep()", "total number of troubled cells: = " << _numberOfTroubledCellsThisTimeStep );
-    logInfo( "startTimeStep(...)", "LIMITING SOLVER\n" );
-
-    // if(_numberOfTroubledCellsThisTimeStep>0){
-    //     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_numberOfTroubledCellsThisTimeStep>0", "_numberOfTroubledCellsThisTimeStep: " + std::to_string(_numberOfTroubledCellsThisTimeStep) );
-    // }
+    logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep(...)", "total number of troubled cells: " << _numberOfTroubledCellsThisTimeStep);
+    logInfo("startTimeStep(...)", "phase " + toString(_solverState));
   }
-
-
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-	if ( isLastGridSweepOfTimeStep() ) {
+  if (isLastGridSweepOfTimeStep()) {
+    #ifdef Parallel
+    int newCellUpdates = _cellUpdates;
+    int newNumberOfTroubleCells = _numberOfTroubledCellsThisTimeStep;
 
-  #ifdef Parallel
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newCellUpdates,
+        &_cellUpdates,
+        1, MPI_INT,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  int newCellUpdates = _cellUpdates;
-  int newNumberOfTroubleCells = _numberOfTroubledCellsThisTimeStep;
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newNumberOfTroubleCells,
+        &_numberOfTroubledCellsThisTimeStep,
+        1, MPI_INT,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    #endif
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newCellUpdates,
-      &_cellUpdates,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newNumberOfTroubleCells,
-      &_numberOfTroubledCellsThisTimeStep,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  #endif
-
-  {{FINISH_TIME_STEP_IMPLEMENTATION}}
-
+    {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStamp,
@@ -218,17 +186,17 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
     case SolverState::GridInitialisation:
       return "grid-initialisation";
     case SolverState::RegularSolver:
-      return "regular (non-limiting) solver";
+      return "regular-(non-limiting)-solver";
     case SolverState::LimiterStatusSpreadingToNeighbours:
-			return "limiter status spreading to neighbours";
+      return "limiter-status-spreading-to-neighbours";
     case SolverState::LimiterStatusSpreadingToSecondNeighbours:
-			return "limiter status spreading to second neighbours";
+      return "limiter-status-spreading-to-second-neighbours";
     case SolverState::LimiterSolver:
-			return "limiting solver";
+      return "limiting-solver";
     case SolverState::Plotting:
       return "plotting";
     case SolverState::Suspended:
-			return "suspended";
+      return "suspended";
   }
   return "<undef>";
 }
@@ -297,7 +265,6 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::isPhysicallyAdmissible(
   const tarch::la::Vector<Dimensions,double>& h,
   const double timeStamp
 ){
-
   {% if ADMISSIBILITY_IMPLEMENTATION!="<none>"%}
   {{ADMISSIBILITY_IMPLEMENTATION}}
   {% else %}
@@ -306,6 +273,5 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::isPhysicallyAdmissible(
 
 }
 {% endif %}
-
 
 {{SOLVER_USER_DEFINITIONS}}

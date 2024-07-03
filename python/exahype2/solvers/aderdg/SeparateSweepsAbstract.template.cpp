@@ -32,7 +32,6 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
   //initialise nodes, weights and matrices for use of the kernels
@@ -44,7 +43,6 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
-
   {{DESTRUCTOR_IMPLEMENTATION}}
 
   //free the generated nodes, weights and matrices
@@ -52,49 +50,39 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
   {% endfor %}
-
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
   return getMaxCellSize();
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _minCellHThisTimeStep : _minCellH;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _maxCellHThisTimeStep : _maxCellH;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
   return _minTimeStepSize;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return _maxTimeStepSize;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double cellSize) {
   tarch::multicore::Lock lock(_semaphore);
@@ -196,11 +184,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const double t,
-      const double dt, 
+      const double dt,
       const tarch::la::Vector<Dimensions, double>& x,
       const tarch::la::Vector<Dimensions, double>& h,
-      const int direction, 
-      bool isBoundaryFace, 
+      const int direction,
+      bool isBoundaryFace,
       int faceIndex) {
   {{RIEMANN_SOLVER_IMPLEMENTATION}}
 }

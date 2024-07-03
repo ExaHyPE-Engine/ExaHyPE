@@ -20,11 +20,11 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
       and
       isFirstGridSweepOfTimeStep()
     ) {
-      logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-      logInfo("startTimeStep()", "t       = " << _minTimeStampThisTimeStep);
-      logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
-      logInfo("startTimeStep()", "h_{min} = " << _minCellH);
-      logInfo("startTimeStep()", "h_{max} = " << _maxCellH);
+      logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:" );
+      logInfo("startTimeStep(...)", "t       = " << _minTimeStampThisTimeStep);
+      logInfo("startTimeStep(...)", "dt      = " << getTimeStepSize());
+      logInfo("startTimeStep(...)", "h_{min} = " << _minCellH);
+      logInfo("startTimeStep(...)", "h_{max} = " << _maxCellH);
   }
 """
 

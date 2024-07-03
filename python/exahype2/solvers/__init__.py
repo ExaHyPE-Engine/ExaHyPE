@@ -11,4 +11,5 @@ from .LocalTimeSteppingCodeSnippets              import LocalTimeSteppingCodeSni
 
 from .LagrangeBasisWithDiagonalMassMatrix        import GaussLegendreBasis
 
+from .MathUtils                                  import MathUtils
 from .ErrorMeasurement                           import ErrorMeasurement

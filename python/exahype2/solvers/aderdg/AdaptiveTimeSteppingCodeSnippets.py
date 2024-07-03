@@ -39,12 +39,12 @@ class AdaptiveTimeSteppingCodeSnippets(
         and
         isFirstGridSweepOfTimeStep()
       ) {
-        logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
-        logInfo("startTimeStep()", "t            = " << _minTimeStamp);
-        logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-        logInfo("startTimeStep()", "h_{min}      = " << _minCellH);
-        logInfo("startTimeStep()", "h_{max}      = " << _maxCellH);
-        logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
+        logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:");
+        logInfo("startTimeStep(...)", "t            = " << _minTimeStamp);
+        logInfo("startTimeStep(...)", "dt           = " << getAdmissibleTimeStepSize());
+        logInfo("startTimeStep(...)", "h_{min}      = " << _minCellH);
+        logInfo("startTimeStep(...)", "h_{max}      = " << _maxCellH);
+        logInfo("startTimeStep(...)", "lambda_{max} = " << _maxEigenvalue);
       }
 
       if (isFirstGridSweepOfTimeStep()) {

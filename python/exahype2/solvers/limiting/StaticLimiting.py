@@ -1,41 +1,37 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import dastgen2
-import peano4
-import exahype2
-
-import jinja2
 import os
-
 from abc import abstractmethod
 
+import jinja2
+
+import dastgen2
+import peano4.output
+import exahype2.grid
+import exahype2.solvers.limiting.kernels
+
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.aderdg.ADERDG import get_face_overlap_merge_implementation
-
-from .actionsets import ( SaveNewCellData, SpreadLimiterStatus,
-    CopyAndConvertPatch, VerifyTroubledness)
 from exahype2.solvers.aderdg import Polynomials
-from exahype2.solvers.aderdg.KernelGenerator import generate_limiter_kernels
+from exahype2.solvers.aderdg.Architectures import Architectures
 
+from .actionsets import (SaveNewCellData, SpreadLimiterStatus,
+    CopyAndConvertPatch, VerifyTroubledness)
 class StaticLimiting(object):
-    # initialization stores the key information about the solver and initializes a number of variables for later usage
+    # Initialisation stores the key information about the solver and initialises a number of variables for later usage
     def __init__(
         self,
         name,
-        regularSolver,
-        limitingSolver,
-        limiting_criterion_implementation  = PDETerms.User_Defined_Implementation
+        regular_solver,
+        limiting_solver,
+        limiting_criterion_implementation = PDETerms.User_Defined_Implementation
     ):
-
-
-        # name of the limiting solver
         self._name = name
 
-        # respectively solver to be used in stable regions and solver to be used in unstable regions
-        self._regular_solver  = regularSolver
-        self._limiter_solver = limitingSolver
+        # Respectively solver to be used in stable regions and solver to be used in unstable regions
+        self._regular_solver  = regular_solver
+        self._limiter_solver = limiting_solver
 
-        self._halo_size = int(limitingSolver._patch_overlap_old.dim[0]/2)
+        self._halo_size = int(limiting_solver._patch_overlap_old.dim[0] / 2)
 
         """
         These will be used by children of this class to fill them with the declaration and definition of the
@@ -50,7 +46,7 @@ class StaticLimiting(object):
         """
         Used by child classes, will contain code to be executed at the start and end respectively of the
         time step. Typically specifies some timestep variable and advances the overall timestamp of the
-        entire solver. 
+        entire solver.
         """
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
@@ -62,20 +58,18 @@ class StaticLimiting(object):
             or self._physical_admissibility_criterion==PDETerms.Empty_Implementation):
             raise Exception("Limiting criterion cannot be none")
 
-
         # create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified
         self.create_data_structures()
         self.create_action_sets()
 
     """
-    Creates all the structures which are attached on the peano grid either in a cell or on the faces.
-    These are defined as peano patches which have given sizes to contain persistent data as well as 
+    Creates all the structures which are attached on the Peano grid either in a cell or on the faces.
+    These are defined as Peano patches which have given sizes to contain persistent data as well as
     conditions for when they should be merged, sent, received, stored, loaded, etc.
     """
 
     @abstractmethod
     def create_data_structures(self):
-        
         """
         This will serve as a face marker to communicate with neighbouring cells whether
         a given cell is troubled, is neighbouring a troubled cell, or is fine.
@@ -97,10 +91,9 @@ class StaticLimiting(object):
     double timeStepSize = repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize();
 """
 
-
     """
-    Creates the action sets, these are actions tied to the grid that are executed at given points of 
-    grid generation, construction or steps of the ader-dg solver. Peano handles grid structures that
+    Creates the action sets, these are actions tied to the grid that are executed at given points of
+    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures that
     contain data as well as operations that are executed on that data. These are the latter.
     The guard here are the conditions for the execution of the operation, as in they are only executed
     if the guard evaluates to true.
@@ -108,7 +101,6 @@ class StaticLimiting(object):
 
     @abstractmethod
     def create_action_sets(self):
-
         self._action_set_save_new_cell_data = SaveNewCellData(self,
             guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
                 + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepping"
@@ -137,7 +129,7 @@ class StaticLimiting(object):
         )
 
         """
-        saving cell needs to happen before the cell is used for any computations
+        Saving cell needs to happen before the cell is used for any computations
         checking troubledness needs to happen in the initialization after the regular solver
         has computed its initial condition.
         spreading limiter status happens once in its own dedicated step after initialization
@@ -147,7 +139,7 @@ class StaticLimiting(object):
           happens before they are used in the first grid traversal, so either at the very
           beginning of the first grid traversal or at the end of the second, so that
           regular-to-limiter and limiter-to-regular cells both have access to either version
-          and can therefore project both variants of their faces 
+          and can therefore project both variants of their faces
         """
         self._action_set_save_new_cell_data.descend_invocation_order            = 0
         self._action_set_check_troubledness.descend_invocation_order            = 1000
@@ -162,11 +154,10 @@ class StaticLimiting(object):
             " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()<=celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
         )
 
-        self._limiter_solver._action_set_update_cell.guard += ( 
+        self._limiter_solver._action_set_update_cell.guard += (
            " and " + "repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
          + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
          )
-
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -175,7 +166,7 @@ class StaticLimiting(object):
 
     def get_user_action_set_includes(self):
         return self.user_action_set_includes
-    
+
     def get_user_solver_includes(self):
         return self.user_solver_includes
 
@@ -185,7 +176,6 @@ class StaticLimiting(object):
         routines from other header files.
         """
         self.user_action_set_includes += value
-
 
     def _store_cell_data_default_guard(self):
         return (
@@ -216,7 +206,7 @@ class StaticLimiting(object):
             + self._name
             + "::SolverState::GridConstruction"
         )
-            
+
     def _load_cell_data_default_guard(self):
         return (
             "not marker.hasBeenRefined() "
@@ -294,11 +284,11 @@ class StaticLimiting(object):
         return self._name + "Q"
 
     def get_name_of_global_instance(self):
-        return "InstanceOf" + self._name
+        return "instanceOf" + self._name
 
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h" 
+#include "tarch/la/Vector.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
@@ -306,12 +296,11 @@ class StaticLimiting(object):
 #include "repositories/SolverRepository.h"
 """
 
-
     """
-  The following functions will be called by the peano4 project,
-  they tell peano which of our generated data it should attach
-  to each grid element and use.
-  """
+    The following functions will be called by the Peano4 project,
+    they tell Peano which of our generated data it should attach
+    to each grid element and use.
+    """
 
     def __str__(self):
         result = (
@@ -339,7 +328,7 @@ Type:                   """ + self.__class__.__name__
     def add_actions_to_plot_solution(self, step, output_path):
         pass
 
-    # these actions are executed during each time step
+    # These actions are executed during each time step
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_save_new_cell_data)
         step.add_action_set(self._action_set_spread_limiter_status)
@@ -348,45 +337,30 @@ Type:                   """ + self.__class__.__name__
     def set_plot_description(self, description):
         self.plot_description = description
 
+    def _generate_kernels(self, namespace, output, subdirectory, dimensions):
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
+        self.add_entries_to_text_replacement_dictionary(d)
+        d["DIMENSIONS"] = dimensions
+        d["NUMBER_OF_DOF_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF"]
+        d["NUMBER_OF_DOF_LIMITER_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF_LIMITER"]
+        d["GHOST_LAYER_WIDTH_3D"] = 0 if dimensions == 2 else d["GHOST_LAYER_WIDTH"]
+        d["FULL_QUALIFIED_SOLVER_NAME"] ="::".join(namespace) + "::" + self._name
 
-    def generate_kernels(self, namespace, output, dimensions):
-        full_qualified_namespace = ""
-        for i in namespace:
-            full_qualified_namespace += i + "::"
-        full_qualified_namespace += self._name
+        kernels_namespace = namespace + ["kernels", self._name]
+        kernels_output_path = subdirectory + "kernels/" + self._name
+        kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
-        generate_limiter_kernels(
-            full_qualified_namespace,
-            self._regular_solver._unknowns,
-            self._regular_solver._auxiliary_variables,
-            self._regular_solver._order,
-            dimensions,
-            limPatchSize=self._limiter_solver.patch_size,
-            numberOfObservable=0,
-            ghostLayerWidth=self._halo_size,
-            useGaussLobatto=(
-                True if self._regular_solver._polynomials is Polynomials.Gauss_Lobatto else False
-            ),
-            # (
-            #   True if self._polynomials is Polynomials.Gauss_Lobatto else False
-            # ),
-            # useLibxsmm=self._use_libxsmm,
-            # useBLIS=self._use_BLIS,
-            # useEigen=self._use_Eigen,
-            # useLibxsmmJIT=self._use_libxsmm_JIT,
-            # architecture=self._architecture
+        if not os.path.exists(kernels_output_path):
+           os.makedirs(kernels_output_path)
+
+        exahype2.solvers.limiting.kernels.Quadrature(d).generate_kernels(
+            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
 
-        output.makefile.add_cpp_file(
-          "kernels/limiter/fv/Quadrature.cpp",
-          generated=True,
+        exahype2.solvers.limiting.kernels.Limiter(d).generate_kernels(
+            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
-
-        output.makefile.add_cpp_file(
-          "kernels/limiter/fv/limiter.cpp",
-          generated=True,
-        )
-
 
     """
     This tells peano to add the solver files to the project. It generates any files that are not
@@ -443,7 +417,7 @@ Type:                   """ + self.__class__.__name__
         output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
         output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
 
-        self.generate_kernels(namespace, output, dimensions)
+        self._generate_kernels(namespace, output, subdirectory, dimensions)
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
@@ -454,7 +428,6 @@ Type:                   """ + self.__class__.__name__
     information from the solver or which was specified by the user.
     """
     def _init_dictionary_with_default_parameters(self, d):
-
         d["SOLVER_INSTANCE"]         = self.get_name_of_global_instance()
         d["REGULAR_SOLVER_INSTANCE"] = self._regular_solver.get_name_of_global_instance()
         d["LIMITER_SOLVER_INSTANCE"] = self._limiter_solver.get_name_of_global_instance()
@@ -467,10 +440,21 @@ Type:                   """ + self.__class__.__name__
         d["REGULAR_SOLVER_UNKNOWN_IDENTIFIER"] = self._regular_solver._unknown_identifier()
         d["LIMITER_SOLVER_UNKNOWN_IDENTIFIER"] = self._limiter_solver._unknown_identifier()
 
-        d["SOLVER_INCLUDES"] = self.get_user_solver_includes()
-
-        d["LIMITER_PATCH_SIZE"] = self._limiter_solver.patch_size
-        d["LIMITER_VARIABLES"]  = self._limiter_solver.unknowns + self._limiter_solver.auxiliary_variables
+        d["ALIGNMENT"]          = Architectures.get_alignment(self._regular_solver._architecture)
+        d["SIMD_WIDTH"]         = Architectures.get_simd_width(self._regular_solver._architecture)
+        d["ORDER"]              = self._regular_solver._order
+        d["NUMBER_OF_DOF"]      = self._regular_solver._order + 1
+        d["NUMBER_OF_DOF_PADDED"] = Architectures.get_size_with_padding(self._regular_solver._architecture, self._regular_solver._order + 1)
+        d["NUMBER_OF_DOF_LIMITER"] = self._limiter_solver.patch_size if self._limiter_solver.patch_size >= 0 else 2 * self._regular_solver._order + 1
+        d["NUMBER_OF_DOF_LIMITER_PADDED"] = Architectures.get_size_with_padding(self._regular_solver._architecture, d["NUMBER_OF_DOF_LIMITER"])
+        d["NUMBER_OF_UNKNOWNS"]             = self._regular_solver._unknowns
+        d["NUMBER_OF_UNKNOWNS_PADDED"]      = Architectures.get_size_with_padding(self._regular_solver._architecture, self._regular_solver._unknowns)
+        d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._regular_solver._auxiliary_variables
+        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = Architectures.get_size_with_padding(self._regular_solver._architecture, self._regular_solver._auxiliary_variables)
+        d["NUMBER_OF_DATA"]                     = self._regular_solver._unknowns + self._regular_solver._auxiliary_variables
+        d["NUMBER_OF_DATA_PADDED"]              = Architectures.get_size_with_padding(self._regular_solver._architecture, self._regular_solver._unknowns + self._regular_solver._auxiliary_variables)
+        d["NUMBER_OF_OBSERVABLES"]              = 0
+        d["GHOST_LAYER_WIDTH"]                  = self._halo_size
 
         d["NUMBER_OF_DOFS_PER_CELL_2D"] = (
             (self._regular_solver.unknowns + self._regular_solver.auxiliary_variables)
@@ -478,6 +462,11 @@ Type:                   """ + self.__class__.__name__
         d["NUMBER_OF_DOFS_PER_CELL_3D"] = (
             (self._regular_solver.unknowns + self._regular_solver.auxiliary_variables)
             * (self._regular_solver.order+1) * (self._regular_solver.order+1) * (self._regular_solver.order+1) )
+
+        d["USE_GAUSS_LOBATTO"] = ( "true" if self._regular_solver._polynomials is Polynomials.Gauss_Lobatto else "false" )
+        d["POLYNOMIAL_TYPE"]   = ( "lobatto" if self._regular_solver._polynomials is Polynomials.Gauss_Lobatto else "legendre" )
+
+        d["SOLVER_INCLUDES"] = self.get_user_solver_includes()
 
         d["SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._solver_user_declarations, undefined=jinja2.DebugUndefined
@@ -498,3 +487,8 @@ Type:                   """ + self.__class__.__name__
         ).render(**d)
 
         d["ADMISSIBILITY_IMPLEMENTATION"]  = self._physical_admissibility_criterion
+
+        d["QUADRATURE_POINTS"]      = ", ".join(self._regular_solver._basis.quadrature_points())
+
+        d["USE_LIBXSMM"] = self._regular_solver._use_libxsmm
+        d["ARCHITECTURE"] = self._regular_solver._architecture

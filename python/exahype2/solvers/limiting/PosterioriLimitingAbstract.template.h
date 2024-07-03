@@ -6,9 +6,11 @@
 // **********************************************************************************************
 #pragma once
 
-#include "exahype2/Solver.h"
-#include "exahype2/NonCriticalAssertions.h"
+#include "Constants.h"
 
+#include "exahype2/Solver.h"
+
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
@@ -16,9 +18,7 @@
 
 #include "peano4/utils/Globals.h"
 
-#include "Constants.h"
-
-#include "kernels/limiter/fv/Quadrature.h"
+#include "kernels/{{SOLVER_NAME}}/Quadrature.h"
 
 {{SOLVER_INCLUDES}}
 
@@ -34,27 +34,6 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    /**
-     * This is a "fake" enum, i.e. we do not use it to distinguish different
-     * variants. Instead, we use it as a fix that allows us to "overload"
-     * operations:
-     *
-     * In C++ you cannot overload w.r.t. static. We however need functions which
-     * exist twice in ExaHyPE: Once as standard (virtual) member functions and
-     * once at static version which an be offloaded to a GPU as it does not
-     * have a state. Both function variants, in theory, have the same signature
-     * but if they had, a compiler could not distinguish them. So I use this
-     * enum for the GPU version.
-     *
-     * If you create a solver without GPU support, this enum will not be used.
-     * It is however always created. Once you write a GPU version and then compile
-     * without GPU support, you will thus still be able to have all your GPU
-     * function variants, and you don't have to work with ifdefs.
-     */
-    enum class Offloadable {
-      Yes
-    };
-
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -221,8 +200,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         const double timeStamp) {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %} = 0 {% else %} final {% endif %};
 {% endif %}
 
-
-
   protected:
     static tarch::logging::Log  _log;
 
@@ -234,8 +211,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
-
   {{SOLVER_USER_DECLARATIONS}}
 };
-
-

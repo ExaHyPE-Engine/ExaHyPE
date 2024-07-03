@@ -1,18 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-precisionTranslate = {
-    "DP": "DP",
-    "double": "DP",
-    "SP": "SP",
-    "float": "SP",
-    "single": "SP",
-    "_Float16": "HP",
-    "std::float16_t": "HP",
-    "__bf16": "HP",
-    "std::bfloat16_t": "HP",
-    "half_float::half": "HP",
-}
-
 
 class Gemms:
     """Specification of a dense matrix-matrix multiplication
@@ -28,6 +15,19 @@ class Gemms:
       }
     }
     """
+
+    PrecisionTranslate = {
+        "DP": "DP",
+        "double": "DP",
+        "SP": "SP",
+        "float": "SP",
+        "single": "SP",
+        "_Float16": "HP",
+        "std::float16_t": "HP",
+        "__bf16": "HP",
+        "std::bfloat16_t": "HP",
+        "half_float::half": "HP",
+    }
 
     # dgemm, dgemv, ....
     operationType = ""
@@ -83,7 +83,7 @@ class Gemms:
         if type(precision) is not list:
             precision = [precision]
         for key in precision:
-            if key not in precisionTranslate.keys():
+            if key not in self.PrecisionTranslate.keys():
                 raise ("Unknown precision")
         if (M > LDC) or (K > LDB) or (M > LDA):
             raise ("Incompatible matrix sizes and leading dimensions")
@@ -107,7 +107,7 @@ class Gemms:
         self.baseroutinename = (
             operationType + "_" + str(M) + "_" + str(N) + "_" + str(K) + "_" + name
         )
-        self.precision = [precisionTranslate[key] for key in precision]
+        self.precision = [self.PrecisionTranslate[key] for key in precision]
 
     def __repr__(self):
         return (

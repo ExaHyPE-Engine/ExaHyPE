@@ -7,9 +7,7 @@ import peano4.solversteps
 import jinja2
 class SpreadLimiterStatus(AbstractLimiterActionSet):
   TemplateSpreadLimiterStatus = """
-
   if ( {{PREDICATE}} ) {
-
       if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()==celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED) return;
 
       bool hasTroubledNeighbour = false;
@@ -27,11 +25,9 @@ class SpreadLimiterStatus(AbstractLimiterActionSet):
           );
         }
       }
-
   }
-
 """
-  
+
   def __init__(self,solver,guard):
     super(SpreadLimiterStatus,self).__init__(solver)
     self.guard               = guard
@@ -44,9 +40,8 @@ class SpreadLimiterStatus(AbstractLimiterActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATE" ]           = self.guard
       result = jinja2.Template(self.TemplateSpreadLimiterStatus).render(**d)
-      pass 
+      pass
     return result
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")

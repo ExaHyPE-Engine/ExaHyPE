@@ -4,9 +4,8 @@ from copy import deepcopy
 
 import peano4.output
 
-from .MathUtils import MathUtils
-from ..Architectures import Architectures
-
+from exahype2.solvers.MathUtils import MathUtils
+from exahype2.solvers.aderdg.Architectures import Architectures
 
 class Quadrature(object):
     def __init__(self, dictionary):
@@ -22,7 +21,7 @@ class Quadrature(object):
             OtherQuadratureWeights, OtherQuadratureNodes = MathUtils.getGaussLobatto(
                 self.d["NUMBER_OF_DOF"]
             )
-        elif ["POLYNOMIAL_TYPE"] == "lobatto":
+        elif self.d["POLYNOMIAL_TYPE"] == "lobatto":
             QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(
                 self.d["NUMBER_OF_DOF"]
             )

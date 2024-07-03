@@ -8,96 +8,42 @@
 
 #include <mm_malloc.h>
 
-// Use {{quadratureType}} quadrature
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights1;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights2;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights3;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights4;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::iweights1;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::iweights3;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::nodes;
-{% if kernelType=="limiter" %}
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::uh2lob;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::dg2fv;
-template <typename T> T* {{codeNamespace}}::Quadrature<T>::fv2dg;
-{% endif %}
+// Use {{POLYNOMIAL_TYPE}} quadrature
 
-{% for precision_number in range(0,computePrecisions|length) %}
-template class {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>;
-{% endfor %}
+template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::nodes;
+template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::uh2lob;
+template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::dg2fv;
+template <typename T> T* {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<T>::fv2dg;
 
-{% for precision_number in range(0,computePrecisions|length) %}
-template <>
-void {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>::freeQuadratureNodesAndWeights() {
-  _mm_free(weights1);
-  _mm_free(weights2);
-  _mm_free(weights3);
-  _mm_free(weights4);
-  _mm_free(iweights1);
-  _mm_free(iweights3);
-  _mm_free(nodes);
-{% if kernelType=="limiter" %}
-  _mm_free(uh2lob);
-  _mm_free(dg2fv);
-  _mm_free(fv2dg);
-{% endif %}
-}
+template class {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<double>;
 
 template <>
-void {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>::initQuadratureNodesAndWeights() {
-  weights1  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w1Size }}, {{alignmentSize}}); //nDofPad
-  weights2  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w2Size }}, {{alignmentSize}}); //2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
-  weights3  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  weights4  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w4Size }}, {{alignmentSize}}); //2D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]), 3D: (nDof*nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]*w1[l])
-  iweights1 = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w1Size }}, {{alignmentSize}}); //nDofPad
-  iweights3 = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  nodes     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad}}, {{alignmentSize}});
-{% if kernelType=="limiter" %}
-  uh2lob    = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{uh2lobSize}}, {{alignmentSize}}); //nDof*nDofPad
-  dg2fv     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{dg2fvSize }}, {{alignmentSize}}); //nDof*nDofLimPad
-  fv2dg     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{fv2dgSize }}, {{alignmentSize}}); //nDofLim*nDofPad
-{% endif %}
-
-{% for i in w1_seq %}
-  weights1[{{i}}]  = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(weights1[i])}};
-{% endfor %}
-
-{% for i in w2_seq %}
-  weights2[{{i}}]  = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(weights2[i])}};
-{% endfor %}
-
-{% for i in w3_seq %}
-  weights3[{{i}}]  = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(weights3[i])}};
-{% endfor %}
-
-{% for i in w4_seq %}
-  weights4[{{i}}]  = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(weights4[i])}};
-{% endfor %}
-
-{% for i in w1_seq %}
-  iweights1[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(iweights1[i])}};
-{% endfor %}
-
-{% for i in w3_seq %}
-  iweights3[{{i}}] = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(iweights3[i])}};
-{% endfor %}
+void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<double>::initQuadratureNodesAndWeights() {
+  nodes     = (double *) _mm_malloc(sizeof(double) * {{NUMBER_OF_DOF_PADDED}}, {{ALIGNMENT}});
+  uh2lob    = (double *) _mm_malloc(sizeof(double) * {{uh2lobSize}}, {{ALIGNMENT}}); //nDof*nDofPad
+  dg2fv     = (double *) _mm_malloc(sizeof(double) * {{dg2fvSize}}, {{ALIGNMENT}}); //nDof*nDofLimPad
+  fv2dg     = (double *) _mm_malloc(sizeof(double) * {{fv2dgSize}}, {{ALIGNMENT}}); //nDofLim*nDofPad
 
 {% for i in quadrature_seq %}
-  nodes[{{i}}]     = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(QuadratureNodes[i])}};
+  nodes[{{i}}]     = (double) {{"{:.15e}".format(QuadratureNodes[i])}};
 {% endfor %}
 
-{% if kernelType=="limiter" %}
 {% for i in uh2lob_seq %}
-  uh2lob[{{i}}]    = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(uh2lob[i])}};
+  uh2lob[{{i}}]    = (double) {{"{:.15e}".format(uh2lob[i])}};
 {% endfor %}
 
 {% for i in dg2fv_seq %}
-  dg2fv[{{i}}]    = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(dg2fv[i])}};
+  dg2fv[{{i}}]    = (double) {{"{:.15e}".format(dg2fv[i])}};
 {% endfor %}
 
 {% for i in fv2dg_seq %}
-  fv2dg[{{i}}]    = ({{computePrecisions[precision_number]}}) {{"{:.15e}".format(fv2dg[i])}};
+  fv2dg[{{i}}]    = (double) {{"{:.15e}".format(fv2dg[i])}};
 {% endfor %}
-{% endif %}
 }
-{% endfor %}
+
+template <>
+void {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<double>::freeQuadratureNodesAndWeights() {
+  _mm_free(uh2lob);
+  _mm_free(dg2fv);
+  _mm_free(fv2dg);
+}

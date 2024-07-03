@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
@@ -7,9 +7,7 @@ import peano4.solversteps
 import jinja2
 class CopyAndConvertPatch(AbstractLimiterActionSet):
   TemplateCopyAndConvertDataFromRegularToLimiterAndProjectToFaces = """
-
   if ( {{CONVERT_FROM_REGULAR_TO_LIMITER_AND_SEND_PREDICATE}} ) {
-
       celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker ownStatus = fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker();
 
       bool sendFaceProjection = ownStatus>=celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR_TO_LIMITER;
@@ -23,29 +21,24 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
       double* regularSolverOldValues = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
       double* limiterSolverNewValues = fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.value;
 
-      //TODO: replace with more general conversion, probably from kernels
-      //converts DG into fv
-      kernels::limiter::projectOnFVLimiterSpaceWithoutHalo(regularSolverOldValues, limiterSolverNewValues);
-
+      //TODO: Replace with more general conversion
+      // Converts DG into FV
+      kernels::{{SOLVER_NAME}}::projectOnFVLimiterSpaceWithoutHalo(regularSolverOldValues, limiterSolverNewValues);
   }"""
 
   """
 """,
 
   TemplateCopyAndConvertDataFromLimiterToRegular = """
-
-  if ( {{CONVERT_FROM_LIMITER_TO_REGULAR_PREDICATE}} ) {
-
-      //TODO: make this prettier and maybe put it in a kernel
-      kernels::limiter::projectOnDGSpaceFromFVWithoutHalo(
+  if ({{CONVERT_FROM_LIMITER_TO_REGULAR_PREDICATE}}) {
+      kernels::{{SOLVER_NAME}}::projectOnDGSpaceFromFVWithoutHalo(
         fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.value,
         fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value
       );
-
   }"""
-  
+
   def __init__(self,solver, regularToLimiterGuard, limiterToRegularGuard):
-    super(CopyAndConvertPatch,self).__init__(solver)
+    super(CopyAndConvertPatch, self).__init__(solver)
     self.regularToLimiterGuard = regularToLimiterGuard
     self.limiterToRegularGuard = limiterToRegularGuard
 
@@ -57,14 +50,12 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "CONVERT_FROM_REGULAR_TO_LIMITER_AND_SEND_PREDICATE" ] = self.regularToLimiterGuard
       result = jinja2.Template(self.TemplateCopyAndConvertDataFromRegularToLimiterAndProjectToFaces).render(**d)
-      pass 
     elif operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "CONVERT_FROM_LIMITER_TO_REGULAR_PREDICATE"] = self.limiterToRegularGuard
       result = jinja2.Template(self.TemplateCopyAndConvertDataFromLimiterToRegular).render(**d)
-      pass
     return result
 
   def get_action_set_name(self):
@@ -74,7 +65,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
       return (
           super(CopyAndConvertPatch, self).get_includes()
           + """
-#include "../kernels/limiter/fv/Kernels.h"
+#include "kernels/"""  + self._solver._name + """/Limiter.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "exahype2/fv/rusanov/rusanov.h"
     """

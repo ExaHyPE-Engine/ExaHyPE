@@ -3,7 +3,7 @@ import sys
 import peano4
 import exahype2
 
-project = exahype2.Project(["exahype2", "aderdg", "limiting"], "Euler", executable="SodShock")
+project = exahype2.Project(["applications", "aderdg", "limiting"], "Euler", executable="SodShock")
 
 dimensions          = 2
 min_level           = 3
@@ -30,9 +30,9 @@ initial_conditions = """
 boundary_conditions = """
   constexpr double original_shock_position = 0.111;
   constexpr double gamma = 1.4;
-  const double p = (faceCentre[0]<-original_shock_position && faceCentre[1]<-original_shock_position) ? 0.1 : 1.0;
+  const double p = (x[0]<-original_shock_position && x[1]<-original_shock_position) ? 0.1 : 1.0;
 
-  Qoutside[0] = (faceCentre[0]<-original_shock_position && faceCentre[1]<-original_shock_position) ? 0.125 : 1.0;
+  Qoutside[0] = (x[0]<-original_shock_position && x[1]<-original_shock_position) ? 0.125 : 1.0;
   Qoutside[1] = 0.0;
   Qoutside[2] = 0.0;
   Qoutside[3] = p/(gamma-1.0);
@@ -95,10 +95,10 @@ fvSolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 project.add_solver(fvSolver)
 
 #actual limiting solver
-limiter = exahype2.solvers.aderdg.limiting.PosterioriLimiting(
+limiter = exahype2.solvers.limiting.PosterioriLimiting(
   name            = "limitingSolver",
-  regularSolver   = aderSolver,
-  limitingSolver  = fvSolver,
+  regular_solver   = aderSolver,
+  limiting_solver  = fvSolver,
   number_of_dmp_observables = 4,
   dmp_relaxation_parameter  = 0.01, #0.02 works for depth 2, 0.01 works for depth 3
   dmp_differences_scaling   = 0.03, #0.04 works for depth 2, 0.02 works for depth 3

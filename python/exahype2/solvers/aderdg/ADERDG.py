@@ -15,9 +15,8 @@ import exahype2.solvers.aderdg.kernels
 import exahype2.solvers.aderdg.actionsets
 
 from exahype2.solvers.PDETerms import PDETerms
+from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
-
-from .Architectures import Architectures
 
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
@@ -398,7 +397,7 @@ Material parameters:    """
         # Custom merge implementation takes into account that the faces project such that
         # the left cell projects to the left half of the face and the right cell projects to the right half.
         self._rhs_estimates_projection.generator.merge_method_definition = (
-            self.get_face_overlap_merge_implementation(self._rhs_estimates_projection)
+            get_face_overlap_merge_implementation(self._rhs_estimates_projection)
         )
         self._rhs_estimates_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
@@ -406,7 +405,7 @@ Material parameters:    """
 """
 
         self._flux_estimates_projection.generator.merge_method_definition = (
-            self.get_face_overlap_merge_implementation(self._flux_estimates_projection)
+            get_face_overlap_merge_implementation(self._flux_estimates_projection)
         )
         self._flux_estimates_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
@@ -1120,6 +1119,7 @@ Material parameters:    """
         d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
         d["SOLVER_NAME"]        = self._name
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
+
         d["ALIGNMENT"]          = Architectures.get_alignment(self._architecture)
         d["SIMD_WIDTH"]         = Architectures.get_simd_width(self._architecture)
         d["ORDER"]              = self._order
@@ -1135,7 +1135,7 @@ Material parameters:    """
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
         d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
 
-        d["USE_HALF_PRECISION"]   = self._use_half_precision
+        d["USE_HALF_PRECISION"] = self._use_half_precision
         d["IS_LINEAR"] = self._is_linear
         d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
 
@@ -1369,14 +1369,14 @@ Material parameters:    """
         self.create_data_structures()
         self.create_action_sets()
 
-    def get_face_overlap_merge_implementation(self, patch_overlap):
-        d = {
-            "OVERLAP": patch_overlap.dim[0]
-            / 2,  # Assumed to always be two, but present here anyway.
-            "DOFS_PER_AXIS": patch_overlap.dim[1],
-            "UNKNOWNS": patch_overlap.no_of_unknowns,
-        }
-        Template = """
+def get_face_overlap_merge_implementation(patch_overlap):
+    d = {
+        "OVERLAP": patch_overlap.dim[0]
+        / 2,  # Assumed to always be two, but present here anyway.
+        "DOFS_PER_AXIS": patch_overlap.dim[1],
+        "UNKNOWNS": patch_overlap.no_of_unknowns,
+    }
+    Template = """
   #if Dimensions == 2
   constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {UNKNOWNS}; // Order + 1
   #else
@@ -1394,4 +1394,4 @@ Material parameters:    """
     &value[(1 - faceLR) * SpaceFaceSize]
   );
 """
-        return Template.format(**d)
+    return Template.format(**d)
