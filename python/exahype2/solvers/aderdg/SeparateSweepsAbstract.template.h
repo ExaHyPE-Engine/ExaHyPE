@@ -43,7 +43,6 @@ namespace {{ item }} {
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-
     enum class SolverState {
       GridConstruction,
       GridInitialisation,

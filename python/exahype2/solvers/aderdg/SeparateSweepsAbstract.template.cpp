@@ -34,18 +34,17 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _cellUpdates(0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
-  //initialise nodes, weights and matrices for use of the kernels
+  // Initialise nodes, weights and matrices for use of the kernels.
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
   {% endfor %}
-
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
   {{DESTRUCTOR_IMPLEMENTATION}}
 
-  //free the generated nodes, weights and matrices
+  // Free the generated nodes, weights and matrices.
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
@@ -138,7 +137,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 }
 {% endif %}
 
-
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
     {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -150,7 +148,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
 {% endif %}
-
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
@@ -198,28 +195,21 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
 }
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   _solverState = SolverState::GridInitialisation;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
-
-	if ( _solverState==SolverState::GridInitialisation ) {
+  if (_solverState==SolverState::GridInitialisation) {
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
@@ -281,108 +271,104 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("startTimeStep()", "phase " + toString(_solverState));
+    logInfo("startTimeStep(...)", "phase " + toString(_solverState));
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-	if ( isLastGridSweepOfTimeStep() ) {
+  if (isLastGridSweepOfTimeStep()) {
+    #ifdef Parallel
+    double newMinTimeStamp    = _minTimeStampThisTimeStep;
+    double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
+    double newMinCellH        = _minCellHThisTimeStep;
+    double newMaxCellH        = _maxCellHThisTimeStep;
+    double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
+    double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  #ifdef Parallel
-  double newMinTimeStamp    = _minTimeStampThisTimeStep;
-  double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
-  double newMinCellH        = _minCellHThisTimeStep;
-  double newMaxCellH        = _maxCellHThisTimeStep;
-  double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
-  double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
+    double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
-  double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
-  double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+    int newCellUpdates = _cellUpdates;
 
-  int newCellUpdates = _cellUpdates;
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinTimeStamp,
+        &_minTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxTimeStamp,
+        &_maxTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStamp,
-      &_minTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
-      &_maxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinCellH,
+        &_minCellHThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxCellH,
+        &_maxCellHThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinCellH,
-      &_minCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxCellH,
-      &_maxCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinTimeStepSize,
+        &_minTimeStepSizeThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxTimeStepSize,
+        &_maxTimeStepSizeThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStepSize,
-      &_minTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newLocalMinTimeStamp,
+        &_localMinTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newLocalMaxTimeStamp,
+        &_localMaxTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMinTimeStamp,
-      &_localMinTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMaxTimeStamp,
-      &_localMaxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newCellUpdates,
+        &_cellUpdates,
+        1, MPI_INT,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    #endif
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newCellUpdates,
-      &_cellUpdates,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  #endif
+    if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+      _minTimeStampThisTimeStep = 0.0;
+    }
+    if (_maxTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+      _maxTimeStampThisTimeStep = 0.0;
+    }
 
-		if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-			_minTimeStampThisTimeStep = 0.0;
-		}
-		if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-			_maxTimeStampThisTimeStep = 0.0;
-		}
-
-  {{FINISH_TIME_STEP_IMPLEMENTATION}}
-
+    {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStamp,
@@ -394,9 +380,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   _solverState = SolverState::Plotting;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
-
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
