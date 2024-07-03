@@ -250,7 +250,7 @@ poisson_solver.postprocess_updated_patch = """
    0,       // no overlap/halo here
    marker.h()
  );
- repositories::InstanceOf{}.reportGradientDelta( delta );
+ repositories::instanceOf{}.reportGradientDelta( delta );
 """.format(args.patch_size, poisson_solver.name)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
