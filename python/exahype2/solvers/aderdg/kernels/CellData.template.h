@@ -84,11 +84,6 @@ namespace {{ item }} {
 {% set shift = shift+PSiSize %}
 {% endif %}
 
-{% if PSiDerivativeSize > 0 %}
-  constexpr int getPSderivativesShift() {return {{shift}};} // Same size as PSi
-{% set shift = shift+PSiSize %}
-{% endif %}
-
   constexpr int getFusedSTPVISize() {return {{shift}};}
 
   // Shifts for boundary conditions

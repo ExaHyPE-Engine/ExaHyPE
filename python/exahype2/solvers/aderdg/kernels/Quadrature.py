@@ -7,6 +7,7 @@ import peano4.output
 from exahype2.solvers.MathUtils import MathUtils
 from exahype2.solvers.aderdg.Architectures import Architectures
 
+
 class Quadrature(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)

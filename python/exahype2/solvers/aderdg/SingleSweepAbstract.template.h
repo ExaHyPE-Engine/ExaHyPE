@@ -46,9 +46,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
-      Prediction,
+      InitialPrediction,
       PredictionOnHangingCells,
-      Correction,
+      Timestep,
       Plotting,
       Suspended
     };
@@ -58,11 +58,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr int    Order                      = {{ORDER}};
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    static constexpr int    MaxPicardIterations        = {{ORDER}}+1;
-    static constexpr bool   UseMaxPicardIterations     = true;
-    static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}};
+    //static constexpr int    MaxPicardIterations        = {{ORDER}} + 1; // TODO: Not used (maybe use in nonlinear FSTPVI?)
+    //static constexpr bool   UseMaxPicardIterations     = true; // TODO: Not used (maybe use in nonlinear FSTPVI?)
+    //static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}}; // TODO: Not used
     static constexpr double CFL                        = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                       = {{CFL_ADER}};
+
+    // User-defined solver constants
+    {{SOLVER_CONSTANTS}}
 
     {% if USE_POINT_SOURCE %}
     static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
@@ -85,7 +88,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * coarser MinH.
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
-    
+
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
 
@@ -98,7 +101,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
-
 
     /**
      * Evaluate refinement criterion over cell
@@ -114,7 +116,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      *
@@ -133,13 +134,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      */
     virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}}* __restrict__ Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
 			const tarch::la::Vector<Dimensions,double>&  h,
 			const tarch::la::Vector<Dimensions,int>&     index,
       bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      * Apply boundary conditions. You can overwrite both the inside and
@@ -147,10 +147,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * note that the boundary conditions you set here are after that subject
      * to the Riemann solver, i.e. flux and eigenvalues.
      *
-     * \param[in]    x         the physical coordinate on the face.
      * \param[in]    t         the start of the time interval.
-     * \param[in]    dt        the width of the time interval.
-     * \param[in]    faceIndex indexing of the face (0 -- {x[0]=xmin}, 1 -- {x[1]=xmax}, 2 -- {x[1]=ymin}, 3 -- {x[2]=ymax}, and so on,
+     * \param[in]    x         the physical coordinate on the face or indexing of the face (0 -- {x[0]=xmin}, 1 -- {x[1]=xmax}, 2 -- {x[1]=ymin}, 3 -- {x[2]=ymax}, and so on,
      *                         where xmin,xmax,ymin,ymax are the bounds of the cell containing point x.
      * \param[in]    d         the coordinate direction the face normal is pointing to.
      * \param[in]    QIn       the conserved variables at point x from inside of the domain
@@ -239,9 +237,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishGridInitialisationStep() override;
 
-
     virtual void suspendSolversForOneGridSweep() override;
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -260,7 +256,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -277,7 +272,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     virtual void finishPlottingStep() override;
-
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the

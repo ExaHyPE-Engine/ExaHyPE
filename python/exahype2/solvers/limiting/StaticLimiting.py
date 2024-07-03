@@ -16,6 +16,7 @@ from exahype2.solvers.aderdg.Architectures import Architectures
 
 from .actionsets import (SaveNewCellData, SpreadLimiterStatus,
     CopyAndConvertPatch, VerifyTroubledness)
+
 class StaticLimiting(object):
     # Initialisation stores the key information about the solver and initialises a number of variables for later usage
     def __init__(

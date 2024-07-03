@@ -32,7 +32,7 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
         )
 
         solver._finish_time_step_implementation += create_finish_time_step_implementation_for_error_measurement(
-            guard="_solverState == SolverState::GridInitialisation or _solverState == SolverState::Correction"
+            guard="_solverState == SolverState::GridInitialisation or _solverState == SolverState::Timestep"
         )
 
         solver._action_set_postprocess_solution = EmptyPostprocessSolution(
@@ -68,7 +68,7 @@ def create_postprocessing_kernel_for_error_measurement():
         marker.h(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
         repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value,
         errors
       );
 

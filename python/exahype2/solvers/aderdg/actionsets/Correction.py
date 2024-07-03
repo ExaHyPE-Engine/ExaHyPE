@@ -51,8 +51,8 @@ class Correction(AbstractADERDGActionSet):
   if ({{PREDICATE}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    // Needs to declare and define timeStepSize
-    {{COMPUTE_TIME_STEP_SIZE}}
+    // Reuse the same timeStepSize from the predictor
+    const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
@@ -83,7 +83,6 @@ class Correction(AbstractADERDGActionSet):
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0));

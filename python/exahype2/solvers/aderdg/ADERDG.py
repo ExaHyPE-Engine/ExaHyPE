@@ -153,16 +153,6 @@ class ADERDG(object):
         self._hold_cell_data_on_heap_with_smart_pointer = False
         self._hold_face_data_on_heap_with_smart_pointer = False
 
-        """
-        Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
-          The old value gets overwritten with the new value at the beginning of the predictor step.
-          This allows rollback of the solution to a previous state if for some reason the computations
-          yield incorrect results.
-          Used for limiting, where troubled cells are rolled back and recomputed with a more robust
-          scheme and neighbouring cells need their old solution to project values with.
-        """
-        self._hold_previous_time_step           = False
-
         # Whether or not to plot information about the grid as well as information about the content of the patches
         self._plot_grid_properties = plot_grid_properties
         self.plot_description = ""
@@ -495,7 +485,6 @@ Material parameters:    """
 
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
             solver=self,
-            clear_guard=self._clear_face_data_default_guard(),
             shift_guard=self._shift_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
@@ -507,17 +496,17 @@ Material parameters:    """
         # extrapolated solution to the faces.
         # Correction uses the extrapolated face solutions from the predictor and the neighboring
         # cells to compute a solution at the next timestep.
-        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
-            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
-        self._action_set_prediction.descend_invocation_order = 1
-
-        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
-            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
-        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
-
         self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
             self, self._store_cell_data_default_guard())
         self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
+
+        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
+        self._action_set_prediction.descend_invocation_order = 3
+
+        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 3
 
         # Handles adaptive mesh refinement
         self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
@@ -533,7 +522,7 @@ Material parameters:    """
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True
         )
-        self._action_set_AMR.descend_invocation_order = 3
+        self._action_set_AMR.descend_invocation_order = 4
 
         self._action_set_AMR_commit_without_further_analysis = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
             solver=self,
@@ -541,11 +530,11 @@ Material parameters:    """
             build_up_new_refinement_instructions=False,
             implement_previous_refinement_instructions=True
         )
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 4
 
         if self._action_set_postprocess_solution == None:
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
-        self._action_set_postprocess_solution.descend_invocation_order = 3
+        self._action_set_postprocess_solution.descend_invocation_order = 4
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -658,16 +647,6 @@ Material parameters:    """
             + "FaceLabel.getBoundary()"
         )
 
-    def _clear_face_data_default_guard(self):
-        return (
-            "not marker.willBeRefined()"
-            + "and repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridConstruction "
-        )
-
     def _shift_face_data_default_guard(self):
         return (
             "not marker.willBeRefined()"
@@ -722,8 +701,7 @@ Material parameters:    """
           print(str(self._flux_estimates_projection))
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
-        if(self._hold_previous_time_step):
-          datamodel.add_cell(self._previous_time_step)
+        datamodel.add_cell(self._previous_time_step)
         datamodel.add_face(self._face_label)
         datamodel.add_face(self._rhs_estimates_projection)
         datamodel.add_face(self._flux_estimates_projection)
@@ -731,8 +709,7 @@ Material parameters:    """
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
-        if self._hold_previous_time_step:
-          step.use_cell(self._previous_time_step)
+        step.use_cell(self._previous_time_step)
         step.use_face(self._face_label)
         step.use_face(self._rhs_estimates_projection)
         step.use_face(self._flux_estimates_projection)
@@ -771,8 +748,8 @@ Material parameters:    """
         step.add_action_set(
             peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
                 filename=output_path + "solution-" + self._name,
-                patch=self._current_time_step,
-                dataset_name=self._unknown_identifier(),
+                patch=self._previous_time_step,
+                dataset_name=self._unknown_identifier()+"_old",
                 description=self.plot_description,
                 mapping=mapping,
                 select_dofs=self.select_dofs_to_print,
@@ -811,10 +788,10 @@ Material parameters:    """
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 
-        step.add_action_set(self._action_set_prediction)
-        step.add_action_set(self._action_set_prediction_on_hanging_cells)
         step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_correction)
+        step.add_action_set(self._action_set_prediction)
+        step.add_action_set(self._action_set_prediction_on_hanging_cells)
 
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)

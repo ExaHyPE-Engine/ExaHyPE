@@ -8,7 +8,7 @@
 
 {% if USE_LIBXSMM %}
 
-#include "asm_amrRoutines.c"
 #include "asm_fstpvi.c"
+#include "asm_amrRoutines.c"
 
 {% endif %}{# USE_LIBXSMM #}

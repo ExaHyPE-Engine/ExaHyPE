@@ -44,9 +44,7 @@ class Prediction(AbstractADERDGActionSet):
 
     {{CREATE_PREDICTOR_ALLOCATIONS}}
 
-    {% if STORE_OLD_SOLUTION %}
-    std::copy_n(luh, sizeLduh, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
-    {% endif %}
+    std::copy_n(luh, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
 """
 
     _Template_TouchCellFirstTime_Core = """
@@ -56,6 +54,8 @@ class Prediction(AbstractADERDGActionSet):
 """
 
     _Template_TouchCellFirstTime_Epilogue = """
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
+
     repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0));
   }
 """
@@ -88,14 +88,6 @@ class Prediction(AbstractADERDGActionSet):
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = nullptr;
     {% endif %}
 
-    {% if LINEARITY=="linear" and USE_POINT_SOURCE %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + kernels::{{SOLVER_NAME}}::getPSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + kernels::{{SOLVER_NAME}}::getPSderivativesShift();
-    {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = nullptr;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = nullptr;
-    {% endif %}
-
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} lduh[kernels::{{SOLVER_NAME}}::getUpdateSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
 
     {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
@@ -109,7 +101,8 @@ class Prediction(AbstractADERDGActionSet):
       lduh, lQhbnd, lFhbnd,
       lQi, lFi, lSi,
       lQhi, lFhi, lShi,
-      gradQ, nullptr, nullptr,
+      gradQ,
+      nullptr, nullptr,
       luh,
       marker.x(), marker.h(), timeStamp, timeStepSize,
       std::vector<int>() // Empty vector
@@ -124,6 +117,7 @@ class Prediction(AbstractADERDGActionSet):
     );
 
     if (!pointSources.empty()) {
+      {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} PSi[kernels::{{SOLVER_NAME}}::getPSiSize()] __attribute__((aligned({{ALIGNMENT}})));
       // Linear, with point sources
       int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
@@ -131,7 +125,7 @@ class Prediction(AbstractADERDGActionSet):
         lQi, lFi, lSi,
         lQhi, lFhi, lShi,
         gradQ,
-        PSi, PSderivatives,
+        PSi, nullptr,
         luh,
         marker.x(), marker.h(), timeStamp, timeStepSize,
         pointSources
@@ -353,7 +347,6 @@ class Prediction(AbstractADERDGActionSet):
             solver._point_sources_implementation != PDETerms.None_Implementation
         )
         self._multiple_precisions = len(solver._predictor_computation_precisions) > 1
-        self._store_old_solution = solver._hold_previous_time_step
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -367,7 +360,6 @@ class Prediction(AbstractADERDGActionSet):
             d[
                 "PREDICATE"
             ] = self.guard  # self._guard TODO: Why does self._guard not work?
-            d["STORE_OLD_SOLUTION"] = self._store_old_solution
             d["PRECISIONS_CAPITALIZED"] = [
                 x.replace(" ", "_").replace("std::", "").capitalize()
                 for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]

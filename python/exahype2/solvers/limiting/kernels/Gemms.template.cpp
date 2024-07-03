@@ -8,4 +8,6 @@
 
 {% if USE_LIBXSMM %}
 
+#include "asm_limiter.c"
+
 {% endif %}{# USE_LIBXSMM #}

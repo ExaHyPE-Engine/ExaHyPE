@@ -35,7 +35,6 @@ class CellData(object):
         self.d["lShiSize"] = -1
         self.d["gradQSize"] = -1
         self.d["PSiSize"] = -1
-        self.d["PSiDerivativeSize"] = -1
 
         if self.d["IS_LINEAR"]:
             self.d["lQiSize"] = nDataPad * (nDof**nDim)
@@ -49,7 +48,6 @@ class CellData(object):
                 self.d["gradQSize"] = nUnknownsPad * (nDof**nDim) * nDim
             if self.d["USE_POINT_SOURCE"]:
                 self.d["PSiSize"] = (nDof + 1) * (nDof**nDim) * nUnknownsPad
-                self.d["PSiDerivativeSize"] = self.d["PSiSize"]
         else:  # nonlinear
             self.d["lQiSize"] = nDataPad * (nDof ** (nDim + 1))
             self.d["lQhiSize"] = nDataPad * (nDof**nDim)

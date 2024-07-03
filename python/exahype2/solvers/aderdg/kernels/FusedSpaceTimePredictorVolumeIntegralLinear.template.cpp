@@ -140,7 +140,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
       #ifdef SharedOMP
-      #pragma omp simd aligned(lQi:{{ALIGNMENT}})
+      #pragma omp simd aligned(lQi,PSi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         lQi[xyz * {{NUMBER_OF_DATA_PADDED}} + n]
@@ -290,7 +290,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
         std::memset(tmpArray, 0, {{DIMENSIONS*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType)); // Zero out ncpResult (stored in tmpArray)
 
-        for(int d = 0; d < {{DIMENSIONS}}; d++) {
+        for (int d = 0; d < {{DIMENSIONS}}; d++) {
           solver.nonconservativeProduct(
             lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
             G[d],
@@ -324,7 +324,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         F[2]      = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
 {% endif %}
 
-        for(int d = 0; d < Dimensions; d++){
+        for (int d = 0; d < Dimensions; d++) {
           solver.multiplyMaterialParameterMatrix(
             lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
             cellCentre,

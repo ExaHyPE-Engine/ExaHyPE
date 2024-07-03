@@ -41,20 +41,34 @@ class Quadrature(object):
         self.d["quadrature_seq"] = range(self.d["NUMBER_OF_DOF"])
 
         l_padSize = self.d["NUMBER_OF_DOF_PADDED"] - self.d["NUMBER_OF_DOF"]
-        uh2lob = MathUtils.assembleQuadratureConversion(QuadratureNodes, OtherQuadratureNodes, self.d["NUMBER_OF_DOF"])
-        self.d["uh2lob"] = MathUtils.matrixPadAndFlatten_ColMajor(uh2lob,l_padSize)
+        uh2lob = MathUtils.assembleQuadratureConversion(
+            QuadratureNodes, OtherQuadratureNodes, self.d["NUMBER_OF_DOF"]
+        )
+        self.d["uh2lob"] = MathUtils.matrixPadAndFlatten_ColMajor(uh2lob, l_padSize)
         self.d["uh2lobSize"] = len(self.d["uh2lob"])
         self.d["uh2lob_seq"] = range(self.d["uh2lobSize"])
 
         l_padSize = self.d["NUMBER_OF_DOF_PADDED"] - self.d["NUMBER_OF_DOF"]
-        dg2fv = MathUtils.assembleDGToFV(QuadratureNodes, QuadratureWeights, self.d["NUMBER_OF_DOF"], self.d["NUMBER_OF_DOF_LIMITER"])
-        self.d["dg2fv"] = MathUtils.matrixPadAndFlatten_ColMajor(dg2fv,l_padSize)
+        dg2fv = MathUtils.assembleDGToFV(
+            QuadratureNodes,
+            QuadratureWeights,
+            self.d["NUMBER_OF_DOF"],
+            self.d["NUMBER_OF_DOF_LIMITER"],
+        )
+        self.d["dg2fv"] = MathUtils.matrixPadAndFlatten_ColMajor(dg2fv, l_padSize)
         self.d["dg2fvSize"] = len(self.d["dg2fv"])
         self.d["dg2fv_seq"] = range(self.d["dg2fvSize"])
 
-        l_padSize = self.d["NUMBER_OF_DOF_LIMITER_PADDED"] - self.d["NUMBER_OF_DOF_LIMITER"]
-        fv2dg = MathUtils.assembleFVToDG(dg2fv, QuadratureWeights, self.d["NUMBER_OF_DOF"], self.d["NUMBER_OF_DOF_LIMITER"])
-        self.d["fv2dg"] = MathUtils.matrixPadAndFlatten_ColMajor(fv2dg,l_padSize)
+        l_padSize = (
+            self.d["NUMBER_OF_DOF_LIMITER_PADDED"] - self.d["NUMBER_OF_DOF_LIMITER"]
+        )
+        fv2dg = MathUtils.assembleFVToDG(
+            dg2fv,
+            QuadratureWeights,
+            self.d["NUMBER_OF_DOF"],
+            self.d["NUMBER_OF_DOF_LIMITER"],
+        )
+        self.d["fv2dg"] = MathUtils.matrixPadAndFlatten_ColMajor(fv2dg, l_padSize)
         self.d["fv2dgSize"] = len(self.d["fv2dg"])
         self.d["fv2dg_seq"] = range(self.d["fv2dgSize"])
 

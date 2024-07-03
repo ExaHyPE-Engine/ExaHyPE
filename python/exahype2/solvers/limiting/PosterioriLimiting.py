@@ -13,11 +13,10 @@ import exahype2.solvers.limiting.kernels
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg import Polynomials
 from exahype2.solvers.aderdg.Architectures import Architectures
+from exahype2.solvers.aderdg.ADERDG import get_face_overlap_merge_implementation
 
 from .actionsets import (SaveNewCellData, SpreadLimiterStatus,
     CopyAndConvertPatch, VerifyTroubledness)
-
-from exahype2.solvers.aderdg.ADERDG import get_face_overlap_merge_implementation
 
 class PosterioriLimiting(object):
     # Initialisation stores the key information about the solver and initialises a number of variables for later usage
