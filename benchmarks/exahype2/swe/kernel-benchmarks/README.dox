@@ -1,0 +1,20 @@
+/**
+
+@page benchmarks_exahype2_swe_kernel_benchmarks Benchmarks of Compute Kernels for the Shallow Water Equations
+
+We provide example plots of outputs obtained from Leonardo.
+
+The benchmarks were run with a SWE setup using 2048 patches per kernel launch,
+32 compute threads, 1 launching thread and 16 finite volumes per axis.
+The maximal eigenvalue has been evaluated and we took 10 measurements samples.
+
+The following Python command was used:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+    python3 kernel-benchmarks.py --patch-size 16 --num-patches 2048 --samples 10 --eval-eig
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We show the best case throughputs.
+
+@image html plot_swe_Leonardo.png
+
+*/

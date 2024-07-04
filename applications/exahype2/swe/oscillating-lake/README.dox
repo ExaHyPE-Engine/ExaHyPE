@@ -1,0 +1,46 @@
+/**
+
+@page applications_exahype2_swe_oscillating_lake Oscillation in a symmetrical paraboloid
+
+This test was defined by Thacker who computed the exact solution of the problem.
+The paraboloid of revolution is defined as:
+
+\f{eqnarray*}{
+b(x, y) = h_0 \left(1 - \sqrt{x^2 + y^2} \right) - 0.1
+\f}
+
+Taken from https://doi.org/10.48550/arXiv.1607.04547
+
+## How to Build and Run
+
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+
+### Using CMake
+
+    cd myPeanoDirectory && mkdir build && cd build
+    CC=gcc CXX=g++ cmake .. -DWITH_MULTITHREADING=omp -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    make -j && make test
+    cd applications/exahype2/swe/oscillating-lake/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 oscillating-lake.py
+    ./ExaHyPE2-SWE-HLLEMRiemannGlobalAdaptiveFV-Release
+
+### Using Automake
+
+    cd myPeanoDirectory
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    CFLAGS="-fopenmp" CC=gcc CXXFLAGS="-std=c++20 -fopenmp" CXX=g++ LDFLAGS="-fopenmp" \
+    ./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+    make -j && make check
+    cd applications/exahype2/swe/oscillating-lake/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 oscillating-lake.py
+    ./ExaHyPE2-SWE-HLLEMRiemannGlobalAdaptiveFV-Release
+
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
+## Visualise the Simulation Output
+
+    python3 oscillating-lake.py --visualise
+
+*/
