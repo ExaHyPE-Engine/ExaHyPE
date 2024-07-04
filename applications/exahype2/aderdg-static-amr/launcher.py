@@ -38,7 +38,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancing(
-  "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+  "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
   "new ::exahype2::LoadBalancingConfiguration(0.98)"
 )
 project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
