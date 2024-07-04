@@ -1,0 +1,56 @@
+[project]
+name = "Peano"
+version = "4.0.0"
+description = "Peano Python API"
+license = {file = "LICENSE"}
+requires-python = ">=3.7"
+authors = [
+  { name="Tobias Weinzierl", email="tobias.weinzierl@durham.ac.uk" },
+  { name="Sean Baccas" },
+  { name="Dominic Etienne Charrier" },
+  { name="Jonathan Frawley" },
+  { name="Yashas Gandhi" },
+  { name="Uzmar Gomez" },
+  { name="Mladen Ivkovic" },
+  { name="Lando Jahn" },
+  { name="Marc Marot-Lassauzaie" },
+  { name="Chung M. Loi" },
+  { name="Daniel Nagy" },
+  { name="Dmitry Nikolaenko" },
+  { name="Pawel Radtke" },
+  { name="Anne Reinarz" },
+  { name="Holger Schulz" },
+  { name="Adam Tuft" },
+  { name="Mark Turner" },
+  { name="Mario Wille" },
+  { name="Marion Weinzierl" },
+  { name="Florian Wunderlich" },
+  { name="Budanaz Yakup" },
+  { name="Han Zhang" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["readme", "dependencies"]
+
+[project.urls]
+"Homepage" = "http://www.peano-framework.org"
+
+[build-system]
+requires = [
+    "setuptools>=61.0",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = [
+    "python",
+]
+[tool.setuptools.package-data]
+"*" = ["*.*"]

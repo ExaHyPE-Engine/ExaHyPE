@@ -26,14 +26,14 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable):
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::InstanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
-    //if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
+    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
+    //if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
         double gradQ[3*59]={ 0 };
 
-        for (int d=0; d<3; d++) {
+        /*for (int d=0; d<3; d++) {
           tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
           tarch::la::Vector<Dimensions,int> rightCell = currentCell;
           leftCell(d)  -= 1;
@@ -42,6 +42,22 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable):
           const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
           for(int i=0; i<59; i++) {
             gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+          }
+        }*/
+
+        for (int d=0; d<3; d++) {
+          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          tarch::la::Vector<Dimensions,int> DouleftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> DourightCell = currentCell;
+          leftCell(d)  -= 1; DouleftCell(d)    -= 2;
+          rightCell(d) += 1; DourightCell(d)  += 2; 
+          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
+          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
+          const int DouleftCellSerialised  = peano4::utils::dLinearised(DouleftCell, patchSize + 2*overlap);
+          const int DourightCellSerialised = peano4::utils::dLinearised(DourightCell,patchSize + 2*overlap);
+          for(int i=0; i<59; i++) {
+            gradQ[d*59+i] = ( -1*oldQWithHalo[DourightCellSerialised*(59+n_a_v)+i] + 8*oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - 8*oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] + 1*oldQWithHalo[DouleftCellSerialised*(59+n_a_v)+i]) / 12.0 / volumeH;
           }
         }
 
@@ -65,8 +81,8 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable):
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::InstanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
-    //if (not marker.willBeRefined() and repositories::InstanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
+    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
+    //if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 

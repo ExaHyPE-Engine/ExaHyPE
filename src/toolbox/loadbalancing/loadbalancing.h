@@ -8,6 +8,9 @@
 /**
  * @page toolbox_loadbalancing Load balancing (domain decomposition)
  *
+ * <!-- Add this one for href links to subitems -->
+ * \tableofcontents
+ *
  * Suite of generic load balancing algorithms (strategies) for Peano 4. The
  * toolbox::loadbalancing::strategies namespace hosts various primitive strategies, but you
  * can combine them into more sophisticated cascade of load balancing
@@ -46,7 +49,6 @@
  *
  * - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE 2".
  * - There's a dedicated page on @ref swift_parallelisation "the parallelisation aspects within Swift 2".
- * - ExaHyPE's astrophysics flavour hosts \subpage page_toolbox_loadbalancing_single_black_hole "a dedicated load balancing discussion on load balancing for single black holes".
  *
  *
  * ## Overview over some pre-manufactured load balancing strategies
@@ -212,8 +214,10 @@
  * - Peano has a @ref page_peano_runtime_analysis "dedicated runtime analysis discussion" which
  *   can help to understand the runtime behaviour shaped by the domain
  *   decomposition.
- * - Peano has a dedicated page on @ref page_peano_performance_optimisation "performance optimisation", which
- *   in turn links back to the domain decomposition page.
+ * - Peano has a dedicated page on @ref page_peano_performance_optimisation "performance optimisation".
+ *   It discusses many flaws and how to fix them. The page below discussed more
+ *   the rationale and provides background information why things work the way
+ *   they do.
  *
  * Further to the generic Peano discussions, individual extensions have their
  * own specific discussion of how to analyse and to understand performance
@@ -229,7 +233,12 @@
  * While the toolbox offers some generic load balancing schemes, it will not be
  * able to accommodate all applications. It notably will always lack
  * domain-specific knowledge. However, there are generic tuning knobs and
- * considerations.
+ * considerations. The page below summarises some generic rationale and
+ * lessons learned. Particular flaws and their fixes are discussed on the
+ * @ref page_peano_performance_optimisation "Peano optimisation page".
+ * So we get an explanation of things here, why things work the way they
+ * do. The recipies how to spot flaws and how to fix them are discussed on the
+ * generic page.
  *
  *
  * ## Load balancing throughout mesh construction

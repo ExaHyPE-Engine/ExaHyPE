@@ -38,6 +38,23 @@ namespace exahype2 {
  * responsibility to destroy it) to the bookkeeping and then can be deleted
  * themselves.
  *
+ * ## Usage:
+ *
+ * Every ExaHyPE solver category defines its own enclave tasks being subclasses
+ * of the present, generic type. Enclave tasks are always to be spawned with
+ * their task number, so we can efficiently wait for them:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+ *   ...
+ * );
+ *
+ * ...
+ *
+ * tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId() );
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ *
  * ## Data ownership
  *
  * - The run() operation allocates the output data and then invokes the functor.
@@ -47,7 +64,7 @@ namespace exahype2 {
  *   following sequence: run() calls computeTask() calls the user's functor. The
  *   size of the output field is specified in the constructor argument. The
  *   output will be on the heap and is eventually passed over to the enclave
- *   bookkeeping.
+ *   bookkeeping. See exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver().
  *
  * ## SmartMPI
  *
@@ -90,11 +107,23 @@ public:
   /**
    * Create plain enclave task.
    *
-   * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
-   * @param enclaveTaskTypeId  Please create it through
-   * <pre>
-  static int enclaveTaskTypeId = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}");
-</pre>
+   * ## Create an unique id for the task type
+   *
+   * It is best to use the parallel factory mechanism within parallel:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   * static int enclaveTaskTypeId = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}");
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   *
+   * @param inputValues        Has to be created on heap via
+   *   tarch::multicore::allocateMemory().
+   * @param enclaveTaskTypeId  Unique id for this type. If you use task
+   *   merging, only tasks of the same type will be merged.
+   * @param outputValues If you pass in nullptr, then the enclave task will
+   *   create a new array on the heap for the task output and then move this
+   *   one over into the bookkeeping from where it eventually will be copied
+   *   once more into the target data field.
    *
    * @see _inputValues for a discussion of const qualifiers
    */
@@ -103,7 +132,8 @@ public:
     const ::peano4::datamanagement::CellMarker& marker,
     double                                      t,
     double                                      dt,
-    double* __restrict__ inputValues,
+    double* __restrict__                        inputValues,
+    double* __restrict__                        outputValues,
     int     numberOfInputValues,
     int     numberOfResultValues,
     Functor functor
@@ -120,11 +150,13 @@ public:
   virtual bool run() override;
 
   /**
-   * Computes a task without bookmarking the outcome.
-   * It is important for tasks that implement smartmpi::Task
-   * that outcomes can be bookmarked independently of the
-   * running of a task, hence why this function lives
-   * alongside and is used by run()
+   * Compute the task
+   *
+   * Typically invoked by run() - though it might also be called directly by
+   * smartMPI, e.g. The routine basically forwards the call to the functor
+   * stored within the task. Before that, it checks if the task is supposed to
+   * allocate the memory for the task outcomes itself. If so, we allocate in
+   * the shared GPU memory, as the task might be deployed there.
    */
   void computeTask();
 

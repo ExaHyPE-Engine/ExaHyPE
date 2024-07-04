@@ -12,7 +12,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/timing/Watch.h"
 
@@ -273,17 +272,11 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {}
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
-
-  OTTER_DEFINE_TASK(local_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::unknown);
-  OTTER_TASK_START(local_task);
-
   _spacetreeSet.createObserverCloneIfRequired(_observer, _spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted(not _spacetree._root.getInverted());
   }
   _spacetree.traverse(*_spacetreeSet._clonedObserver[_spacetree._id], true);
-
-  OTTER_TASK_END(local_task);
   return false;
 }
 
