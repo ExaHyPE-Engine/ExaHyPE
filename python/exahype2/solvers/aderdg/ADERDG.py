@@ -890,7 +890,7 @@ Material parameters:    """
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 headfile_template=kernels_templates_prefix + "RiemannSolver.template.h",
                 cppfile_template=kernels_templates_prefix + "RiemannSolverLinear.template.cpp" if self._is_linear
-                else kernels_templates_prefix + "RiemannSolverNonLinear.template.cpp",
+                else kernels_templates_prefix + "RiemannSolverNonlinear.template.cpp",
                 classname=kernels_output_path + "/RiemannSolver",
                 namespace=kernels_namespace,
                 subdirectory=subdirectory + ".",
