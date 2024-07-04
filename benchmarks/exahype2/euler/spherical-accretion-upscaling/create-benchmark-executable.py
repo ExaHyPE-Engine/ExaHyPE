@@ -211,8 +211,6 @@ if "dyn" in args.type:
   thesolver.add_solver_constants("static constexpr bool DynamicAMR = true;" )
 else:
   thesolver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
-
-thesolver.switch_to_heap_storage(exahype2.solvers.fv.Storage.Heap, exahype2.solvers.fv.Storage.Heap)
   
         
 #

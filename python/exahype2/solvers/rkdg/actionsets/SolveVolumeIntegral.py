@@ -26,11 +26,20 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   - {{COMPUTE_TIME_STEP_SIZE}} has to specify a double timeStepSize. It may be const if
     you want. I don't alter it.
 
-  In return, the following variables will be determined by the action set:
+  In return, the following variables will be set by the action set:
 
-  - timeStamp: double This is the time stamp of the original solution, i.e. not the
-    one we are currently evaluating due to the Runge-Kutta scheme.
-  -
+  - timeStampOldSolution: double This is the time stamp of the original 
+    solution, i.e. not the one we are currently evaluating due to the 
+    Runge-Kutta scheme.
+  - timeStamp: double This is the time stamp of the current Runge Kutta
+    guess. It is timeStampOldSolution plus the weight of the Butcher scheme
+    times the time step size.
+  - QIn: double* A pointer to the actual linear combination of previous 
+    guesses according to the Butcher tableau.
+  - QOut: For Runge-Kutta, we ahve to store all guesses of the future solution,
+    so we can eventually combine them into one final outcome. QOut points to 
+    that segment/guess that's to be computed in this step.
+
   """
 
   TemplateCellKernel = """
@@ -48,15 +57,14 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+    #if Dimensions==2
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    #elif Dimensions==3
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    #endif
 
     {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
     if (marker.willBeSkeletonCell()) {
-      #if Dimensions==2
-      double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
-      #elif Dimensions==3
-      double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
-      #endif
-
       ::exahype2::CellData cellData(
         QIn,
         marker.x(),
@@ -80,18 +88,17 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         marker,
         timeStamp,
         timeStepSize,
+        {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
         QIn
+        {% else %}
+        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.getSmartPointer(),
+        QOut
+        {% endif %}
       );
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
       tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId());
     }
     {% else %}
-    #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
-    #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
-    #endif
-
     ::exahype2::CellData cellData(
       QIn,
       marker.x(),

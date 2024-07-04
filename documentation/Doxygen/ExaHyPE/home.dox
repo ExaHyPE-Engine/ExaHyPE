@@ -8,6 +8,8 @@
   to avoid substructuring these top-level pages now.
 -->
 
+\tableofcontents
+
 \li \subpage page_exahype2_tutorials
 \li \subpage page_exahype_applications
 \li \subpage page_exahype_benchmarks
