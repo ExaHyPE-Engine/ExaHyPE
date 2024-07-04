@@ -29,7 +29,7 @@ load balancing, sophisticated geometry representations, and other features.
 
 # Installation
 
-Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/de/dce/page_installation.html).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dce/page_installation.html).
 
 # Availability
 

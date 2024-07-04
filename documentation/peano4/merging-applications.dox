@@ -1,0 +1,179 @@
+/**
+
+  @page page_peano_mergin_applications Merging/coupling various applications
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+  Peano's Python API is a mere wrapper around the Peano C++ core, i.e. it 
+  provides a high-level abstraction of Peano's @ref peano_action_sets "action sets",
+  the data held by a Peano application, its Makefile, and so forth. Popular 
+  Peano extensions then create a layer on top of this API which eventually
+  yields a Peano project. Obviously, once you have lowered the abstraction
+  level into a Peano project, you can still alter this whole application 
+  model. Indeed, you can now add technical details that have previously 
+  been hidden, or you can combine different projects.
+  
+  We distinguish various different terms in the context of coupling:
+  
+  - Multiplicative coupling means that two different solvers or applications
+    take turns. If you have a solver A and a solver B, and if you write down
+    their action as a function, you would write down the overall action of 
+    these solvers as @f$ ... \circ  A \circ B \circ A \circ B @f$. This is 
+    where the name multiplicative comes from.
+  - Additive coupling means that two solvers run in parallel for a while and
+    eventually exchange data after that. The name additive results from the 
+    fact that you might want to write down such a solver as 
+    @f$ \circ (A + B) \circ (A+B)@f$.
+  - Separate coupling sweeps are runs through the mesh which do not invoke any
+    solver functionality but instead synchronise data and exchange all data.
+     
+  Before we continue, we emphasise that we rely heavily on terms like @ref page_architecture_home "observer"
+  and also makes use of the notion of @ref peano_action_sets "action sets". Each
+  mesh sweep is tied to one observer, which in turn is represented by a 
+  peano4.solversteps.Step object. 
+  
+   
+  # Lowering two codes into a Peano project (multiplicatively)
+  
+  Skip this part if you work with only one extension and want to add additional
+  helper grid sweeps, e.g. If you have two extensions - such as ExaHyPE and
+  Swift - which both create Peano projects, you end up with a high-level code
+  which resembles
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  peano_project_A = my_first_extension_project.generate_Peano4_project()
+  peano_project_B = my_second_extension_project.generate_Peano4_project()
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  These two projects now can be merged into one:
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  peano4_project = peano4.merge( peano_project_A, peano_project_B )
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  @todo Dmitry, can you please write this function? The blueprint is there already
+  
+  Once lowered, you can also add new algorithmic steps as they are required for
+  separate coupling sweeps, e.g. From hereon, the (merged) Peano 4 project is 
+  the work data set, as any change in the original project (such as an 
+  exahype2.Project instance) does ***not*** propagate through anymore.
+  
+  Once merged, it is reasonably to doublecheck the generated file 
+  repositories/StepRepository.h. It defines observers from both projects, but 
+  StepRepository notably hosts an enum called Steps which accommodates both 
+  identifiers for the steps from the first project and the second project.
+  This means, from hereon you can toggle and decide whether you want to run
+  a step from either project. You can switch forth and back in arbitrary 
+  order. 
+
+  Peano usually expects that the high-level extension ensures that no two
+  algorithmic steps use the same name for two different observers. When you
+  merge two projects, no such guarantee exists. Therefore, merge() will 
+  introduce new enums such as MySolverA_StepA, where StepA is the step name
+  the originally had been defined and MySolverA is the name of the first 
+  solver. 
+   
+  @todo Dmitry, we need to let merge() rename the steps.
+
+
+  # Add additional mesh sweeps manually
+
+  One you have the low-level Peano project, you can add an arbitrary number of 
+  additional algorithmic steps. Each step models a new mesh sweep and 
+  gives you a brand new observer object:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  additional_step = peano4.solversteps.Step( name = "AdditionalStep",
+                                             add_user_defined_actions=False,
+                                             )
+  peano4_project.solversteps.add_step( additional_step )
+  ~~~~~~~~~~~~~~~~~~~~~~~
+   
+  Passing in True gives you a C++ template which you can befill with 
+  semantics. Consult the @ref page_architecture_home "architecture" and 
+  @ref peano_action_sets "action set" descriptions. Per step added, you 
+  should find a new class in observers.
+  
+
+  # Unify the data usage
+  
+  Though the repository now contains both solver's data structures and 
+  observers, the observers are not yet compatible with each other: Each
+  observer needs to be told via use_face(), use_cell() and use_vertex()
+  which data entities are out there. If we construct two separate
+  solvers, solver A knows nothing of the data declared in solver B and
+  vice versa. If we introduce additional mesh sweeps, these mesh sweeps
+  do not know anything of each other either.
+  
+  The merge() operation for the projects automatically ensures that all
+  data are correct: It runs, for example, through all use_vertex() data of 
+  the first observer of solver A and adds those guys to all steps in solver
+  B. There are some assumptions here to make this work:
+  
+  - The attributes all have different names.
+  - All observers use all vertices, faces and cells of a project. There 
+    are not a few observers which only use a subset. Peano allows this 
+    to happen, but this is not allowed if we merge projects.
+  
+  @todo Dmitry, if we find that attributes' names clash, we have to rename
+        them too
+
+  Additional external mesh sweeps are slightly more complicated. Here, we 
+  have to add all the use statements manually. Fortunately, some extensions
+  such as ExaHyPE offer routines to register external, additional mesh 
+  sweeps, and you should use those.
+  
+
+  # Create a merged main file
+  
+  Once you have created your fused project with additional mesh traversals,
+  you can alter your main routine and invoke the steps from the new,
+  joint project. 
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      [...]
+    ) {
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalStep )
+      );
+
+      [...]
+    }
+      [...]
+    ) {
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::SolverA_Sweep1 )
+      );
+
+      [...]
+    }
+      [...]
+    ) {
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::SolverB_Sweep1 )
+      );
+
+      [...]
+    }
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The toggling is straightforward and simple. However, you might have objects with 
+  states in your code, such as global solver objects. Some of these toggle their 
+  state after and before each mesh sweep, and then they make their behaviour depend 
+  upon the actual state. Some extensions therefore define routines such as 
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  repositories::suspendSolversForOneGridSweep();
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  which you can use in the code to ensure that solvers do not misbehave. 
+  
+  
+  
+  # Lowering two codes into a Peano project (additively)
+
+
+
+ */
+ 

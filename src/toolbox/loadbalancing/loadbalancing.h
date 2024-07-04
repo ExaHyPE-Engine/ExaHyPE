@@ -6,7 +6,7 @@
 #include "toolbox/loadbalancing/metrics/CustomCellWeight.h"
 
 /**
- * @page toolbox_loadbalancing Load balancing (domain decomposition)
+ * @page toolbox_loadbalancing Load Balancing (Domain Decomposition)
  *
  * Suite of generic load balancing algorithms (strategies) for Peano 4. The
  * toolbox::loadbalancing::strategies namespace hosts various primitive strategies, but you

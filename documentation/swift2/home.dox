@@ -1,0 +1,205 @@
+/**
+
+@page page_swift2_home Swift 2
+
+
+\tableofcontents
+
+\li \subpage swift_terminology
+\li \subpage swift_benchmarks
+\li \subpage swift_tests
+\li \subpage swift_tutorials
+\li \subpage swift_algorithm
+\li \subpage swift_building_project_from_scratch
+\li \subpage swift_initial_conditions
+\li \subpage swift_boundary_conditions
+\li \subpage swift_particle_new_solver
+\li \subpage swift_visualisation
+\li \subpage swift_architecture
+\li \subpage swift_parallelisation
+\li \subpage swift_graph_compiler
+\li \subpage swift_runtime_analysis
+\li \subpage page_swift_performance_optimisation
+
+
+
+@image html documentation/Excalibur-logo.png
+
+Swift 2 is a <a href="https://swift.strw.leidenuniv.nl/">SWIFT (SPH With Inter-dependent Fine-grained
+Tasking)</a> clone which combines the SWIFT SPH kernels
+(tasks) with Peano's particle-in-dual-tree concept.
+The integration of the SWIFT kernels and Peano 4 has been made possible by the
+EPSRC ExCALIBUR grants Massively Parallel Particle Hydrodynamics
+for Engineering and Astrophysics (EP/V001523/1) and PAX-SPH.
+Swift 2 is realised as Python layer on top of Peano 4 and brings Peano's core,
+its particle toolbox, and SWIFT together.
+
+# Signpost
+
+- Getting Started:
+    - How to compile Peano4 for Swift2 is described
+    \ref section_compile_peano4_for_swift2 "here".
+    - For instructions on how to get started with Swift 2, check the
+    \ref swift_tutorials site
+    - A series of tests, including ready-to-go examples intended to verify the
+    physics solvers, are described on the \ref swift_tests page. Running those
+    physics tests (located in `/tests/swift2/hydro-simple-sph-physics`) is a good
+    starting point to get familiar with Swift 2.
+    - For documentation of some ready-to-go benchmarks, check the \ref swift_benchmarks page.
+    - How to plot results is explained in \ref swift_visualisation
+- Advanced Topics
+    - How to build a new Swift2 project from scratch is documented in
+    \ref swift_building_project_from_scratch . That site is also a good
+    point to start looking into how things work in the background.
+    - More details on how Swift2 works internally is available in
+        - \ref swift_architecture
+        - \ref swift_parallelisation
+        - \ref swift_graph_compiler
+- On Performance
+    - see
+        - \ref page_swift_performance_optimisation
+        - \ref swift_runtime_analysis
+
+
+
+
+
+
+\section section_compile_peano4_for_swift2 Compile Peano4 For Swift2
+
+
+As Swift 2 is a Peano extension, you first have to
+\ref page_installation_home "configure and build the core Peano code base",
+i.e. its libraries, before you start any work.
+Hereby, it is important that you add the particles toolbox:
+
+
+          ./configure ... --enable-particles --enable-swift
+
+
+
+
+\subsection section_compile_swift2_with_hdf5 Compile Swift2 with HDF5 enabled
+
+
+If you want to use the HDF5 I/O functionalities, you also need to configure Peano
+with HDF5 enabled. To achieve this, Peano must have been configured with
+
+          ./configure ... --enable-particles --enable-swift --with-hdf5
+
+
+### With Spack/containers
+
+We assume that ``$HDF5_ROOT`` names the directory that contains your local HDF5 installation,
+e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
+In this case, it is recommended to include the following flags:
+
+          ./configure ...  --enable-particles --enable-swift --with-hdf5 \
+                CXXFLAGS="-I/$HDF5_ROOT/include" \
+                LDFLAGS="-I/$HDF5_ROOT/lib" \
+                LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
+
+
+
+
+### Ubuntu
+
+With Ubuntu, the packages you need are
+
+- libhdf5-serial-dev
+- hdf5-tools
+
+and then you can configure with
+
+
+         ./configure --enable-particles --enable-swift --enable-loadbalancing \
+             --enable-blockstructured --enable-exahype2 --with-hdf5 \
+             CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" \
+             LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
+             LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" \
+             --build=x86_64 --host=x86_64
+
+
+
+\subsubsection section_swift2_python_hdf5 Python
+
+Some of Swift's Python scripts use HDF5, too, and therefore need the package
+h5py which you can install via pip, e.g.
+
+         pip install h5py
+
+
+
+# Equations for "Minimal" SPH
+
+The equations being solved are documented in the source code. Here, we provide the
+links to the corresponding pages.
+
+To understand the order in which we solve the equations, consider the life cycle
+of a SPH particle during a single simulation time step show in the image below.
+
+
+@image html particle-lifecycle.png "A typical life cycle of a particle for SPH with a kick-drift-kick time integration scheme"  width=50%
+
+
+- A `kick` step is documented in ::swift2::kernels::legacy::leapfrog_kick_global_time_step_size
+- A `drift` step is documented in ::swift2::kernels::legacy::leapfrog_drift_global_time_step_size
+- The "neighbour search" which determines the smoothing lengths and densities
+  of particles are documented in ::swift2::kernels::legacy::density_kernel and
+  ::swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required
+- The time step computation is given in TODO.
+
+
+
+
+
+
+
+
+
+
+
+
+# Bibliography
+
+Whenever you build a Peano application, you get all the C++ code plus a
+Makefile.
+You also get a Readme file (similar file name to your executable) which
+enlists which algorithmic building blocks you employ.
+This Readme file might be your first point of recherche.
+
+
+The best reference for Swift is
+
+      @inproceedings{10.1145/2929908.2929916,
+        author = {Schaller, Matthieu and Gonnet, Pedro and Chalk, Aidan B. G. and Draper, Peter W.},
+        title = {SWIFT: Using Task-Based Parallelism, Fully Asynchronous Communication, and Graph Partition-Based Domain Decomposition for Strong Scaling on More than 100,000 Cores},
+        year = {2016},
+        publisher = {Association for Computing Machinery},
+        doi = {10.1145/2929908.2929916},
+        booktitle = {Proceedings of the Platform for Advanced Scientific Computing Conference},
+        articleno = {2},
+        numpages = {10},
+        series = {PASC '16}
+      }
+
+
+The official pidt paper is
+
+
+
+      @article{WEINZIERL201642,
+        title = {Two particle-in-grid realisations on spacetrees},
+        journal = {Parallel Computing},
+        volume = {52},
+        pages = {42 - 64},
+        year = {2016},
+        issn = {0167-8191},
+        doi = {https://doi.org/10.1016/j.parco.2015.12.007},
+        author = {T. Weinzierl and B. Verleye and P. Henri and D. Roose}
+      }
+
+
+
+
+*/
