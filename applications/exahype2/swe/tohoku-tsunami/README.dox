@@ -1,0 +1,50 @@
+/**
+
+@page applications_exahype2_swe_tohoku_tsunami 2011 Tōhoku Tsunami
+
+<div style="display: flex;">
+    <div style="flex: 50%; padding: 5px;">
+        \image html TohokuDomain.png
+    </div>
+    <div style="flex: 50%; padding: 5px;">
+        \image html TohokuDomainWireframe.png
+    </div>
+</div>
+
+\image html TohokuTsunami.gif
+
+## How to Build and Run
+
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+
+### Using CMake
+
+    cd myPeanoDirectory && mkdir build && cd build
+    CC=gcc CXX=g++ cmake .. -DWITH_MULTITHREADING=omp -DWITH_NETCDF=ON -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    make -j && make test
+    cd applications/exahype2/swe/tohoku-tsunami/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 tohoku-tsunami.py
+    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveFV-Release
+
+### Using Automake
+
+    cd myPeanoDirectory
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    CFLAGS="-fopenmp" CC=gcc CXXFLAGS="-std=c++20 -fopenmp" CXX=g++ LDFLAGS="-fopenmp" \
+    ./configure --with-multithreading=omp --with-netcdf --enable-exahype --enable-loadbalancing --enable-blockstructured
+    make -j && make check
+    cd applications/exahype2/swe/tohoku-tsunami/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 tohoku-tsunami.py
+    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveFV-Release
+
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
+This scenario requires the NetCDF library.
+
+## Visualise the Simulation Output
+
+    python3 tohoku-tsunami.py --visualise
+
+*/

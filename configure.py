@@ -4,8 +4,14 @@
 import os
 import re
 import shlex
+import shutil
 import argparse
 import subprocess
+
+
+def is_pkg_config_installed():
+    return shutil.which("pkg-config") is not None
+
 
 parser = argparse.ArgumentParser(
     description="Configuration helper script for GNU Automake"
@@ -21,6 +27,7 @@ parser.add_argument(
 )
 parser.add_argument("--fem", action="store_true", help="Enable finite elements support")
 parser.add_argument("--petsc", action="store_true", help="Enable PETSc support")
+parser.add_argument("--netcdf", action="store_true", help="Enable netCDF support")
 parser.add_argument("--libxsmm", action="store_true", help="Enable LIBXSMM support")
 parser.add_argument(
     "--multithreading",
@@ -64,7 +71,7 @@ cxx = os.environ.get("CXX")
 if cc is None or cxx is None:
     raise Exception(
         "Invalid C and C++ compilers provided. \
-Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
+Specify compatible C and C++ compilers by using the environment flags CC and CXX."
     )
 
 cflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
@@ -265,6 +272,39 @@ if args.fem:
 if args.petsc:
     configure_args.append("--with-petsc")
     configure_args.append("--enable-finiteelements")
+
+
+def find_netcdf_paths():
+    if not is_pkg_config_installed():
+        return None, None
+
+    try:
+        # Use pkg-config to get the NetCDF include directory
+        include_dir = (
+            subprocess.check_output(["pkg-config", "--cflags-only-I", "netcdf"])
+            .decode()
+            .strip()[2:]
+        )
+        # Use pkg-config to get the NetCDF library directory and name
+        lib_dir_and_name = (
+            subprocess.check_output(
+                ["pkg-config", "--libs-only-L", "--libs-only-l", "netcdf"]
+            )
+            .decode()
+            .strip()[2:]
+        )
+        return include_dir, lib_dir_and_name
+    except subprocess.CalledProcessError:
+        return None, None
+
+
+if args.netcdf:
+    netcdf_include_dir, netcdf_lib_dir_and_name = find_netcdf_paths()
+    if netcdf_include_dir is not None:
+        cxxflags += f" -I{netcdf_include_dir}"
+    if netcdf_lib_dir_and_name is not None:
+        ldflags += f" -L{netcdf_lib_dir_and_name}"
+    configure_args.append("--with-netcdf")
 
 if args.libxsmm:
     configure_args.append("--with-libxsmm")
