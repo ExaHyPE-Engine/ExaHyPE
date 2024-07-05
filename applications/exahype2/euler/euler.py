@@ -61,9 +61,9 @@ build_modes = {
 build_mode = "Release"
 
 storage_types = {
-    "CallStack": exahype2.solvers.fv.Storage.CallStack,
-    "Heap": exahype2.solvers.fv.Storage.Heap,
-    "SmartPointers": exahype2.solvers.fv.Storage.SmartPointers,
+    "CallStack":     exahype2.solvers.Storage.CallStack,
+    "Heap":          exahype2.solvers.Storage.Heap,
+    "SmartPointers": exahype2.solvers.Storage.SmartPointers,
 }
 storage_type = "CallStack"
 
@@ -332,7 +332,7 @@ if args.solver in fv_rusanov_solvers and "Adaptive" in args.solver:
         pde_terms_without_state=args.use_stateless_pde_terms
     )
     # self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
-    my_solver.switch_to_heap_storage(
+    my_solver.switch_storage_scheme(
         cell_data_storage=storage_types[args.storage],
         face_data_storage=storage_types[args.storage],
     )

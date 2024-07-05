@@ -2,6 +2,9 @@
 
 @page page_swift_performance_optimisation Performance optimisation
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
 
 This section discusses some Swift-specific performance optimisation steps.
 While Swift 2.0 and its baseline, Peano, provide simplistic performance analysis

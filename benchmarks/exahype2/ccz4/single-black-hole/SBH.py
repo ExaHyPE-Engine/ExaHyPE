@@ -70,13 +70,6 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         Construct the limiter
         
-        use_heap_storage is a boolean. The superclass exahype2.ccz4.CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking 
-        documents in detail what this flag means, but it cannot harm to 
-        repeat the core message once again: True means proper storage on 
-        the heap. False means use the heap but administer it via a smart
-        pointer. Independent of the flag, data is never held on the call
-        stack.
-        
         patch_size: Integer
           Pass in the patch size of the FD4 scheme or, if you are using RKDG, 
           hand in the number 1. The Finite Volume patch then will be 16 times
@@ -90,7 +83,6 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             patch_size=SubPatchSize,
             min_volume_h=1.0/65536,
             max_volume_h=65536,
-            use_heap_storage=False, # See superclass docu
             pde_terms_without_state=True,
         )
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
@@ -248,7 +240,6 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
               rk_order=1,
               min_meshcell_h=min_cell_size / patch_size,
               max_meshcell_h=max_cell_size / patch_size,
-              use_heap_storage=False, # See superclass docu
               pde_terms_without_state=False
         )
 
@@ -530,7 +521,6 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
                  patch_size,
                  min_cell_size, 
                  max_cell_size, 
-                 use_heap_storage=False, # See superclass docu
                  ):
         self._name_without_FD4_extension = name
 
@@ -541,7 +531,6 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
             rk_order=1,
             min_meshcell_h=min_cell_size / patch_size,
             max_meshcell_h=max_cell_size / patch_size,
-            use_heap_storage=False, # See superclass docu
             pde_terms_without_state=False
         )
 
@@ -661,7 +650,6 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
                  patch_size,
                  min_cell_size, 
                  max_cell_size, 
-                 use_heap_storage=False,
                  ):
         """!
         
@@ -676,11 +664,6 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
            the FD and DG solver variants. The superclass constructor argues 
            over finite volume sizes, and we hence have to recalibrate this 
            parameter with patch_size.
-        @param use_heap_storage: Boolean
-           Please see superclass. If this is set to false, it does not(!) mean
-           that we do not(!) store data on the heap. It merely says we use 
-           different variants how to store data on the heap. See 
-           CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking.
         
         """
 
@@ -689,7 +672,6 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             patch_size=patch_size,
             min_volume_h=min_cell_size / patch_size,
             max_volume_h=max_cell_size / patch_size,
-            use_heap_storage=False,
             pde_terms_without_state=True
         )
 

@@ -520,6 +520,7 @@ Material parameters:    """
             + self._name
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
+            called_by_grid_construction=False,
             implement_previous_refinement_instructions=True
         )
         self._action_set_AMR.descend_invocation_order = 4
@@ -528,9 +529,19 @@ Material parameters:    """
             solver=self,
             guard=self._store_cell_data_default_guard(),
             build_up_new_refinement_instructions=False,
-            implement_previous_refinement_instructions=True
+            implement_previous_refinement_instructions=True,
+            called_by_grid_construction=False,
         )
         self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 4
+
+        self._action_set_AMR_throughout_grid_construction = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
+            solver=self,
+            guard=self._store_cell_data_default_guard(),
+            build_up_new_refinement_instructions=True,
+            implement_previous_refinement_instructions=True,
+            called_by_grid_construction=True,
+        )
+        self._action_set_AMR_throughout_grid_construction.descend_invocation_order = 4
 
         if self._action_set_postprocess_solution == None:
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
@@ -726,7 +737,7 @@ Material parameters:    """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR)
+            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
