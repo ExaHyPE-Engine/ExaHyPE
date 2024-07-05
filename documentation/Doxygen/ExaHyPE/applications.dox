@@ -5,6 +5,7 @@
 \li \subpage application_exahype2_selfgravitation
 \li \subpage applications_exahype2_ccz4
 \li \subpage applications_exahype2_landslide
+\li \subpage applications_exahype2_exaseis
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these 
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".
