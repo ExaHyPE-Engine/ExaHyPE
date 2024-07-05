@@ -1,0 +1,107 @@
+/**
+
+\page page_dastgen_home DaStGen
+
+\tableofcontents
+
+At several points, Peano and its extensions use plain C++ classes as data
+storage. All the unknowns per vertex or the particles for example are modelled
+as individual classes. On the Python level, Peano offers the dastgen2 package to
+model these classes. You simple create an instance of a dastgen2.DataModel which
+represents your envisaged C++ class, and then you add the attributes that you
+want to have. A code generator then takes this data structure and dumps it into
+a plain C++ header plus implementation file. It also generates setters and
+getters for the fields.
+
+There are two more features that are added through the DaStGen object interface.
+On the one hand, the generated C++ code will hold annotations how to store the
+underlying object efficiently. Most compilers will ignore such information, i.e.
+will be unable to compress the data or support non-IEEE floating-point format,
+but our group is working on an LLVM-extension which provides exactly this: It
+can take annotated C++ code and translate it into memory-optimised machine code.
+Through the DaStGen Python API, you can specify the required annotations within
+Python.
+
+On the other hand, the translation from a Python data structure into C++ gives
+the API the opportunity to add aspects to the generated code, i.e. some generic
+utilities. For Peano, you can, for example, add support for MPI datatypes. In
+this case, the generated class not only holds the attributes, it also defines a
+user-defined MPI datatype, such that objects of this class can be sent out
+natively via MPI. Further to that, Peano defines further plug-ins (aspects) that
+you can add if an object represents face or vertex data, e.g. In this case,
+Peano will expect the created routines to provide merge routines which specify
+how to merge copies at the domain boundaries, or it needs some boolean functions
+which point out whether to exchange boundary data or not. This can be done in
+Python by adding the corresponding aspects which in turn just inject additional
+C++ functions into the generated code.
+
+Finally, Peano defines its own falvours (specialisations) of dastgen2.DataModel
+for special extensions. The blockstructured meshes for example have a
+specialisation which represents a patch and also injects the right merges for
+boundary data exchange right from the start. The swift2 extension also defines
+its own data model for particles. Again, a particle is just a
+dastgen2.DataModel, i.e. will be mapped onto a plain C++ class, but each
+particle always has some pre-defined routines and attributes such as a position
+in space.
+
+
+# Attributes
+
+If you want to add further attributes to the DaStGen2 data model, use the
+routine dastgen2.DataModel.add_attribute(). Each C++ data type that we use has
+its counterpart in the namespace dastgen2.attributes. With
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+my_model = dastgen2.DataModel( "mynamespace::MyClass" )
+my_model.add_attribute( dastgen2.attributes.Double("myAttribute") )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+you create for example a C++ class of the name MyClass which hosts one double
+attribute. Study the objects available in dastgen2.attributes.
+
+
+Peano has some attributes of its own. They are specialisations/replacements of
+the native C++/DaStGen objects which use Peano-specific features. If you add
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+my_model.add_attribute( dastgen2.attributes.DoubleArray("myArray1", "14") )
+my_model.add_attribute( peano4.dastgen2.Peano4DoubleArray("myArray2", "14"))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+you get two double arrays of size 14. In the fist case, the attribute will be
+mapped onto a plain C++ array. The second attribute, myArray2, however will be
+mapped onto a tarch::la::Vector of size 14, i.e. use Peano's built-in technical
+architecture.
+
+
+# Aspects
+
+Peano usually adds the peano4.dastgen2.MPIAndStorage aspect to most of its
+storage classes. Most solvers, particle models, ... provide factory methods to
+create a DaStGen2 model. The returned object then host the right aspects
+already. You can nevertheless add further aspects.
+
+
+
+# Aggressive vectorisation
+
+Most compilers need aggressive inlining before they can start to vectorise.
+Inlining is - without IPO - only possible if the setters and getters are all
+in the header, i.e. if they are exposed. DaStGen by default produces clean
+C++ code with a clear separation of headers and implementation. If you want 
+the tool to abandon that principle, you have to set the expose_in_header 
+flag for your attributes.
+
+If you want this to happen for all attributes, call
+dastgen2.DataModel.expose_all_attributes_in_header_file(). The routine runs
+over all attributes and sets the expose flag.
+
+I do not make expose the default, as we know that all-in-the-header code
+typically produces vast executables and long compilation time. For a lot of 
+routines, it is also not required, and for GPUs it seems not to play a role
+anyway, as you can always inline later via IPO. Finally, we hope for IPO to
+become, on the long term, universally supported everywhere such that we can 
+return to a clear separation of declaration and definition.
+
+*/

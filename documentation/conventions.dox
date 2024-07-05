@@ -1,0 +1,214 @@
+/**
+
+ \page page_conventions_home Coding Conventions and IDEs
+
+\tableofcontents
+
+ We follow the convention that the header files only hold the declarations, while
+ the cpp files hold the actual implementations. We kind of gave up on this convention
+ in few particular places for speed, i.e. whenever a compiler should do inlining,
+ i.e. remove function calls, but doesn't. If we found such places and suffered
+ significantly in terms of performance, then we moved the implementation into the
+ headers. We also use header-based implementations for template (the header
+ implementation files then have the extension .cpph), but as soon as compilers do
+ widely support templates that are not headers or we have moved functions over to
+ the new C++ auto keyword, we'll move all into the implementation files.
+
+
+ I decided a while ago that all documentation should be in the headers if
+ possible. Most documentation focuses on what a function does not how it does
+ it. Therefore, the docu belongs to the declaration. If an implementation is so
+ complicated or long that you need documentation within the source code to
+ understand it, then the function needs to be simplified or split up.
+
+ Further to that, I try to make any source code, documentation, ... stick to a
+ "80 characters per line" policy. Such files can be easily read with vi or less
+ on the terminal on any computer.
+
+
+ Syntax Conventions
+ ==================
+
+ We mainly follow mainstream Java syntax conventions in Peano for historic reasons and
+ as this is a real OO/C++ project. Some important principles are:
+
+ - One file per class
+ - Consistent naming conventions
+ - Long, self-explaining names (no acronyms)
+ - One subdirectory per namespace
+
+
+
+
+Configuring Peano in Eclipse
+============================
+
+You can integrate Peano straightforwardly into Eclipse.
+Clone the repository locally and invoke
+
+~~~~~~~~~~~~~~~~~~~~~~~
+libtoolize; aclocal;
+autoconf; autoheader;
+cp src/config.h.in .;
+automake --add-missing
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Open the Eclipse GUI and run the following steps:
+
+- Select `New Project`.
+- Select a C++ project. Older Eclipse versions want you to pick the mode `Managed Build`. Some wizard generations distinguish C from C/C++. I always pick the C/C++ version.
+- Locate the project at a remote directory (where you git deposits the clones).
+- Select `GNU Autotools`. The Empty Project is the right one to select.
+- You need only one target configuration. By default, Eclipse offers you to build Build and Debug. Disable the debug variant.
+
+Some Eclipse wizards tend to overwrite Peano's `configure.ac` file. If
+this is the case, replace the files through
+
+~~~~~~~~~~~~~~~~~~~~~~~
+git restore  configure.ac
+git restore  Makefile.am
+git restore  src/Makefile.am
+~~~~~~~~~~~~~~~~~~~~~~~
+
+and clean the project in Eclipse. Once you've done so, I recommend that you
+give the .gitignore file some special treatment:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+git rm --cached file
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Eclipse tends to insert the documentation folder to the ignored files once you
+enable the autotools pipeline. Every new commit now will add this ignore entry
+to the global repo, which is something we don't want to have.
+
+
+# Python Conventions / Style Guide
+
+Most users will interact with Peano through the Python API, which acts as glue to stick
+together various C++ snippets in a way that can be modified for each experiment. 
+
+We aim for our Python to look something like the [PEP-8 style guide for Python](https://peps.python.org/pep-0008/).
+In particular, methods should be named all in lowercase, with words separated by underscores, such as:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+def my_method_for_calulcating_residuals(*args):
+  # code goes here
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Moreover, class names should be in camel case:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+class MyClassForStoringData:
+  # code goes here
+~~~~~~~~~~~~~~~~~~~~~~~
+
+More info can be found in the FAQs below.
+
+# C++ conventions / Style Guide
+
+We use fairly standard conventions when writing C++. This includes, but isn't limited to:
+
+- CamelCase for methods, variables and classes
+- Indentation with tabs (two spaces wide)
+- Opening brace for ```if``` statements or ```for``` loops should be on same line, eg:
+~~~~~~~~~~~~~~~~~~~~~~~
+for (int i=0; i<10; i++){
+  // code goes here
+}
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If in doubt, you can use the automatic formatting tool described below, but it is crucial
+that you only format files which you had modified already, i.e. no formatting random files
+in the repo.
+
+
+
+FAQs
+--------------
+
+- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
+  improves readability. Python packages should also have short, all-lowercase names, although the
+  use of underscores is discouraged.
+- Class names should normally use the CapWords (CamelCase) convention.
+- Function names should be lowercase, with words separated by underscores as necessary to improve
+  readability.
+- Variable names follow the same convention as function names.
+
+
+
+
+
+
+
+Python
+===============
+
+Please try and follow the <a href="https://peps.python.org/pep-0008/">PEP 8 Style guide</a>.
+
+
+FAQs
+--------------
+
+- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
+  improves readability. Python packages should also have short, all-lowercase names, although the
+  use of underscores is discouraged.
+- Class names should normally use the CapWords (CamelCase) convention.
+- Function names should be lowercase, with words separated by underscores as necessary to improve
+  readability.
+- Variable names follow the same convention as function names.
+
+
+
+
+
+
+Code Formatting
+===============
+
+Recently (2023) a code formatting script has been added to incrementally add consistent
+formatting throughout the project. Under the hood, it uses ``clang-format`` for C++ code,
+and ``black`` for Python code.
+
+Since the idea is to incrementally add consistent formatting throughout, the code script
+is set up to only format files that have been modified on your local branch to the main
+branch, ``p4``. Ideally, the formatting script should be run on your local branch before
+you submit a merge request.
+
+The usage is straightforward. The script can be found in ``Peano/format.py``.
+To format all files that differ from files on the main ``p4`` branch, simply run
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 format.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to compare your local branch to a different branch than ``p4``, you can
+specify that using the ``-b`` or ``--branch`` flag, e.g.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 format.py --branch branch-I-want-to-merge-into
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that the format script detects potential files which might need formatting using
+git, therefore only files tracked by the git versioning will be considered.
+
+If you prefer to run the formatting script on individual files only, you can specify
+them using the ``--files`` flag:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``--files`` flag doesn't check whether the files you provide are traced by git, and
+will try to format any files you provide. This can be used for instance to run the
+formatter on generated files.
+
+
+
+
+
+
+
+
+
+ */
+

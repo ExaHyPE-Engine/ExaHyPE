@@ -1,0 +1,73 @@
+/**
+
+\page page_version_control_home Version Control (Git)
+
+\tableofcontents
+
+The project is hosted on the gitlab of the Leibniz Supercomputing Centre. You
+find the repository at https://gitlab.lrz.de/hpcsoftware/Peano. We try to give
+all interested colleagues access to the repository including some write
+permissions, but we do protect some branches.
+
+- Our main branch is called p4, as we work with Peano 4. This one is protected
+  and serves as our release branch.
+- p4 has a couple of top-level branches which are editable by a few key
+  users. Please assign merge requests to one of these key users if you want your
+  changes to be merged.
+  - particles
+  - multigrid
+  - exahype
+  - applications
+  - infrastructure
+  - documentation
+- Most of these branches are only writable by the PI, though some
+  responsibilities for very few ranches are delegated.
+- We have multiple subbranches under each top level branch. They are "owned"
+  by various colleagues.
+
+It is sometimes confusing to distinguish methodological extensions and
+applications: Very often, the application needs trigger the introduction of new
+numerical techniques or infrastructure features. However, we find it useful to
+maintain them in different branches, as infrastructure changes by definition
+often affect a lot of different applications, so we want people to be very
+careful.
+
+Our merges happen exclusively along the branch tree, i.e. any modification
+should feed at one point into a top-level branch of above. Once we are happy
+with the status quo there, anybody can request a merge into p4 via a merge
+request. The other way round, updates into p4 are not automatically downstreamed
+into the top level branches. If you would like to see updates of the release
+branch before you branch from a top-level branch, please issue another MR and
+assign it to the PI.
+
+
+## Naming conventions
+
+If you create a new branch, please follow the two naming approaches:
+
+1. Create a hierarchical representation such as particles-taskgraph-bugfix
+   which highlights that this branch is a subbranch of taskgraph which in
+   turn is a subbranch of particles.
+2. Use your username followed by a slash as name prefix.
+
+The second version puts additional emphasis on who "owns" a certain branch,
+while the first one highlights the hierarchical relationships. Multi-user
+branches or top-level branches do not have a name prefix.
+
+
+## Popular subbranches
+
+- ***documentation*** is a top-level branch which exclusively fixes
+  documentation, tutorials, ... Nothing in here does actually "touch" real
+  code @ref page_documentation_home "besides inserting markers such that code sections can be cited".
+- ***infrastructure-gpu*** is a subbranch of infrastructure and collects all
+  the extensions we need to support various GPU back-ends.
+- ***infrastructure-cmake*** and similar branches are used for tweaks around
+  the build systems.
+- ***infrastructure-ci*** and similar branches deal with continuous
+  integration.
+- ***particles*** hosts our SPH work, i.e. Swift 2.
+- ***exahype*** hosts our work around ExaHyPE 2.
+- ***multigrid*** hosts our multigrid work funded under the ExCALIBUR programme.
+
+*/

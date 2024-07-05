@@ -1,0 +1,276 @@
+/**
+
+@page page_swift_performance_optimisation Performance optimisation
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+This section discusses some Swift-specific performance optimisation steps.
+While Swift 2.0 and its baseline, Peano, provide simplistic performance analysis
+features to spot some flaws, a proper performance optimisation has to be guided
+by external performance analysis tools.
+Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this
+page.
+All of the recommendations there apply for SWIFT, too.
+
+
+
+
+# Optimising the single core performance of individual species (vectorisation)
+
+To enable proper vectorisation is not trivial within a Lagrangian framework,
+as we typically need the right instructions, i.e. compute kernels, but also
+a fitting memory layout.
+As a user, you are responsible to ensure that the memory layout is properly
+chosen, and then you can activate the solvers' vectorisation.
+
+
+
+Some of Swift's solvers are however already well-prepared to exploit the knowledge about
+optimised memory layouts and proper setups of action sets and hence can be
+vectorised.
+This does not hold for all solvers. You have to study their documentation,
+typically alter some switches and then tune the memory layout and particle
+handling as described below.
+Please note that not all solvers are compatible with all graph compiler
+flavours either. Again, this is something you might want to check with the
+solver documentation.
+
+Even if your solver does not support vectorisation, you might benefit from the
+discussions below such as the memory pool and the different flavours of active
+set handling.
+The impact just won't be that big.
+The page @ref swift_particle_new_solver provides further details how to write
+vectorised solvers, i.e. how to prepare solvers to be able to exploit continuous,
+well-administered memory.
+
+
+
+## Step 1: Maintaining the active sets
+
+There are two different versions how to maintain the active sets: We can either
+build them up as proper sets and add particles to the set whenever we
+touchCellFirstTime() and remove them from the cell when we invoke
+touchCellLastTime(). Or we can work with a list, memorise how many particles we
+add per touchCellFirstTime() and remove exactly this number when we backtrack
+through the tree.
+
+The set variant is robust, but it is not very fast as we have to check for each
+particle in touchCellLastTime() where it is within the set and then we can
+remove it. We also miss out on any adjacent memory storage. The list variant
+is faster and preserves the ordering of the particles per vertex/cell (see the
+remarks below), but it works if and only if the particle-mesh association
+remains invariant. Such an "ordered" particle sequence allows you to use
+compute kernels with coalesced memory access, i.e. vectorisation.
+This insight gives rise to a third variant, where we use the coalesced memory
+storage and insert sorting sweeps whenever the particle positions change, such
+that we can always work with properly sorted particles.
+
+Whether or not to use one variant or the other is a decision that's made by the
+graph compiler. Some compiler flavours support different active set
+construction variants, others are tied to one variant only.
+By default, the project initialises its graph compiler with the variant
+that does not try to vectorise or use sorted particles.
+You can alter that in your code:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Just pick another variant (consult namespace docu) here. Please note that these
+operations do typically unfold their potential if and only if you use a fully
+vectorised solver in combination with a proper particle memory management below.
+
+Note: If you use a scheme which relies on vectorisation all the time, you have
+to also alter the initialisation via
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.initialisation_steps_task_graph_compiler  = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalescend_memory_access
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Step 2: Storage of particles and maintaining the particle-mesh association
+
+Maintaining the association of particles to meshes is key, as Peano traverses
+the mesh and issues the particle updates for those particles tied to particular
+vertices or cells. We distinguish different ways how the particles themselves
+are organised in the memory and how the indices over the particles are built
+up and maintained. All particles are always stored on the heap, but how they
+populate the heap can be changed by using different
+@ref toolbox_particles_memorypool "memor pools".
+
+
+You can alter the scheme per particle species by taking your
+instance of peano4.toolbox.particles.ParticleSet. Each particle set hosts an
+attribute generator. You can exchange the generator and thus switch
+administration and storage variants per species.
+
+
+Feature | Generator | Semantics
+--------|--------------|----------
+scattered particles, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
+scattered particles, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
+arrays of particles per vertex | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
+global array of particles | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_GlobalContinuous | The code tries to hold the particles in one big consecutive array where all particles associated with one vertex are held en bloc.
+
+
+The scattered variants holds the particles somewhere on the global heap, and
+try never to move them. If particles travel within their subdomain, the code
+solely update the pointers each vertex holds to the particle. As a consequence,
+we might run into a fragmented heap occupation and the compute kernels will
+have to deal with scattered memory access. Coalescent memory access is basically
+never possible.
+
+
+@image html python/peano4/toolbox/particles/ParticleSetGenerator_ScatteredOnHeap.png
+
+
+In return, we don't move
+(potentially heavy) particles around in memory and hence don't stress the
+OS memory system. To maintain the lists of the particles per vertex, we offer
+different versions. Again, the pointers can be stored within a consecutive
+memory block (array), or we can use a list which adds another level of overhead
+but is more flexible if particle-associations change frequently.
+
+
+@image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
+
+We also offer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chunks per vertex".
+You can study toolbox::particles::memorypool::VertexWiseContinuousMemoryPool
+for a discussion on its realisation.
+Finally, there's also a variant which tries to hold all the particles in one
+big blob, i.e. as one large array. This global sorting is realised through
+toolbox::particles::memorypool::GlobalContinuousMemoryPool.
+
+
+@image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
+
+
+The code to switch the storage scheme is relatively easy. Capture the particle
+set that the Swift 2 project returns when you add a particle species:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle_set = project.add_particle_species(particle)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The line above changes the particle set generator, i.e. the class which maps the
+particle set onto an implementation.
+
+
+## Step 3: Expose all particle attributes
+
+Vectorisation requires very aggressive inlining. To facilitate such inlining,
+all the setters and getters of particle attributes have to be available in the
+header. Study the
+@ref page_dastgen_home "DaStGen documentation" for remarks how to move getters and
+settings into the header. Notably study the semantics of the function
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle.data.expose_all_attributes_in_header_file()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which moves all attribute setters and getters into the header and hence
+facilitiates very aggressive inlining via copy n paste.
+
+
+## Step 4: Switch to optimised and vectorised kernels
+
+Our rewrite of Swift is based upon the concept that all physics should be
+realisable through two-body forces or unary particle updates. Furthermore, we
+assume that such update kernels have all validity checks built-in, i.e. they
+determine internally if a particle is, for example, within the cut off radius
+or does not act on itself. These design decisions are discussed
+@ref swift_particle_new_solver "in the context of introducing new, bespoke solvers".
+
+
+Switching to optimised kernels is conceptually simple: You alter the iteration
+scheme over the particles within a cell or those that are attached to a vertex.
+However, this is a delicate process, and it definitely is worth trying things
+out one by one and to let a profiler guide any changes.
+
+
+### Move if checks out of the kernels
+
+Users typically start from a generic usage of the iterators in ParticleSetIterators.h.
+That is, they simply type down swift2::kernels::forAllParticlePairs() and hand
+in their compute kernels of choice. As kernels always should check internally
+if they are supposed to run or not (consult @ref swift_particle_new_solver "how to introduce a new solver"),
+all the iterators could do is invoke the actual kernel per particle or
+particle pair, respectively.
+
+However, it might make sense to evaluate a "shall I run" predicate ahead of the
+actual kernel invocation: If a particle is outside of a cell in a cell kernel,
+it might be reasonable not even to start to run over all the (active) particles
+around it. So this additional check makes mainly sense for particle-particle
+interactions, i.e. forAllParticlePairs(), but Swift 2 realises the same
+guard mechanism for both forAllParticles() and forAllParticlePairs(). Both
+routines do accept additional guards which allow you to mask out certain
+calculations a priori.
+
+By default, some of them are already active: The update of a particle
+associated to a vertex for example is only evaluated if this vertex is local,
+and particle pairs are only evaluated if the receiver side is inside a cell
+and hasn't been taken into account yet.
+Whilst, it might be interesting to deactivate these guards and to evaluate
+the impact, the particle-particle interactions per cell indeed do check each
+particle pair individually (this is important for a lot of consistency checks
+in non-release modes) and one might want to shortcut these checks. For this,
+you have to alter your
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, mykernel, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::MyParticleType>);"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which is the default into
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, mykernel, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::MyParticleType>);"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once again: It is not always beneficial to move predicates outside, as this
+introduces additional outer branching which in turn challenges any
+vectorisation. You have to test and see.
+
+
+### Switch to vectorised kernels
+
+If kernels consume a lot of compute time, it is reasonable to switch the
+compute kernels. This again can be done through the iterators. Replace
+the ::swift2::kernels::forAllParticlePairs() call with a vectorised
+counterpart. There are at multiple variants in the ParticleSetIterator.h
+file. It is never clear a priori which one yields the best performance.
+
+Please note that vectorised kernels have a slightly different call
+signature. Besides the particle sets and marker, all of them need meta data
+how the particle sets are arranged in memory. In the Python API, they need
+the numberOfAssignedParticles, numberOfLocalParticles, or
+numberOfActiveParticles, respectively. Obviously, vectorised kernels work
+if and only if you have chosen a vector-friendly memory layout.
+
+A lot of particle kernels vectorise poorly, as they have internal branching.
+Therefore, solver developers might offer them in two variants: The plain one
+where the particle updates are protected with a validation predicate
+("am I supposed to update the particle") and a variant which works with
+masking, i.e. where the final update is multiplied with either 0 or 1 and
+therefore either activated or disabled. Masking can be very expensive, as
+it means that we might do a lot of calculations. However, it can allow
+vectorisation. To make a long story short: Some kernels come along with a
+variant that is fast yet does not vectorise and a flavour which is not that
+efficient yet vectorises. You have to test combinations of them with the
+iterators. There is @ref swift_runtime_analysis "a page on runtime analysis"
+hints which might be useful in this context.
+
+
+
+# Further References
+
+See also
+
+- Notes in @ref benchmarks_swift2_hydro_noh_imposion_test
+- Section "Tune a kernel realisation" on page @ref swift_particle_new_solver
+
+ */
+
