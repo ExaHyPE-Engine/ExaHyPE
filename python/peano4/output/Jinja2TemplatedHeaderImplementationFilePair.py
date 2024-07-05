@@ -49,6 +49,7 @@ dictionary entries besides the ones manually handed over by the user.
     self.d[ "NAMESPACE" ] = []
     for i in namespace:
       self.d["NAMESPACE"].append(i)
+    # Eliminate the prepending "::" that can lead to compatibility issues across the solvers
     self.d["FULL_QUALIFIED_NAMESPACE"] = "::".join(namespace)
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
