@@ -1,0 +1,44 @@
+/**
+
+\page page_continuous_integration Continuous Integration (CI)
+
+\tableofcontents
+
+On this page, we detail the current function of the CI pipeline.
+Much of the following is subject to change.
+
+
+## How do I run the pipeline?
+
+The pipeline runs automatically for all branches and all pushes.
+However, it only runs fully on the `p4` branch.
+For all other branches, the pipeline only executes the build and test (unit tests) stages.
+
+At time of writing, ```gitlab-runner``` is installed as a service on multiple nodes of DINE.
+The workers are kept alive by recurring slurm jobs. Peano developers should not need to do
+anything other than push to a branch, and [check the pipelines page on the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines)
+to check that their code has correctly built for each compiler toolchain. Of course,
+this will only check that the core of Peano has been built correctly. See below for info
+on how to write custom tests.
+
+
+## How does the pipeline work?
+
+Within the repo, we have various scripts to build the code. ```configure.py``` in the top-level
+of Peano will ```configure``` and ```make``` the code according to whatever requirements are
+needed. The only difference here is we use ```singularity exec``` to make sure that these
+commands are run inside these singularity images, so that specific compilers can be used
+automatically.
+
+This is planned to change, however, as this isn't so clean. In the future, we either plan
+to mirror the repo to GitHub and use GitHub actions, or make an executor for gitlab-runner
+that can handle singularity images directly.
+
+## How do I write my own tests?
+
+Unfortunately, the use of the singularity containers is not pretty, and
+so the best thing to do is describe your desired actions in a bash script and ask for help on the
+continuous-integration channel of the Slack. This is due to change in the near future.
+
+
+*/

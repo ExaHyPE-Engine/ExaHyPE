@@ -6,7 +6,7 @@
 #include "toolbox/loadbalancing/metrics/CustomCellWeight.h"
 
 /**
- * @page toolbox_loadbalancing Load balancing (domain decomposition)
+ * @page toolbox_loadbalancing Load Balancing (Domain Decomposition)
  *
  * <!-- Add this one for href links to subitems -->
  * \tableofcontents
