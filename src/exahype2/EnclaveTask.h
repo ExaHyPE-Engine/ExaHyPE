@@ -169,8 +169,17 @@ public:
 
   static void releaseTaskNumber(int number);
 
+  /**
+   * Reserve a new enclave task number
+   *
+   * This factory mechanism is implicitly used by the constructor of an enclave
+   * task. However, we make it public. Therefore, you can also hijack enclave
+   * task numbers. This comes in handy if you want to manually insert
+   * predecessor tasks to enclave tasks: You create "your own" enclave task, the
+   * enclave task creation will recognise that a task is already associated with
+   * a cell, and hence use this one as additional input constraint.
+   */
+  static int reserveTaskNumber();
 private:
   static tarch::Enumerator                  _enumerator;
-
-  static int reserveTaskNumber();
 };
