@@ -220,6 +220,9 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
     1. We ensure that we use Sommerfeld boundary conditions. This means that
        we have to replace the whole generic boundary treatment with a bespoke
        action set.
+    2. The coupling has to be injected. We model the coupling as separate
+       (enclave) tasks to avoid that we totally serialise the solver steps
+       whenever we encounter a coupling.
 
     """
     def __init__(self, 
@@ -345,8 +348,9 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         )
 
         self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(
-            self,
-            """
+            solver = self,
+            enclave_task_cell_label = "fineGridCell" + self._name_without_FD4_extension + "_FVCellLabel",
+            compute_kernel_implementation = """
 const int sizeOfPatch = (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
@@ -375,12 +379,39 @@ const int sizeOfFace = 2
             + """_FV.NumberOfAuxiliaryVariables);
   
 double* interpolatedFVDataWithHalo = ::tarch::allocateMemory<double>(sizeOfPatch, ::tarch::MemoryLocation::Heap);
-double* dummyFace0 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-double* dummyFace1 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-double* dummyFace2 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-double* dummyFace3 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-double* dummyFace4 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+
+bool faceIsReal0 = repositories::instanceOf"""
+            + self._name_without_FD4_extension
+            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,0);
+bool faceIsReal1 = repositories::instanceOf"""
+            + self._name_without_FD4_extension
+            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,1);
+bool faceIsReal2 = repositories::instanceOf"""
+            + self._name_without_FD4_extension
+            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,2);
+bool faceIsReal3 = repositories::instanceOf"""
+            + self._name_without_FD4_extension
+            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,3);
+bool faceIsReal4 = repositories::instanceOf"""
+            + self._name_without_FD4_extension
+            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,4);
+bool faceIsReal5 = repositories::instanceOf"""
+            + self._name_without_FD4_extension
+            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5);
+            
+double* realFace0 = faceIsReal0 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(0).value : nullptr;
+double* realFace1 = faceIsReal1 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(1).value : nullptr;
+double* realFace2 = faceIsReal2 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value : nullptr;
+double* realFace3 = faceIsReal3 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value : nullptr;
+double* realFace4 = faceIsReal4 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value : nullptr;
+double* realFace5 = faceIsReal5 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value : nullptr;
+
+double* dummyFace0 = faceIsReal0 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+double* dummyFace1 = faceIsReal1 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+double* dummyFace2 = faceIsReal2 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+double* dummyFace3 = faceIsReal3 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+double* dummyFace4 = faceIsReal4 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+double* dummyFace5 = faceIsReal5 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 
 ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
   repositories::instanceOf"""
@@ -413,45 +444,21 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
   interpolatedFVDataWithHalo,
-  repositories::instanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
-            + self._name_without_FD4_extension
-            + """_FVQNew(0).value,
-  repositories::instanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
-            + self._name_without_FD4_extension
-            + """_FVQNew(1).value,
-  repositories::instanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
-            + self._name_without_FD4_extension
-            + """_FVQNew(2).value,
-  repositories::instanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
-            + self._name_without_FD4_extension
-            + """_FVQNew(3).value,
-  repositories::instanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
-            + self._name_without_FD4_extension
-            + """_FVQNew(4).value,
-  repositories::instanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
-            + self._name_without_FD4_extension
-            + """_FVQNew(5).value
+  faceIsReal0 ? realFace0 : dummyFace0,
+  faceIsReal1 ? realFace1 : dummyFace1,
+  faceIsReal2 ? realFace2 : dummyFace2,
+  faceIsReal3 ? realFace3 : dummyFace3,
+  faceIsReal4 ? realFace4 : dummyFace4,
+  faceIsReal5 ? realFace5 : dummyFace5
 );
 
 ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
-::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
-::tarch::freeMemory(dummyFace1, tarch::MemoryLocation::Heap );
-::tarch::freeMemory(dummyFace2, tarch::MemoryLocation::Heap );
-::tarch::freeMemory(dummyFace3, tarch::MemoryLocation::Heap );
-::tarch::freeMemory(dummyFace4, tarch::MemoryLocation::Heap );
-::tarch::freeMemory(dummyFace5, tarch::MemoryLocation::Heap );
+if (dummyFace0!=nullptr) ::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
+if (dummyFace1!=nullptr) ::tarch::freeMemory(dummyFace1, tarch::MemoryLocation::Heap );
+if (dummyFace2!=nullptr) ::tarch::freeMemory(dummyFace2, tarch::MemoryLocation::Heap );
+if (dummyFace3!=nullptr) ::tarch::freeMemory(dummyFace3, tarch::MemoryLocation::Heap );
+if (dummyFace4!=nullptr) ::tarch::freeMemory(dummyFace4, tarch::MemoryLocation::Heap );
+if (dummyFace5!=nullptr) ::tarch::freeMemory(dummyFace5, tarch::MemoryLocation::Heap );
 """,
         )
 
