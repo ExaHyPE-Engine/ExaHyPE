@@ -20,7 +20,10 @@ tbb::dynamic_task_graph_node&  tbb::dynamic_task_graph_node_repository::create_n
 
   bool task_with_number_has_never_been_created_before  = _node_container.insert(hash_map_accessor, number);
 
-  if (not task_with_number_has_never_been_created_before) {
+  if (task_with_number_has_never_been_created_before) {
+    hash_map_accessor->second          = nullptr;
+  }
+  else {
     bool task_with_number_has_never_been_shadowed_before = _shadowed_node_container.insert(shadowed_hash_map_accessor, number);
 
     if (not task_with_number_has_never_been_shadowed_before) {
@@ -28,9 +31,6 @@ tbb::dynamic_task_graph_node&  tbb::dynamic_task_graph_node_repository::create_n
     }
 
     shadowed_hash_map_accessor->second = hash_map_accessor->second;
-    hash_map_accessor->second          = nullptr;
-  }
-  else {
     hash_map_accessor->second          = nullptr;
   }
 
