@@ -95,11 +95,17 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         QOut
         {% endif %}
       );
+      
+      int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
+      
       tarch::multicore::spawnTask(
         newEnclaveTask, 
-        fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber()>=0 ? std::set<int>{fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber()} : tarch::multicore::NoInDependencies, 
+        predecessorEnclaveTaskNumber>=0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies, 
         newEnclaveTask->getTaskId()
       );
+      
+      ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
     }
     {% else %}
