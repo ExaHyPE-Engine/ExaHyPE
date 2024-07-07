@@ -90,7 +90,7 @@ class impl:
         self.SCOPE = 0
 
     def namespace(self,location):
-        self.code += f"namespace {location}" + "{" + "\n"
+        self.code += f"\nnamespace {location}" + "{" + "\n"
         self.SCOPE += 1
         self.INDENT += 1
 
@@ -136,7 +136,7 @@ class impl:
             if char == "(":
                 string += char
                 var_start = i+1
-            elif char == "[":
+            elif char == "[" and expression[i+1] == "]":
                 temp_enum = expression[var_start:i]
                 if temp_enum in enums:
                     temp_enum = Enumerator().fetch(enums[temp_enum])
@@ -144,13 +144,13 @@ class impl:
                     temp_enum = enum
                 temp_enum.shift(enum)
                 string += temp_enum.index()
-            elif char == "]":
+            elif char == "]" and expression[i-1] == "[":
                 pass
             else:
                 string += char
         return string
 
-    def stencil(self,out_name,names,stencil,scales,enums,below,enum=None):
+    def stencil(self,out_name,names,stencil,scales,var_list,enums,below,special=None,enum=None):
         if self.debug: print("Hello from impl.stencil")
         if enum==None:
             enum = Enumerator().fetch(enums[out_name])
@@ -160,7 +160,7 @@ class impl:
             self.indent(1)
             enum.lower()
             enums[out_name] = enum.RETURN()
-            self.stencil(out_name,names,stencil,scales,enums,below-1)
+            self.stencil(out_name,names,stencil,scales,var_list,enums,below-1)
             self.indent(-1)
         else:
             self.indent(1)
@@ -175,12 +175,14 @@ class impl:
                     dim = 0
                     self.indent()
                     self.code += lhs
-                    scale = scales[scale_i]
+                    if type(scales) == list:
+                        scale = scales[scale_i]
+                    else: scale = scales
                     if scale >= 0:
                         self.code += " += "
                     else:
                         self.code += " -= "
-                    self.code += f"{abs(scales[scale_i])} * " + names[int(temp)] + "["
+                    self.code += f"{abs(scale)} * " + names[int(temp)] + "["
                     temp = ""
                 elif char == "]":
                     inside = False

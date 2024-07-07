@@ -6,8 +6,8 @@ dt = 0.01
 
 Qcopy   =   test.Evaluate("Qcopy", "Q[]")
 
-xnum    =   test.halo([1,0,0])
-ynum    =   test.halo([0,1,0])
+xnum    =   test.halo([1,0])
+ynum    =   test.halo([0,1])
 
 XFlux   =   test.Evaluate("flux_x", "Flux_x(Qcopy[],kwargs)", xnum)
 YFlux   =   test.Evaluate("flux_y", "Flux_y(Qcopy[],kwargs)", ynum)
@@ -17,4 +17,9 @@ YEig   =   test.Evaluate("tmp_y_eigen", "Y_max_eigenvalues(Qcopy[],kwargs)", ynu
 
 test.Stencil(Qcopy,[XFlux,YFlux],"0[010],0[0-10],1[001],1[00-1]",dt*np.array([1,-1,1,-1]))
 test.Stencil(Qcopy,[XEig,YEig],"0[010],0[0-10],1[001],1[00-1]",[0.5,0.5,0.5,0.5])
+
+const*max(XEign[i],[i+1])*(Q[i]-Q[i+1])
+const*max(XEign[i],[i-1])*(Q[i]-Q[i-1])
+
+
 
