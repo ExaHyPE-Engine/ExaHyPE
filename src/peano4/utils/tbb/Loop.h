@@ -27,15 +27,14 @@
   int counter##Begin[] = {0,0}; \
   int counter##End[]   = {counter##Max(0),counter##Max(1)}; \
   tbb::parallel_for( \
-    tbb::blocked_rangexd<int,2>( \
+    tbb::blocked_rangeNd<int,2>( \
       counter##Begin, \
       counter##End, \
-      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1, \
-      loopParallelism==::peano4::utils::LoopPlacement::Nested \
+      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
-    [&]( const tbb::blocked_rangexd<int,2>&  range ) { \
-      for( int counter##1 = range.subrange(0).begin();  counter##1 < range.subrange(0).end();  counter##1++ ) \
-      for( int counter##2 = range.subrange(1).begin();  counter##2 < range.subrange(1).end();  counter##2++ ) { \
+    [&]( const tbb::blocked_rangeNd<int,2>&  range ) { \
+      for( int counter##1 = range.dim(0).begin();  counter##1 < range.dim(0).end();  counter##1++ ) \
+      for( int counter##2 = range.dim(1).begin();  counter##2 < range.dim(1).end();  counter##2++ ) { \
         tarch::la::Vector<2, int> counter = { counter##1, counter##2 };
 
 
@@ -45,16 +44,15 @@
   int counter##Begin[] = {0,0,0}; \
   int counter##End[]   = {counter##Max(0),counter##Max(1),counter##Max(2)}; \
   tbb::parallel_for( \
-    tbb::blocked_rangexd<int,3>( \
+    tbb::blocked_rangeNd<int,3>( \
       counter##Begin, \
       counter##End, \
-      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1, \
-      loopParallelism==::peano4::utils::LoopPlacement::Nested \
+      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
-    [&]( const tbb::blocked_rangexd<int,3>&  range ) { \
-      for( int counter##1 = range.subrange(0).begin();  counter##1 < range.subrange(0).end();  counter##1++ ) \
-      for( int counter##2 = range.subrange(1).begin();  counter##2 < range.subrange(1).end();  counter##2++ ) \
-      for( int counter##3 = range.subrange(2).begin();  counter##3 < range.subrange(2).end();  counter##3++ ) {\
+    [&]( const tbb::blocked_rangeNd<int,3>&  range ) { \
+      for( int counter##1 = range.dim(0).begin();  counter##1 < range.dim(0).end();  counter##1++ ) \
+      for( int counter##2 = range.dim(1).begin();  counter##2 < range.dim(1).end();  counter##2++ ) \
+      for( int counter##3 = range.dim(2).begin();  counter##3 < range.dim(2).end();  counter##3++ ) {\
         tarch::la::Vector<3, int> counter = { counter##1, counter##2, counter##3 };
 
 
@@ -64,17 +62,16 @@
   int counter##Begin[] = {0,0,0,0}; \
   int counter##End[]   = {counter##Max(0),counter##Max(1),counter##Max(2),counter##Max(3)}; \
   tbb::parallel_for( \
-    tbb::blocked_rangexd<int,4>( \
+    tbb::blocked_rangeNd<int,4>( \
       counter##Begin, \
       counter##End, \
-      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1, \
-      loopParallelism==::peano4::utils::LoopPlacement::Nested \
+      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
-    [&]( const tbb::blocked_rangexd<int,4>&  range ) { \
-      for( int counter##1 = range.subrange(0).begin();  counter##1 < range.subrange(0).end();  counter##1++ ) \
-      for( int counter##2 = range.subrange(1).begin();  counter##2 < range.subrange(1).end();  counter##2++ ) \
-      for( int counter##3 = range.subrange(2).begin();  counter##3 < range.subrange(2).end();  counter##3++ ) \
-      for( int counter##4 = range.subrange(3).begin();  counter##4 < range.subrange(3).end();  counter##4++ ) { \
+    [&]( const tbb::blocked_rangeNd<int,4>&  range ) { \
+      for( int counter##1 = range.dim(0).begin();  counter##1 < range.dim(0).end();  counter##1++ ) \
+      for( int counter##2 = range.dim(1).begin();  counter##2 < range.dim(1).end();  counter##2++ ) \
+      for( int counter##3 = range.dim(2).begin();  counter##3 < range.dim(2).end();  counter##3++ ) \
+      for( int counter##4 = range.dim(3).begin();  counter##4 < range.dim(3).end();  counter##4++ ) { \
         tarch::la::Vector<4, int> counter = { counter##1, counter##2, counter##3, counter##4 };
 
 
@@ -84,18 +81,17 @@
   int counter##Begin[] = {0,0,0,0,0}; \
   int counter##End[]   = {counter##Max(0),counter##Max(1),counter##Max(2),counter##Max(3),counter##Max(4)}; \
   tbb::parallel_for( \
-    tbb::blocked_rangexd<int,5>( \
+    tbb::blocked_rangeNd<int,5>( \
       counter##Begin, \
       counter##End, \
-      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1, \
-      loopParallelism==::peano4::utils::LoopPlacement::Nested \
+      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
-    [&]( const tbb::blocked_rangexd<int,5>&  range ) { \
-      for( int counter##1 = range.subrange(0).begin();  counter##1 < range.subrange(0).end();  counter##1++ ) \
-      for( int counter##2 = range.subrange(1).begin();  counter##2 < range.subrange(1).end();  counter##2++ ) \
-      for( int counter##3 = range.subrange(2).begin();  counter##3 < range.subrange(2).end();  counter##3++ ) \
-      for( int counter##4 = range.subrange(3).begin();  counter##4 < range.subrange(3).end();  counter##4++ ) \
-      for( int counter##5 = range.subrange(4).begin();  counter##5 < range.subrange(4).end();  counter##5++ ) { \
+    [&]( const tbb::blocked_rangeNd<int,5>&  range ) { \
+      for( int counter##1 = range.dim(0).begin();  counter##1 < range.dim(0).end();  counter##1++ ) \
+      for( int counter##2 = range.dim(1).begin();  counter##2 < range.dim(1).end();  counter##2++ ) \
+      for( int counter##3 = range.dim(2).begin();  counter##3 < range.dim(2).end();  counter##3++ ) \
+      for( int counter##4 = range.dim(3).begin();  counter##4 < range.dim(3).end();  counter##4++ ) \
+      for( int counter##5 = range.dim(4).begin();  counter##5 < range.dim(4).end();  counter##5++ ) { \
         tarch::la::Vector<5, int> counter = { counter##1, counter##2, counter##3, counter##4, counter##5 };
 
 
