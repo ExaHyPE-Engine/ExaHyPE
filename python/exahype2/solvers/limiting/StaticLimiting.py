@@ -88,9 +88,13 @@ class StaticLimiting(object):
 
         self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n  _Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
 
-        self._limiter_solver._compute_time_step_size = """
-    double timeStepSize = repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize();
+        compute_time_step_size = """
+    double timeStepSize = std::min( repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
+                                    repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
 """
+
+        self._limiter_solver._compute_time_step_size = compute_time_step_size
+        self._regular_solver._compute_time_step_size = compute_time_step_size
 
     """
     Creates the action sets, these are actions tied to the grid that are executed at given points of
@@ -122,7 +126,7 @@ class StaticLimiting(object):
         self._action_set_copy_convert_and_project_data = CopyAndConvertPatch(self,
             regularToLimiterGuard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
                 + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepping"
-                + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()==celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
+                + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()<=celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
                 + " and " + "repositories::" + self.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
             limiterToRegularGuard = ( "not marker.willBeRefined() and not marker.hasBeenRefined()"
               + " and " + "repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"

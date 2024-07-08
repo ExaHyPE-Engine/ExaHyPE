@@ -87,8 +87,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     case SolverState::GridInitialisation:
     case SolverState::PlottingAfterGridInitialisation:
       _solverState = SolverState::LimiterStatusSpreadingToNeighbours;
+      repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
+      repositories::{{REGULAR_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
       break;
     case SolverState::LimiterStatusSpreadingToNeighbours:
+      repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
     case SolverState::TimeStepping:
     case SolverState::Plotting:
     case SolverState::Suspended:
@@ -97,11 +100,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
-
-  if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
-      repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
-      repositories::{{REGULAR_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
-  }
 
   if (::tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:");
