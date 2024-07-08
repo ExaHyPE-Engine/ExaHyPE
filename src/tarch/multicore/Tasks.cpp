@@ -560,7 +560,6 @@ void tarch::multicore::native::processFusedTask(
     tarch::multicore::native::spawnTask(
       myTask,
       std::set<TaskNumber>(),
-      std::set<TaskNumber>(),
       NoOutDependencies
     );
   } else {
