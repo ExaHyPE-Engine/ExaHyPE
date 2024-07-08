@@ -84,22 +84,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  const double* __restrict__                  copyOfLinearCombinationOfPreviousShots
+  const double* __restrict__                  linearCombinationOfPreviousShots
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
     marker,
     t,
     dt,
-#if Dimensions==2
+    #if Dimensions==2
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
+    nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
-#else
+    #else
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
+    nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
-#endif
+    #endif
     [&]() -> void {
       applyKernelToCell(
         _marker,
@@ -111,15 +113,56 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
       tarch::freeMemory( _inputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     }
-  )
+  ),
 #ifdef UseSmartMPI
-  , smartmpi::Task(_enclaveTaskTypeId)
+  smartmpi::Task(_enclaveTaskTypeId),
 #endif
-{
+  _linearCombinationOfPreviousShots(nullptr) {
   // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
   //       distinguish different task types once we map other steps onto tasks, too
   setPriority({{ENCLAVE_TASK_PRIORITY}});
-  std::copy_n(copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues);
+  std::copy_n(linearCombinationOfPreviousShots, _numberOfInputValues, _inputValues);
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
+  const ::peano4::datamanagement::CellMarker& marker,
+  double                                      t,
+  double                                      dt,
+  std::shared_ptr< double[] >                 linearCombinationOfPreviousShots,
+  double* __restrict__                        output
+):
+  ::exahype2::EnclaveTask(
+    _enclaveTaskTypeId,
+    marker,
+    t,
+    dt,
+    linearCombinationOfPreviousShots.get(),
+    output,
+    #if Dimensions==2
+    {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
+    #else
+    {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
+    #endif
+    [&]() -> void {
+      applyKernelToCell(
+        _marker,
+        _t,
+        _dt,
+        _inputValues,
+        _outputValues
+      );
+    }
+  ),
+#ifdef UseSmartMPI
+  smartmpi::Task(_enclaveTaskTypeId),
+#endif
+  _linearCombinationOfPreviousShots(linearCombinationOfPreviousShots) {
+  // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
+  //       distinguish different task types once we map other steps onto tasks, too
+  setPriority({{ENCLAVE_TASK_PRIORITY}});
 }
 
 
@@ -339,10 +382,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
-  logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
-  ::exahype2::CellData cellData(otherTasks.size()+1);
+  ::exahype2::CellData cellData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
   int currentTask = 0;
   for (auto& p: otherTasks) {
     cellData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
@@ -351,7 +394,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
     delete p;
     currentTask++;
   }
@@ -361,7 +404,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   cellData.t[currentTask]           = _t;
   cellData.dt[currentTask]          = _dt;
   cellData.id[currentTask]          = _taskNumber;
-  cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
 
   //
   // ==============
@@ -392,7 +435,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   if (not foundOffloadingBranch) {
-    logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+    logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
       << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
@@ -403,7 +446,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<cellData.numberOfCells; i++) {
-    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 

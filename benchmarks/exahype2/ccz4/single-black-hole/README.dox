@@ -16,8 +16,7 @@ compromise between accuracy and stability.
 # Build executable
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=../../../../python
-export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 
 python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -739,7 +738,7 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
         rm tasks/*.o
         $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FD4EnclaveTask.cpp -o tasks/CCZ4SBH_FD4EnclaveTask.o
         $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FVEnclaveTask.cpp  -o tasks/CCZ4SBH_FVEnclaveTask.o
-        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
+        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    This follows @ref page_peano_performance_optimisation "Peano's recommendations"
    how to obtain meaningful optimisation reports. However, it will result in

@@ -13,12 +13,13 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
-	exahype2 \
-	swift2 \
-	petsc \
 	convert \
-	unittests \
-	tbb
+	exahype2 \
+	mghype \
+	petsc \
+	swift2 \
+	tbb \
+	unittests
 
 #
 # I want Peano to be as fast as possible and thus build it as static library
@@ -32,7 +33,7 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
 
 Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/Enumerator.cpp \
-    tarch/NonCriticalAssertions.cpp \
+	tarch/NonCriticalAssertions.cpp \
 	tarch/UnitTests.cpp \
 	tarch/la/tests/DynamicMatrixTest.cpp \
 	tarch/la/tests/MatrixVectorTest.cpp \
@@ -46,22 +47,18 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/DynamicMatrix.cpp \
 	tarch/accelerator/accelerator.cpp \
 	tarch/accelerator/Device.cpp \
-	tarch/accelerator/DeviceInfo.cpp \
 	tarch/accelerator/cpp/accelerator.cpp \
 	tarch/accelerator/cpp/Device.cpp \
-	tarch/accelerator/cpp/DeviceInfo.cpp \
 	tarch/accelerator/omp/accelerator.cpp \
 	tarch/accelerator/omp/Device.cpp \
-	tarch/accelerator/omp/DeviceInfo.cpp \
 	tarch/accelerator/omp/GPUMemoryManager.cpp \
 	tarch/accelerator/sycl/accelerator.cpp \
 	tarch/accelerator/sycl/Device.cpp \
-	tarch/accelerator/sycl/DeviceInfo.cpp \
 	tarch/accelerator/sycl/GPUMemoryManager.cpp \
 	tarch/accelerator/cuda/ErrorCheck.cpp \
-	tarch/accelerator/cuda/DeviceInfo.cpp \
 	tarch/accelerator/cuda/Device.cpp \
 	tarch/accelerator/cuda/accelerator.cpp \
+	tarch/accelerator/hip/accelerator.cpp \
 	tarch/multicore/BooleanSemaphore.cpp \
 	tarch/multicore/multicore.cpp \
 	tarch/multicore/Core.cpp \
@@ -191,7 +188,9 @@ Peano4Core_SOURCES = \
 	peano4/parallel/tests/NodeTest.cpp \
 	peano4/stacks/stacks.cpp \
 	peano4/stacks/STDVectorStack.cpp \
-	peano4/utils/Loop.cpp
+	peano4/utils/Loop.cpp \
+	peano4/utils/tests/ParallelDForTest.cpp
+	
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)

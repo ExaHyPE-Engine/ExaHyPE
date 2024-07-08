@@ -197,7 +197,7 @@ inline void computeGradQi(double* gradQi, const double* const u, const int reque
  **/
 template <typename SolverType>
 void computeGradQ(double* gradQ, const double* const u, const tarch::la::Vector<DIMENSIONS, double>& sizeOfPatch) {
-	const int numberOfVariables = SolverType::NumberOfVariables;
+	const int numberOfVariables = SolverType::NumberOfUnknowns;
 	const int order = SolverType::Order;
         computeGradQ(gradQ, u, sizeOfPatch, numberOfVariables, order);
 }
@@ -205,7 +205,7 @@ void computeGradQ(double* gradQ, const double* const u, const tarch::la::Vector<
 /// Convenience also for computeGradQi
 template <typename SolverType>
 void computeGradQi(double* gradQi, const double* const u, const int requestedDirection, const int requestedVariableIndex, const tarch::la::Vector<DIMENSIONS, double>& sizeOfPatch) {
-	const int numberOfVariables = SolverType::NumberOfVariables;
+	const int numberOfVariables = SolverType::NumberOfUnknowns;
 	const int order = SolverType::Order;
 	computeGradQi(gradQi, u, requestedDirection, requestedVariableIndex, sizeOfPatch, numberOfVariables, order);
 }

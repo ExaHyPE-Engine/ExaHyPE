@@ -19,14 +19,15 @@ class GPULaunch(object):
 
         cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir == "":
-            mpi_vendor, gpu_vendor = parse_makefile_for_mpi_and_gpu_vendor()
+            #mpi_vendor, gpu_vendor = parse_makefile_for_mpi_and_gpu_vendor()  # TODO: Fix this by using the path of the caller
+            mpi_vendor, gpu_vendor = None, None
         else:
             mpi_vendor, gpu_vendor = parse_cmake_cache_for_mpi_and_gpu_vendor()
 
-        if gpu_vendor is None:
+        if mpi_vendor is None or gpu_vendor is None:
             self._generate = False
-
-        self._context = {"GPU_VENDOR": gpu_vendor, "MPI_IMPLEMENTATION": mpi_vendor}
+        else:
+            self._context = {"GPU_VENDOR": gpu_vendor, "MPI_IMPLEMENTATION": mpi_vendor}
 
 
     def generate(self, directory):

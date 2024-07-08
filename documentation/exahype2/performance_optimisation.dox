@@ -1,0 +1,278 @@
+/**
+
+@page page_exahype_performance_optimisation Performance optimisation
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+This section discusses some ExaHyPE-specific performance optimisation steps.
+While ExaHyPE and its baseline, Peano, provide simplistic performance analysis 
+features to spot some flaws, a proper performance optimisation has to be guided
+by external performance analysis tools.
+Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this 
+page.
+All of the recommendations there apply for ExaHyPE, too.
+
+
+The page consists of two big parts.
+A first one gives kind of a quick-n-dirty roadmap which defines a workflow how 
+to search for flaws in your parallelisation.
+The second part of the page runs through various scalability issues on the 
+different machine levels (core, node, cluster, gpus).
+The roadmap is close to trivial - likely everybody would follow these steps - but
+I reiterate it here, as it structures the discussion afterwards.
+
+
+
+
+
+## Single core optimisation
+
+### The code is extremely bandwidth-bound and seems to move data forth and back all the time
+
+Most ExaHyPE solvers store their data on (call) stacks to localise all memory 
+accesses. This implies that they move their data around a lot. This 
+materialises in profiles similar to
+
+~~~~~~~~~~~~~~~~~~~
+Top Hotspots
+Function                                                           Module           CPU Time  % of CPU Time(%)
+-----------------------------------------------------------------  --------------  ---------  ----------------
+applications::exahype2::ccz4::ncp                                  peano4_bbhtest   559.299s             13.3%
+__memmove_avx_unaligned_erms                                       libc.so.6        529.383s             12.6%
+toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest   505.116s             12.0%
+applications::exahype2::ccz4::source                               peano4_bbhtest   347.667s              8.3%
+__kmpc_set_lock                                                    libiomp5.so      340.473s              8.1%
+[Others]                                                           N/A             1916.907s             45.7%
+~~~~~~~~~~~~~~~~~~~
+
+where memory movements (__memmove_avx_unaligned_erms) end up high on the list.
+You can alter 
+this behaviour by switching to a heap-based memory administration. Consult the 
+documentation of the solver of interest, but the ``fix'' always looks similar to 
+
+         self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+
+i.e. you have to swap how a patch is mapped onto a C++ implementation. Most solvers provide a routine
+
+         my_solver.switch_to_heap_storage(True, True)
+
+
+which does the switch for you. Please around with different True, False 
+combinations. 
+Once you have switched, you should also consult @ref page_peano_performance_optimisation "Peano's generic remarks on alignment", 
+and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can 
+potentially even use GPUs). This topic is discussed below.
+
+
+
+
+
+### The PDE term routines (sources, ncp, fluxes, eigenvalues, ...) are extremely expensive 
+
+In principle, that's what you want to see. If this is the case, then you should 
+next follow the @ref page_exahype_gpu "recommendations for GPU parallelisation". 
+These focus on GPU efficiency, but the optimisations also pay off significantly 
+for CPUs.
+
+
+
+
+## Multithreading optimisation
+
+To assess the multithreading efficiency, follow the steps below:
+
+1. Check if your code scales on a single node and if the scalability is 
+   stable, i.e. does not become worse once you add more and more cores. This might be 
+   counter-intuitive if you are interested in large-scale applications - notably
+   as the number of cores on your machine is fixed, so you have limited freedom 
+   there - but it is important to understand this behaviour prior to any 
+   subsequent steps. Node scalability issues propagate through to all further 
+   optimisation steps. 
+   
+   If you use OpenMP, you can alter the number of cores used by ExaHyPE through 
+   the environment variable OMP_NUM_THREADS. For SYCL, TBB and C++ threading, 
+   you need to set the thread count manually. This can happen within the main 
+   of the C++ code, or you use exahype2.Project.set_number_of_threads().
+ 
+2. Check if you use all cores for all setups at the point where your speedup 
+   starts to stagnate. If you do not use all cores beyond the stagnation points
+   (or when the curve starts to flatten out), study the remarks below on enclave tasking and
+   multicore kernels. Check that you have enough enclave tasks and that these
+   enclave tasks use all cores if you still suffer from underutilisation on a 
+   node.
+   
+
+### The trees aka subpartitions are imbalanced
+
+This effect is discussed in the @ref page_peano_performance_optimisation "generic performance optimisation".
+The discussion therein mentions to test various load balancing strategies. 
+For ExaHypE2, there are specific knobs to tune once you are reasonably
+happy with the domain decomposition. Therefore, the generic Peano page
+is to be consulted first.
+
+
+### Few very expensive enclave tasks introduce phases of limited concurrency
+
+This notably happens with multiphysics codes, where only very few limiter cells
+make up the majority of the runtime. You see them appear in a profile as single
+huge tasks. 
+
+One fix for this flaw is to switch to an implementation for these expensive 
+tasks which in turn can farm out over all cores. However, this is only the 
+last resort, as it ***does not fix the algorithmic latency***. You fix the 
+problem that the tasks arise a posteriori. Notably, this fix does not help if
+you have a low concurrency initially (few trees spawning cheap tasks) and 
+would have threads at this point which happily could process the critical 
+tasks. Before you try to make the tasks themselves faster, I therefore suggest
+to 
+
+1. give the critical tasks a higher priority than the normal tasks. The enclave
+   solvers typically have an attribute enclave_task_priority which you can 
+   reset to
+   
+             self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
+   
+   for example.
+
+2. recalibrate your load balancing such that the mesh fragments which produce 
+   these massive tasks are very small and basically only do those guys.
+   
+The second strategy is interesting: Basically, I recommend to tailor certain 
+parallel partitions around the expensive tasks. We violate a geometric balancing
+and instead implicitly realise a real cost model. This means that we might even
+make the expensive tasks skeleton tasks (as they become adjacent to MPI boundaries), 
+which is not problematic if a subpartition only constaints few skeleton tasks: 
+It will then just run longer within its fork-join section.
+
+
+### Very high spin time and not enough trees for the all cores
+
+This topic is covered by 
+@ref page_peano_performance_optimisation "Peano's section calls The code shows very high spin time".
+In ExaHyPE 2's context it means that you do not have enough trees to keep 
+all cores busy, i.e. your mesh is too small or your subpartitions are too 
+big. 
+However, you migth find out that decreasing the subpartitions actually 
+increases the runtime.
+This is reasonable, as each subdomain requires a significant administrative
+overhead to keep all halo data consistent.
+If you are in such a "deadlock" (not enough subpartitions, but the subpartitions
+cannot be smaller), you have to switch to a solver with enclave tasking.
+
+
+
+### There is a lack of enclave tasks
+
+The nicest task-based programming approach does not pay off if you don't 
+produce enough tasks to keep every core busy. To find out how many 
+tasks Peano produces, recompile the code with the @ref page_peano_runtime_analysis "statistics tracking enabled".
+
+
+
+ExaHyPE takes all collected information and dumps it into a file called
+statistics.csv (or similar) which you can open in Excel or LibreOffice. 
+The default main file as generated takes care of this, i.e. you can change
+the behaviour by modifying the main.
+You find information on the format written in tarch::logging::Statistics, but
+a Python script call similar to 
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 1,3,5,6 -o csv statistics-rank-0.csv
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+should be sufficient to extract the quantities of interest. With the 
+statistics, we can directly see how many fork-join/bsp-type grid traversals
+per time step we encounter:
+
+@image html performance_optimisation_bsp.png
+
+In this example, we get an impression that the number of traversals always 
+kicks off at 50+, but then slides down. 
+So the individual traversals finish at different speed.
+The last 32 traversal tasks/sweeps then all finish at the same time.
+Once we examine the number of local tasks per thread
+
+@image html performance_optimisation_local-tasks.png
+
+we see that this varies widely. Yet, there rarely are more than 16 tasks 
+in the local queues at any time. 
+More interesting is the number of tasks in the global task queue:
+
+@image html performance_optimisation_global-tasks.png
+
+The tarch's tasking backend does track the number of ready tasks in the
+system. If enclave tasking is enabled, you should have columns which 
+show how many tasks are in the system over time. See the documentation of
+tarch::multicore for some further information. 
+With up to 8,000 enclave tasks per time step in the example above, we 
+can conclude that there is always a healthy number of tasks available.
+
+
+If you do not see any pending tasks or no tasks at all, the individual 
+subdomains are simply too small to find enough tasks.
+Therefore, the code might struggle to keep all cores busy.
+It cannot deploy enclave tasks to idling tasks.
+There are a few things that you can try:
+
+- Solve a bigger problem.
+- Check if you can use fewer subdomains such that the individual subdomains
+  are bigger.
+- Work with more regular grids. They usually help you to generate more tasks. 
+  So avoid steep AMR changes.
+
+
+### The code does not use all cores
+
+For the FD4 scheme and a lot of other compute kernels, we provide compute kernel
+implementations which can spread out over the whole node, i.e. are internally
+parallelised again. 
+A typical solver supporting concurrent (enclave task) kernels hosts several 
+compute kernel calls besides the core routines. Below is a list for a
+Finite Volume solver with enclave tasking:
+
+ - _compute_kernel_call
+ - _fused_compute_kernel_call_cpu
+ - _fused_compute_kernel_call_gpu
+
+These kernels can be reset to alternative implementations. In principle, you 
+can alter them from outside or within a subclass by simple reassigning the 
+underlying function invocation (the kernel is a plain C++ string). Some solvers
+such as the Finite Volume Rusanov solver however provide factory methods to 
+construct kernels which might come in handy.
+
+
+Note that the fused variants are used if and only if we can be sure that a compute 
+task does not require any synchronisity. They are used for
+enclave tasking codes only, and only if you have switched to stateless kernel 
+updates before (see recommendations above). As a consequence, these guys are 
+fairly save kernels to replace with a parallelised implementation, as you can 
+be sure that no data races arise.
+
+
+Nothing stops you from picking an alternative implementation for _compute_kernel_call
+as well. Just validate that you do not introduce any data races.
+
+
+### Any generic load balancing is disfunctional
+
+If you have extremely heterogeneous load per cell, any generic load balancing 
+of Peano has to fail, as all the generic balancing schemes use a plain cell
+count to determine a good domain decomposition. They use a homogeneous cost
+model.
+
+In principle, nothing stops you from writing your own totally independent load
+balancing. For some experiments, this might be reasonable. If you want to use a
+generic load balancing, you might however also consider to change the load 
+metrics. For this, you have to use a specialisation of toolbox::loadbalancing::metrics::CellCount.
+
+I recommend to consult exahype2.grid.FineGridCellLoadBalancingCostMetric, which 
+discusses step by step how to introduce a tailored load balancing.
+
+
+## MPI optimisation
+
+
+ */
+ 

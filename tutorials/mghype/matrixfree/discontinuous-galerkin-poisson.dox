@@ -1,0 +1,146 @@
+/**
+
+@page tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson Matrix-free Discontinuous Galerkin for the Poisson equation
+
+This simple example discusses the most basic steps behind a Discontinuous 
+Galerkin solver. 
+
+The standard "benchmark" for this solver (once again solving the Poisson 
+equation on the unit square) can be found in tests/multigrid/matrixfree/poisson/dg.py.
+Our discussion follows this script, though we omit many technical details such
+as the parsing of the command line) and  focus on key numerical ingredients 
+from a user perspective. Therefore, it is reasonable to study the present text 
+in combination with the actual script. This page is more on the how to use the 
+class to construct a working solver.
+The solver of interest is 
+multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+(cmp multigrid/matrixfree/solvers/api/DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.py in src).
+ 
+ Once again, we solve the Poisson equation, and employ a Discontinuous Galerkin
+ formalism with a point-wise Riemann solver. That is, we start from
+ 
+ @f$ \mathcal{L}(u) = - \Delta u = f @f$
+ 
+ and apply a weak formulation:
+ 
+ \f{eqnarray*}{
+ \int \left( - \Delta u, v \right) dx & = & \int (f, v) dx \\
+ \int _c \left( \nabla u, \nabla v \right) dx - \sum _f \int _f \left( \nabla u, n \right) v dS(x) & = & \int (f, v) dx \\
+ \int _c \left( \nabla u, \nabla v \right) dx - \sum _f \int _f \left( \mathcal{R}(u^-,u^+), n \right) \phi dS(x) & = & \int (f,v) dx.
+ \f}
+
+Which we solve with the simplest Riemann solver one can think of: We average, 
+i.e. @f$ \mathcal{R}(u^-,u^+) = [[\nabla u]] @f$. This is neither a stable 
+approach nor elegant, but it helps us to illustrate how to set up the solver.
+Once we @ref page_multigrid_unfolding "unfold this weak formulation over the mesh", we 
+see all the operators and steps of the script involved:
+ 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+We are currently in the progress of restructuring our directories: We used to have a top-level
+python directory and a top-level src directory. In the future, we plan to merge all of these
+in one place (src) and to have api subdirectories within the C++ folders which hold the 
+Python code corresponding/wrapping the C++ snippets. As this transition is not complete
+yet, you have to make both python and src part of your PYTHONPATH:
+
+        export PYTHONPATH=../../../../python:../../../../src
+</div>
+ 
+ 
+# Project setup
+ 
+Creating a project is a one-liner:
+
+@snippet tests/multigrid/matrixfree/poisson/dg.py Create project
+ 
+
+# Create the solver
+
+The solver construction also is a "one-liner" using the following observations:
+
+- We solve a scalar equation system. Consequently, we have @f$ K_c=1 @f$.
+- Our Riemann solver will take the projections of the gradients and average it. In this simple case, @f$ K_c=1 @f$.
+
+@snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver
+
+The instantiation relies heavily on several matrices. Here, we can reuse 
+the same utility routines that we also use for the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG with PETSc"
+code.  
+
+@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
+
+Only two matrices are new:
+
+- The @f$ \tilde{A} @f$ matrix from multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+  (called approximate_system_matrix) has to be an approximation to 
+  @f$ A^{cc} @f$ that we can invert. In the present example, we use the 
+  simplest robust one possible and set @f$ \tilde{A} = diag(A^{cc}) @f$. This 
+  means that we end up with a global Jacobi solver.
+- The Riemann solver matrix here can either be specified, or we set it to None.
+  If we set it to None, we will get an empty routine in the generated C++ 
+  code that we have to befill (see below). In our case, we apply the penalty 
+  method (see remarks below).
+
+
+# Implement the solver's core functionality
+ 
+Upon the first run of the Python script, we get two new C++ classes, i.e. four
+files: AbstractDGPoisson.h, AbstractDGPoisson.cpp, DGPoisson.h, DGPoisson.cpp. 
+They are named like this, as DGPoisson is the name of the solver. The interesting file
+for the user is DGPoisson.cpp.
+
+
+@snippet tests/multigrid/matrixfree/poisson/DGPoisson.cpp Set initial guess and rhs
+
+
+
+# Solver flavours
+
+By default, we get a block Jacobi method, where we update individual the cells
+all in parallel (logically). So we calculate the residual per cell, and then 
+approximately eliminate this residual locally. After that, we solve all the
+problems on the facing. Depending on the relaxation weight, this is another
+Jacobi update or even an exact solve (for a value face_relaxation=1). 
+ 
+## An additive two-grid solver
+
+The first extension of this solver is an additive two-grid solver:
+
+- All faces are solved exactly (for face_relaxation=1). 
+- The residual is computed per cell.
+- The residual is restricted onto a collocated low-order discretisation
+  (d-linear shape functions tied to the vertices).
+- The residual feeds into a cell update.
+- The coarser mesh updates.
+- Both solutions are summed up into a new cell guess.
+- The new guess is projected onto the faces.
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+ Whenever possible and reasonable, we try to realise complex solvers as 
+ composition of simple solvers. In the present example, the two-grid solver is
+ realised as two completely separate solvers which are coupled in a pre- and 
+ postprocessing step. This way, we can write and test the solvers 
+ independently.
+</div>
+
+
+The two-grid solver can be found in tests/multigrid/matrixfree/poisson/dg-two-grid.py.
+It requires a second matrix generator for the correction equation
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Construct correction matrices
+
+and then simply creates an additional solver:
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Correction equation solver
+
+This additional solver is a sole helper and hence never terminates the 
+simulation (see very small value of solver_tolerance). Once created, we
+take our DG solver and add a new preprocessing and postprocessing action set to
+it. Theycrealise the actual coupling:
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Coupling
+
+Both solvers are next added to the project.
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Add solvers
+
+*/

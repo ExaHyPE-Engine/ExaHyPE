@@ -17,7 +17,7 @@ namespace tarch {
     /**
      * Performs an in-situ LU-decomposition of the square matrix A. Returns
      * pivot values, too. The storage format is normalised such that the
-     * diagonal values of the upper triangular matrix are one.
+     * diagonal values of the lower triangular matrix are one.
      */
     template<int Rows, typename Scalar>
     void lu (
@@ -26,7 +26,7 @@ namespace tarch {
     );
 
     /**
-     * In-situ LU without pivoting. See the other lu routine.
+     * In-situ LU without pivoting. See the other LU routine.
      */
     template<int Rows, typename Scalar>
     void lu (
@@ -34,12 +34,14 @@ namespace tarch {
     );
 
     /**
+     * Back substitution following LU decomposition
+     *
      * Accepts an upper triangular matrix and a rhs. It then returns the
-     * solution x to
+     * solution x to @f$ Rx=f @f$ i.e. @f$  x=R^{-1}f @f$. We assume that
+     * R is a proper, non-normalised upper triangular matrix. It does not
+     * have to have 1s on the diagonals.
      *
-     * Rx=f
-     *
-     * i.e. x=R^{-1}f
+     * @param R the upper matrix from the LU decomposition
      */
     template<int Rows, typename Scalar>
     Vector<Rows,Scalar> backSubstitution(
@@ -65,20 +67,39 @@ namespace tarch {
     */
     template<int Rows, typename Scalar>
     Matrix<Rows,Rows,Scalar> invert(
-      const Matrix<Rows,Rows,Scalar>&  R
+      const Matrix<Rows,Rows,Scalar>&  M
     );
-
     #else
-    template<typename Scalar>
-    Matrix<2,2,Scalar> invert(
-      const Matrix<2,2,Scalar>&  R
-    );
-
-    template<typename Scalar>
-    Matrix<3,3,Scalar> invert(
-      const Matrix<3,3,Scalar>&  R
+    /**
+     * Invert matrix with LU decomposition
+     *
+     * We first invoke the LU decomposition without
+     */
+    template<int Rows, typename Scalar>
+    Matrix<Rows,Rows,Scalar> invert(
+      const Matrix<Rows,Rows,Scalar>&  M
     );
     #endif
+
+    /**
+     * Specialisation of inversion
+     *
+     * This one inverts directly and is usually faster than BLAS.
+     */
+    template<typename Scalar>
+    Matrix<2,2,Scalar> invert(
+      const Matrix<2,2,Scalar>&  M
+    );
+
+    /**
+     * Specialisation of inversion
+     *
+     * This one inverts directly and is usually faster than BLAS.
+     */
+    template<typename Scalar>
+    Matrix<3,3,Scalar> invert(
+      const Matrix<3,3,Scalar>&  M
+    );
 
     template<typename Scalar>
     double det(
@@ -95,5 +116,3 @@ namespace tarch {
 
 
 #include "tarch/la/LUDecomposition.cpph"
-
-

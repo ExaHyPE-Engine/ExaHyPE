@@ -1,13 +1,12 @@
-[![Build Status](https://gitlab.lrz.de/hpcsoftware/Peano/badges/p4/pipeline.svg)](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines "Build Status")
 [![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-bronze-e6ae77)](https://api.eu.badgr.io/public/assertions/vg8PP-0FQlafJ-L-cRs_Xw "SQAaaS bronze badge achieved")
 
 <div align="center" style="margin-bottom: 30px;">
-  <img src="./documentation/logos/Peano-logo.png"/>
+  <img src="./documentation/Peano-logo.png"/>
 </div>
 
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
-  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html">Documentation</a> •
+  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/index.html">Documentation</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
@@ -29,7 +28,7 @@ load balancing, sophisticated geometry representations, and other features.
 
 # Installation
 
-Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/de/dce/page_installation.html).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dce/page_installation.html).
 
 # Availability
 
@@ -55,16 +54,16 @@ We however use a whole set of tools around it.
 
 # Docker
 
-We maintain a collection of [Dockerfiles](./docker/).
+We maintain a collection of [Dockerfiles](https://hpcsoftware.pages.gitlab.lrz.de/Peano/df/dbb/page_installation_with_docker.html).
 
 # Apptainer
 
-We maintain a collection of [Apptainer Definition Files](./apptainer/).
+We maintain a collection of [Apptainer Definition Files](https://hpcsoftware.pages.gitlab.lrz.de/Peano/db/d56/page_installation_with_apptainer.html).
 
 # Spack
 
 To considerably alleviate the installation process of Peano, especially on HPC systems,
-we provide [packages](./spack/) that rely on [Spack](https://github.com/spack/spack/wiki).
+we provide [packages](https://hpcsoftware.pages.gitlab.lrz.de/Peano/d6/db6/page_installation_with_spack.html) that rely on [Spack](https://github.com/spack/spack/wiki).
 
 # Contributing
 
