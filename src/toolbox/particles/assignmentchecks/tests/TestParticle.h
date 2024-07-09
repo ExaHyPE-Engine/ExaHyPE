@@ -2,10 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/utils/Globals.h"
+// TODO: put back in
+/* #include "peano4/utils/Globals.h" */
 
-// #include <concepts>
+// TODO: remove again
+#include "tarch/la/Vector.h"
 
 namespace toolbox {
   namespace particles {
@@ -13,8 +14,8 @@ namespace toolbox {
       namespace tests {
         class TestParticle;
       } // namespace tests
-    } // assignmentchecks
-  }   // namespace particles
+    }   // namespace assignmentchecks
+  }     // namespace particles
 } // namespace toolbox
 
 class toolbox::particles::assignmentchecks::tests::TestParticle {
@@ -28,7 +29,11 @@ private:
   int                                   _depth;
 
 public:
-  TestParticle(const tarch::la::Vector<Dimensions, double>& x, int particleID, bool local=false);
+  TestParticle(
+    const tarch::la::Vector<Dimensions, double>& x,
+    int                                          particleID,
+    bool                                         local = false
+  );
 
   int                                   getDepth() const;
   int                                   getPartid() const;

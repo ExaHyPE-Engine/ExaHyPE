@@ -13,7 +13,6 @@ namespace toolbox {
        * Please destroy after usage
        */
       tarch::tests::TestCase* getUnitTests();
-    }
-  }
-}
-
+    } // namespace assignmentchecks
+  }   // namespace particles
+} // namespace toolbox

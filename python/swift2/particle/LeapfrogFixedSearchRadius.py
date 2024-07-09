@@ -150,7 +150,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 touch_vertex_last_time_kernel=f"""
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
                 ::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
-                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.h(), _spacetreeId);
+                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
                 """,
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"

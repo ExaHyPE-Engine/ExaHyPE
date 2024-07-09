@@ -1,20 +1,27 @@
-#include "TracingAPI.h"
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
+#pragma once
+
+#include "Database.h"
 
 template <typename ParticleContainer>
 std::vector<toolbox::particles::assignmentchecks::ParticlePosition> toolbox::
   particles::assignmentchecks::recordParticlePositions(
     const ParticleContainer& container
   ) {
+
   std::vector<toolbox::particles::assignmentchecks::ParticlePosition> result(
     container.size()
   );
 
+#ifdef AssignmentChecks
   int entry = 0;
   for (auto& p : container) {
     result[entry] = p->getX();
     entry++;
   }
+#endif
 
   return result;
 }
@@ -28,6 +35,9 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          spacetreeId
 ) {
+
+#ifdef AssignmentChecks
+
   assertionEquals(container.size(), recordedPositions.size());
 
   typename ParticleContainer::const_iterator    pParticle = container.begin();
@@ -51,4 +61,5 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
     pParticle++;
     pRecordedPosition++;
   }
+#endif
 }
