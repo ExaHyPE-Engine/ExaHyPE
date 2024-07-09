@@ -66,8 +66,7 @@ namespace toolbox {
             const double              tolerance
           ) const;
 
-          // bool operator==(const ParticleIdentifier& rhs) const;
-          // bool operator!=(const ParticleIdentifier& rhs) const;
+
           bool operator<(const ParticleIdentifier& rhs) const;
           bool operator<(const ParticleSearchIdentifier& rhs) const;
 

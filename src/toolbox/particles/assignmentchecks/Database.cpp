@@ -200,7 +200,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
   std::ostringstream msg;
   msg << "\n============================\n"
-      << identifier.toString() << "\n============================\n";
+      << identifier.toString()
+      << "\n============================\n";
 
   auto search = _data.find(identifier);
   if (search != _data.end()) {
@@ -315,13 +316,6 @@ void toolbox::particles::assignmentchecks::internal::Database::
     tarch::la::abs(key.particleX - newParticleX),
     ParticleSearchIdentifier::shiftTolerance * identifier.positionTolerance
   );
-  // TODO MLADEN: clean
-  // for (int i = 0; i < Dimensions; i++){
-  //   if (std::abs(key.particleX(i) - newParticleX(i)) >
-  //   ParticleSearchIdentifier::shiftTolerance * identifier.positionTolerance){
-  //     shift = true;
-  //   }
-  // }
 
   if (shift) {
     // delete old entry in database and add the new one.
