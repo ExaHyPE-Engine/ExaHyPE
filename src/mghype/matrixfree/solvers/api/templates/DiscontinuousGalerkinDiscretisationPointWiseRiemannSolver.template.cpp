@@ -28,13 +28,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initFace(
   // @todo insert your code here. For most codes can stay empty
 }
 
-
-/**
-* Returns true if we are outside the expected
-* tolerance, and false if we can terminate.
-*
-*/
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds()
-{
-  return true;
-}

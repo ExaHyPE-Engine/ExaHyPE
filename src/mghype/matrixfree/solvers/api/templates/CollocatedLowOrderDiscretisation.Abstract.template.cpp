@@ -133,3 +133,5 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update() const {
   return _state == State::Solve;
 }
+
+{{ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS}}
