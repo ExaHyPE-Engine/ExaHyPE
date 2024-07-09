@@ -37,6 +37,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
     }
   }
   {% endfor %}

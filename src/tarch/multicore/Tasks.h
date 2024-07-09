@@ -188,6 +188,27 @@ namespace tarch {
      * Returning true signals that the task is done, but the same task has to
      * be re-executed. It is up to the tasking runtime to decide if it will
      * re-execute immediately again or at a later point.
+     *
+     * A typical usage looks similar to
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
+     *     tarch::multicore::Task::DontFuse,
+     *     tarch::multicore::Task::DefaultPriority,
+     *     [=,this]()->bool {
+     *        ...
+     *        return false;
+     *     }
+     *   );
+     *
+     *   tarch::multicore::spawnTask( 
+     *     newTask, 
+     *     tarch::multicore::NoInDependencies, 
+     *     myNumber 
+     *   );
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     *
      */
     class TaskWithCopyOfFunctor: public Task {
     private:

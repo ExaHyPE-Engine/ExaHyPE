@@ -99,11 +99,22 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           newQ
           {% endif %}
         );
+        
+        int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
+        
+        tarch::multicore::spawnTask( 
+          newEnclaveTask, 
+          predecessorEnclaveTaskNumber>=0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies, 
+          newEnclaveTask->getTaskId() 
+        );
+        
+        ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+  
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+
         // Time stamp is not updated, as this will be done by final linear combination
         // fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
-        tarch::multicore::spawnTask( newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId() );
       }
   """
     )
@@ -204,6 +215,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
     }
   }
   {% endfor %}

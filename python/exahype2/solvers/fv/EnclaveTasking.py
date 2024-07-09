@@ -108,10 +108,20 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       newQ
       {% endif %}
     );
+    
+    int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
+    
+    tarch::multicore::spawnTask(
+      newEnclaveTask, 
+      predecessorEnclaveTaskNumber>=0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies, 
+      newEnclaveTask->getTaskId()
+    );
+
+    ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+
+
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
-
-    tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId());
   }
   """
     )
