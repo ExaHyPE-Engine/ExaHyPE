@@ -109,8 +109,11 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   ac::internal::ParticleIdentifier b = ac::internal::
     ParticleIdentifier("DummyParticle", particleBX, 2);
 
-  logDebug("testTruthTableSearchAndIDKeys()",
-    "a < b:" << (a < b) << "(1) a==b:" << (a == b) << "(0) a==a:" <<  (a == a) << "(1) b==b:" << (b == b) << "(1)"
+  logDebug(
+    "testTruthTableSearchAndIDKeys()",
+    "a < b:"
+      << (a < b) << "(1) a==b:" << (a == b) << "(0) a==a:" << (a == a)
+      << "(1) b==b:" << (b == b) << "(1)"
   );
 
   assert(a < b);
@@ -124,9 +127,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   ac::internal::ParticleSearchIdentifier B = ac::internal::
     ParticleSearchIdentifier("DummyParticle", particleBX, 2, tol);
 
-  logDebug("testTruthTableSearchAndIDKeys()",
-      "A < B:" << (A < B) << "(1) A==B:" << (A == B) << "(0) A==A:" <<  (A == A) << "(1) B==B:" << (B == B) << "(1)"
-      );
+  logDebug(
+    "testTruthTableSearchAndIDKeys()",
+    "A < B:"
+      << (A < B) << "(1) A==B:" << (A == B) << "(0) A==A:" << (A == A)
+      << "(1) B==B:" << (B == B) << "(1)"
+  );
 
   assertion(A < B);
   assertion(not(A == B));
@@ -135,18 +141,30 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // cross-comparisons
-  logDebug("testTruthTableSearchAndIDKeys()",
-    "a < A:" << (a < A) << "(0) A < a:" << (A < a) << "(0) a==A:" << (a == A) << "(1) A == a:" <<  (A == a) << "(1)"
-    );
-  logDebug("testTruthTableSearchAndIDKeys()",
-    "a < B:" << (a < B) << "(1) B < a:" << (B < a) << "(0) a==B:" << (a == B) << "(0) B == a:" <<  (B == a) << "(0)"
-    );
-  logDebug("testTruthTableSearchAndIDKeys()",
-    "b < A:" << (b < A) << "(0) A < b:" << (A < b) << "(1) b==A:" << (b == A) << "(0) A == b:" <<  (A == b) << "(0)"
-    );
-  logDebug("testTruthTableSearchAndIDKeys()",
-    "b < B:" << (b < B) << "(0) B < b:" << (B < b) << "(0) b==B:" << (b == B) << "(1) B == b:" <<  (B == b) << "(1)"
-    );
+  logDebug(
+    "testTruthTableSearchAndIDKeys()",
+    "a < A:"
+      << (a < A) << "(0) A < a:" << (A < a) << "(0) a==A:" << (a == A)
+      << "(1) A == a:" << (A == a) << "(1)"
+  );
+  logDebug(
+    "testTruthTableSearchAndIDKeys()",
+    "a < B:"
+      << (a < B) << "(1) B < a:" << (B < a) << "(0) a==B:" << (a == B)
+      << "(0) B == a:" << (B == a) << "(0)"
+  );
+  logDebug(
+    "testTruthTableSearchAndIDKeys()",
+    "b < A:"
+      << (b < A) << "(0) A < b:" << (A < b) << "(1) b==A:" << (b == A)
+      << "(0) A == b:" << (A == b) << "(0)"
+  );
+  logDebug(
+    "testTruthTableSearchAndIDKeys()",
+    "b < B:"
+      << (b < B) << "(0) B < b:" << (B < b) << "(0) b==B:" << (b == B)
+      << "(1) B == b:" << (B == b) << "(1)"
+  );
 
   assertion(not(a < A));
   assertion(not(A < a));
@@ -375,7 +393,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       meshSweepNames.size() * 4
     );
 
-    logDebug("testAddingParticleEvents(): Particle history " + std::to_string(p),
+    logDebug(
+      "testAddingParticleEvents(): Particle history " + std::to_string(p),
       eventDatabase.particleHistory(identifier)
     );
   }
@@ -388,7 +407,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 }
 
 
-void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleMoveEvents() {
+void toolbox::particles::assignmentchecks::tests::TestHelpers::
+  testParticleMoveEvents() {
   // Run without cleaning up database on-the-fly
   testAddingParticleMovingEvents(100, 1000);
   // Run with cleaning up database on-the-fly
@@ -399,7 +419,11 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleMoveE
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testAddingParticleMovingEvents(int nsweeps, int nEventsToKeep) {
 
-  logTraceInWith2Arguments("testAddingParticleMovingEvents()", nsweeps, nEventsToKeep);
+  logTraceInWith2Arguments(
+    "testAddingParticleMovingEvents()",
+    nsweeps,
+    nEventsToKeep
+  );
 
   namespace ac = ::toolbox::particles::assignmentchecks;
 
@@ -499,7 +523,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   );
 
 
-  logDebug("testAddingParticleMovingEvents particle history",
+  logDebug(
+    "testAddingParticleMovingEvents particle history",
     eventDatabase.particleHistory(identifier)
   );
 
@@ -609,7 +634,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       spacetreeId
     );
 
-    logDebug("testParticleWalkSameTreeLevel()", "Moving particle to " << localPartX);
+    logDebug(
+      "testParticleWalkSameTreeLevel()",
+      "Moving particle to " << localPartX
+    );
 
     // pretend a particle can walk from vertex to vertex.
     // find current vertex particle is assigned to.
@@ -620,9 +648,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     }
     vertexX = internal::findVertexX(localPartX, vertexH);
 
-    logDebug("testParticleWalkSameTreeLevel()",
-      "Checking vertex"
-    );
+    logDebug("testParticleWalkSameTreeLevel()", "Checking vertex");
 
     if (vertexInd != prevVertexInd) {
       // Particle has changed vertex. Take note of that.
@@ -654,7 +680,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     }
   }
 
-  logDebug("testParticleWalkSameTreeLevel()", eventDatabase.toString() );
+  logDebug("testParticleWalkSameTreeLevel()", eventDatabase.toString());
 
   // is particle count correct?
   assertion2(
@@ -748,9 +774,11 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     "initialAssign"
   );
 
-  logDebug("testParticleLiftDrop()",
-    "Initially assigning to H=" << vertexH << " X=" << vertexX << " depth=" << depth
-    );
+  logDebug(
+    "testParticleLiftDrop()",
+    "Initially assigning to H="
+      << vertexH << " X=" << vertexX << " depth=" << depth
+  );
 
   ac::startMeshSweep("Lifts");
 
@@ -762,8 +790,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     vertexH *= 3.;
     vertexX = internal::findVertexX(vertexX, vertexH);
 
-    logDebug("testParticleLiftDrop()",
-        "Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
+    logDebug(
+      "testParticleLiftDrop()",
+      "Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth
+    );
 
     ac::detachParticleFromVertex(
       particleName,
@@ -799,8 +829,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     vertexH /= 3.;
     vertexX = internal::findVertexX(localPartX, vertexH);
 
-    logDebug("testParticleLiftDrop()",
-        "Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth
+    logDebug(
+      "testParticleLiftDrop()",
+      "Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth
     );
 
     ac::detachParticleFromVertex(
@@ -955,7 +986,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
 
     logDebug("testParticleWalk()", "Moving particle to " << localPartX);
 
-    logDebug("testParticleWalk()", "Checking vertex H=" << vertexH << " X=" << vertexX);
+    logDebug(
+      "testParticleWalk()",
+      "Checking vertex H=" << vertexH << " X=" << vertexX
+    );
 
     // Does the particle need lifting from the current vertex?
     while (internal::liftParticle(localPartX, vertexX, vertexH, depth)) {
@@ -965,8 +999,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
       vertexH *= 3.;
       vertexX = internal::findVertexX(localPartX, vertexH);
 
-      logDebug("testParticleWalk()",
-          "Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth
+      logDebug(
+        "testParticleWalk()",
+        "Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth
       );
 
       ac::detachParticleFromVertex(
@@ -1000,8 +1035,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
       vertexH /= 3.;
       vertexX = internal::findVertexX(localPartX, vertexH);
 
-      logDebug("testParticleWalk()",
-          "Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
+      logDebug(
+        "testParticleWalk()",
+        "Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth
+      );
 
       ac::detachParticleFromVertex(
         particleName,
@@ -1027,9 +1064,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
     }
   }
 
-  logDebug("testParticleWalk() Data dump at end",
-    eventDatabase.toString()
-  );
+  logDebug("testParticleWalk() Data dump at end", eventDatabase.toString());
 
   // Clean up after yourself
   eventDatabase.reset();
@@ -1146,9 +1181,15 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         spacetreeId
       );
 
-      logDebug("testPeriodicBoundaryConditions() ", "Moving particle to " << partX );
+      logDebug(
+        "testPeriodicBoundaryConditions() ",
+        "Moving particle to " << partX
+      );
 
-      logDebug("testPeriodicBoundaryConditions() ", "Checking vertex H=" << p->getVertexH() << " X=" << vertexX);
+      logDebug(
+        "testPeriodicBoundaryConditions() ",
+        "Checking vertex H=" << p->getVertexH() << " X=" << vertexX
+      );
 
       // Does the particle need lifting from the current vertex?
       while (internal::liftParticle(
@@ -1163,9 +1204,11 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         p->setVertexH(p->getVertexH() * 3.);
         vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
-        logDebug("testPeriodicBoundaryConditions() ",
-            "Lifting to H=" << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth()
-            );
+        logDebug(
+          "testPeriodicBoundaryConditions() ",
+          "Lifting to H="
+            << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth()
+        );
 
         ac::detachParticleFromVertex(
           particleName,
@@ -1203,8 +1246,11 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         p->setVertexH(p->getVertexH() / 3.);
         vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
-        logDebug("testPeriodicBoundaryConditions() ",
-            "Dropping to H=" << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth() );
+        logDebug(
+          "testPeriodicBoundaryConditions() ",
+          "Dropping to H="
+            << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth()
+        );
 
         ac::detachParticleFromVertex(
           particleName,
@@ -1249,8 +1295,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         replica->setDepth(p->getDepth());
         particleSet.push_back(replica);
 
-        logDebug("testPeriodicBoundaryConditions() ",
-            "Creating virtual particle at " << virtualPartX
+        logDebug(
+          "testPeriodicBoundaryConditions() ",
+          "Creating virtual particle at " << virtualPartX
         );
 
         // Take note of newly created particle.
@@ -1345,8 +1392,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     auto p = particleSet.begin();
     while (p != particleSet.end()) {
       if (not(*p)->isLocal()) {
-        logDebug("testPeriodicBoundaryConditions() ",
-          "erasing " << (*p)->getX() );
+        logDebug(
+          "testPeriodicBoundaryConditions() ",
+          "erasing " << (*p)->getX()
+        );
 
         vertexX = internal::findVertexX((*p)->getX(), (*p)->getVertexH());
 
@@ -1379,7 +1428,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   } // mesh sweep loops
 
-  logDebug("testPeriodicBoundaryConditions() Data dump end", eventDatabase.toString() );
+  logDebug(
+    "testPeriodicBoundaryConditions() Data dump end",
+    eventDatabase.toString()
+  );
 
   // Clean up after yourself
   eventDatabase.reset();
@@ -1553,7 +1605,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     eventDatabase.toString()
   );
 
-  logDebug("testSieveSet() Particle History",
+  logDebug(
+    "testSieveSet() Particle History",
     eventDatabase.particleHistory(identifier)
   );
 

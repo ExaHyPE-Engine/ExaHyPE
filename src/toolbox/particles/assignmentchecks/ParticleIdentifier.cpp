@@ -135,4 +135,3 @@ bool operator!=(
 ) {
   return not lhs.numericalEquals(rhs);
 }
-

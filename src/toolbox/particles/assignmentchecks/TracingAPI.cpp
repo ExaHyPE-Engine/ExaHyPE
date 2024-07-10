@@ -153,7 +153,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
           or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal)
           or (isDropping and previousEvent.isLocal) or (isDetached)
           or virtualPartThatHasBeenErased,
-          identifier.toString(),
+        identifier.toString(),
         event.toString(),
         previousEvent.toString(),
         treeId,
@@ -209,21 +209,22 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // If we break this, the particle search will fail.
   tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
   assertion5(
-      tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
-      "particle moved more than vertex size",
-      oldParticleX,
-      newParticleX,
-      dx,
-      vertexH
-      )
-
-  // use old particle position to find history.
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
+    tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
+    "particle moved more than vertex size",
     oldParticleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+    newParticleX,
+    dx,
+    vertexH
+  )
+
+    // use old particle position to find history.
+    ParticleSearchIdentifier identifier
+    = ParticleSearchIdentifier(
+      particleName,
+      oldParticleX,
+      particleID,
+      tarch::la::max(vertexH)
+    );
 
   ParticleEvents& history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
@@ -256,7 +257,8 @@ void toolbox::particles::assignmentchecks::moveParticle(
     // This must be on the same tree then.
     // We can apply stricter checks.
 
-    // Can't be sieve event, particle needs to have been assigned to vertex first
+    // Can't be sieve event, particle needs to have been assigned to vertex
+    // first
     assertion(
       previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
@@ -294,9 +296,9 @@ void toolbox::particles::assignmentchecks::moveParticle(
       // store the current particle position.
       std::ostringstream pastTrace;
       pastTrace
-        << "Consecutive Move starting at x=[" <<
-        ::toString(previousEvent.previousParticleX) << "] at sweep " <<
-        database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
+        << "Consecutive Move starting at x=["
+        << ::toString(previousEvent.previousParticleX) << "] at sweep "
+        << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
         << " | old trace: " << previousEvent.trace;
       " | new trace: " + trace;
 
@@ -464,7 +466,9 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
   logDebug(
     "assignParticleToSieveSet()",
-    "assign " << particleName << " particle at " << particleX << " to global sieve set on tree " << treeId
+    "assign "
+      << particleName << " particle at " << particleX
+      << " to global sieve set on tree " << treeId
   );
 
 

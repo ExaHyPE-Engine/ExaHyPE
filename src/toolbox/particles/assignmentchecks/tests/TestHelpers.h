@@ -122,8 +122,8 @@ private:
    *  If < `nsweeps`, then events from the database will be purged.
    */
   void testAddingParticleMovingEvents(
-    int  nsweeps       = 100,
-    int  nEventsToKeep = 1000
+    int nsweeps       = 100,
+    int nEventsToKeep = 1000
   );
 
   /**

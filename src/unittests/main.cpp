@@ -52,40 +52,40 @@ void runTests() {
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
 
-  #ifdef UseExaHyPE
+#ifdef UseExaHyPE
   tests = exahype2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-  #endif
+#endif
 
-  #ifdef UseSWIFT
+#ifdef UseSWIFT
   tests = swift2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-  #endif
+#endif
 
-  #ifdef UseToolboxBlockstructured
+#ifdef UseToolboxBlockstructured
   tests = toolbox::blockstructured::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-  #endif
+#endif
 
-  #ifdef UseToolboxFiniteElements
+#ifdef UseToolboxFiniteElements
   tests = toolbox::finiteelements::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-  #endif
+#endif
 
-  #ifdef UseToolboxMultiprecision
+#ifdef UseToolboxMultiprecision
   tests = toolbox::multiprecision::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-  #endif
+#endif
 
 #ifdef UseToolboxParticles
   tests = toolbox::particles::getUnitTests();
@@ -201,7 +201,6 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
-
 
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry(
