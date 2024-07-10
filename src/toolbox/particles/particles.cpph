@@ -112,7 +112,6 @@ void toolbox::particles::insertParticleIntoCell(
 
 #if PeanoDebug > 0
   int partID = newParticle->getPartid();
-  std::cout << "Hello World!" << partID << std::endl;
 #else
   int partID = -1;
 #endif
