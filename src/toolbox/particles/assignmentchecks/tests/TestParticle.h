@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-// TODO: put back in
 /* #include "peano4/utils/Globals.h" */
 
-// TODO: remove again
 #include "tarch/la/Vector.h"
 
 namespace toolbox {

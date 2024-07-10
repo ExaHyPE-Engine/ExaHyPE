@@ -15,9 +15,6 @@ namespace toolbox {
 
         namespace internal {
 
-          // TODO: clean
-          /* bool allVerbose; */
-
           /**
            * Does this particle need to be lifted? Yes if particleX
            * is not located in the square with size 2 vertexH around
@@ -69,7 +66,6 @@ namespace toolbox {
 class toolbox::particles::assignmentchecks::tests::TestHelpers:
   public tarch::tests::TestCase {
 
-  /* TODO: Verbose parameters */
 private:
   /**
    * Test whether ParticleIdentifier and ParticleSearchIdentifier

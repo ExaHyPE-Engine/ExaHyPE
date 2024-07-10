@@ -11,9 +11,6 @@ namespace {
   tarch::logging::Log _log("toolbox::particles::assignmentchecks");
 } // namespace
 
-// TODO: All the "Verbose" parameters everywhere
-// TODO: Add actual  assertions everywhere
-
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", off)
 #endif
@@ -131,10 +128,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       "A < B:" << (A < B) << "(1) A==B:" << (A == B) << "(0) A==A:" <<  (A == A) << "(1) B==B:" << (B == B) << "(1)"
       );
 
-  assert(A < B);
-  assert(not(A == B));
-  assert(not(B == A));
-  assert(not(B < A));
+  assertion(A < B);
+  assertion(not(A == B));
+  assertion(not(B == A));
+  assertion(not(B < A));
 
 
   // cross-comparisons
@@ -151,25 +148,25 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     "b < B:" << (b < B) << "(0) B < b:" << (B < b) << "(0) b==B:" << (b == B) << "(1) B == b:" <<  (B == b) << "(1)"
     );
 
-  assert(not(a < A));
-  assert(not(A < a));
-  assert(A == a);
-  assert(a == A);
+  assertion(not(a < A));
+  assertion(not(A < a));
+  assertion(A == a);
+  assertion(a == A);
 
-  assert(a < B);
-  assert(not(B < a));
-  assert(not(B == a));
-  assert(not(a == B));
+  assertion(a < B);
+  assertion(not(B < a));
+  assertion(not(B == a));
+  assertion(not(a == B));
 
-  assert(not(b < A));
-  assert(A < b);
-  assert(not(A == b));
-  assert(not(b == A));
+  assertion(not(b < A));
+  assertion(A < b);
+  assertion(not(A == b));
+  assertion(not(b == A));
 
-  assert(not(b < B));
-  assert(not(B < b));
-  assert(b == B);
-  assert(B == b);
+  assertion(not(b < B));
+  assertion(not(B < b));
+  assertion(b == B);
+  assertion(B == b);
 
   logTraceOut("testTruthTableSearchAndIDKeys()");
 }
@@ -596,7 +593,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     // insert tiny movement steps, make sure movement isn't recorded.
     double dt_use = dt;
     if (sweep > 8 and sweep < 12) {
-      // TODO: fix this
       dt_use *= 1e-2;
     }
 
@@ -756,7 +752,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     "Initially assigning to H=" << vertexH << " X=" << vertexX << " depth=" << depth
     );
 
-ac::startMeshSweep("Lifts");
+  ac::startMeshSweep("Lifts");
 
   // Does the particle need lifting from the current vertex?
   while (internal::liftParticle(localPartX, vertexX, vertexH, depth)) {
@@ -794,7 +790,6 @@ ac::startMeshSweep("Lifts");
 
 
   ac::startMeshSweep("Drops");
-
 
   // Now drop it in the correct vertex.
   while (internal::dropParticle(localPartX, vertexH, depth, maxVertexDepth)) {
@@ -842,7 +837,7 @@ ac::startMeshSweep("Lifts");
   ac::internal::ParticleSearchIdentifier identifier = ac::internal::
     ParticleSearchIdentifier("TestParticle", localPartX, particleID, vertexH(0));
 
-  // 12 is hardcoded here. Modify manually if you change test setup.
+  // 13 is hardcoded here. Modify manually if you change test setup.
   assertion3(
     eventDatabase.getTotalParticleEntries(identifier) == 13,
     "Wrong number of snapshots stored for particle",
