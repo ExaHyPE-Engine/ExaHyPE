@@ -152,8 +152,9 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
       assertion7(
         previousEvent.type == internal::Event::Type::NotFound
           or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal)
-          or (isDropping and previousEvent.isLocal) or (isDetached),
-        identifier.toString(),
+          or (isDropping and previousEvent.isLocal) or (isDetached)
+          or virtualPartThatHasBeenErased,
+          identifier.toString(),
         event.toString(),
         previousEvent.toString(),
         treeId,
