@@ -105,9 +105,10 @@ class CollocatedSolver(ActionSet):
       
         vertexValues(i)   = solColSum;
         
+        // @Sean: rhs_is_primal needs to be made an input variable
         bool rhs_is_primal = false;
         if (rhs_is_primal) { // Compute b^tilde = M * rhs
-          rhsValues(i) = rhsColSum
+          rhsValues(i) = rhsColSum;
         }
         else // Compute b^tilde = rhs
         {
