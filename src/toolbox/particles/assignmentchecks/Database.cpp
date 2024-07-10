@@ -24,6 +24,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
   _maxParticleSnapshotsToKeepTrackOf = n;
 }
 
+
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
   const std::string& meshSweepName
 ) {
@@ -200,8 +201,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
   std::ostringstream msg;
   msg << "\n============================\n"
-      << identifier.toString()
-      << "\n============================\n";
+      << identifier.toString() << "\n============================\n";
 
   auto search = _data.find(identifier);
   if (search != _data.end()) {
@@ -305,10 +305,10 @@ void toolbox::particles::assignmentchecks::internal::Database::
     "Particle not found through its identifier"
   );
 
-  // Do we need to shift the coordinates of the identifier?
-  // Use the one the search gives you back, because we allow for a fuzzy search.
-  // You need to compare to the actually stored coordinates, not to whatever
-  // you think they currently may be.
+  // Do we need to shift the coordinates of the identifier?  Use the one the
+  // search gives you back, because we allow for a fuzzy search.  You need to
+  // compare to the actually stored coordinates, not to whatever you think they
+  // currently may be.
   ParticleIdentifier key     = search->first;
   ParticleEvents&    history = search->second;
 
@@ -321,8 +321,8 @@ void toolbox::particles::assignmentchecks::internal::Database::
     // delete old entry in database and add the new one.
     logDebug(
       "addEvent(...) ",
-      "shifting particle identifier from " + ::toString(key.particleX) + " to "
-        + ::toString(newParticleX)
+      "shifting particle identifier from "
+        << key.particleX << " to " << newParticleX
     );
 
     ParticleEvents historyCopy = history;
