@@ -68,7 +68,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
         {
           fineGridVertex{{SOLVER_NAME}}.setValue( dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
-          fineGridVertex{{SOLVER_NAME}}.setRand(  dof, dis(rng));
+          fineGridVertex{{SOLVER_NAME}}.setRand(  dof, 0.0); // vector v_random is set to 0 on the boundary
         }
       }
     }
@@ -95,7 +95,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
         {
           fineGridVertex{{SOLVER_NAME}}.setValue(dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
-          fineGridVertex{{SOLVER_NAME}}.setRand( dof, dis(rng));
+          fineGridVertex{{SOLVER_NAME}}.setRand( dof, dis(rng)); // vector v_random receives random values in the interior vertices
         }
       }
     }
@@ -151,7 +151,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
           randValues[i] = fineGridVertices{{SOLVER_NAME}}(i).getRand(0);
         }
 
-        // multiply by A_cg
+        // multiply v_random by A_cg
         randValues = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * randValues;
 
         // place this into rhs
@@ -171,17 +171,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
    """
   
   templateTouchVertexLastTime="""
-  // we want to make sure that all the boundary vertices are truly 
-  // set to zero.
-
-  if ( 
-    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
-    or
-    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Corner
-  ) {
-
-    fineGridVertex{{SOLVER_NAME}}.setRhs(0.0);
-  }
+  
   """
 
   def __init__(self,
