@@ -104,7 +104,16 @@ class CollocatedSolver(ActionSet):
         }
       
         vertexValues(i)   = solColSum;
-        rhsValues(i)      = rhsColSum;
+        
+        bool rhs_is_primal = false;
+        if (rhs_is_primal) { // Compute b^tilde = M * rhs
+          rhsValues(i) = rhsColSum
+        }
+        else // Compute b^tilde = rhs
+        {
+          rhsValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getRhs(unknown);  
+        }
+
         residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
       }
 
