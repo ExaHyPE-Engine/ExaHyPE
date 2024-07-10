@@ -31,8 +31,8 @@
 #endif
 
 #ifdef UseToolboxParticles
-#include "toolbox/particles/UnitTests.h"
 #include "toolbox/particles/assignmentchecks/UnitTests.h"
+#include "toolbox/particles/UnitTests.h"
 #endif
 
 
@@ -52,40 +52,40 @@ void runTests() {
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
 
-#ifdef UseExaHyPE
+  #ifdef UseExaHyPE
   tests = exahype2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
+  #endif
 
-#ifdef UseSWIFT
+  #ifdef UseSWIFT
   tests = swift2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
+  #endif
 
-#ifdef UseToolboxBlockstructured
+  #ifdef UseToolboxBlockstructured
   tests = toolbox::blockstructured::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
+  #endif
 
-#ifdef UseToolboxFiniteElements
+  #ifdef UseToolboxFiniteElements
   tests = toolbox::finiteelements::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
+  #endif
 
-#ifdef UseToolboxMultiprecision
+  #ifdef UseToolboxMultiprecision
   tests = toolbox::multiprecision::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-#endif
+  #endif
 
 #ifdef UseToolboxParticles
   tests = toolbox::particles::getUnitTests();
@@ -171,6 +171,27 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
+
+  // White- or blacklist assignment checks traces
+  tarch::logging::LogFilter::getInstance().addFilterListEntry(
+    tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "toolbox::particles::assignmentchecks",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    )
+  );
+  tarch::logging::LogFilter::getInstance().addFilterListEntry(
+    tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "toolbox::particles::assignmentchecks",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    )
+  );
+
   tarch::logging::LogFilter::getInstance().addFilterListEntry(
     tarch::logging::LogFilter::FilterListEntry(
       tarch::logging::LogFilter::FilterListEntry::TargetTrace,
@@ -180,6 +201,7 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
+
 
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry(

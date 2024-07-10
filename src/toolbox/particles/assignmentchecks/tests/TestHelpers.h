@@ -75,13 +75,13 @@ private:
    * Test whether ParticleIdentifier and ParticleSearchIdentifier
    * work as intended in a map for a fuzzy search.
    */
-  void testTruthTableSearchAndIDKeys(bool verbose = false);
+  void testTruthTableSearchAndIDKeys();
 
 
   /**
    * Make sure that adding mesh sweeps to the database works.
    */
-  void testAddingSweepsToDatabase(bool verbose = false);
+  void testAddingSweepsToDatabase();
 
 
   /**
@@ -96,8 +96,13 @@ private:
    * We're also adding events without them having any meaning. Proper
    * event tracing including consistency checks will also be done later.
    */
-  void testAddingParticleEvents(bool verbose = false);
+  void testAddingParticleEvents();
 
+  /**
+   * Test adding move events of particles. Calls
+   * testAddingParticleMovingEvents() with different configurations.
+   */
+  void testParticleMoveEvents();
 
   /**
    * Test the adding of particle events to the database with a moving
@@ -107,7 +112,14 @@ private:
    * deletion when the database becomes too large.
    *
    * We're also adding events without them having any meaning. Proper
-   * event tracing including consistency checks will also be done later.
+   * event tracing including consistency checks will also be done in a different
+   * test.
+   *
+   * Note that this stupidly just adds new move events to the database. This is
+   * not what we do in the actual tracing, where consecutive move events are
+   * compacted into a single one. That too will be tested in different test
+   * methods. Here we just test the adding of events and the replacement
+   * of the identifier once a particle has moved too much.
    *
    * @param nsweeps How many mesh sweeps to simulate.
    * @param nEventsToKeep How many events per particle the database should keep.
@@ -115,8 +127,7 @@ private:
    */
   void testAddingParticleMovingEvents(
     int  nsweeps       = 100,
-    int  nEventsToKeep = 1000,
-    bool verbose       = false
+    int  nEventsToKeep = 1000
   );
 
   /**
