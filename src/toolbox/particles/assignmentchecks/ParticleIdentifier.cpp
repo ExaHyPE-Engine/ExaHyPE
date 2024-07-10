@@ -13,6 +13,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   particleX(particleX__),
   particleID(particleID__) {}
 
+
 toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
   ParticleSearchIdentifier(
     const std::string&                           particleName__,
@@ -58,6 +59,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   // If everthing is equal so far, then one is not smaller than the oter.
   return false;
 }
+
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmallerWithTolerance(
@@ -109,6 +111,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
   return numericalSmallerWithTolerance(rhs, positionTolerance);
 }
 
+
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   operator<(
     const toolbox::particles::assignmentchecks::internal::
@@ -117,6 +120,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   return numericalSmallerWithTolerance(rhs, rhs.positionTolerance);
 }
 
+
 bool operator==(
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
@@ -124,9 +128,11 @@ bool operator==(
   return lhs.numericalEquals(rhs);
 }
 
+
 bool operator!=(
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
 ) {
   return not lhs.numericalEquals(rhs);
 }
+

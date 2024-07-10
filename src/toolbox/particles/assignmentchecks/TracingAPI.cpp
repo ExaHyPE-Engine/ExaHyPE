@@ -4,7 +4,6 @@
 #include "TracingAPI.h"
 
 #include "Database.h" // needed for defined(AssignmentChecks) macro and ::internal namespace
-#include "tarch/la/VectorVectorOperations.h"
 
 
 #if defined(AssignmentChecks)

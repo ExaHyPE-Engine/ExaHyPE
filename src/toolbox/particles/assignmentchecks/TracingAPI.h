@@ -107,7 +107,8 @@ namespace toolbox {
        * - A new particle might have been inserted into the domain for the very
        *   first time. In this case, the particle has to be "free", i.e. it may
        *   not have been assigned to any other vertex yet. The search should
-       *   reduce a NotFound.
+       *   reduce a NotFound, or find that in a previous sweep it had been a
+       *   virtual particle that has been erased.
        * - The particle might have been dropped from a coarser level. See
        *   corresponding discussion for virtual particles below including some
        *   sketches.
@@ -132,11 +133,12 @@ namespace toolbox {
        * - The particle comes in through the boundary as part of the boundary
        *   exchange. In this case, the particle has to be "free", i.e. it may
        *   not be assigned to any other vertex yet. The particle has to be new
-       *   (NotFound in database).
+       *   (NotFound in database), or virtual in a previous sweep as well and
+       *   having been erased.
        * - If it is an update of the halo copy, we would expect the
        *   corresponding merge() to replace this copy. A replacement manifests
        *   in an event sequence of detach->erase->assign, so we still get a
-       *   NotFound throughout the assign.
+       *   NotFound or Erase throughout the assign.
        * - A virtual particle might also be subject of a mesh drop: If we lift
        *   a particle, exchange it along the boundary, we have to drop it on
        *   both sides again. We update its state
@@ -289,13 +291,16 @@ namespace toolbox {
 
       using ParticlePosition = tarch::la::Vector<Dimensions, double>;
 
+      /**
+       * Record the current particle positions in a vector.
+       */
       template <typename ParticleContainer>
       std::vector<ParticlePosition> recordParticlePositions(
         const ParticleContainer& container
       );
 
       /**
-       * Record the particle positions
+       * Trace the particle movements.
        *
        * This routine runs through the particles in container and invokes
        * moveParticle() for each and every particle which has moved. That is,
