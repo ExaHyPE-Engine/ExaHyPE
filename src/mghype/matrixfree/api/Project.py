@@ -224,7 +224,10 @@ you require to run this Peano4 application with PETSc.
 
     solver.add_to_plot         (self.algorithm_step_plot)
 
-    solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory, self._abstract_overwrite )
+    if self._abstract_overwrite==False:
+      solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory, self._abstract_overwrite )
+    else:
+      solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
     
     self._solvers.append( solver )
 

@@ -705,9 +705,12 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_plot_solution(self.plot_solution, self._output_path)
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
-            solver.add_implementation_files_to_project(
-                self._project.namespace, self._project.output, self._dimensions, self._subdirectory, self._abstract_overwrite
-            )
+            if self._abstract_overwrite==False:
+                solver.add_implementation_files_to_project(
+                    self._project.namespace, self._project.output, self._dimensions, self._subdirectory, self._abstract_overwrite
+                )
+            else:
+                solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._dimensions, self._subdirectory )
 
         self.__generate_solver_repository()
 
