@@ -5,7 +5,7 @@ import jinja2
 
 
 
-class InitDofsTest3(ActionSet):
+class InitDofsTest8(ActionSet):
   """!
   In touchVertexFirstTime, we set the type of vertex we see (either Interior, Boundary or Coarse),
   as well as sending some values to the solver implementation file to be placed into the mesh.
@@ -172,7 +172,7 @@ class InitDofsTest3(ActionSet):
 
   def __init__(self,
                solver):
-    super( InitDofsTest3, self ).__init__()
+    super( InitDofsTest8, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

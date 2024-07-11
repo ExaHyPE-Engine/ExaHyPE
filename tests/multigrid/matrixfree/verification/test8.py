@@ -7,10 +7,10 @@ import mghype
 from time import sleep
 
 # custom action set
-from actionsets.test3 import InitDofsTest3
+from actionsets.test8 import InitDofsTest8
 
 print( """
-  WARNING: implementation file (eg CollocatedPoisson.cpp) must be removed before
+  WARNING: implementation file (eg CollocatedPoisson.cpp) must be removed before`
     running this script if you want custom behaviour.
 
 """)
@@ -55,7 +55,7 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               mass_matrix = mass_matrix,
                                                               mass_matrix_scaling = maxx_matrix_scaling,
                                                               solver_tolerance=1e-8,
-                                                              custom_init_actionset=InitDofsTest3,
+                                                              custom_init_actionset=InitDofsTest8,
                                                               custom_plot_actionset=[("vu","getVu"), (("vb","getVb"))]
                                                             )
 
