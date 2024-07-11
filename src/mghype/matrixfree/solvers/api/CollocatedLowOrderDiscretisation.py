@@ -118,7 +118,9 @@ class CollocatedLowOrderDiscretisation(Solver):
                solver_tolerance,
                smoother_relaxation   = 0.6,
                custom_init_actionset = None,
-               custom_plot_actionset = None # just pass in a tuple here
+               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
+               custom_init_vertex = "",
+               custom_boundary_conditions = ""
                ):
     """!
    
@@ -156,6 +158,9 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._custom_init_actionset         = custom_init_actionset
     self._custom_plot_actionset         = custom_plot_actionset
 
+    self._custom_init_vertex            = custom_init_vertex
+    self._custom_boundary_conditions    = custom_boundary_conditions
+
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
@@ -184,7 +189,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs") )
 
     if self._custom_plot_actionset:
-      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, self._custom_plot_actionset[0], self._custom_plot_actionset[1]) )
+      for name, getter in self._custom_plot_actionset:
+        observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, name, getter) )
 
     pass
 
@@ -238,7 +244,9 @@ class CollocatedLowOrderDiscretisation(Solver):
         "SOLVER_TOLERANCE"            :  self._solver_tolerance,
         "SMOOTHER_RELAXATION":           self._smoother_relaxation,
         "ABSTRACT_SOLVER_HEADER_EXTRAS"        : self._abstract_solver_header_extras,
-        "ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS": self._abstract_solver_implementation_extras
+        "ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS": self._abstract_solver_implementation_extras,
+        "CUSTOM_INIT_VERTEX"                   : self._custom_init_vertex,
+        "CUSTOM_BOUNDARY_CONDITIONS"           : self._custom_boundary_conditions,
     }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

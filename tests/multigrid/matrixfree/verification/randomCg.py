@@ -19,16 +19,18 @@ import peano4
 import numpy as np
 import mghype
 
+from time import sleep
+
 # custom action set
 from actionsets.initCollocatedRandom import InitDofsCollocatedRandomRhs
 
 print( """
-
-Peano 4 multigrid solver using Continuous Galerkin
-
-@author 2022 Sean Baccas, Dmitry Nikolaenko, Tobias Weinzierl
+  WARNING: implementation file (eg CollocatedPoisson.cpp) must be removed before
+    running this script if you want custom behaviour.
 
 """)
+
+sleep(2)
 
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
@@ -66,7 +68,7 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               mass_matrix_scaling = maxx_matrix_scaling,
                                                               solver_tolerance=1e-8,
                                                               custom_init_actionset=InitDofsCollocatedRandomRhs,
-                                                              custom_plot_actionset=("rand","getRand")
+                                                              custom_plot_actionset=[("rand","getRand")]
                                                             )
 
 # need to make sure we have the correct field name to support extra random field
@@ -92,6 +94,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_each_timestep    = args.plot_each_timestep,
+  max_iterations        = 1
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
