@@ -142,9 +142,10 @@ class InitDofsTest8(ActionSet):
           vb_values[i] = fineGridVertices{{SOLVER_NAME}}(i).getRhs(0);
         }
 
-        // multiply v_random by A_cg
+        // multiply vu by A_cg
         vu_values = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * vu_values;
-        vb_values = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * vb_values;
+        // multiply vb by M
+        vb_values = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h()) * vb_values;
 
         // place this into rhs
         for (int i=0; i<TwoPowerD; i++){
