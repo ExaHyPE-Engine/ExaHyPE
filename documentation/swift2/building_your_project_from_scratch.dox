@@ -1,0 +1,236 @@
+/**
+
+@page swift_building_project_from_scratch Building your project from scratch
+
+
+# Introduction
+
+Our interface for Swift 2 is almost complete realised in Python. We configure
+the whole simulation in Python, but typically make the key steps of a simulation
+point to generic C++ routines which are shipped with Peano 4. Alterantively, we
+can inject C++ code manually into the Python code (which is great for
+prototyping). Once the Python script is executed, it generates a plain C++ code
+with a makefile which waves Peano's core and the SPH kernels together.
+
+Before you start, make sure you configured and compiled Peano4 correctly so that
+Swift2 can run. See @ref section_compile_peano4_for_swift2 "the instructions".
+Once Peano's core libraries are all built, you can start to write a proper Swift
+application:
+
+
+# Generating a swift2.project
+
+
+We start with the creation of a Swift 2 project:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+import swift2
+project = swift2.Project( namespace=['''benchmarks''', '''swift2''', '''planetorbit'''],
+                          project_name='''planetorbit''',
+                          executable=orbit-exec )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can find the source file for the project class in ``python/swift2/Project.py``.
+
+\todo Document parameters either here or in the py file itself. If you document it
+    there, make sure to write here for users to look there for documentation.
+
+
+
+
+
+
+
+
+
+
+# Generating a Particle Species
+
+Next, we have to add a particle species. We need to define both the data that a
+particle species holds, as well as its life cycle, i.e. all the (algorithmic)
+steps it needs to go through over a single simulation step. For a concrete
+working example, see ``SPHLeapfrogFixedSearchRadius.py``.
+
+
+
+
+
+
+
+## Generating Particle Data Fields
+
+The definition of a particle is straightforward. We employ a tool called
+DaStGen 2 which really just is a set of Python classes which represent the
+attributes of a C++ class. See \ref page_dastgen_home for more details on DaStGen.
+
+We build up a set of Python objects sketching a C++ struct and Swift 2 and
+DaStGen eventually dump them into proper C++ code from which it is embedded into the
+actual simulator. For example, to create a new particle species which has a mass
+and velocity, we run:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+import dastgen2
+
+particle = peano4.toolbox.particles.Particle('''Particle''')
+
+v_attr = peano4.dastgen2.Peano4DoubleArray('''v''','''Dimensions''')
+mass_attr = dastgen2.attributes.Double('''mass''')
+
+particle.data.add_attribute(v_attr)
+particle.data.add_attribute(mass_attr)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@todo what are minimal required particle fields? Shall we hardcode them? If hardcoded, document
+what fields are always present. If not, document what fields need to be present.
+
+
+
+## Generating Particle Parameters
+
+It may be useful to introduce parameters which are valid for your entire particle
+species. For example, you want need a particle independent CFL factor, or maximal
+smoothing length, or resolution, etc. This can easily be achieved through use of
+`static` (or even `const static`) class variables, which you can also generate using
+DaStGen2. See the corresponding documentation on \ref page_dastgen_home.
+
+
+
+
+
+
+## Generating the Particle Life Cycle
+
+With the particle data defined, we can now set up what equations are being solved, and in
+which order, for each particle for each simulation step. This is documented in detail in
+@ref Section_SwiftAlgorithmStep on the @ref swift_particle_new_solver page.
+
+If you are planning on using a new solver, you will need to write new solver kernels.
+Consult the documentation on that given on the
+\ref swift_particle_new_solver "create your own solver" page.
+
+
+
+
+
+
+
+
+
+
+# Setting Global Simulation Parameters
+
+@todo all of this, once it converges. I want to move the majority of parameters away
+from users and from individual project .py files. No point in users specifying
+KERNEL_GAMMAs etc.
+
+
+To set the global simulation parameters, you need to call the corresponding
+method:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+domain_size = [ 2, 2, 2 ]
+offset      = [ 0, 0, 0 ]
+
+project.set_global_simulation_parameters(
+  dimensions            = dimensions,
+  offset                = offset,
+  domain_size           = domain_size,
+  min_end_time          = args.end_time,
+  max_end_time          = 0.0,
+  first_plot_time_stamp = 0.0,
+  time_in_between_plots = args.plot_delta,
+  periodic_BC           = periodic_boundary_conditions,
+  plotter_precision     = 8
+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\todo document units here: time and spatial.
+
+
+The ``domain_size`` parameter determines how big your simulation box is, while
+``offset`` allows you to translate the lower left corner of the box by the
+specified amount. Note that the code will not check whether the particles you
+specify in the initial conditions are also inside the simulation domain. If they
+aren't, they'll simply be discarded, and the code will continue to do its thing
+unbothered by it.
+
+
+
+
+
+
+
+
+
+
+
+# Special Steps
+
+Aside from the algorithmic steps particles go through each simulation step,
+there are some special steps to be taken care of.
+
+
+
+
+
+
+## Initial Setup
+
+### Reading Initial Conditions
+
+See @ref swift_initial_conditions for options (hdf5/inserting)
+
+Then use
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+project.algorithm_step_initial_conditions.add_action_set(...)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\todo elaborate
+
+Note that it is your responsibility to make sure that the ``domain_offset`` and
+the ``domain_size`` parameters match the particle coordinates you specify in the
+initial conditions. Particles outside the domain will be discarded.
+
+
+
+
+
+
+
+### Inital Step
+
+
+After the particles have been read in, some further set-up is needed. For
+example, we need to compute the smoothing lengths and densities of the particles
+in order to compute their time step size before the first step can begin.
+
+For details on how to implement the sequence of initialization steps, please refer
+to @ref Section_SwiftAlgorithmStepsInitialization.
+
+
+
+
+
+
+
+## Writing Output
+
+You need to specify a plotter, and which particle quantities to write.
+
+\todo Go into plotter details. Maybe wait for swift-like hdf5 output.
+
+
+
+
+
+# Building the Project
+
+\todo this
+
+
+
+
+
+*/

@@ -1,0 +1,92 @@
+/**
+
+@page applications_exahype2_swe Shallow Water Equations
+
+The shallow water equations (Saint-Venant) are a common (d−1) approximation
+to the d–dimensional Navier-Stokes equations to model incompressible, free
+surface flows:
+
+\f{eqnarray*}{
+\frac{\partial}{\partial t} \begin{pmatrix}
+                h\\hu\\hv
+               \end{pmatrix}
+               + \frac{\partial}{\partial x}
+               \begin{pmatrix}
+                hu\\hu^2 + \frac{1}{2} \cdot gh^2\\huv
+               \end{pmatrix}
+               + \frac{\partial}{\partial y}
+               \begin{pmatrix}
+                hv\\huv\\hv^2 + \frac{1}{2} \cdot gh^2
+               \end{pmatrix}
+               + \begin{pmatrix}
+                0\\ghb_x\\ghb_y
+               \end{pmatrix} =
+               \begin{pmatrix}
+                0\\0\\0
+               \end{pmatrix}
+\f}
+
+With @f$ b(x, y) @f$ being the bathymetry measured from a reference @f$ D @f$
+(normal sea level, negative below, positive above), @f$ h(x, y, t) @f$ being the total positive water depth
+and @f$ g @f$ the earth's gravitational acceleration set to @f$ 9.81ms^{-2} @f$.
+The two velocities @f$ u(x, y, t) @f$ and @f$ v(x, y, t) @f$ are the velocities in x- and y-dimension respectively.
+
+## Eigenvalues
+
+The eigenvalues (wave speeds) in x-dimension are given by:
+
+\f{eqnarray*}{
+\lambda_{x_1} = u, \lambda_{x_2,_3} = u \pm \sqrt{gh}
+\f}
+
+And in y-dimension by:
+
+\f{eqnarray*}{
+\lambda_{y_1} = v, \lambda_{y_2,_3} = v \pm \sqrt{gh}
+\f}
+
+The respective derivations of the various aspects of the shallow water equations can be found in
+"Shock-Capturing Methods for Free-Surface Shallow Flows" by E.F. Toro (2001).
+
+## Flux
+
+The two fluxes in x- and y-dimension respectively are given by:
+
+\f{eqnarray*}{
+F(U) = \begin{pmatrix}
+       hu\\hu^2 + \frac{1}{2} \cdot gh^2\\huv
+       \end{pmatrix}
+\f}
+
+\f{eqnarray*}{
+G(U) = \begin{pmatrix}
+       hv\\huv\\hv^2 + \frac{1}{2} \cdot gh^2
+       \end{pmatrix}
+\f}
+
+## Bed Slope Term
+
+The bed slope term
+
+\f{eqnarray*}{
+\begin{pmatrix}
+  0\\ghb_x\\ghb_y
+\end{pmatrix}
+\f}
+
+is implemented as a non-conservative product.
+
+## Scenarios
+
+\li \subpage applications_exahype2_swe_sea_at_rest
+\li \subpage applications_exahype2_swe_radial_dam_break
+\li \subpage applications_exahype2_swe_radial_bathymetry_dam_break
+\li \subpage applications_exahype2_swe_radial_obstacle_dam_break
+\li \subpage applications_exahype2_swe_three_mounds_channel
+\li \subpage applications_exahype2_swe_circular_island
+\li \subpage applications_exahype2_swe_oscillating_lake
+\li \subpage applications_exahype2_swe_artificial_tsunami
+\li \subpage applications_exahype2_swe_chile_tsunami
+\li \subpage applications_exahype2_swe_tohoku_tsunami
+
+*/

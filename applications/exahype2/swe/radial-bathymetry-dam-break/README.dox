@@ -1,0 +1,52 @@
+/**
+
+@page applications_exahype2_swe_radial_bathymetry_dam_break Radial Bathymetry Dam Break
+
+Scenario simulating a radial dam break caused by discontinuity in the bathymetry.
+In the middle of the simulation plane, there is a circular discontinuity in the bathymetry leading to a discontinuity in the water height for @f$ t=0 @f$.
+
+\f{align*}{
+h(x, y, 0) &= 1.0 \\
+hu(x, y, 0) &= 0.0 \\
+hv(x, y, 0) &= 0.0 \\
+b(x, y) &= \begin{cases}
+  -0.9 & \text{if } \sqrt{\left(\frac{N}{2} - x\right)^2 + \left(\frac{N}{2} - y\right)^2} \leq{} \frac{N}{10} \\
+  -1.0 & \text{otherwise}
+\end{cases}
+\f}
+
+Where @f$ (x, y) \in [0, N] \times [0, N] @f$ in meters.
+
+## How to Build and Run
+
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+
+### Using CMake
+
+    cd myPeanoDirectory && mkdir build && cd build
+    CC=gcc CXX=g++ cmake .. -DWITH_MULTITHREADING=omp -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    make -j && make test
+    cd applications/exahype2/swe/radial-bathymetry-dam-break/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 radial-bathymetry-dam-break.py
+    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveFV-Release
+
+### Using Automake
+
+    cd myPeanoDirectory
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    CFLAGS="-fopenmp" CC=gcc CXXFLAGS="-std=c++20 -fopenmp" CXX=g++ LDFLAGS="-fopenmp" \
+    ./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+    make -j && make check
+    cd applications/exahype2/swe/radial-bathymetry-dam-break/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 radial-bathymetry-dam-break.py
+    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveFV-Release
+
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
+## Visualise the Simulation Output
+
+    python3 radial-bathymetry-dam-break.py --visualise
+
+*/

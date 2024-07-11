@@ -1,0 +1,107 @@
+/**
+
+@page page_exahype2_home ExaHyPE 2
+
+\tableofcontents
+
+\li \subpage page_exahype2_tutorials
+\li \subpage page_exahype_applications
+\li \subpage page_exahype_benchmarks
+\li \subpage page_exahype_tracer
+\li \subpage page_exahype_visualisation
+\li \subpage page_exahype_runtime_analysis
+\li \subpage page_exahype_performance_optimisation
+\li \subpage page_exahype_parallelisation
+\li \subpage page_exahype_coupling
+\li \subpage page_exahype_faq
+\li \subpage page_exahype_multicore
+\li \subpage page_exahype_gpu
+\li \subpage page_exahype_boundary_conditions
+\li \subpage page_exahype_amr
+\li \subpage page_exahype_cpp_kernels
+\li \subpage page_exahype_solvers
+\li \subpage exahype2_enumerator
+
+@image html documentation/exahype2/ExaHyPE-logo.jpg
+
+## Overview
+
+ExaHyPE 2 is part of Peano 4, which is an open source framework for solvers on dynamically adaptive Cartesian meshes that was developed by a team led by Tobias Weinzierl,
+who is at the time of writing Professor at the department of Computer Science of Durham University in the United Kingdom.
+
+ExaHyPE 2 itself is a hyperbolic PDE engine, its goal is to provide a generic engine in which users can
+implement the specifics of their hyperbolic PDEs and have these be solved by the engine.
+This is what we will endeavor to do in the following.
+ExaHyPE 2 solves partial differential equations of the following form:
+
+@f$
+\frac{\partial Q}{\partial t} + \nabla . F(Q, \nabla Q) + B(Q) . \nabla Q= S(Q) + \sum_{i = 1}^{n_{ps}} \delta_i
+@f$
+
+Here @f$ F @f$ is called the flux, @f$ B @f$ is the non-conservative product (often shortened to NCP)
+and @f$ S @f$ is the source of the equation.
+
+For simplicity the easiest way to think of each of these is as follows:
+
+- The flux contains terms linked to the transmission of a quantity within the domain such as the flow of heat from a hot part of the domain to a colder one. It concerns quantities that do not change but merely move from part to another.
+- The NCP, as the term non-conservative would imply, contains terms that are transmitted but can increase or decrease. One example for this would be friction, which causes the overall velocity of the system to decrease.
+- The source contains terms that are acted upon the system from outside, such as gravity or someone acting upon it.
+
+ExaHyPE 2 is a rewrite of the ExaHyPE engine developed under the umbrella of the EU FET HPC programme ExaHyPE.
+ExaHyPE has received funding from the European Union’s Horizon 2020 research
+and innovation programme under grant agreement No 671698 (ExaHyPE).
+ExaHyPE 2 has been made possible mainly through two funding routes:
+EPSRC funded three projects under their ExCALIBUR programme, and Intel made
+ExaHyPE centerpiece of an Intel oneAPI Academic Centre of Excellence.
+
+As ExaHyPE 2 is a Peano 4 extension, you first have to
+@ref page_installation_home "configure and build" the core
+Peano code base, i.e. its libraries, before you start any work.
+Hereby, it is important that you add the ExaHyPE-specific toolboxes:
+
+     ./configure ... --enable-exahype --enable-loadbalancing --enable-blockstructured
+
+We recommend that you run a few of the @ref page_exahype_benchmarks benchmarks
+to ensure that all is properly set up before you start developing your own
+codes.
+
+ExaHyPE 2 follows the @ref page_architecture_home "Peano 4 architecture" and hence
+consists of two major parts: a set of C++ routines, classes, macros, ... which
+are built on top of Peano's @ref page_tarch_home "Technical architecture",
+the @ref page_peano4_home "Peano core" and various toolboxes, plus a set of
+Python scripts which are built on top of Peano's Python API.
+
+Every run of the Python script produces a file called README-executablename.md
+which enlists which software ingredients are used by the resulting code.
+
+## Historical remarks
+
+ExaHyPE 2 is the follow-up development of the ExaHyPE project which has
+been funded by the EU from 2015--2019.
+The present version is the second generation of the code (ExaHyPE 2) and has
+seen substantial rewrites of core routines.
+However, many paradigms and even code blocks remain the same.
+Migrating from the original ExaHyPE to ExaHyPE 2 thus should be straightforward.
+
+The original ExaHyPE had been built on top of Peano (third generation) and tried
+to hide as much of Peano away as possible.
+In ExaHyPE 2, I go the opposite way: ExaHyPE 2 is a full-blown Peano add-in and I
+try not to hide anything away.
+Where we designed our own data management on top of Peano in ExaHyPE, all the
+data management (as well as parallelisation, e.g.) is native Peano 4.
+
+With the migration from a sole-C++ philosophy to C++ supplemented by a Python
+API in Peano, I also dumped ExaHyPE's former configuration/specification file paradigm.
+An ExaHyPE 2 application now is championed by a sole Python script.
+This Python script yields a native Peano application (builder mechanism) which then assembles the application.
+
+<div style="display: flex;">
+    <div style="flex: 1;">
+        @image html documentation/Excalibur-logo.png
+    </div>
+    <div style="flex: 1;">
+        @image html documentation/EU-logo.png
+    </div>
+</div>
+
+*/
