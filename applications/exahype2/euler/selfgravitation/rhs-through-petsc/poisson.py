@@ -7,7 +7,7 @@ import peano4
 import exahype2
 
 import numpy as np
-import multigrid
+import mghype
 
 modes = {
   "release": peano4.output.CompileMode.Release,
@@ -20,6 +20,7 @@ modes = {
 # parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 (default) to use all cores")
+parser.add_argument("-pt",   "--plot-timestep",     dest="plot_each_timestep", action="store_true", default=False, help="Plot after each timestep. By default (False) we plot after initialisation and at the end" )
 parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../../", help="Peano4 directory")
 parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
 parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=True, help="Verbose")
@@ -64,7 +65,7 @@ euler_solver   = None
 poisson_solver = None
 
 #! [Construct matrices]
-matrices = multigrid.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
@@ -115,7 +116,7 @@ if args.type=="global-adaptive":
 
 ## Poisson solver
 
-poisson_solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+poisson_solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "Poisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
@@ -153,7 +154,7 @@ poisson_solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretis
 
 # mass_matrix = np.eye( 2**args.dimensions )
 
-# poisson_solver = multigrid.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Poisson",
+# poisson_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Poisson",
 #                                                               args.upv,
 #                                                               args.dimensions,
 #                                                               args.meshsize,
@@ -192,12 +193,13 @@ euler_project = exahype2.Project(
 # )
 
 #! [Create project]
-poisson_project = multigrid.matrixfree.api.Project( 
+poisson_project = mghype.matrixfree.api.Project( 
   namespace = [ "applications", "exahype2", "euler", "selfgravitation" ],
   project_name = "Poisson", 
   directory     = ".",
   subdirectory  = "poisson",
-  executable    = "selfgravitation-poisson"
+  executable    = "selfgravitation-poisson",
+  abstract_overwrite = False,
 )
 #! [Create project]
 
@@ -295,6 +297,7 @@ poisson_project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = offset,
   domain_size           = size,
+  plot_each_timestep    = args.plot_each_timestep,
 )
 
 #
