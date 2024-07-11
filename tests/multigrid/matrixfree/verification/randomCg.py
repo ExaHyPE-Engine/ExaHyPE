@@ -1,3 +1,18 @@
+"""
+This test checks that the CG solver converges to u_random for the RHS set as b_c = A_CG * u_random with some vector u_random.
+It shows that the solution u of the problem 
+    A * u = A * u_random
+approximates u_random. u_random has to satisfy the boundary conditions but can be random at the interior vertices.
+
+Algorithm:
+
+1. Generate u_random by assigning a value from [0,1] to each vertex.
+2. Set u_random to 0 at the boundary vertices to satisfy the boundary conditions.
+3. Compute b_c = A_CG * u_random, where A_CG is the system matrix for CG.
+4. Solve A_CG * u = b_c with CollocatedSolver.
+5. Check |u - u_random| < tol.
+"""
+
 import os, sys
 import argparse
 import peano4
