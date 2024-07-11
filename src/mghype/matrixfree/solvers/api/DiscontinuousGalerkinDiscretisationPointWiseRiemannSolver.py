@@ -434,7 +434,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       observer.add_action_set( self.postprocessing_action_set )
 
   
-  def add_implementation_files_to_project(self, namespace, output, subdirectory=""):
+  def add_implementation_files_to_project(self, namespace, output, subdirectory="", abstract_overwrite=True):
     """!
     
     The solver creates two classes: An abstract base class and its 
@@ -489,7 +489,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       namespace,
       subdirectory + ".",
       dictionary,
-      True,
+      abstract_overwrite,
       True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",

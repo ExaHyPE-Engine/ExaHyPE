@@ -37,12 +37,14 @@ class Project:
                directory  = ".",
                executable = "peano4matrixfree",
                subdirectory="",
+               abstract_overwrite=True,
                ):
     self._project = peano4.Project(namespace, project_name, directory, subdirectory)
     
     # what to do about this line?
     # self._project.output.makefile.add_cmake_core_library("petsc")
     self._subdirectory = subdirectory
+    self._abstract_overwrite = abstract_overwrite
 
     # does this get overwritten later?
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -222,7 +224,7 @@ you require to run this Peano4 application with PETSc.
 
     solver.add_to_plot         (self.algorithm_step_plot)
 
-    solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
+    solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory, self._abstract_overwrite )
     
     self._solvers.append( solver )
 
