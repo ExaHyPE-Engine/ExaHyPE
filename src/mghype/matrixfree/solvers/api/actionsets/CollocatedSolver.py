@@ -85,6 +85,28 @@ class CollocatedSolver(ActionSet):
     repositories::{{SOLVER_INSTANCE}}.update()
   ) {
     logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
+    auto getCoeff = [&]( const auto& vertexType ) -> double {
+      double output;
+      switch (vertexType) {
+        case vertexdata::{{SOLVER_NAME}}::Type::Interior:
+        {
+          output = 0.25;
+        } break;
+        case vertexdata::{{SOLVER_NAME}}::Type::Boundary:
+        {
+          output = 0.5;
+        } break;
+        case vertexdata::{{SOLVER_NAME}}::Type::Corner:
+        {
+          output = 1.0;
+        } break;
+      default:
+        { throw std::runtime_error( "Bad vertex type" ); } break;
+      }
+      return output;
+    };
+
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
       // Mass and assembly matrix should be block diagonal, 
@@ -119,7 +141,7 @@ class CollocatedSolver(ActionSet):
         }
         else // Compute b^tilde = rhs
         {
-          rhsValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getRhs(unknown);  
+          rhsValues(i) = getCoeff( fineGridVertices{{SOLVER_NAME}}(i).getType() ) * fineGridVertices{{SOLVER_NAME}}(i).getRhs(unknown);  
         }
 
         residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
