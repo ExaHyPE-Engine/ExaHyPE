@@ -96,6 +96,9 @@ class InitDofsCollocatedRandomRhs(ActionSet):
           fineGridVertex{{SOLVER_NAME}}.setValue(dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRand( dof, dis(rng)); // vector v_random receives random values in the interior vertices
+
+          // use a continuous distribution x*y*(1-x)*(1-y) for "u_random" instead of the random one
+          //fineGridVertex{{SOLVER_NAME}}.setRand( dof, marker.x()(0)*marker.x()(1)*(1.0-marker.x()(0))*(1.0-marker.x()(1)) );
         }
       }
     }
