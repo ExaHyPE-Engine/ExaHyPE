@@ -1,3 +1,13 @@
+"""
+This test checks that A_CG indeed approximates the continuum operator:
+check A_DG * u_exact == M * b_exact, where u_exact and b_exact are the dof-vectors 
+of the functions u_exact(x) and b_exact(x) which satisfy the PDE in the continuum
+    - Laplace u_exact(x) = b_exact(x).
+
+We use u_exact(x,y) = sin(2*pi*x) * sin(2*pi*y),
+       b_exact(x,y) = 8*pi^2 * sin(2*pi*x) * sin(2*pi*y)
+"""
+
 from peano4.solversteps.ActionSet import ActionSet
 
 import peano4
@@ -168,14 +178,13 @@ class InitDofsTest8(ActionSet):
    """
   
   templateTouchVertexLastTime="""
+  // Set boundary conditions vu = 0 strongly.
+  // This overwrites the result of A_CG * u and M * b at the boundary vertices.
+
   if ( fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary ) {
-    auto value = fineGridVertex{{SOLVER_NAME}}.getValue();
-    repositories::{{SOLVER_INSTANCE}}.setBoundaryConditions(
-      marker.x(),
-      marker.h(),
-      value
-    );
-    fineGridVertex{{SOLVER_NAME}}.setValue(value);
+    auto value = 0.0;
+    fineGridVertex{{SOLVER_NAME}}.setVu(value);
+    fineGridVertex{{SOLVER_NAME}}.setVb(value);
   }
   """
 
