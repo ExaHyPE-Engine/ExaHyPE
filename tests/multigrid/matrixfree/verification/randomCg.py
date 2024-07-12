@@ -66,7 +66,7 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               local_assembly_matrix_scaling=system_matrix_scaling,
                                                               mass_matrix = mass_matrix,
                                                               mass_matrix_scaling = maxx_matrix_scaling,
-                                                              solver_tolerance=1e-8,
+                                                              solver_tolerance=1e-6,
                                                               custom_init_actionset=InitDofsCollocatedRandomRhs,
                                                               custom_plot_actionset=[("rand","getRand")]
                                                             )
@@ -94,7 +94,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_each_timestep    = args.plot_each_timestep,
-  max_iterations        = 1000
+  max_iterations        = 5000
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
