@@ -168,7 +168,15 @@ class InitDofsTest8(ActionSet):
    """
   
   templateTouchVertexLastTime="""
-  
+  if ( fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary ) {
+    auto value = fineGridVertex{{SOLVER_NAME}}.getValue();
+    repositories::{{SOLVER_INSTANCE}}.setBoundaryConditions(
+      marker.x(),
+      marker.h(),
+      value
+    );
+    fineGridVertex{{SOLVER_NAME}}.setValue(value);
+  }
   """
 
   def __init__(self,
