@@ -44,6 +44,11 @@ mass_matrix,   maxx_matrix_scaling   = poisson_equation_matrices.get_cell_mass_m
 
 # Construct custom rhs:
 
+custom_boundary_conditions="""
+  for (int i=0; i<value.size(); i++) {
+    value[i] = 0.0;
+  }
+"""
 
 solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("CollocatedPoisson",
                                                               1, # unknowns
@@ -56,7 +61,8 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               mass_matrix_scaling = maxx_matrix_scaling,
                                                               solver_tolerance=1e-8,
                                                               custom_init_actionset=InitDofsTest8,
-                                                              custom_plot_actionset=[("vu","getVu"), (("vb","getVb"))]
+                                                              custom_plot_actionset=[("vu","getVu"), (("vb","getVb"))],
+                                                              custom_boundary_conditions=custom_boundary_conditions
                                                             )
 
 # need to make sure we have the correct field name to support extra random field
