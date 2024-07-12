@@ -74,8 +74,33 @@ def reorder_array(array1, array2):
 
     return array2_reorder
 
+def plot_field(data):
+        """
+        Visualise the parsed field as an interactive scatter plot.
+        """
+
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+
+        x = data[:, 0]
+        y = data[:, 1]
+        val = data[:, 2]
+
+        # Plot
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        sc = ax.scatter(x, y, val, c=val, cmap='viridis')
+        fig.colorbar(sc, ax=ax, label='Value')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('val')
+        ax.set_title(' ')
+        plt.show()
+
 if __name__ == "__main__":
     v_solution = parse_patch_file("CollocatedPoisson.value-1.peano-patch-file") 
     v_random   = parse_patch_file("CollocatedPoisson.rand-1.peano-patch-file")
     v_random = reorder_array(v_solution, v_random)
     print(f'{np.max(np.abs(v_solution - v_random)) = }')
+
+    plot_field(v_solution)

@@ -69,6 +69,13 @@ class CollocatedSolver(ActionSet):
     }
     logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
+
+  if ( fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary ) {
+    auto value = 0.0;
+    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
+      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, value);
+    }
+  }
   """
 
   templateTouchCellFirstTime = """ 
