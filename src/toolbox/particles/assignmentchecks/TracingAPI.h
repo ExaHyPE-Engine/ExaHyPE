@@ -280,6 +280,29 @@ namespace toolbox {
       }
 
       /**
+       * Eliminate existing particles, so only those that are "forgotten"
+       * remain
+       *
+       * This routine runs through the particles for which we have
+       * recorded events. If the last event
+       *
+       * - affects a remote particle;
+       * - is a move;
+       * - is an assignment to vertex,
+       *
+       * we know that it cannot eliminate existing particles. So we
+       * remote their trajectories via removeTrajectory(). If the
+       * last snapshot is empty, we remove it completely.
+       *
+       * Once this routine has terminated, we get the stuff in the
+       * database for particles that seem to have been left over. We also
+       * get a lot of historic data, but if we plot the database and
+       * study solely the last snapshot, we typically get a good idea of
+       * which particles got lost.
+       */
+      void eliminateExistingParticles();
+
+      /**
        * Ensure that database is empty
        *
        * This one is usually called after eliminateExistingParticles() and will

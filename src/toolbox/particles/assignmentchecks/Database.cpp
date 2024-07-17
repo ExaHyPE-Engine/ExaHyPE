@@ -339,6 +339,27 @@ void toolbox::particles::assignmentchecks::internal::Database::
 }
 
 
+void toolbox::particles::assignmentchecks::internal::Database::
+  eliminateExistingParticles() {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
+
+  for (auto it = _data.begin(); it != _data.end();) {
+    internal::Event& lastEvent = it->second.back();
+
+    if (lastEvent.type == internal::Event::Type::AssignToVertex
+        or lastEvent.type == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex
+        or lastEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex
+        or (not lastEvent.isLocal)) {
+      ++it;
+    } else {
+      it = _data.erase(it);
+    }
+  }
+}
+
+
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::getPreviousEvent(
     ParticleEvents& particleHistory,

@@ -97,6 +97,7 @@ namespace toolbox {
           size_t _maxParticleSnapshotsToKeepTrackOf;
 
         public:
+          // TODO: is this still used?
           static constexpr int SearchWholeDatabase                    = 0;
           static constexpr int AnyTree                                = -1;
           static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
@@ -228,6 +229,12 @@ namespace toolbox {
            * Get the history of stored mesh sweep (names).
            */
           std::string sweepHistory() const;
+
+          /**
+           * Eliminate existing particles from the database. See documentation
+           * in TracingAPI.h:eliminateExistingParticles() for more.
+           */
+          void eliminateExistingParticles();
         };
 
         /**

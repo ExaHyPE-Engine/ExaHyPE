@@ -501,6 +501,11 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   logTraceOut("assignParticleToSieveSet(...)");
 }
 
+void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
+
+  internal::Database& database = internal::Database::getInstance();
+  database.eliminateExistingParticles();
+}
 
 void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
 
