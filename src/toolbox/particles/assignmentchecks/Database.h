@@ -18,11 +18,6 @@
 #endif
 
 
-// TODO in documentation:
-// - checks will fail if particles move too much. They can't have arbitrary
-// motions in the grid. THey're limited by the vertexH.
-// - database dump and particle history dump will print out last event first
-
 namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
@@ -42,7 +37,7 @@ namespace toolbox {
          * _maxParticleSnapshotsToKeepTrackOf particle events. Once that number
          * is exceeded, the past history will be condensed into a single event,
          * signifying that it had been compacted.
-
+         *
          * Additionally, something we come across very often is that particles,
          * once assigned to a vertex, very often stay assigned to the same
          * vertex for a long time (=many sweeps) and only experiences small
@@ -117,51 +112,19 @@ namespace toolbox {
           void startMeshSweep(const std::string& meshSweepName);
 
           /**
-           * TODO: fix docu here.
-           * Return last entry matching identifier
+           * Return the stored event history of a particle
            *
-           * This routine runs backwards (from new to old) through the
-           * database and searches for a particle entry with the specified
-           * position and name. If there's none or the last logged entry for
-           * this particle is an erase event, then the routine returns an
-           * invalid event.
+           * If there's none, this routine returns a history containing
+           * an invalid event. This history containing an invalid event
+           * will alloc a new ParticleEvents and add a singleevent of
+           * type NotFound if there is no history. Make sure to delete
+           * that after you use it.
            *
-           * Cannot be const as we have a semaphore to be thread-safe.
+           * Cannot be const as we have a semaphore to be
+           * thread-safe.
            *
-           * If the routine encounters a move particle, it changes the
-           * identifier and invokes itself recursively for this identifier.
-           * This way, we can follow a particle through the database even
-           * though it has changed its position in space. If the find
-           * information on a previous position, this previous position is held
-           * as raw floating point data, i.e. might differ from the position
-           * use in the database to identify previous particle states by
-           * floating point accuracy. So we have to make them match before we
-           * continue to search recursively.
+           * @return The history of the particle.
            *
-           * ## Implementation
-           *
-           * I originally thought that I have to release the lock before I
-           * jump into the recursion. This is however not necessary, as we
-           * are working with read/write locks and I can have an arbitrary
-           * number of read locks in this case. Actually, it would be
-           * outrightly wrong to free it, as someone might alter the data
-           * structure in-between a function and its recursive re-invocation.
-           * So we have to keep it lock until we return.
-           *
-           *
-           * @param spacetreeId Either a valid spacetree or AnyTree if you don't
-           * care
-           *
-           * @return tuple of event and identifier. In most cases, the
-           *   identifier returned will equal the parameter identifier.
-           *   However, if the particle has moved, the result identifier
-           *   will identify the spatial position corresponding to the
-           *   returned event.
-           *
-           *   --------------------
-           *   Will alloc a new ParticleEvents and add a single
-           *   event of type NotFound if there is no history.
-           *   Make sure to delete that after you use it.
            */
           ParticleEvents& getParticleHistory(
             const ParticleSearchIdentifier& identifier
@@ -171,25 +134,6 @@ namespace toolbox {
            * Print history of one particle
            *
            * Cannot be const as we have a semaphore to be thread-safe.
-           *
-           * The particle runs backwards through the database and plots all
-           * fitting identifiers. When we encounter a move, we memorise it.
-           * Once at the end of the database, we look if there has been a
-           * move before. If so, we call the search again for this previous
-           * particle position. When we construct the particle identifier
-           * for the tail recursion, we have to take into account that the
-           * previous position is stored as raw position data, but the
-           * database's entries might be slightly off due to truncation
-           * errors.
-           *
-           * If there are multiple moves, we only take the first one into
-           * account. Multiple moves might occur if several particles
-           * "hop through" the same spatial position in the database. Only
-           * the most recent one however is relevant for identifier.
-           *
-           * --------------------------------
-           * Events of type NotFound will not be added to the history.
-           * TODO: rename
            */
           std::string particleHistory(const ParticleSearchIdentifier& identifier
           );
@@ -217,7 +161,6 @@ namespace toolbox {
           int getNumberOfSnapshots() const;
 
           /**
-           * TODO: check docu
            * Add a new event to the database
            *
            * If there is not yet an entry for identifier in the current
@@ -225,33 +168,16 @@ namespace toolbox {
            * new dataset for particle identifier and clean up the database,
            * i.e. throw away irrelevant old data.
            *
+           * If the number of events for a particle exceeds the limit set
+           * by _maxParticleSnapshotsToKeepTrackOf, this routine will
+           * squash them together into a single event signifying that
+           * this compression has occurred, while keeping the event type
+           * of the last recorded event. The other events in the history
+           * will be deleted.
            *
-           *
-           * ## Garbage/history collection
-           *
-           * Eventually, it is time to clean up the database. This happens if
-           * and only if we have a maximum database size set in
-           * _maxParticleSnapshotsToKeepTrackOf.
-           *
-           * - If the new event is an assignment, then we know that now
-           *   future request will ever look backwards in history beyond this
-           *   assignment. So we can delete all of this historic data.
-           * - If we have tons of particle moves switching vertices (and
-           *   hence deleting and re-associating particles), we can eliminate
-           *   all of those and instead add two events: one that attaches a
-           *   particle and one that moves it in one go.
-           *
-           * I originally thought that I'd also like to remove old data
-           * entries whenever we encounter an erase event. However, this is
-           * not necessary: If we have an erase event (for an expired halo
-           * element), we'll very likely get a new assignment in a second.
-           * This assignment will then eliminate previous "expired"
-           * information as per the description above.
-           *
-           * ------------------------------------------
-           *  - will refresh identifier if moved past tolerance
-           *  - will delete events if there are too many
-           *  - returns ref to particleEvents
+           * @return the particle history of the particle specified by
+           *   identifier. A convenience so we don't have to search for
+           *   its history again just after we've added an event.
            */
           ParticleEvents& addEvent(
             ParticleSearchIdentifier identifier,
@@ -259,8 +185,8 @@ namespace toolbox {
           );
 
           /**
-           * Change the particle's coordinates if it moved too much
-           * compared to the coordinates stored in its identifier in
+           * Change the particle's coordinates used to identify it if it moved
+           * too much compared to the coordinates stored in its identifier in
            * the database.
            */
           void shiftIdentifierCoordinates(
