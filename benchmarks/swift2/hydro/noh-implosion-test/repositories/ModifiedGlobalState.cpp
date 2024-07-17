@@ -15,6 +15,7 @@
 
 
 #include "toolbox/loadbalancing/strategies/SpreadOutOnceGridStagnates.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 
 namespace benchmarks {namespace swift2 {namespace noh {namespace repositories {
