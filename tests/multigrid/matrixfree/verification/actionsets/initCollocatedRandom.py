@@ -233,3 +233,83 @@ class InitDofsCollocatedRandomRhs(ActionSet):
 #include <random>
 #include "peano4/utils/Loop.h"
 """
+
+
+class InitDofsCollocatedRandomTest2(InitDofsCollocatedRandomRhs):
+  """!
+  Exactly the same as above, with slightly modified templateTouchCellFirstTime
+
+  Don't specialise anything apart from one template. Everything else
+  will be exactly the same
+  """
+  def __init__(self,
+               solver):
+    ## catch everything from the parent class
+    super( InitDofsCollocatedRandomTest2, self ).__init__( solver )
+
+  templateTouchCellFirstTime = """
+  logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+
+  switch(dofType)
+  {
+    case celldata::{{SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+        // perform initialisation proc
+        // this does not work for more than one unknown per vertex
+
+        tarch::la::Vector<TwoPowerD, double> randValues;
+        for (int i=0; i<TwoPowerD; i++){
+          randValues[i] = fineGridVertices{{SOLVER_NAME}}(i).getRand(0);
+        }
+
+        // multiply v_random by A_cg
+        randValues = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * randValues;
+
+        // place this into rhs
+        for (int i=0; i<TwoPowerD; i++){
+          fineGridVertices{{SOLVER_NAME}}(i).setRhs(
+            fineGridVertices{{SOLVER_NAME}}(i).getRhs() + randValues(i)
+          );
+
+          // similar for solution
+          fineGridVertices{{SOLVER_NAME}}(i).setValue(
+            fineGridVertices{{SOLVER_NAME}}(i).getValue() + randValues(i)
+
+          );
+
+        }
+
+      }
+    }
+    break;
+
+  }
+  
+  logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+   """
+  
+  templateTouchVertexLastTime="""
+  
+  """
