@@ -61,9 +61,12 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   particle
       ) {
-        // We don't need to check for anything here, just overwrite particle
-        // data.
-        first_init_particle(&particle);
+        // In principle, we don't need to check for anything here, just
+        // overwrite particle data. In practice, this messes with the
+        // dependency checks.
+        if (localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
+          first_init_particle(&particle);
+        }
       }
 
       /**
