@@ -5,10 +5,10 @@ set -e
 # Script to run experiment (Noh 2D)
 
 # set threads number
-export OMP_NUM_THREADS=2
+export OMP_NUM_THREADS=1
 
 # Parameters
-N_PART=120
+N_PART=30
 END_TIME=0.2
 TIMESTEP_SIZE=0.0001
 CFL_FACTOR=0.2

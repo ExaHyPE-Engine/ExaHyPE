@@ -118,6 +118,54 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh2D", executable="noh2D"
 )
 
+
+# see also modifications around line 270
+
+#  if (
+#      args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+#      and args.realisation.split(".")[1] == Storage_Scattered
+#      and args.realisation.split(".")[2] == Sorting_MultiscaleSort
+#  ):
+#  project.algorithm_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+#  )
+#  project.initialisation_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+#  )
+
+#  elif (
+#      args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+#      and args.realisation.split(".")[1] == Storage_Scattered
+#      and args.realisation.split(".")[2] == Sorting_BucketSort
+#  ):
+#  project.algorithm_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+#  )
+#  project.initialisation_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+#  )
+
+#  elif (
+#      args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+#      and (
+#          args.realisation.split(".")[1] == Storage_ContinuousPerVertex
+#          or args.realisation.split(".")[1] == Storage_GlobalContinuous
+#      )
+#      and args.realisation.split(".")[2] == Sorting_MultiscaleSort
+#  ):
+
+project.algorithm_steps_task_graph_compiler = (
+    swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
+)
+project.initialisation_steps_task_graph_compiler = (
+    swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
+)
+
+
+particle_interaction_kernel_realisation = (
+    swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
+)
+
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
@@ -137,6 +185,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
+    particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
 )
 
 
@@ -210,9 +259,29 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
+
+#  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
+#  particle_set.generator = (
+#      peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
+#          particle_set
+#      )
+#  )
+#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
+particle_set.generator = (
+    peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
+)
+#  else:
+#  particle_set.generator = (
+#      peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+#          particle_set
+#      )
+#  )
+
+
+
 if args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
-    #  build_mode = peano4.output.CompileMode.Debug
+    #  build_mode = peano4.output.CompileMode.Asserts
+    build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
 
@@ -232,7 +301,6 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    #  "toolbox::loadbalancing::strategies::RecursiveBipartition",
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
