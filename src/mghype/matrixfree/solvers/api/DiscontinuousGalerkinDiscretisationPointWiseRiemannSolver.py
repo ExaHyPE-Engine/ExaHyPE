@@ -252,7 +252,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               face_relaxation,
               approximate_system_matrix,
               approximate_system_matrix_scaling,
-              solver_tolerance
+              solver_tolerance,
+              custom_init_actionset = None,
+              custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
+              custom_init_cell = "",
+              custom_init_face = "",
               ):
     """!
     
@@ -390,6 +394,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     self._basic_descend_order           = 0
 
+    self._custom_init_actionset         = custom_init_actionset
+    self._custom_plot_actionset         = custom_plot_actionset
+
+    self._custom_init_cell            = custom_init_cell
+    self._custom_init_face            = custom_init_face
+
     # assertions for matrix shapes
     # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     # assert assembly_matrix.shape == mass_matrix.shape
@@ -414,7 +424,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     """
     observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution") )
     observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs") )
-    pass
+
+    if self._custom_plot_actionset:
+      for name, getter in self._custom_plot_actionset:
+        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter) )
 
   def add_to_create_grid(self, observer):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
@@ -426,8 +439,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     Solution initialisation
     
     """
-    observer.add_action_set( InitDofsDG(self) ) 
-    pass
+    if self._custom_init_actionset is None:
+      observer.add_action_set( InitDofsDG(self) )
+    else:
+      observer.add_action_set( self._custom_init_actionset(self) )
 
   def add_to_solve(self, observer):
     """!
@@ -491,6 +506,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "FACE_RELAXATION"             : self._face_relaxation,
         "POLY_DEGREE"                 : self._poly_degree,
         "SOLVER_TOLERANCE"            : self._solver_tolerance,
+        "CUSTOM_INIT_CELL"            : self._custom_init_cell,
+        "CUSTOM_INIT_FACE"            : self._custom_init_face,
 
         }
 

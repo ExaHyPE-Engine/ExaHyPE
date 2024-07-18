@@ -15,7 +15,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCell(
   tarch::la::Vector< CellUnknowns, double >&  value,
   tarch::la::Vector< CellUnknowns, double >&  rhs
 ) {
-  // @todo insert your code here
+{{CUSTOM_INIT_CELL}}
 }
 
 
