@@ -129,6 +129,6 @@ void toolbox::particles::insertParticleIntoCell(
     marker.h(),
     spacetreeId,
     "toolbox::particles::insertParticleIntoCell()",
-    true
+    true // particle is new
   );
 }
