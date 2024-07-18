@@ -108,7 +108,7 @@ namespace toolbox {
        *   first time. In this case, the particle has to be "free", i.e. it may
        *   not have been assigned to any other vertex yet. The search should
        *   reduce a NotFound, or find that in a previous sweep it had been a
-       *   virtual particle that has been erased.
+       *   particle that has been erased.
        * - The particle might have been dropped from a coarser level. See
        *   corresponding discussion for virtual particles below including some
        *   sketches.
@@ -125,7 +125,7 @@ namespace toolbox {
        *   its parallel flag yet. Therefore, it might have changed.
        * - A particle might change from remote to local. This can only happen
        *   in UpdateParallelState after a merge, which first detaches a particle
-       *   and then readds it with the local flag set.
+       *   and then re-adds it with the local flag set.
        *
        *
        * ### Consistency check for virtual particles
@@ -198,14 +198,13 @@ namespace toolbox {
        * global sieve set.
        *
        * @param particleIsNew If we know that a particle is new, there's no
-       *                      need to search through the database.
+       *   need to search through the database.
        * @param reassignmentOnSameTreeDepthAllowed If true, assume our
-       *                      particle sorting/bookkeeping algorithm allows
-       *                      for a particle to be reassigned from one vertex
-       *                      to another vertex on the same depth in the tree
-       *                      directly (through its movement). Otherwise,
-       *                      expect the particle to be sorted either via
-       *                      sieves, lifts, or drops.
+       *   particle sorting/bookkeeping algorithm allows for a particle to be
+       *   reassigned from one vertex to another vertex on the same depth in
+       *   the tree directly (due to its movement). Otherwise, expect the
+       *   particle to be sorted either via sieves or a sequence of lifts and
+       *   drops.
        */
       void assignParticleToVertex(
         const std::string&                           particleName,
@@ -227,6 +226,20 @@ namespace toolbox {
        * To make this API call valid, the particle has to be assigned to a
        * vertex beforehand. So there has to be a assignParticleToVertex()
        * before this one.
+       *
+       * An exception may occur during mergeWithParticle() if we're using
+       * periodic boundary conditions: Once a particle is mirrored along the
+       * boundary (for the first time), we won't be able to identify its
+       * history in the database due to its change in position. This can
+       * happen during a first mergeWithParticle() in the simulation run.
+       * In that case, permit the previous event to be of type NotFound via
+       * the @param inMergeWithPeriodicBoundarySwap.
+       *
+       * TODO: we may need to extend this to non-periodic boundary swaps
+       * too. If the exchange is via MPI, then a particle may not exists
+       * in the database of the other rank too, and we have the same problem.
+       * Then we should permit an event of type NotFound for any merge event,
+       * not just for periodic boundary data swaps.
        */
       void detachParticleFromVertex(
         const std::string&                           particleName,
@@ -236,6 +249,7 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
+        const bool                                   inMergeWithPeriodicBoundarySwap,
         const std::string&                           trace
       );
 

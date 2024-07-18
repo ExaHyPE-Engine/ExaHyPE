@@ -44,7 +44,7 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
 
 int toolbox::particles::assignmentchecks::internal::Database::
   getNumberOfSnapshots() const {
-  return _data.size();
+  return _meshSweepData.size();
 }
 
 
@@ -153,10 +153,11 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
+  int cmswi = getCurrentMeshSweepIndex();
 
   msg << "--------------------------\n";
   msg << "Last sweep dump: Sweep ["
-      << _meshSweepData.at(_currentMeshSweepIndex).getName() << "]\n";
+      << _meshSweepData.at(cmswi).getName() << "]\n";
   msg << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
@@ -166,7 +167,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     msg << "\n" << identifier.toString();
 
     for (auto event = history.crbegin(); event != history.crend(); event++) {
-      if (event->meshSweepIndex != _currentMeshSweepIndex) {
+      if (event->meshSweepIndex != cmswi) {
         break;
       }
       msg << "\n\t->" << event->toString();
@@ -178,7 +179,9 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
 
 std::string toolbox::particles::assignmentchecks::internal::Database::
-  sweepHistory() const {
+  sweepHistory() {
+
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
   int                counter = 0;
@@ -258,7 +261,7 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     );
     logDebug(
       "addEvent(...) ",
-      "add new particle history thread for " + identifier.toString()
+      "add new particle history thread for " + identifier.toString() + ",Event:" + event.toString()
     );
     return _data.at(identifier);
 
@@ -297,6 +300,9 @@ void toolbox::particles::assignmentchecks::internal::Database::
                                           identifier,
     tarch::la::Vector<Dimensions, double> newParticleX
   ) {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
 
   auto search = _data.find(identifier);
 

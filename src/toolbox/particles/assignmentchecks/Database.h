@@ -228,7 +228,7 @@ namespace toolbox {
           /**
            * Get the history of stored mesh sweep (names).
            */
-          std::string sweepHistory() const;
+          std::string sweepHistory();
 
           /**
            * Eliminate existing particles from the database. See documentation

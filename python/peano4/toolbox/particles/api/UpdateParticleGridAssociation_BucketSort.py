@@ -126,6 +126,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
             marker.x(),
             marker.h(),
             _spacetreeId,
+            false,
             "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
           );
           toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -164,6 +165,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
           marker.x(),
           marker.h(),
           _spacetreeId,
+          false,
           "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
         );
         toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -208,7 +210,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle(
         new globaldata::{{PARTICLE}}(*sievedParticle),
         marker,
-        _spacetreeId
+        _spacetreeId,
+        false
       );
     }
 

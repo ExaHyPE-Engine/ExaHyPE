@@ -144,15 +144,12 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
             and not previousEvent.isLocal
           );
 
-    const bool virtualPartThatHasBeenErased =
-        (previousEvent.type == internal::Event::Type::Erase and (not previousEvent.isLocal));
-
     if (isLocal) {
       assertion7(
-        previousEvent.type == internal::Event::Type::NotFound
+        (previousEvent.type == internal::Event::Type::NotFound)
+        or (previousEvent.type == internal::Event::Type::Erase)
           or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal)
-          or (isDropping and previousEvent.isLocal) or (isDetached)
-          or virtualPartThatHasBeenErased,
+          or (isDropping and previousEvent.isLocal) or (isDetached),
         identifier.toString(),
         event.toString(),
         previousEvent.toString(),
@@ -165,12 +162,13 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
       assertion7(
           (previousEvent.type == internal::Event::Type::NotFound)
           or
+          (previousEvent.type == internal::Event::Type::Erase)
+          or
           isDroppingFromSieveSet
           or
           (isDropping and not previousEvent.isLocal)
           or
-          (previousEvent.type == internal::Event::Type::DetachFromVertex and previousEvent.isLocal)
-          or virtualPartThatHasBeenErased,
+          (previousEvent.type == internal::Event::Type::DetachFromVertex and previousEvent.isLocal),
           identifier.toString(),
           event.toString(),
           previousEvent.toString(),
@@ -373,6 +371,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
+  const bool                                   inMergeWithPeriodicBoundarySwap,
   const std::string&                           trace
 ) {
 
@@ -410,38 +409,43 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   Event           previousEvent = getPreviousEvent(history, treeId, 1);
 
 
-  assertion6(
-    previousEvent.type == internal::Event::Type::AssignToVertex
-      or previousEvent.type
-           == internal::Event::Type::MoveWhileAssociatedToVertex
-      or previousEvent.type
-           == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-    identifier.toString(),
-    event.toString(),
-    previousEvent.toString(),
-    treeId,
-    database.getNumberOfSnapshots(),
-    trace
-  );
-  assertion7(
-    tarch::la::equals(previousEvent.vertexX, vertexX),
-    identifier.toString(),
-    event.toString(),
-    previousEvent.toString(),
-    treeId,
-    database.getNumberOfSnapshots(),
-    trace,
-    database.particleHistory(identifier)
-  );
-  assertion6(
-    tarch::la::equals(previousEvent.vertexH, vertexH),
-    identifier.toString(),
-    event.toString(),
-    previousEvent.toString(),
-    treeId,
-    trace,
-    database.particleHistory(identifier)
-  );
+  if (previousEvent.type == internal::Event::Type::NotFound and inMergeWithPeriodicBoundarySwap) {
+    // We have no data on previous event, so no checks.
+  } else {
+    assertion6(
+      previousEvent.type == internal::Event::Type::AssignToVertex
+        or previousEvent.type
+             == internal::Event::Type::MoveWhileAssociatedToVertex
+        or previousEvent.type
+             == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      treeId,
+      database.getNumberOfSnapshots(),
+      trace
+    );
+    assertion7(
+      tarch::la::equals(previousEvent.vertexX, vertexX),
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      treeId,
+      database.getNumberOfSnapshots(),
+      trace,
+      database.particleHistory(identifier)
+    );
+    assertion6(
+      tarch::la::equals(previousEvent.vertexH, vertexH),
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      treeId,
+      trace,
+      database.particleHistory(identifier)
+    );
+
+  }
 
   logTraceOut("detachParticleFromVertex(...)");
 }
@@ -557,6 +561,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
+  const bool                                   inMergeWithPeriodicBoundarySwap,
   const std::string&                           trace
 ) {}
 

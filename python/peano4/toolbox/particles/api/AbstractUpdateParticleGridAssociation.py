@@ -308,6 +308,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             peano4::datamanagement::reconstructXOfParentVertex(marker, i),
             marker.h()*3.0,
             _spacetreeId,
+            false,
             "AbstractUpdateParticleGridAssociation::_Template_Drop"
           );
           toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -387,6 +388,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         marker.x(),
         marker.h(),
         _spacetreeId,
+        false,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"
       );
       toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -430,6 +432,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         marker.x(),
         marker.h(),
         _spacetreeId,
+        false,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
       toolbox::particles::assignmentchecks::assignParticleToSieveSet(
