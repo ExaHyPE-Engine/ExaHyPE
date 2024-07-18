@@ -114,7 +114,7 @@ class NohProblemIC:
       }
       else if (HYDRO_DIMENSIONS==3) {
         // ~ cbrt int max - 1
-        constexpr int MAX_PART_NUMBER = 1289;
+        MAX_PART_NUMBER = 1289;
       }
 
       double xp = particle->getX(0);
