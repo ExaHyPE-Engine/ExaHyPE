@@ -12,8 +12,7 @@ namespace {{ item }} {
 
 {% if USE_LIBXSMM %}
 
-{% for gemm,precision in gemmList %}
-
+{% for gemm,precision in GEMM_LIST %}
 {% if precision == "DP" %}
 void {{gemm}}(const double* A, const double* B, double* C);
 {% elif precision == "SP"%}
@@ -21,7 +20,6 @@ void {{gemm}}(const float* A, const float* B, float* C);
 {% else %}
 void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% endif %}
-
 {% endfor %}
 
 {% endif %}{# USE_LIBXSMM #}
@@ -100,6 +98,9 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
   {% set alignment_C = "Unaligned" %}
 {% endif %}
 
+{% if USE_LIBXSMM %}
+  {{gemms.baseroutinename}}({{A}}{% if A_shift != '0' %}+{{A_shift}}{% endif %}, {{B}}{% if B_shift != '0' %}+{{B_shift}}{% endif %}, {{C}}{% if C_shift != '0' %}+{{C_shift}}{% endif %});
+{% else %}
 {% if force_coeff_matrix %}
   double {{B}}[{{gemms.LDB*gemms.K}}] __attribute__((aligned({{ALIGNMENT}})));
   #ifdef SharedOMP
@@ -134,6 +135,7 @@ for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
     }
   }
 }
+{% endif %} {# USE_LIBXSMM #}
 {% endwith %}
 {% endmacro %}
 {#

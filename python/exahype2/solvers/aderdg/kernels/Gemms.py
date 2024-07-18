@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
+import os
+import subprocess
 
 class Gemms:
     """Specification of a dense matrix-matrix multiplication
@@ -125,3 +126,47 @@ class Gemms:
                 self.alignment_C,
             )
         )
+
+def generate_gemms(output_path, output_file_name, namespace, dict, gemm_config_list):
+    for gemm in gemm_config_list:
+        for current_precision in gemm.precision:
+            command_line_arguments = (
+                " "
+                + "dense"
+                + " "
+                + os.path.join(output_path, output_file_name)
+                + " "
+                + "::".join(namespace)
+                + "::"
+                + gemm.baseroutinename
+                + " "
+                + str(gemm.M)
+                + " "
+                + str(gemm.N)
+                + " "
+                + str(gemm.K)
+                + " "
+                + str(gemm.LDA)
+                + " "
+                + str(gemm.LDB)
+                + " "
+                + str(gemm.LDC)
+                + " "
+                + str(gemm.alpha)
+                + " "
+                + str(gemm.beta)
+                + " "
+                + str(gemm.alignment_A)
+                + " "
+                + str(gemm.alignment_C)
+                + " "
+                + dict["ARCHITECTURE"]
+                + " "
+                + gemm.prefetchStrategy
+                + " "
+                + current_precision
+            )  # SP (single-precision), DP (double-precision) or l16 (only dense)
+            bash_command = (
+                "/opt/views/view/bin/libxsmm_gemm_generator" + command_line_arguments
+            )
+            subprocess.call(bash_command.split())

@@ -5,6 +5,8 @@ from copy import deepcopy
 import peano4.output
 
 from .Gemms import Gemms
+from .Gemms import generate_gemms
+
 from exahype2.solvers.MathUtils import MathUtils
 
 
@@ -15,7 +17,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
     def generate_kernels(
         self, namespace, output, subdirectory, template_prefix, output_path
     ):
-        self._build_gemms()
+        self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
 
         if self.d["IS_LINEAR"]:
             # Size of the tmp array
@@ -121,7 +123,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
             output_path + "/FusedSpaceTimePredictorVolumeIntegral.cpp", generated=True
         )
 
-    def _build_gemms(self):
+    def _build_gemms(self, namespace, output, subdirectory, template_prefix, output_path):
         # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
@@ -402,4 +404,10 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
             )  # beta, 0 => overwrite C
 
         if self.d["USE_LIBXSMM"]:
-            self.controller.generateGemms("asm_fstpvi.c", self.d["GEMMS"].values())
+            generate_gemms(
+                output_path=output_path,
+                output_file_name="FusedSpaceTimePredictorVolumeIntegral_libxsmm.c",
+                namespace=namespace,
+                dict=self.d,
+                gemm_config_list=self.d["GEMMS"].values(),
+            )

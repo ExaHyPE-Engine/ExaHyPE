@@ -5,6 +5,7 @@ from copy import deepcopy
 import peano4.output
 
 from .Gemms import Gemms
+from .Gemms import generate_gemms
 
 
 class AMRRoutines(object):
@@ -14,7 +15,7 @@ class AMRRoutines(object):
     def generate_kernels(
         self, namespace, output, subdirectory, template_prefix, output_path
     ):
-        self._build_gemms()
+        self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix + "AMRRoutines.template.h",
@@ -30,7 +31,7 @@ class AMRRoutines(object):
         output.makefile.add_h_file(output_path + "/AMRRoutines.h", generated=True)
         output.makefile.add_cpp_file(output_path + "/AMRRoutines.cpp", generated=True)
 
-    def _build_gemms(self):
+    def _build_gemms(self, namespace, output, subdirectory, template_prefix, output_path):
         # Define a sequence of GEMMS
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
@@ -209,6 +210,10 @@ class AMRRoutines(object):
             )  # output slice not aligned, add to result
 
         if self.d["USE_LIBXSMM"]:
-            self.controller.generate_gemms(
-                "asm_amrRoutines.c", self.context["GEMMS"].values()
+            generate_gemms(
+                output_path=output_path,
+                output_file_name="AMRRoutines_libxsmm.c",
+                namespace=namespace,
+                dict=self.d,
+                gemm_config_list=self.d["GEMMS"].values(),
             )

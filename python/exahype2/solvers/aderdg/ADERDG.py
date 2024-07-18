@@ -824,7 +824,7 @@ Material parameters:    """
         self.add_entries_to_text_replacement_dictionary(d)
         d["DIMENSIONS"] = dimensions
         d["NUMBER_OF_DOF_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF"]
-        d["FULL_QUALIFIED_SOLVER_NAME"] ="::".join(namespace) + "::" + self._name
+        d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(namespace) + "::" + self._name
 
         kernels_namespace = namespace + ["kernels", self._name]
         kernels_output_path = subdirectory + "kernels/" + self._name
@@ -972,22 +972,18 @@ Material parameters:    """
         This code just inserts that missing #endif.
         """
         if self._use_libxsmm and self._architecture == "noarch":
-            file = open("kernels/" + self._name + "/asm_fstpvi.c", "r")
+            file = open("kernels/" + self._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "r")
             content = file.read()
             file.close()
-            file = open("kernels/" + self._name + "/asm_fstpvi.c", "w")
+            file = open("kernels/" + self._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "w")
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()
 
-            file = open(
-                "kernels/" + self._name + "/asm_amrRoutines.c", "r"
-            )
+            file = open("kernels/" + self._name + "/AMRRoutines_libxsmm.c", "r")
             content = file.read()
             file.close()
-            file = open(
-                "kernels/" + self._name + "/asm_amrRoutines.c", "w"
-            )
+            file = open("kernels/" + self._name + "/AMRRoutines_libxsmm.c", "w")
             content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
             file.write(content)
             file.close()

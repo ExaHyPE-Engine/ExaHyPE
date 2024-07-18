@@ -8,7 +8,7 @@
 
 {% if USE_LIBXSMM %}
 
-#include "asm_fstpvi.c"
-#include "asm_amrRoutines.c"
+#include "AMRRoutines_libxsmm.c"
+#include "FusedSpaceTimePredictorVolumeIntegral_libxsmm.c"
 
 {% endif %}{# USE_LIBXSMM #}
