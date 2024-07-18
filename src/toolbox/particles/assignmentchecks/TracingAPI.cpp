@@ -238,18 +238,23 @@ void toolbox::particles::assignmentchecks::moveParticle(
   assertion(anyPreviousEvent.type != internal::Event::Type::NotFound);
 
   // We must still be on the same vertex, or something is wrong.
-  assertion3(
-    tarch::la::equals(anyPreviousEvent.vertexH, vertexH),
-    "Vertices not the same",
-    anyPreviousEvent.vertexH,
-    vertexH
-  );
-  assertion3(
-    tarch::la::equals(anyPreviousEvent.vertexX, vertexX),
-    "Vertices not the same",
-    anyPreviousEvent.vertexX,
-    vertexX
-  );
+  // Exception: erase event. We don't keep track of the vertex data there,
+  // because the particle gets detached from vertices first.
+  if (anyPreviousEvent.type != internal::Event::Type::Erase){
+    assertion3(
+      tarch::la::equals(anyPreviousEvent.vertexH, vertexH),
+      "Vertices not the same",
+      anyPreviousEvent.vertexH,
+      vertexH
+    );
+    assertion3(
+      tarch::la::equals(anyPreviousEvent.vertexX, vertexX),
+      "Vertices not the same",
+      anyPreviousEvent.vertexX,
+      vertexX
+    );
+  }
+
 
   if (previousEvent.type != Event::Type::NotFound) {
     // This must be on the same tree then.
