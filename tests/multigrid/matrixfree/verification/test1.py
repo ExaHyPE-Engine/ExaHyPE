@@ -30,7 +30,7 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 sleep(3)
 
-from actionsets.InitDGTest1 import InitDofsDGTest1
+from actionsets.InitDG import InitDofsDGTest1
 
 
 

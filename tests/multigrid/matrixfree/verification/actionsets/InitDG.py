@@ -249,3 +249,83 @@ class InitDofsDGTest1(ActionSet):
 #include <random>
 """
 
+
+class InitDofsDGTest6(InitDofsDGTest1):
+  """!
+  Inherit from class above and modify one template.
+  """
+
+  def __init__(self,
+               solver):
+    super( InitDofsDGTest6, self ).__init__(solver)
+
+  templateTouchCellFirstTime = """
+  logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  
+  /*
+  extremely hacky static random number generator
+  */
+  static std::mt19937 rng(0); // seed with 0 for reproducibility
+  static std::uniform_real_distribution<> dis(0.0, 1.0);
+
+  switch(dofType)
+  {
+    case celldata::{{SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+
+        // create vectors to send to implementation
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > solution;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > rhs;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > residual;
+
+        // first - fill the solution vector with randoms
+        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++) {
+          solution[i] = dis(rng);
+
+          // and residual to 0...
+          residual[i] = 0;
+        }
+
+        // set rhs...
+        rhs =  repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
+
+        // and finally, reset the initial guess to 0....
+        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
+          solution[i] = 0;
+
+        // send to mesh...
+        fineGridCell{{SOLVER_NAME}}.setSolution( solution );
+        fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
+        fineGridCell{{SOLVER_NAME}}.setResidual( residual );
+
+
+      }
+    }
+    break;
+
+  }
+  
+  logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+   """
