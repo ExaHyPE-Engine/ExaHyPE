@@ -53,7 +53,7 @@ class NohProblemIC:
        */
 
       // Box centre
-      tarch::la::Vector<Dimensions,double> x_0(0.5);
+      tarch::la::Vector<Dimensions,double> x_0 = DomainOffset + 0.5 * DomainSize;
 
       // Distance of particle to centre
       tarch::la::Vector<Dimensions,double> dist = particle->getX() - x_0;
