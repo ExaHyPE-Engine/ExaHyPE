@@ -8,18 +8,6 @@ import jinja2
 class SaveNewCellData(AbstractLimiterActionSet):
   TemplateSaveNewCellData = """
   if ( {{PREDICATE}} ) {
-    {% if COPY_OLD_VALUES %}
-      //copying old values
-      std::copy_n(
-        fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value,
-#if Dimensions==2
-        {{NUMBER_OF_DOFS_PER_CELL_2D}},
-#else
-        {{NUMBER_OF_DOFS_PER_CELL_3D}},
-#endif
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_regularOld.value
-      );
-    {% endif %}
 
     {% if USE_DMP %}
       //resetting local min and max
@@ -28,7 +16,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
       kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
         repositories::{{SOLVER_INSTANCE}},
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_regularOld.value,
+        fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.value,
         localMinPerVariables, localMaxPerVariables
       );
 

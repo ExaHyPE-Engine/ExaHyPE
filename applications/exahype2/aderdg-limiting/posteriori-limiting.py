@@ -90,7 +90,7 @@ fvSolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   flux                  = flux,
   eigenvalues           = max_eval,
   initial_conditions    = "", #get set by regular solver
-  boundary_conditions   = boundary_conditions
+  boundary_conditions   = "const tarch::la::Vector<Dimensions, double>& x = faceCentre;\n" + boundary_conditions
 )
 project.add_solver(fvSolver)
 

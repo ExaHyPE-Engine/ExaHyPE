@@ -18,7 +18,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
       //If there's no need to send anything, skip this step
       if(!sendFaceProjection) return;
 
-      double* regularSolverOldValues = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
+      double* regularSolverOldValues = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.value;
       double* limiterSolverNewValues = fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.value;
 
       //TODO: Replace with more general conversion

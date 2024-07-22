@@ -85,6 +85,8 @@ class PosterioriLimiting(object):
     """
         self._action_set_postprocess_solution = None
 
+        self._regular_solver._split_sweeps = True
+
         # create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified
         self.create_data_structures()
         self.create_action_sets()
@@ -98,29 +100,6 @@ class PosterioriLimiting(object):
     @abstractmethod
     def create_data_structures(self):
         regular_patch_size = self._regular_solver.order+1
-
-        self._previous_time_step = peano4.datamodel.Patch(
-            (regular_patch_size, regular_patch_size, regular_patch_size),
-            self._regular_solver.unknowns + self._regular_solver.auxiliary_variables,
-            self._unknown_identifier() + "_regularOld"
-        )
-
-        # if user has specified that they want the data on the heap
-        # if self._hold_cell_data_on_heap_with_smart_pointer:
-        #   self._previous_time_step.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
-        #       self._previous_time_step,
-        #       self._solution_persistent_storage_precision
-        #   )
-
-        self._previous_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-            self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
-
-        self._previous_time_step.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
 
         """
         This will serve as a face marker to communicate with neighbouring cells whether
@@ -397,13 +376,11 @@ Type:                   """
         return result
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
-      datamodel.add_cell(self._previous_time_step)
       datamodel.add_cell(self._cell_label)
       datamodel.add_face(self._face_label)
       datamodel.add_face(self._min_and_max_projection)
 
     def add_use_data_statements_to_Peano4_solver_step(self, step):
-      step.use_cell(self._previous_time_step)
       step.use_cell(self._cell_label)
       step.use_face(self._face_label)
       step.use_face(self._min_and_max_projection)
