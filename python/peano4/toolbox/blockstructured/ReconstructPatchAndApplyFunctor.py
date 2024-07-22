@@ -88,6 +88,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   
     """
     super(ReconstructPatchAndApplyFunctor,self).__init__(descend_invocation_order=1,parallel=False)
+    
+    assert isinstance(reconstructed_array_memory_location,ReconstructedArrayMemoryLocation), "type of argument is {}".format( type(reconstructed_array_memory_location) )
+    
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
       assert( patch_overlap.dim[0] % 2 == 0 )
@@ -200,7 +203,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     #endif
 """
     else:
-      print( "Error: memory allocation mode for patch reconstruction not known")
+      raise Exception( "Error: memory allocation mode {} for patch reconstruction not known".format(self.reconstructed_array_memory_location) )
 
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """

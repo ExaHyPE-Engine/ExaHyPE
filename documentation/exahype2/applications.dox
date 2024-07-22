@@ -1,0 +1,21 @@
+/**
+
+@page page_exahype_applications Applications
+
+\li \subpage application_exahype2_selfgravitation
+\li \subpage applications_exahype2_ccz4
+\li \subpage applications_exahype2_swe
+\li \subpage applications_exahype2_landslide
+
+This directory holds links to some showcase applications of ExaHyPE. Many of these
+applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".
+That is, they are rather complex collections of Python scripts, but there are
+simplified ones with hardcoded setting, setups, ...
+
+- \ref applications_exahype2_ccz4 "Black hole simulations with CCZ4".
+
+The documentation files for these applications usually are stored within the
+source code directories next to the actual code. They therefore carry
+identifiers (doxygen page attribute) which mirror the applications' namespaces.
+
+*/

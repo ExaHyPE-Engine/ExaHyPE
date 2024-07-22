@@ -1,0 +1,29 @@
+/**
+
+@page page_exahype_benchmarks Benchmarks
+
+\li \subpage benchmarks_exahype2_euler_kernel_benchmarks
+\li \subpage benchmarks_exahype2_acoustic_wave_kernel_benchmarks
+\li \subpage benchmarks_exahype2_elastic_wave_kernel_benchmarks
+\li \subpage benchmarks_exahype2_advection_kernel_benchmarks
+\li \subpage benchmarks_exahype2_swe_kernel_benchmarks
+\li \subpage benchmarks_exahype2_ccz4_kernel_benchmarks
+
+\li \subpage benchmarks_exahype2_swe_artificial_tsunami
+
+\li \subpage benchmarks_exahype2_ccz4_gauge_wave
+\li \subpage benchmarks_exahype2_ccz4_single_black_hole
+\li \subpage benchmarks_exahype2_ccz4_single_black_hole_performance
+
+\li \subpage benchmarks_exahype2_euler_spherical_accretion_upscaling
+
+ExaHyPE comes along with a set of benchmarks.
+These benchmarks should all run more or less out-of-the-box.
+Before you start, ensure that you have configured and built Peano as specified for @ref page_exahype2_home "ExaHyPE 2".
+
+Most benchmark descriptions can be found in files next to the
+benchmarks in the respective source directory. The key of these
+documentation files (page identifier) hence matches their
+namespace.
+
+*/

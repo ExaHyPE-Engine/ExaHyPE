@@ -496,6 +496,24 @@ fi
 
 
 #
+# NetCDF
+#
+AC_ARG_WITH(netcdf,
+  AS_HELP_STRING([--with-netcdf],[enable NetCDF [default=false]]),
+  [ AC_MSG_CHECKING(for netcdf)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_netcdf=false ;;
+      *)     AC_MSG_RESULT(yes);   use_netcdf=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for openblas); AC_MSG_RESULT(no); use_netcdf=false ])
+AM_CONDITIONAL([UseNetCDF],[test "x$use_netcdf" = xtrue])
+
+if test "$use_netcdf" == true; then
+  AC_DEFINE([UseNetCDF], [UseNetCDF], [UseNetCDF])
+fi
+
+
+#
 # Otter
 #
 AC_ARG_WITH(otter,
@@ -517,9 +535,8 @@ fi
 #
 # OPENBLAS
 # This is needed by LAPACK and libxsmmjit, so we enable/disable
-# here, make sure we add "-lopenblas" to LIBS, and do not 
-# allow configuring --with-lapack or --with-libxsmm without
-# it
+# here, make sure we add "-lopenblas" to LIBS, and do not
+# allow configuring --with-lapack or --with-libxsmm without it.
 #
 AC_ARG_WITH(openblas,
   AS_HELP_STRING([--with-openblas],[enable OpenBLAS [default=false]]),
@@ -556,8 +573,8 @@ fi
 
 #
 # LIBXSMM JIT
-# 
-# Check to see if user enabled openblas...
+#
+# Check to see if user enabled OpenBLAS
 #
 AC_ARG_WITH(libxsmmjit,
   AS_HELP_STRING([--with-libxsmmjit],[enable LIBXSMM JIT [default=false]]),
@@ -571,7 +588,7 @@ AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
 
 if test "$use_libxsmmJIT" == true; then
   if test "$use_openblas" == false; then
-  AC_MSG_ERROR([LIBXSMM JIT requires OpenBlas. Re-reun with --with-openblas])
+  AC_MSG_ERROR([LIBXSMM JIT requires OpenBLAS. Re-reun with --with-openblas])
   else
   AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
   fi
@@ -629,7 +646,7 @@ AM_CONDITIONAL([UseLapack],[test "x$use_lapack" = xtrue])
 
 if test "$use_lapack" == true; then
   if test "$use_openblas" == false; then
-  AC_MSG_ERROR([Lapack requires OpenBlas. Re-reun with --with-openblas])
+  AC_MSG_ERROR([Lapack requires OpenBLAS. Re-reun with --with-openblas])
   else
   AC_DEFINE([UseLapack], [UseLapack], [UseLapack])
   fi
@@ -1137,6 +1154,27 @@ fi
 
 
 #
+# NetCDF
+#
+if test "$use_netcdf" != false; then
+  # Find the NetCDF header
+  AC_CHECK_HEADERS([netcdf.h], [
+  ], [
+    AC_MSG_ERROR([NetCDF headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([netcdf], [nc_open], [
+    NETCDF_LIBS="netcdf"
+  ], [
+    AC_MSG_ERROR([NetCDF library not found. Did you forget to include -lnetcdf to LDFLAGS?])
+  ])
+  AC_SUBST([NETCDF_LIBS])
+  NETCDF_INCLUDE_DIR=$(dirname $NETCDF_LIBS)
+  AC_SUBST([NETCDF_INCLUDE_DIR])
+fi
+
+
+#
 # LIBXSMM
 #
 if test "$use_libxsmm" != false; then
@@ -1270,9 +1308,9 @@ if test "$use_lapack" != false; then
   ], [
     AC_MSG_ERROR([LAPACK headers not found])
   ])
-  # Check for libraries. The lapack libraries are 
-  # libopenblas, but if this doesn't work, try 
-  # configuring with -llapack
+  # Check for libraries. The lapack libraries are
+  # libopenblas, but if this doesn't work, try
+  # configuring with -llapack.
   AC_CHECK_LIB([openblas], [LAPACKE_dgetrf], [
     LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
   ], [

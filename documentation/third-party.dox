@@ -1,0 +1,77 @@
+/**
+
+\page page_third_party_home Optional Third-party Tools and Libraries
+
+
+\li \subpage tarch_multicore_otter
+\li \subpage tbb_dynamic_task_graph_design
+
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+# OpenBLAS / libxsmmJIT / Lapack
+
+OpenBLAS is an implementation of BLAS, which provide some basic linear algebra subroutines.
+libxsmmJIT (available as submodule) and lapack (more complicated linear algebra routines,
+used for matrix inversion etc) depend on this. 
+
+We provide a few configure options to make sure all the headers and libraries are available.
+When running configure script (see \ref page_installation_home) you should include
+```with-openblas``` to enable OpenBLAS. Further, you should use ```with-lapack``` to enable 
+lapack and similarly ```with-libxsmmjit```. Configuration for these two options will fail
+without OpenBLAS enabled.
+
+We leave it up to the user to modify the CXXFLAGS, LDFLAGS and LD_LIBRARY_PATH correctly.
+These options were tested on COSMA (see \ref page_machines), where installations of openblas
+were already available. 
+
+When configuring, be sure to add:
+  - A link to the include directory for the version of openblas for your compiler to CXXFLAGS
+  - A link to the lib directory for the version of openblas for your compiler to LDFLAGS
+  - A link to the lib directory for the version of openblas for your compiler to LD_LIBRARY_PATH
+  - ```-lopenblas``` to LDFLAGS
+
+The call to configure should look something like this (for example, on COSMA):
+
+```./configure --with-openblas --with-lapack [other configure options] CXXFLAGS="... -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/"
+  LDFLAGS="-L/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib/ -lopenblas" ...
+
+Make sure to export your LD_LIBRARY_PATH first.
+
+# HDF5 
+
+Peano does not need hdf5. There's no generic input file format, and it can write
+its own mesh files without hdf5. Things are different if you want to dump hdf5,
+or if you use an extension/toolbox which requires hdf5. In this case, you have 
+to enable hdf5 in the configuration (pass in --with-hdf5) and ensure that your 
+CXXFLAGS and LDFLAGS include all libraries. 
+
+For the latter, different systems have other paths. On local Ubuntu 
+workstations, we typically use something similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lhdf5_cpp
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please note that two hdf5 libraries are required: the hdf5 library which is 
+written in C and the C++ counterpart.
+
+
+
+
+# The Visualization Toolkit (VTK)
+
+Peano usually dumps data @ref tarch_patch_files "data in its own native file format".
+However, there are several extensions where it directly writes into VTK files
+or cousins of it, such that you can directly visualise the outcome with 
+Paraview of VisIt, e.g. Most users do not need to build Peano directly against
+any third-party visualisation libraries.
+
+
+However, ...
+
+
+
+ */
+ 
