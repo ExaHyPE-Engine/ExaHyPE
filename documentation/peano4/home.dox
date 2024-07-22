@@ -1,0 +1,67 @@
+/**
+
+@page page_peano4_home Peano 4
+
+\tableofcontents
+
+\li \subpage peano_main
+\li \subpage page_peano_domain_decomposition
+\li \subpage peano_action_sets
+\li \subpage page_peano_localisation
+\li \subpage page_peano_runtime_analysis
+\li \subpage page_peano_performance_optimisation
+\li \subpage tarch_accelerator_SYCL
+\li \subpage peano_python_api
+\li \subpage page_peano_amr
+\li \subpage peano_utilities
+\li \subpage page_peano_mergin_applications
+
+
+Peano is a framework for generating dynamically adaptive grids for a wide range
+of scientific applications. 
+The original article on Peano can be found <a href="https://dl.acm.org/doi/10.1145/3319797"> here. </a> 
+Peano works with spacetrees, similar to octrees, and runs through these trees 
+top-down, i.e. from coarse to fine. 
+This traversal cannot be changed and is hidden within the Peano code.
+Users interact with the traversal via listeners of observers, i.e. classes that are
+notified by the traversal whenever the traversal loads a cell, enters a cell, 
+leaves a cell, and so forth.
+The present subsection discussed Peano-specific details, and it might be 
+reasonable to study the @ref page_architecture_home "high level description" of the
+code base first.
+Most users never interact with the low level C++ routines in Peano as they 
+either use Peano's Python API or they use an extension built on top of Peano
+(such as ExaHyPE) which hides away most technical details.  
+
+
+
+
+
+@todo add links to the python and c++ documentation which has already been captured. 
+@todo tidy this up - just adding this page in to introduce methods which need to be written for multigrid, such as touchVertexFirstTime
+
+
+Peano allows us to embed the computational domain into a unit hypercube of dimension @f$ d @f$. The domain can be refined, where needed,
+by dividing the unit hypercube @f$ k^d @f$ times along each axis, leading to @f$ k^d @f$ hypercubes. We call this process **refinement**.
+By default, we take @f$ k @f$ to be 3, as this allows for traversing the cells using a Peano curve. 
+
+Where necessary, some cells in the hypercube may be further refined where greater computational resources are necessary. This leads to a 
+hierarchy called a **spacetree**, where, loosely speaking, the nodes at a depth @f$ n @f$ represent a cell which has been @f$ n@f$-times refined.
+@todo clear up wording here! 
+
+Crucially, cells and vertices are made unique through both their **level of refinement/resolution** and their **position in space**. 
+
+### Traversal
+
+The Peano backend chooses the order in which to traverse the spacetree. Each cell at each level of refinement are processed each traversal. 
+The user can define what exactly is to happen in each cell upon each traversal, by writing functionality into each of the functions in the 
+Action Set.
+
+@todo Specify each of these, and how they can be given extra functionality. 
+
+
+In general, making a new simulation in Peano is about defining the computational domain, informing the software about the number
+of unknowns per cell, the number of unknowns per vertex and so on.
+
+
+*/ 
