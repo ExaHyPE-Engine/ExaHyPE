@@ -225,12 +225,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::InitialPrediction;
       break;
     case SolverState::Suspended:
-      _solverState = (_minTimeStamp==0) ?
-        SolverState::InitialPrediction : _solverState = SolverState::Timestep;
+{% if USE_SEPARATE_SWEEPS is sameas True %}
+      _solverState = SolverState::InitialPrediction;
+{% else %}
+      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::Timestep;
+{% endif %}
       break;
     case SolverState::Plotting:
-      _solverState = (_minTimeStamp==0) ?
-        SolverState::InitialPrediction : _solverState = SolverState::Timestep;
+      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::Timestep;
       break;
     case SolverState::InitialPrediction:
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
@@ -240,8 +242,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Timestep;
       break;
     case SolverState::Timestep:
+{% if USE_SEPARATE_SWEEPS is sameas True %}
+      _solverState = SolverState::InitialPrediction;
+{% else %}
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
         SolverState::PredictionOnHangingCells : _solverState = SolverState::Timestep;
+{% endif %}
       break;
   }
 
@@ -408,15 +414,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+{% if USE_SEPARATE_SWEEPS is sameas True %}
+  return _solverState==SolverState::InitialPrediction;
+{% else %}
   return ( _solverState==SolverState::Timestep
-        // or _solverState==SolverState::Plotting
         or _solverState==SolverState::InitialPrediction);
+{% endif %}
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return ( _solverState==SolverState::Timestep
-        // or _solverState==SolverState::Plotting
-        );
+  return _solverState==SolverState::Timestep;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}

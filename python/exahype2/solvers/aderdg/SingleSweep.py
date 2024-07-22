@@ -26,6 +26,11 @@ class SingleSweep(ADERDG):
 
         self._solver_template_file_class_name = "SingleSweep"
 
+        #If turned on it turns the solver from a single sweep to a separate sweeps solver,
+        #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
+        #   this can be useful for debugging, or for some additional features such as limiting.
+        self._split_sweeps = False
+
         self.create_action_sets()
         self.create_data_structures()
 
@@ -195,3 +200,9 @@ class SingleSweep(ADERDG):
         self._postprocess_updated_patch += kernel
         self.create_data_structures()
         self.create_action_sets()
+
+    def _init_dictionary_with_default_parameters(self, d):
+        super(
+            SingleSweep, self
+        )._init_dictionary_with_default_parameters(d)
+        d["USE_SEPARATE_SWEEPS"] = self._split_sweeps
