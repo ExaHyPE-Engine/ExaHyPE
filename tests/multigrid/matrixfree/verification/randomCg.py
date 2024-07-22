@@ -47,7 +47,12 @@ project = mghype.matrixfree.api.Project( project_name = "CollocatedFEM",
                                 )
 
 #! [Construct matrices]
-poisson_equation_matrices = mghype.api.matrixgenerators.DLinear(
+# poisson_equation_matrices = mghype.api.matrixgenerators.DLinear(
+#   dimensions = args.dimensions,
+#   poly_degree = 1,
+#   unknowns_per_vertex_dof = 1
+# )
+poisson_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
