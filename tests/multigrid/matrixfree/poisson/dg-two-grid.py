@@ -79,7 +79,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
 
 
 #! [Construct correction matrices]
-correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
+correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
