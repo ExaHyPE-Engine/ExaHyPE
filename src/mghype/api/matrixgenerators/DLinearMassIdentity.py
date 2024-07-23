@@ -9,6 +9,13 @@ from .MatrixGenerator import MatrixGenerator
 
 class DLinearMassIdentity(MatrixGenerator):
   '''!
+  Using normalised identity matrix instead of the mass matrix. 
+  This is necessary when the residual is computed as b-A*u instead of
+  M*b-A*u, for example, when using CG solver for the coarse-grid correction
+  in multigrid.
+
+  ---
+
   Simple matrix generator for continuous d-linear finite elements
   
   This factory method is there for convenience, i.e. users can take it to 
@@ -74,6 +81,14 @@ class DLinearMassIdentity(MatrixGenerator):
       
   def get_cell_mass_matrix(self):
     '''!
+    Here we use a normalised identity matrix instead of the mass matrix.
+    To achieve the result (Id_global * b_global), the local matrix should be
+    divided by 2^Dimensions, see get_cell_identity_matrix().
+    For example, in 2D, it is 0.25*Id, which, when summed
+    for 4 cells sharing each interior vertex, will result in the global identity.
+    Note that this does not differentiate between interior and boundary vertices.
+
+    ---
     
     Create a cell-cell mass matrix
     
