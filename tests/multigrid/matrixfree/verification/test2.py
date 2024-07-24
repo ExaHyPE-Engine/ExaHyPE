@@ -1,16 +1,19 @@
 """
-This test checks that the CG solver converges to u_random for the RHS set as b_c = A_CG * u_random with some vector u_random.
-It shows that the solution u of the problem 
+This test checks that the CG solver leaves the input invariant if the RHS is constructed as b_c = A_CG * u_random 
+with some vector u_random, when the same u_random is used as the initial guess for the algorithm.
+
+It shows that the solution of the problem 
     A * u = A * u_random
-approximates u_random. u_random has to satisfy the boundary conditions but can be random at the interior vertices.
+converges to u_random in one iteration.
+u_random has to satisfy the boundary conditions but can be random at the interior vertices.
 
 Algorithm:
 
 1. Generate u_random by assigning a value from [0,1] to each vertex.
 2. Set u_random to 0 at the boundary vertices to satisfy the boundary conditions.
 3. Compute b_c = A_CG * u_random, where A_CG is the system matrix for CG.
-4. Solve A_CG * u = b_c with CollocatedSolver.
-5. Check |u - u_random| < tol.
+4. Solve A_CG * u = b_c with CollocatedSolver with u_random as the initial guess.
+5. Check |u - u_random| < tol after the first iteration of the solver.
 """
 
 import os, sys
@@ -47,14 +50,14 @@ project = mghype.matrixfree.api.Project( project_name = "CollocatedFEM",
                                 )
 
 #! [Construct matrices]
-poisson_equation_matrices = mghype.api.matrixgenerators.DLinear(
+poisson_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
 )
 
 system_matrix, system_matrix_scaling = poisson_equation_matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix,   maxx_matrix_scaling   = poisson_equation_matrices.get_cell_mass_matrix()
+mass_matrix,   mass_matrix_scaling   = poisson_equation_matrices.get_cell_mass_matrix()
 #! [Construct matrices]
 
 solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("CollocatedPoisson",
@@ -65,7 +68,7 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               local_assembly_matrix = system_matrix,
                                                               local_assembly_matrix_scaling=system_matrix_scaling,
                                                               mass_matrix = mass_matrix,
-                                                              mass_matrix_scaling = maxx_matrix_scaling,
+                                                              mass_matrix_scaling = mass_matrix_scaling,
                                                               solver_tolerance=1e-6,
                                                               custom_init_actionset=InitDofsCollocatedRandomTest2,
                                                               custom_plot_actionset=[("rand","getRand")]
