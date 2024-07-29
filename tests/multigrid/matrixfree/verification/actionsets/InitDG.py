@@ -95,7 +95,7 @@ class InitDofsDGTest1(ActionSet):
           residual[i] = 0;
         }
 
-        // set rhs...
+        // set rhs and update when we have all the projections...
         rhs =  repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
 
         // send to mesh...
@@ -103,6 +103,23 @@ class InitDofsDGTest1(ActionSet):
         fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
         fineGridCell{{SOLVER_NAME}}.setResidual( residual );
 
+        // now we need to compute all projections...
+        auto faceProjections = repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * solution;
+
+        for (int f=0; f<TwoTimesD; f++) {
+          int startIndexProjection = 
+            f < Dimensions ?
+            repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+            0;
+          for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
+            fineGridFaces{{SOLVER_NAME}}(f).setProjection(
+              p + startIndexProjection,
+              faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
+            );
+
+          }
+          
+        }
 
       }
     }
@@ -113,7 +130,7 @@ class InitDofsDGTest1(ActionSet):
   logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
 
-  templatetouchFaceFirstTime = """
+  templateTouchFaceFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
   facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
@@ -190,6 +207,61 @@ class InitDofsDGTest1(ActionSet):
   logTraceOutWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
   
+  templateTouchCellLastTime = """
+    if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+  ) {
+    // perform averaging on faces...
+
+    // if face data 
+    for (int f=0; f<TwoTimesD; f++) {
+      if ( fineGridFaces{{SOLVER_NAME}}(f).getType() ==  facedata::{{SOLVER_NAME}}::Type::Interior ) {
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
+          repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFaces{{SOLVER_NAME}}(f).getProjection();
+
+        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+          fineGridFaces{{SOLVER_NAME}}(f).setSolution(
+            i,
+            // again, hacky but we need the correct face solutions in scope now.
+            // in general, this will be done twice, but correctly both times, as 
+            // we do not update the projections again...
+            repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
+          );
+      }
+      else if ( fineGridFaces{{SOLVER_NAME}}(f).getType() ==  facedata::{{SOLVER_NAME}}::Type::Boundary ) {
+        int startIndexProjection = 
+          f < Dimensions ?
+          repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+          0;
+
+        auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+        for (int row=0; row<boundaryMatrix.rows(); row++)
+        {
+          double rowSolution = 0;
+          for (int col=0; col<boundaryMatrix.cols(); col++)
+          {
+            rowSolution += boundaryMatrix( row, col ) * fineGridFaces{{SOLVER_NAME}}(f).getProjection( col + startIndexProjection );
+          }
+          // place this solution into the face
+          fineGridFaces{{SOLVER_NAME}}(f).setSolution( row, rowSolution );
+        }
+      }
+    }
+
+    // now let's finish updating rhs
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
+    for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+
+    // next, we need to project solution on face onto the cell...
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
+
+    fineGridCell{{SOLVER_NAME}}.setRhs( fineGridCell{{SOLVER_NAME}}.getRhs( ) + projection );
+
+  }
+  """
+  
   def __init__(self,
                solver):
     super( InitDofsDGTest1, self ).__init__()
@@ -207,7 +279,10 @@ class InitDofsDGTest1(ActionSet):
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.templatetouchFaceFirstTime).render(**self.d)
+      result = jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
+      pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      result = jinja2.Template(self.templateTouchCellLastTime).render(**self.d)
       pass
     return result
 
