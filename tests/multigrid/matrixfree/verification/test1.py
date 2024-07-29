@@ -62,7 +62,7 @@ matrices = mghype.api.matrixgenerators.GLMatrixFree(
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix, mass_matrix_scaling         = matrices.get_cell_mass_matrix()
+mass_matrix, mass_matrix_scaling         = matrices.get_cell_identity_matrix() # set identity instead of the mass matrix for the random solution test
 face_from_cell_projection, \
 face_from_cell_projection_scaling        = matrices.get_face_from_cell_matrix()
 cell_from_face_projection, \
@@ -93,7 +93,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 0.01,
+  solver_tolerance = 1e-6,
   custom_init_actionset=InitDofsDGTest1
 )
 
