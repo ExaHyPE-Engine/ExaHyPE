@@ -7,7 +7,7 @@
 
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
-  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/index.html">Documentation</a> •
+  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/">Documentation</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
@@ -29,7 +29,7 @@ load balancing, sophisticated geometry representations, and other features.
 
 # Installation
 
-Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/de/dce/page_installation.html).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dce/page_installation.html).
 
 # Availability
 

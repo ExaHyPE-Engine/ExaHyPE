@@ -4,17 +4,17 @@
 
 Here we maintain Apptainer Definition Files for different compilers.
 
-# Build
+## Build
 
 ```shell
 apptainer build <compiler>.sif Apptainer.<compiler>
 ```
 
 ```shell
-docker run -v ${PWD}:/work --privileged peanoframework/base apptainer build work/<compiler>.sif work/Apptainer.<compiler>
+docker run -v ${PWD}:/work --privileged peanoframework/apptainer apptainer build work/<compiler>.sif work/Apptainer.<compiler>
 ```
 
-# Usage
+## Usage
 
 ```shell
 apptainer shell -e --bind "$PWD" <compiler>.sif

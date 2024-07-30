@@ -1,0 +1,68 @@
+spack:
+  definitions:
+  - packages: [
+      m4,
+      xz,
+      git,
+      perl,
+      patchelf,
+      binutils+ld+gold,
+      libtool,
+      diffutils,
+      pkgconf,
+      autoconf,
+      automake,
+      gmake,
+      cmake,
+      ninja,
+      py-pip,
+      py-black,
+      py-sympy,
+      py-scipy,
+      py-numpy,
+      py-mpmath,
+      py-jinja2,
+      py-jsonschema,
+      py-jupyterlab,
+      py-matplotlib,
+      gsl,
+      mesa,
+      btop,
+      htop,
+      nvtop,
+      intel-oneapi-mpi,
+      intel-oneapi-mkl,
+      libxsmm+generator,
+      memkind,
+      blis,
+      boost,
+      openblas,
+      eigen+ipo,
+      papi+cuda,
+      likwid+cuda,
+      babelstream+cuda cuda_arch=70,
+      parmetis+int64+shared+ipo,
+      metis+int64+real64+ipo+shared,
+      hdf5+fortran+threadsafe+mpi+shared,
+      netcdf-c+mpi+shared,
+      netcdf-cxx4+pic+shared,
+      netcdf-fortran+pic+shared,
+      parallel-netcdf+cxx+fortran+pic+shared,
+      petsc+mpi+memkind+metis+cuda+hwloc+openmp,
+      paraview+mpi+ipo+python+hdf5 ^llvm ~clang ~flang ~lldb ~lld libcxx=none ~gold +llvm_dylib
+    ]
+  packages:
+    all:
+      target: [x86_64]
+      compiler: [intel-oneapi-compilers@2024.1.0]
+  specs:
+  - intel-oneapi-compilers@2024.1.0
+  - matrix:
+    - [$packages]
+    #- ['intel-oneapi-compilers@2024.1.0']
+  concretizer:
+    unify: true
+  config:
+    install_tree: /opt/software
+    install_missing_compilers: true
+  view: /opt/views/view

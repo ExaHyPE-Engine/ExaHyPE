@@ -1,7 +1,5 @@
 FROM peanoframework/llvm:latest
 
-LABEL peano-framework.org=http://www.peano-framework.org/
-
 RUN { \
       echo '#!/bin/sh' \
       && echo '.' /opt/spack-environment/activate.sh \

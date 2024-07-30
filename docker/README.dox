@@ -4,33 +4,61 @@
 
 Here we maintain Dockerfiles for different compilers.
 
-# Build
+## Build
+
+To build the Docker images, make sure to execute the following commands in the Peano root directory.
+
+### Building the base images
 
 ```shell
-docker build -t peanoframework/<compiler> -f Dockerfile.<compiler> .
+docker build -t peanoframework/base -f docker/Dockerfile.base .
+docker build -t peanoframework/spack -f docker/Dockerfile.spack .
+docker build -t peanoframework/apptainer -f docker/Dockerfile.apptainer .
 ```
 
-# Usage
+### Building the compiler images
+
+```shell
+docker build --build-arg SPACK_ENV_FILE=spack/compilers/amd/spack.yaml -t peanoframework/amd -f docker\Dockerfile.spack-env .
+docker build --build-arg SPACK_ENV_FILE=spack/compilers/gcc/spack.yaml -t peanoframework/gcc -f docker\Dockerfile.spack-env .
+docker build --build-arg SPACK_ENV_FILE=spack/compilers/intel/spack.yaml -t peanoframework/intel -f docker\Dockerfile.spack-env .
+docker build --build-arg SPACK_ENV_FILE=spack/compilers/llvm/spack.yaml -t peanoframework/llvm -f docker\Dockerfile.spack-env .
+docker build --build-arg SPACK_ENV_FILE=spack/compilers/nvidia/spack.yaml -t peanoframework/nvidia -f docker\Dockerfile.spack-env .
+docker build -t peanoframework/targetdart -f docker/Dockerfile.targetdart .
+```
+
+Note that if you want to build the Intel image with GPU offloading (Codeplay plugins),
+you can use the dedicated Dockerfile for that:
+
+```shell
+docker build -t peanoframework/intel -f docker/Dockerfile.intel .
+```
+
+### Building Extension Images
+
+```shell
+docker build -t peanoframework/exahype2 -f docker/Dockerfile.exahype2 .
+```
+
+## Usage
 
 ```shell
 docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler> /bin/bash
 ```
 
-where `<compiler>` needs to be replaced by the compiler you want to use.
-
-## With GPU Support
+### With GPU Support
 
 ```shell
 docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler> /bin/bash
 ```
 
-## With Port Forwarding
+### With Port Forwarding (JupyterLab)
 
 ```shell
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
 ```
 
-# Dockerhub
+## Dockerhub
 
 You can find prebuilt Docker images for each compiler we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
 
