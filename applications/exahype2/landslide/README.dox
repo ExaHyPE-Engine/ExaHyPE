@@ -1,0 +1,71 @@
+/**
+
+@page applications_exahype2_landslide Depth-averaged Shallow Water Equations with Steep Topography
+
+\f{eqnarray*}{
+\frac{\partial}{\partial t} \begin{pmatrix}
+    h\\hu\\hv
+    \end{pmatrix}
+    + \frac{\partial}{\partial x}
+    \begin{pmatrix}
+    hu\\hu^2 + \frac{1}{2} \cdot g\cos(\zeta)h^2\\huv
+    \end{pmatrix}
+    + \frac{\partial}{\partial y}
+    \begin{pmatrix}
+    hv\\huv\\hv^2 + \frac{1}{2} \cdot g\cos(\zeta)h^2
+    \end{pmatrix}
+    +D(x) + D(y) =
+    \begin{pmatrix}
+    0\\hg\sin(\zeta)-\mu\frac{u}{\sqrt{u^2+v^2}}hg\cos(\zeta)\\-\mu\frac{v}{\sqrt{u^2+v^2}}hg\cos(\zeta)
+\end{pmatrix}
+\f}
+
+Where
+
+\f{eqnarray*}{
+D(x)=\begin{pmatrix}
+    0\\
+    -\nu\sqrt{h}(1.5\cdot\frac{\partial h}{\partial x}\frac{\partial u}{\partial x} + h\frac{\partial^2 u}{\partial x^2})\\
+    -0.5\cdot\nu\sqrt{h}(1.5\cdot\frac{\partial h}{\partial x}(\frac{\partial u}{\partial y}+\frac{\partial v}{\partial x})+h(\frac{\partial u}{\partial y \partial x}+\frac{\partial^2 v}{\partial x^2}))
+\end{pmatrix}
+\f}
+
+\f{eqnarray*}{
+D(y)=\begin{pmatrix}
+    0\\
+    -0.5\cdot\nu\sqrt{h}(1.5\cdot\frac{\partial h}{\partial y}(\frac{\partial u}{\partial y}+\frac{\partial v}{\partial x})+h(\frac{\partial^2 u}{\partial y^2}+\frac{\partial v}{\partial x \partial y}))\\
+    -\nu\sqrt{h}(1.5\cdot\frac{\partial h}{\partial y}\frac{\partial v}{\partial y} + h\frac{\partial^2 v}{\partial y^2})
+\end{pmatrix}
+\f}
+
+Where @f$ \zeta @f$ is the angle of inclination of the inclined plane.
+
+The coefficient of basal friction @f$ \mu(Fr,h) @f$ is a piecewise function
+and the coefficient of viscosity @f$ \nu @f$ is a function of the material parameters.
+The complete expression for @f$ \mu(Fr,h) @f$ and @f$ \nu @f$ can be found in literature.
+
+The ncp term requires the calculation of partial derivatives of @f$ h @f$,
+@f$ u @f$ and @f$ v @f$. These derivatives are calculated by finite difference schemes using a 9-point stencil (cf. fig below).
+
+<p align="center">
+  <img src="9-Point-Stencil.png" />
+</p>
+
+We use the notation: @f$ u(C2) @f$ = value of @f$ u @f$ in cell @f$ C2 @f$.
+The derivatives in cell 5 are calculated as follows:
+
+\f{eqnarray*}{
+\frac{\partial u}{\partial x} &=& \frac{u(C5)-u(C4)}{\Delta x}\\
+\frac{\partial u}{\partial y} &=& \frac{u(C5)-u(C8)}{\Delta y}\\
+\frac{\partial^2 u}{\partial x^2} &=& \frac{u(C6)-2u(C5)+u(C4)}{(\Delta x)^{2}}\\
+\frac{\partial^2 u}{\partial y^2} &=& \frac{u(C2)-2u(C5)+u(C8)}{(\Delta y)^{2}}\\
+\frac{\partial^2 u}{\partial x \partial y} &=& \frac{u(C3)-u(C1)-u(C9)+u(C7)}{4\cdot \Delta x\cdot \Delta y}\\
+\f}
+
+Similarly, derivatives of @f$ h @f$ and @f$ v @f$ are calculated.
+
+## Scenarios
+
+\li \subpage applications_exahype2_landslide_avalanche
+
+*/

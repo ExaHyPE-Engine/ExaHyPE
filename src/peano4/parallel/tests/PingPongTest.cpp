@@ -47,7 +47,7 @@ namespace {
 
   class PingPongSendTask: public tarch::multicore::Task {
     private:
-      const bool _data;
+      const int  _data;
       const bool _blockingMPI;
     public:
       PingPongSendTask(int data, bool blockingMPI):

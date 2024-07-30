@@ -330,11 +330,11 @@ The way how to add steps is relatively mechanical:
 3. Make all of ExaHyPE's data structures known to your new step. For this, you
    have to invoke use_cell(), use_vertex() and use_face() commands for each and
    every solver. As the solvers are tied to the ExaHyPE project, it offers a 
-   routine exahype2.Project.register_new_user_defined_algorithmic_step()
+   routine exahype2.Project.init_new_user_defined_algorithmic_step()
    which you can use to add the required statements.
 
    ~~~~~~~~~~~~~~~~~~~~~~~
-   project.register_new_user_defined_algorithmic_step( additional_step )
+   project.init_new_user_defined_algorithmic_step( additional_step )
    ~~~~~~~~~~~~~~~~~~~~~~~
    
    This routine can also be invoked earlier. You just have to ensure that all 
@@ -367,9 +367,13 @@ all the ExaHyPE mesh traversals and then there's a new, additional one.
       continueToSolve         = true;
     }
     else if (
-      repositories::isFirstGridSweepOfTimeStep()
+      (
+        repositories::isLastGridSweepOfTimeStep()
+        or
+        repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==repositories::StepRepository::Steps::InitGrid
+      )
       and
-      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalStep
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
     ) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalStep )
@@ -390,11 +394,50 @@ all the ExaHyPE mesh traversals and then there's a new, additional one.
    (which we creatively named AdditionalStep in this example). Nothing stops
    you to extend this logic such that multiple additional steps are executed
    in a row. You can also obviously plug into the stage just after the solver
-   initialisation. 
+   initialisation:
+   
+   The statement 
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    else if (
+      (
+        repositories::isLastGridSweepOfTimeStep()
+        or
+        repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==repositories::StepRepository::Steps::InitGrid
+      )
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   runs the additional step directly after the initialisation sweep and then 
+   after each time step. If you write 
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    else if (
+      repositories::isLastGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   the initialisation will be followed by a first time step (typically with 
+   time step size 0 as we have to fiddle out the admissible time step size).
+   After this first one, it injects an additional sweep and from hereon one 
+   after each further time step.
+   
+   The only thing you should not do is a statement similar to
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    else if (
+      repositories::isFirstGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   The predicate isFirstGridSweepOfTimeStep() becomes true right after the 
+   first beginIteration() and stays on this value. See its documentation.
+   That means that it is true after a primary sweep (if you have an enclave
+   solver) or the first trial in a Runge-Kutta scheme.
    
    As all solvers with a CFL evaluation will run an initial time step with time
    step size zero, plugging into the mesh traversal after the first time step 
-   has completed is sufficient.
+   has completed is sufficient. See remark above.
    
 2. We now have to ensure that all MPI ranks and threads run this one step if 
    we trigger it. For this, we scroll to step() and add a new case statement
@@ -581,7 +624,7 @@ augment the whole setup with your own data.
 
 
 While the 
-routine register_new_user_defined_algorithmic_step() ensures that additional,
+routine init_new_user_defined_algorithmic_step() ensures that additional,
 user-defined
 algorithmic steps "know" which data ExaHyPE associates with each 
 grid entity (face, mesh, vertex), this does not hold the other way round:

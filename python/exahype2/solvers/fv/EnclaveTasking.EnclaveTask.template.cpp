@@ -88,7 +88,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        output
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
@@ -96,6 +97,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     t,
     dt,
     reconstructedPatch,
+    output,
     #if Dimensions==2
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},

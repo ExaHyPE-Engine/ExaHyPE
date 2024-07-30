@@ -162,16 +162,27 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   /**
    * Clone content.
    *
-   * This routine is exclusively used by the boundary data exchange to copy
-   * data from an outgoing buffer into an incoming or an MPI buffer. Therefore,
-   * the destination should always be empty. We however do not know if the
-   * input data other is actually empty: We always exchange all boundary
-   * unknown types, but if a solver is localised, it might actually never
-   * write into an outgoing buffer. Therefore, other might be empty or not.
+   * This routine is used by the spacetree to copy
+   * data from an outgoing buffer into an incoming or an MPI buffer. This is
+   * required when we stream a tree to another tree, or whenever we exchange
+   * data along the MPI boundary. Consult
+   * peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks()
+   * for example.
    *
-   * If it is not empty, we have to perform a deep copy however.
+   * Therefore, the destination should always be empty. Otherwise, something
+   * went terribly wrong: The receiving side otherwise hasn't really processed
+   * all data handled in and we likely encounter an inconsistent global state.
+   *
+   * We however do not know if the
+   * input data other is empty or not: We always exchange all boundary
+   * unknown types, but if a solver is localised, it might actually never
+   * write into an outgoing buffer. Therefore, other might be empty.
+   *
+   * If other is not empty, we have to perform a deep copy.
    */
   void clone(const {{CLASSNAME}}& other);
+
+  std::shared_ptr< {{FLOAT_TYPE}}[] > getSmartPointer() const;
 
   /**
    * Shallow copy

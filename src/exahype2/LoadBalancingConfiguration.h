@@ -22,6 +22,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
 
     const double   _loadBalancingQuality;
     const int      _minSizeOfTree;
+    const bool     _assumePeriodicBoundaryConditions;
     const int      _maxNumberOfTreesThroughoutInitialDistribution;
     const int      _maxNumberOfTrees;
     const peano4::SplitInstruction::Mode _mode;
@@ -75,6 +76,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
     LoadBalancingConfiguration(
       double loadBalancingQuality=0.9,
       int    minSizeOfTree = 0,
+      bool   assumePeriodicBoundaryConditions = false,
       int    maxNumberOfTreesThroughoutInitialDistribution=UseNumberOfThreads,
       int    maxNumberOfTrees=UseTwiceTheNumberOfThreads,
       peano4::SplitInstruction::Mode mode = peano4::SplitInstruction::Mode::BottomUp

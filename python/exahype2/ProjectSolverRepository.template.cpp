@@ -15,6 +15,8 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/Device.h"
 
+#include "Constants.h"
+
 
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}Set.h"
@@ -238,7 +240,11 @@ void finishTimeStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal(
+    DomainOffset,
+    DomainSize,
+    PeriodicBC
+  );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -259,7 +265,11 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal(
+      DomainOffset,
+      DomainSize,
+      PeriodicBC
+    );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -322,7 +332,11 @@ void finishGridInitialisationStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal(
+      DomainOffset,
+      DomainSize,
+      PeriodicBC
+    );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -338,7 +352,11 @@ void finishPlottingStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal(
+      DomainOffset,
+      DomainSize,
+      PeriodicBC
+    );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 

@@ -108,6 +108,15 @@ namespace tarch {
     ));
   }
 
+  /**
+   * Free memory
+   *
+   * This routine is thread-safe in the sense that it checks if data actually
+   * point to something that is not nullptr. If data is the nullptr, the
+   * operation degenerates to nop. This is important as we use the routine
+   * within smart pointers, where we don't want to check manually if data is
+   * actually nullptr or not.
+   */
   void freeMemory(
     void* data,
     MemoryLocation location,

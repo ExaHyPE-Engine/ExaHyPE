@@ -1,0 +1,69 @@
+include:
+  - .continuous_integration/gitlab-templates.yml
+
+stages:
+  - Compiler
+
+GCC:
+  extends: .Variables
+  stage: Compiler
+  parallel:
+    matrix:
+    - multithreading: ["omp"]
+  variables:
+    CC: "gcc"
+    CXX: "g++"
+    IMAGE_TAG: "${IMAGE_TAG_GCC}"
+    CONFIGURATION_OPTIONS: "--exahype --swift --multithreading=$multithreading"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-automake.yml
+    strategy: depend
+
+Intel:
+  extends: .Variables
+  stage: Compiler
+  parallel:
+    matrix:
+    - multithreading: ["omp"]
+  variables:
+    CC: "icx"
+    CXX: "icpx"
+    IMAGE_TAG: "${IMAGE_TAG_INTEL}"
+    CONFIGURATION_OPTIONS: "--exahype --swift --multithreading=$multithreading"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-automake.yml
+    strategy: depend
+
+LLVM:
+  extends: .Variables
+  stage: Compiler
+  parallel:
+    matrix:
+    - multithreading: ["omp"]
+  variables:
+    CC: "clang"
+    CXX: "clang++"
+    IMAGE_TAG: "${IMAGE_TAG_LLVM}"
+    CONFIGURATION_OPTIONS: "--exahype --swift --multithreading=$multithreading"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-automake.yml
+    strategy: depend
+
+NVIDIA:
+  extends: .Variables
+  stage: Compiler
+  parallel:
+    matrix:
+    - multithreading: ["omp"]
+  variables:
+    CC: "nvc"
+    CXX: "nvc++"
+    IMAGE_TAG: "${IMAGE_TAG_NVIDIA}"
+    CONFIGURATION_OPTIONS: "--exahype --swift --multithreading=$multithreading"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-automake.yml
+    strategy: depend

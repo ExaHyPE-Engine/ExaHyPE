@@ -2,6 +2,12 @@
 
 \page page_installation Installation
 
+\li \subpage page_installation_with_spack
+\li \subpage page_installation_with_docker
+\li \subpage page_installation_with_apptainer
+
+\tableofcontents
+
 Peano is typically acquired through a git clone.
 You have to clone this archive first.
 We grant access free of charge, and the repository is public. However,
@@ -153,7 +159,7 @@ Package Installation
 ----------------------
 
 The easiest way to install the Peano Python packages is to navigate to
-`myPeanoDirectory/python` first (you're in the right place if you see the
+`myPeanoDirectory/` first (you're in the right place if you see the
 `pyproject.toml` file), and then run
 
     pip3 install -e .
@@ -173,9 +179,9 @@ Python Path
 
 As an alternative to installing the packages, you can modify your Python path. There
 are multiple ways to do so.
-The standard way is to set the `PYTHONPATH`:
+The standard way is to set the `PYTHONPATH`, e.g.:
 
-    export PYTHONPATH=myPeanoDirectory/python
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
 
 This can even be done in the `.bashrc`. If you "install" the Peano Python
 packages this way, you will also need to manually install additional
@@ -301,9 +307,5 @@ make test
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-\li \subpage page_installation_with_spack
-\li \subpage page_installation_with_docker
-\li \subpage page_installation_with_apptainer
 
 */

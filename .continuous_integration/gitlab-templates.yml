@@ -1,0 +1,51 @@
+.Variables:
+  variables:
+    CI_DEBUG_TRACE: "false"
+    # https://docs.gitlab.com/ee/user/project/repository/monorepos/
+    # https://docs.gitlab.com/ee/ci/runners/configure_runners.html#git-fetch-extra-flags
+    GIT_DEPTH: 1
+    GIT_STRATEGY: fetch # clone
+    GIT_FETCH_EXTRA_FLAGS: "--no-tags"
+    IMAGE_TAG_BASE: "base.sif"
+    IMAGE_TAG_GCC: "gcc.sif"
+    IMAGE_TAG_INTEL: "intel.sif"
+    IMAGE_TAG_LLVM: "llvm.sif"
+    IMAGE_TAG_NVIDIA: "nvidia.sif"
+    SINGULARITY_BINDDIR: "/dine/data/do009/peano"
+    SINGULARITY_IMAGEDIR: "/dine/data/do009/peano/images"
+    CCACHE_DIR: "/dine/data/do009/peano/.ccache_dir"
+
+.Tags:
+  extends: .Variables
+  tags:
+    - "peano-dine-runner"
+
+.BeforeScript:
+  extends: .Tags
+  before_script:
+    - echo "Running CI with $(nproc) cores"
+    - ls
+    - pwd
+    - whoami
+    - hostname
+    - git --version
+    - echo $CI_BUILDS_DIR
+    - echo $CI_PROJECT_DIR
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo $SINGULARITY_BINDDIR
+    - echo $SINGULARITY_IMAGEDIR
+    - echo $CCACHE_DIR
+    - echo $CONFIGURATION_OPTIONS
+    - module load singularity/3.9.2
+
+.SanitiseAutomake:
+  extends: .Tags
+  before_script:
+    - python3 .continuous_integration/sanitise_path.py Makefile src/Makefile config.log
+
+.SanitiseCMake:
+  extends: .Tags
+  before_script:
+    - python3 .continuous_integration/sanitise_path.py build/CTestTestfile.cmake build/CMakeCache.txt
+

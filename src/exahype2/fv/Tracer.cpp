@@ -4,6 +4,7 @@
 
 #include "PatchUtils.h"
 #include "peano4/utils/Loop.h"
+#include "tarch/logging/Log.h"
 
 tarch::la::Vector<Dimensions, int> exahype2::fv::internal::mapParticleOntoVoxel(
   const peano4::datamanagement::CellMarker&    marker,
@@ -70,6 +71,7 @@ double exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   const tarch::la::Vector<Dimensions, double>&  particleX,
   int                                           unknown
 ) {
+  static tarch::logging::Log _log( "exahype2::fv::internal" );
   tarch::la::Vector<Dimensions, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
   double h = getVolumeLength(marker.h(), voxelsPerAxis);
@@ -94,10 +96,17 @@ double exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
       } else {
         weight = 0.0;
       }
+      assertion3( tarch::la::smallerEquals(weight, 1.0), weight, k, relativeDistance );
     }
     if (weight > 0.0) {
       result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
     }
   enddforx
+  //if (unknown==0){
+  //  //std::cout << "exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(): Q_0(should close to 1.0 always)=" << result <<std::endl;
+  //  logInfo( "projectValueOntoParticle_piecewiseLinear(...)", "particle x=" << ::toString(particleX) << ", marker=" << marker.toString() 
+  //    << ", biasedVoxel=" << ::toString(biasedVoxel)<<", result=" << result );
+  //}
+
   return result;
 }

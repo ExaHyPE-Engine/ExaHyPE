@@ -62,6 +62,14 @@ class ProjectPatchOntoFaces(ActionSet):
     self.additional_includes = additional_includes
 
 
+  @property
+  def guard(self):
+      return self.d[ "GUARD" ]
+  
+  @guard.setter
+  def guard(self,value):
+    self.d[ "GUARD" ]              = value
+
   def get_constructor_body(self):
     return ""
 

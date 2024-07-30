@@ -2,6 +2,8 @@
 
 \page page_dastgen DaStGen
 
+\tableofcontents
+
 At several points, Peano and its extensions use plain C++ classes as data
 storage. All the unknowns per vertex or the particles for example are modelled
 as individual classes. On the Python level, Peano offers the dastgen2 package to

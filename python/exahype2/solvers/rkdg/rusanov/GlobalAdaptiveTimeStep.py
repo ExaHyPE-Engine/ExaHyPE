@@ -17,13 +17,24 @@ from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
 
 from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+
 
 class GlobalAdaptiveTimeStep(SeparateSweeps):
+  """!
+  
+  RKDG solver with Rusanov Riemann solver employing global adaptive time stepping
+  
+  Please consult GlobalFixedTimeStep for details. This version is very similar
+  with the big difference being that we add the evaluation  and global 
+  reduction of the maximum eigenvalue and then adopt the time step size
+  accordingly.
+  
+  """
   def __init__(self,
     name,
     rk_order,
     polynomials,
-    face_projections,
     unknowns,
     auxiliary_variables,
     min_cell_h,
@@ -39,8 +50,23 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False,
     pde_terms_without_state=False,
-  ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, rk_order, polynomials, face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties, pde_terms_without_state)
+    ):
+    """!
+        
+    Construct RKDG solver with adaptive global time step 
+        
+    """
+    super(GlobalAdaptiveTimeStep,self).__init__(name, 
+                                                rk_order, 
+                                                polynomials, 
+                                                FaceProjections.Solution,
+                                                unknowns, 
+                                                auxiliary_variables, 
+                                                min_cell_h, 
+                                                max_cell_h, 
+                                                plot_grid_properties, 
+                                                pde_terms_without_state,
+                                                )
 
     self._time_step_relaxation                            = time_step_relaxation
     self._compute_eigenvalue                              = True
@@ -48,7 +74,7 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     self._kernel_namespace                                = "rusanov"
     self._volumetric_compute_kernel_call                  = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
     self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
-    self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, face_projections)
+    self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, FaceProjections.Solution)
     # TODO: self._Riemann_compute_kernel_call_stateless =
     self._add_solver_contributions_call                   = create_add_solver_contributions_call(self._basis)
     self._multiply_with_inverted_mass_matrix_call         = create_multiply_with_inverted_mass_matrix_call(self._basis)

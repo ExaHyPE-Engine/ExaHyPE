@@ -16,6 +16,8 @@
 {{SOLVER_INCLUDES}}
 
 #include <vector>
+#include <memory>
+
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
@@ -104,13 +106,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * reconstructedPatch argument, we don't have to call a free() in the
      * task constructor of the functor that we pass to the enclave
      * task (superclass). Likewise, the superclass EnclaveTask tasks
-     * care of the allocation of the output data.
+     * care of the allocation of the output data if no output (nullptr)
+     * is specified.
      */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch
+      double* __restrict__                        reconstructedPatch,
+      double* __restrict__                        output
     );
 
     #ifdef UseSmartMPI

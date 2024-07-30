@@ -5,88 +5,83 @@ import sys
 import sympy
 import subprocess
 
-#
-# We import the required modules for this project.
-# We always need the 'peano4' module as this is our core project.
-# Since we are creating an ExaHyPE 2 application, we additionally
-# need to import the 'exahype2' module.
-#
+"""
+We import the required modules for this project.
+We always need the 'peano4' module as this is our core project.
+Since we are creating an ExaHyPE 2 application, we additionally
+need to import the 'exahype2' module.
+"""
 import peano4
 import exahype2
 
-#
-# We specify the space dimensions here.
-# We support either 2- or 3-dimensional problems.
-#
+"""
+We specify the space dimensions here.
+We support either 2- or 3-dimensional problems.
+"""
 dimensions = 2
 
-#
-# The number of finite volumes per axis in one patch.
-#
+"""
+The number of finite volumes per axis in one patch.
+"""
 patch_size = 16
 
-#
-# The size of a finite volume/cell per axis.
-#
+"""
+The size of a finite volume/cell per axis.
+"""
 volume_size = 0.1
 
-#
-# The simulation end time.
-#
-end_time = 1
+"""
+The simulation end time.
+"""
+end_time = 1.0
 
-#
-# Define the advection speed.
-#
+"""
+Define the advection speed.
+"""
 advection_speed = 1.0
 
-#
-# Choose domain size and offset.
-#
+"""
+Choose domain size and offset.
+"""
 size = [1.0, 1.0, 1.0]
 offset = [0.0, 0.0, 0.0]
 
-#
-# If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
-#
-use_make = True
-
-#
-# Set to true, to visualise/convert the output data using a postprocessor.
-#
+"""
+Set to true, to visualise/convert the output data using a postprocessor.
+"""
 visualise = False
 
-#
-# Choose how often a snapshot is written.
-#
+"""
+Choose how often a snapshot is written.
+"""
 time_in_between_two_snapshots = end_time / 100
 # time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
-#
-# Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
-#
+"""
+Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
+"""
 compile_mode = peano4.output.CompileMode.Release
 
-#
-# We first create a new ExaHyPE 2 project.
-# For this, we specify the (nested) namespaces, the name of our main file and our executable name.
-# We amend the executable name by the space dimensions.
-#
+"""
+We first create a new ExaHyPE 2 project.
+For this, we specify the (nested) namespaces, the name of our main file and our executable name.
+We amend the executable name by the space dimensions.
+"""
 my_project = exahype2.Project(
     namespace=["tutorials", "exahype2", "advection"],
-    project_name="AdvectionTutorial",
+    project_name="Advection",
     directory=".",
-    executable="advection-" + str(dimensions) + "d",
+    executable="ExaHyPE2-Advection-" + str(dimensions) + "d",
 )
 
-#
-# Add the Finite Volumes solver using named arguments.
-# This is the way you can add further PDE terms.
-# This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
-# Rusanov is the type of flux that is used to solve the Riemann problem at boundaries between cells.
-#
+"""
+Add the Finite Volumes solver using named arguments.
+This is the way you can add further PDE terms.
+This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
+Rusanov is the type of flux that is used to solve the Riemann problem at boundaries between cells.
+"""
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-    name="AdvectionSolver",
+    name="Advection",
     patch_size=patch_size,
     unknowns=dimensions,
     auxiliary_variables=0,
@@ -95,19 +90,19 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     time_step_relaxation=0.5,
 )
 
-#
-# We want to define our PDE symbolically.
-# For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
-#
+"""
+We want to define our PDE symbolically.
+For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
+"""
 my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
     unknowns=dimensions, auxiliary_variables=0, dimensions=dimensions
 )
 v = my_pde.name_Q_entries(0, dimensions, "v")
 c = sympy.symbols("c")
 
-#
-# Define the equation system
-#
+"""
+Define the equation system
+"""
 # Flux [unknowns, dimensions]
 if dimensions == 2:
     my_pde.F[0, 0] = v[0]
@@ -139,24 +134,23 @@ else:
 
 my_pde.substitute_expression(c, advection_speed)
 
-#
-# Since 'my_pde' only holds the PDE for the advection equation without initial- or boundary conditions,
-# we still need to properly define initial- and boundary conditions.
-# This gives us then a complete description of a 'scenario'.
-#
-#
+"""
+Since 'my_pde' only holds the PDE without initial- or boundary conditions,
+we still need to properly define initial- and boundary conditions.
+This gives us then a complete description of a 'scenario'.
+"""
+
 # Initial conditions
-#
 my_pde.initial_values[0] = my_pde.x[0]
 my_pde.initial_values[1] = my_pde.x[1]
 if dimensions == 3:
     my_pde.initial_values[2] = my_pde.x[2]
 
-#
-# Specify which implementation our solvers uses.
-# Here we want to set the implementation we get from our symbolically defined PDE,
-# i.e., we get the C++ implementation which is generated by ExaHyPE's 'symhype' package.
-#
+"""
+Specify which implementation our solvers uses.
+Here we want to set the implementation we get from our symbolically defined PDE,
+i.e., we get the C++ implementation which is generated by ExaHyPE's 'symhype' package.
+"""
 my_solver.set_implementation(
     initial_conditions=my_pde.implementation_of_initial_conditions(),
     boundary_conditions=my_pde.implementation_of_homogeneous_Neumann_BC(),
@@ -164,20 +158,20 @@ my_solver.set_implementation(
     eigenvalues=my_pde.implementation_of_max_eigenvalue(),
 )
 
-#
-# To see which variables (unknowns + auxiliary variables) we can visualise,
-# let's add a plot description for the variables to our solver.
-#
+"""
+To see which variables (unknowns + auxiliary variables) we can visualise,
+let's add a plot description for the variables to our solver.
+"""
 my_solver.plot_description = my_pde.unknown_identifier_for_plotter()
 
-#
-# Add the solver to our project
-#
+"""
+Add the solver to our project
+"""
 my_project.add_solver(my_solver)
 
-#
-# Configure some global parameters
-#
+"""
+Configure some global parameters
+"""
 my_project.set_global_simulation_parameters(
     dimensions=dimensions,
     size=size[0:dimensions],
@@ -189,16 +183,14 @@ my_project.set_global_simulation_parameters(
     periodic_BC=[False, False, False],
 )
 
-#
-# This defines where the output files should go.
-# If you omit this, output files are automatically put into the application's folder.
-#
+"""
+This defines where the output files should go.
+If you omit this, output files are automatically put into the application's folder.
+"""
 my_project.set_output_path("solution")
-if not os.path.exists("solution"):
-    os.makedirs("solution")
 
 if visualise:
-    output_patch_file = "solution/solution-AdvectionSolver.peano-patch-file"
+    output_patch_file = "solution/solution-Advection.peano-patch-file"
     if os.path.isfile(output_patch_file):
         subprocess.call(
             [
@@ -209,49 +201,41 @@ if visualise:
         )
     sys.exit(0)
 
-#
-# If you only target a sequential execution, you can omit the load balancing.
-# However, for a parallel build and execution you need to set load balancing.
-# This requires the 'LoadBalancing' toolbox to be built.
-# The type of load balancer can greatly impact the speedup and overall performance.
-# For an overview of available load balancer refer to the documentation.
-#
+"""
+If you only target a sequential execution, you can omit the load balancing.
+However, for a parallel build and execution you need to set load balancing.
+This requires the 'LoadBalancing' toolbox to be built.
+The type of load balancer can greatly impact the speedup and overall performance.
+For an overview of available load balancer refer to the documentation.
+"""
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 
-#
-# We need to set the location of our core libraries ('Peano4').
-# This helps us to resolve any dependencies.
-# Additionally, we specify the build mode which you can also change to a different mode.
-#
+"""
+We need to set the location of our core libraries ('Peano4').
+This helps us to resolve any dependencies.
+Additionally, we specify the build mode which you can also change to a different mode.
+"""
 my_project.set_Peano4_installation("../../../", mode=compile_mode)
 
-#
-# We generate and grab the underlying core project of 'Peano4'.
-# This gives us access to some functions we want to use to finalise and build this project.
-#
+"""
+We generate and grab the underlying core project of 'Peano4'.
+This gives us access to some functions we want to use to finalise and build this project.
+"""
 my_project = my_project.generate_Peano4_project(verbose=True)
 
-#
-# Optional: Set an floating-point exception handler to the Peano 4 project.
-#
-my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
-#
-# Finally, we want to build our project.
-# First, all of the necessary glue code is generated in the application folder,
-# then 'make' is invoked automatically which compiles the generated code and links against our core libraries
-# and toolboxes which have been built before.
-# You can also always invoke 'make' yourself to compile, or cleanup with 'make clean'.
-#
-my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
+"""
+Finally, we want to build our project.
+First, all of the necessary glue code is generated in the application folder,
+then 'make' is invoked automatically which compiles the generated code and links against our core libraries
+and toolboxes which have been built before.
+You can also always invoke 'make' yourself to compile, or cleanup with 'make clean'.
+"""
+my_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
 print("\nPDE is: ")
 print(my_pde.__str__())
-print("Executable is advection-" + str(dimensions) + "d")
-print("Clean object files via 'make clean'")
-print("(Re)compile the generated code via 'make -j'")
-print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 advection.py' again")
+print(my_solver)
+print(my_project)

@@ -96,7 +96,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        output
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
@@ -104,6 +105,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     t,
     dt,
     reconstructedPatch,
+    output,
     #if Dimensions==2
     ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}},

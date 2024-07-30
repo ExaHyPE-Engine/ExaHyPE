@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.PDETerms  import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 import jinja2
 
 
@@ -9,7 +9,7 @@ def create_abstract_solver_user_declarations_for_fixed_time_stepping():
 private:
   double _timeStepSize;
 public:
-  double getTimeStepSize() const;  
+  double getTimeStepSize() const;
     """
 
 
@@ -30,15 +30,15 @@ def create_compute_time_step_size_for_fixed_time_stepping(_time_step_size):
 
 def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
     """
-
     The outcome is used before we actually roll over the accumulation variables
     and other stuff.
-
     """
     predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    tarch::mpi::Rank::getInstance().isGlobalMaster()
     and
-    _maxCellH>0.0
+    _maxCellH > 0.0
+    and
+    isFirstGridSweepOfTimeStep()
   """
 
     if use_enclave_tasking:
@@ -49,11 +49,11 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
   if ("""
         + predicate
         + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep<< " (volume size)" );
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep()", "t       = " << _minTimeStampThisTimeStep);
+    logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
+    logInfo("startTimeStep()", "h_{min} = " << _minCellH);
+    logInfo("startTimeStep()", "h_{max} = " << _maxCellH);
   }
 """
     )
@@ -64,14 +64,13 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(
 ):
     return (
         """
-  assertion( _minCellH >= 0.0 );
-  assertion( MaxAdmissibleCellH > 0.0 );
+  assertion(_minCellH >= 0.0);
+  assertion(MaxAdmissibleCellH > 0.0);
   if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """
+    _timeStepSize = """
         + str(normalised_time_step_size)
         + """ * _minCellH / MaxAdmissibleCellH;
-  }
-  else {
+  } else {
     _timeStepSize = 0.0;
   }
 """
@@ -84,27 +83,26 @@ private:
   double _maxEigenvalue;
   double _admissibleTimeStepSize;
 public:
-  void setMaxEigenvalue( double eigenvalue );  
+  void setMaxEigenvalue(double eigenvalue);
   /**
-   * @return Admissible time step size for the current sweep, i.e. 
+   * @return Admissible time step size for the current sweep, i.e.
    *         return _admissibleTimeStepSize. This value always refers
    *         to the minimum mesh volume size. If you use subcycling,
    *         you have to scale it for cells that are not on the finest
-   *         mesh resolution. 
+   *         mesh resolution.
    */
-  virtual double getAdmissibleTimeStepSize() const;  
+  virtual double getAdmissibleTimeStepSize() const;
 """
 
 
 def create_abstract_solver_user_definitions_for_adaptive_time_stepping():
     return """
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
-  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue(double eigenvalue) {
+  if (tarch::la::greater(eigenvalue, 0.0)) {
     tarch::multicore::Lock lock(_semaphore);
     _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
   }
-}    
-
+}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
   return _admissibleTimeStepSize;
@@ -120,8 +118,7 @@ def create_compute_time_step_size_for_adaptive_time_stepping():
 
 def create_compute_new_time_step_size_for_adaptive_time_stepping():
     return """
-  
-    double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
+    const double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
       {{SOLVER_NAME}}
       >(
         repositories::{{SOLVER_INSTANCE}},
@@ -132,23 +129,24 @@ def create_compute_new_time_step_size_for_adaptive_time_stepping():
         timeStepSize
       );
 
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-    
-    // This is a value set for stats reasons. We'll ignore it later as we 
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
+
+    // This is a value set for stats reasons. We'll ignore it later as we
     // ask for a new valid time step size from getAdmissibleTimeStepSize().
     //const double newTimeStepSize = 0.0;
     const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false)>0.0 ?
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
       0.0;
-
 """
 
 
 def create_start_time_step_implementation_for_adaptive_time_stepping():
     predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    tarch::mpi::Rank::getInstance().isGlobalMaster()
     and
-    _maxCellH>0.0
+    _maxCellH > 0.0
+    and
+    isFirstGridSweepOfTimeStep()
   """
 
     statistics = (
@@ -156,17 +154,17 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
   if ("""
         + predicate
         + """) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStamp );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)" );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo("startTimeStep()", "t            = " << _minTimeStamp);
+    logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("startTimeStep()", "h_{min}      = " << _minCellH);
+    logInfo("startTimeStep()", "h_{max}      = " << _maxCellH);
+    logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
   }
 """
     )
 
-    clear_max_eigenvalue = """if (_solverState == SolverState::Prediction) {
+    clear_max_eigenvalue = """if (isFirstGridSweepOfTimeStep()) {
   _maxEigenvalue = 0.0;
 }"""
 
@@ -175,10 +173,8 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
 
 def create_finish_time_step_implementation_for_adaptive_time_stepping():
     """
-
     This routine is inserted after we have reduced all global quantities. These
     are the quantities with the postfix ThisTimeStep.
-
     """
     compute_new_timestep = """
 
@@ -189,30 +185,26 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
           &_maxEigenvalue,
           1,
           MPI_DOUBLE,
-          MPI_MAX, 
+          MPI_MAX,
           [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
           );
     #endif
 
-
-    if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-      ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-      // keep time step size invariant
+    if (tarch::la::smaller(_maxEigenvalue, 0.0)) {
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue >= 0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
+      // Keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
-    }
-    else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-      ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>0", "Max eigenvalue has reached zero, which means that the simulation cannot succesfully continue: " + std::to_string(_maxEigenvalue) );
-      _admissibleTimeStepSize = 0.0;
-    }
-    else {
+    } else if (tarch::la::equals(_maxEigenvalue, 0.0)) {
+      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue > 0", "max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalue));
+    } else {
       const double minVolumeSize = _minCellHThisTimeStep;
-      //the max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction
-      _admissibleTimeStepSize = std::min( MinTerminalTime-_minTimeStampThisTimeStep,CFL * PNPM / _maxEigenvalue);
-      if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
-        ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
+      // The max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction
+      _admissibleTimeStepSize = std::min(MinTerminalTime - _minTimeStampThisTimeStep, CFL * PNPM / _maxEigenvalue);
+      if (std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize)) {
+        ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_admissibleTimeStepSize > 0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize));
       }
       if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-        logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
+        logWarning("finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")");
       }
     }
 """

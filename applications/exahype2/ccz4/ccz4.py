@@ -19,42 +19,43 @@ import CCZ4Helper
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts, 
+  "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
 floatparams = {
-        "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
-        "GLMepsD":1.0, 
+  "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
+  "GLMepsD":1.0, 
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
-        "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0, "KOSigma":4.0 #, \
+  "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+  "sk":1.0, "bs":1.0,
+  "domain_r":0.5, "smoothing":0.0, "KOSigma":8.0 #, \
 }
 
 intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "SO":0}
-#sss
+#
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume/meshcell size, i.e. not to patch size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume/meshcell size, i.e. not to patch size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
-    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
-    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4","phy-debug", "PT"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
+    parser.add_argument("-maxh", "--max-h",           dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume/meshcell size, i.e. not to patch size" )
+    parser.add_argument("-minh", "--min-h",           dest="min_h",           type=float, default=0,        help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume/meshcell size, i.e. not to patch size" )
+    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int,   default=6,        help="Patch size, i.e. number of volumes per patch per direction" )
+    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04,     help="Plot step size (0 to switch it off)" )
+    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",            help="|".join(modes.keys()) )
+    parser.add_argument(         "--gpu",             dest="GPU",             default=False, action="store_true",  help="Run with accelerator support" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-adaptive", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk2-adaptive", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
-    parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",      dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
+    parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",   dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
+    parser.add_argument("-pst",  "--plot-start-time", dest="plot_start_time", type=float, default=0.0, help="start time for plot" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures", "flat"], required="True", help="Scenario" )
-    parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-static point tracer, 2-moving point tracer" )
-    parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
-    parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
-    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-so", "--second-order",  dest="SO_flag",           default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
+    parser.add_argument("-cfl",  "--CFL-ratio",       dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer",  type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-static point tracer, 2-moving point tracer" )
+    parser.add_argument("-tn",   "--tracer-name",     dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
+    parser.add_argument("-exn",  "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
+    parser.add_argument("-outdir", "--output-directory", dest="path",     type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-so",   "--second-order",    dest="SO_flag",     default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -68,7 +69,9 @@ if __name__ == "__main__":
     SuperClass = None
 
     print(args.implementation)
-    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
+    if args.implementation=="fv-adaptive":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk2-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
@@ -104,10 +107,20 @@ if __name__ == "__main__":
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
 """
-
-        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
-          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_mesh_unit_h, max_volume_h=max_mesh_unit_h,
+            time_step_relaxation=cfl
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+          if args.implementation=="fd4-rk1-adaptive":
             rk_order = 1
+          elif args.implementation=="fd4-rk2-adaptive":
+            rk_order = 2
           else:
             rk_order = 4
           SuperClass.__init__(
@@ -120,7 +133,7 @@ if __name__ == "__main__":
             KOSigma=KOSig
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
-          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+          if args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
             rk_order = 4
@@ -179,12 +192,31 @@ if __name__ == "__main__":
             kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
             KOSigma                                  = self._KO_Sigma
           )
-
-          self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
-            )
         
-        self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          self.postprocess_updated_patch += """{
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+
+
+        else:
+          self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
@@ -437,8 +469,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-12,-12,0.0]
-    project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
+    probe_point = [-100, -100, 0.0]
+    project.add_plot_filter( probe_point,[200.0, 200.0, 0.01], 1 )
     #if args.extension=="Psi4":
     #  my_solver.select_dofs_to_print = [0,12,16,17,18,53,54,59,60]
     #elif args.extension=="adm" or args.extension=="phy-debug":
@@ -447,14 +479,14 @@ if __name__ == "__main__":
     #  pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95,0,128,128))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-    #  "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
+    #  "new ::exahype2::LoadBalancingConfiguration(0.95, 32 ,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
 
 ########################################################################################
 #Tracer setting 
@@ -467,14 +499,14 @@ if __name__ == "__main__":
         #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
         #                            particle_set=tracer_particles, filename="t-design.dat", scale_factor=abs(offset[0])*0.8)
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
-        init_action_set.priority = 0
+        init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation( init_action_set )
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
                                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
                                                                )
-        tracer_action_set.priority = my_solver._action_set_update_cell.priority+1
+        tracer_action_set.descend_invocation_order = my_solver._action_set_update_cell.descend_invocation_order+1
         project.add_action_set_to_timestepping(tracer_action_set)
         project.add_action_set_to_initialisation(tracer_action_set)
         
@@ -488,21 +520,20 @@ if __name__ == "__main__":
           position_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.02
           )
-        dump_action_set.priority = my_solver._action_set_update_cell.priority+2
+        dump_action_set.descend_invocation_order = my_solver._action_set_update_cell.descend_invocation_order+2
         project.add_action_set_to_timestepping(dump_action_set)
 
     if args.add_tracer==2:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[2.0,0,0],[-2.0,0,0]])
-        init_action_set.priority = 0
+            particle_set=tracer_particles, coordinates=[[0.2,0,0],[-0.2,0,0]])
+        init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation( init_action_set )
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
                                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler",
-                                                               projection_kernel_arguments="""
-                                                                marker,
+                                                               projection_kernel_arguments="""marker,
                                                                 {{PATCH_SIZE}},
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
                                                                 fineGridCell{{SOLVER_NAME}}Q.value,
@@ -512,21 +543,22 @@ if __name__ == "__main__":
                                                                 *p
                                                                """
                                                                )
-        tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
+        tracer_action_set.descend_invocation_order = my_solver._action_set_compute_final_linear_combination.descend_invocation_order+1
         project.add_action_set_to_timestepping(tracer_action_set)
         project.add_action_set_to_initialisation(tracer_action_set)
         
         dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
-          filename=args.path+"Tracer-test",
-          number_of_entries_between_two_db_flushes=500,
+          filename=args.path+"Tracer-BHTracker",
+          number_of_entries_between_two_db_flushes=1000,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.02
+          time_delta_between_two_snapsots=0.02,
+          clear_database_after_flush      = False
           )
-        dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
+        dump_action_set.descend_invocation_order = my_solver._action_set_compute_final_linear_combination.descend_invocation_order+2
         project.add_action_set_to_timestepping(dump_action_set)
 
 ########################################################################################
@@ -540,10 +572,10 @@ if __name__ == "__main__":
       #
       # There are two different things to do when we pick a scneario: We have
       # to configure the solver accordingly (and keep in mind that every solver
-      # needs its own config), and then we might have to adopt the build 
+      # needs its own config), and then we might have to adopt the build
       # environment.
       #
-      peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
+      peano4_project.output.makefile.add_linker_flag( "-lm -lgsl -lgslcblas" )
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Utilities.cpp" )
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Parameters.cpp" )
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Logging.cpp" )
@@ -554,7 +586,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Newton.cpp" )
       peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
     else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")        
+      raise Exception( "Scenario " + args.scenario + " is now unknown")
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )
@@ -580,13 +612,13 @@ if __name__ == "__main__":
         )
 
       additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
-                                                                             is_enclave_solver = False,
+                                                                             is_enclave_solver = ("enclave" in args.implementation),
                                                                              ))
       additional_mesh_traversal.add_action_set( project_patch_onto_faces )
       additional_mesh_traversal.add_action_set( roll_over_projected_faces )
       additional_mesh_traversal.add_action_set( dynamic_AMR )
       
-      project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+      project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
 
       peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )

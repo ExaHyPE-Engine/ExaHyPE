@@ -101,6 +101,14 @@ class SeparateSweeps(RungeKuttaDG):
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
 
+    any_primary_sweep_predicate = "(" + " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_cell ) + ")"
+    self._linear_combination_of_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        self._provide_cell_data_to_compute_kernels_default_guard() + " and " + any_primary_sweep_predicate,
+        "false",
+        "false",
+    )        
+
+
   def create_action_sets(self):
     """
       We invoke the superclass which creates all the action sets, and then we

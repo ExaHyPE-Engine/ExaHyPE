@@ -40,7 +40,7 @@ void toolbox::loadbalancing::dumpStatistics() {
     msg << "no trees hosted on this node - therefore no load";
   }
   else {
-    msg << " total=" << sumLocal << "/" << sumRemote << " (local/remote)";
+    msg << " total=" << sumLocal << "/" << sumRemote << " (local/virtual)";
   }
 
 

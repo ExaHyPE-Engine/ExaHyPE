@@ -2,6 +2,8 @@
 
 \page page_version_control Version control
 
+\tableofcontents
+
 The project is hosted on the gitlab of the Leibniz Supercomputing Centre. You 
 find the repository at https://gitlab.lrz.de/hpcsoftware/Peano. We try to give
 all interested colleagues access to the repository including some write 
@@ -18,7 +20,7 @@ permissions, but we do protect some branches.
   - applications
   - infrastructure
   - documentation
-  Most of these branches are only writable by the PI, though some 
+- Most of these branches are only writable by the PI, though some 
   responsibilities for very few ranches are delegated.
 - We have multiple subbranches under each top level branch. They are "owned"
   by various colleagues.

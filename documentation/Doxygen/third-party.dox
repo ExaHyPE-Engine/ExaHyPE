@@ -4,6 +4,7 @@
 
 
 \li \subpage tarch_multicore_otter
+\li \subpage tbb_dynamic_task_graph_design
 
 
 <!-- Add this one for href links to subitems -->

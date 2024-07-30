@@ -2,6 +2,7 @@
 
 \page page_documentation Documentation
 
+\tableofcontents
 
 Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
 

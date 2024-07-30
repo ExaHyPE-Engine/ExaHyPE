@@ -61,15 +61,15 @@ void applications::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
 	
   //following data reference: https://journals.aps.org/prd/pdf/10.1103/PhysRevD.69.024006
 	if (CCZ4swi==2 and CCZ4BBHType==1){
-		tp->par_b=3.0;
+		tp->par_b=5.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->give_bare_mass=true;//use puncture mass instead of adm mass
-		tp->par_m_plus=0.47656; tp->par_m_minus=0.47656;
+		tp->par_m_plus=0.48595; tp->par_m_minus=0.48595;
 		//tp->target_M_plus=999;//adm mass
-		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.13808; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.095433; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
 		//tp->target_M_minus=999;//adm mass
-		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.13808; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.095433; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
@@ -333,10 +333,10 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==2) { //
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==1
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {4, 2.5};
+      double Radius[NumberOfRefinementLayers] = {8, 6};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
@@ -346,10 +346,7 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==3) { //binary black holes
-    //double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
-    //double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
-
+  if (CCZ4ReSwi==3) {  //not used
     tarch::la::Vector<Dimensions,double> leftBH  = {-4.241, 0.0, 0.0};
     tarch::la::Vector<Dimensions,double> rightBH = { 4.241, 0.0, 0.0};
 
@@ -366,8 +363,8 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       else {result = ::exahype2::RefinementCommand::Keep;}
     }
   }
-  if (CCZ4ReSwi==4){ //single black hole, higher level of amr
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+  if (CCZ4ReSwi==4){ //5 level, not used
+    if (tarch::la::equals(t,0.0)){  
       constexpr int NumberOfRefinementLayers = 4;
  //   with some alter
       double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5};
@@ -381,8 +378,8 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==8){ //single black hole, higher level of amr
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+  if (CCZ4ReSwi==8){ //not used
+    if (tarch::la::equals(t,0.0)){  
       constexpr int NumberOfRefinementLayers = 1;
       double Radius[NumberOfRefinementLayers] = {2};
       double MaxH[NumberOfRefinementLayers]   = {0.04};
@@ -395,8 +392,8 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==5){ //single black hole, decent refinement
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+  if (CCZ4ReSwi==5){ //4 level, not used yet
+    if (tarch::la::equals(t,0.0)){   
       constexpr int NumberOfRefinementLayers = 3;
 //    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
@@ -414,7 +411,7 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==6){
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==0, 2
       constexpr int NumberOfRefinementLayers = 2;
       double Radius[NumberOfRefinementLayers] = {4, 3};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
@@ -428,7 +425,7 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==7){ 
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+    if (tarch::la::equals(t,0.0)){  //static AMR, for sbh
       constexpr int NumberOfRefinementLayers = 2;
       double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};

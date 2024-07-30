@@ -3,7 +3,7 @@
 @page page_peano_performance_optimisation Performance optimisation
 
 <!-- Add this one for href links to subitems -->
-\tableofcontents
+@tableofcontents
 
 
 This section discusses some Peano-specific performance optimisation steps.
@@ -37,8 +37,10 @@ performance analysis with domain-specific data: We think that it is the job
 of a performance analyis tool to uncover what is going wrong and the statistics
 then can help to clarify why this happens from an application's point of view.
  
+ 
+## Compiler 
 
-## Compiler feedback
+### Compiler feedback
 
 Any optimisation should be guided by compiler feedback and proper performance
 analysis. For the (online) performance analysis, Peano provides tailored 
@@ -73,7 +75,7 @@ You throw away the object file and then you rebuild this single file yet with
 the optimisation reports on. 
 
 
-## Inter-procedural optimisation
+### Inter-procedural optimisation
 
 Most successful vectorsation passes depend upon successful inlining (despite
 marking functions as vectorisable). To facilitate this inlining, you can either
@@ -108,52 +110,71 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 The final ipo optimisation report will end up in a file ipo_out.optrpt.
 
 
-## Single core optimisation
+## Domain decomposition
 
-### The code fails to use aligned data
+We use the same geometric load balancing for both the MPI code and on the node. 
+In the latter case, subpartitions aka subtrees are distributed over several 
+threads. The load balancing can be written manually for your application, or you
+can use classes from the @ref toolbox_loadbalancing "load balancing toolbox" 
+that is shipped with Peano.
 
-See general remarks in documentation of tarch::allocateMemory() and
-tarch::MemoryLocation.
-
-@see tarch::allocateMemory()
-@see tarch::MemoryLocation
-
-### Adaptive mesh refinement is very expensive
-
-Peano realises a strict cell-wise traversal paradigm, where individual
-actions @ref peano_action_sets "are tied to single cells, faces or vertices".
-Therefore, @ref peano_amr "Peano's AMR" is also controlled by sets of 
-refine and erase events. The decision to refine or erase a mesh is made
-by Peano by comparing each and every mesh entity against the set of 
-erase and refine commands. This happens in 
-peano4::grid::Spacetree::updateVertexAfterLoad().
-
-If you work with thousands of mesh refinement and coarsening events, the 
-AMR checks themselves become time-consuming. Therefore, each tree traversal
-invokes peano4::grid::merge() on the command first. This routine tries to 
-consolidate many erase and refine commands into fewer ones, and it also 
-throws away those erase commands which contradict refines. However, you 
-can still tune this behaviour:
-
-- As each and every traversal automaton calls the merger, it might make
-  sense that you invoke merge() yourself earlier, before you hand stuff
-  over to Peano. This way, you avoid multiple (though parallel) merges
-  on different threads and ranks.
-- The merge() operation will search for refine and erase commands which
-  are adjacent to each other and combine them into one. So it 
-  intrinsically works with hexahedral areas. Try to ensure that your 
-  refine and erase commands span a hexahedral area, so they can be 
-  combined into one single command. For this, you might refine a little
-  bit too aggressively but gain in terms of effective runtime.
-- The merge() operation works with a certain tolerance (as it works with
-  floating point numbers, but also with geometric data). If you invoke 
-  merge() yourself, you can add in a higher tolerance and hence merge
-  together subareas that are to be refined or erased which are not 
-  exactly adjacent to each other but close.  
+The documentation of the @ref toolbox_loadbalancing "load balancing toolbox" 
+contains some generic explanations why certain things work the way they do 
+and what has to be taken into account if a code suffers from certain behaviour.
+It is important to read through these explanations prior to tweaking the load
+balancing as discussed below.
 
 
 
-## Multithreading optimisation
+### The domain decomposition works (I see multiple trees), but I don't get any/good speedup
+
+Before you continue, check if the individual trees are well-balanced. Do they 
+have the same size? If not, you might want to study the remarks below on 
+ill-balanced partiitons. Now, assume they are well-balanced. 
+If you have a well balanced problem, the trees have all roughly the same amount
+of local cells:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+toolbox::loadbalancing::dumpStatistics()                12 tree(s): (#0:19653/7108)(#1:19644/1365)(#2:19644/2461)(#3:19644/2445)(#4:19644/2525)(#5:19644/2645)(#6:19644/2621)(#7:19644/2789)(#8:19644/2493)(#9:19644/2709)(#10:19644/2485)(#11:19644/1685) total=235737/33331 (local/remote)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All looks fine here. 
+If you don't get any (reasonable) speedup, then you should look at the ratio between
+the total number of local cells and the total number of remote cells (granularity).
+
+In the example above, we have 12 trees where each tree holds 19644 cells.
+Therefore, we have very good balanced load. Now, we look into the ratio of
+the total number of local cells (235737) and remote cells (33331):
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+granularity = 235737 / 33331 ~= 7.07
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In some heuristic measurements we deduced a "rule of thumb" where a granularity of greater than ~10
+results in a linear speedup in a strong scaling setup (neglecting other effects like memory bandwidth, etc.).
+If you get a smaller granularity than ~10, you will lose performance
+(in relation to the hardware resources you throw at the problem) that worsens, the smaller the granularity gets.
+
+To remedy this effect you will need to find ways on how to increase the granularity in your simulation.
+
+Possible ways to do so can be:
+
+- Increase the problem size. If your problem is too small, you always run risk to 
+  overdecompose. Once the problem per thread or rank is too small, there's not much
+  you can do anymore.
+- Restrict the number of spacetrees (subpartitions) per rank.
+- Add task-based parallelism. Try out enclave solvers (with restricted number 
+  of trees) for ExaHyPE, e.g.
+
+
+<div style="background-color:#75e12f">
+ Domain decomposition introduces a severe overhead. Therefore, your runtime might go down as you 
+ increase the number of trees. More trees means more effort to keep data consistent between 
+ subpartitions. Therefore, it can be advantageous to limit the number of trees, i.e. not to 
+ book out all threads. The threads then have to be kept busy otherwise (through 
+ task parallelism or parallel fors inside compute kernels, e.g.).
+</div>
+
 
 ### The individual trees are of significantly different sizes
 
@@ -202,56 +223,30 @@ There are some generic ideas that you can try out:
    number of trees per node. The trees are then mapped by Peano onto threads. If
    you have too many trees however, you create a lot of overhead for this mapping.
    By default, most load balancing schemes allow the code to use up to twice the
-   number of trees than cores. This value can be increased.
-
-To motivate most of these considerations, it is important to remember that 
-Peano builds up the grid top-down, i.e. from coarse to fine, and immediately 
-tries to split the mesh over the compute units.
-
-Recursive load balancing schemes yield the best quality partitions, but often 
-fail for rather shallow (3-6 levels of adaptivity) trees with adaptive mesh
-refinement. In this case, it pays off to find a good indicator what a good 
-partition size could be for your setup, and then to switch to a scheme like
-toolbox::loadbalancing::SplitOversizedTree. Peano always has to accommodate
-@ref page_peano_domain_decomposition "some domain split-up constraints" and
-hence cannot fork off arbitrary adaptive mesh parts and also has to ensure 
-that there is always a clear tree topology in the splitting, i.e. if you 
-recursively split, you can only make as many splits as you have tree levels.
+   number of trees than cores. This value can be increased. Be aware of the 
+   discussion above, as this idea contradicts the experience there (for some 
+   applications).
+6. Introduce a better cost metric. By default, Peano uses a geometric cost metric,
+   i.e. it counts the number of cells and tries to balance this count. If the 
+   number if not representative of the actual workload, then this will result in 
+   a poor workload distribution.
 
 
-### The individual trees are well balanced but I don't get any speedup
 
-If you have a well balanced problem, i.e. the trees have all roughly the same amount
-of local cells:
+<div style="background-color:#75e12f">
+ Tweaking the load balancing manually is the last resort. Most codes benefit from 
+ employing a 
+ @ref toolbox_loadbalancing "cascade of different load balancing schemes" and
+ eventually get away with a pure geometric cost model. 
+</div>
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-toolbox::loadbalancing::dumpStatistics()                12 tree(s): (#0:19653/7108)(#1:19644/1365)(#2:19644/2461)(#3:19644/2445)(#4:19644/2525)(#5:19644/2645)(#6:19644/2621)(#7:19644/2789)(#8:19644/2493)(#9:19644/2709)(#10:19644/2485)(#11:19644/1685) total=235737/33331 (local/remote)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+It is important to keep in mind that all data displayed here on the terminal 
+are geometric data. If you have a highly inhomogeneous cost, as you use kernels
+with varying workload (particles or non-linear solvers within cells), if you
+use task parallelism heavily, if you use adaptive mesh refinement, or if you 
+use different localised solvers in different subdomains, then all the data
+here as well as the recommendations have to be taken with a pinch of salt.
 
-and you don't get any speedup, then you should look at the ratio between
-the total number of local cells and the total number of remote cells (granularity).
-
-In the example above, we have 12 trees where each tree holds 19644 cells.
-Therefore, we have very good balanced load. Now, we look into the ratio of
-the total number of local cells (235737) and remote cells (33331):
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-granularity = 235737 / 33331 ~= 7.07
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In some heuristic measurements we deduced a "rule of thumb" where a granularity of greater than ~10
-results in a linear speedup in a strong scaling setup (neglecting other effects like memory bandwidth, etc.).
-If you get a smaller granularity than ~10, you will lose performance
-(in relation to the hardware resources you throw at the problem) that worsens, the smaller the granularity gets.
-
-To remedy this effect you will need to find ways on how to increase the granularity in your simulation.
-
-Possible ways to do so can be:
-- Increase the problem size (particularly number of cells or patches).
-- Decrease the amount of hardware resources (threads, cores, ranks, GPUs, etc.) you are using.
-- Choose another load balancing strategy.
-- Restrict the number of spacetrees (subpartitions) per rank.
-- Try out enclave solvers (with restricted number of trees).
 
 
 ### The grid splitting needs too much time
@@ -329,6 +324,66 @@ In this case, you have to increase the code's concurrency otherwise, i.e. not vi
 geometric decomposition.
 Additional tasking within your code for example is an option, or compute kernels which 
 themselves can use more than one core.
+
+
+## Single core optimisation
+
+### The code fails to use aligned data
+
+See general remarks in documentation of tarch::allocateMemory() and
+tarch::MemoryLocation.
+
+@see tarch::allocateMemory()
+@see tarch::MemoryLocation
+
+### Adaptive mesh refinement is very expensive
+
+Peano realises a strict cell-wise traversal paradigm, where individual
+actions @ref peano_action_sets "are tied to single cells, faces or vertices".
+Therefore, @ref peano_amr "Peano's AMR" is also controlled by sets of 
+refine and erase events. The decision to refine or erase a mesh is made
+by Peano by comparing each and every mesh entity against the set of 
+erase and refine commands. This happens in 
+peano4::grid::Spacetree::updateVertexAfterLoad().
+
+If you work with thousands of mesh refinement and coarsening events, the 
+AMR checks themselves become time-consuming. Therefore, each tree traversal
+invokes peano4::grid::merge() on the command first. This routine tries to 
+consolidate many erase and refine commands into fewer ones, and it also 
+throws away those erase commands which contradict refines. However, you 
+can still tune this behaviour:
+
+- As each and every traversal automaton calls the merger, it might make
+  sense that you invoke merge() yourself earlier, before you hand stuff
+  over to Peano. This way, you avoid multiple (though parallel) merges
+  on different threads and ranks.
+- The merge() operation will search for refine and erase commands which
+  are adjacent to each other and combine them into one. So it 
+  intrinsically works with hexahedral areas. Try to ensure that your 
+  refine and erase commands span a hexahedral area, so they can be 
+  combined into one single command. For this, you might refine a little
+  bit too aggressively but gain in terms of effective runtime.
+- The merge() operation works with a certain tolerance (as it works with
+  floating point numbers, but also with geometric data). If you invoke 
+  merge() yourself, you can add in a higher tolerance and hence merge
+  together subareas that are to be refined or erased which are not 
+  exactly adjacent to each other but close.  
+
+
+
+## Multithreading optimisation
+
+Peano supports both task-based and data parallelism. The former is specific to 
+extensions such as Swift or ExaHyPE, i.e. each has their own tasking approach.
+There are some generic recommendations though, and we discuss them below. All
+Peano codes can support data parallelism by a textbook non-overlapping domain
+decomposition. Actually, we have a tree decomposition.
+
+To enable a tree deccomposition, a load balancing scheme has to be activated.
+This makes Peano yield multiple trees and these trees are then either distibuted
+among ranks or among threads or both. 
+Therefore, the generic domain decomposition tweaks and flaws are discussed in a 
+section of its own above on data decomposition.
 
 
 ### Introducing tasks makes my code significantly slower

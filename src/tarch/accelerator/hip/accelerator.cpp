@@ -35,13 +35,13 @@ void* tarch::internal::allocateRawData(
 }
 
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
-  assertion(data);
-
   // TODO: Use HIP routines
   switch (location) {
   case MemoryLocation::Heap:
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    std::free(data);
+    if (data!=nullptr) {
+      std::free(data);
+    }
     break;
   }
 }

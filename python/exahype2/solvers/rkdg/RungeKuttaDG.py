@@ -32,11 +32,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
     compute_number_of_face_projection_quantities,
 )
 
-
-class Storage(Enum):
-    CallStack = 0
-    Heap = 1
-    SmartPointers = 2
+from exahype2.solvers.Storage import Storage
 
 
 class RungeKuttaDG(object):
@@ -376,9 +372,7 @@ class RungeKuttaDG(object):
         self._face_data_storage = Storage.CallStack
 
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
-
-        self.create_data_structures()
-        self.create_action_sets()
+        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
 
 
     def __str__(self):
@@ -808,16 +802,15 @@ We use RK("""
 #include "repositories/SolverRepository.h"
 """
 
-        self._rhs_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        self._linear_combination_of_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
-            self._load_cell_data_default_guard(),
-            self._store_cell_data_default_guard(),
-        )
+            "false",
+            "false",
+        )        
         self._linear_combination_of_estimates.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h"
 """
-
         self._estimate_projection.generator.send_condition = "false"
         self._estimate_projection.generator.receive_and_merge_condition = "false"
 
@@ -902,6 +895,7 @@ We use RK("""
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True,
+            called_by_grid_construction=False,
         )
         self._action_set_AMR_commit_without_further_analysis = (
             exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
@@ -909,6 +903,16 @@ We use RK("""
                 guard=self._store_cell_data_default_guard(),
                 build_up_new_refinement_instructions=False,
                 implement_previous_refinement_instructions=True,
+                called_by_grid_construction=False,
+            )
+        )
+        self._action_set_AMR_throughout_grid_construction = (
+            exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
+                solver=self,
+                guard=self._store_cell_data_default_guard(),
+                build_up_new_refinement_instructions=True,
+                implement_previous_refinement_instructions=True,
+                called_by_grid_construction=True,
             )
         )
         self._action_set_linear_combination_of_estimates = (
@@ -984,6 +988,7 @@ We use RK("""
             self._baseline_action_set_descend_invocation_order + 4
         )  # depends on other guys
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
+        self._action_set_AMR_throughout_grid_construction.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
         self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 5
         )
@@ -1191,7 +1196,7 @@ We use RK("""
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR)
+            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
@@ -1739,7 +1744,7 @@ We use RK("""
         self.create_action_sets()
 
 
-    def switch_to_heap_storage(
+    def switch_storage_scheme(
         self,
         cell_data_storage: Storage,
         face_data_storage: Storage,

@@ -45,7 +45,7 @@ namespace benchmarks {
  * first grid sweep.
  *
  * The "magic" happens in getNumberOfTasksToHoldBack() and the documentation
- * of this rule pdrovides some further details.
+ * of this rule provides some further details.
  *
  * We disable any nested parallelism. See paralleliseForkJoinSection()'s
  * documentation.
@@ -84,7 +84,7 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      * Reset _finiteVolumeTasksInThisBSPSection is this is the start of the
      * outermost parallel region.
      *
-     * @see paralleliseForkJoinSection() which uses the nested parallelim
+     * @see paralleliseForkJoinSection() which uses the nested parallelism
      *   counter.
      */
     virtual void            startBSPSection(int nestedParallelismLevel) override;
@@ -95,7 +95,7 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      * Decrement the counter _nestedBSPLevels. If the outermost parallel
      * region joins, we can update _maxFiniteVolumeTasks.
      *
-     * @see paralleliseForkJoinSection() which uses the nested parallelim
+     * @see paralleliseForkJoinSection() which uses the nested parallelism
      *   counter.
      */
     virtual void            endBSPSection(int nestedParallelismLevel) override;
@@ -119,7 +119,7 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      *
      * If we hae a Finite Volume task, we send it off to the GPU immediately.
      * If we have FD4 tasks, we wait until we have 16 of them and then send them
-     * off. The 16 is totall arbitrary. I just needed one number.
+     * off. The 16 is arbitrary. I just needed one number.
      */
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
 

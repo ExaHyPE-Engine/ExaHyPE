@@ -118,7 +118,7 @@ void tarch::multicore::native::spawnTask(
     delete job;
   });
 
-  if (taskNumber != NoDependencies) {
+  if (taskNumber != NoOutDependencies) {
     tarch::multicore::Lock lock(spawnedTasksSemaphore);
     logInfo("spawnTask(...)", "store shared future of task " << taskNumber);
     assertion1(spawnedTasks.count(taskNumber) == 0, taskNumber);
@@ -132,7 +132,7 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
   std::future<void>                  dontWait              = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
     } else {
       delete myTask;
     }
@@ -172,9 +172,9 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 
 void tarch::multicore::native::waitForAllTasks() {
   logTraceInWith1Argument("waitForAllTasks()", spawnedTasks.size());
-  int firstUnfinishedTask = NoDependencies + 1;
-  while (firstUnfinishedTask != NoDependencies) {
-    firstUnfinishedTask = NoDependencies;
+  int firstUnfinishedTask = NoOutDependencies + 1;
+  while (firstUnfinishedTask != NoOutDependencies) {
+    firstUnfinishedTask = NoOutDependencies;
 
     tarch::multicore::Lock lock(spawnedTasksSemaphore);
     if (not spawnedTasks.empty()) {
@@ -182,7 +182,7 @@ void tarch::multicore::native::waitForAllTasks() {
     }
     lock.free();
 
-    if (firstUnfinishedTask != NoDependencies) {
+    if (firstUnfinishedTask != NoOutDependencies) {
       logInfo("waitForAllTasks()", "wait for task " << firstUnfinishedTask);
       waitForTask(firstUnfinishedTask);
     }

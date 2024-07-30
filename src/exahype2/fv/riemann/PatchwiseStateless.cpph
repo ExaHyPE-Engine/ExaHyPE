@@ -1,0 +1,698 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <
+  class SolverType,
+  int  NumberOfVolumesPerAxisInPatch,
+  int  HaloSize,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateRiemann,
+  bool EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapStateless(
+  CellData&                    patchData,
+  peano4::utils::LoopPlacement loopPlacement
+) {
+  static tarch::logging::Log _log("exahype2::fv::riemann");
+  logTraceIn("timeStepWithRiemannPatchwiseHeapStateless()");
+
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(
+    1,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  );
+  const exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+    1,
+    NumberOfVolumesPerAxisInPatch,
+    0,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  );
+  const TempDataEnumeratorType fluxEnumerator(
+    patchData.numberOfCells,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    0
+  );
+  const TempDataEnumeratorType ncpEnumerator(
+    patchData.numberOfCells,
+    NumberOfVolumesPerAxisInPatch + 1,
+    HaloSize,
+    NumberOfUnknowns,
+    0
+  );
+  const TempDataEnumeratorType eigenvaluesEnumerator(
+    patchData.numberOfCells,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    0
+  );
+  const TempDataEnumeratorType maxEigenvalueEnumerator(
+    patchData.numberOfCells,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    1,
+    0
+  );
+  const TempDataEnumeratorType riemannEnumerator(
+    patchData.numberOfCells,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    0
+  );
+
+  double* tempFluxX = EvaluateFlux ? tarch::allocateMemory<double>(
+                        fluxEnumerator.size(),
+                        tarch::MemoryLocation::Heap
+                      )
+                                   : nullptr;
+  double* tempFluxY = EvaluateFlux ? tarch::allocateMemory<double>(
+                        fluxEnumerator.size(),
+                        tarch::MemoryLocation::Heap
+                      )
+                                   : nullptr;
+  double* tempFluxZ = (EvaluateFlux and Dimensions == 3)
+                        ? tarch::allocateMemory<double>(
+                          fluxEnumerator.size(),
+                          tarch::MemoryLocation::Heap
+                        )
+                        : nullptr;
+
+  double* tempNonconservativeProductX
+    = EvaluateNonconservativeProduct
+        ? tarch::allocateMemory<
+          double>(ncpEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempNonconservativeProductY
+    = EvaluateNonconservativeProduct
+        ? tarch::allocateMemory<
+          double>(ncpEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempNonconservativeProductZ
+    = (EvaluateNonconservativeProduct and Dimensions == 3)
+        ? tarch::allocateMemory<
+          double>(ncpEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+
+  double* tempEigenvaluesX = tarch::allocateMemory<double>(
+    eigenvaluesEnumerator.size(),
+    tarch::MemoryLocation::Heap
+  );
+  double* tempEigenvaluesY = tarch::allocateMemory<double>(
+    eigenvaluesEnumerator.size(),
+    tarch::MemoryLocation::Heap
+  );
+  double* tempEigenvaluesZ
+    = (Dimensions == 3)
+        ? tarch::allocateMemory<
+          double>(eigenvaluesEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+
+  double* tempMaxEigenvalueX = tarch::allocateMemory<double>(
+    maxEigenvalueEnumerator.size(),
+    tarch::MemoryLocation::Heap
+  );
+  double* tempMaxEigenvalueY = tarch::allocateMemory<double>(
+    maxEigenvalueEnumerator.size(),
+    tarch::MemoryLocation::Heap
+  );
+  double* tempMaxEigenvalueZ
+    = (Dimensions == 3)
+        ? tarch::allocateMemory<
+          double>(maxEigenvalueEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+
+  double* tempLeftUpdatesX
+    = EvaluateRiemann
+        ? tarch::allocateMemory<
+          double>(riemannEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempRightUpdatesX
+    = EvaluateRiemann
+        ? tarch::allocateMemory<
+          double>(riemannEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempBelowUpdatesY
+    = EvaluateRiemann
+        ? tarch::allocateMemory<
+          double>(riemannEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempAboveUpdatesY
+    = EvaluateRiemann
+        ? tarch::allocateMemory<
+          double>(riemannEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempBackwardUpdatesZ
+    = (EvaluateRiemann and Dimensions == 3)
+        ? tarch::allocateMemory<
+          double>(riemannEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+  double* tempForwardUpdatesZ
+    = (EvaluateRiemann and Dimensions == 3)
+        ? tarch::allocateMemory<
+          double>(riemannEnumerator.size(), tarch::MemoryLocation::Heap)
+        : nullptr;
+
+  parallelForWithSchedulerInstructions(
+    patchIndex,
+    patchData.numberOfCells,
+    loopPlacement
+  ) {
+    // ====================================================
+    // Copy solution over and evaluate source (if required)
+    // ====================================================
+    if constexpr (EvaluateSource) {
+      parallelDforWithSchedulerInstructions(
+        volume,
+        NumberOfVolumesPerAxisInPatch,
+        loopPlacement
+      ) {
+        loopbodies::copySolutionAndAddSourceTerm<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+      endParallelDfor
+    } else {
+      parallelDPlusOneForWithSchedulerInstructions(
+        volume,
+        internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(
+          NumberOfVolumesPerAxisInPatch,
+          NumberOfUnknowns,
+          NumberOfAuxiliaryVariables
+        ),
+        loopPlacement
+      ) {
+        loopbodies::copySolution(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          tarch::la::slice<Dimensions>(volume, 0), // first Dimensions entries
+          volume(Dimensions),                      // unknown
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+      endParallelDfor
+    }
+
+    // ====================================================
+    // Compute damping due to max eigenvalue
+    // ====================================================
+    parallelDforWithSchedulerInstructions(
+      volume,
+      internal::rangeOverVolumesPlusHaloInXDirection(
+        NumberOfVolumesPerAxisInPatch,
+        HaloSize,
+        true
+      ),
+      loopPlacement
+    ) {
+      volume(0) -= HaloSize;
+      loopbodies::computeEigenvalues<SolverType>(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volume,
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        0,
+        tempEigenvaluesX,
+        eigenvaluesEnumerator
+      );
+    }
+    endParallelDfor
+
+      parallelDforWithSchedulerInstructions(
+        volume,
+        internal::rangeOverVolumesPlusHaloInYDirection(
+          NumberOfVolumesPerAxisInPatch,
+          HaloSize,
+          true
+        ),
+        loopPlacement
+      ) {
+      volume(1) -= HaloSize;
+      loopbodies::computeEigenvalues<SolverType>(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volume,
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        1,
+        tempEigenvaluesY,
+        eigenvaluesEnumerator
+      );
+    }
+    endParallelDfor
+
+#if Dimensions == 3
+      parallelDforWithSchedulerInstructions(
+        volume,
+        internal::rangeOverVolumesPlusHaloInZDirection(
+          NumberOfVolumesPerAxisInPatch,
+          HaloSize,
+          true
+        ),
+        loopPlacement
+      ) {
+      volume(2) -= HaloSize;
+      loopbodies::computeEigenvalues<SolverType>(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volume,
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        2,
+        tempEigenvaluesZ,
+        eigenvaluesEnumerator
+      );
+    }
+    endParallelDfor
+#endif
+
+      // ====================================================
+      // Normal (conservative) flux
+      // ====================================================
+      if constexpr (EvaluateFlux) {
+      parallelDforWithSchedulerInstructions(
+        volume,
+        internal::rangeOverVolumesPlusHaloInXDirection(
+          NumberOfVolumesPerAxisInPatch,
+          HaloSize,
+          true
+        ),
+        loopPlacement
+      ) {
+        volume(0) -= HaloSize;
+        loopbodies::computeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempFluxX,
+          fluxEnumerator
+        );
+      }
+      endParallelDfor
+
+        parallelDforWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesPlusHaloInYDirection(
+            NumberOfVolumesPerAxisInPatch,
+            HaloSize,
+            true
+          ),
+          loopPlacement
+        ) {
+        volume(1) -= HaloSize;
+        loopbodies::computeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempFluxY,
+          fluxEnumerator
+        );
+      }
+      endParallelDfor
+
+#if Dimensions == 3
+        parallelDforWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesPlusHaloInZDirection(
+            NumberOfVolumesPerAxisInPatch,
+            HaloSize,
+            true
+          ),
+          loopPlacement
+        ) {
+        volume(2) -= HaloSize;
+        loopbodies::computeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempFluxZ,
+          fluxEnumerator
+        );
+      }
+      endParallelDfor
+#endif
+    }
+
+    if constexpr (EvaluateNonconservativeProduct) {
+      parallelDforWithSchedulerInstructions(
+        volume,
+        internal::rangeOverVolumesPlusHaloInXDirection(
+          NumberOfVolumesPerAxisInPatch,
+          HaloSize,
+          false
+        ),
+        loopPlacement
+      ) {
+        volume(0) -= HaloSize;
+        loopbodies::computeNonconservativeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempNonconservativeProductX,
+          ncpEnumerator
+        );
+      }
+      endParallelDfor
+
+        parallelDforWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesPlusHaloInYDirection(
+            NumberOfVolumesPerAxisInPatch,
+            HaloSize,
+            false
+          ),
+          loopPlacement
+        ) {
+        volume(1) -= HaloSize;
+        loopbodies::computeNonconservativeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempNonconservativeProductY,
+          ncpEnumerator
+        );
+      }
+      endParallelDfor
+
+#if Dimensions == 3
+        parallelDforWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesPlusHaloInZDirection(
+            NumberOfVolumesPerAxisInPatch,
+            HaloSize,
+            false
+          ),
+          loopPlacement
+        ) {
+        volume(2) -= HaloSize;
+        loopbodies::computeNonconservativeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempNonconservativeProductZ,
+          ncpEnumerator
+        );
+      }
+      endParallelDfor
+#endif
+
+        parallelDPlusOneForWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesTimesUnknowns(
+            NumberOfVolumesPerAxisInPatch,
+            NumberOfUnknowns
+          ),
+          loopPlacement
+        ) {
+        loopbodies::updateSolutionWithNonconservativeFlux(
+          tempNonconservativeProductX,
+          tempNonconservativeProductY,
+          tempNonconservativeProductZ,
+          ncpEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          tarch::la::slice<Dimensions>(volume, 0),
+          volume(Dimensions),
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+      endParallelDfor
+    }
+
+    if constexpr (EvaluateRiemann) {
+      parallelDforWithSchedulerInstructions(
+        volume,
+        internal::rangeOverVolumesPlusHaloInXDirection(
+          NumberOfVolumesPerAxisInPatch,
+          HaloSize,
+          false
+        ),
+        loopPlacement
+      ) {
+        volume(0) -= HaloSize;
+        loopbodies::computeRiemannSolution<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempFluxX,
+          fluxEnumerator,
+          tempEigenvaluesX,
+          eigenvaluesEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempRightUpdatesX,
+          tempLeftUpdatesX,
+          riemannEnumerator,
+          tempMaxEigenvalueX,
+          maxEigenvalueEnumerator
+        );
+      }
+      endParallelDfor
+
+        parallelDforWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesPlusHaloInYDirection(
+            NumberOfVolumesPerAxisInPatch,
+            HaloSize,
+            false
+          ),
+          loopPlacement
+        ) {
+        volume(1) -= HaloSize;
+        loopbodies::computeRiemannSolution<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempFluxY,
+          fluxEnumerator,
+          tempEigenvaluesY,
+          eigenvaluesEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempAboveUpdatesY,
+          tempBelowUpdatesY,
+          riemannEnumerator,
+          tempMaxEigenvalueY,
+          maxEigenvalueEnumerator
+        );
+      }
+      endParallelDfor
+
+#if Dimensions == 3
+        parallelDforWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesPlusHaloInZDirection(
+            NumberOfVolumesPerAxisInPatch,
+            HaloSize,
+            false
+          ),
+          loopPlacement
+        ) {
+        volume(2) -= HaloSize;
+        loopbodies::computeRiemannSolution<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempFluxZ,
+          fluxEnumerator,
+          tempEigenvaluesZ,
+          eigenvaluesEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volume,
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempForwardUpdatesZ,
+          tempBackwardUpdatesZ,
+          riemannEnumerator,
+          tempMaxEigenvalueZ,
+          maxEigenvalueEnumerator
+        );
+      }
+      endParallelDfor
+#endif
+
+        parallelDPlusOneForWithSchedulerInstructions(
+          volume,
+          internal::rangeOverVolumesTimesUnknowns(
+            NumberOfVolumesPerAxisInPatch,
+            NumberOfUnknowns
+          ),
+          loopPlacement
+        ) {
+        loopbodies::updateSolutionWithRiemannSolution(
+          tempLeftUpdatesX,
+          tempRightUpdatesX,
+          tempBelowUpdatesY,
+          tempAboveUpdatesY,
+          tempBackwardUpdatesZ,
+          tempForwardUpdatesZ,
+          riemannEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          tarch::la::slice<Dimensions>(volume, 0),
+          volume(Dimensions),
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+      endParallelDfor
+    }
+
+    if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
+      double newMaxEigenvalue = 0.0;
+      dfor(volume, NumberOfVolumesPerAxisInPatch) {
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          loopbodies::reduceMaxEigenvalue(
+            tempMaxEigenvalueX,
+            tempMaxEigenvalueY,
+            tempMaxEigenvalueZ,
+            maxEigenvalueEnumerator,
+            patchIndex,
+            volume
+          )
+        );
+      }
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+    }
+  }
+  endParallelFor
+
+    if (tempFluxX != nullptr) {
+    tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
+  }
+  if (tempFluxY != nullptr) {
+    tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
+  }
+  if (tempFluxZ != nullptr) {
+    tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
+  }
+  if (tempNonconservativeProductX != nullptr) {
+    tarch::freeMemory(tempNonconservativeProductX, tarch::MemoryLocation::Heap);
+  }
+  if (tempNonconservativeProductY != nullptr) {
+    tarch::freeMemory(tempNonconservativeProductY, tarch::MemoryLocation::Heap);
+  }
+  if (tempNonconservativeProductZ != nullptr) {
+    tarch::freeMemory(tempNonconservativeProductZ, tarch::MemoryLocation::Heap);
+  }
+  if (tempLeftUpdatesX != nullptr) {
+    tarch::freeMemory(tempLeftUpdatesX, tarch::MemoryLocation::Heap);
+  }
+  if (tempRightUpdatesX != nullptr) {
+    tarch::freeMemory(tempRightUpdatesX, tarch::MemoryLocation::Heap);
+  }
+  if (tempBelowUpdatesY != nullptr) {
+    tarch::freeMemory(tempBelowUpdatesY, tarch::MemoryLocation::Heap);
+  }
+  if (tempAboveUpdatesY != nullptr) {
+    tarch::freeMemory(tempAboveUpdatesY, tarch::MemoryLocation::Heap);
+  }
+  if (tempBackwardUpdatesZ != nullptr) {
+    tarch::freeMemory(tempBackwardUpdatesZ, tarch::MemoryLocation::Heap);
+  }
+  if (tempForwardUpdatesZ != nullptr) {
+    tarch::freeMemory(tempForwardUpdatesZ, tarch::MemoryLocation::Heap);
+  }
+  if (tempEigenvaluesX != nullptr) {
+    tarch::freeMemory(tempEigenvaluesX, tarch::MemoryLocation::Heap);
+  }
+  if (tempEigenvaluesY != nullptr) {
+    tarch::freeMemory(tempEigenvaluesY, tarch::MemoryLocation::Heap);
+  }
+  if (tempEigenvaluesZ != nullptr) {
+    tarch::freeMemory(tempEigenvaluesZ, tarch::MemoryLocation::Heap);
+  }
+  if (tempMaxEigenvalueX != nullptr) {
+    tarch::freeMemory(tempMaxEigenvalueX, tarch::MemoryLocation::Heap);
+  }
+  if (tempMaxEigenvalueY != nullptr) {
+    tarch::freeMemory(tempMaxEigenvalueY, tarch::MemoryLocation::Heap);
+  }
+  if (tempMaxEigenvalueZ != nullptr) {
+    tarch::freeMemory(tempMaxEigenvalueZ, tarch::MemoryLocation::Heap);
+  }
+
+  logTraceOut("timeStepWithRiemannPatchwiseHeapStateless()");
+}

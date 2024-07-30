@@ -16,8 +16,7 @@ compromise between accuracy and stability.
 # Build executable
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=../../../../python
-export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 
 python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6
 ~~~~~~~~~~~~~~~~~~~~~~~

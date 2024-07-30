@@ -10,8 +10,8 @@ class InitialCondition(AbstractRKFDActionSet):
   TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+    parallelDfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+      int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
@@ -19,7 +19,7 @@ class InitialCondition(AbstractRKFDActionSet):
         {{GRID_IS_CONSTRUCTED}}
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
+    } endParallelDfor
     
     // relevant for tracing et al which kicks in if and only if cell has been
     // updated
