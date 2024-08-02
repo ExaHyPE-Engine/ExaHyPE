@@ -30,7 +30,7 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 sleep(3)
 
-from actionsets.InitDG import InitDofsDGTest1
+from actionsets.InitDG import InitDofsDGTest1, InitDofsIntermediatePhaseTest1
 
 
 
@@ -96,6 +96,8 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   solver_tolerance = 1e-6,
   custom_init_actionset=InitDofsDGTest1
 )
+
+solver.preprocessing_action_set = InitDofsIntermediatePhaseTest1(solver)
 
 #! [Instantiate solver]
 

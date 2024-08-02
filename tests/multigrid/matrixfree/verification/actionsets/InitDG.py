@@ -207,61 +207,6 @@ class InitDofsDGTest1(ActionSet):
   logTraceOutWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
   
-  templateTouchCellLastTime = """
-    if ( 
-    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
-  ) {
-    // perform averaging on faces...
-
-    // if face data 
-    for (int f=0; f<TwoTimesD; f++) {
-      if ( fineGridFaces{{SOLVER_NAME}}(f).getType() ==  facedata::{{SOLVER_NAME}}::Type::Interior ) {
-        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
-          repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFaces{{SOLVER_NAME}}(f).getProjection();
-
-        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
-          fineGridFaces{{SOLVER_NAME}}(f).setSolution(
-            i,
-            // again, hacky but we need the correct face solutions in scope now.
-            // in general, this will be done twice, but correctly both times, as 
-            // we do not update the projections again...
-            repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
-          );
-      }
-      else if ( fineGridFaces{{SOLVER_NAME}}(f).getType() ==  facedata::{{SOLVER_NAME}}::Type::Boundary ) {
-        int startIndexProjection = 
-          f < Dimensions ?
-          repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
-          0;
-
-        auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
-        for (int row=0; row<boundaryMatrix.rows(); row++)
-        {
-          double rowSolution = 0;
-          for (int col=0; col<boundaryMatrix.cols(); col++)
-          {
-            rowSolution += boundaryMatrix( row, col ) * fineGridFaces{{SOLVER_NAME}}(f).getProjection( col + startIndexProjection );
-          }
-          // place this solution into the face
-          fineGridFaces{{SOLVER_NAME}}(f).setSolution( row, rowSolution );
-        }
-      }
-    }
-
-    // now let's finish updating rhs
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
-    for (int f=0; f<TwoTimesD; f++)
-    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
-      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
-
-    // next, we need to project solution on face onto the cell...
-    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
-
-    fineGridCell{{SOLVER_NAME}}.setRhs( fineGridCell{{SOLVER_NAME}}.getRhs( ) + projection );
-
-  }
-  """
-  
   def __init__(self,
                solver):
     super( InitDofsDGTest1, self ).__init__()
@@ -280,9 +225,6 @@ class InitDofsDGTest1(ActionSet):
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
-      pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = jinja2.Template(self.templateTouchCellLastTime).render(**self.d)
       pass
     return result
 
@@ -322,6 +264,154 @@ class InitDofsDGTest1(ActionSet):
 #include "peano4/utils/Loop.h"
 #include<numeric> // for std::iota
 #include <random>
+"""
+
+class InitDofsIntermediatePhaseTest1(ActionSet):
+  """!
+  Perform some intermediate actions in test 1, namely:
+    - Fix the face solution, with projections that we get from the init phase
+    - Fix the rhs, using new face solution projected back into cell
+
+  This action set will run first, so we can fix the face solution (perhaps redundantly,
+  as the first TFFT in the solver will do this anyway), and then we fix the rhs during 
+  the TCFT of this action set, which will be run first.
+
+  We only want to do this once, so we have a static int to keep count...
+  """
+
+  templateEndTraversal="""
+  Counter++;
+  """
+
+  templateTouchFaceFirstTime="""
+  if ( 
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior
+    and
+    Counter==0
+  ) {
+    logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
+
+    // project the u^\pm into a temporary vector
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
+      repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
+
+    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+      fineGridFace{{SOLVER_NAME}}.setSolution(
+        i,
+        repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
+      );
+    logTraceOutWith1Argument( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution() );
+  }
+
+  else if (
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary
+    and
+    Counter==0
+  ) {
+    logTraceInWith1Argument( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
+    // Essentially what we do here is fix the solution on the boundary to be 
+    // the inner-side projection.
+
+    // skip halfway along the projection vector if we are on face 0 or 1
+    int startIndexProjection = 
+      marker.getSelectedFaceNumber() < Dimensions ?
+      repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+      0;
+
+    auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+
+    /*
+    Here we do slightly messy matrix multiplication. We would just multiply the boundary matrix
+    by the projection vector, and place that into the solution, but here we only want to capture
+    half of the projection vector; the other half lies outside the computational domain and
+    should be fixed to 0.
+    */
+    for (int row=0; row<boundaryMatrix.rows(); row++)
+    {
+      double rowSolution = 0;
+      for (int col=0; col<boundaryMatrix.cols(); col++)
+      {
+        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{SOLVER_NAME}}.getProjection( col + startIndexProjection );
+      }
+      // place this solution into the face
+      fineGridFace{{SOLVER_NAME}}.setSolution( row, rowSolution );
+    }
+
+    logTraceOut( "updateFaceSolution::InteriorPenalty");
+  }
+
+
+"""
+
+  templateTouchCellFirstTime="""
+    if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse
+    and
+    Counter==0
+  ) {
+    // now let's finish updating rhs
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
+    for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+
+    // next, we need to project solution on face onto the cell...
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
+
+    fineGridCell{{SOLVER_NAME}}.setRhs( fineGridCell{{SOLVER_NAME}}.getRhs( ) + projection );
+
+  }
+  """
+
+  def __init__(self, solver):
+    super(InitDofsIntermediatePhaseTest1, self).__init__(0, False)
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+
+  def get_attributes(self):
+    return """
+    static int Counter;
+  """
+
+  def get_static_initialisations(self, full_qualified_classname):
+    return f"""
+  int {full_qualified_classname}::Counter = 0;
+    """
+  
+  def get_body_of_operation(self, operation_name):
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      return jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      return jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      return jinja2.Template(self.templateEndTraversal).render(**self.d)
+    return ""
+  
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_") + "IntermediateSolve"
+  
+  def user_should_modify_template(self):
+    return False
+  
+  def get_includes(self):
+    """!
+   
+    """    
+    return """
+#include "repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
 """
 
 
