@@ -51,9 +51,8 @@ class Context{
     this->scenario->setPointSourceVector(Q,x,t,dt,forceVector,n);
   }
 
-  void setRefinementCriteria(exahype2::solvers::aderdg::Solver* solver,
-                             std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria){
-    this->scenario->refinementCriteria(solver,criteria);
+  void setRefinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria){
+    this->scenario->refinementCriteria(criteria);
   }
 
 };

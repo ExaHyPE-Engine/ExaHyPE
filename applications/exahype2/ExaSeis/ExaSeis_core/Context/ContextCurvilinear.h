@@ -9,7 +9,7 @@
 #include "curvi/geometry/block.h"
 #include "curvi/interface/interface.h"
 #include "curvi/kdTree/root.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+// #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class ContextCurvilinear: public Context<Shortcuts, basisSize> {
@@ -68,7 +68,7 @@ public:
 
     if (tarch::la::equals(t, 0.0)) {
       Shortcuts     s;
-      int           numberOfData = s.SizeVariables + s.SizeParameters;
+      int           numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
       kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
       kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
 
@@ -185,7 +185,7 @@ public:
 
   void getElementSize(const double* const luh, tarch::la::Vector<Dimensions, double>& dx) {
     Shortcuts     s;
-    int           numberOfData = s.SizeVariables + s.SizeParameters;
+    int           numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
     dx[0] = 0;
@@ -212,7 +212,7 @@ public:
     int center_i2 = int(std::floor(basisSize / 2.0));
 
     Shortcuts     s;
-    int           numberOfData = s.SizeVariables + s.SizeParameters;
+    int           numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
     center[0] = (luh[id_xyzf(center_i1, center_i1, center_i1, s.curve_grid + 0)]

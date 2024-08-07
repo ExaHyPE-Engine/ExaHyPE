@@ -50,15 +50,13 @@ public:
     forceVector[s.sigma + 4] = f;
   };
 
-  virtual void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Variables>*>& criteria
-  ) override {
-    criteria.push_back(new Refinement::RefinePositionCustomCoordinates<Variables>(
-      m_pointSourceLocation,
-      basisSize,
-      static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0],
-      static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][1]
-    ));
+  virtual void refinementCriteria(std::vector<Refinement::RefinementCriterion<Variables>*>& criteria) override {
+    // criteria.push_back(new Refinement::RefinePositionCustomCoordinates<Variables>(
+    //   m_pointSourceLocation,
+    //   basisSize,
+    //   static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0],
+    //   static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][1]
+    // ));
   };
 };
 

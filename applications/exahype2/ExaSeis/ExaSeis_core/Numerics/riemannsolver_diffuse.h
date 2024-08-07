@@ -71,9 +71,9 @@ namespace Numerics {
   template <class Shortcuts>
   void right_eigenvectors(const double Q[], const int direction, double eigenvectors[]) {
     Shortcuts s;
-    std::fill_n(eigenvectors, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
+    std::fill_n(eigenvectors, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
-    kernels::idx2 idx2(s.SizeVariables + s.SizeParameters, s.SizeVariables + s.SizeParameters);
+    kernels::idx2 idx2(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
     double        rho     = Q[s.rho];
     double        cp      = Q[s.cp];
     double        cs      = Q[s.cs];
@@ -122,10 +122,10 @@ namespace Numerics {
     eigenvectors[idx2(12, s.v + 0)]     = -cp;
 
 #ifdef Asserts
-    for (int i = 0; i < s.SizeVariables + s.SizeParameters; i++) {
-      for (int j = 0; j < s.SizeVariables + s.SizeParameters; j++) {
+    for (int i = 0; i < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; i++) {
+      for (int j = 0; j < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; j++) {
         if (!std::isfinite(eigenvectors[idx2(i, j)])) {
-          for (int k = 0; k < s.SizeVariables + s.SizeParameters; k++) {
+          for (int k = 0; k < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; k++) {
             std::cout << Q[k] << std::endl;
           }
         }
@@ -138,8 +138,8 @@ namespace Numerics {
   template <class Shortcuts>
   void right_eigenvectors_inverse(const double Q[], const int direction, double eigenvectors[]) {
     Shortcuts s;
-    std::fill_n(eigenvectors, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
-    kernels::idx2 idx2(s.SizeVariables + s.SizeParameters, s.SizeVariables + s.SizeParameters);
+    std::fill_n(eigenvectors, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
+    kernels::idx2 idx2(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
 
     double rho     = Q[s.rho];
     double cp      = Q[s.cp];
@@ -189,10 +189,10 @@ namespace Numerics {
     eigenvectors[idx2(12, s.alpha)] = (cp * rho * Q[s.v + 0] * i_alpha + 2 * Q[s.sigma + 0]) / (rho * (cp * cp) * 2.0);
 
 #ifdef Asserts
-    for (int i = 0; i < s.SizeVariables + s.SizeParameters; i++) {
-      for (int j = 0; j < s.SizeVariables + s.SizeParameters; j++) {
+    for (int i = 0; i < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; i++) {
+      for (int j = 0; j < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; j++) {
         if (!std::isfinite(eigenvectors[idx2(i, j)])) {
-          for (int k = 0; k < s.SizeVariables + s.SizeParameters; k++) {
+          for (int k = 0; k < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; k++) {
             std::cout << Q[k] << std::endl;
           }
         }
@@ -227,17 +227,17 @@ namespace Numerics {
     Shortcuts s;
 
     // eigenvalues left and right
-    double Ev_R[(s.SizeVariables + s.SizeParameters)];
-    double Ev_L[(s.SizeVariables + s.SizeParameters)];
-    std::fill_n(Ev_R, (s.SizeVariables + s.SizeParameters), 0.0);
-    std::fill_n(Ev_L, (s.SizeVariables + s.SizeParameters), 0.0);
+    double Ev_R[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables)];
+    double Ev_L[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables)];
+    std::fill_n(Ev_R, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
+    std::fill_n(Ev_L, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     eigenvalues<Shortcuts>(Q_R, Ev_R);
     eigenvalues<Shortcuts>(Q_L, Ev_L);
 
     double ev_max = std::numeric_limits<double>::min();
 
-    for (int i = 0; i < s.SizeVariables; i++) {
+    for (int i = 0; i < s.NumberOfUnknowns; i++) {
       ev_max = std::max(std::abs(Ev_R[i]), ev_max);
       ev_max = std::max(std::abs(Ev_L[i]), ev_max);
     }
@@ -250,28 +250,28 @@ namespace Numerics {
   template <class Shortcuts>
   void computeAbsA(const double* const Q_L, const double* const Q_R, double absA[], int direction) {
     Shortcuts     s;
-    kernels::idx2 idx2(Dimensions, s.SizeVariables);
-    kernels::idx2 idxA(s.SizeVariables + s.SizeParameters, s.SizeVariables + s.SizeParameters);
-    std::fill_n(absA, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
+    kernels::idx2 idx2(Dimensions, s.NumberOfUnknowns);
+    kernels::idx2 idxA(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
+    std::fill_n(absA, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     // transposed eigenvectors and inverse eigenvectors
-    double R[(s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters)];
-    std::fill_n(R, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
-    double R_inv[(s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters)];
-    std::fill_n(R_inv, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
+    double R[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables)];
+    std::fill_n(R, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
+    double R_inv[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables)];
+    std::fill_n(R_inv, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     // Average Q
-    double Qavg[s.SizeVariables + s.SizeParameters];
-    std::fill_n(Qavg, (s.SizeVariables + s.SizeParameters), 0.0);
+    double Qavg[s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables];
+    std::fill_n(Qavg, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     // Eigenvalues for the average
-    double Ev[(s.SizeVariables + s.SizeParameters)];
-    std::fill_n(Ev, (s.SizeVariables + s.SizeParameters), 0.0);
+    double Ev[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables)];
+    std::fill_n(Ev, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     double ev_max = computeSmax<Shortcuts>(Q_L, Q_R);
 
     // Compute average of both sides
-    for (int k = 0; k < s.SizeVariables + s.SizeParameters; k++) {
+    for (int k = 0; k < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; k++) {
       Qavg[k] = (Q_L[k] + Q_R[k]) * 0.5;
     }
 
@@ -285,44 +285,44 @@ namespace Numerics {
     right_eigenvectors_inverse<Shortcuts>(Qavg, direction, R_inv);
 
     // We store T R = R^T T^-1 in R (nice it's already transposed there ;))
-    for (int i = 0; i < s.SizeVariables + s.SizeParameters; i++) {
+    for (int i = 0; i < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; i++) {
       rotate_dofs_inverse<Shortcuts>(R + idxA(i, 0), direction);
     }
 
     // we store R^-1*T^-1 in R^-1
-    for (int i = 0; i < s.SizeVariables + s.SizeParameters; i++) {
+    for (int i = 0; i < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; i++) {
       rotate_dofs_inverse<Shortcuts>(R_inv + idxA(i, 0), direction);
     }
 
     eigenvalues<Shortcuts>(Qavg, Ev);
 
     // Compute HLLEM anti diffusion
-    for (int i = 0; i < s.SizeVariables + s.SizeParameters; i++) {
+    for (int i = 0; i < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; i++) {
       Ev[i] = 1.0 - std::abs(Ev[i]) / ev_max; // we store deltaLambda directly in EV
     }
 
     // Add Rusanov diffusion
-    for (int i = 0; i < s.SizeVariables + s.SizeParameters; i++) {
+    for (int i = 0; i < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; i++) {
       absA[idxA(i, i)] = -0.5 * ev_max;
     }
     // std::cout << ev_max << std::endl;
     // std::cout <<"absA" << std::endl;
-    /* for(int i=0; i< s.SizeParameters+s.SizeVariables; i++){ */
-    /*   for(int j=0; j< s.SizeParameters+s.SizeVariables; j++){ */
+    /* for(int i=0; i< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; i++){ */
+    /*   for(int j=0; j< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; j++){ */
     /*     //std::cout << absA[idxA(i,j)] << ";"; */
     /*   } */
     /*   //std::cout << std::endl; */
     /* } */
 
-    for (int i = 0; i < s.SizeParameters + s.SizeVariables; i++) {
-      for (int j = 0; j < s.SizeParameters + s.SizeVariables; j++) {
+    for (int i = 0; i < s.NumberOfAuxiliaryVariables + s.NumberOfUnknowns; i++) {
+      for (int j = 0; j < s.NumberOfAuxiliaryVariables + s.NumberOfUnknowns; j++) {
         R[idxA(j, i)] = R[idxA(j, i)] * Ev[j];
       }
     }
 
-    for (int i = 0; i < s.SizeParameters + s.SizeVariables; i++) {
-      for (int j = 0; j < s.SizeParameters + s.SizeVariables; j++) {
-        // for(int k=0; k< s.SizeParameters+s.SizeVariables; k++){
+    for (int i = 0; i < s.NumberOfAuxiliaryVariables + s.NumberOfUnknowns; i++) {
+      for (int j = 0; j < s.NumberOfAuxiliaryVariables + s.NumberOfUnknowns; j++) {
+        // for(int k=0; k< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; k++){
         for (int k = 6; k < 10; k++) { // This needs clarification: Maurizio only uses EV 7-10 and not all of them
           absA[idxA(i, j)] += 0.5 * ev_max * R[idxA(k, i)] * R_inv[idxA(k, j)];
         }
@@ -330,8 +330,8 @@ namespace Numerics {
     }
 
     /* //std::cout <<"absA" << std::endl; */
-    /* for(int i=0; i< s.SizeParameters+s.SizeVariables; i++){ */
-    /*   for(int j=0; j< s.SizeParameters+s.SizeVariables; j++){ */
+    /* for(int i=0; i< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; i++){ */
+    /*   for(int j=0; j< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; j++){ */
     /*     //std::cout << absA[idxA(i,j)] << ";"; */
     /*   } */
     /*   //std::cout << std::endl; */
@@ -345,33 +345,33 @@ namespace Numerics {
     Shortcuts s;
 
     // approximate graidient
-    double gradQ[(s.SizeVariables + s.SizeParameters) * (Dimensions)];
-    std::fill_n(gradQ, ((s.SizeVariables + s.SizeParameters) * Dimensions), 0.0);
+    double gradQ[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (Dimensions)];
+    std::fill_n(gradQ, ((s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * Dimensions), 0.0);
 
     // average state
-    double ncp[s.SizeVariables + s.SizeParameters];
-    std::fill_n(ncp, (s.SizeVariables + s.SizeParameters), 0.0);
+    double ncp[s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables];
+    std::fill_n(ncp, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     // average state
-    double Qavg[s.SizeVariables + s.SizeParameters];
-    std::fill_n(Qavg, (s.SizeVariables + s.SizeParameters), 0.0);
+    double Qavg[s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables];
+    std::fill_n(Qavg, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
-    kernels::idx2 idx2(Dimensions, s.SizeVariables + s.SizeParameters);
-    kernels::idx2 idxA(s.SizeVariables + s.SizeParameters, s.SizeVariables + s.SizeParameters);
+    kernels::idx2 idx2(Dimensions, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
+    kernels::idx2 idxA(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
 
     // HLLEM diffusion matrices;
-    double absA[(s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters)];
-    std::fill_n(absA, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
+    double absA[(s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables)];
+    std::fill_n(absA, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables) * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0.0);
 
     computeAbsA<Shortcuts>(QL_, QR_, absA, direction);
 
     // approximate gradient on node
-    for (int k = 0; k < s.SizeVariables + s.SizeParameters; k++) {
+    for (int k = 0; k < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; k++) {
       gradQ[idx2(direction, k)] = (QR_[k] - QL_[k]);
     }
 
     // compute average on node
-    for (int k = 0; k < s.SizeVariables + s.SizeParameters; k++) {
+    for (int k = 0; k < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; k++) {
       Qavg[k] = (QL_[k] + QR_[k]) * 0.5;
     }
     assertion2(!tarch::la::equals(Qavg[s.rho], 0.0), QL_[s.rho], QR_[s.rho]);
@@ -380,38 +380,38 @@ namespace Numerics {
     solver->nonConservativeProduct(Qavg, gradQ, ncp);
 
     /* std::cout <<"ncp" << std::endl; */
-    /* for(int j=0; j< s.SizeParameters+s.SizeVariables; j++){ */
+    /* for(int j=0; j< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; j++){ */
     /*   std::cout << ncp[j] << ";"; */
     /* } */
     /* std::cout << std::endl; */
 
     /* std::cout <<"Qavg" << std::endl; */
-    /* for(int j=0; j< s.SizeParameters+s.SizeVariables; j++){ */
+    /* for(int j=0; j< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; j++){ */
     /*   std::cout << Qavg[j] << ";"; */
     /* } */
     /* std::cout << std::endl; */
 
     /* std::cout <<"gradQ" << std::endl; */
-    /* for(int j=0; j< s.SizeParameters+s.SizeVariables; j++){ */
+    /* for(int j=0; j< s.NumberOfAuxiliaryVariables+s.NumberOfUnknowns; j++){ */
     /*   std::cout << gradQ[idx2(direction,j)] << ";"; */
     /* } */
     /* std::cout << std::endl; */
 
-    for (int k = 0; k < s.SizeVariables; k++) {
-      for (int l = 0; l < s.SizeVariables + s.SizeParameters; l++) {
+    for (int k = 0; k < s.NumberOfUnknowns; k++) {
+      for (int l = 0; l < s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables; l++) {
         FR_[k] += absA[idxA(k, l)] * gradQ[idx2(direction, l)];
       }
     }
 
     //    std::cout <<"FR" << std::endl;
-    /*  for(int j=0; j< s.SizeVariables; j++){  */
+    /*  for(int j=0; j< s.NumberOfUnknowns; j++){  */
     /*    std::cout << FR_[j] << ";";  */
     /*  }  */
     /* std::cout << std::endl; */
 
-    std::copy_n(FR_, s.SizeVariables, FL_);
+    std::copy_n(FR_, s.NumberOfUnknowns, FL_);
 
-    for (int k = 0; k < s.SizeVariables; k++) {
+    for (int k = 0; k < s.NumberOfUnknowns; k++) {
       FR_[k] -= 0.5 * ncp[k];
       FL_[k] += 0.5 * ncp[k];
     }
