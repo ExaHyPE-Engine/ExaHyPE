@@ -326,8 +326,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                   solver,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lduh,
-  {{SOLUTION_STORAGE_PRECISION}}* __restrict__                      lQhbnd,
-  {{SOLUTION_STORAGE_PRECISION}}* __restrict__                      lFhbnd,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                      lQhbnd,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                      lFhbnd,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQi,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ rhs,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFi,
