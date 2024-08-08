@@ -64,3 +64,21 @@ Return the name of the object that will be created for this solver.
   def add_to_abstract_solver(self, header, implementation):
     self._abstract_solver_header_extras         = header
     self._abstract_solver_implementation_extras = implementation
+
+  def add_to_vertex_data(self, name, size):
+    """!
+    Add in extra attributes on the fly
+    """
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( name, size ) )
+
+  def add_to_cell_data(self, name, size):
+    """!
+    Add in extra attributes on the fly
+    """
+    self._cell_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( name, size ) )
+
+  def add_to_face_data(self, name, size):
+    """!
+    Add in extra attributes on the fly
+    """
+    self._face_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( name, size ) )

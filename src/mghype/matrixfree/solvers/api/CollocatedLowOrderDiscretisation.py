@@ -167,15 +167,6 @@ class CollocatedLowOrderDiscretisation(Solver):
   def add_use_statements(self, observer):
     super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
 
-  def add_to_vertex_data(self, name, size=None):
-    """!
-    Use this method to add a DastGen array of given name and size to the
-    vertex datamodel.
-    """
-    if size is None:
-      size = self._unknowns_per_vertex
-    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( name, size ) )
-
   def add_to_plot(self, observer):
     """!
     
