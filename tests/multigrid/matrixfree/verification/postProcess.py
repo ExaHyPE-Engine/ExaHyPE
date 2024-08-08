@@ -1,10 +1,15 @@
 import numpy as np
 
-def parse_patch_file(file_path):
+def parse_patch_file(file_path, solver_type):
     """
     Transform data from Peano patch file into numpy array
     in the format [x_vertex, y_vertex, value]
+
+    :arg file_path: path to Peano patch file
+    :solver_type: "CG" or "DG"
     """
+
+    if solver_type not in ["CG", "DG"]: raise ValueError("Invalid solver type. Expected 'CG' or 'DG'.")
     
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -38,21 +43,26 @@ def parse_patch_file(file_path):
         else:
             i += 1
 
-    # keep only unique rows (one vertex -- one entry)
-    tolerance = 1e-9
-    data_unique = []
+    if solver_type == 'CG':
+        # keep only unique rows (one vertex -- one entry)
+        tolerance = 1e-9
+        data_unique = []
 
-    for row in data:
-        # Check if row=[x,y,val] is close to any existing row
-        if not any( np.all(np.isclose(row, unique_row, atol=tolerance)) for unique_row in data_unique ):
-            data_unique.append(row)
+        for row in data:
+            # Check if row=[x,y,val] is close to any existing row
+            if not any( np.all(np.isclose(row, unique_row, atol=tolerance)) for unique_row in data_unique ):
+                data_unique.append(row)
+        
+        # assert:
+        # size of data = 4*N^2
+        # size of data_unique = (N+1)^2, where N is the number of cells
+        assert np.sqrt(np.shape(data)[0]) == (np.sqrt(np.shape(data_unique)[0]) - 1) * 2
+        result = np.array(data_unique)
+
+    elif solver_type == 'DG':
+        result = result = np.array(data)
     
-    # assert:
-    # size of data = 4*N^2
-    # size of data_unique = (N+1)^2, where N is the number of cells
-    assert np.sqrt(np.shape(data)[0]) == (np.sqrt(np.shape(data_unique)[0]) - 1) * 2
-    
-    return np.array(data_unique)
+    return result
 
 def reorder_array(array1, array2):
     """
