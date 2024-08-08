@@ -144,7 +144,7 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   double offset_y = x[1] - h[1] * 0.5;
   double offset_z = x[2] - h[2] * 0.5;
 
-  kernels::idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
   for (int k = 0; k < Order + 1; k++) { 
     double computational_z = (offset_z + h[2] * QuadraturePoints1d[Order-k]); //QuadPoints are in opposite order to exa1
@@ -275,7 +275,7 @@ void ::exahype2::elastic::ElasticSolver::flux(
 
   std::fill_n(F, NumberOfUnknowns, 0.0);
 
-  kernels::idx2 idx_pml(Dimensions, 9);
+  idx2 idx_pml(Dimensions, 9);
 
   switch (normal) {
   case 0: {
@@ -325,7 +325,7 @@ void ::exahype2::elastic::ElasticSolver::nonconservativeProduct(
   double* __restrict__ BgradQ // BgradQ[36]
 ) {
 
-  kernels::idx2 idx_pml(Dimensions, 9);
+  idx2 idx_pml(Dimensions, 9);
   double        rho       = Q[s.rho];
   double        cp        = Q[s.cp];
   double        cs        = Q[s.cs];
@@ -426,7 +426,7 @@ void ::exahype2::elastic::ElasticSolver::algebraicSource(
   double alpha_y = (pml_alpha_const + pml_alpha_scalar * dmp_pml_y);
   double alpha_z = (pml_alpha_const + pml_alpha_scalar * dmp_pml_z);
 
-  kernels::idx2 idx_pml(Dimensions, 9);
+  idx2 idx_pml(Dimensions, 9);
 
   const double* Q_pml = Q + s.pml;
   double*       S_pml = S + s.pml;
@@ -482,7 +482,7 @@ void ::exahype2::elastic::ElasticSolver::multiplyMaterialParameterMatrix(
   double lambda  = rho * cp * cp - 2 * mu;
   double rho_inv = 1.0 / (rho * jacobian);
 
-  kernels::idx2 idx_pml(Dimensions, 9);
+  idx2 idx_pml(Dimensions, 9);
 
   // Rhs uses the same formula regardless of dimension, hence no switch necessary
 

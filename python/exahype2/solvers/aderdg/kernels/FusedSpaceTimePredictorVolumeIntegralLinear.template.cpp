@@ -342,8 +342,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_SOURCE %}
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       solver.algebraicSource(
-        x[0],
-        t,
+        cellCentre,
+        timeStamp,
         lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
         lSi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}}
       );
