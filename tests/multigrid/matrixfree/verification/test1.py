@@ -1,3 +1,8 @@
+"""
+This test checks that the DG solver leaves the input invariant if the RHS is constructed as 
+b = A_DG * u_{random} and u = u_{random} is the initial guess.
+"""
+
 import os, sys
 import argparse
 import peano4

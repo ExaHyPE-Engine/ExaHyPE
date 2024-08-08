@@ -1,3 +1,9 @@
+"""
+The same as Test 3, but for DG.
+This tests checks that the DG solver converges to u_{random} for the RHS constructed as b = A_DG * u_{random} 
+with some random u_{random}.
+"""
+
 import os, sys
 import argparse
 import peano4
@@ -8,11 +14,6 @@ from time import sleep
 print( """
 
 Peano 4 multigrid solver using Discontinuous Galerkin
-      
-@Alex - in the init action set we set each cell value to 
-      be a random value. Then, we gather each of these (4 per cell),
-      apply the cell-cell matrix, and write each of these values into
-      the rhs. I also set the max_iterations to 10
 
   We set all the face values to 0.
       
@@ -30,7 +31,7 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 sleep(3)
 
-from actionsets.InitDG import InitDofsDGTest6
+from actionsets.InitDG import InitDofsDGTest6, InitDofsIntermediatePhaseTest6
 
 
 
@@ -62,7 +63,7 @@ matrices = mghype.api.matrixgenerators.GLMatrixFree(
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix, mass_matrix_scaling         = matrices.get_cell_mass_matrix()
+mass_matrix, mass_matrix_scaling         = matrices.get_cell_identity_matrix() # set identity instead of the mass matrix for the random solution test
 face_from_cell_projection, \
 face_from_cell_projection_scaling        = matrices.get_face_from_cell_matrix()
 cell_from_face_projection, \
@@ -93,9 +94,11 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 0.01,
+  solver_tolerance = 1e-6,
   custom_init_actionset=InitDofsDGTest6
 )
+
+solver.preprocessing_action_set = InitDofsIntermediatePhaseTest6(solver)
 
 #! [Instantiate solver]
 
@@ -120,7 +123,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_each_timestep    = args.plot_each_timestep,
-  max_iterations        = 10
+  max_iterations        = 1000
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )

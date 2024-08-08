@@ -71,7 +71,7 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               local_assembly_matrix_scaling=system_matrix_scaling,
                                                               mass_matrix = mass_matrix,
                                                               mass_matrix_scaling = maxx_matrix_scaling,
-                                                              solver_tolerance=1e-6,
+                                                              solver_tolerance=1e-9,
                                                               custom_init_actionset=InitDofsCollocatedRandomRhs,
                                                               custom_plot_actionset=[("rand","getRand")]
                                                             )

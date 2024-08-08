@@ -101,3 +101,18 @@ class BlockMatrix(ABC):
         :arg orientation: orientation of reference element
         """
         return self._Xi_F[ell][orientation]
+
+
+    def print_dictionary(self, input, indent=0):
+        """
+        Visualise nested dictionary
+        """
+
+        if type(input) == dict:
+            for k, v in input.items():
+                print(" "*indent + f"{k}:")
+                self.print_dictionary(v, indent+2)
+        else:
+            assert type(input) == np.ndarray
+            ##print(" "*indent + f"NumPy array of size {input.shape}")
+            print(" "*indent + f"{repr(input)}")
