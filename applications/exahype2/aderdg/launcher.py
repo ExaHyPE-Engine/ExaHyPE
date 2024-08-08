@@ -79,7 +79,7 @@ project = exahype2.Project(
 theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name  = scenario.__class__.__name__, order = order,
   min_cell_h = min_h, max_cell_h = max_h,
-  time_step_relaxation  = 0.5,
+  time_step_relaxation  = 0.9,
   unknowns              = scenario._equation.num_unknowns,
   auxiliary_variables   = scenario._equation.num_auxiliary_variables,
   initial_conditions    = scenario.initial_conditions(),
