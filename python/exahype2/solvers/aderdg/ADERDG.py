@@ -851,22 +851,6 @@ Material parameters:    """
 
         generated_kernels = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "SolutionUpdate.template.h",
-                cppfile_template=kernels_templates_prefix + "SolutionUpdate.template.cpp",
-                classname=kernels_output_path + "/SolutionUpdate",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(kernels_output_path + "/SolutionUpdate.h", generated=True)
-        output.makefile.add_cpp_file(kernels_output_path + "/SolutionUpdate.cpp", generated=True)
-
-        generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 headfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.h",
                 cppfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.cpp",
                 classname=kernels_output_path + "/MaxScaledEigenvalue",

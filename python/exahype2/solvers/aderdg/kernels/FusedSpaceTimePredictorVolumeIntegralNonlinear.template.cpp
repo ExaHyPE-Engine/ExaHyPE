@@ -8,6 +8,7 @@
 
 #include "DGMatrices.h"
 #include "Quadrature.h"
+#include "CellData.h"
 #include "PicardIteration.h"
 
 {% if USE_LIBXSMM %}
@@ -22,23 +23,42 @@
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pCompType* __restrict__                       lduh,
   pStoreType* __restrict__                      lQhbnd,
   pStoreType* __restrict__                      lFhbnd,
-  pCompType* __restrict__                       lQi,
-  pCompType* __restrict__                       rhs,
-  pCompType* __restrict__                       lFi,
-  pCompType* __restrict__                       lSi,
-  pCompType* __restrict__                       lQhi,
-  pCompType* __restrict__                       lFhi,
-  pCompType* __restrict__                       lShi,
-  pCompType* __restrict__                       gradQ,
-  const cStoreType* const __restrict__          luh,
+  cStoreType* const __restrict__                luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
   const double                                  timeStamp,
   const double                                  timeStepSize
 ) {
+
+  pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
+
+  pCompType* lQi   = memory + getlQiShift();
+  pCompType* lQhi  = memory + getlQhiShift();
+
+  pCompType* rhs  = memory + getrhsShift();
+
+  {% if USE_FLUX %}
+  pCompType* lFi   = memory + getlFiShift();
+  pCompType* lFhi  = memory + getlFhiShift();
+  {% else %}
+  pCompType* lFi   = nullptr;
+  {% endif %}
+
+  {% if USE_SOURCE or USE_NCP %}
+  pCompType* lSi   = memory + getlSiShift();
+  pCompType* lShi  = memory + getlShiShift();
+  {% else %}
+  pCompType* lSi   = nullptr;
+  {% endif %}
+
+  {% if USE_NCP %}
+  pCompType* gradQ = memory + getgradQShift();
+  {% else %}
+  pCompType* gradQ = nullptr;
+  {% endif %}
+
   // Assume dx[0] == dx[1] == dx[2]
   const double invDx = 1.0 / cellSize[0];
 
@@ -60,6 +80,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for (int it = 0; it < {{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}; it++) {
     dudxT_by_dx[it] = invDx * DGMatrices<pCompType>::dudx_T[it];
   }
+{% else %}
+    pCompType* dudxT_by_dx = nullptr;
 {% endif %}
 
   // 1: Trivial initial guess
@@ -80,11 +102,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       lSi,
       gradQ,
       new_lQi_slice,
-{% if USE_NCP %}
       dudxT_by_dx,
-{% else %}
-      nullptr,
-{% endif %}
       luh,
       cellCentre,
       cellSize,
@@ -275,30 +293,34 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //****** Volume Integral ******
   //*****************************
 
-  memset(lduh, 0, {{NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}} * sizeof(pCompType));
+  //define coefficient matrix coeffVolume
+  pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned({{ALIGNMENT}})));
+  for(int i=0; i<{{NUMBER_OF_DOF}}; i++){
+    for(int j=0; j<{{NUMBER_OF_DOF}}; j++){
+      coeffVolume[i*4+j] = Kxi_T[i*{{NUMBER_OF_DOF_PADDED}}+j] *
+        invDx * timeStepSize * Quadrature<pCompType>::iweights1[i];
+    }
+  }
 
 {% if USE_FLUX %}
   // Assume dx[0] == dx[1] == dx[2]
   for (int j = 0; j < {{NUMBER_OF_DOF_3D}}; j++) {
     for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
-      // x, also define coefficient matrix coeffVolume.
-      {{ m.gemm('lduh_x', 'lFhi', 'coeffVolume', 'lduh',
+      // x
+      {{ m.gemm('lduh_x', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
-        '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF),
-        true_B='Kxi_T',
-        true_alpha='Quadrature<pCompType>::weights2[i+j*'~NUMBER_OF_DOF~'] * invDx',
-        force_coeff_matrix=True) | indent(6) }}{##}
+        '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF) ) | indent(6) }}{##}
 
-      // y, reuse coeffVolume.
-      {{ m.gemm('lduh_y', 'lFhi', 'coeffVolume', 'lduh',
+      // y
+      {{ m.gemm('lduh_y', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~(NUMBER_OF_DOF*NUMBER_OF_DOF)~'+i)*'~NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
 
 {% if DIMENSIONS==3 %}
-      // z, reuse coeffVolume.
-      {{ m.gemm('lduh_z', 'lFhi', 'coeffVolume', 'lduh',
+      // z
+      {{ m.gemm('lduh_z', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~NUMBER_OF_DOF~'+i)*'~NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
@@ -310,10 +332,10 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if USE_NCP or USE_SOURCE %}
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     #ifdef SharedOMP
-    #pragma omp simd aligned(lduh,lShi:{{ALIGNMENT}})
+    #pragma omp simd aligned(luh,lShi:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-      lduh[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += Quadrature<pCompType>::weights3[xyz] * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+      luh[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += timeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
     }
   }
 {% endif %}
@@ -323,20 +345,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 }
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
-template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
+template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                   solver,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lduh,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                      lQhbnd,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                      lFhbnd,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ rhs,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lSi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQhi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFhi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lShi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ gradQ,
-  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__          luh,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                 lQhbnd,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                 lFhbnd,
+  {{SOLUTION_STORAGE_PRECISION}}* const __restrict__                luh,
   const tarch::la::Vector<Dimensions, double>&                      cellCentre,
   const tarch::la::Vector<Dimensions, double>&                      cellSize,
   const double                                                      timeStamp,

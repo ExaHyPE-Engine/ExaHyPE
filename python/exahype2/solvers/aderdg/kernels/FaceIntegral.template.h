@@ -16,7 +16,8 @@ void faceIntegral(
   const cCompType* const  lFhbnd,
   const int               direction,
   const int               orientation,
-  const double            inverseDxDirection
+  const double            inverseDxDirection,
+  const double            timeStepSize
 );
 
 {% for item in NAMESPACE -%}

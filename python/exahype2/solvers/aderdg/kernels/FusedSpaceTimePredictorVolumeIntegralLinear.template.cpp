@@ -8,6 +8,7 @@
 
 #include "DGMatrices.h"
 #include "Quadrature.h"
+#include "CellData.h"
 
 {% if USE_LIBXSMM %}
 #include "Gemms.h"
@@ -31,25 +32,34 @@
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pCompType* __restrict__                       lduh,
   pStoreType* __restrict__                      lQhbnd,
   pStoreType* __restrict__                      lFhbnd,
-  pCompType* __restrict__                       lQi,
-  pCompType* __restrict__                       lFi,
-  pCompType* __restrict__                       lSi,
-  pCompType* __restrict__                       lQhi,
-  pCompType* __restrict__                       lFhi,
-  pCompType* __restrict__                       lShi,
-  pCompType* __restrict__                       gradQ,
-  pCompType* __restrict__                       PSi,
-  pCompType* __restrict__                       PSderivatives,
-  const cStoreType* const __restrict__          luh,
+  cStoreType* const __restrict__                luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
   const double                                  timeStamp,
   const double                                  timeStepSize,
   const std::vector<int>&                       pointSources
 ) {
+
+
+  pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
+
+  pCompType* lQi   = memory + getlQiShift();
+  pCompType* lQhi  = memory + getlQhiShift();
+
+  pCompType* lFi   = memory + getlFiShift();
+  pCompType* lFhi  = memory + getlFhiShift();
+
+  {% if USE_SOURCE %}
+  pCompType* lSi   = memory + getlSiShift();
+  pCompType* lShi  = memory + getlShiShift();
+  {% endif %}
+
+  {% if USE_NCP %}
+  pCompType* gradQ = memory + getgradQShift();
+  {% endif %}
+
   const pCompType invDt = 1.0 / timeStepSize;
   const pCompType invDx = 1.0 / cellSize[0];
 
@@ -86,6 +96,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType dtavFac = 1.0;
 
 {% if USE_POINT_SOURCE %}
+
+  pCompType PSi[getPSiSize()] __attribute__((aligned({{ALIGNMENT}})));
+
   { // 1.5: Compute point source contribution
     std::memset(PSi, 0, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
 
@@ -560,15 +573,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   //*****************************
 
   // For linear non-conservative PDE, the volume integral is trivial, since it
-  // only involves the element mass matrix, which later will cancel.
-  memset(lduh, 0, {{NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}} * sizeof(pCompType));
+  // only involves the element mass matrix, which cancels out.
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     #ifdef SharedOMP
-    #pragma omp simd aligned(lduh,lFhi{{',lShi' if USE_SOURCE else ''}}:{{ALIGNMENT}})
+    #pragma omp simd aligned(luh,lFhi{{',lShi' if USE_SOURCE else ''}}:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-        lduh[xyz*{{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= Quadrature<pCompType>::weights3[xyz] *
+        luh[xyz*{{NUMBER_OF_DATA}} + n] -= timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
             (
 {% if USE_FLUX or USE_NCP %}
                 lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF**DIMENSIONS}}] // x
@@ -588,21 +600,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 }
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
-template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
+template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                   solver,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lduh,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                      lQhbnd,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                      lFhbnd,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lSi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lQhi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lFhi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ lShi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ gradQ,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ PSi,
-  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ PSderivatives,
-  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__          luh,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                 lQhbnd,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                 lFhbnd,
+  {{SOLUTION_STORAGE_PRECISION}}* const __restrict__                luh,
   const tarch::la::Vector<Dimensions, double>&                      cellCentre,
   const tarch::la::Vector<Dimensions, double>&                      cellSize,
   const double                                                      timeStamp,

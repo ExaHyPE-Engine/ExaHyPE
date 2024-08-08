@@ -15,7 +15,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   const cCompType* const  lFhbnd,
   const int               direction,
   const int               orientation,
-  const double            inverseDxDirection
+  const double            inverseDxDirection,
+  const double            timeStepSize
 ) {
   const cCompType* const FCoeff = (orientation == 0 ? DGMatrices<cCompType>::FLCoeff : DGMatrices<cCompType>::FRCoeff);
 
@@ -28,14 +29,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   switch (direction) {
   case 0: // x-faces, left-right flux.
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
-      const cCompType scaledWeight = scaling * Quadrature<cCompType>::weights2[zy];
+      const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[zy];
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         #ifdef SharedOMP
         #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
         #endif
-        for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-          lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
-            -= scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+        for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+          lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n]
+            -= Quadrature<cCompType>::iweights3[zy * {{NUMBER_OF_DOF}} + x] *
+              scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         }
       }
     }
@@ -43,14 +45,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   case 1: // y-faces
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        const cCompType scaledWeight = scaling * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
+        const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
           #ifdef SharedOMP
           #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
           #endif
-          for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
-              -= scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+          for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+            lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n]
+              -= Quadrature<cCompType>::iweights3[(z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x] *
+                scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
           }
         }
       }
@@ -58,14 +61,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   break;
   case 2: // z-faces
     for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
-      const cCompType scaledWeight = scaling * Quadrature<cCompType>::weights2[yx];
+      const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[yx];
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
         #ifdef SharedOMP
         #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
         #endif
-        for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-          lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
-            -= scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+        for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+          lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_DATA}} + n]
+            -= Quadrature<cCompType>::iweights3[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx] *
+              scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         }
       }
     }
@@ -79,6 +83,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const  lFhbnd,
   const int                                         direction,
   const int                                         orientation,
-  const double                                      inverseDxDirection
+  const double                                      inverseDxDirection,
+  const double                                      timeStepSize
 );
 {% endfor %}

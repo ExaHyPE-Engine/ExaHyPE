@@ -78,8 +78,6 @@ class Correction(AbstractADERDGActionSet):
       }
     } // for d
 
-    {{SOLUTION_UPDATE}}
-
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
@@ -87,15 +85,6 @@ class Correction(AbstractADERDGActionSet):
 
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0));
   }
-"""
-
-    _Template_SolutionUpdate = """
-    kernels::{{SOLVER_NAME}}::solutionUpdate(
-      luh,
-      luh,
-      lduh,
-      timeStepSize
-    );
 """
 
     _Template_RiemannSolver = """
@@ -132,16 +121,16 @@ class Correction(AbstractADERDGActionSet):
     _Template_FaceIntegral = """
         const double inverseDxDirection = 1.0 / marker.h()[d];
         kernels::{{SOLVER_NAME}}::faceIntegral(
-          lduh,
+          luh,
           FIn,
           direction,
           orientation,
-          inverseDxDirection
+          inverseDxDirection,
+          timeStepSize
         );
 """
 
     _Template_CorrectorAllocations = """
-    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[kernels::{{SOLVER_NAME}}::getUpdateSize()]{0.0};
     const int fluxElementsPerFace = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 """
 
@@ -191,9 +180,6 @@ class Correction(AbstractADERDGActionSet):
             d["CORRECTOR_ALLOCATIONS"] = jinja2.Template(
                 self._Template_CorrectorAllocations
             ).render(**d)
-            d["SOLUTION_UPDATE"] = jinja2.Template(
-                self._Template_SolutionUpdate
-            ).render(**d)
             d["FACE_INTEGRAL"] = jinja2.Template(self._Template_FaceIntegral).render(
                 **d
             )
@@ -217,9 +203,6 @@ class Correction(AbstractADERDGActionSet):
 #include "kernels/"""
             + self._solver._name
             + """/RiemannSolver.h"
-#include "kernels/"""
-            + self._solver._name
-            + """/SolutionUpdate.h"
 #include "kernels/"""
             + self._solver._name
             + """/MaxScaledEigenvalue.h"

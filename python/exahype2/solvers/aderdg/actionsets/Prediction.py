@@ -50,7 +50,6 @@ class Prediction(AbstractADERDGActionSet):
     _Template_TouchCellFirstTime_Core = """
     {{FUSED_PREDICTOR_VOLUME_INTEGRAL}}
     {{PROJECT_SOLUTION_TO_FACES}}
-    {{SOLUTION_UPDATE}}
 """
 
     _Template_TouchCellFirstTime_Epilogue = """
@@ -61,34 +60,6 @@ class Prediction(AbstractADERDGActionSet):
 """
 
     _Template_PredictorAllocations = """
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} memory[kernels::{{SOLVER_NAME}}::getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi           = memory + kernels::{{SOLVER_NAME}}::getlQiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi          = memory + kernels::{{SOLVER_NAME}}::getlQhiShift();
-
-    {% if LINEARITY=="linear" or USE_FLUX %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = memory + kernels::{{SOLVER_NAME}}::getlFiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = memory + kernels::{{SOLVER_NAME}}::getlFhiShift();
-    {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = nullptr;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = nullptr;
-    {% endif %}
-
-    {% if USE_SOURCE or (LINEARITY=="nonlinear" and USE_NCP) %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = memory + kernels::{{SOLVER_NAME}}::getlSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = memory + kernels::{{SOLVER_NAME}}::getlShiShift();
-    {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = nullptr;
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = nullptr;
-    {% endif %}
-
-    {% if USE_NCP %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = memory + kernels::{{SOLVER_NAME}}::getgradQShift();
-    {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = nullptr;
-    {% endif %}
-
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} lduh[kernels::{{SOLVER_NAME}}::getUpdateSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
 
     {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
     {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
@@ -98,12 +69,7 @@ class Prediction(AbstractADERDGActionSet):
     // Linear, without point sources
     int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
-      lduh, lQhbnd, lFhbnd,
-      lQi, lFi, lSi,
-      lQhi, lFhi, lShi,
-      gradQ,
-      nullptr, nullptr,
-      luh,
+      lQhbnd, lFhbnd, luh,
       marker.x(), marker.h(), timeStamp, timeStepSize,
       std::vector<int>() // Empty vector
     );
@@ -117,16 +83,10 @@ class Prediction(AbstractADERDGActionSet):
     );
 
     if (!pointSources.empty()) {
-      {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} PSi[kernels::{{SOLVER_NAME}}::getPSiSize()] __attribute__((aligned({{ALIGNMENT}})));
       // Linear, with point sources
       int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
-        lduh, lQhbnd, lFhbnd,
-        lQi, lFi, lSi,
-        lQhi, lFhi, lShi,
-        gradQ,
-        PSi, nullptr,
-        luh,
+        lQhbnd, lFhbnd, luh,
         marker.x(), marker.h(), timeStamp, timeStepSize,
         pointSources
       );
@@ -134,12 +94,7 @@ class Prediction(AbstractADERDGActionSet):
       // Linear, without point sources
       int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegralWithoutPointSources<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
-        lduh, lQhbnd, lFhbnd,
-        lQi, lFi, lSi,
-        lQhi, lFhi, lShi,
-        gradQ,
-        nullptr, nullptr,
-        luh,
+        lQhbnd, lFhbnd, luh,
         marker.x(), marker.h(), timeStamp, timeStepSize,
         pointSources
       );
@@ -147,16 +102,10 @@ class Prediction(AbstractADERDGActionSet):
 """
 
     _Template_FSTPVI_Nonlinear = """
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} rhs[({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}) * SpaceTimeBasisSize];
-
     // Nonlinear, without point sources
     int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
-      lduh, lQhbnd, lFhbnd,
-      lQi, rhs, lFi, lSi,
-      lQhi, lFhi, lShi,
-      gradQ,
-      luh,
+      lQhbnd, lFhbnd, luh,
       marker.x(), marker.h(), timeStamp, timeStepSize
     );
 """
@@ -311,21 +260,13 @@ class Prediction(AbstractADERDGActionSet):
     _Template_FaceIntegral = """
         const double inverseDxDirection = 1.0 / marker.h()[d];
         kernels::{{SOLVER_NAME}}::faceIntegral(
-          lduh,
+          luh,
           FIn,
           direction,
           orientation,
-          inverseDxDirection
+          inverseDxDirection,
+          timeStepSize
         );
-"""
-
-    _Template_SolutionUpdate = """
-    kernels::{{SOLVER_NAME}}::solutionUpdate(
-      luh,
-      luh,
-      lduh,
-      timeStepSize
-    );
 """
 
     def __init__(self, solver, guard, on_hanging_cells=False):
@@ -376,7 +317,6 @@ class Prediction(AbstractADERDGActionSet):
                     ] = self._Template_FSTPVI_Linear_Without_PS
             else:
                 d["FUSED_PREDICTOR_VOLUME_INTEGRAL"] = self._Template_FSTPVI_Nonlinear
-            d["SOLUTION_UPDATE"] = self._Template_SolutionUpdate
             if self._on_hanging_cells:
                 if self._use_custom_riemann_solver:
                     d["RIEMANN_SOLVER"] = jinja2.Template(
@@ -437,9 +377,6 @@ class Prediction(AbstractADERDGActionSet):
 #include "kernels/"""
             + self._solver._name
             + """/RiemannSolver.h"
-#include "kernels/"""
-            + self._solver._name
-            + """/SolutionUpdate.h"
 #include "kernels/"""
             + self._solver._name
             + """/FusedSpaceTimePredictorVolumeIntegral.h"
