@@ -95,8 +95,12 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 1e-6,
-  custom_init_actionset=InitDofsDGTest6
+  custom_init_actionset=InitDofsDGTest6,
+  custom_plot_actionset=[("rand","getRand")]
 )
+
+# add an extra field for the random vector
+solver.add_to_cell_data("rand", 1)
 
 solver.preprocessing_action_set = InitDofsIntermediatePhaseTest6(solver)
 
