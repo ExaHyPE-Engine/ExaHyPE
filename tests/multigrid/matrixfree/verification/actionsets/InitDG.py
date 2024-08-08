@@ -102,6 +102,7 @@ class InitDofsDGTest1(ActionSet):
         fineGridCell{{SOLVER_NAME}}.setSolution( solution );
         fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
         fineGridCell{{SOLVER_NAME}}.setResidual( residual );
+        fineGridCell{{SOLVER_NAME}}.setRand( solution );
 
         // now we need to compute all projections...
         auto faceProjections = repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * solution;
@@ -418,6 +419,7 @@ class InitDofsIntermediatePhaseTest1(ActionSet):
 class InitDofsDGTest6(InitDofsDGTest1):
   """!
   Inherit from class above and modify one template.
+  The only difference is that here we set the initial guess to 0.
   """
 
   def __init__(self,
@@ -473,6 +475,9 @@ class InitDofsDGTest6(InitDofsDGTest1):
           residual[i] = 0;
         }
 
+        // save the random field
+        fineGridCell{{SOLVER_NAME}}.setRand( solution );
+
         // set rhs...
         rhs =  repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
 
@@ -494,3 +499,9 @@ class InitDofsDGTest6(InitDofsDGTest1):
   
   logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
+
+class InitDofsIntermediatePhaseTest6(InitDofsIntermediatePhaseTest1):
+  """
+  Inherit from the class for test1.
+  """
+  pass
