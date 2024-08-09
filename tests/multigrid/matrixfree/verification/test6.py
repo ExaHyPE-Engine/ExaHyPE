@@ -50,7 +50,7 @@ args = parser.parse_args()
 
 
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
-                              namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
+                              namespace = [ "tests", "multigrid", "matrixfree", "test6" ]
                             )
 
 
@@ -72,7 +72,7 @@ approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
-  name = "DGPoisson",
+  name = "Test6",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
   unknowns_per_cell_node = 1,
