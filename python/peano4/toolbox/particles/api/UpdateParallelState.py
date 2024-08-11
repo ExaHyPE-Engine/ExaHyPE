@@ -145,18 +145,43 @@ class UpdateParallelState(ActionSet):
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
 
-  // Have left the domain in the previous mesh sweep. So we set it to virtual 
+  // Have left the domain in the previous mesh sweep. So we set it to virtual
   // now. After this iteration, the particle will be thrown away. This can only
-  // happen if the previous mesh sweep has altered the position, i.e. while we 
-  // set the particle to virtual here, some other tree will just receive this 
-  // one and set it local there. In most cases, this will be a replace of an 
+  // happen if the previous mesh sweep has altered the position, i.e. while we
+  // set the particle to virtual here, some other tree will just receive this
+  // one and set it local there. In most cases, this will be a replace of an
   // existing (virtual) particle copy.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
     logDebug( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
     _numberOfParticlesThatHaveLeftTheirDomain++;
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+
+    #if PeanoDebug > 0
+    int partID = p->getPartid();
+    #else
+    int partID = -1;
+    #endif
+
+    toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      "{{PARTICLE}}",
+      p->getX(),
+      partID,
+      true,
+      marker.x(),
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexFirstTime"
+    );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(
+      "{{PARTICLE}}",
+      p->getX(),
+      partID,
+      false,
+      marker.x(),
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexFirstTime"
+    );
   }
 }
 """
@@ -175,16 +200,42 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     p++;
   }
   else {
-    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
-    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
-    #if !defined(Parallel)
-    assertion2(
-      ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
-      (*p)->toString(),
-      marker.toString()
-    );
+    #if PeanoDebug > 0
+    int partID = (*p)->getPartid();
+    #else
+    int partID = -1;
     #endif
+
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
+    toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      "{{PARTICLE}}",
+      (*p)->getX(),
+      partID,
+      false,
+      marker.x(),
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexLastTime"
+    );
+    toolbox::particles::assignmentchecks::eraseParticle(
+      "{{PARTICLE}}",
+      (*p)->getX(),
+      partID,
+      false,
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexLastTime"
+    );
+    // #if !defined(Parallel)
+    // This assertion breaks when running without MPI on 1 tree with periodic
+    // boundary conditions on. It doesn't account for periodic BCs being mapped
+    // onto a boundary exchange too.
+    // assertion2(
+    //   ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
+    //   (*p)->toString(),
+    //   marker.toString()
+    // );
+    // #endif
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }

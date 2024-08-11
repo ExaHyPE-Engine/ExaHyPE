@@ -74,7 +74,8 @@ class SPHParticle(Particle):
 
     Additional Particle fields
         - hasNoNeighbours: Flag whether particle has no neighbours
-        - partID: unique particle ID
+        - partID: unique particle ID. This overwrites the super class' partID
+                  and is always present, regardless of debug mode.
 
 
     ## Attributes
@@ -221,6 +222,8 @@ class SPHParticle(Particle):
         self.force_neighbourcount = dastgen2.attributes.Integer(
             "forceNeighbourCount", ifdefs=["PeanoDebug > 0"]
         )
+        # Note: This overwrites the super class PartID, and is always present,
+        # regardless of debug mode.
         self.part_id = dastgen2.attributes.Integer("partid")
         self.data.add_attribute(self.has_no_neighbours)
         self.data.add_attribute(self.sml_converged)

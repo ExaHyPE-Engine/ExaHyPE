@@ -127,7 +127,7 @@ def _get_particle_iterator_templates(particle_name, kernel_realisation):
         iterate_over_particles_assigned_to_vertex_for_move = f"""
             auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
             ::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);
-            ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
+            ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
             """
         ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
 

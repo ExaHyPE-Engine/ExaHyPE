@@ -31,6 +31,7 @@
 #endif
 
 #ifdef UseToolboxParticles
+#include "toolbox/particles/assignmentchecks/UnitTests.h"
 #include "toolbox/particles/UnitTests.h"
 #endif
 
@@ -88,6 +89,11 @@ void runTests() {
 
 #ifdef UseToolboxParticles
   tests = toolbox::particles::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+
+  tests = toolbox::particles::assignmentchecks::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
@@ -165,6 +171,27 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
+
+  // White- or blacklist assignment checks traces
+  tarch::logging::LogFilter::getInstance().addFilterListEntry(
+    tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "toolbox::particles::assignmentchecks",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    )
+  );
+  tarch::logging::LogFilter::getInstance().addFilterListEntry(
+    tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "toolbox::particles::assignmentchecks",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    )
+  );
+
   tarch::logging::LogFilter::getInstance().addFilterListEntry(
     tarch::logging::LogFilter::FilterListEntry(
       tarch::logging::LogFilter::FilterListEntry::TargetTrace,

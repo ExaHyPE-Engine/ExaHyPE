@@ -188,7 +188,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
                 touch_vertex_last_time_kernel=f"""
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
                 ::swift2::kernels::forAllParticles(marker, assignedParticles, ::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
-                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
+                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
                 """,
                 prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
                 includes="""
