@@ -1,13 +1,8 @@
 #ifndef EXASEIS_SCENARIO_HEADER
 #define EXASEIS_SCENARIO_HEADER
 
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
-// #include "kernels/GaussLegendreBasis.h"
-
-// #include "exahype/solvers/Solver.h"
 #include "../Context/DomainInformation.h"
 #include "../Refinement/refinement.h"
-#include "exahype2/aderdg/solvers/Solver.h"
 
 template <class Shortcuts, int basisSize>
 class Scenario {
@@ -30,7 +25,7 @@ public:
   ){};
 
   virtual void refinementCriteria(
-    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
+    std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
   ) {
     // no criteria
     // std::cout << "ScenarioCriteria" << std::endl;

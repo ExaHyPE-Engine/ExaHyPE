@@ -26,7 +26,7 @@ public:
 
     Shortcuts s;
 
-    constexpr int numberOfData = s.SizeVariables + s.SizeParameters;
+    constexpr int numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
     kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
@@ -39,7 +39,7 @@ public:
     double width_x = dx[0];
     double width_y = dx[1];
     double width_z = dx[2];
-    std::fill_n(luh, basisSize * basisSize * basisSize * (s.SizeVariables + s.SizeParameters), 0);
+    std::fill_n(luh, basisSize * basisSize * basisSize * (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 0);
 
     for (int k = 0; k < basisSize; k++) {
       for (int j = 0; j < basisSize; j++) {

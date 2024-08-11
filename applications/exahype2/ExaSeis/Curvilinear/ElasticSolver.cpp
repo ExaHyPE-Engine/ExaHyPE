@@ -18,8 +18,50 @@ exahype2::elastic::ElasticSolver::ElasticSolver():
   std::string scenario_string   = "Loh1";
   std::string topography_string = "loh1.yaml";
 
-  DomainInformation*              domain_info = new DomainInformation(this);
-  SolverInformationADERDG<Order>* solver_info = new SolverInformationADERDG<Order>(this);
+
+  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
+  double maxDSize = std::numeric_limits<double>::min();
+  double minDSize = std::numeric_limits<double>::max();
+  tarch::la::Vector<Dimensions, double> sizes = DomainSize;
+  
+  for(int i=0; i<Dimensions; i++){
+    if(sizes[i]>maxDSize){
+      maxDSize = sizes[i];
+    }
+    if(sizes[i]<minDSize){
+      minDSize = sizes[i];
+    }    
+  }
+  
+  int depth = 0;
+  
+  //finding coarsest possible Mesh level
+  while(maxDSize>MaxAdmissibleCellH){
+    depth += 1;
+    maxDSize /= 3.0;
+  }
+  
+  double realCoarsestMeshSize = maxDSize;
+  double coarsestMeshLevel = depth;  
+  
+  depth = 0;
+  while(minDSize>MinAdmissibleCellH){
+    depth += 1;
+    minDSize /= 3.0;
+  }
+
+  DomainInformation*              domain_info = new DomainInformation(
+    coarsestMeshLevel,//int coarsestMeshLevel,
+    realCoarsestMeshSize,//double coarsestMeshSize,
+    depth,//double maxAdaptiveDepth,
+    DomainOffset, DomainSize
+  );
+
+  SolverInformationADERDG<Order>* solver_info = new SolverInformationADERDG<Order>(
+    this,
+    kernels::ElasticSolver::Quadrature<double>::nodes,
+    kernels::ElasticSolver::DGMatrices<double>::dudx
+  );
 
   context = new ContextCurvilinear<VariableShortcuts, Order + 1>(
     scenario_string, topography_string, domain_info, solver_info
@@ -27,7 +69,7 @@ exahype2::elastic::ElasticSolver::ElasticSolver():
 
   context->initTransformation();
   context->initTree();
-  context->setRefinementCriteria(this, this->refinementCriteria);
+  context->setRefinementCriteria(this->refinementCriteria);
 
   initPointSourceLocations(pointSourceLocation);
 }
@@ -40,7 +82,7 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   bool                                         gridIsConstructed
 ) {
 
-  std::fill_n(Q, (s.SizeParameters + s.SizeVariables) * (Order + 1) * (Order + 1) * (Order + 1), 0);
+  std::fill_n(Q, (s.NumberOfAuxiliaryVariables + s.NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0);
 }
 
@@ -87,7 +129,7 @@ void exahype2::elastic::ElasticSolver::boundaryConditions(
   int                                          normal
 ) {
 
-  std::copy_n(Qinside, NumberOfVariables + NumberOfParameters, Qoutside);
+  std::copy_n(Qinside, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables, Qoutside);
 }
 
 double ::exahype2::elastic::ElasticSolver::maxEigenvalue(
@@ -323,7 +365,7 @@ void ::exahype2::elastic::ElasticSolver::pointSource(
 
   context->setPointSourceVector(Q, x, t, dt, forceVector, n);
 
-  for (int i = 0; i < s.SizeVariables; i++) {
+  for (int i = 0; i < s.NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;
   }
 }
@@ -348,30 +390,7 @@ void exahype2::elastic::ElasticSolver::riemannSolver(
     std::copy_n(FIn, s.Size, FOut);
   }
 
-  int myFaceIndex = 0;
-  switch (faceIndex) {
-  case 0:
-    myFaceIndex = 0;
-    break;
-  case 1:
-    myFaceIndex = 2;
-    break;
-  case 2:
-    myFaceIndex = 4;
-    break;
-  case 3:
-    myFaceIndex = 1;
-    break;
-  case 4:
-    myFaceIndex = 3;
-    break;
-  case 5:
-    myFaceIndex = 5;
-    break;
-  }
-
-  Numerics::
-    riemannSolver<VariableShortcuts, Order + 1, NumberOfVariables, (NumberOfVariables + NumberOfParameters), _TOP * 2>(
-      FL, FR, QL, QR, dt, direction, isBoundaryFace, myFaceIndex
-    );
+  Numerics::riemannSolver<VariableShortcuts, Order + 1, s.NumberOfUnknowns, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 1>(
+    FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
+  );
 }

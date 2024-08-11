@@ -9,22 +9,18 @@
 #pragma once
 
 #include "AbstractElasticSolver.h"
-#include "VariableShortcuts_ElasticSolver.h"
+#include "VariableShortcuts.h"
 #include "tarch/logging/Log.h"
 
-#define ASAGI_NOMPI
 #define _CUSTOM_COORDINATES
-
-#if !defined(_TOP)
-#define _TOP 1
-#endif
+#define ASAGI_NOMPI
+#define ISOTROPIC
+#define _TOP 2
 
 #include "../ExaSeis_core/Context/ContextCurvilinear.h"
-#include "../ExaSeis_core/Numerics/isotropic.h"
 #include "../ExaSeis_core/Numerics/routines_curvilinear.h"
+#include "../ExaSeis_core/Numerics/isotropic.h"
 #include "../ExaSeis_core/Refinement/refinement.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLobattoBasis.h"
 
 namespace exahype2 {
   namespace elastic {
@@ -42,6 +38,7 @@ private:
 
 public:
   ElasticSolver();
+  double* QuadraturePoints1d = kernels::ElasticSolver::Quadrature<double>::nodes;
 
   /**
    * Refinement criterion

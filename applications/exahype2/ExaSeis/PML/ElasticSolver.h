@@ -8,27 +8,52 @@
 //
 #pragma once
 
-#include "Abstractloh.h"
-#include "riemannSolverLOH.h"
-#include "VariableShortcuts_loh.h"
+
+#include "AbstractElasticSolver.h"
+#include "VariableShortcuts.h"
 #include "tarch/logging/Log.h"
-#include "generated/kernels/aderdg/linear/Kernels.h"
+#include "kernels/ElasticSolver/Kernels.h"
 
-namespace examples {
-  namespace exahype2 {
-    namespace elastic {
+#define _CUSTOM_COORDINATES
+#define ASAGI_NOMPI
+#define ISOTROPIC
+#define _TOP 2
 
-      class loh;
+// #include "../ExaSeis_core/Numerics/routines_curvilinear.h"
+// #include "../ExaSeis_core/Numerics/pml.h"
+// #include "../ExaSeis_core/Context/ContextCurvilinearPML.h"
+// #include "../ExaSeis_core/Refinement/refinement.h"
 
-    } // namespace elastic
-  }   // namespace exahype2
-} // namespace examples
+#include "../ExaSeis_core/Context/ContextCurvilinearPML.h"
+#include "../ExaSeis_core/Numerics/routines_curvilinear.h"
+#include "../ExaSeis_core/Numerics/pml.h"
+#include "../ExaSeis_core/Refinement/refinement.h"
 
-class examples::exahype2::elastic::loh: public Abstractloh {
+namespace exahype2 {
+  namespace elastic {
+
+    class ElasticSolver;
+
+  } // namespace elastic
+} // namespace exahype2
+
+class exahype2::elastic::ElasticSolver: public AbstractElasticSolver {
 private:
   static tarch::logging::Log _log;
 
+  VariableShortcuts s;
+
+  ContextCurvilinear<VariableShortcuts, Order + 1>*                context;
+  std::vector<Refinement::RefinementCriterion<VariableShortcuts>*> refinementCriteria;
+  int                                                              pml_cell_width;
+  double                                                           pml_alpha_const;
+  double                                                           pml_alpha_scalar;
+  double                                                           pml_rel_error;
+  int                                                              pml_power;
+
 public:
+  ElasticSolver();
+  double* QuadraturePoints1d = kernels::ElasticSolver::Quadrature<double>::nodes;
   /**
    * Refinement criterion
    *
@@ -50,14 +75,14 @@ public:
    *  which make the solution follow
    */
   ::exahype2::RefinementCommand refinementCriterion(
-    const double* __restrict__ Q, // Q[9+3]
+    const double* __restrict__ Q, // Q[36+19]
     const tarch::la::Vector<Dimensions, double>& x,
     const tarch::la::Vector<Dimensions, double>& h,
     double                                       t
   ) override;
 
   void initialCondition(
-    double* __restrict__ Q, // Q[9+3]
+    double* __restrict__ Q, // Q[36+19]
     const tarch::la::Vector<Dimensions, double>& x,
     const tarch::la::Vector<Dimensions, double>& h,
     const tarch::la::Vector<Dimensions, int>&    index,
@@ -65,8 +90,8 @@ public:
   ) override;
 
   void boundaryConditions(
-    const double* __restrict__ Qinside, // Qinside[9+3]
-    double* __restrict__ Qoutside,      // Qoutside[9+3]
+    const double* __restrict__ Qinside, // Qinside[36+19]
+    double* __restrict__ Qoutside,      // Qoutside[36+19]
     const tarch::la::Vector<Dimensions, double>& faceCentre,
     const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
@@ -74,10 +99,10 @@ public:
   ) final override;
 
   void riemannSolver(
-    double* const                                FL, // FL[9
-    double* const                                FR, // FR[9
-    const double* const                          QL, // QL[9+3]
-    const double* const                          QR, // QR[9+3]
+    double* const                                FL, // FL[36
+    double* const                                FR, // FR[36
+    const double* const                          QL, // QL[36+19]
+    const double* const                          QR, // QR[36+19]
     const double                                 t,
     const double                                 dt,
     const tarch::la::Vector<Dimensions, double>& x,
@@ -97,13 +122,13 @@ public:
   ) override;
 
   void flux(
-    const double* __restrict__ Q, // Q[9+3]
+    const double* __restrict__ Q, // Q[36+19]
     const tarch::la::Vector<Dimensions, double>& volumeX,
     const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double* __restrict__ F // F[9]
+    double* __restrict__ F // F[36]
   ) override;
 
   void nonconservativeProduct(
@@ -116,6 +141,9 @@ public:
     int                                          normal,
     double* __restrict__ BgradQ
   ) override;
+
+  void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double* const Q, double* S)
+    override;
 
   void multiplyMaterialParameterMatrix(
     const double* const                          Q,

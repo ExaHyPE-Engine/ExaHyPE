@@ -29,9 +29,8 @@ class TPV5 : public Scenario<Shortcuts, basisSize>{
 
   }
 
-  void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,
-                          std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
-    //    criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
+  void refinementCriteria(std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
+
     double left_edge[3];  left_edge[0]  = 19.9; left_edge[1]  = 7.4; left_edge[2]  = 19.9;
     double right_edge[3]; right_edge[0] = 20.1; right_edge[1] = 7.6; right_edge[2] = 20.1;
 
@@ -39,11 +38,10 @@ class TPV5 : public Scenario<Shortcuts, basisSize>{
     double left_edge_box[3];  left_edge_box[0]  = 19.9; left_edge_box[1]  = -1.0; left_edge_box[2]  = -1.0;
     double right_edge_box[3]; right_edge_box[0] = 20.1; right_edge_box[1] = 41.0; right_edge_box[2] = 41.0;    
 
+    criteria.push_back(new Refinement::RefineBetweenPositions<Shortcuts>(left_edge,right_edge));
 
-    criteria.push_back(new Refinement::RefineBetweenPositions<Shortcuts>(solver->getMaximumAdaptiveMeshLevel(),left_edge,right_edge));
-    //    criteria.push_back(new Refinement::trackVelocity<Shortcuts>(basisSize,0.25,0.01));
     criteria.push_back(new Refinement::trackVelocity<Shortcuts>(basisSize,0.05,0.0));
-    criteria.push_back(new Refinement::RefineFilterCube<Shortcuts>(left_edge_box, right_edge_box, solver->getMaximumAdaptiveMeshLevel()+1, solver->getMaximumAdaptiveMeshLevel()+1));
+    // criteria.push_back(new Refinement::RefineFilterCube<Shortcuts>(left_edge_box, right_edge_box, solver->getMaximumAdaptiveMeshLevel()+1, solver->getMaximumAdaptiveMeshLevel()+1));
 
   }
 };

@@ -3,6 +3,7 @@
 
 // #include "kernels/GaussLegendreBasis.h"
 #include "exahype2/RefinementControl.h"
+#include "../Numerics/idx.h"
 
 namespace Refinement {
   template <class Shortcuts>
@@ -34,7 +35,7 @@ namespace Refinement {
       ::exahype2::RefinementCommand&               refine
     ) override {
       Shortcuts     s;
-      kernels::idx4 idx(basisSize, basisSize, basisSize, s.SizeVariables + s.SizeParameters);
+      kernels::idx4 idx(basisSize, basisSize, basisSize, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
       double        maxVelocity_2 = 0;
       double        minVelocity_2 = std::numeric_limits<double>::max();
       for (int i = 0; i < basisSize; i++) {
@@ -94,8 +95,7 @@ namespace Refinement {
   template <class Shortcuts>
   class RefineBetweenPositions: public RefinementCriterion<Shortcuts> {
   public:
-    RefineBetweenPositions(int level, double a_left[3], double a_right[3]):
-      max_level(level) {
+    RefineBetweenPositions(double a_left[3], double a_right[3]){
       rectangle_left[0] = a_left[0];
       rectangle_left[1] = a_left[1];
       rectangle_left[2] = a_left[2];
@@ -123,7 +123,7 @@ namespace Refinement {
         elementBetweenPoints &= ((left_vertex[i] < rectangle_right[i]) && (right_vertex[i] > rectangle_left[i]));
       }
 
-      if (elementBetweenPoints && (max_level > level)) { // solver->getMaximumAdaptiveMeshLevel()-1
+      if (elementBetweenPoints) { // solver->getMaximumAdaptiveMeshLevel()-1
         refine = ::exahype2::RefinementCommand::Refine;
         return true;
       }
@@ -133,7 +133,6 @@ namespace Refinement {
   private:
     double rectangle_left[3];
     double rectangle_right[3];
-    int    max_level;
   };
 
   template <class Shortcuts>
@@ -161,7 +160,7 @@ namespace Refinement {
       double left_vertex = std::numeric_limits<double>::min();
 
       Shortcuts     s;
-      kernels::idx4 idx(basisSize, basisSize, basisSize, s.SizeVariables + s.SizeParameters);
+      kernels::idx4 idx(basisSize, basisSize, basisSize, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
           double vertex = 0;
@@ -262,7 +261,7 @@ namespace Refinement {
       double        right_vertex[3];
       Shortcuts     s;
       bool          positionInElement = true;
-      kernels::idx4 idx(basisSize, basisSize, basisSize, s.SizeVariables + s.SizeParameters);
+      kernels::idx4 idx(basisSize, basisSize, basisSize, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables);
       for (int i = 0; i < basisSize; i++) {
         left_vertex[0] += luh[idx(0, 0, i, s.curve_grid + 0)] * FL[i];
         right_vertex[0] += luh[idx(basisSize - 1, basisSize - 1, i, s.curve_grid + 0)] * FR[i];

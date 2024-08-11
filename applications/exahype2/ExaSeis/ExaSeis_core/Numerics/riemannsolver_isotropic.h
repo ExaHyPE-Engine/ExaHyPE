@@ -1,5 +1,5 @@
 // #include "../../../ExaHyPE/kernels/KernelUtils.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+// #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 namespace Numerics {
 
@@ -32,13 +32,15 @@ namespace Numerics {
     double& Tm_hat,
     double& Tl_hat
   ) {
-    if (faceIndex % 2 == 0) {
+    // if (faceIndex % 2  == 0) { //left face
+    if (faceIndex < Dimensions) { //left face
       riemannSolver_BC0(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolver_BC0(vm, Tm, zs, r, vm_hat, Tm_hat);
       riemannSolver_BC0(vl, Tl, zs, r, vl_hat, Tl_hat);
     }
 
-    if (faceIndex % 2 == 1) {
+    // if (faceIndex % 2 == 1) { //right face
+    else { //right face
       riemannSolver_BCn(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolver_BCn(vm, Tm, zs, r, vm_hat, Tm_hat);
       riemannSolver_BCn(vl, Tl, zs, r, vl_hat, Tl_hat);
@@ -131,7 +133,7 @@ namespace Numerics {
         double Tn_hat_m, Tm_hat_m, Tl_hat_m;
 
         if (isBoundaryFace) {
-          // 1 absorbing 0 free surface
+          // 0 absorbing 1 free surface
           double r = faceIndex == surface ? 1 : 0;
           //	double r=1.;
           riemannSolver_boundary(
