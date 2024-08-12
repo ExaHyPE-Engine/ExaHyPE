@@ -3,7 +3,7 @@ from postProcess import parse_patch_file
 
 if __name__ == "__main__":
     v_solution = parse_patch_file("DGPoisson.solution-1.peano-patch-file", "DG") 
-    v_random   = parse_patch_file("DGPoisson.rand-1.peano-patch-file",     "DG")
+    v_random   = parse_patch_file("DGPoisson.rand-0.peano-patch-file",     "DG")
 
     diff_norm = 0.0 # |v_solution - v_random|_{max}
     

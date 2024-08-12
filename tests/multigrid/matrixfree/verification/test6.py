@@ -72,7 +72,7 @@ approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
-  name = "Test6",
+  name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
   unknowns_per_cell_node = 1,
