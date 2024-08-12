@@ -47,7 +47,7 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
 def create_postprocessing_kernel_for_error_measurement():
     return """
     if ((repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
-      or repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep())
+      or repositories::{{SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep())
       and not marker.willBeRefined() and not marker.hasBeenRefined()
     ) {
       double errors[3]{};
