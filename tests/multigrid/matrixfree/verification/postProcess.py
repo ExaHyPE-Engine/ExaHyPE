@@ -35,9 +35,9 @@ def parse_patch_file(file_path, solver_type):
 
                 # Write in the output
                 data.extend([[xlb,    ylb,    values[0]],
-                            [xlb+hx, ylb,    values[1]],
-                            [xlb,    ylb+hy, values[2]],
-                            [xlb+hx, ylb+hy, values[3]]])
+                             [xlb+hx, ylb,    values[1]],
+                             [xlb,    ylb+hy, values[2]],
+                             [xlb+hx, ylb+hy, values[3]]])
                 
                 # jump to the next 'begin patch'
                 i += 8
@@ -45,20 +45,20 @@ def parse_patch_file(file_path, solver_type):
             else:
                 i += 1
             
-            # keep only unique rows (one vertex -- one entry)
-            tolerance = 1e-9
-            data_unique = []
+        # keep only unique rows (one vertex -- one entry)
+        tolerance = 1e-9
+        data_unique = []
 
-            for row in data:
-                # Check if row=[x,y,val] is close to any existing row
-                if not any( np.all(np.isclose(row, unique_row, atol=tolerance)) for unique_row in data_unique ):
-                    data_unique.append(row)
-            
-            # assert:
-            # size of data = 4*N^2
-            # size of data_unique = (N+1)^2, where N is the number of cells
-            assert np.sqrt(np.shape(data)[0]) == (np.sqrt(np.shape(data_unique)[0]) - 1) * 2
-            result = np.array(data_unique)
+        for row in data:
+            # Check if row=[x,y,val] is close to any existing row
+            if not any( np.all(np.isclose(row, unique_row, atol=tolerance)) for unique_row in data_unique ):
+                data_unique.append(row)
+        
+        # assert:
+        # size of data = 4*N^2
+        # size of data_unique = (N+1)^2, where N is the number of cells
+        assert np.sqrt(np.shape(data)[0]) == (np.sqrt(np.shape(data_unique)[0]) - 1) * 2, f'{np.shape(data) = }, {np.shape(data_unique) = }'
+        result = np.array(data_unique)
 
     elif solver_type == 'DG':
         # For DG, convert the patch file format into a dictionary:
