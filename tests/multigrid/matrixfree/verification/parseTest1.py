@@ -1,10 +1,21 @@
 import numpy as np
-from postProcess import parse_patch_file, reorder_array, plot_field
+from postProcess import parse_patch_file
 
 if __name__ == "__main__":
-    v_solution = parse_patch_file("CollocatedPoisson.value-1.peano-patch-file", "CG") 
-    v_random   = parse_patch_file("CollocatedPoisson.rand-1.peano-patch-file",  "CG")
-    v_random = reorder_array(v_solution, v_random)
-    print(f'{np.max(np.abs(v_solution - v_random)) = }')
+    v_solution = parse_patch_file("DGPoisson.solution-1.peano-patch-file", "DG") 
+    v_random   = parse_patch_file("DGPoisson.rand-1.peano-patch-file",     "DG")
 
-    plot_field(v_solution)
+    diff_norm = 0.0 # |v_solution - v_random|_{max}
+    
+    # Iterate over all cell keys in the solution dictionary
+    # keys are coordinates of the left-bottom vertex of each cell
+    i = 0
+    for key in v_solution.keys():
+        cell_values_solution = np.asarray(v_solution[key])
+        # Access the same key in v_random 
+        cell_values_random   = np.asarray(v_random[key])
+
+        # Update global max norm with local cell max norm
+        diff_norm = max( diff_norm, np.max(np.abs(cell_values_solution - cell_values_random)) )
+
+    print(f'|v_solution - v_random|_max = {diff_norm}')
