@@ -203,27 +203,53 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     case SolverState::GridConstruction:
       _solverState = SolverState::GridInitialisation;
       break;
+  {% if RECONSTRUCTION_STAGES==0 %}
   {% for item in range(RK_STEPS-1) %}
     case SolverState::RungeKuttaSubStep{{item}}:
       _solverState = SolverState::RungeKuttaSubStep{{item+1}};
       break;
   {% endfor %}
+  {% else %}
+  {% for item in range(RK_STEPS-1) %}
+    case SolverState::ReconstructionSubStep{{item}}:
+      _solverState = SolverState::RungeKuttaSubStep{{item}};
+      break;
+    case SolverState::RungeKuttaSubStep{{item}}:
+      _solverState = SolverState::ReconstructionSubStep{{item+1}};
+      break;
+  {% endfor %}
+    case SolverState::ReconstructionSubStep{{RK_STEPS-1}}:
+      _solverState = SolverState::RungeKuttaSubStep{{RK_STEPS-1}};
+      break;
+  {% endif %}
     case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
     case SolverState::GridInitialisation:
     case SolverState::RungeKuttaSubStep{{RK_STEPS-1}}:
+      {% if RECONSTRUCTION_STAGES==0 %}
       _solverState = SolverState::RungeKuttaSubStep0;
+      {% else %}
+      _solverState = SolverState::ReconstructionSubStep0;
+      {% endif %}
       break;
-    {% if RK_STEPS>1 %}
+  {% if RK_STEPS>1 %}
     case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
+      {% if RECONSTRUCTION_STAGES==0 %}
       _solverState = SolverState::RungeKuttaSubStep1;
+      {% else %}
+      _solverState = SolverState::ReconstructionSubStep1;
+      {% endif %}
       break;
-    {% else %}
+  {% else %}
     case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
+      {% if RECONSTRUCTION_STAGES==0 %}
       _solverState = SolverState::RungeKuttaSubStep0;
+      {% else %}
+      _solverState = SolverState::ReconstructionSubStep0;
+      {% endif %}
       break;
-    {% endif %}
+  {% endif %}
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -390,6 +416,13 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "runge-kutta-step-{{item}}";
       break;
     {%- endfor %}
+    {% if RECONSTRUCTION_STAGES!=0 %} 
+    {% for item in range(RECONSTRUCTION_STAGES) %}
+    case SolverState::ReconstructionSubStep{{item}}:
+      return "reconstruction-step-{{item}}";
+      break;
+    {%- endfor %}
+    {% endif %}
   }
   return "<undef>";
 }
@@ -403,8 +436,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+  {% if RECONSTRUCTION_STAGES!=0 %}
+  return _solverState==SolverState::ReconstructionSubStep0
+      or _solverState==SolverState::RungeKuttaSubStep0AfterGridInitialisation;
+  {% else %}
   return _solverState==SolverState::RungeKuttaSubStep0
       or _solverState==SolverState::RungeKuttaSubStep0AfterGridInitialisation;
+  {% endif %}
 }
 
 
