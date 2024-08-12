@@ -9,14 +9,16 @@ tarch::logging::Log  exahype2::LoadBalancingConfiguration::_log( "exahype2::Load
 
 
 exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
-  double loadBalancingQuality,
-  int minSizeOfTree,
+  double  loadBalancingQuality,
+  int     minSizeOfTree,
+  bool    assumePeriodicBoundaryConditions,
   int maxNumberOfTreesThroughoutInitialDistribution,
   int maxNumberOfTrees,
   peano4::SplitInstruction::Mode mode
 ):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
+  _assumePeriodicBoundaryConditions(assumePeriodicBoundaryConditions),
   _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
   _maxNumberOfTrees( maxNumberOfTrees ),
   _mode( mode ) {
@@ -76,7 +78,9 @@ int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing:
     or
     state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
-    return 0;
+    return _assumePeriodicBoundaryConditions
+         ? tarch::mpi::Rank::getInstance().getNumberOfRanks() * ThreePowerD
+         : 0;
   } else {
     return _minSizeOfTree;
   }

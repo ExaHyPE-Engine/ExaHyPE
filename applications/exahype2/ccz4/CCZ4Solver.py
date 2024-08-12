@@ -304,7 +304,6 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         patch_size,
         min_volume_h,
         max_volume_h,
-        use_heap_storage,
         pde_terms_without_state
     ):
         AbstractCCZ4Solver.__init__(self)
@@ -397,24 +396,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
                  patch_size, 
                  min_volume_h, 
                  max_volume_h, 
-                 use_heap_storage,
                  pde_terms_without_state,
                  ):
         """!
 
         Construct solver with enclave tasking and adaptive time stepping
-
-
-        ## Attributes
-
-        use_heap_storage: Boolean
-          By default, we place the patches on the heap but administer them through
-          a smart pointer. You can switch this default and enforce a "proper"
-          storage of the data on the heap. This usually introduces more memory
-          movements, though you might end up with a better memory alignment, i.e.
-          memory closer to the compute kernels.
-
-
 
         """
         AbstractCCZ4Solver.__init__(self)
@@ -430,16 +416,6 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             pde_terms_without_state=pde_terms_without_state
         )
         self._add_standard_includes()
-
-        if use_heap_storage:
-            self.switch_to_heap_storage(
-                exahype2.solvers.fv.Storage.Heap, exahype2.solvers.fv.Storage.Heap
-            )
-        else:
-            self.switch_to_heap_storage(
-                exahype2.solvers.fv.Storage.SmartPointers,
-                exahype2.solvers.fv.Storage.SmartPointers,
-            )
 
         self.set_implementation(
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
@@ -769,7 +745,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         rk_order,
         min_meshcell_h,
         max_meshcell_h,
-        use_heap_storage,
         pde_terms_without_state,
         second_order=False
     ):
@@ -779,17 +754,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
         Calibrate the default time step size calibration with 1/16 to take into
         account that we have a higher-order numerical scheme.
-
-
-        ## Attributes
-
-        use_heap_storage: Boolean
-          By default, we place the patches on the heap but administer them through
-          a smart pointer. You can switch this default and enforce a "proper"
-          storage of the data on the heap. This usually introduces more memory
-          movements, though you might end up with a better memory alignment, i.e.
-          memory closer to the compute kernels.
-
 
         """
         AbstractCCZ4Solver.__init__(self)
@@ -809,16 +773,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         )
 
         self._add_standard_includes()
-
-        if use_heap_storage:
-            self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
-            )
-        else:
-            self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.SmartPointers,
-                exahype2.solvers.rkfd.Storage.SmartPointers,
-            )
 
         self.set_implementation(
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
@@ -1032,7 +986,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         min_meshcell_h,
         max_meshcell_h,
         reconstruction_type,
-        use_heap_storage=False,
     ):
         """!
 
@@ -1040,18 +993,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 
         Calibrate the default time step size calibration with 1/16 to take into
         account that we have a higher-order numerical scheme.
-
-
-
-        ## Attributes
-
-        use_heap_storage: Boolean
-          By default, we place the patches on the heap but administer them through
-          a smart pointer. You can switch this default and enforce a "proper"
-          storage of the data on the heap. This usually introduces more memory
-          movements, though you might end up with a better memory alignment, i.e.
-          memory closer to the compute kernels.
-
 
         """
         AbstractCCZ4Solver.__init__(self)
@@ -1070,11 +1011,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         )
 
         self._add_standard_includes()
-
-        if use_heap_storage:
-            self.switch_to_heap_storage(Storage.Heap, Storage.Heap)
-        else:
-            self.switch_to_heap_storage(Storage.SmartPointers, Storage.SmartPointers)
 
         self.set_implementation(
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
@@ -1223,6 +1159,101 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         project.add_action_set_to_timestepping(dump_into_database_action_set)
 
 
+def construct_DG_ncp():
+    return """
+  double dQdxSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    dQdxSerialised[i+0*NumberOfUnknowns] = 0.0;
+    dQdxSerialised[i+1*NumberOfUnknowns] = 0.0;
+    dQdxSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    dQdxSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
+"""
+
+
+def construct_DG_source_term():
+    return """
+  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
+"""
+
+
+def construct_DG_eigenvalues():
+    return """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""
+
+def construct_DG_postprocessing_kernel():
+    return """
+{
+    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+def add_tracer_to_DG_solver(name,
+            coordinates,
+            project,
+            self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            clear_database_after_flush,
+            tracer_unknowns,
+):
+    number_of_attributes = (
+        (self.unknowns + self.auxiliary_variables)
+        if tracer_unknowns == None
+        else len(tracer_unknowns)
+    )
+    tracer_particles = project.add_tracer(
+        name=name, attribute_count=number_of_attributes
+    )
+    init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
+        particle_set=tracer_particles, coordinates=coordinates
+    )
+    init_action_set.descend_invocation_order = 0
+    project.add_action_set_to_initialisation(init_action_set)
+
+    assert tracer_unknowns == None
+
+    tracing_action_set = exahype2.tracer.DiscontinuousGalerkinTracing(
+        tracer_particles,
+        solver=self,
+        project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
+    )
+    tracing_action_set.descend_invocation_order = (
+        self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
+        + 1
+    )
+    project.add_action_set_to_timestepping(tracing_action_set)
+    project.add_action_set_to_initialisation(tracing_action_set)
+
+    dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
+        particle_set=tracer_particles,
+        solver=self,
+        filename=name + "-" + self._name,
+        number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes,
+        output_precision=10,
+        data_delta_between_two_snapsots = data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+        clear_database_after_flush      = clear_database_after_flush,
+    )
+    dump_into_database_action_set.descend_invocation_order = (
+        self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
+        + 1
+    )
+    project.add_action_set_to_timestepping(dump_into_database_action_set)
+
+
 class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
     AbstractCCZ4Solver,
     exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
@@ -1258,24 +1289,11 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
         polynomials,
         min_cell_h,
         max_cell_h,
-        use_heap_storage=False,
+        pde_terms_without_state,
     ):
         """!
 
         Construct solver with enclave tasking
-
-
-
-
-        ## Attributes
-
-        use_heap_storage: Boolean
-          By default, we place the patches on the heap but administer them through
-          a smart pointer. You can switch this default and enforce a "proper"
-          storage of the data on the heap. This usually introduces more memory
-          movements, though you might end up with a better memory alignment, i.e.
-          memory closer to the compute kernels.
-
 
         """
         AbstractCCZ4Solver.__init__(self)
@@ -1284,61 +1302,26 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             name=name,
             rk_order=rk_order,
             polynomials=polynomials,
-            face_projections=exahype2.solvers.rkdg.FaceProjections.Solution,
             unknowns=sum(self._FO_formulation_unknowns.values()),
             auxiliary_variables=0,
             min_cell_h=min_cell_h,
             max_cell_h=max_cell_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+            pde_terms_without_state=pde_terms_without_state
         )
 
         self._add_standard_includes()
 
-        if use_heap_storage:
-            self.switch_to_heap_storage(
-                exahype2.solvers.rkdg.Storage.Heap, exahype2.solvers.rkdg.Storage.Heap
-            )
-        else:
-            self.switch_to_heap_storage(
-                exahype2.solvers.rkdg.Storage.SmartPointers,
-                exahype2.solvers.rkdg.Storage.SmartPointers,
-            )
-
         self.set_implementation(
             boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-            ncp="""
-  double dQdxSerialised[NumberOfUnknowns*3];
-  for (int i=0; i<NumberOfUnknowns; i++) {
-    dQdxSerialised[i+0*NumberOfUnknowns] = 0.0;
-    dQdxSerialised[i+1*NumberOfUnknowns] = 0.0;
-    dQdxSerialised[i+2*NumberOfUnknowns] = 0.0;
-
-    dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
-  }
-  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
-""",
+            ncp=construct_DG_ncp(),
             flux=exahype2.solvers.PDETerms.None_Implementation,
-            source_term="""
-  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
-""",
+            source_term=construct_DG_source_term(),
             refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
-            eigenvalues="""
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-""",
+            eigenvalues=construct_DG_eigenvalues()
         )
 
-        self.postprocess_updated_cell_after_final_linear_combination += """
-{
-    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
+        self.postprocess_updated_cell_after_final_linear_combination += construct_DG_postprocessing_kernel()
 
     def add_tracer(
         self,
@@ -1365,46 +1348,121 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
         project: exahype2.Project
 
         """
-        number_of_attributes = (
-            (self.unknowns + self.auxiliary_variables)
-            if tracer_unknowns == None
-            else len(tracer_unknowns)
+        add_tracer_to_DG_solver(
+            name,
+            coordinates,
+            project,
+            self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            clear_database_after_flush,
+            tracer_unknowns,
         )
-        tracer_particles = project.add_tracer(
-            name=name, attribute_count=number_of_attributes
-        )
-        init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
-            particle_set=tracer_particles, coordinates=coordinates
-        )
-        init_action_set.descend_invocation_order = 0
-        project.add_action_set_to_initialisation(init_action_set)
 
-        assert tracer_unknowns == None
 
-        tracing_action_set = exahype2.tracer.DiscontinuousGalerkinTracing(
-            tracer_particles,
-            solver=self,
-            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
-        )
-        tracing_action_set.descend_invocation_order = (
-            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
-            + 1
-        )
-        project.add_action_set_to_timestepping(tracing_action_set)
-        project.add_action_set_to_initialisation(tracing_action_set)
+class CCZ4Solver_RKDG_GlobalAdaptiveTimeStep(
+    AbstractCCZ4Solver,
+    exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
+):
+    """!
 
-        dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
-            particle_set=tracer_particles,
-            solver=self,
-            filename=name + "-" + self._name,
-            number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes,
-            output_precision=10,
-            data_delta_between_two_snapsots = data_delta_between_two_snapsots,
-            time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-            clear_database_after_flush      = clear_database_after_flush,
+    CCZ4 solver using Runge-Kutta Discontinuous Galerkin and global adaptive time stepping incl enclave tasking
+
+    The constructor of this classs is straightforward and realises the standard
+    steps of any numerical implementation of the CCZ4 scheme:
+
+    1. Init the actual numerical scheme. This happens through the constructor
+       of the base class.
+
+    2. Add the header files that we need, i.e. those files which contain the
+       actual CCZ4 implementation.
+
+    3. Add some constants that any CCZ4 C++ code requires.
+
+    4. Set the actual implementation, i.e. link the generic PDE terms to the
+       CCZ4-specific function calls.
+
+    5. Add the CCZ4-specific postprocessing.
+
+    6. Switch to higher-order interpolation and restriction.
+
+    """
+
+    def __init__(
+        self,
+        name,
+        rk_order,
+        polynomials,
+        min_cell_h,
+        max_cell_h,
+        pde_terms_without_state,
+    ):
+        """!
+
+        Construct solver with enclave tasking
+
+        """
+        AbstractCCZ4Solver.__init__(self)
+        exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep.__init__(
+            self,
+            name=name,
+            rk_order=rk_order,
+            polynomials=polynomials,
+            unknowns=sum(self._FO_formulation_unknowns.values()),
+            auxiliary_variables=0,
+            min_cell_h=min_cell_h,
+            max_cell_h=max_cell_h,
+            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+            pde_terms_without_state=pde_terms_without_state
         )
-        dump_into_database_action_set.descend_invocation_order = (
-            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
-            + 1
+
+        self._add_standard_includes()
+
+        self.set_implementation(
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
+            ncp=construct_DG_ncp(),
+            flux=exahype2.solvers.PDETerms.None_Implementation,
+            source_term=construct_DG_source_term(),
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            eigenvalues=construct_DG_eigenvalues()
         )
-        project.add_action_set_to_timestepping(dump_into_database_action_set)
+
+        self.postprocess_updated_cell_after_final_linear_combination += construct_DG_postprocessing_kernel()
+
+    def add_tracer(
+        self,
+        name,
+        coordinates,
+        project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
+        clear_database_after_flush,
+        tracer_unknowns,
+    ):
+        """!
+
+        Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
+
+        At this point, we have not yet created the Peano 4 project. Therefore, we
+        have not yet befilled the time stepping action set.
+
+        project: exahype2.Project
+
+        """
+        add_tracer_to_DG_solver(
+            name,
+            coordinates,
+            project,
+            self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            clear_database_after_flush,
+            tracer_unknowns,
+        )

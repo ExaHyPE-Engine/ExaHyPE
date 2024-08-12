@@ -419,7 +419,7 @@ thus appreciate any citation of the original release paper
         Tracers have to be the very last thing you add to your project.
         At this point, all solvers have to be added to the project.
         However, you have to add the tracers prior to any user-defined
-        routines. See docu of register_new_user_defined_algorithmic_step().
+        routines. See docu of init_new_user_defined_algorithmic_step().
 
         We rely on the particle toolbox. Therefore, our particles have
         already a position x, a search radius (which we don't usually
@@ -749,10 +749,10 @@ thus appreciate any citation of the original release paper
         return self._project
 
 
-    def register_new_user_defined_algorithmic_step(self,
-                                                   step,
-                                                   ):
-        """! Add all the use operations to new algorithmic step
+    def init_new_user_defined_algorithmic_step(self,
+                                               step,
+                                               ):
+        """! Inform ExaHyPE 2 that there is an additional solver step not resulting from vanilla solver versions
         
         Use this routine whenever you have created your own 
         @ref page_architecture "algorithmic step". Please note that the routine
@@ -765,6 +765,9 @@ thus appreciate any citation of the original release paper
         project. It only manipulates the step. Therefore, you can even call it 
         after you have distilled the Peano project from the ExaHyPE project, 
         i.e. after you have called exahype2.Project.generate_Peano4_project().
+        In return, you however still have to add the new step manually to the
+        Peano project. That is, this routine merely initialises the new step,
+        but it does not yet add it to the sweeps known by Peano.
 
         @param step: peano4.solversteps.Step
   

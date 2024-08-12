@@ -14,6 +14,7 @@ import os
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from exahype2.solvers.Storage import Storage
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -36,6 +37,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
     }
   }
   {% endfor %}
@@ -251,3 +253,20 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             self._name
         )
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
+        d["MAKE_COPY_OF_ENCLAVE_TASK_DATA"] = self.make_copy_of_enclave_task_data
+
+
+    def switch_storage_scheme(
+        self,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
+    ):
+        if cell_data_storage == Storage.SmartPointers:
+            self.make_copy_of_enclave_task_data = False
+        else:
+            self.make_copy_of_enclave_task_data = True
+            
+        super(SeparateSweepsWithEnclaveTasking, self).switch_storage_scheme(
+            cell_data_storage,
+            face_data_storage
+        )

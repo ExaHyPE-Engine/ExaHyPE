@@ -410,7 +410,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return isLastGridSweepOfTimeStep()
+  return isLastGridSweepOfTimeStep() or _solverState==SolverState::Suspended
       or _solverState==SolverState::GridInitialisation
       or _solverState==SolverState::Plotting;
 }
@@ -423,7 +423,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}};
+  return _solverState==SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}} or _solverState==SolverState::Suspended;
 }
 
 

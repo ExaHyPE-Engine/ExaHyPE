@@ -19,14 +19,24 @@ from exahype2.solvers.rkdg.FixedTimeSteppingCodeSnippets import (
     FixedTimeSteppingCodeSnippets,
 )
 
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+
 
 class GlobalFixedTimeStep(SeparateSweeps):
+    """!
+    
+    RKDG solver with Rusanov Riemann solver and global fixed time step
+    
+    Likely the simplest version of the RKDG solver with Rusanov. We "inherit"
+    basically all parameters from the superclass. The major difference is the 
+    
+    
+    """
     def __init__(
         self,
         name,
         rk_order,
         polynomials,
-        face_projections,
         unknowns,
         auxiliary_variables,
         min_cell_h,
@@ -43,11 +53,19 @@ class GlobalFixedTimeStep(SeparateSweeps):
         pde_terms_without_state=False,
         plot_grid_properties=False,
     ):
+        """!
+        
+        Construct RKDG solver with fixed time step 
+        
+        For Rusanov, we really only need the solution along the face, and so we
+        ar fine with one quantity per PDE to be projected.
+        
+        """
         super(GlobalFixedTimeStep, self).__init__(
             name,
             rk_order,
             polynomials,
-            face_projections,
+            FaceProjections.Solution,
             unknowns,
             auxiliary_variables,
             min_cell_h,
@@ -62,7 +80,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
         self._kernel_namespace = "rusanov"
         self._volumetric_compute_kernel_call                  = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
         self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
-        self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, face_projections)
+        self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, FaceProjections.Solution)
         # TODO: self._Riemann_compute_kernel_call_stateless =
         self._add_solver_contributions_call                   = create_add_solver_contributions_call(self._basis)
         self._multiply_with_inverted_mass_matrix_call         = create_multiply_with_inverted_mass_matrix_call(self._basis)

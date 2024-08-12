@@ -179,8 +179,8 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
               {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1]|length) %}
               {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]!=0 %}
                 {{FACES_ACCESSOR}}(d).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
-                  {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO+1]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
-                  fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},patchCell,j) ];
+                  timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
+                  fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},patchCell,j) ];
               {% endif %}
               {% endfor %}
             {% endif %}
@@ -209,8 +209,8 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
               {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1]|length) %}
               {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]!=0 %}
                 {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
-                  {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO+1]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
-                  fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},patchCell,j) ];
+                   timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
+                  fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},patchCell,j) ];
               {% endif %}
               {% endfor %}
             {% endif %}

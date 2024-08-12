@@ -1,0 +1,655 @@
+/**
+
+@page page_exahype_coupling Coupling of various solvers and additional mesh traversals
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+If you want to solve systems of PDEs where some PDEs advance on
+different time scales, solve different problems, are active in 
+different domains, and so forth, you have two options on the table: You can
+model the solvers as one big system or you can logically code the
+solvers as two totally separate things and couple them. If you have to run
+some postprocessing, you also have two options: Either make the postprocessing
+a "real" postprocessing by adding it as postprocessing step to your solvers of
+choice, or you add separate mesh sweeps which perform the postprocessing. 
+
+
+The former version is faster, as you read/write data only once and you do not 
+impose additional mesh traversals. The latter version is the way to go if you
+need some boundary exchange prior such that halos, for example, are up-to-date.
+It might also be appropriate if you want to couple the hyperbolic solvers to 
+other solvers, such as an elliptic term or a solid in a fluid-structure
+interaction scenario.
+When it comes to the coupling of two solvers, the first
+approach sketched is simple: If the two solvers feature @f$ N_1 @f$ and @f$ N_2 @f$ unknowns,
+you simply create one new solver with @f$ N_1+N_2 @f$ unknowns and you provide
+flux functionsm, ncps, ...for all of the components. The big
+disadvantage of this approach is that all solvers have to advance in
+time at the same speed, that you might replicate code if you have
+already two existing solvers, and that you also might run a lot of
+unneeded calculations if only some PDE equations evolve actually in
+time.
+Technically, the implementation of this variant however is straightforward
+and we will not discuss it further here, i.e. our description from hereon assumes that you work with two solvers and/or 
+separate mesh sweeps.
+
+
+# Coupling two solvers
+
+Using multiple solvers within ExaHyPE is, in principle, straightforward, too. You create 
+two solver instances and you add them to your project. Both solvers then 
+will be embedded into the mesh and run independently. They will hence interact
+through the adaptive mesh refinement - if one solver refines, the other one
+will follow - but otherwise be totally independent. While
+this approach allows us to have a clear separation-of-solvers, the
+coupling of the two systems is not that straightforward. And we have to 
+couple them if we want to solver our initial setup phrased as system of
+PDEs.
+
+
+## Preparing the PDEs to be coupled
+
+How to couple the PDEs depends upon the fact if you want to directly
+project the solutions onto each other of if you make one PDE feed into 
+the other one via the right-hand side (or in general some "material" 
+parameters within its PDE other than the evolution unknowns). If you 
+coupld PDEs directly, you can use your PDE solvers as they stand.
+
+To prepare the system of PDEs in the other case, I recommend to add new material (auxiliary)
+parameters to each PDE which contain the cooupling term. That is, if you 
+have two solver A and B and B has an impact on A through a scalar and A
+influences B through a vector, thend you add one material parameter to A 
+and three to B. 
+
+
+Those material parameters are not material parameters in the traditional
+sense. 
+They change over time.
+B will set the material parameters of A and vice versa.
+
+
+
+## Coupling the solution data
+
+There are two places where we can add coupling, i.e. map solution data
+onto each other: It can either be a
+preprocessing step of the time step or a postprocessing step. While, in
+principle, both approaches do work here, there's a delicate difference: 
+In the pre-processing step, we have access to the
+patch data plus the halo. In the post-processing step, we have only
+access to the patch content. 
+
+
+We note that we exclusively discuss volumetric mapping in this section.
+This is the only coupling we support at the moment within ExaHyPE, i.e.
+we do not support mapping of face data onto each other (anymore). Besides
+volumetric coupling, you can obviously "only" couple global properties
+with each other. This is however similar to the time step synchronisation
+as discussed below and therefore not subject of further discussion.
+
+
+
+## Coupling the time step sizes
+
+Unless you use fixed time stepping schemes with hard-coded time step 
+sizes that match, any two solvers with ExaHyPE run at their own speed. 
+Even more, each individual cell runs at its own speed and hosts its own
+time stamp. For local timestepping, different cells may advance at different
+speed in time. For adaptive timestepping, all cells ***of one solver*** 
+will advance with the same time step size.
+
+
+For most solvers, it is therefore sufficient to plug into getAdmissibleTimeStepSize()
+of the superclass. Overwrite it, call the superclass' variant and then alter
+the returned value. 
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class mynamespace::MySolver: public MyBaseClass {
+  ... 
+  getAdmissibleTimeStepSize() const override;
+};
+
+
+
+#include "repositories/SolverRepository.h"
+
+double mynamespace::MySolvergetAdmissibleTimeStepSize() const {
+  // get vanilla version of time step size, i.e. only the one computed
+  // by our solver
+  double myTimeStepSize = MyBaseClass::getAdmissibleTimeStepSize();
+  double otherTimeStepSize = repositories::MyOtherSolver.getAdmissibleTimeStepSize();
+  
+  // now we combine it with each other and return result
+} 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is the approach used in 
+@ref applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling "Euler example with self-gravitation via the Poisson equation".
+If you want to use local time stepping or run checks on the timestamp per cell,
+you will have to alter the cell's meta data holding its time stamp.
+Things in this case become more involved, i.e. you will have to study the
+underlying action sets and change the generated source code in there.
+
+
+## Localisation
+
+ExaHyPE couples volumetrically. That does not mean that all solvers have to be 
+solved everywhere. Indeed, the idea to offer support for multiple solvers arose
+originally from the a posteriori limiting of Dumbser et al where a Finite Volume
+solver complements ADER-DG solutions where shocks arise.
+
+Most projects that follow these rationale realise the same pattern:
+We define two different solvers, and we couple them
+with each other. The coupling (and solve) however are local operations:
+
+-   The low-order (typically Finite Volume - we therefore always refer
+    to Finite Volumes or FV from hereon) solver is our fallback strategy and we therefore
+    neither solve with Finite Volumes everywhere in the computational
+    domain nor should do we store the corresponding data.
+    
+-   The higher-order scheme is used everywhere where the FV is not 
+    applied or labelled as valid.
+
+-   The FV and the higher-order solver are not coupled everywhere but only in
+    boundary regions.
+
+We will effectively end up with a domain decomposition where parts of
+the computational domain are handled by the higher-order solver and the other
+parts are handled with FV. 
+To realise this, we need a marker or oracle, i.e. a magic function 
+per cell which tells us, similar to a multi-phase flow, which
+solver rules in this particular cell. 
+The
+marker will guide us which solver is "valid" in which cell, where one solver
+overrules the other one, and where we do not have to store one solver's data
+or the other.
+
+
+The image below illustrates the core idea behind typically coupling approaches
+in ExaHyPE. The sizes of the overlap might differ, but the principle is always
+the same. The illustration shows the minimal overlap that we can typically
+use. Both the upper and the lower mesh illustrate the same mesh. I use colours
+to show which solver exists in which mesh cell.
+
+@image html coupling.png
+
+- Solver A is running within the filled cells visualised on the the top. In 
+  empty cells, A neither solves anything nor does it hold data. 
+- Solver B is running within the filled cells visualised on the bottom. In 
+  empty cells, B neither solves anything nor does it hold data. 
+- Consequently, dark red cells are exclusively solved by A, whereas dark 
+  green cells are exclusively B.
+- In orange cells, A solves its PDE. Afterwards, A's updated solution is 
+  projected onto B's solution. That is, the blue cells hold B's data, but 
+  they are not updated by B but instead hold projections of A's data. They
+  kind of serve as boundary layer for B.
+- In the yellow cells, A does not solve its PDE but holds A's data. After
+  each step, the cell's solution by B (light green) is written into A's data.
+  The yellow cells serve as Dirichlet boundary data for A's solve.
+  
+Starting from this description, sophisticated coupling equations can be 
+realised, where you exploit the fact that we have a volumetric overlap.
+
+### Localisation guided by a marker
+
+Skip this section if you prefer a hard-coded marking of active regions.
+
+### Avoid that solver data is held everywhere
+
+Once you know where a solver is valid, it makes sense also to only store
+the solver's data in the valid region. Otherwise, a lot of memory is "wasted"
+which furthermore will be moved/accessed in each and every grid sweep, as the 
+mesh management of Peano so far does not know that ExaHyPE might not need the 
+data. ExaHyPE has to let Peano know.
+
+
+The technical principles behind such a localisation @ref page_peano_localisation "are discussed on a generic Peano page of its own".
+ExaHyPE builds up pretty deep inheritance hierarchy
+where every subclass specialises and augments the basic numerical scheme, and 
+also implements additional guards when data is stored or not.
+However, most of these subclasses rely on only six routines to control
+the data flow:
+
+- _provide_cell_data_to_compute_kernels_default_guard(),
+- _load_cell_data_default_guard(),
+- _store_cell_data_default_guard(),
+- _provide_face_data_to_compute_kernels_default_guard(),
+- _load_face_data_default_guard(),
+- _store_face_data_default_guard(),
+
+
+The implementation then uses these predicates to puzzle the actual storage
+scheme together via calls similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
+        )
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, most solvers only store data for unrefined 
+cells. They mask coarser levels with in the tree out.    
+Subclasses such as enclave tasking variations augment the guards
+further such that not all data are stored all the time. Nothing stops you
+from adding further constraints and to use a solver only in a certain 
+subdomain for example.
+
+
+
+### The actual solution coupling
+
+For the actual solver coupling, four hook-in points are available:
+
+1. The dedicated solver preprocessing action set.
+2. The hook-in preprocess_reconstructed_patch, which injects code right
+   before the actual compute kernel (Finite Volume scheme, e.g.) is triggered.
+3. The hook-in postprocess_updated_patch, which injects code right after
+   updated time-step data. This snippet is called after the compute kernel 
+   has terminated. For Runge-Kutta style solvers, aka multi-step solvers, 
+   there are two of these hook-ins: One called after every intermediate
+   step and one called once we compute the final linear combination of
+   these intermediate outcomes.
+4. The dedicated solver postprocessing action set.
+
+These steps all have differen properties. The global preprocessing 
+precedes any solver routine, i.e. it is called before any compute kernel
+on any solver is launched. It also is guaranteed to run sequentially, 
+i.e. there is nothing running in parallel to the preprocess actino set. 
+For the postprocessing, similar arguments hold. These steps come after
+all solvers have updated their solution. The kernel hook-ins (2) and (3)
+in contrast can run in parallel.
+
+Any coupling can be arbitrary complicated, but there are several 
+off-the-shelf routines offered in toolbox::blockstructured. Interesting
+variants include toolbox::blockstructured::copyUnknown() and 
+::toolbox::blockstructured::computeGradientAndReturnMaxDifference().
+Besides those guys, you might also want to use the AMR routines within
+the blockstructured toolbox and the ExaHyPE folders, where you find, 
+for example, linear interpolation and restriction.
+
+
+
+Important: If you couple two solvers, you have to carefully 
+take into account
+
+1. in which order these solvers run; If that makes a difference, you
+   might want to use the dedicated post- and pre-processing action sets.
+2. wheather or not you use @ref page_exahype_solvers_enclave_solvers "enclave solvers". The later ones take the data out of the
+   mesh after their primary sweep and insert it back into the mesh. 
+   This has to be taken into account when you interpolate: data might
+   be extracted from the mesh and then be put back in;
+3. if you localise a solver, i.e. store it only in some places, you 
+   will have garbage on faces around this localised area.
+
+@see toolbox/blockstructured/Copy.h
+@see toolbox/blockstructured/Derivative.h
+@see toolbox/blockstructured/Interpolation.h
+@see toolbox/blockstructured/Restriction.h
+
+
+# Adding additional mesh sweeps
+
+Some applications of ExaHyPE have to add additional mesh sweeps. This can be
+due to added functionality or as they want to couple the ExaHyPE solver with
+another code. The latter approach is the most flexible use case. We therefore
+discuss this one here, as it covers the "simpler" ambition to add only an 
+additional mesh sweep to an existing ExaHyPE solver. Therefore, our dicussions
+follows the @ref page_peano_mergin_applications "Peano's generic coupling description".
+Please read through this discussion before continuing with this section (the
+description actually refers back to this page at one point).
+
+
+The way how to add steps is relatively mechanical:
+
+1. Generate the peano4.Project object from ExaHyPE. This is referred to as
+   "lowering" in @ref page_peano_mergin_applications.
+   
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   peano4_project = project.generate_Peano4_project()
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   
+2. Create a new algorithmic step with Peano. 
+
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   additional_step = peano4.solversteps.Step( name = "AdditionalStep",
+                                              add_user_defined_actions=True,
+                                              )
+   peano4_project.solversteps.add_step( additional_step )
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   
+   In this example, we plan to manually interact with the step, i.e. to insert 
+   C++ code manually into the events once the code is generated. Therefore, we 
+   pass in a True here.
+
+3. Make all of ExaHyPE's data structures known to your new step. For this, you
+   have to invoke use_cell(), use_vertex() and use_face() commands for each and
+   every solver. As the solvers are tied to the ExaHyPE project, it offers a 
+   routine exahype2.Project.init_new_user_defined_algorithmic_step()
+   which you can use to add the required statements.
+
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   project.init_new_user_defined_algorithmic_step( additional_step )
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   
+   This routine can also be invoked earlier. You just have to ensure that all 
+   the solvers are already properly added to the ExaHyPE project. See the 
+   method documentation.
+
+
+## Triggering the new mesh traversal
+
+You still have to trigger the actual mesh traversal. For this, you have to 
+alter the main function. ExaHyPE generates a dummy main in you application's 
+root directory which works for most plain ExaHyPE codes. However, it will 
+never overwrite the main if you have already created a bespoke one. 
+
+Before you start manipulating the main, please have a look into the generated
+file repositories/StepRepository.h. The enum Steps should already contain an 
+entry for your additional algorithmic step once you have followed the 
+instructions from the previous section. That is, Peano knows that the there are
+all the ExaHyPE mesh traversals and then there's a new, additional one. 
+
+1. Scroll to the function selectNextAlgorithmicStep() within the main cpp file.
+   and insert the lines as of below. 
+   
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [...]
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::PlotSolution )
+      );
+      haveJustWrittenSnapshot = true;
+      continueToSolve         = true;
+    }
+    else if (
+      (
+        repositories::isLastGridSweepOfTimeStep()
+        or
+        repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==repositories::StepRepository::Steps::InitGrid
+      )
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalStep )
+      );
+      continueToSolve         = true;
+    }
+    else if ( repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime ) {
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::TimeStep )
+      );
+      continueToSolve         = true;
+    [...]
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
+   We basically let all the logic when to plot and how to pick time steps in 
+   place, but before the solver wants to do the very first grid sweep of a new 
+   time step, we postpone this step and instead run our new additional step
+   (which we creatively named AdditionalStep in this example). Nothing stops
+   you to extend this logic such that multiple additional steps are executed
+   in a row. You can also obviously plug into the stage just after the solver
+   initialisation:
+   
+   The statement 
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    else if (
+      (
+        repositories::isLastGridSweepOfTimeStep()
+        or
+        repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==repositories::StepRepository::Steps::InitGrid
+      )
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   runs the additional step directly after the initialisation sweep and then 
+   after each time step. If you write 
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    else if (
+      repositories::isLastGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   the initialisation will be followed by a first time step (typically with 
+   time step size 0 as we have to fiddle out the admissible time step size).
+   After this first one, it injects an additional sweep and from hereon one 
+   after each further time step.
+   
+   The only thing you should not do is a statement similar to
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    else if (
+      repositories::isFirstGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+    ) {
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   The predicate isFirstGridSweepOfTimeStep() becomes true right after the 
+   first beginIteration() and stays on this value. See its documentation.
+   That means that it is true after a primary sweep (if you have an enclave
+   solver) or the first trial in a Runge-Kutta scheme.
+   
+   As all solvers with a CFL evaluation will run an initial time step with time
+   step size zero, plugging into the mesh traversal after the first time step 
+   has completed is sufficient. See remark above.
+   
+2. We now have to ensure that all MPI ranks and threads run this one step if 
+   we trigger it. For this, we scroll to step() and add a new case statement
+   there:
+   
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    case repositories::StepRepository::Steps::AdditionalStep:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "additional-step" );
+
+        repositories::suspendSolversForOneGridSweep();
+        observers::AdditionalStep  observer;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+      }
+      break;
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
+   The important tiny detail here is the call to suspendSolversForOneGridSweep(),
+   which will invoke suspendSolversForOneGridSweep() on each and every ExaHyPE
+   solver. This tells them that we have a "spare" mesh traversal - logically
+   similar to a plot - where they don't have to compute anything.
+
+3. Last but not least, add the corresponding include to your main:
+
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include "observers/AdditionalStep.h"
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+This modificated logic squeezes the additional steps in-between any two 
+complete time steps. If a solver requires multiple mesh sweeps to realise
+its update, this sequence of sweeps will not be interrupted. While the 
+realisation as sketched so far works on a single core, it very likely will
+crash immediately once you use domain decomposition: All ExaHyPE solvers 
+make quite distinct decisions whether to send out data in any single grid
+sweep or not. Any decision has to be matched with the corresponind receive
+logic: If we send out data in iteration n, these data have to be reveived
+in iteration n+1.
+
+
+Rather than modifying this complex logic, we observe that ExaHyPE has already
+defined one type of mesh traversal which can always squeeze into any two time
+steps: the plotting. 
+
+
+## Add behaviour
+
+### Manually implement new functionality
+
+In the example above, we tell the new action set that we want to manually add
+new behaviour, as we set the flag
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+add_user_defined_actions=True
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As a consequence, we will obtain a new class within our project's actionset 
+directory. You can directly add behaviour into this class. Please note that 
+such a class is never overwritten by subsequent Python API invocations. 
+
+Adding behaviour manually is only one way to inject behaviour. You might as
+well set 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+add_user_defined_actions=False
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this case, no new class in actionsets is generated. You will have to add
+additional behaviour yourself as detailed below.
+
+
+## Switch the additional traversals on/off
+
+Some benchmarks want to enable the additional traversals for some solver 
+choices, while they don't need it for others. In this case, we have identified
+some best practices. You start from a vanilla main as generated by the Python
+API, and then you make modifications to this main. Main files are not 
+overwritten by the API if it already finds and existing one, so once your
+modified main is added to the repository, you can be sure every checkout sees
+this one even though glue code is to be regenerated on a new system.
+
+
+To switch the feature no/off, I recommend that you make your Python script
+(the simulation driver) trigger this line
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+whenever you need additional mesh traversals. Within the main, you can 
+then protected the code regions of interest with 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An example for the realisation of this usage pattern is benchmarks/exahhype2/ccz4/gauge-wave. 
+Study @ref benchmarks_exahype2_ccz4_gauge_wave for a discussion of their 
+particular algorithmic steps.
+
+
+### Create new functionality in Python
+
+The canonical way to add new functionality directly via Python follows 
+always the same pattern:
+
+1. Create a new Python class which inherits from peano4.solversteps.ActionSet:
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   import peano4
+   
+    class MyActionSet(peano4.solversteps.ActionSet):
+        def __init__(self):
+            super( MyActionSet, self ).__init__(descend_invocation_order = 0, 
+                                                parallel = False,
+                                                )
+             [...]
+
+    
+    def user_should_modify_template(self):
+        return False
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+2. Ensure that you main script imports this @ref peano_action_sets "action set".
+3. Add it to your new user-defined step:
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+      additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
+                                                           add_user_defined_actions=False,
+                                                           )
+      additional_mesh_traversal.add_action_set( ComputeFirstDerivatives() )
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+4. Overwrite the functions from ActionSet, i.e. the superclass, which you
+   actually want to overwrite. 
+
+
+A classic example for a sophisticated variant of the the last step is the 
+action set implemented within applications/exahype2/ccz4/ComputeFirstDerivatives.py.
+It extends peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor for a Finite
+Difference scheme. This one in turn inherits from peano4.solversteps.ActionSet. 
+Once defined, we again add this to the step via add_action_set().
+   
+   
+
+### Use pre-defined functionality 
+
+You can write your own @ref peano_action_sets "action sets" to it (see above), 
+and/or you can use existing action sets within your additional mesh sweep. 
+Each additional mesh sweep has access
+to all ExaHyPE solver data. Nothing stops you from using and manipulating these
+data in your additional mesh sweeps.
+
+For this, I recommend that you study your solver objects' interna. Each of 
+them creates a whole suite of solver-specific action sets which are then added to the 
+individual steps via add_actions_to_perform_time_step(). Each solver also 
+creates its own distinct set of data structures and ties them to vertices,
+faces and cells.
+
+A good example is the ccz4.py script and the action sets within 
+ComputeFirstDerivatives.py which can be found in applications/exahype2/ccz4.
+Here, we define an additional action set which manipulates the "solution"
+after each time step or Runge-Kutta step, respectively. It manipulates the 
+solver's core data structure, and is used in combination with various 
+pre-defined action sets such as 
+exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces.
+
+
+## Dynamic adaptivity
+
+Do not coarsen or erase the mesh in the additional grid sweeps. Some ExaHyPE
+solvers are really picky when it comes to when they can refine or not. A 
+refinement in-between two Runge-Kutta steps for example is not particularly 
+helpful. If you need the additional steps to trigger mesh modifications, use
+the exahype2::RefinementControl objects and add them to exahype2::RefinementControlService.
+The service serves as a middle layer in-between ExaHyPE and Peano.
+
+
+
+
+## Add new data to the mesh
+
+By the time we have configured the new additional steps, you are working with 
+a plain Peano project. You consequently have quite some freedom. One of the 
+things you can do is to add arbitrary data to the mesh vertices, face and 
+cell which have nothing to do with the core ExaHyPE solvers in use. You can
+augment the whole setup with your own data.
+
+
+While the 
+routine init_new_user_defined_algorithmic_step() ensures that additional,
+user-defined
+algorithmic steps "know" which data ExaHyPE associates with each 
+grid entity (face, mesh, vertex), this does not hold the other way round:
+
+If you want to add further data to the mesh, you first create this data. 
+After that, you add the corresponding use_face(), use_vertex() or use_cell()
+calls to your script for your new mesh traversal. At this point, you also 
+have to notify all of ExaHyPE's mesh traversals that we have the additional
+data. They also traverse the mesh and if they are not aware of some user 
+data attached to it, this might lead to data inconsistencies. For this, you
+have to iterate over all of the steps associated with the Peano project and 
+add the usage information there as well. 
+
+
+Unfortunately, it becomes a little bit nasty here:
+By the time you add the new data, the ExaHyPE project has already lowered its
+data representation into Peano. That is, you cannot work with the ExaHyPE
+data representation anymore (with solvers and their actions), but you have to 
+alter Peano's data representation:
+Basically, you have to iterate over all mesh sweeps within the Peano project,
+and ensure that they know about the additional data that you inject into the 
+system.
+
+  
+
+ 
+ */
+

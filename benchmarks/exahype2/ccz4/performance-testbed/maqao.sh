@@ -19,7 +19,7 @@ module load gsl
 
 export UCX_TLS=ud,sm,self
 
-export OMP_NUM_THREADS=32
+export OMP_NUM_THREADS=<OMP_NUM_THREADS>
 
 <mpi_command> <run_command>
 

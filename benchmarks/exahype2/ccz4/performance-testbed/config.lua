@@ -140,10 +140,10 @@ filter = {
 -- !! Uncomment the table you want to use !!
 -- If the profiling should begin after a given percentage of the application time.
 -- A first run of the application is automatically performed to time the application.
---profile_start = {
---   unit = "p",      -- 'p' for 'percentage'
---   value = 30,         -- delay in percentage of the total application time
---}
+profile_start = {
+   unit = "s",      -- 'p' for 'percentage'
+   value = 100,         -- delay in percentage of the total application time
+}
 -- If the profiling should begin when the application is started
 --profile_start = {
 --   unit = "none",   -- Specify that no delay is needed

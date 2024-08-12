@@ -37,16 +37,34 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
 
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
+  {% if GRID_CONSTRUCTION %}
   if ( 
     not marker.willBeRefined() 
-    and
-    tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  
     and
     tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH) 
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
   else if ( 
+    not marker.willBeRefined() 
+    and
+    tarch::la::greaterEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+    and
+    not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
+  ) { 
+    refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
+      nullptr,
+      marker.x(),
+      marker.h(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
+    );
+    fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
+  }
+  else {
+    refinementCriterion = ::exahype2::RefinementCommand::Keep;
+  }
+  {% else %}
+  if ( 
     {{PREDICATE}}
     and
     not marker.willBeRefined() 
@@ -55,27 +73,6 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
-  else if ( not marker.willBeRefined() and tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  ) { 
-    refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      marker.x(),
-      marker.h(),
-      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
-    );
-     
-    if (
-      refinementCriterion==::exahype2::RefinementCommand::Refine 
-      and 
-      tarch::la::smallerEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
-    ) {
-      logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
-      refinementCriterion = ::exahype2::RefinementCommand::Keep;
-    } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Erase ) {
-      logDebug( "touchCellFirstTime(...)", "drop coarsen instructions, as we are in initial grid setup phase" );
-      refinementCriterion = ::exahype2::RefinementCommand::Keep;
-    } 
-  }
   else if ( 
     {{PREDICATE}}
     and
@@ -103,6 +100,7 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
   else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
   }
+  {% endif %}
     
   _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}} );
   logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
@@ -114,6 +112,7 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
         guard,
         build_up_new_refinement_instructions,
         implement_previous_refinement_instructions,
+        called_by_grid_construction, 
         event_lifetime=2,
     ):
         """
@@ -152,6 +151,7 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
             implement_previous_refinement_instructions
         )
         self._event_lifetime = event_lifetime
+        self._called_by_grid_construction = called_by_grid_construction
 
     def get_body_of_getGridControlEvents(self):
         if self._implement_previous_refinement_instructions:
@@ -200,6 +200,7 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
             )
             # @todo Falsch: Auch nur im letzten Schritt oder so evaluieren bei RK
             d["EVENT_LIFETIME"] = self._event_lifetime
+            d[ "GRID_CONSTRUCTION" ]  = self._called_by_grid_construction
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             result = jinja2.Template(self.TemplateAMR).render(**d)

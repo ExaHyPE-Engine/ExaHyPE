@@ -188,7 +188,9 @@ Peano4Core_SOURCES = \
 	peano4/parallel/tests/NodeTest.cpp \
 	peano4/stacks/stacks.cpp \
 	peano4/stacks/STDVectorStack.cpp \
-	peano4/utils/Loop.cpp
+	peano4/utils/Loop.cpp \
+	peano4/utils/tests/ParallelDForTest.cpp
+	
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)

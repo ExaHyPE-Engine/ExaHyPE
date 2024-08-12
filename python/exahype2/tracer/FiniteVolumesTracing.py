@@ -113,9 +113,10 @@ if (
 ) {
   for (auto* p: localParticles) {
     if ( 
-      p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet
+      p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet and marker.isContained(p->getX())
     ) {
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
+
 
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}

@@ -726,9 +726,17 @@ namespace exahype2::fv::rusanov {
       int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches
     );
 
-    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize);
-    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize);
-    tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int haloSize);
+    /**
+     * Construct iteration range
+     *
+     * If you have a 6x6x6 range and a halo of 3, then you get
+     *
+     * - (6+2*3)x6x6 if extendInBothDirections is true;
+     * - (6+3)x6x6 if extendInBothDirections is false.
+     */
+    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize, bool extendInBothDirections);
+    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize, bool extendInBothDirections);
+    tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int haloSize, bool extendInBothDirections);
 
     tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize, int patches);
     tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize, int patches);

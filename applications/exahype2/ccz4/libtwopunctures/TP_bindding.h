@@ -30,7 +30,7 @@ namespace TP_bindding {
 		//now adjust the solution
 		for (int i=0;i<6;i++) {
 			Q[i]=phisq*Q[i]; //\tilde{\gamma}_ij
-			Q[i+6]=	phisq*Q[i+6]-1./3. * traceK * Q[i]; //\tilde{A}_ij
+			Q[i+6]=	phisq*(Q[i+6]-1./3. * traceK * Q[i]/phisq); //\tilde{A}_ij
 		}
 		
 		//Q[53]=traceK; Q[54]=std::log(phi); Q[16]=std::log(Q[16]);

@@ -20,12 +20,8 @@ import exahype2.solvers.rkfd.actionsets
 from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
+from exahype2.solvers.Storage import Storage
 
-
-class Storage(Enum):
-    CallStack = 0
-    Heap = 1
-    SmartPointers = 2
 
 
 class CellCenteredFiniteDifferences(object):
@@ -237,13 +233,10 @@ class CellCenteredFiniteDifferences(object):
         self._interpolation = "#error Not yet defined"
         self._restriction = "#error Not yet defined"
 
-        self._cell_data_storage = Storage.CallStack
-        self._face_data_storage = Storage.CallStack
-
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
-        self.create_data_structures()
-        self.create_action_sets()
+        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
+        
 
     def __str__(self):
         result = (
@@ -740,6 +733,7 @@ The finest mesh width of """
             guard=self._store_cell_data_default_guard(),
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True,
+            called_by_grid_construction=False,
         )
         self._action_set_AMR_commit_without_further_analysis = (
             exahype2.solvers.rkfd.actionsets.AdaptivityCriterion(
@@ -747,6 +741,16 @@ The finest mesh width of """
                 guard=self._store_cell_data_default_guard(),
                 build_up_new_refinement_instructions=False,
                 implement_previous_refinement_instructions=True,
+                called_by_grid_construction=False,
+            )
+        )
+        self._action_set_AMR_throughout_grid_construction = (
+            exahype2.solvers.rkfd.actionsets.AdaptivityCriterion(
+                solver=self,
+                guard=self._store_cell_data_default_guard(),
+                build_up_new_refinement_instructions=True,
+                implement_previous_refinement_instructions=True,
+                called_by_grid_construction=True,
             )
         )
         self._action_set_handle_boundary = (
@@ -1061,7 +1065,7 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR)
+            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
@@ -1511,7 +1515,7 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
-    def switch_to_heap_storage(
+    def switch_storage_scheme(
         self,
         cell_data_storage: Storage,
         face_data_storage: Storage,

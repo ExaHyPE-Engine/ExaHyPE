@@ -82,6 +82,14 @@
   void startGridConstructionStep();
   void startGridInitialisationStep();
 
+  /**
+   * Start a new time step
+   *
+   * The solvers analyse their current solver state and toggle it. After
+   * this routine is called, the solvers' states remain invariant until
+   * the next startTimeStep() call or a suspension. Notably,
+   * finishTimeStep() does not alter the solvers' states.
+   */
   void startTimeStep(
     double globalMinTimeStamp,
     double globalMaxTimeStamp,
@@ -98,6 +106,10 @@
 
   void finishGridConstructionStep();
   void finishGridInitialisationStep();
+
+  /**
+   * @see startTimeStep()
+   */
   void finishTimeStep();
   void finishPlottingStep();
 
@@ -105,7 +117,35 @@
   void finishSimulation();
 
   bool mayPlot();
+
+  /**
+   * Is this the first sweep of a time step
+   *
+   * This query should be used with care within a user function and only once
+   * you have studied isLastGridSweepOfTimeStep(). startTimeStep() switches
+   * into this state. That is, when you call startTimeStep() and it turns out
+   * to be the first sweep, the predicate will be true after startTimeStep()
+   * has been called, and it will be true once the first mesh sweep has
+   * terminated and the control comes back to the main routine. It is nice to
+   * query stuff, but you should not "disturb" the solvers' mesh sweep
+   * sequence. If you have a Runge-Kutta solver for example, the fact that this
+   * predicate holds means that you've just finished the very first mesh
+   * run-through of a time step, but the time step overall is not finished
+   * yet.
+   */
   bool isFirstGridSweepOfTimeStep();
+
+  /**
+   * Is this the last sweep of a time step
+   *
+   * Some solvers require multiple mesh sweeps to realise their behaviour.
+   * Runge-Kutta solvers and enclave solvers are the most prominent examples.
+   * Once you call startTimeStep() for the last time, the internal states will
+   * toggle and this predicate will hold. After the time step has terminated
+   * and finishTimeStep() has been called, this predicate holds. That is, you
+   * can query it in the main and find out that a solver has just finished its
+   * time step.
+   */
   bool isLastGridSweepOfTimeStep();
 
   void suspendSolversForOneGridSweep();

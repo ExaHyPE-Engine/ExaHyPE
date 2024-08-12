@@ -172,7 +172,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
     assertion(value == value);
     particle.setData(unknown, value);
   }
-
+  
   for (int d = 0; d < Dimensions; d++) {
     particle.setX(d, particle.getX(d) + timeStepSize * factors(d) * particle.getData(indices(d)));
   }

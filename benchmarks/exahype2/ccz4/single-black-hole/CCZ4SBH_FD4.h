@@ -3,6 +3,9 @@
 #pragma once
 
 #include "AbstractCCZ4SBH_FD4.h"
+
+#include "MulticoreOrchestration.h"
+
 #include "tarch/logging/Log.h"
 
 

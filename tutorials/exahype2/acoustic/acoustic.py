@@ -1,0 +1,283 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+import os
+import sys
+import sympy
+import subprocess
+
+"""
+We import the required modules for this project.
+We always need the 'peano4' module as this is our core project.
+Since we are creating an ExaHyPE 2 application, we additionally
+need to import the 'exahype2' module.
+"""
+import peano4
+import exahype2
+
+"""
+We specify the space dimensions here.
+We support either 2- or 3-dimensional problems.
+"""
+dimensions = 2
+
+"""
+The number of finite volumes per axis in one patch.
+"""
+patch_size = 16
+
+"""
+The size of a finite volume/cell per axis.
+"""
+volume_size = 0.1
+
+"""
+The simulation end time.
+"""
+end_time = 1.0
+
+"""
+Choose domain size and offset.
+"""
+size = [10.0, 10.0, 10.0]
+offset = [0.0, 0.0, 0.0]
+
+"""
+Set to true, to visualise/convert the output data using a postprocessor.
+"""
+visualise = False
+
+"""
+Choose how often a snapshot is written.
+"""
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+
+"""
+Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
+"""
+compile_mode = peano4.output.CompileMode.Release
+
+"""
+We first create a new ExaHyPE 2 project.
+For this, we specify the (nested) namespaces, the name of our main file and our executable name.
+We amend the executable name by the space dimensions.
+"""
+my_project = exahype2.Project(
+    namespace=["tutorials", "exahype2", "acoustic"],
+    project_name="Acoustic",
+    directory=".",
+    executable="ExaHyPE2-Acoustic-" + str(dimensions) + "d",
+)
+
+"""
+Add the Finite Volumes solver using named arguments.
+This is the way you can add further PDE terms.
+This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
+Rusanov is the type of flux that is used to solve the Riemann problem at boundaries between cells.
+"""
+my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    name="Acoustic",
+    patch_size=patch_size,
+    unknowns=dimensions + 1,  # [p, u, v, (w)]
+    auxiliary_variables=0,
+    min_volume_h=volume_size,
+    max_volume_h=volume_size,
+    time_step_relaxation=0.5,
+)
+
+"""
+We want to define our PDE symbolically.
+For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
+"""
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=dimensions + 1, auxiliary_variables=0, dimensions=dimensions
+)
+p = my_pde.name_Q_entry(0, "p")
+v = my_pde.name_Q_entries(1, dimensions, "v")
+
+rho = sympy.symbols("rho")
+c = sympy.symbols("c")
+K0 = rho * c * c
+
+"""
+Define the equation system
+"""
+# Flux [unknowns, dimensions]
+if dimensions == 2:
+    my_pde.F[0, 0] = K0 * v[0]
+    my_pde.F[1, 0] = 1.0 / rho * p
+    my_pde.F[2, 0] = 0
+
+    my_pde.F[0, 1] = K0 * v[1]
+    my_pde.F[1, 1] = 0
+    my_pde.F[2, 1] = 1.0 / rho * p
+else:
+    my_pde.F[0, 0] = K0 * v[0]
+    my_pde.F[1, 0] = 1.0 / rho * p
+    my_pde.F[2, 0] = 0
+    my_pde.F[3, 0] = 0
+
+    my_pde.F[0, 1] = K0 * v[1]
+    my_pde.F[1, 1] = 0
+    my_pde.F[2, 1] = 1.0 / rho * p
+    my_pde.F[3, 1] = 0
+
+    my_pde.F[0, 2] = K0 * v[2]
+    my_pde.F[1, 2] = 0
+    my_pde.F[2, 2] = 0
+    my_pde.F[3, 2] = 1.0 / rho * p
+
+# Eigenvalues [unknowns, dimensions]
+if dimensions == 2:
+    my_pde.eigenvalues[0] = -c
+    my_pde.eigenvalues[1] = 0
+    my_pde.eigenvalues[2] = c
+else:
+    my_pde.eigenvalues[0] = -c
+    my_pde.eigenvalues[1] = 0
+    my_pde.eigenvalues[2] = 0
+    my_pde.eigenvalues[3] = c
+
+"""
+Since 'my_pde' only holds the PDE without initial- or boundary conditions,
+we still need to properly define initial- and boundary conditions.
+This gives us then a complete description of a 'scenario'.
+"""
+
+# Initial conditions
+my_pde.initial_values[0] = 0
+my_pde.initial_values[1] = 0
+my_pde.initial_values[2] = 0
+if dimensions == 3:
+    my_pde.initial_values[3] = 0
+
+# Boundary conditions
+my_pde.boundary_values[0] = 0
+my_pde.boundary_values[1] = 0
+my_pde.boundary_values[2] = 0
+if dimensions == 3:
+    my_pde.boundary_values[3] = 0
+
+# Source term
+sigma = sympy.symbols("sigma")
+t0 = sympy.symbols("t0")
+M0 = sympy.symbols("M0")
+t = sympy.symbols("t")
+
+max_h = sympy.symbols("MaxAdmissibleVolumeH")
+force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
+
+if dimensions == 2:
+    point_source = sympy.sqrt((5 - my_pde.x[0]) ** 2 + (5 - my_pde.x[1]) ** 2)
+    my_pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True))  # p
+else:
+    point_source = sympy.sqrt(
+        (5 - my_pde.x[0]) ** 2 + (5 - my_pde.x[1]) ** 2 + (5 - my_pde.x[2]) ** 2
+    )
+    my_pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True))  # p
+
+my_pde.sources[1] = 0
+my_pde.sources[2] = 0
+if dimensions == 3:
+    my_pde.sources[3] = 0
+
+my_pde.substitute_expression(rho, 2.7)
+my_pde.substitute_expression(c, 6.0)
+my_pde.substitute_expression(sigma, 0.1149)
+my_pde.substitute_expression(t0, 0.7)
+my_pde.substitute_expression(M0, 1000.0)
+
+"""
+Specify which implementation our solvers uses.
+Here we want to set the implementation we get from our symbolically defined PDE,
+i.e., we get the C++ implementation which is generated by ExaHyPE's 'symhype' package.
+"""
+my_solver.set_implementation(
+    initial_conditions=my_pde.implementation_of_initial_conditions(),
+    boundary_conditions=my_pde.implementation_of_boundary_conditions(),
+    flux=my_pde.implementation_of_flux(),
+    eigenvalues=my_pde.implementation_of_max_eigenvalue(),
+    source_term=my_pde.implementation_of_sources(),
+)
+
+"""
+To see which variables (unknowns + auxiliary variables) we can visualise,
+let's add a plot description for the variables to our solver.
+"""
+my_solver.plot_description = my_pde.unknown_identifier_for_plotter()
+
+"""
+Add the solver to our project
+"""
+my_project.add_solver(my_solver)
+
+"""
+Configure some global parameters
+"""
+my_project.set_global_simulation_parameters(
+    dimensions=dimensions,
+    size=size[0:dimensions],
+    offset=offset[0:dimensions],
+    min_end_time=end_time,
+    max_end_time=end_time,
+    first_plot_time_stamp=0.0,
+    time_in_between_plots=time_in_between_two_snapshots,
+    periodic_BC=[False, False, False],
+)
+
+"""
+This defines where the output files should go.
+If you omit this, output files are automatically put into the application's folder.
+"""
+my_project.set_output_path("solution")
+
+if visualise:
+    output_patch_file = "solution/solution-Acoustic.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
+
+"""
+If you only target a sequential execution, you can omit the load balancing.
+However, for a parallel build and execution you need to set load balancing.
+This requires the 'LoadBalancing' toolbox to be built.
+The type of load balancer can greatly impact the speedup and overall performance.
+For an overview of available load balancer refer to the documentation.
+"""
+my_project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    "new ::exahype2::LoadBalancingConfiguration()",
+)
+
+"""
+We need to set the location of our core libraries ('Peano4').
+This helps us to resolve any dependencies.
+Additionally, we specify the build mode which you can also change to a different mode.
+"""
+my_project.set_Peano4_installation("../../../", mode=compile_mode)
+
+"""
+We generate and grab the underlying core project of 'Peano4'.
+This gives us access to some functions we want to use to finalise and build this project.
+"""
+my_project = my_project.generate_Peano4_project(verbose=True)
+
+"""
+Finally, we want to build our project.
+First, all of the necessary glue code is generated in the application folder,
+then 'make' is invoked automatically which compiles the generated code and links against our core libraries
+and toolboxes which have been built before.
+You can also always invoke 'make' yourself to compile, or cleanup with 'make clean'.
+"""
+my_project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
+
+print("\nPDE is: ")
+print(my_pde.__str__())
+print(my_solver)
+print(my_project)
