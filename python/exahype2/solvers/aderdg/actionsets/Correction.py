@@ -58,6 +58,15 @@ class Correction(AbstractADERDGActionSet):
 
     {{CORRECTOR_ALLOCATIONS}}
 
+    ::exahype2::CellData<{{SOLUTION_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}> cellData(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize,
+      nullptr
+    );
+
     for (int d = 0; d < Dimensions; d++) {
       const int direction = d;
 
@@ -121,7 +130,7 @@ class Correction(AbstractADERDGActionSet):
     _Template_FaceIntegral = """
         const double inverseDxDirection = 1.0 / marker.h()[d];
         kernels::{{SOLVER_NAME}}::faceIntegral(
-          luh,
+          cellData.QIn[0],
           FIn,
           direction,
           orientation,
@@ -194,6 +203,7 @@ class Correction(AbstractADERDGActionSet):
         return (
             super(Correction, self).get_includes()
             + """
+#include "exahype2/CellData.h"
 #include "kernels/"""
             + self._solver._name
             + """/CellData.h"

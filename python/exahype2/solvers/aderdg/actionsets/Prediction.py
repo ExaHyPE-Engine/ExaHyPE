@@ -28,8 +28,6 @@ class Prediction(AbstractADERDGActionSet):
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-
     #if Dimensions == 2
     constexpr int SpaceFaceSize         = {{ORDER}} + 1;
     constexpr int SpaceBasisSize        = ({{ORDER}} + 1) * ({{ORDER}} + 1);
@@ -44,7 +42,7 @@ class Prediction(AbstractADERDGActionSet):
 
     {{CREATE_PREDICTOR_ALLOCATIONS}}
 
-    std::copy_n(luh, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
+    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
 """
 
     _Template_TouchCellFirstTime_Core = """
@@ -61,15 +59,26 @@ class Prediction(AbstractADERDGActionSet):
 
     _Template_PredictorAllocations = """
 
-    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
-    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()]{({{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}})0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}}  boundaryData[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize()+kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()];
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = boundaryData;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = boundaryData + kernels::{{SOLVER_NAME}}::getBndFaceTotalSize();
+
+    ::exahype2::CellData<{{SOLUTION_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}> cellData(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize,
+      boundaryData
+    );
+
 """
 
     _Template_FSTPVI_Linear_Without_PS = """
     // Linear, without point sources
     int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
-      lQhbnd, lFhbnd, luh,
+      lQhbnd, lFhbnd, cellData.QIn[0],
       marker.x(), marker.h(), timeStamp, timeStepSize,
       std::vector<int>() // Empty vector
     );
@@ -86,7 +95,7 @@ class Prediction(AbstractADERDGActionSet):
       // Linear, with point sources
       int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
-        lQhbnd, lFhbnd, luh,
+        lQhbnd, lFhbnd, cellData.QIn[0],
         marker.x(), marker.h(), timeStamp, timeStepSize,
         pointSources
       );
@@ -94,7 +103,7 @@ class Prediction(AbstractADERDGActionSet):
       // Linear, without point sources
       int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegralWithoutPointSources<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
-        lQhbnd, lFhbnd, luh,
+        lQhbnd, lFhbnd, cellData.QIn[0],
         marker.x(), marker.h(), timeStamp, timeStepSize,
         pointSources
       );
@@ -105,7 +114,7 @@ class Prediction(AbstractADERDGActionSet):
     // Nonlinear, without point sources
     int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
-      lQhbnd, lFhbnd, luh,
+      lQhbnd, lFhbnd, cellData.QIn[0],
       marker.x(), marker.h(), timeStamp, timeStepSize
     );
 """
@@ -125,12 +134,12 @@ class Prediction(AbstractADERDGActionSet):
 
     for (int d = 0; d < Dimensions; d++) {
       // Projected solution estimations
-      std::copy_n(&lQhbnd[2 * d * BasisElementsPerFace], BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace);
-      std::copy_n(&lQhbnd[(2 * d + 1) * BasisElementsPerFace], BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value);
+      std::copy_n(lQhbnd +  2 * d * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace);
+      std::copy_n(lQhbnd + (2 * d + 1) * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value);
 
       // Projected flux estimations
-      std::copy_n(&lFhbnd[2 * d * FluxElementsPerFace], FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace);
-      std::copy_n(&lFhbnd[(2 * d + 1) * FluxElementsPerFace], FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value);
+      std::copy_n(lFhbnd +  2 * d * FluxElementsPerFace, FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace);
+      std::copy_n(lFhbnd + (2 * d + 1) * FluxElementsPerFace, FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value);
 
       // Timestamp information for boundary handling
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
@@ -140,7 +149,7 @@ class Prediction(AbstractADERDGActionSet):
 
     _Template_NumberOfPrecisionsIterator = """
     ::exahype2::PrecisionCommand myPrecision = repositories::{{SOLVER_INSTANCE}}.precisionCriterion(
-      luh,
+      cellData.QIn[0],
       marker.x(),
       marker.h(),
       timeStepSize,
@@ -185,9 +194,9 @@ class Prediction(AbstractADERDGActionSet):
       // Left values
       if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
         {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = &lFhbnd[2 * d * FluxElementsPerFace];
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = lFhbnd + 2 * d * FluxElementsPerFace;
         {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = &lQhbnd[2 * d * BasisElementsPerFace];
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = lQhbnd + 2 * d * BasisElementsPerFace ;
         int orientation = 0;
         int faceNumber  = d;
         bool isBoundary = false;
@@ -198,16 +207,16 @@ class Prediction(AbstractADERDGActionSet):
         {{FACE_INTEGRAL}}
       } else {
         // Project to faces and update face timestamp
-        std::copy_n(&lQhbnd[2 * d * BasisElementsPerFace], BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace);
-        std::copy_n(&lFhbnd[2 * d * FluxElementsPerFace], FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace);
+        std::copy_n(lQhbnd + 2 * d * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace);
+        std::copy_n(lFhbnd + 2 * d * FluxElementsPerFace,  FluxElementsPerFace,  fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace);
         fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
       }
 
       // Right values
       if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = &lFhbnd[(2 * d + 1) * FluxElementsPerFace];
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = lFhbnd + (2 * d + 1) * FluxElementsPerFace;
         {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value + FluxElementsPerFace;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = &lQhbnd[(2 * d + 1) * BasisElementsPerFace];
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = lQhbnd + (2 * d + 1) * BasisElementsPerFace;
         {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value + BasisElementsPerFace;
         int orientation = 1;
         int faceNumber  = d + Dimensions;
@@ -219,8 +228,8 @@ class Prediction(AbstractADERDGActionSet):
         {{FACE_INTEGRAL}}
       } else {
         // Project to faces and update face timestamp
-        std::copy_n(&lQhbnd[(2 * d + 1) * BasisElementsPerFace], BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value);
-        std::copy_n(&lFhbnd[(2 * d + 1) * FluxElementsPerFace], FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value);
+        std::copy_n(lQhbnd + (2 * d + 1) * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value);
+        std::copy_n(lFhbnd + (2 * d + 1) * FluxElementsPerFace,  FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value);
         fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).setNewTimeStamp(0, timeStamp);
       }
     }
@@ -260,7 +269,7 @@ class Prediction(AbstractADERDGActionSet):
     _Template_FaceIntegral = """
         const double inverseDxDirection = 1.0 / marker.h()[d];
         kernels::{{SOLVER_NAME}}::faceIntegral(
-          luh,
+          cellData.QIn[0],
           FIn,
           direction,
           orientation,
@@ -368,6 +377,7 @@ class Prediction(AbstractADERDGActionSet):
         includes = (
             super(Prediction, self).get_includes()
             + """
+#include "exahype2/CellData.h"
 #include "kernels/"""
             + self._solver._name
             + """/CellData.h"
