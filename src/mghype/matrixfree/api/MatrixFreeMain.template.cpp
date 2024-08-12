@@ -1,21 +1,29 @@
 #include "{{MAIN_NAME}}.h"
 
-#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
-#include "{{SUBDIRECTORY}}observers/InitSolution.h"
-#include "{{SUBDIRECTORY}}observers/Solve.h"
-#include "{{SUBDIRECTORY}}observers/Plot.h"
-
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
+#include "{{SUBDIRECTORY}}observers/InitSolution.h"
+#include "{{SUBDIRECTORY}}observers/Solve.h"
+#include "{{SUBDIRECTORY}}observers/Plot.h"
+// @todo @author Dmitry
+// # I think, further automation of including steps from observers of different extensions is worth of consideration ->
+// # see in the comments below between the {% ... %} exepressions
 {% if SUBDIRECTORIES -%}
 {% for subdirectory in SUBDIRECTORIES %}
+// {% for step in OBSERVERS[subdirectory] %}
+// #include "{{subdirectory}}observers/{{step}}.h"
+// {% endfor -%}
 #include "{{subdirectory}}repositories/DataRepository.h"
 #include "{{subdirectory}}repositories/StepRepository.h"
 {% endfor -%}
 {% else %}
+// {% for step in OBSERVERS[""] %}
+// #include "observers/{{step}}.h"
+// {% endfor -%}
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
 {%- endif %}
@@ -31,7 +39,6 @@
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
-
 #include "toolbox/finiteelements/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
@@ -53,15 +60,11 @@ tarch::timing::Measurement plotMeasurement;
 
 
 bool selectNextAlgorithmicStep() {
-  static bool gridCreated = false;
-  
-  static int solverSteps;
-
-  bool continueToSolve = true;
-
-  static bool plotThenExit = false;
-
-  const int MaxIterations = 5000;
+  static bool         gridCreated         = false;
+  static int          solverSteps;
+  bool                continueToSolve     = true;
+  static bool         plotThenExit        = false;
+  const int           MaxIterations       = 5000;
 
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
