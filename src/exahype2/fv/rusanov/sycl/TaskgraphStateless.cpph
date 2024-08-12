@@ -729,7 +729,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData<double, double>& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -770,7 +770,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData<double, double>& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -811,7 +811,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless(int targetDevice, CellData<double, double>& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -852,7 +852,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -896,7 +896,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -940,7 +940,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");

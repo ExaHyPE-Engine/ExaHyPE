@@ -10,16 +10,17 @@
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "tarch/accelerator/sycl/GPUMemoryManager.h"
 
-exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
-  const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+template<typename inType, typename outType>
+exahype2::fv::rusanov::sycl::GPUCopyCellData<inType, outType>::GPUCopyCellData(
+  const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells           = hostObject.numberOfCells;
   cellCentre              = ::sycl::malloc_device<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
   cellSize                = ::sycl::malloc_device<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
-  QIn                     = ::sycl::malloc_device<double*>(numberOfCells, queue);
-  QOut                    = ::sycl::malloc_device<double*>(numberOfCells, queue);
-  QInCopyInOneHugeBuffer  = ::sycl::malloc_device<double>(numberOfCells * inEnumerator.size(), queue);
-  QOutCopyInOneHugeBuffer = ::sycl::malloc_device<double>(numberOfCells * outEnumerator.size(), queue);
+  QIn                     = ::sycl::malloc_device<inType*>(numberOfCells, queue);
+  QOut                    = ::sycl::malloc_device<outType*>(numberOfCells, queue);
+  QInCopyInOneHugeBuffer  = ::sycl::malloc_device<inType>(numberOfCells * inEnumerator.size(), queue);
+  QOutCopyInOneHugeBuffer = ::sycl::malloc_device<outType>(numberOfCells * outEnumerator.size(), queue);
   t                       = ::sycl::malloc_device<double>(numberOfCells, queue);
   dt                      = ::sycl::malloc_device<double>(numberOfCells, queue);
   maxEigenvalue           = ::sycl::malloc_device<double>(numberOfCells, queue);
@@ -30,9 +31,9 @@ exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
   copyEvent[2] = queue.memcpy(t, hostObject.t, numberOfCells * sizeof(double));
   copyEvent[3] = queue.memcpy(dt, hostObject.dt, numberOfCells * sizeof(double));
 
-  double* tmpQIn = new double[numberOfCells * inEnumerator.size()];
+  inType* tmpQIn = new inType[numberOfCells * inEnumerator.size()];
   for (int i = 0; i < numberOfCells; i++) {
-    ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size() * sizeof(double));
+    ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size() * sizeof(inType));
     queue.submit([&](::sycl::handler& h) {
       h.single_task([=, *this]() {
         QIn[i]  = &QInCopyInOneHugeBuffer[i * inEnumerator.size()];
@@ -40,25 +41,26 @@ exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
       });
     });
   }
-  copyEvent[4] = queue.memcpy(QInCopyInOneHugeBuffer, tmpQIn, numberOfCells * inEnumerator.size() * sizeof(double));
+  copyEvent[4] = queue.memcpy(QInCopyInOneHugeBuffer, tmpQIn, numberOfCells * inEnumerator.size() * sizeof(inType));
   delete[] tmpQIn;
 
   ::sycl::event::wait(copyEvent);
 }
 
-void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
-  CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
+template<typename inType, typename outType>
+void exahype2::fv::rusanov::sycl::GPUCopyCellData<inType, outType>::destroy(
+  CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
 ) {
-  double* tmpQOut = new double[numberOfCells * outEnumerator.size()];
+  outType* tmpQOut = new outType[numberOfCells * outEnumerator.size()];
 
   std::vector<::sycl::event> copyEvent(2);
-  copyEvent[0] = queue.memcpy(tmpQOut, QOutCopyInOneHugeBuffer, numberOfCells * outEnumerator.size() * sizeof(double));
+  copyEvent[0] = queue.memcpy(tmpQOut, QOutCopyInOneHugeBuffer, numberOfCells * outEnumerator.size() * sizeof(outType));
   if (copyEigenvaluesBack) {
     copyEvent[1] = queue.memcpy(hostObject.maxEigenvalue, maxEigenvalue, numberOfCells * sizeof(double));
   }
   ::sycl::event::wait(copyEvent);
   for (int i = 0; i < numberOfCells; i++) {
-    ::std::memcpy(hostObject.QOut[i], &tmpQOut[i * outEnumerator.size()], outEnumerator.size() * sizeof(double));
+    ::std::memcpy(hostObject.QOut[i], &tmpQOut[i * outEnumerator.size()], outEnumerator.size() * sizeof(outType));
   }
 
   delete[] tmpQOut;
@@ -73,16 +75,16 @@ void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
   ::sycl::free(maxEigenvalue, queue);
 }
 
-
-exahype2::fv::rusanov::sycl::GPUUSMCellData::GPUUSMCellData(
-  const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+template<typename inType, typename outType>
+exahype2::fv::rusanov::sycl::GPUUSMCellData<inType, outType>::GPUUSMCellData(
+  const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells = hostObject.numberOfCells;
 
   cellCentre    = ::sycl::malloc_shared<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
   cellSize      = ::sycl::malloc_shared<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
-  QIn           = ::sycl::malloc_shared<double*>(numberOfCells, queue);
-  QOut          = ::sycl::malloc_shared<double*>(numberOfCells, queue);
+  QIn           = ::sycl::malloc_shared<inType*>(numberOfCells, queue);
+  QOut          = ::sycl::malloc_shared<outType*>(numberOfCells, queue);
   t             = ::sycl::malloc_shared<double>(numberOfCells, queue);
   dt            = ::sycl::malloc_shared<double>(numberOfCells, queue);
   maxEigenvalue = ::sycl::malloc_shared<double>(numberOfCells, queue);
@@ -99,18 +101,19 @@ exahype2::fv::rusanov::sycl::GPUUSMCellData::GPUUSMCellData(
   ::sycl::event::wait(copyEvent);
 }
 
-void exahype2::fv::rusanov::sycl::GPUUSMCellData::destroy(
-  CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
+template<typename inType, typename outType>
+void exahype2::fv::rusanov::sycl::GPUUSMCellData<inType, outType>::destroy(
+  CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
 ) {
-  double*                      tmpQOut = new double[numberOfCells * outEnumerator.size()];
+  outType*                     tmpQOut = new outType[numberOfCells * outEnumerator.size()];
   ::std::vector<::sycl::event> copyEvent(2);
-  copyEvent[0] = queue.memcpy(tmpQOut, QOut, numberOfCells * outEnumerator.size() * sizeof(double));
+  copyEvent[0] = queue.memcpy(tmpQOut, QOut, numberOfCells * outEnumerator.size() * sizeof(outType));
   if (copyEigenvaluesBack) {
     copyEvent[1] = queue.memcpy(hostObject.maxEigenvalue, maxEigenvalue, numberOfCells * sizeof(double));
   }
   ::sycl::event::wait(copyEvent);
   for (int i = 0; i < numberOfCells; i++) {
-    ::std::memcpy(hostObject.QOut[i], &tmpQOut[i * outEnumerator.size()], outEnumerator.size() * sizeof(double));
+    ::std::memcpy(hostObject.QOut[i], &tmpQOut[i * outEnumerator.size()], outEnumerator.size() * sizeof(outType));
   }
 
   delete[] tmpQOut;
@@ -123,17 +126,17 @@ void exahype2::fv::rusanov::sycl::GPUUSMCellData::destroy(
   ::sycl::free(maxEigenvalue, queue);
 }
 
-
-exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
-  const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+template<typename inType, typename outType>
+exahype2::fv::rusanov::sycl::GPUManagedCellData<inType, outType>::GPUManagedCellData(
+  const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells           = hostObject.numberOfCells;
   cellCentre              = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
   cellSize                = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
-  QIn                     = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double*>(numberOfCells, queue);
-  QOut                    = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double*>(numberOfCells, queue);
-  QInCopyInOneHugeBuffer  = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells * inEnumerator.size(), queue);
-  QOutCopyInOneHugeBuffer = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells * outEnumerator.size(), queue);
+  QIn                     = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<inType*>(numberOfCells, queue);
+  QOut                    = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<outType*>(numberOfCells, queue);
+  QInCopyInOneHugeBuffer  = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<inType>(numberOfCells * inEnumerator.size(), queue);
+  QOutCopyInOneHugeBuffer = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<outType>(numberOfCells * outEnumerator.size(), queue);
   t                       = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, queue);
   dt                      = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, queue);
   maxEigenvalue           = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, queue);
@@ -144,9 +147,9 @@ exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
   copyEvent[2] = queue.memcpy(t, hostObject.t, numberOfCells * sizeof(double));
   copyEvent[3] = queue.memcpy(dt, hostObject.dt, numberOfCells * sizeof(double));
 
-  double* tmpQIn = new double[numberOfCells * inEnumerator.size()];
+  inType* tmpQIn = new inType[numberOfCells * inEnumerator.size()];
   for (int i = 0; i < numberOfCells; i++) {
-    ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size() * sizeof(double));
+    ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size() * sizeof(inType));
     queue.submit([&](::sycl::handler& h) {
       h.single_task([=, *this]() {
         QIn[i]  = &QInCopyInOneHugeBuffer[i * inEnumerator.size()];
@@ -154,24 +157,25 @@ exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
       });
     });
   }
-  copyEvent[4] = queue.memcpy(QInCopyInOneHugeBuffer, tmpQIn, numberOfCells * inEnumerator.size() * sizeof(double));
+  copyEvent[4] = queue.memcpy(QInCopyInOneHugeBuffer, tmpQIn, numberOfCells * inEnumerator.size() * sizeof(inType));
   delete[] tmpQIn;
 
   ::sycl::event::wait(copyEvent);
 }
 
-void exahype2::fv::rusanov::sycl::GPUManagedCellData::destroy(
-  CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
+template<typename inType, typename outType>
+void exahype2::fv::rusanov::sycl::GPUManagedCellData<inType, outType>::destroy(
+  CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
 ) {
-  double*                      tmpQOut = new double[numberOfCells * outEnumerator.size()];
+  outType*                     tmpQOut = new outType[numberOfCells * outEnumerator.size()];
   ::std::vector<::sycl::event> copyEvent(2);
-  copyEvent[0] = queue.memcpy(tmpQOut, QOutCopyInOneHugeBuffer, numberOfCells * outEnumerator.size() * sizeof(double));
+  copyEvent[0] = queue.memcpy(tmpQOut, QOutCopyInOneHugeBuffer, numberOfCells * outEnumerator.size() * sizeof(outType));
   if (copyEigenvaluesBack) {
     copyEvent[1] = queue.memcpy(hostObject.maxEigenvalue, maxEigenvalue, numberOfCells * sizeof(double));
   }
   ::sycl::event::wait(copyEvent);
   for (int i = 0; i < numberOfCells; i++) {
-    ::std::memcpy(hostObject.QOut[i], &tmpQOut[i * outEnumerator.size()], outEnumerator.size() * sizeof(double));
+    ::std::memcpy(hostObject.QOut[i], &tmpQOut[i * outEnumerator.size()], outEnumerator.size() * sizeof(outType));
   }
 
   delete[] tmpQOut;
