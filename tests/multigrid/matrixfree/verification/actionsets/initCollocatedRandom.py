@@ -352,9 +352,8 @@ class InitDofsCollocatedRandomTest2(InitDofsCollocatedRandomRhs):
    """
   
 
-class InitCollocatedTest4(ActionSet):
+class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
   templateTouchVertexFirstTime="""
-
   /*
   extremely hacky static random number generator
   */
@@ -448,13 +447,49 @@ class InitCollocatedTest4(ActionSet):
       assertionMsg(false, "should not be returned by user" );
       break;
   }
-
-
   """
 
+  templateTouchCellFirstTime="""
+  logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+
+  switch(dofType)
+  {
+    case celldata::{{SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+      }
+    }
+    break;
+
+  }
+  
+  logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  
+  """
   def __init__(self,
                solver):
-    super( InitCollocatedTest4, self ).__init__()
+    super( InitCollocatedTest4, self ).__init__(solver)
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
@@ -464,7 +499,10 @@ class InitCollocatedTest4(ActionSet):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
-      pass 
+      pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      pass
     return result
 
   def get_action_set_name(self):
