@@ -49,6 +49,41 @@ class InitDofsDGTest1(ActionSet):
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
+  auto insertIfNotPresent = []( std::vector<int>& v, int i ) {
+    if( std::find( v.begin(), v.end(), i ) == v.end() ) v.push_back(i);
+  };
+
+  // anonymous functions to calculate cell indices which are on the boundary
+  std::vector<int> indicesOnBoundary;
+
+  for (int f=0; f<TwoTimesD; f++) {
+    if( fineGridFaces{{SOLVER_NAME}}(f).getType() == facedata::{{SOLVER_NAME}}::Type::Boundary ) {
+      // this face is on the boundary. Gather the cell dof indices this corresponds to
+
+      switch(f){
+        case 0: {
+          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, (repositories::{{SOLVER_INSTANCE}}.PolyDegree+1 + 1)*i );
+        } break;
+
+        case 1: {
+          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, i );
+        } break;
+
+        case 2: {
+          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, repositories::{{SOLVER_INSTANCE}}.PolyDegree + (repositories::{{SOLVER_INSTANCE}}.PolyDegree+1 + 1)*i );
+        } break;
+
+        case 3: {
+          for (int i=(repositories::{{SOLVER_INSTANCE}}.PolyDegree+1)*repositories::{{SOLVER_INSTANCE}}.PolyDegree; i<(repositories::{{SOLVER_INSTANCE}}.PolyDegree+1)*(repositories::{{SOLVER_INSTANCE}}.PolyDegree+1); i++) insertIfNotPresent( indicesOnBoundary, i );
+        } break;
+
+      }
+    
+    }
+  }
+
+  auto indexIsOnBoundary = [&indicesOnBoundary](int i) -> bool { return not( indicesOnBoundary.empty() ) and std::find( indicesOnBoundary.begin(), indicesOnBoundary.end(), i ) != indicesOnBoundary.end() ; };
+
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
   
   /*
@@ -89,6 +124,12 @@ class InitDofsDGTest1(ActionSet):
 
         // first - fill the solution vector with randoms
         for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++) {
+          if ( indexIsOnBoundary(i) ) {
+            // ...
+          }
+          else {
+            // ...
+          }
           solution[i] = dis(rng);
 
           // and residual to 0...
