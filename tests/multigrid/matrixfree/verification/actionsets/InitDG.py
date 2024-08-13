@@ -645,10 +645,6 @@ class InitDofsDGTest4(InitDofsDGTest1):
         // set rhs...
         rhs =  repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
 
-        // and finally, reset the initial guess to 0....
-        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
-          solution[i] = 0;
-
         // send to mesh...
         fineGridCell{{SOLVER_NAME}}.setSolution( solution );
         fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
