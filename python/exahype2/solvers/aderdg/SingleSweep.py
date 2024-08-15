@@ -71,7 +71,12 @@ class SingleSweep(ADERDG):
             + "::SolverState::InitialPrediction or "
             + "repositories::"
             + self.get_name_of_global_instance()
-            + ".isFirstGridSweepOfTimeStep()"
+            + ".isFirstGridSweepOfTimeStep() or "
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::Plotting"
         )
 
         self._rhs_estimates_projection.generator.receive_and_merge_condition = (
@@ -93,7 +98,12 @@ class SingleSweep(ADERDG):
             + "::SolverState::InitialPrediction or "
             + "repositories::"
             + self.get_name_of_global_instance()
-            + ".isFirstGridSweepOfTimeStep()"
+            + ".isFirstGridSweepOfTimeStep() or "
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::Plotting"
         )
 
         self._flux_estimates_projection.generator.receive_and_merge_condition = (
