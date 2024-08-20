@@ -546,7 +546,7 @@ class InitDofsDGTest6(InitDofsDGTest1):
         // first - fill the solution vector with randoms
         for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++) {
           if ( indexIsOnBoundary(i) ) {
-            solution[i] = 0.0;
+            solution[i] = 0.0; // to satisfy the boundary conditions
           }
           else {
             solution[i] = dis(rng);
@@ -562,7 +562,24 @@ class InitDofsDGTest6(InitDofsDGTest1):
         fineGridCell{{SOLVER_NAME}}.setRand( solution );
 
         // set rhs...
-        rhs =  repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
+        rhs = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
+
+        // now we need to compute all projections...
+        auto faceProjections = repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * solution;
+
+        for (int f=0; f<TwoTimesD; f++) {
+          int startIndexProjection = 
+            f < Dimensions ?
+            repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+            0;
+          for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
+            fineGridFaces{{SOLVER_NAME}}(f).setProjection(
+              p + startIndexProjection,
+              faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
+            );
+            }
+
+          }
 
         // and finally, reset the initial guess to 0....
         for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
@@ -572,7 +589,6 @@ class InitDofsDGTest6(InitDofsDGTest1):
         fineGridCell{{SOLVER_NAME}}.setSolution( solution );
         fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
         fineGridCell{{SOLVER_NAME}}.setResidual( residual );
-
 
       }
     }
