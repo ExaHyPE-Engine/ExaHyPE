@@ -127,3 +127,59 @@ def plot_field(data):
         ax.set_zlabel('val')
         ax.set_title(' ')
         plt.show()
+
+def plot_field_dg(data, H):
+    """
+    Visualise the parsed field as an interactive scatter plot.
+
+    :arg data: parsed patch data in the form of a dictionary as output of parse_patch_file()
+    :arg H: mesh size as list of cell sizes in each direction: [hx, hy]
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    import mghype
+
+    assert len(H) == 2, "Only works for 2D"
+
+    # For plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    x = []
+    y = []
+    val = []
+    
+    # Local coordinates of cell nodes
+    poly_degree = int(np.sqrt(len(data[(0.0, 0.0)]))) - 1
+    matrices = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(poly_degree)
+    local_node_coordinates = matrices._Xi_C
+    num_of_nodes = len(local_node_coordinates[0])
+
+    # Allocate list of global coordinates
+    global_node_coordinates = [[np.zeros_like(arr) for arr in local_node_coordinates[0]]]
+
+    for key in data.keys():
+        # Coordinates of the left-bottom cell vertex
+        xlb = key[0]
+        ylb = key[1]
+
+        # Local-to-global mapping:
+        # x = xlb + hx/2*(xi  + 1)
+        # y = ylb + hy/2*(eta + 1)
+        for i in range(num_of_nodes):
+            global_node_coordinates[0][i][0] = xlb + 0.5 * H[0] * (local_node_coordinates[0][i][0] + 1.0)
+            global_node_coordinates[0][i][1] = ylb + 0.5 * H[1] * (local_node_coordinates[0][i][1] + 1.0)
+            # global_node_coordinates[0][i][:] = [ key[coord_id] + 0.5 * H[coord_id] * (local_node_coordinates[0][i][coord_id] + 1.0) for coord_id in range(2) ]
+
+        # Add to global arrays for plotting
+        x.extend([ global_node_coordinates[0][i][0] for i in range(num_of_nodes) ])
+        y.extend([ global_node_coordinates[0][i][1] for i in range(num_of_nodes) ])
+        val.extend(data[key])
+    
+    # Plot
+    sc = ax.scatter(x, y, val, c=val, cmap='viridis')
+    fig.colorbar(sc, ax=ax, label='Value')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('val')
+    ax.set_title(' ')
+    plt.show()
