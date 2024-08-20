@@ -297,7 +297,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned({{ALIGNMENT}})));
   for(int i=0; i<{{NUMBER_OF_DOF}}; i++){
     for(int j=0; j<{{NUMBER_OF_DOF}}; j++){
-      coeffVolume[i*4+j] = Kxi_T[i*{{NUMBER_OF_DOF_PADDED}}+j] *
+      coeffVolume[i*{{NUMBER_OF_DOF_PADDED}}+j] = Kxi_T[i*{{NUMBER_OF_DOF_PADDED}}+j] *
         invDx * timeStepSize * Quadrature<pCompType>::iweights1[i];
     }
   }
