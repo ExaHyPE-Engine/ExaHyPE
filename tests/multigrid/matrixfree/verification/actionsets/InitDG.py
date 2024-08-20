@@ -483,7 +483,7 @@ class InitDofsDGTest6(InitDofsDGTest1):
 
       switch(f){
         case 0: {
-          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, (repositories::{{SOLVER_INSTANCE}}.PolyDegree+1 + 1)*i );
+          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, (repositories::{{SOLVER_INSTANCE}}.PolyDegree + 1)*i );
         } break;
 
         case 1: {
@@ -491,7 +491,7 @@ class InitDofsDGTest6(InitDofsDGTest1):
         } break;
 
         case 2: {
-          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, repositories::{{SOLVER_INSTANCE}}.PolyDegree + (repositories::{{SOLVER_INSTANCE}}.PolyDegree+1 + 1)*i );
+          for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.PolyDegree+1; i++) insertIfNotPresent( indicesOnBoundary, repositories::{{SOLVER_INSTANCE}}.PolyDegree + (repositories::{{SOLVER_INSTANCE}}.PolyDegree + 1)*i );
         } break;
 
         case 3: {
