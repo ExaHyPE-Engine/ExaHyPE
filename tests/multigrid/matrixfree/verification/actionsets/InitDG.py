@@ -650,9 +650,44 @@ class InitDofsDGTest4(InitDofsDGTest1):
         fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
         fineGridCell{{SOLVER_NAME}}.setResidual( residual );
 
-        // next, fetch the  vertex and write into vector1
+      }
+    }
+    break;
 
+  }
+  
+  """
 
+class InitDofsDGTest5(InitDofsDGTest1):
+
+    
+  templateTouchCellFirstTime="""
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  
+  switch(dofType)
+  {
+    case celldata::{{SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
 
       }
     }
@@ -661,3 +696,6 @@ class InitDofsDGTest4(InitDofsDGTest1):
   }
   
   """
+  def __init__(self,
+               solver):
+    super( InitDofsDGTest5, self ).__init__(solver)
