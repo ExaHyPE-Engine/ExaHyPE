@@ -603,7 +603,33 @@ class InitDofsIntermediatePhaseTest6(InitDofsIntermediatePhaseTest1):
   """
   Inherit from the class for test1.
   """
-  pass
+  templateTouchCellFirstTime="""
+    if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse
+    and
+    Counter==0
+  ) {
+    // now let's finish updating rhs
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
+    for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+
+    // next, we need to project solution on face onto the cell...
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
+
+    fineGridCell{{SOLVER_NAME}}.setRhs( fineGridCell{{SOLVER_NAME}}.getRhs( ) + projection );
+
+    // we also reset solutions and projections to 0 for the benefit of the solver
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projections(0.0);
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double >   solutions(0.0);
+
+    for (int f=0; f<TwoTimesD; f++) {
+      fineGridFaces{{SOLVER_NAME}}(f).setProjection(projections);
+      fineGridFaces{{SOLVER_NAME}}(f).setSolution(solutions);
+    }
+  }
+  """
 
 class InitDofsDGTest4(InitDofsDGTest1):
   def __init__(self,
