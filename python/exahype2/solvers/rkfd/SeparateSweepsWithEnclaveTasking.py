@@ -75,7 +75,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ); // previous time step has to be valid
   
       double subTimeStamp=timeStamp;
-      {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+      {% for PREDICATE_NO in range(0,PREDICATES|length-1) %}
       if ({{PREDICATES[PREDICATE_NO]}}) {
         subTimeStamp += {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}}*timeStepSize;
       }
