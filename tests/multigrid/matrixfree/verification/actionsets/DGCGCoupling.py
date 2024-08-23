@@ -248,7 +248,7 @@ class Test5Coupling(Test4Coupling):
 
   auto v_cell = composedProlongationMatrix * u_cg_random;
   
-  fineGridCell{{DG_SOLVER_NAME}}.setVcell(
+  fineGridCell{{DG_SOLVER_NAME}}.setVcell( 
     v_cell
   );
 
@@ -303,7 +303,7 @@ class Test5Coupling(Test4Coupling):
 
   auto v_restrict_mdg = composedRestrictionMatrix * mdg_p;
   for (int v=0; v<TwoPowerD; v++)
-    fineGridVertices{{CG_SOLVER_NAME}}(v).setVrestrictMDG( 0, v_restrict_mdg(v) );
+    fineGridVertices{{CG_SOLVER_NAME}}(v).setVrestrictMDG( 0, fineGridVertices{{CG_SOLVER_NAME}}(v).getVrestrictMDG(0) + v_restrict_mdg(v) );
 
   }
   """

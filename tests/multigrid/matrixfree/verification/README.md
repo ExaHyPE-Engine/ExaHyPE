@@ -12,6 +12,6 @@ Order and description of tests:
 
 6. The same as Test 3, but for DG: Check that the DG solver converges to u_{random} for the RHS b = A_DG * u_{random} with some random u_{random}.
 
-7. Check that the multigrid two-cycle converges in one iteration if pre-smoothing is switched off and we set b = A_DG * P * u_{c,random}
+7. Check that the multigrid two-cycle converges in one iteration (in one two-grid cycle) if pre-smoothing is switched off and we set b = A_DG * P * u_{c,random}
 
 8. Check that A_DG and A_CG really approximate the continuum operators: A_DG * u = M * b where u, b are the dof-vectors of the functions u(x), b(x) which satisfy the PDE in the continuum -Laplace u(x) = b(x).

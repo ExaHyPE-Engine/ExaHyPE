@@ -628,8 +628,8 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
         auto MCGValues = repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() )          * randoms;
 
         for (int i=0; i<TwoPowerD; i++) {
-          fineGridVertices{{SOLVER_NAME}}(i).setAcg( 0, ACGValues(i) );
-          fineGridVertices{{SOLVER_NAME}}(i).setMcg( 0, MCGValues(i) );
+          fineGridVertices{{SOLVER_NAME}}(i).setAcg( 0, ACGValues(i) + fineGridVertices{{SOLVER_NAME}}(i).getAcg(0) );
+          fineGridVertices{{SOLVER_NAME}}(i).setMcg( 0, MCGValues(i) + fineGridVertices{{SOLVER_NAME}}(i).getMcg(0) );
         }
       }
     }

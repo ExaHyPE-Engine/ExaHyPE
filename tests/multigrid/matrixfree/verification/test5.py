@@ -1,3 +1,10 @@
+"""
+This test checks that R * A_DG * P * u_random = A_CG * u_random and R * M_DG * P * u_random = M_CG * u_random 
+for some random vector u_random.
+Here R and P are the restriction and prolongation operators, respectively, A_DG, A_CG are system matrices and 
+M_DG, M_CG are mass matrices for DG and CG, respectively.
+"""
+
 import os, sys
 import argparse
 import peano4
@@ -67,7 +74,7 @@ dg_solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPoi
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 0.01,
+  solver_tolerance = 1e-6,
   custom_init_actionset=InitDofsDGTest5,
 )
 
@@ -80,7 +87,7 @@ dg_solver.add_to_cell_data( "vcell", (args.poly_degree + 1) ** args.dimensions )
 dg_solver.add_to_face_data( "projectionTest", num_dg_face_projections )
 dg_solver.add_to_face_data( "solutionTest",   num_dg_face_solutions )
 
-correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
+correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
@@ -156,7 +163,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_each_timestep    = args.plot_each_timestep,
-  max_iterations        = 1
+  max_iterations        = 2
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
