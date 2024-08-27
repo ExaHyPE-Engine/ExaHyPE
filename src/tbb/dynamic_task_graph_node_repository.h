@@ -45,9 +45,12 @@ namespace tbb {
        * Factor mechanism
        *
        * Gives you a new node. If there's already a task with that number,
-       * then the factory mechanism adds in in-dependency to that one.
-       *
-       * The responsibility for this node resides within the repo.
+       * then this task is backed up in the data structure 
+       * _shadowed_node_container. This way, we can add in-out dependencies
+       * (the task with the same number is an in-dependency for the newly
+       * created task). To add this dependency is the job of the user, i.e.
+       * this routine just ensures that the backup/shadow container is 
+       * properly befilled.
        */
       dynamic_task_graph_node&  create_node(
         std::function<void()>           functor,

@@ -1,0 +1,37 @@
+/**
+
+@page benchmarks_exahype2_swe_artificial_tsunami Artificial Tsunami
+
+This benchmark is a simplified version of the corresponding application that runs for a short amount of time to evaluate the performance.
+This benchmark also does not require the NetCDF library and does not dump any solution outputs.
+Refer to the \ref applications_exahype2_swe_artificial_tsunami application for details on the setup.
+
+## How to Build and Run
+
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+
+### Using CMake
+
+    cd myPeanoDirectory && mkdir build && cd build
+    CC=gcc CXX=g++ cmake .. -DWITH_MULTITHREADING=omp -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    make -j && make test
+    cd benchmarks/exahype2/swe/artificial-tsunami/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 artificial-tsunami.py
+    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveEnclaveFV-Stateless-Release
+
+### Using Automake
+
+    cd myPeanoDirectory
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    CFLAGS="-fopenmp" CC=gcc CXXFLAGS="-std=c++20 -fopenmp" CXX=g++ LDFLAGS="-fopenmp" \
+    ./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+    make -j && make check
+    cd benchmarks/exahype2/swe/artificial-tsunami/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 artificial-tsunami.py
+    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveEnclaveFV-Stateless-Release
+
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
+*/
