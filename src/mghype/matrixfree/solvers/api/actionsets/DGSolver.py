@@ -241,10 +241,10 @@ class ProjectOntoCells(ActionSet):
     // update global residual
     repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
       tarch::la::max( tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() ) ),
-      tarch::la::volume(marker.h()) * tarch::la::max(tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() )),
-      tarch::la::norm2Squared(tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() )),
+      tarch::la::norm2Squared(tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() )),     
+      tarch::la::volume(marker.h()) * tarch::la::norm2Squared(tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() )),      
       marker.h()(0)
-    );   
+    );
     
     // multiply by "smoother" / preconditioner
     fineGridCell{{SOLVER_NAME}}.setResidual(
