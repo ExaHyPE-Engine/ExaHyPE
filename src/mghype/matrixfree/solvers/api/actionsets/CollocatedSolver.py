@@ -58,9 +58,9 @@ class CollocatedSolver(ActionSet):
                  * 1.0 / fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) * r;
 
       repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
-        tarch::la::abs(r),
-        tarch::la::volume(marker.h()) * r * r,
+        tarch::la::abs(r),        
         r * r,
+        tarch::la::volume(marker.h()) * r * r,
         marker.h()(0)
       );
 
