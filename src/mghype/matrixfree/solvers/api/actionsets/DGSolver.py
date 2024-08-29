@@ -15,9 +15,10 @@ class UpdateCell(ActionSet):
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
     and
+    // only one condition here - ensures that we don't do this when restricting the residual
     repositories::{{SOLVER_INSTANCE}}.updateCell()
   ) {
-    logTraceInWith4Arguments("touchCellFirstTime", 
+    logTraceInWith4Arguments("UpdateCell", 
       fineGridCell{{SOLVER_NAME}}.getSolution(),
       fineGridCell{{SOLVER_NAME}}.getRhs(),
       marker.toString(),
@@ -33,7 +34,7 @@ class UpdateCell(ActionSet):
 
     fineGridCell{{SOLVER_NAME}}.setResidual( r );
 
-    logTraceOut("touchCellFirstTime");
+    logTraceOut("UpdateCell");
   }
   """
 
@@ -214,8 +215,10 @@ class ProjectOntoCells(ActionSet):
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
     and
-    repositories::{{SOLVER_INSTANCE}}.updateCell()
+    repositories::{{SOLVER_INSTANCE}}.projectOntoCells()
   ) {
+    logTraceInWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
+
     // we intend that the internal residual vector should be reset and updated in the 
     // cell update procedure
 
@@ -256,6 +259,7 @@ class ProjectOntoCells(ActionSet):
       );
     }
 
+    logTraceOutWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
   }
 
   """
@@ -330,6 +334,8 @@ class UpdateFaceSolution(ActionSet):
     and
     repositories::{{SOLVER_INSTANCE}}.updateFace()
   ) {
+    logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
+
     // project the u^\pm into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
@@ -340,11 +346,15 @@ class UpdateFaceSolution(ActionSet):
         (1-repositories::{{SOLVER_INSTANCE}}.OmegaFace)*fineGridFace{{SOLVER_NAME}}.getSolution(i)
          + repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
       );
+    logTraceOutWith1Argument( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution() );
   }
 
-  else if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary )
-  {
-    logTraceInWith1Argument( "InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
+  else if (
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateFace()
+  ) {
+    logTraceInWith1Argument( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
     // Essentially what we do here is fix the solution on the boundary to be 
     // the inner-side projection.
 
@@ -373,7 +383,7 @@ class UpdateFaceSolution(ActionSet):
       fineGridFace{{SOLVER_NAME}}.setSolution( row, rowSolution );
     }
 
-    logTraceOut( "InteriorPenalty");
+    logTraceOut( "updateFaceSolution::InteriorPenalty");
   }
 
 

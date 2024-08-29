@@ -7,8 +7,6 @@ class Solver:
 
   Abstract base class for matrix free solvers.
 
-  Much of the implementation is yet to be done. 
-
   """
 
   def __init__(self, 
@@ -23,9 +21,13 @@ class Solver:
     self._face_data   = peano4.datamodel.DaStGen2( name )
     self._cell_data   = peano4.datamodel.DaStGen2( name )
 
-    self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
+    self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Corner", "Coarse", "Outside", "Undefined"] ) )
     self._face_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
     self._cell_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse", "Outside", "Undefined"] ) )
+
+    # for use with verification suite
+    self._abstract_solver_header_extras         = """ """
+    self._abstract_solver_implementation_extras = """ """
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -58,3 +60,7 @@ Return the name of the object that will be created for this solver.
   @abstractmethod
   def create_readme_descriptor(self):
     return "not written yet"
+
+  def add_to_abstract_solver(self, header, implementation):
+    self._abstract_solver_header_extras         = header
+    self._abstract_solver_implementation_extras = implementation

@@ -18,7 +18,7 @@ parser.add_argument("-fas",   "--use-fas",          dest="fas", action="store_tr
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
+parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=2, help="Polynomial Degree")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Smoothing parameter for cells")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Smoothing parameter for faces")
@@ -79,7 +79,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
 
 
 #! [Construct correction matrices]
-correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
+correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
@@ -134,7 +134,7 @@ solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.Multi
 
 
 #! [Add solvers]
-project.add_solver(correction_equation_solver)
+project.add_solver(correction_equation_solver, auxiliary=True)
 project.add_solver(solver)
 #! [Add solvers]
 

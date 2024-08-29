@@ -19,8 +19,11 @@ class CollocatedSolver(ActionSet):
     );
     fineGridVertex{{SOLVER_NAME}}.setValue(value);
   }
-  else if (fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior)
-  {
+  else if (
+    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
+    and
+    repositories::{{SOLVER_INSTANCE}}.update()
+  ) {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
@@ -66,6 +69,13 @@ class CollocatedSolver(ActionSet):
     }
     logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
+
+  if ( fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary ) {
+    auto value = 0.0;
+    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
+      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, value);
+    }
+  }
   """
 
   templateTouchCellFirstTime = """ 
@@ -75,6 +85,7 @@ class CollocatedSolver(ActionSet):
     repositories::{{SOLVER_INSTANCE}}.update()
   ) {
     logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
       // Mass and assembly matrix should be block diagonal, 
@@ -100,8 +111,8 @@ class CollocatedSolver(ActionSet):
           rhsColSum += M(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getRhs(unknown);
         }
       
-        vertexValues(i)   = solColSum;
-        rhsValues(i)      = rhsColSum;
+        vertexValues(i)   = solColSum;        
+        rhsValues(i) = rhsColSum;
         residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
       }
 
