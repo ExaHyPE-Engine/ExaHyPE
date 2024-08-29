@@ -11,7 +11,8 @@ TBB_SOURCES = \
 	dynamic_task_graph_node.cpp \
 	dynamic_task_graph_spawned_node.cpp \
 	dynamic_task_graph_node_repository.cpp \
-	dynamic_task_graph_utils.cpp 
+	dynamic_task_graph_utils.cpp \
+	task_handle_repository.cpp
 	  
 
 libtbb_extension_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
