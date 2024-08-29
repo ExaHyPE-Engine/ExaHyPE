@@ -7,7 +7,7 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution, ProjectOntoCells
+from .actionsets.DGSolver         import UpdateResidual, ProjectOntoFaces, UpdateFaceSolution, ProjectIntoCellAndUpdateCellSolution
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
@@ -172,7 +172,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
         
     
-    All of this functionality can be found in the subpackage actionsets.UpdateCell.
+    All of this functionality can be found in the subpackage actionsets.UpdateResidual.
 
   ## How does it work?
 
@@ -212,19 +212,19 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   touchFaceFirstTime. We apply the Riemann matrix that is present in the Abstract Solver class. This action set goes first,
   the idea being that we updated the face solution using the updated face projections from the previous sweep.
 
-  ### ProjectOntoCells
-  Code for this is in actionsets.DGSolver.ProjectOntoCells. This action set works when we touch the cell for the first time.
+  ### ProjectIntoCellAndUpdateCellSolution
+  Code for this is in actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution. This action set works when we touch the cell for the first time.
   We project the newly updated face solution back into the cells. In particular we:
    - Write the updated face solution into the residual stored in the cell. This finishes the cell update from the previous sweep.
    - Update the global residual
    - Update the cell solution, which is projected back onto faces in the next action set.
 
   ### ProjectOntoFaces
-  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after ProjectOntoCells, so that we project
+  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after ProjectIntoCellAndUpdateCellSolution, so that we project
   freshly updated Cell values onto the Faces.
 
-  ### UpdateCell
-  Code for this is in actionsets.DGSolver.UpdateCell. We do something nontrivial in touchCellFirstTime, namely perform the cell update
+  ### UpdateResidual
+  Code for this is in actionsets.DGSolver.UpdateResidual. We do something nontrivial in touchCellFirstTime, namely perform the cell update
   rule as above. We set the residual to be \f$ Mb - A^{cc} u^c \f$.
 
     
@@ -456,9 +456,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       self.preprocessing_action_set.descend_invocation_order = descend_order + 0
       observer.add_action_set( self.preprocessing_action_set )
     observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
-    observer.add_action_set( ProjectOntoCells(self, descend_order+2, False) )
+    observer.add_action_set( ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) )
     observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
-    observer.add_action_set( UpdateCell(self, descend_order+4, False) )
+    observer.add_action_set( UpdateResidual(self, descend_order+4, False) )
     if self.postprocessing_action_set != None:
       self.postprocessing_action_set.descend_invocation_order = descend_order + 4
       observer.add_action_set( self.postprocessing_action_set )

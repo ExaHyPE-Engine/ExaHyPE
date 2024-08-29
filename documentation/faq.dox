@@ -1,0 +1,446 @@
+/**
+
+@page page_faq_home FAQs and Troubleshooting (User Perspective)
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+Some frequently asked questions and problems are discussed below.
+
+
+# Autotools
+
+- ***configure fails with ...*** Before you start
+  any further investigation, update to the latest version of the autotools,
+  ensure your configure script suits this version, and rerun the build system
+  configuration:
+  ~~~~~~~~~~~~~~~~~~~
+  autoreconf --install
+  libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+  ~~~~~~~~~~~~~~~~~~~
+
+- ***checking host system type... Invalid configuration `./configure': machine `./configure-unknown' not recognized*** We got this
+  recently on a number of new Linux installations. In this case, adding
+  ~~~~~~~~~~~~~~~~~~~
+  --build=x86_64 --host=x86_64
+  ~~~~~~~~~~~~~~~~~~~
+  to your configure call seems to be necessary.
+
+
+
+# Compilation
+
+- ***My compiler yields warnings of the type***
+  ~~~~~~~~~~~~~~~~~~~
+./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]
+ [[clang::pack]]  std::bitset<TwoPowerD>   _hasBeenRefined;
+  ~~~~~~~~~~~~~~~~~~~
+  Please consult your compiler options. Usually re-configuring with the flag
+  ```-Wno-unknown-attributes``` eliminates the warnings.
+
+- ***My C++ version is too old***
+  Try to rerun configure with
+  ~~~~~~~~~~~~~~~~~~~
+CXXFLAGS=-std=c++20
+  ~~~~~~~~~~~~~~~~~~~
+  Depending on your compiler, the flag might also be
+  ~~~~~~~~~~~~~~~~~~~
+CXXFLAGS=--std=c++20
+  ~~~~~~~~~~~~~~~~~~~
+  Some compilers want you to use two hyphens, others expect one. Please note
+  that most Clang-based compiler installations do not bring their own C++ standard
+  library to the table. They use the pre-existing GCC STL. Now, if your
+  Clang-based compiler - that includes NVIDIA and Intel - is built against a
+  version of GNU whose STL is too old, you will get errors despite the std
+  flag. In this case, you have to load a newer GCC module *after* you have
+  loaded your Intel, NVIDIA or Clang module. You basically load the Clang-based
+  compiler which will introduce a GNU STL, i.e. set the corresponding environment
+  variables. After that, you manually load a newer GCC which redirects all of
+  these variables.  
+
+  If there are multiple `gcc` versions present, it is possible for CLANG to
+  automatically select an outdated version thus creates problem when
+  compiling. You can check what is the selection version with `clang++ -v`.
+  Use this to select the other listed options:
+  `--gcc-install-dir=/path/to/new/gcc`.
+
+- ***My compiler reports***
+  ~~~~~~~~~~~~~~~~~~~
+tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std`
+  13 |  return new (std::align_val_t(Alignment)) double[size];
+  ~~~~~~~~~~~~~~~~~~~
+  We have seen this error with GCC if the supported C++ generation is too old.
+  See remarks above.
+
+- ***My compiler yields errors like***
+  ~~~~~~~~~~~~~~~~~~~
+`warning \#3191: scoped enumeration types are a C++11 feature`
+  ~~~~~~~~~~~~~~~~~~~
+  Your compiler seems not to have
+  C++11 (or, newer) enabled by default. See remarks above.
+
+- ***My compiler fails with***
+  ~~~~~~~~~~~~~~~~~~~
+"tarch/plotter/griddata/unstructured/vtk/VTKBinaryFileWriter.cpp", line 42: error: name followed by "::" must be a class or namespace name
+        if (not std::filesystem::exists(indexFileName + ".pvd"))
+  ~~~~~~~~~~~~~~~~~~~
+  We have seen this error with GCC if the supported C++ generation is too old.
+  See remarks above.
+
+- ***My compiler terminates with***
+  ~~~~~~~~~~~~~~~~~~~
+`error: unknown attribute 'optimize' ignored*`
+  ~~~~~~~~~~~~~~~~~~~
+   We have seen this issue notably on macOS
+   with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
+   some systems and then the wrong header is included. Consult the remarks on
+   @ref compiler_specific_settings "compiler-specific settings". Ensure that
+   the flag ```CompilerCLANG``` is enabled and used.
+
+- ***My compiler terminates with errors when I enable OpenMP multithreading***
+  Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
+
+- ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
+  The application will parse the configure call used by Peano to feed its
+  Makefile. To get
+  the correct flags for HDF5 support for your experiment, you might want to add
+  the following or similar flags to your Peano configuration call:
+  ~~~~~~~~~~~~~~~~~~~
+LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
+  ~~~~~~~~~~~~~~~~~~~
+  This list is not comprehense and might differ on each system. The safest way
+  to find these flags is to run the HDF5 compiler with verbose. It is actually
+  only a wrapper around your real compiler which sets some variables, i.e. the
+  verbose mode should give you the flags that are set, and then you can add
+  these flags manually to your configure call. The Peano 4 applications then
+  will pick up these flags automatically the next time you invoke the Python
+  scripts.
+
+- ***configure fails for the NVIDIA compiler*** For NVIDIA, we have to make CXX
+  and CC point to the C++ compiler, as both are passed the same
+  arguments by configure, which are actually only understood by the C++ version.
+  So please ensure that both flags delegate to nvc++.
+  ~~~~~~~~~~~~~~~~~~~
+export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
+./configure CXX=$NVCPP CC=$NVCPP ...
+  ~~~~~~~~~~~~~~~~~~~
+  Furthermore, some compute kernels are not available with the NVIDIA tools, as the compiler is
+  pretty picky when it decides which temporary variables it might place on the
+  call stack. This should not affect Peano 4's core, but it can affect some
+  extensions such as ExaHyPE.
+
+- ***My compiler stops with ***
+
+  ~~~~~~~~~~~~~~~~~~~
+  /apps/developers/compilers/gcc/13.2/1/default/lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/chrono:2320:48: error: call to consteval function 'std::chrono::hh_mm_ss::_S_fractional_width' is not a constant expression
+        static constexpr unsigned fractional_width = {_S_fractional_width()};
+  ~~~~~~~~~~~~~~~~~~~
+  
+  We have seen this with too ***new*** C++ standard libs such as the version 13.2.
+  Use an older one such as 11.2.
+  
+- ***With Intel's OpenMP, we get the following error***
+
+  ~~~~~~~~~~~~~~~~~~~
+/nobackup/frmh84/Peano/src/libTarch_debug.a(libTarch_debug_a-Tasks.o): In function `tarch::multicore::native::spawnTask(tarch::multicore::Task*, std::set<int, std::less<int>, std::allocator<int> > const&, int const&)':
+/nobackup/frmh84/Peano/src/tarch/multicore/omp/Tasks.cpp:275: undefined reference to `__kmpc_omp_taskwait_deps_51'
+  ~~~~~~~~~~~~~~~~~~~
+                  
+  We have seen this with Intel compiler when you use the Clang LLVM OpenMP 
+  runtime, i.e. use -fopenmp. Switch to -fiopenmp instead.
+
+
+
+# Linking
+
+- ***My linker complains about a missing tbb, even though I do not use Intel's TBB***
+  Intel has donated TBB to the open source community and Clang, for example, uses
+  it internally to realise its OpenMP scheduler. Unfortunately, the integration
+  is sometimes not mature, i.e. the compiler then does not automatically add
+  the library to its settings. Reconfigure with
+  ~~~~~~~~~~~~~~~~~~~
+LDFLAGS="-ltbb"
+  ~~~~~~~~~~~~~~~~~~~
+  and you should be fine.
+
+- ***If I use Fortran as well, I get errors alike***
+  ~~~~~~~~~~~~~~~~~~~
+undefined reference to for_stop_core
+undefined reference to for_write_seq_list
+  ~~~~~~~~~~~~~~~~~~~
+  This tells you
+  that the linker failed to find the Fortran standard libraries. For the GNU
+  compilers, you need for example the flag -lgfortran while Intel requires
+  -lifcore within the LDFLAGS.
+  You can add these flags manually via your Python script to the code, but
+  I think this is a flaw. They belong into the configuration not into your
+  Python script.
+
+- ***The linker complains about some routines/classes from the technical
+  architectures, but they are definitely there***
+  GCC/C++ is extremely sensitive when it comes to the order of the libraries
+  used. You might have to edit your makefile manually to get a ``valid''
+  ordering that works. My recommendation is that you always links from the most
+  abstract library to the lowest level lib. In one ExaHyPE project, e.g., the
+  following order worked whereas all others resulted in linker errors:
+  -lExaHyPE2Core2d_asserts, -lToolboxLoadBalancing2d_asserts, lPeano4Core2d_asserts,
+  -lTarch_asserts.
+  So the link order is high-level extensions, toolboxes, core, tarch.
+  The Makefile which is generated by the Python API should follow this convention.
+
+- ***Linking fails for Intel icpx compilers***
+  When encountering linker errors such as undefined reference to `__kmpc_omp_taskwait_deps_51'
+  when compiling with OpenMP multithreading using the icpx compiler,
+  you are probably not using the new -fiopenmp flag. Make sure to pass -fiopenmp to your configuration
+  instead of -fopenmp.
+
+# Runtime
+
+  - ***My unit tests fail in the NodeTest***. We have found that GCC's
+    STL is buggy (confirmed in version 9.3.0), although we do not know if this bug
+    is found within the unordered_set, the bitset or the
+    pair implementation. Anyway, a newer version of GCC (12 for example)
+    seem to fix this issue. If you use Intel's toolchain or literally any LLVM,
+    you might have to manually load a newer GNU version after you've loaded your
+    core compiler.
+
+  - ***sycl-ls show OpenCL devices instead of Level Zero (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Simply unset it to fix the issue.
+
+
+
+# Python API
+
+-   ***`import peano4` yields not found error***. You haven't set your
+    `PYTHONPATH` properly. Ensure that it points to Peano's python
+    subdirectory. So use something similar to
+
+             export PYTHONPATH=~/git/Peano/python
+
+-   My installation or paraview complains about ***ModuleNotFoundError: No module named 'numpy'***.
+    For some parts of Peano and its extensions, you need the package
+    numpy. If you don't
+    have numpy on your system install it with either of the following
+    commands:
+
+             pip3 install --user numpy
+
+    Similar arguments hold for jinja2. Please note that Peano's API
+    and all extensions are written in a way that they can work without
+    numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
+    might be available if you have no numpy.
+
+
+
+# Performance analysis
+
+- ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through
+  the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
+  and pick the vendor-specific built toolchain. After that, ensure that you
+  profile the code in the profile version and not only in the release version.
+  The release builds of the libraries do not yield much additional information
+  that can be used to spot runtime flaws, e.g.
+- ***The Intel/NVIDIA tools yield too much data*** First, pick the
+  \ref compiler_specific_settings "vendor-specific toolchain" fitting to your system/compiler. After that,
+  amend your log filter. See \ref tarch_logging for more info.
+
+
+# External tools
+
+- ***doxygen shows a lot of code as if it were preformatted (source) code, even though it should be proper class/function documentations*** This
+  is a known bug in Doxygen. Update to a newer version of the tool (at least 1.9.7) from
+  <a href="https://www.doxygen.nl/files">https://www.doxygen.nl/files</a> and you should
+  be fine.
+- ***The Intel performance and correctness tools yield invalid or messed-up results*** Ensure
+  you have built your code with -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS.
+  Please consult the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
+- ***I struggle to configure Peano 4 with Otter*** First, ensure you
+  add --with-otter to your configure call. If the configure fails,
+  run through the following checks one by one:
+  -  Ensure that you have added
+~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="... -Iyour-path/otter/include"
+~~~~~~~~~~~~~~~~~~~~~
+  - Ensure that you have added
+~~~~~~~~~~~~~~~~~~~~~
+LIBS="... -lotter-task-graph -lotf2
+~~~~~~~~~~~~~~~~~~~~~
+    to your libraries. Depending on your system, you might need the explicit linking to otf2 or not.
+  - Ensure that you have added
+~~~~~~~~~~~~~~~~~~~~~
+LDFLAGS="... --Lyour-path/otter/build/lib -L/opt/otf2/lib"
+~~~~~~~~~~~~~~~~~~~~~
+    Once again, you might need the explicit OTF2 link or not.
+  - Add the libraries to your library path
+~~~~~~~~~~~~~~~~~~~~~
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib
+~~~~~~~~~~~~~~~~~~~~~
+    as the checks otherwise will fail.
+
+
+# Debugging
+
+
+- ***I can't see my log/trace statements.*** There's a whole set of
+  things that can go wrong.
+  -   Check that your log filter specifies the class name. For efficiency
+      reasons, you can only filter per class. Ensure you don't specify
+      methods. If you do so, Peano 4 thinks your method name is a
+      (sub)class name and won't apply your filter.
+  -   Ensure that your main code is translated with a reasonable debug
+      flag. The makefile has to translate your code with
+      `-DPeanoDebug=4` (or 1 if you are only interested in tracing).
+  -   Ensure you link to libraries which are built with a reasonable
+      debug level. For this, run your code and search for the header
+
+                   build: 2d, no mpi, C++ threading, debug level=4
+
+      on the terminal. Again, has to be 1 or 4 at least.
+  -   Ensure you have a whitelist entry for the routine you are
+      interested in. Study how to use @ref tarch_logging "Peano's logging" or
+      insert manual log filter statements:
+
+                  tarch::logging::LogFilter::getInstance().addFilterListEntry(
+                    tarch::logging::LogFilter::FilterListEntry(
+                      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+                      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+                      "examples::algebraicmg",
+                      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
+                    )
+                  );
+
+  -   If you are still unsure which log filters are active, insert
+
+                   tarch::logging::LogFilter::getInstance().printFilterListToCout();
+
+      into your code and see which entries it does enlist.
+
+- ***gdb says "not in executable format: file format not recognized"***.
+  automake puts the actual executable into a `.libs` directory and
+  creates bash scripts invoking those guys. Change into `.libs` and
+  run gdb directly on the executable. Before you do so, ensure that
+  `LD_LIBRARY_Path` points to the directory containing the libraries.
+  Again, those guys are stored in a `.libs` subdirectory, so the
+  library path should point to that subdirectory.
+
+
+# MPI troubleshooting
+
+- ***My code crashes unexpectedly with malloc/free errors***. Please
+  rerun your code with Intel MPI and the flag `-check_mpi`. You should
+  not get any error reports. If you do, we have had serious problems
+  as some of Peano's classes use `MPI_C_BOOL` or `MPI_CXX_BOOL`. They
+  seem not be supported properly.
+
+- ***With more and more ranks, I suddenly run into timeouts***. Peano has a
+  built-in timeout detection which you can alter by changing the
+  timeout threshold. This is done via the `--timeout XXX` parameter.
+
+
+
+C++ core
+--------
+
+-   **Where is the information whether a point or face is at the
+    boundary or not?** I do not provide any such feature. Many codes for
+    example use the grid to represent complicated domains, and thus
+    would need such a feature anyway. So what you have to do is to add a
+    bool to each vertex/face and set this boolean yourself.
+
+-   To be continued ...
+
+Parallelisation
+---------------
+
+-   **Why do I (temporarily) get an adaptive grid even though I specify
+    a regular one?** This phenomenon arises if your adaptive refinements
+    and (dynamic) load balancing happen at the same time. Load balancing
+    is realised by transfering a whole tree part (subpartition
+    incl. coarser scales) to another rank after a grid sweep. Refinement
+    happens in multiple stages: After a grid traversal, the rank takes
+    all the refinement instructions and then realises them throughout
+    the subsequent grid sweep. So if a rank gets a refinement command
+    and then gives away parts of its mesh, then it might not be able to
+    realise this refinement. At the same time, the rank accepting the
+    new partition is not aware of the refinement requests yet. So it
+    might get the refinement request, but with one step delay: It sets
+    up the local partition, evaluates the refinement criterion, is
+    informed about a refinement wish for this area, and subsequently
+    realises it. For most codes, that delay by one iteration is not a
+    problem as the newly established rank will just realise the
+    refinement one grid sweep later, but the point is: refine and erase
+    commands in  are always a wishlist to the kernel. The kernel can
+    decide to ignore it---at least for one grid sweep.
+
+-   **Why do I get imbalanced partitions even though I tried to tell my
+    load balancer of choice to balance brilliantly?**  is based upon
+    three-partitioning, i.e. whenever it refines a cell it yields $3^d$
+    new cells. Most users scale up in multiples of two. As $3^d$ cannot
+    be divided into two equally-sized chunks, we always have some
+    imbalance.
+
+-   **Why do some load balancing schemes report that they have to
+    extrapolate data?** A typical message you get is "global number of
+    cells lags behind local one. ..."' Most of my toolbox load balancing
+    relies on asynchronous (non-blocking) collectives to gather
+    information about the total grid structure. As a consequence, this
+    information always might lag behind the actual status quo (load
+    balancing info is sent out while the mesh refines, e.g.). Some load
+    balancing schemes can detect such inconsistencies---they only arise
+    due to AMR and typically are sorted out an iteration later
+    anyway---and apply heuristics. If they detect that the global cell
+    number seems to be too small, e.g., they assume that every rank
+    meanwhile has refined once more and multiply the global cell count
+    with $3^d$.
+
+-   **I get a timeout but  claims that there are still messages in the
+    MPI queue. How do I know what certain MPI messages tags mean?** All
+    tags used in  are registered through the operation
+    `tarch::mpi::Rank::reserveFreeTag`. If you translate with any
+    positive value of `PeanoDebug` (the trace, debug and assert library
+    variants of  do so, e.g.) then you get a list of tag semantics at
+    startup. These lists are the same as the ones you use in release
+    mode, i.e. when this information is not dumped. Please note that the
+    info goes straight to cout, i.e. you can't filter it. That's because
+    the tag allocation usually happens before our logging landscape is
+    up and configured properly.
+
+-   To be continued ...
+
+-   **I have previously introduced auxiliary (material) parameters and
+    now the code crashes every now and then.** Ensure that you
+    initialise all data in your code. That includes any potential
+    auxiliary variables. I usually use
+
+    for (int i=0; i\<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++)
+    Q\[i\] = 0.0;
+
+    as a first step within `initialCondition()`. So I ensure first that
+    there is no garbage in the data. Further to that, ensure that you
+    also set proper boundary data for any auxiliary value. You might not
+    need these data, as you do not use the auxiliary variables to
+    exchange information between patches, but you have to set proper
+    values nevertheless. Otherwise, all of 's assertions will fail as it
+    detects data corruption.
+
+-   **My higher order solver yields physically slightly unreasonable
+    data for the Riemann solves.** If you use a higher-order scheme  has
+    to project your polynomial solution onto the faces. For this, it
+    uses pre-assembled matrices which are stored in double precision.
+    However, round-off errors might lead to situations where you get
+    small deviations---we have seen densities around $-10^{-8}$ for the
+    Euler equations, e.g. Usually, such round-off errors are fine, but
+    you might run into problems if you take the square root of such tiny
+    negative values, e.g. It is therefore important that you apply the
+    maximum function:
+
+    // Naive code leading into problems: // nonCriticalAssertion8(
+    p\>=0.0, Q\[0\], Q\[1\], Q\[2\], Q\[3\], Q\[4\], x, t, normal ); //
+    const double c = std::sqrt( gamma \* p \* irho );
+
+    // working code: nonCriticalAssertion9(
+    tarch::la::greaterEquals(p,0.0), Q\[0\], Q\[1\], Q\[2\], Q\[3\],
+    Q\[4\], x, t, normal, p ); const double c = std::sqrt(
+    std::max(0.0,gamma \* p \* irho) );
+
+ */
+

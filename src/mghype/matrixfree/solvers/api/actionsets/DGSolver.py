@@ -3,7 +3,7 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class UpdateCell(ActionSet):
+class UpdateResidual(ActionSet):
   """!
 
   This is for DG solver
@@ -43,7 +43,7 @@ class UpdateCell(ActionSet):
                solver,
                descend_invocation_order=0,
                parallel=True):
-    super( UpdateCell, self ).__init__(
+    super( UpdateResidual, self ).__init__(
       descend_invocation_order,
       parallel
     )
@@ -70,7 +70,7 @@ class UpdateCell(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
+    return __name__.replace(".py", "").replace(".", "_") + "_UpdateResidual"
     
   def user_should_modify_template(self):
     """!
@@ -210,7 +210,7 @@ class ProjectOntoFaces(ActionSet):
 #include "peano4/utils/Loop.h"
 """
 
-class ProjectOntoCells(ActionSet):
+class ProjectIntoCellAndUpdateCellSolution(ActionSet):
   templateTouchCellFirstTime="""
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
@@ -267,7 +267,7 @@ class ProjectOntoCells(ActionSet):
                solver,
                descend_invocation_order=0,
                parallel=True):
-    super( ProjectOntoCells, self ).__init__(
+    super( ProjectIntoCellAndUpdateCellSolution, self ).__init__(
       descend_invocation_order,
       parallel
     )
@@ -294,7 +294,7 @@ class ProjectOntoCells(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
+    return __name__.replace(".py", "").replace(".", "_") + "_ProjectIntoCellAndUpdateCellSolution"
     
   def user_should_modify_template(self):
     """!
