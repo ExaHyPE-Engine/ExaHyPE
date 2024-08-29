@@ -16,7 +16,9 @@
 #include <oneapi/tbb/blocked_range3d.h>
 #include <oneapi/tbb/parallel_for.h>
 
-#include "tbb/blocked_rangeNd.h"
+//#include "tbb/blocked_rangeNd.h"
+#define TBB_PREVIEW_BLOCKED_RANGE_ND 1
+#include <oneapi/tbb/blocked_rangeNd.h>
 #endif
 
 #if defined(SharedSYCL)
