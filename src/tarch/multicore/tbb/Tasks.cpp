@@ -18,6 +18,7 @@
 #include <tbb/task_group.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/concurrent_hash_map.h>
+#include <atomic>
 
 //#include "tbb/dynamic_task_graph.h"
 //#include "tbb/dynamic_task_graph_node.h"
@@ -70,6 +71,7 @@ namespace {
   //::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
   ::oneapi::tbb::task_handle_repository taskHandleRepository;
   ::oneapi::tbb::task_group             globalTaskGroup;
+  ::std::atomic<int>                    pending_task_counter(0);
 } // namespace
 
 
@@ -130,17 +132,19 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
         tarch::multicore::Core::getInstance().yield();
       }
       delete p;
+      pending_task_counter--;
     });
+    pending_task_counter++;
   }
 
   taskGroup.wait();
 }
 
-// TODO: How do you
+// TODO: Figure out how to do this with task_group
 int tarch::multicore::native::getNumberOfPendingTasks() {
-  assertion(false && "not implemented: tarch::multicore::native::getNumberOfPendingTasks");
+  //assertion(false && "not implemented: tarch::multicore::native::getNumberOfPendingTasks");
   //return taskGraph.size();
-  return -1;
+  return pending_task_counter.load();
 }
 
 
@@ -155,12 +159,14 @@ void tarch::multicore::native::spawnTask(
         while (job->run()) {
         }
         delete job;
+        pending_task_counter--;
       }
     );
 
     taskHandleRepository.add_dependencies( handle, inDependencies );
 
     globalTaskGroup.run( std::move(handle) );
+    pending_task_counter++;
   }
   else {
     ::oneapi::tbb::task_handle& handle = taskHandleRepository.include_handle(
@@ -169,6 +175,7 @@ void tarch::multicore::native::spawnTask(
           while (job->run()) {
           }
           delete job;
+          pending_task_counter--;
         }
       ),
       taskNumber
@@ -177,6 +184,7 @@ void tarch::multicore::native::spawnTask(
     taskHandleRepository.add_dependencies( taskNumber, inDependencies );
 
     globalTaskGroup.run( std::move(handle) );
+    pending_task_counter++;
   }
 }
 
@@ -207,9 +215,9 @@ void tarch::multicore::native::processFusedTask(
   });
 }
 
-
+// TODO: implement correctly
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  assertion(false && "not implemented: tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies)");
+  //assertion(false && "not implemented: tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies)");
   globalTaskGroup.wait();
 }
 
