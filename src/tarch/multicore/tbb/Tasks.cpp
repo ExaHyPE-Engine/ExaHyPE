@@ -19,10 +19,10 @@
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/concurrent_hash_map.h>
 
-#include "tbb/dynamic_task_graph.h"
-#include "tbb/dynamic_task_graph_node.h"
-#include "tbb/dynamic_task_graph_node_repository.h"
-
+//#include "tbb/dynamic_task_graph.h"
+//#include "tbb/dynamic_task_graph_node.h"
+//#include "tbb/dynamic_task_graph_node_repository.h"
+#include "tbb/task_handle_repository.h"
 
 namespace {
   ::oneapi::tbb::task_arena defaultTaskArena;
@@ -66,8 +66,10 @@ namespace {
     return result;
   }
 
-  ::oneapi::tbb::dynamic_task_graph_node_repository  taskGraphNodeRepository;
-  ::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
+  //::oneapi::tbb::dynamic_task_graph_node_repository  taskGraphNodeRepository;
+  //::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
+  ::oneapi::tbb::task_handle_repository taskHandleRepository;
+  ::oneapi::tbb::task_group             globalTaskGroup;
 } // namespace
 
 
@@ -134,9 +136,11 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   taskGroup.wait();
 }
 
-
+// TODO: How do you
 int tarch::multicore::native::getNumberOfPendingTasks() {
-  return taskGraph.size();
+  assertion(false && "not implemented: tarch::multicore::native::getNumberOfPendingTasks");
+  //return taskGraph.size();
+  return -1;
 }
 
 
@@ -146,7 +150,7 @@ void tarch::multicore::native::spawnTask(
   const TaskNumber&            taskNumber
 ) {
   if (taskNumber==NoOutDependencies) {
-    ::oneapi::tbb::dynamic_task_graph_node node(
+    ::oneapi::tbb::task_handle handle = globalTaskGroup.defer(
       [job]() -> void {
         while (job->run()) {
         }
@@ -154,23 +158,25 @@ void tarch::multicore::native::spawnTask(
       }
     );
 
-    taskGraphNodeRepository.add_dependencies( node, inDependencies );
+    taskHandleRepository.add_dependencies( handle, inDependencies );
 
-    taskGraph.put( node );
+    globalTaskGroup.run( std::move(handle) );
   }
   else {
-    ::oneapi::tbb::dynamic_task_graph_node& node = taskGraphNodeRepository.create_node(
-      [job]() -> void {
-        while (job->run()) {
+    ::oneapi::tbb::task_handle& handle = taskHandleRepository.include_handle(
+      globalTaskGroup.defer(
+        [job]() -> void {
+          while (job->run()) {
+          }
+          delete job;
         }
-        delete job;
-      },
+      ),
       taskNumber
     );
 
-    taskGraphNodeRepository.add_dependencies( taskNumber, inDependencies );
+    taskHandleRepository.add_dependencies( taskNumber, inDependencies );
 
-    taskGraph.put( node );
+    globalTaskGroup.run( std::move(handle) );
   }
 }
 
@@ -203,14 +209,13 @@ void tarch::multicore::native::processFusedTask(
 
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  for (auto& p: inDependencies) {
-    taskGraph.wait( taskGraphNodeRepository.get_node(p) );
-  }
+  assertion(false && "not implemented: tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies)");
+  globalTaskGroup.wait();
 }
 
 
 void tarch::multicore::native::waitForAllTasks() {
-  taskGraph.wait_for_all();
+  globalTaskGroup.wait();
 }
 
 #endif
