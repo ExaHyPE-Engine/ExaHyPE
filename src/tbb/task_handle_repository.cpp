@@ -1,6 +1,6 @@
+#if defined(TBB_USE_TASK_GROUP_PREVIEW)
+
 #include "task_handle_repository.h"
-
-
 #include <cassert>
 
 
@@ -91,3 +91,5 @@ tbb::task_handle_repository::~task_handle_repository() {
     delete pair.second;
   }
 }
+
+#endif
