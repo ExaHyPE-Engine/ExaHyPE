@@ -64,18 +64,33 @@ namespace {
 
     return result;
   }
+
+  /**
+   * Helper class for dealing with a global task_group
+   * 
+   * A task_group expects a call to wait before the end of its lifetime,
+   * which is not expected by tarch's tasking interface. Thus, a
+   * special class is needed that waits in its destructor, such that
+   * there is always a call to wait.
+   */
   class global_task_group : public ::oneapi::tbb::task_group {
   public:
     global_task_group() : task_group() {}
-    ~global_task_group(){
+    ~global_task_group() {
       wait();
     }  
   };
-  //::oneapi::tbb::dynamic_task_graph_node_repository  taskGraphNodeRepository;
-  //::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
-  ::oneapi::tbb::task_handle_repository taskHandleRepository;
-  global_task_group                     globalTaskGroup;
-  ::std::atomic<int>                    pending_task_counter(0);
+ 
+  ::oneapi::tbb::task_handle_repository taskHandleRepository; // used to store task_handles and manage dependencies
+  
+  /**
+   * Global task group used to execute the majority of tasks
+   * 
+   * TBB's improved task_group api allows the user to build up dynamic dependencies between tasks in a task_grup,
+   * which is heavily used in this implementation of tarch's tasking interface.
+   */
+  global_task_group   globalTaskGroup;         
+  ::std::atomic<int>  pendingTaskCounter(0); // counter needed for getNumberOfPendingTasks  
 } // namespace
 
 
@@ -136,19 +151,16 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
         tarch::multicore::Core::getInstance().yield();
       }
       delete p;
-      pending_task_counter--;
+      pendingTaskCounter--;
     });
-    pending_task_counter++;
+    pendingTaskCounter++;
   }
 
   taskGroup.wait();
 }
 
-// TODO: Figure out how to do this with task_group
 int tarch::multicore::native::getNumberOfPendingTasks() {
-  //assertion(false && "not implemented: tarch::multicore::native::getNumberOfPendingTasks");
-  //return taskGraph.size();
-  return pending_task_counter.load();
+  return pendingTaskCounter.load();
 }
 
 
@@ -163,14 +175,14 @@ void tarch::multicore::native::spawnTask(
         while (job->run()) {
         }
         delete job;
-        pending_task_counter--;
+        pendingTaskCounter--;
       }
     );
 
     taskHandleRepository.add_dependencies( handle, inDependencies );
 
     globalTaskGroup.run( std::move(handle) );
-    pending_task_counter++;
+    pendingTaskCounter++;
   }
   else {
     ::oneapi::tbb::task_handle& handle = taskHandleRepository.include_handle(
@@ -179,7 +191,7 @@ void tarch::multicore::native::spawnTask(
           while (job->run()) {
           }
           delete job;
-          pending_task_counter--;
+          pendingTaskCounter--;
         }
       ),
       taskNumber
@@ -188,7 +200,7 @@ void tarch::multicore::native::spawnTask(
     taskHandleRepository.add_dependencies( taskNumber, inDependencies );
 
     globalTaskGroup.run( std::move(handle) );
-    pending_task_counter++;
+    pendingTaskCounter++;
   }
 }
 
@@ -219,9 +231,9 @@ void tarch::multicore::native::processFusedTask(
   });
 }
 
-// TODO: implement correctly
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  //assertion(false && "not implemented: tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies)");
+  // TBB's current task_group api does not allow waiting for specific tasks, so the entire
+  // task group is drained instead. 
   globalTaskGroup.wait();
 }
 
