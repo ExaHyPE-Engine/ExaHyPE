@@ -66,18 +66,17 @@ namespace {
 
     return result;
   }
-  class task_group_wrapper {
+  class global_task_group : public ::oneapi::tbb::task_group {
   public:
-    ::oneapi::tbb::task_group tg;
-    task_group_wrapper() {}
-    ~task_group_wrapper(){
-      tg.wait();
+    global_task_group() : task_group() {}
+    ~global_task_group(){
+      wait();
     }  
   };
   //::oneapi::tbb::dynamic_task_graph_node_repository  taskGraphNodeRepository;
   //::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
   ::oneapi::tbb::task_handle_repository taskHandleRepository;
-  task_group_wrapper                    globalTaskGroup;
+  global_task_group                     globalTaskGroup;
   ::std::atomic<int>                    pending_task_counter(0);
 } // namespace
 
@@ -161,7 +160,7 @@ void tarch::multicore::native::spawnTask(
   const TaskNumber&            taskNumber
 ) {
   if (taskNumber==NoOutDependencies) {
-    ::oneapi::tbb::task_handle handle = globalTaskGroup.tg.defer(
+    ::oneapi::tbb::task_handle handle = globalTaskGroup.defer(
       [job]() -> void {
         while (job->run()) {
         }
@@ -172,12 +171,12 @@ void tarch::multicore::native::spawnTask(
 
     taskHandleRepository.add_dependencies( handle, inDependencies );
 
-    globalTaskGroup.tg.run( std::move(handle) );
+    globalTaskGroup.run( std::move(handle) );
     pending_task_counter++;
   }
   else {
     ::oneapi::tbb::task_handle& handle = taskHandleRepository.include_handle(
-      globalTaskGroup.tg.defer(
+      globalTaskGroup.defer(
         [job]() -> void {
           while (job->run()) {
           }
@@ -190,7 +189,7 @@ void tarch::multicore::native::spawnTask(
 
     taskHandleRepository.add_dependencies( taskNumber, inDependencies );
 
-    globalTaskGroup.tg.run( std::move(handle) );
+    globalTaskGroup.run( std::move(handle) );
     pending_task_counter++;
   }
 }
@@ -225,12 +224,12 @@ void tarch::multicore::native::processFusedTask(
 // TODO: implement correctly
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   //assertion(false && "not implemented: tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies)");
-  globalTaskGroup.tg.wait();
+  globalTaskGroup.wait();
 }
 
 
 void tarch::multicore::native::waitForAllTasks() {
-  globalTaskGroup.tg.wait();
+  globalTaskGroup.wait();
 }
 
 #endif
