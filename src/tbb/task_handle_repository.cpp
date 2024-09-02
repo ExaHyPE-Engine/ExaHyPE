@@ -86,3 +86,8 @@ void tbb::task_handle_repository::add_dependencies( oneapi::tbb::task_handle&  n
   }
 }
 
+tbb::task_handle_repository::~task_handle_repository() {
+  for (auto& pair : _handle_container) {
+    delete pair.second;
+  }
+}

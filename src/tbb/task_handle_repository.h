@@ -35,7 +35,7 @@ namespace tbb {
       using task_handle_number = int;
 
       task_handle_repository();
-
+      ~task_handle_repository();
       /**
        * Factor mechanism
        *
