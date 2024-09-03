@@ -132,6 +132,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         nDofPad = self.d["NUMBER_OF_DOF_PADDED"]
         nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
+        nData    = self.d["NUMBER_OF_DATA"]
         nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
 
         if self.d["IS_LINEAR"]:
@@ -292,7 +293,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     nDof,
                     nUnknownsPad,
                     nDofPad,
-                    nUnknownsPad,
+                    nData,
                     1,
                     1,
                     1,
@@ -308,7 +309,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     nDof,
                     nUnknownsPad,
                     nDofPad,
-                    nUnknownsPad * nDof,
+                    nData * nDof,
                     1,
                     1,
                     1,
@@ -325,7 +326,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         nDof,
                         nUnknownsPad,
                         nDofPad,
-                        nUnknownsPad * nDof2,
+                        nData * nDof2,
                         1,
                         1,
                         1,

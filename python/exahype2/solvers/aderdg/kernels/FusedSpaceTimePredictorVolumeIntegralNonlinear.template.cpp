@@ -310,20 +310,20 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       {{ m.gemm('lduh_x', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
-        '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF) ) | indent(6) }}{##}
+        '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_DATA*NUMBER_OF_DOF) ) | indent(6) }}{##}
 
       // y
       {{ m.gemm('lduh_y', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
-        '(j*'~(NUMBER_OF_DOF*NUMBER_OF_DOF)~'+i)*'~NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
+        '(j*'~(NUMBER_OF_DOF*NUMBER_OF_DOF)~'+i)*'~NUMBER_OF_DATA) | indent(6) }}{##}
 
 {% if DIMENSIONS==3 %}
       // z
       {{ m.gemm('lduh_z', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
-        '(j*'~NUMBER_OF_DOF~'+i)*'~NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
+        '(j*'~NUMBER_OF_DOF~'+i)*'~NUMBER_OF_DATA) | indent(6) }}{##}
 {% endif %}
     }
   }
@@ -335,7 +335,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     #pragma omp simd aligned(luh,lShi:{{ALIGNMENT}})
     #endif
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-      luh[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += timeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+      luh[xyz * {{NUMBER_OF_DATA}} + n] += timeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
     }
   }
 {% endif %}
