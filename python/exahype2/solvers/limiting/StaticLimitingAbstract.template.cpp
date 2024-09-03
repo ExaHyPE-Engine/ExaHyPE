@@ -216,6 +216,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
 
 
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::addTroubledCell(){
+  tarch::multicore::Lock lock(_semaphore);
   _totalNumberOfTroubledCells += 1;
 }
 int {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getNumberOfTroubledCells() const {

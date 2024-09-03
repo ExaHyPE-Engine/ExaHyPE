@@ -49,11 +49,10 @@ class SaveNewCellData(AbstractLimiterActionSet):
   }
 """
 
-  def __init__(self, solver, guard, copy_old_values=False, use_dmp=False, reset_troubled_markers=False, transmit_cell_timestamps=False):
+  def __init__(self, solver, guard, use_DMP=False, reset_troubled_markers=False, transmit_cell_timestamps=False):
     super(SaveNewCellData, self).__init__(solver)
     self.guard                      = guard
-    self._copy_old_values           = copy_old_values
-    self._use_dmp                   = use_dmp
+    self._use_DMP                   = use_DMP
     self._reset_troubled_markers    = reset_troubled_markers
     self._transmit_cell_timestamps  = transmit_cell_timestamps
 
@@ -64,8 +63,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATE" ]              = self.guard
-      d["COPY_OLD_VALUES"]          = self._copy_old_values
-      d["USE_DMP"]                  = self._use_dmp
+      d["USE_DMP"]                  = self._use_DMP
       d["RESET_TROUBLED_MARKERS"]   = self._reset_troubled_markers
       d["TRAMSMIT_CELL_TIMESTAMPS"] = self._transmit_cell_timestamps
       result = jinja2.Template(self.TemplateSaveNewCellData).render(**d)

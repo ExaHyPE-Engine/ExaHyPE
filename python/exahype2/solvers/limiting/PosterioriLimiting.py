@@ -173,8 +173,7 @@ class PosterioriLimiting(object):
             guard = ("not marker.willBeRefined() and not marker.hasBeenRefined() and" +
               " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver" +
               " and " + "repositories::" + self._regular_solver.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
-            copy_old_values=True,
-            use_dmp=True,
+            use_DMP=self._number_of_dmp_observables>0,
             reset_troubled_markers=True
         )
 
@@ -378,12 +377,14 @@ Type:                   """
     def add_to_Peano4_datamodel(self, datamodel, verbose):
       datamodel.add_cell(self._cell_label)
       datamodel.add_face(self._face_label)
-      datamodel.add_face(self._min_and_max_projection)
+      if self._number_of_dmp_observables>0:
+        datamodel.add_face(self._min_and_max_projection)
 
     def add_use_data_statements_to_Peano4_solver_step(self, step):
       step.use_cell(self._cell_label)
       step.use_face(self._face_label)
-      step.use_face(self._min_and_max_projection)
+      if self._number_of_dmp_observables>0:
+        step.use_face(self._min_and_max_projection)
 
     def add_actions_to_init_grid(self, step):
         pass
