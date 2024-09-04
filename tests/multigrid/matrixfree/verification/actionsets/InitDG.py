@@ -550,6 +550,7 @@ class InitDofsDGTest6(InitDofsDGTest1):
           }
           else {
             solution[i] = dis(rng);
+            //solution[i] = std::sin( 2*tarch::la::PI * marker.x()(0) ) * std::sin( 2*tarch::la::PI * marker.x()(1) );
           }
 
           //solution[i] = dis(rng);
