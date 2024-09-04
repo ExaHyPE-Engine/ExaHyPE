@@ -3,6 +3,7 @@ import argparse
 import peano4
 import mghype
 import numpy as np
+import time
 
 from actionsets.InitDG               import InitDofsDGTest7
 from actionsets.initCollocatedRandom import InitCollocatedTest7
@@ -16,11 +17,13 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=2, help="Polynomial Degree")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
-parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
+parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.0, help="Mesh size")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
+print('omega_c is set to 0 by default, see description of Test 7')
+time.sleep(2)
 
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
                               namespace = [ "tests", "multigrid", "matrixfree", "Test7" ]
@@ -78,7 +81,7 @@ correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   unknowns_per_vertex_dof = 1
 )
 system_matrix, system_matrix_scaling = correction_equation_matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix,   maxx_matrix_scaling   = correction_equation_matrices.get_cell_mass_matrix()
+mass_matrix,   maxx_matrix_scaling   = correction_equation_matrices.get_cell_mass_matrix() # cell identity as we use DLinearMassIdentity
 #! [Construct correction matrices]
 
 
@@ -119,8 +122,8 @@ solver.preprocessing_action_set = Test7Coupling(
     injection_matrix,
     injection_matrix_scaling,
     use_fas=False,
-    smoothing_steps_DG=-10,
-    smoothing_steps_CG=-10
+    smoothing_steps_DG = 1,  # do in each cycle
+    smoothing_steps_CG = 1e7 # upper limit for the correction solver
 )
 
 #! [Add solvers]
