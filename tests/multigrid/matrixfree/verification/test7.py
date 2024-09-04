@@ -118,7 +118,9 @@ solver.preprocessing_action_set = Test7Coupling(
     restriction_matrix_scaling,
     injection_matrix,
     injection_matrix_scaling,
-    False
+    use_fas=False,
+    smoothing_steps_DG=-10,
+    smoothing_steps_CG=-10
 )
 
 #! [Add solvers]
