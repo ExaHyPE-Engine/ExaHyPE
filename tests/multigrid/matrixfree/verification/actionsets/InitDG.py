@@ -2,6 +2,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import peano4
 import jinja2
+import mghype
 
 class InitDofsDGTest1(ActionSet):
   """!
@@ -702,7 +703,6 @@ class InitDofsDGTest4(InitDofsDGTest1):
 
 class InitDofsDGTest5(InitDofsDGTest1):
 
-    
   templateTouchCellFirstTime="""
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
   
@@ -741,3 +741,152 @@ class InitDofsDGTest5(InitDofsDGTest1):
   def __init__(self,
                solver):
     super( InitDofsDGTest5, self ).__init__(solver)
+
+class InitDofsDGTest7(InitDofsDGTest1):
+
+  templateTouchCellFirstTime="""
+  constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
+  constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
+
+  static const tarch::la::Matrix< Rows, Cols, double > prolongationMatrix = 
+    {
+      {{PROLONGATION_MATRIX[0]| join(", ")}}
+        {% for ROW in PROLONGATION_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+        {% endfor %}
+    };
+
+  celldata::{{DG_SOLVER_NAME}}::Type dofType = repositories::{{DG_SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  
+  switch(dofType)
+  {
+    case celldata::{{DG_SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{DG_SOLVER_NAME}}.setType( celldata::{{DG_SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{DG_SOLVER_NAME}}.setType( celldata::{{DG_SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{DG_SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{DG_SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+
+        // also gather the cg values
+        tarch::la::Vector<TwoPowerD, double> u_cg_random;
+        for (int i=0; i<TwoPowerD; i++) u_cg_random(i) = fineGridVertices{{CG_SOLVER_NAME}}(i).getValue(0);
+        auto v_cell = prolongationMatrix * u_cg_random;
+        
+        fineGridCell{{DG_SOLVER_NAME}}.setSolution( 
+          v_cell
+        );
+
+        // next, project v_cell onto each of the faces
+        tarch::la::Vector< TwoTimesD * repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection, double > faceProjections;
+        for (int f=0; f<TwoTimesD; f++) {
+          int startIndexProjection = 
+            f < Dimensions ?
+            repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+            0;
+          for (int p=0; p<repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
+            fineGridFaces{{DG_SOLVER_NAME}}(f).setProjection(
+              p + startIndexProjection,
+              faceProjections( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
+            );
+
+          }
+        }
+
+        // also begin to set rhs
+        fineGridCell{{DG_SOLVER_NAME}}.setRhs(
+          repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * v_cell
+        );
+
+      }
+    }
+    break;
+
+  }
+  
+  """
+
+  templateTouchFaceLastTime="""
+  // perform averaging on the faces
+  if (
+    fineGridFace{{DG_SOLVER_NAME}}.getType() == facedata::{{DG_SOLVER_NAME}}::Type::Interior
+  ) {
+    // project the u^\pm into a temporary vector
+    tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
+      repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{DG_SOLVER_NAME}}.getProjection();
+
+    for (int i=0; i<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+      fineGridFace{{DG_SOLVER_NAME}}.setSolution(
+        i,
+        projection(i)
+      );
+  }
+
+  else if (
+    fineGridFace{{DG_SOLVER_NAME}}.getType() == facedata::{{DG_SOLVER_NAME}}::Type::Boundary
+  ) {
+    // Essentially what we do here is fix the solution on the boundary to be 
+    // the inner-side projection.
+
+    // skip halfway along the projection vector if we are on face 0 or 1
+    int startIndexProjection = 
+      marker.getSelectedFaceNumber() < Dimensions ?
+      repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+      0;
+
+    auto boundaryMatrix = repositories::{{DG_SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+
+    /*
+    Here we do slightly messy matrix multiplication. We would just multiply the boundary matrix
+    by the projection vector, and place that into the solution, but here we only want to capture
+    half of the projection vector; the other half lies outside the computational domain and
+    should be fixed to 0.
+    */
+    for (int row=0; row<boundaryMatrix.rows(); row++)
+    {
+      double rowSolution = 0;
+      for (int col=0; col<boundaryMatrix.cols(); col++)
+      {
+        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{DG_SOLVER_NAME}}.getProjection( col + startIndexProjection );
+      }
+      // place this solution into the face
+      fineGridFace{{DG_SOLVER_NAME}}.setSolution( row, rowSolution );
+    }
+
+  }
+
+  """
+
+  def get_prolongation_matrix(self):
+    intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
+      dim = 2,
+      coarse_order = 1,
+      fine_order = self.dg_solver._poly_degree
+      )
+    return intergrid_operators.prolongation()
+
+  def __init__(self,
+               dg_solver,
+               ):
+    super( InitDofsDGTest7, self ).__init__(dg_solver)
+    self.dg_solver = dg_solver
+    self.d["DG_SOLVER_INSTANCE"]    = dg_solver.instance_name()
+    self.d["DG_SOLVER_NAME"]        = dg_solver.typename()
+    self.d["CG_SOLVER_INSTANCE"]    = "instanceOfCollocatedPoisson"
+    self.d["CG_SOLVER_NAME"]        = "CollocatedPoisson"
+    self.d["PROLONGATION_MATRIX"]   = self.get_prolongation_matrix()

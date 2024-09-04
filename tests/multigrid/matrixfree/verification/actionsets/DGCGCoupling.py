@@ -3,6 +3,7 @@ from peano4.solversteps.ActionSet import ActionSet
 import dastgen2
 import peano4
 import jinja2
+import mghype
 
 class Test4Coupling(ActionSet):
   """!
@@ -261,7 +262,7 @@ class Test5Coupling(Test4Coupling):
       repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
       0;
     for (int p=0; p<repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
-      fineGridFaces{{DG_SOLVER_NAME}}(f).setProjectionTest(
+      fineGridFaces{{DG_SOLVER_NAME}}(f).setProjection(
         p + startIndexProjection,
         faceProjections( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
       );
@@ -409,3 +410,45 @@ class Test5Coupling(Test4Coupling):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       return jinja2.Template(self.templateEndTraversal).render(**self.d)
     return result
+  
+
+class Test7Coupling(mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGCoupling):
+  templateTouchCellFirstTime="""
+  if (
+    DGCycleCounter==0 
+    and
+    CGCycleCounter==0
+    and
+    fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
+  ){
+    // finish updating rhs
+    tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.CellUnknowns, double > rhs;
+
+    // fetch the faces
+    tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
+    for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      faceSol( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{DG_SOLVER_NAME}}(f).getSolution(s);
+    
+    fineGridCell{{DG_SOLVER_NAME}}.setRhs(
+      fineGridCell{{DG_SOLVER_NAME}}.getRhs()
+      +
+      repositories::{{DG_SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h())  * faceSol
+    );
+  }
+  """ + mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGCoupling.templateTouchCellFirstTime
+
+  def get_includes(self):
+    """!
+   
+    We need the solver repository in this action set, as we directly access
+    the solver object. We also need access to Peano's d-dimensional loops.
+         
+    """    
+    return """
+#include "repositories/SolverRepository.h"
+#include <random>
+#include "peano4/utils/Loop.h"
+#include "mghype/mghype.h"
+#include "mghype/matrixfree/solvers/DGCGCoupling.h"
+"""
