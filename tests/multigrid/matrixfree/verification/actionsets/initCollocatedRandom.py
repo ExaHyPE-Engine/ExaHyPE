@@ -646,3 +646,150 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
     self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
+
+class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
+  """!
+  We just need random numbers in the inital guess and elsewhere zeroess
+  """
+
+  templateTouchVertexFirstTime = """
+
+  /*
+  extremely hacky static random number generator
+  */
+  static std::mt19937 rng(0); // seed with 0 for reproducibility
+  static std::uniform_real_distribution<> dis(0.0, 1.0);
+
+
+  // this is done inside getDofType. included here for sanity check
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+    bool isOnBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isOnBoundary;
+  };
+
+  auto isCorner = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+    bool isCorner = true;
+    for (int d=0; d<Dimensions; d++) {
+      isCorner &= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isCorner &= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isCorner;
+  };
+
+  logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+
+  switch(dofType)
+  {
+    case vertexdata::{{SOLVER_NAME}}::Type::Boundary:
+    {
+      if ( marker.willBeRefined() )
+      {
+        // Coarse grid vertex. Mark it as such for later
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        // we have boundary vertex
+        if ( isCorner( marker.x() ) )
+          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Corner );
+        else
+          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
+
+        // store 
+        for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        {
+          fineGridVertex{{SOLVER_NAME}}.setValue( dof, 0.0);
+          fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
+        }
+      }
+    }
+    break;
+
+    case vertexdata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if (isOnBoundary(marker.x())) 
+      {
+        logWarning( "touchVertexFirstTime(...)", "vertex at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
+      }
+
+      if ( marker.willBeRefined() )
+      {
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+
+      else
+      {
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Interior );
+
+        // store 
+        for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        {
+          fineGridVertex{{SOLVER_NAME}}.setValue(dof, dis(rng));
+          fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
+
+        }
+      }
+    }
+    break;
+
+    case vertexdata::{{SOLVER_NAME}}::Type::Coarse:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+
+    case vertexdata::{{SOLVER_NAME}}::Type::Undefined:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+  }
+
+
+  logTraceOutWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+   """
+
+  templateTouchCellFirstTime="""
+  logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+
+  switch(dofType)
+  {
+    case celldata::{{SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+      }
+    }
+    break;
+
+  }
+  
+  logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  
+  """
+  
+  templateTouchVertexLastTime="""
+  
+  """
