@@ -39,7 +39,7 @@ matrices = mghype.api.matrixgenerators.GLMatrixFree(
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix, mass_matrix_scaling         = matrices.get_cell_mass_matrix()
+mass_matrix, mass_matrix_scaling         = matrices.get_cell_identity_matrix() # here we need DG identity matrix as the residual is constricted as rhs - A_DG*P*u_{cg,random}
 face_from_cell_projection, \
 face_from_cell_projection_scaling        = matrices.get_face_from_cell_matrix()
 cell_from_face_projection, \
