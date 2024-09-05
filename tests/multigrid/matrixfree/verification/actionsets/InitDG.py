@@ -235,8 +235,12 @@ class InitDofsDGTest1(ActionSet):
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
 
-        // send to init
-        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+        // set all of these values to 0
+        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+          sol[i] = 0;
+
+        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection; i++)
+          projection[i] = 0;
 
         // put into mesh
         fineGridFace{{SOLVER_NAME}}.setSolution(sol);
@@ -794,7 +798,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
         );
 
         // next, project v_cell onto each of the faces
-        tarch::la::Vector< TwoTimesD * repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection, double > faceProjections;
+        tarch::la::Vector< TwoTimesD * repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection, double > faceProjections = repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * v_cell;
         for (int f=0; f<TwoTimesD; f++) {
           int startIndexProjection = 
             f < Dimensions ?
@@ -891,3 +895,9 @@ class InitDofsDGTest7(InitDofsDGTest1):
     self.d["CG_SOLVER_INSTANCE"]    = "instanceOfCollocatedPoisson"
     self.d["CG_SOLVER_NAME"]        = "CollocatedPoisson"
     self.d["PROLONGATION_MATRIX"]   = self.get_prolongation_matrix()
+
+  def get_body_of_operation(self,operation_name):
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
+      return jinja2.Template(self.templateTouchFaceLastTime).render(**self.d)
+    else:
+      return super().get_body_of_operation(operation_name)
