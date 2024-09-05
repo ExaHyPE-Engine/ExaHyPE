@@ -415,9 +415,7 @@ class Test5Coupling(Test4Coupling):
 class Test7Coupling(mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGCoupling):
   templateTouchCellFirstTime="""
   if (
-    DGCycleCounter==0 
-    and
-    CGCycleCounter==0
+    firstCycleCounter==0
     and
     fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
   ){
@@ -438,6 +436,10 @@ class Test7Coupling(mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGC
   }
   """ + mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGCoupling.templateTouchCellFirstTime
 
+  templateEndTraversal = """
+  firstCycleCounter++;
+  """
+
   def get_includes(self):
     """!
    
@@ -452,3 +454,18 @@ class Test7Coupling(mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGC
 #include "mghype/mghype.h"
 #include "mghype/matrixfree/solvers/DGCGCoupling.h"
 """
+
+  def get_attributes(self):
+    return super().get_attributes() + """
+    static int firstCycleCounter;
+"""
+
+  def get_static_initialisations(self, full_qualified_classname):
+    return super().get_static_initialisations(full_qualified_classname) + f"""
+int {full_qualified_classname}::firstCycleCounter = 0;
+"""
+  def get_body_of_operation(self,operation_name):
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      return jinja2.Template(self.templateEndTraversal).render(**self.d)
+    else:
+      return super().get_body_of_operation(operation_name)
