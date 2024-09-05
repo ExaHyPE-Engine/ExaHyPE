@@ -731,8 +731,8 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
           // set the ref. solution instead of random for debugging
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, std::sin( 2.0*tarch::la::PI * marker.x()(0) ) * std::sin( 2.0*tarch::la::PI * marker.x()(1) ) );
-          //fineGridVertex{{SOLVER_NAME}}.setValue(dof, dis(rng));
+          //fineGridVertex{{SOLVER_NAME}}.setValue(dof, std::sin( 2.0*tarch::la::PI * marker.x()(0) ) * std::sin( 2.0*tarch::la::PI * marker.x()(1) ) );
+          fineGridVertex{{SOLVER_NAME}}.setValue(dof, dis(rng));
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
         }
       }
