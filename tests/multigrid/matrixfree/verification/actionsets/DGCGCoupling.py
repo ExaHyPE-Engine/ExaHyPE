@@ -426,7 +426,7 @@ class Test7Coupling(mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGC
     tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
     for (int f=0; f<TwoTimesD; f++)
     for (int s=0; s<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
-      faceSol( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{DG_SOLVER_NAME}}(f).getSolution(s);
+      faceSol( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{DG_SOLVER_NAME}}(f).getRandSolutions(s);
     
     fineGridCell{{DG_SOLVER_NAME}}.setRhs(
       fineGridCell{{DG_SOLVER_NAME}}.getRhs()

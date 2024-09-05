@@ -74,6 +74,9 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   custom_init_actionset=InitDofsDGTest7
 )
 
+solver.add_to_face_data("randProjections", 2*2*(args.poly_degree+1)**(1))
+solver.add_to_face_data("randSolutions",     2*(args.poly_degree+1)**(1))
+
 #! [Construct correction matrices]
 correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   dimensions = args.dimensions,

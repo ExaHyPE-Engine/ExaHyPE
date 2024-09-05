@@ -801,7 +801,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
             repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
             0;
           for (int p=0; p<repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
-            fineGridFaces{{DG_SOLVER_NAME}}(f).setProjection(
+            fineGridFaces{{DG_SOLVER_NAME}}(f).setRandProjections(
               p + startIndexProjection,
               faceProjections( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
             );
@@ -814,7 +814,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
           repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * v_cell
         );
 
-        // reset the initial guess to 0
+        // set the initial guess to 0
         fineGridCell{{DG_SOLVER_NAME}}.setSolution( 
           0.0
         );
@@ -837,7 +837,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
       repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{DG_SOLVER_NAME}}.getProjection();
 
     for (int i=0; i<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
-      fineGridFace{{DG_SOLVER_NAME}}.setSolution(
+      fineGridFace{{DG_SOLVER_NAME}}.setRandSolutions(
         i,
         projection(i)
       );
@@ -871,7 +871,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
         rowSolution += boundaryMatrix( row, col ) * fineGridFace{{DG_SOLVER_NAME}}.getProjection( col + startIndexProjection );
       }
       // place this solution into the face
-      fineGridFace{{DG_SOLVER_NAME}}.setSolution( row, rowSolution );
+      fineGridFace{{DG_SOLVER_NAME}}.setRandSolutions( row, rowSolution );
     }
 
   }
