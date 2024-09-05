@@ -818,6 +818,11 @@ class InitDofsDGTest7(InitDofsDGTest1):
           repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * v_cell
         );
 
+        // reset the initial guess to 0
+        fineGridCell{{DG_SOLVER_NAME}}.setSolution( 
+          0.0
+        );
+
       }
     }
     break;
