@@ -706,6 +706,8 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
         {
           fineGridVertex{{SOLVER_NAME}}.setValue( dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
+
+          fineGridVertex{{SOLVER_NAME}}.setRand( dof,  0.0); // vector v_random is set to 0 on the boundary
         }
       }
     }
@@ -732,8 +734,12 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
         {
           // set the ref. solution instead of random for debugging
           //fineGridVertex{{SOLVER_NAME}}.setValue(dof, std::sin( 2.0*tarch::la::PI * marker.x()(0) ) * std::sin( 2.0*tarch::la::PI * marker.x()(1) ) );
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, dis(rng));
+          double randVal = dis(rng);
+          fineGridVertex{{SOLVER_NAME}}.setValue(dof, randVal);
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
+
+          // save the random vector separately
+          fineGridVertex{{SOLVER_NAME}}.setRand( dof, randVal); 
         }
       }
     }

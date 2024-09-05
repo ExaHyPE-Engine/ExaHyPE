@@ -100,8 +100,12 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
   mass_matrix_scaling = maxx_matrix_scaling,
   solver_tolerance              = 1e-12,
   smoother_relaxation           = 0.5,
-  custom_init_actionset=InitCollocatedTest7
+  custom_init_actionset=InitCollocatedTest7,
+  custom_plot_actionset=[("rand","getRand")]
 )
+
+# add an extra field fo storing the random CG vector
+correction_equation_solver.add_to_vertex_data("rand", 1)
 
 intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
   dim = args.dimensions,
