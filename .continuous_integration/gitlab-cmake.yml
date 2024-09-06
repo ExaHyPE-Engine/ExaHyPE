@@ -71,7 +71,7 @@ ExaHyPE2_Euler:
       solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
   script:
     - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/euler; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 euler.py -s $solver_type -d $dimensions -m $build_type;"
+    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
   needs:
     - job: Build
   dependencies:
