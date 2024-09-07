@@ -41,7 +41,7 @@ project.set_load_balancing(
   "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
   "new ::exahype2::LoadBalancingConfiguration(0.98)"
 )
-project.set_Peano4_installation("../../../", peano4.output.CompileMode.Debug)
+project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
 peano4_project = project.generate_Peano4_project("False")
 peano4_project.output.makefile.add_cpp_file("swe.cpp")
 
