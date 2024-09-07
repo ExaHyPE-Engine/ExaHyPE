@@ -9,7 +9,7 @@ min_h = 1.0/27.0
 
 polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
-project = exahype2.Project(["exahype2", "aderdg"], ".", executable="SWE")
+project = exahype2.Project(["applications", "exahype2", "aderdg"], ".", executable="SWE")
 
 theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name  = "swe", order = order,
@@ -41,8 +41,8 @@ project.set_load_balancing(
   "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
   "new ::exahype2::LoadBalancingConfiguration(0.98)"
 )
-project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
+project.set_Peano4_installation("../../../", peano4.output.CompileMode.Debug)
 peano4_project = project.generate_Peano4_project("False")
 peano4_project.output.makefile.add_cpp_file("swe.cpp")
 
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=16)
+peano4_project.build(make_clean_first=True)

@@ -2,9 +2,9 @@
 #include "swe.h"
 #include "exahype2/RefinementControl.h"
 
-tarch::logging::Log   exahype2::aderdg::swe::_log( "exahype2::aderdg::swe" );
+tarch::logging::Log   applications::exahype2::aderdg::swe::_log( "applications::exahype2::aderdg::swe" );
 
-::exahype2::RefinementCommand exahype2::aderdg::swe::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::aderdg::swe::refinementCriterion(
     const double * __restrict__                  Q,    //Q[4+0]
     const tarch::la::Vector<Dimensions,double>&  x,
     const tarch::la::Vector<Dimensions,double>&  h,
@@ -20,7 +20,7 @@ tarch::logging::Log   exahype2::aderdg::swe::_log( "exahype2::aderdg::swe" );
   return result;
 }
 
-void exahype2::aderdg::swe::initialCondition(
+void applications::exahype2::aderdg::swe::initialCondition(
   double * __restrict__ Q, //Q[3+1]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -41,7 +41,7 @@ void exahype2::aderdg::swe::initialCondition(
 
 }
 
-void exahype2::aderdg::swe::boundaryConditions(
+void applications::exahype2::aderdg::swe::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[3+1]
   double * __restrict__                        Qoutside, // Qoutside[3+1]
   const tarch::la::Vector<Dimensions,double>&  x,
@@ -61,7 +61,7 @@ void exahype2::aderdg::swe::boundaryConditions(
 
 }
 
-double ::exahype2::aderdg::swe::maxEigenvalue(
+double applications::exahype2::aderdg::swe::maxEigenvalue(
   const double* __restrict__ Q, // Q[3+1]
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeSize,
@@ -80,7 +80,7 @@ double ::exahype2::aderdg::swe::maxEigenvalue(
   // return c;
 }
 
-void ::exahype2::aderdg::swe::flux(
+void applications::exahype2::aderdg::swe::flux(
   const double* __restrict__ Q, // Q[3+1]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -107,7 +107,7 @@ void ::exahype2::aderdg::swe::flux(
   // F[normal+1] = inv_rho * Q[0];
 }
 
-void ::exahype2::aderdg::swe::nonconservativeProduct(
+void applications::exahype2::aderdg::swe::nonconservativeProduct(
   const double *__restrict__ Q, //Q[3+1]
   const double *__restrict__ deltaQ, //deltaQ[3+1]
   const tarch::la::Vector<Dimensions, double> &volumeX,
