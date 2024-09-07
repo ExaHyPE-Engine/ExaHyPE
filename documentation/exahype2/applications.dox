@@ -2,6 +2,7 @@
 
 @page page_exahype_applications Applications
 
+\li \subpage applications_exahype2_advection
 \li \subpage application_exahype2_selfgravitation
 \li \subpage applications_exahype2_ccz4
 \li \subpage applications_exahype2_swe
