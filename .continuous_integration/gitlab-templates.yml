@@ -11,8 +11,8 @@
     IMAGE_TAG_INTEL: "intel.sif"
     IMAGE_TAG_LLVM: "llvm.sif"
     IMAGE_TAG_NVIDIA: "nvidia.sif"
-    SINGULARITY_BINDDIR: "/dine/data/do009/peano"
-    SINGULARITY_IMAGEDIR: "/dine/data/do009/peano/images"
+    APPTAINER_BINDDIR: "/dine/data/do009/peano"
+    APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"
     CCACHE_DIR: "/dine/data/do009/peano/.ccache_dir"
 
 .Tags:
@@ -33,11 +33,10 @@
     - echo $CI_PROJECT_DIR
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
-    - echo $SINGULARITY_BINDDIR
-    - echo $SINGULARITY_IMAGEDIR
+    - echo $APPTAINER_BINDDIR
+    - echo $APPTAINER_IMAGEDIR
     - echo $CCACHE_DIR
     - echo $CONFIGURATION_OPTIONS
-    - module load singularity/3.9.2
 
 .SanitiseAutomake:
   extends: .Tags
