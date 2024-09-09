@@ -26,7 +26,7 @@ class SingleSweep(ADERDG):
 
         self._solver_template_file_class_name = "SingleSweep"
 
-        #If turned on it turns the solver from a single sweep to a separate sweeps solver,
+        # If turned on it turns the solver from a single sweep to a separate sweeps solver,
         #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
         #   this can be useful for debugging, or for some additional features such as limiting.
         self._split_sweeps = False
