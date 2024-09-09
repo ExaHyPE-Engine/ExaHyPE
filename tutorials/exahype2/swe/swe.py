@@ -27,7 +27,7 @@ volume_size = 0.01
 """
 The simulation end time.
 """
-end_time = 1
+end_time = 1.0
 
 """
 Choose domain size and offset.
@@ -59,7 +59,7 @@ my_project = exahype2.Project(
     namespace=["tutorials", "exahype2", "swe"],
     project_name="SWE",
     directory=".",
-    executable="ExaHyPE2-SWE",
+    executable="SWE",
 )
 
 """

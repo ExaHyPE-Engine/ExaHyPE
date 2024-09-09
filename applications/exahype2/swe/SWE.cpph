@@ -1,26 +1,17 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "SWE.h"
 
-#include "Constants.h"
-#include "tarch/Assertions.h"
-#include "tarch/NonCriticalAssertions.h"
-#include "VariableShortcuts.h"
-
-using s = applications::exahype2::swe::VariableShortcuts;
-
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
 void applications::exahype2::swe::eigenvalues(
-  const double* __restrict__ Q,
-  const ::tarch::la::Vector<Dimensions, double>& x,
-  const ::tarch::la::Vector<Dimensions, double>& h,
-  double                                         t,
-  double                                         dt,
-  int                                            normal,
-  double* __restrict__ L
+  [[maybe_unused]] const double* const __restrict__             Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] double* const __restrict__                   L
 ) {
+  using s = VariableShortcuts;
+
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -34,28 +25,26 @@ void applications::exahype2::swe::eigenvalues(
   nonCriticalAssertion(Q[s::b] == Q[s::b]);
 #endif
 
+  static constexpr double g = 9.81;
+
   const double u = Q[s::h] > 0.0 ? Q[s::hu + normal] / Q[s::h] : 0.0;
-  const double c = Q[s::h] > 0.0 ? std::sqrt(g * Q[s::h]) : 0.0;
+  const double c = Q[s::h] > 0.0 ? sqrt(g * Q[s::h]) : 0.0;
   L[0]           = u;
   L[1]           = u + c;
   L[2]           = u - c;
 }
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
 
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
 void applications::exahype2::swe::flux(
-  const double* __restrict__ Q,
-  const ::tarch::la::Vector<Dimensions, double>& x,
-  const ::tarch::la::Vector<Dimensions, double>& h,
-  double                                         t,
-  double                                         dt,
-  int                                            normal,
-  double* __restrict__ F
+  [[maybe_unused]] const double* const __restrict__             Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] double* const __restrict__                   F
 ) {
+  using s = VariableShortcuts;
+
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -68,32 +57,30 @@ void applications::exahype2::swe::flux(
   nonCriticalAssertion(Q[s::hu + 1] == Q[s::hu + 1]);
   nonCriticalAssertion(Q[s::b] == Q[s::b]);
 #endif
+
+  static constexpr double g = 9.81;
 
   const double ih = Q[s::h] > 0.0 ? 1.0 / Q[s::h] : 0.0;
   F[s::h]         = Q[s::hu + normal];
   F[s::hu + 0]    = ih * Q[s::hu + normal] * Q[s::hu + 0];
   F[s::hu + 1]    = ih * Q[s::hu + normal] * Q[s::hu + 1];
-  F[s::hu + normal] += 0.5 * 9.81 * Q[s::h] * Q[s::h]; // TODO: Should be
-                                                       // removed as ncp takes
-                                                       // care of that.
+  F[s::hu + normal] += 0.5 * g * Q[s::h] * Q[s::h]; // TODO: Should be
+                                                    // removed as ncp takes
+                                                    // care of that.
 }
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
 
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
 void applications::exahype2::swe::nonconservativeProduct(
-  const double* __restrict__ Q,
-  const double* __restrict__ deltaQ,
-  const ::tarch::la::Vector<Dimensions, double>& x,
-  const ::tarch::la::Vector<Dimensions, double>& h,
-  double                                         t,
-  double                                         dt,
-  int                                            normal,
-  double* __restrict__ BTimesDeltaQ
+  [[maybe_unused]] const double* const __restrict__             Q,
+  [[maybe_unused]] const double* const __restrict__             deltaQ,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] double* const __restrict__                   BTimesDeltaQ
 ) {
+  using s = VariableShortcuts;
+
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -117,6 +104,8 @@ void applications::exahype2::swe::nonconservativeProduct(
 
   BTimesDeltaQ[s::h] = 0.0;
 
+  static constexpr double g = 9.81;
+
   switch (normal) {
   case 0: // x
     BTimesDeltaQ[s::hu + 0] = g * Q[s::h] * deltaQ[s::b];
@@ -128,6 +117,3 @@ void applications::exahype2::swe::nonconservativeProduct(
     break;
   }
 }
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif

@@ -15,12 +15,18 @@
   }
 {%- endfor %}
 
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 struct {{NAMESPACE | join("::")}}::VariableMetrics {
   static constexpr int NumberOfDistinctVariables  = {{VARIABLE_NAMES|length}};
   static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
   static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
   static constexpr int Size                       = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
 };
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
 /**
  * Positions of fields in the vector of unknowns.
@@ -31,6 +37,9 @@ struct {{NAMESPACE | join("::")}}::VariableMetrics {
  *
  * You might want to use a typedef to shorten the notation.
  */
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 class {{NAMESPACE | join("::")}}::VariableShortcuts : public {{NAMESPACE | join("::")}}::VariableMetrics {
 public:
   // Positions of fields inside the unknown vector (solution vector) Q
@@ -45,3 +54,6 @@ public:
   constexpr int operator [] (const int index) const noexcept { return Q[index]; }
   constexpr int operator () (const int index) const noexcept { return Q[index]; }
 };
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
