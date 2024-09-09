@@ -7,7 +7,7 @@ pages:
   allow_failure: false
   dependencies: []
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_IMAGEDIR/${IMAGE_TAG_BASE} doxygen documentation/Doxyfile
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_TAG_BASE} doxygen documentation/Doxyfile
     - rm -rf public
     - mkdir public
     - mv ./doxygen-html/html/* public/
