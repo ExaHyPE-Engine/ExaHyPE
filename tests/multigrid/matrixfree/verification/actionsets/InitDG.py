@@ -790,7 +790,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
 
         // also gather the cg values
         tarch::la::Vector<TwoPowerD, double> u_cg_random;
-        for (int i=0; i<TwoPowerD; i++) u_cg_random(i) = fineGridVertices{{CG_SOLVER_NAME}}(i).getValue(0);
+        for (int i=0; i<TwoPowerD; i++) u_cg_random(i) = fineGridVertices{{CG_SOLVER_NAME}}(i).getRand(0);
         auto v_cell = prolongationMatrix * u_cg_random;
 
         // next, project v_cell onto each of the faces
