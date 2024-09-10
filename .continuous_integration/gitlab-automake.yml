@@ -150,7 +150,7 @@ ExaHyPE2_Kernels:
   allow_failure: false
   parallel:
     matrix:
-    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
+    - benchmark: [euler, acoustic, elastic-wave, advection]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -fpe -m Release"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; ./kernel-benchmarks-fv-rusanov-2d-ps-16-Release"
