@@ -65,10 +65,17 @@ euler_solver   = None
 poisson_solver = None
 
 #! [Construct matrices]
+
+# matrices = mghype.api.matrixgenerators.DLinear(
+#   dimensions = args.dimensions,
+#   poly_degree = 1,
+#   unknowns_per_vertex_dof = 1
+# )
+
 matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
-  1,  # Unknowns per cell dof. Scalar PDE here
+  1, #args.upv,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
   2
 )
@@ -80,6 +87,7 @@ cell_from_face_projection, \
 cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
 approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
+
 #! [Construct matrices]
 
 #! [Instantiate solvers]
@@ -115,6 +123,18 @@ if args.type=="global-adaptive":
   )
 
 ## Poisson solver
+
+# poisson_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Poisson",
+#                                                               args.upv, #1, # unknowns
+#                                                               args.dimensions,
+#                                                               args.meshsize,
+#                                                               args.meshsize,
+#                                                               local_assembly_matrix = assembly_matrix,
+#                                                               local_assembly_matrix_scaling=assembly_matrix_scaling,
+#                                                               mass_matrix = mass_matrix,
+#                                                               mass_matrix_scaling = mass_matrix_scaling,
+#                                                               solver_tolerance=0.01
+#                                                             )
 
 poisson_solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "Poisson",
@@ -166,11 +186,11 @@ poisson_solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisati
 #                                                             )
 #! [Instantiate solvers]
 
-# assert (
-#     poisson_solver.name != euler_solver.name
-# ), "names the solvers should not be the same"
+assert (
+    poisson_solver.name != euler_solver.name
+), "names the solvers should not be the same"
 
-# euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
+euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus subdirectory).
@@ -198,8 +218,8 @@ poisson_project = mghype.matrixfree.api.Project(
   project_name = "Poisson", 
   directory     = ".",
   subdirectory  = "poisson",
-  executable    = "selfgravitation-poisson",
-  abstract_overwrite = False,
+  executable    = "selfgravitation-poisson"
+  # abstract_overwrite = False,
 )
 #! [Create project]
 

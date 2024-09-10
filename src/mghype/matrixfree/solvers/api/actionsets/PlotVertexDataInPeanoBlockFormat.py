@@ -154,7 +154,7 @@ if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::C
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """
 
 

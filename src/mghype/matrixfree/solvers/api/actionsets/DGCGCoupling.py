@@ -475,7 +475,7 @@ class AbstractDGCGCoupling(ActionSet):
          
     """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 #include "mghype/mghype.h"
 #include "mghype/matrixfree/solvers/DGCGCoupling.h"
