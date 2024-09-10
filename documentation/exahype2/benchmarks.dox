@@ -3,7 +3,7 @@
 @page page_exahype_benchmarks Benchmarks
 
 \li \subpage benchmarks_exahype2_euler_kernel_benchmarks
-\li \subpage benchmarks_exahype2_acoustic_wave_kernel_benchmarks
+\li \subpage benchmarks_exahype2_acoustic_kernel_benchmarks
 \li \subpage benchmarks_exahype2_elastic_wave_kernel_benchmarks
 \li \subpage benchmarks_exahype2_advection_kernel_benchmarks
 \li \subpage benchmarks_exahype2_swe_kernel_benchmarks
