@@ -68,9 +68,9 @@ ExaHyPE2_Euler:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler; PYTHONPATH=$CI_PROJECT_DIR/python python3 euler.py -s $solver_type -d $dimensions -m $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/point-explosion/euler; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type"
   needs:
     - job: Build
   dependencies:

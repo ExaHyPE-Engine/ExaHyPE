@@ -2,6 +2,8 @@
 
 @page page_exahype_benchmarks Benchmarks
 
+\tableofcontents
+
 \li \subpage benchmarks_exahype2_euler_kernel_benchmarks
 \li \subpage benchmarks_exahype2_acoustic_wave_kernel_benchmarks
 \li \subpage benchmarks_exahype2_elastic_wave_kernel_benchmarks
