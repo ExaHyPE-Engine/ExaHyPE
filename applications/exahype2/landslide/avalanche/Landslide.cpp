@@ -17,10 +17,9 @@ void applications::exahype2::landslide::Landslide::initialCondition(
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {
-    {0.15, 0.35}};
-  const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < 0.10;
 
+  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = { 0.15, 0.35 };
+  const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < 0.10;
   Q[s::h] = (nearCentre ? 0.008 : 0.0); // Granular material height (h)
 }
 
@@ -58,10 +57,16 @@ void applications::exahype2::landslide::Landslide::boundaryConditions(
 
   auto result = ::exahype2::RefinementCommand::Keep;
 
-  if (x(0) < 0.79) {
+  /*if (x(0) < 0.79) {
     result = ::exahype2::RefinementCommand::Refine;
   } else {
     result = ::exahype2::RefinementCommand::Erase;
+  }*/
+
+  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = { 0.15, 0.35 };
+  const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < 0.10;
+  if (nearCentre) {
+    result = ::exahype2::RefinementCommand::Refine;
   }
 
   return result;
