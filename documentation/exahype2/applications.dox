@@ -4,6 +4,7 @@
 
 \tableofcontents
 
+\li \subpage applications_exahype2_advection
 \li \subpage applications_exahype2_acoustic
 \li \subpage applications_exahype2_elastic
 \li \subpage applications_exahype2_swe
