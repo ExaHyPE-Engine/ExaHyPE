@@ -2,6 +2,9 @@
 
 @page page_exahype_applications Applications
 
+\tableofcontents
+
+\li \subpage applications_exahype2_acoustic
 \li \subpage applications_exahype2_elastic
 \li \subpage applications_exahype2_swe
 \li \subpage applications_exahype2_landslide
