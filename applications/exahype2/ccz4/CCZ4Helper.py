@@ -18,16 +18,37 @@ def get_body_of_enforceCCZ4constraint():
   }
 """
 
-def get_body_of_adm_constraints(patch_size, number_of_output_variable):
-	return """ 
+def get_body_of_adm_constraints(patch_size, number_of_output_variable, so_flag):
+  if so_flag:
+    extra_derivative_assign="""
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                      10,11,12,13,14,15,16,17,18,19,
+                                      20,21,22,53,54};
+        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
+                                        33,34,35,36,37,38,39,40,41,42,
+                                        43,44,45,46,47,48,49,50,51,52,
+                                        55,56,57,58}; 
+        
+        dfor( dof, 3 ) {
+          for (int unknown : auxiliaryVarsIndices) {
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = //abuse of RHS, auxiliary variables are stored there.
+              fineGridCellCCZ4QRhsEstimates.value[ enumeratorWithoutAuxiliaryVariables(0,dof,unknown) ];
+          }   
+        } 
+    """
+  else:
+    extra_derivative_assign=""
+  return """ 
         const int patchSize = """ + str( patch_size ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
-    //if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
+    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {"""+extra_derivative_assign+"""
+
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
@@ -73,22 +94,43 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable):
     } 
 """
 
-def get_body_of_Psi_Calc(patch_size, number_of_output_variable):
-	return """ 
+def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
+  if so_flag:
+    extra_derivative_assign="""
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                      10,11,12,13,14,15,16,17,18,19,
+                                      20,21,22,53,54};
+        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
+                                        33,34,35,36,37,38,39,40,41,42,
+                                        43,44,45,46,47,48,49,50,51,52,
+                                        55,56,57,58}; 
+        
+        dfor( dof, 3 ) {
+          for (int unknown : auxiliaryVarsIndices) {
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = //abuse of RHS, auxiliary variables are stored there.
+              fineGridCellCCZ4QRhsEstimates.value[ enumeratorWithoutAuxiliaryVariables(0,dof,unknown) ];
+          }   
+        } 
+    """
+  else:
+    extra_derivative_assign=""
+  return """ 
         const int patchSize = """ + str( patch_size ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
     const int n_a_v="""+str(number_of_output_variable)+""";
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {
-    //if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction) {
+    if (not marker.willBeRefined() and repositories::instanceOfCCZ4.getSolverState()!=CCZ4::SolverState::GridConstruction and repositories::instanceOfCCZ4.getSolverState()==CCZ4::SolverState::RungeKuttaSubStep0) {"""+extra_derivative_assign+"""
+
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
         double gradQ[3*59]={ 0 };
 
-        for (int d=0; d<3; d++) {
+        /*for (int d=0; d<3; d++) {
           tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
           tarch::la::Vector<Dimensions,int> rightCell = currentCell;
           leftCell(d)  -= 1;
@@ -97,6 +139,22 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable):
           const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
           for(int i=0; i<59; i++) {
             gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+          }
+        }*/
+
+        for (int d=0; d<3; d++) {
+          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          tarch::la::Vector<Dimensions,int> DouleftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> DourightCell = currentCell;
+          leftCell(d)  -= 1; DouleftCell(d)    -= 2;
+          rightCell(d) += 1; DourightCell(d)  += 2; 
+          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
+          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
+          const int DouleftCellSerialised  = peano4::utils::dLinearised(DouleftCell, patchSize + 2*overlap);
+          const int DourightCellSerialised = peano4::utils::dLinearised(DourightCell,patchSize + 2*overlap);
+          for(int i=0; i<59; i++) {
+            gradQ[d*59+i] = ( -1*oldQWithHalo[DourightCellSerialised*(59+n_a_v)+i] + 8*oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - 8*oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] + 1*oldQWithHalo[DouleftCellSerialised*(59+n_a_v)+i]) / 12.0 / volumeH;
           }
         }
 

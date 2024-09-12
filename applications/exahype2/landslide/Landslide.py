@@ -376,52 +376,52 @@ class Landslide:
         project.set_Peano4_installation(args.peano_dir, mode=build_mode)
         project = project.generate_Peano4_project(verbose=True)
 
-        project.constants.export_constexpr_with_type("g", str(9.81), "double")
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type("g", str(9.81), "double")
+        project.constants.export_const_with_type(
             "Zeta",
             str("35.0 * std::numbers::pi / 180.0; // Conversion of degrees to radians"),
             "double",
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Zeta1", str("28.95 * std::numbers::pi / 180.0"), "double"
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Zeta2", str("44.09 * std::numbers::pi / 180.0"), "double"
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Zeta3", str("31.81 * std::numbers::pi / 180.0"), "double"
         )
-        project.constants.export_constexpr_with_type("Beta", str(1.07), "double")
-        project.constants.export_constexpr_with_type("Gamma", str(2.01), "double")
-        project.constants.export_constexpr_with_type("BetaStar", str(0.06), "double")
+        project.constants.export_const_with_type("Beta", str(1.07), "double")
+        project.constants.export_const_with_type("Gamma", str(2.01), "double")
+        project.constants.export_const_with_type("BetaStar", str(0.06), "double")
         # Kappa in the friction law is assumed to be 1 and is just initialised as a const double in the source function.
         # The user can apply std::pow((Fr/BetaStar), Kappa) for evaluating T in the source function in case the value of Kappa is different from 1.
-        project.constants.export_constexpr_with_type("Kappa", str(1.0), "double")
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type("Kappa", str(1.0), "double")
+        project.constants.export_const_with_type(
             "FrictionLengthScale", str(0.00035), "double"
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Mu1", str("std::tan(Zeta1)"), "double"
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Mu2", str("std::tan(Zeta2)"), "double"
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Mu3", str("std::tan(Zeta3)"), "double"
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Nu",
             str(
                 "(2.0 / 9.0) * (FrictionLengthScale / Beta) * (g * std::sin(Zeta) / std::sqrt(g * std::cos(Zeta)))  * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu1)) - 1.0)"
             ),
             "double",
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Hstart",
             str("FrictionLengthScale * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu3)) - 1.0)"),
             "double",
         )
-        project.constants.export_constexpr_with_type(
+        project.constants.export_const_with_type(
             "Hstop",
             str("FrictionLengthScale * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu1)) - 1.0)"),
             "double",

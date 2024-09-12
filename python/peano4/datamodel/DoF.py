@@ -94,6 +94,7 @@ class DoF(object):
     self.name        = name
     self.namespace   = []
     self._additional_load_and_store_arguments = []
+    self.subdirectories = []
   
   
   def configure(self,namespace,association, subdirectory=""):
@@ -103,7 +104,7 @@ class DoF(object):
     self.namespace = [x for x in namespace]
     self.association  = association
     self.namespace   += [ get_subnamespace_for_association(association) ]   
-    self.subdirectory = subdirectory 
+    self.subdirectory = subdirectory
     
 
   def get_full_qualified_type(self):

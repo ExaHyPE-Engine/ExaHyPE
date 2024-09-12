@@ -1,0 +1,461 @@
+/**
+
+\page page_documentation_home Documentation (Doxygen)
+
+\tableofcontents
+
+Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
+
+- Everything is in the code;
+- All documentation is created via \c doxygen;
+- What does not fit into the code is documented in separated files which also are processed by \c doxygen;
+- Code documentation should be in the header files for C/C++ code;
+- Further documentation files have the extension ```.dox```.
+
+To generate the documentation, \c cd to your Peano directory, and type:
+
+      doxygen documentation/Doxyfile
+
+To understand the following descriptions, it is reasonable to keep the
+following terminology in mind:
+
+- A page is the LaTeX equivalent of a chapter.
+- A subpage is the LaTeX equivalent of a section.
+- We typically use the hash signs to substructure information
+  within a section where two hashes denote sections.
+
+The code on Peano's website is generated everytime we get a top-level push, 
+i.e. a push into the master branch p4. Therefore, the online docu will always
+lag behind the latest developments. You might be better off with creating your
+own docu on your branch locally.
+
+
+Rationale
+============
+
+We aim for documentation which is always up-to-date.
+The documentation shall be searchable.
+We want to have one medium which integrates top-level and high-level overview information (normally stored in ```*.dox``` files)
+with low-level source code documentation (normally stored in ```*.h``` and ```*.py``` files).
+
+
+Peano's documentation can be quite complex with all the toolboxes and
+extensions being part of the code plus the fact that we combine C/C++
+and Python in numerous ways.
+Therefore, the file structure of the documentation reflects the logical
+structure of the menus.
+
+
+How to add new files
+======================
+
+Header files and Python scripts are automatically picked up by the script as
+long as they are stored within directories which are subject to search.
+Low-level subpages are automatically generated for them.
+If you want to write stand-alone docu (such as top-level or high-level overview
+descriptions), the corresponding dox files should go into
+
+      documentation/subdirectory
+
+Doxygen supports the addition of pages anywhere in the directories that it searches.
+These can be written in markdown or html.
+Additionally, files must start with \htmlonly[ /** ]\endhtmlonly and end with
+\htmlonly[ */ ]\endhtmlonly, so that Doxygen is alerted to process them.
+
+
+New (top-level) documentation page
+-------------------------------------
+
+With top-level, we mean something like Peano or ExaHyPE or Swift.
+Top-level menu entries are reserved for such rubrics and therefore are infrequently introduced.
+Please consult with  the team if you want to add a new top-level entry.
+
+If the team agrees that there should be a new top-level entry, please follow
+the following conventions:
+
+- Add a new directory within ```documentation/Doxygen```.
+- Create a new main page within this new directory. Most packages call this
+  file ```home.dox```.
+
+The new mainpage typically reads as follows
+
+\verbatim
+/**
+
+         @page peano_home Peano
+
+         \tableofcontents
+
+         \li \subpage action_sets
+
+*/
+\endverbatim
+
+where \c peano_home and \c Peano are to be replaced with the names of your choice.
+
+Next, enumerate all the subpages to be nested within this page below.
+This prevents these subpages from appearing at the top level menu.
+
+
+New (high-level) subpages
+-------------------------------------
+
+Subpages are the Doxygen term for something that we would call a section
+in LaTeX. To create such a section, please follow the following steps:
+
+- Create a new file within the documentation subdirectory of your choice;
+- Begin the new main page as above (with a ```\page```, ```page_ref``` and a page title),
+  i.e. any page to be included should start with
+
+\verbatim
+/**
+
+       \page page_ref Page Title
+\endverbatim
+
+  Here, ```page_ref``` will serve as a global unique identifier throughout Doxygen.
+  Therefore, we usually use identifiers such as \c peano_mysection where (in this example) \c peano is a generic
+  prefix identifying the top-level rubric (page), and \c mysection is the subpage within the rubric.
+- Any page marked with ``` \page``` will appear on the top level menu by
+  default. New documentation sections should therefore be added to their
+  corresponding chapter or top-level page (see above) via
+
+\verbatim
+           \li \subpage page_ref
+\endverbatim
+
+  where \c page_ref typically has a structure similar to \c peano_mysection.
+
+The last item illustrates a fundamental paradigm of Doxygen:
+All the pages are, in the first lace, one large blob.
+To introduce parent-child relations, you have to add the child to the parent page.
+The child page itself does not specify its parent.
+Through this, you can duplicate entries in the navigation menu:
+you simply add the subpage to multiple parents.
+
+Don't forget to conclude every dox file with:
+
+\verbatim
+*/
+\endverbatim
+
+
+Adding (low-level) documentation inside the code
+----------------------------------------------------
+
+Doxygen recognises comments written following certain rules in C++ and Python source codes.
+As comments are written differently in these languages, these rules are also different.
+In C++, a comment section must be wrapped by the first line \htmlonly /** \endhtmlonly and the last line \htmlonly */ \endhtmlonly
+and will contain a (multiline) text between them (describing, for example, a function and its arguments before the function body):
+
+\verbatim
+/**
+ * Comment title
+ *
+ * Multiline text
+ ...
+ * Multiline text
+ *
+ * ## Subsection 1 for this function or class or namespace
+ *
+ * More docu in multiline text.
+ *
+ *
+ * ## Subsection 2 for this function or class or namespace
+ *
+ * More docu in multiline text.
+ *
+ *
+ */
+\endverbatim
+
+The documentation of a function, class or namespace has to be put ***before*** the
+actual declaration, and it always in the header file in Peano.
+
+
+In Python, a comment section must be wrapped differently, namely,
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+"""!
+
+  Comment title
+
+  This is a Python comment that will make it into the HTML docu
+
+"""
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Don't forget the exclamation mark as this allows Doxygen to render a Python comment on a webpage correctly,
+otherwise the comment text will appear as a code snippet.
+For Python, the comment has to be put directly ***after*** the function or class definition.
+
+Furthermore, if you want to ensure that a full qualfilied name, such as petsc.Project.add_solver()
+appears in the finished html page, ensure that the .py file that contains the class being referenced
+sits in the same directory as a ```__init__.py``` file, which can be empty. Then all you need to do is reference it like:
+
+\verbatim
+petsc.Project.add_solver()
+\endverbatim
+
+in the .dox file.
+
+Within the individual comments, you can substructure the comments further via the hashtag.
+Markdown headlines should work, too.
+
+
+What is a little bit annoying is that Doxygen reads comments within the source code and
+headers as markdown. Consequently, comments that have an indent greater than five are
+rendered once again as source code. You have to remove the indentation sometimes. It seems
+that this mainly affects the Python code, but not the C++ documentation.
+
+
+
+# Tutorials
+
+
+We hold tutorials parallel to the actual source code, tests and benchmarks.
+It is obviously up to the author of a tutorial how to structure the tutorial.
+However, we found it very useful if tutorials refer to other benchmarks and 
+tests wherever possible rather than duplicating code. 
+
+To facilitate this,
+doxygen allows you to "extract" source code snippets into your documentation 
+pages. The feature is documented at https://www.doxygen.nl/manual/commands.html#cmdsnippet.
+
+The idea is that the code that is relevant/discussed has to be annotated with 
+
+\verbatim
+//! [tutorials swift2 planet-orbit create project]
+
+Code that you want to display in tutorials, too 
+
+//! [tutorials swift2 planet-orbit create project]
+\endverbatim
+
+(in C/C++ code) or
+
+\verbatim
+#! [tutorials swift2 planet-orbit create project]
+
+Code that you want to display in tutorials, too 
+
+#! [tutorials swift2 planet-orbit create project]
+\endverbatim
+
+respectively. We can then integrate this code part through
+
+
+\verbatim
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit create project
+
+This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
+\endverbatim
+
+
+
+
+Doxygen cheat sheet
+======================
+
+New chapters are created with the ''' # ''' symbol. This will make "Brief doxygen cheat sheet"
+in the sidebar, as a drop-down menu within the current page.
+
+\verbatim
+# Brief doxygen cheat sheet
+\endverbatim
+
+## Headings 
+
+You can nest drop-down menus. Add a second sub-level with two hash signs. Note the appearance
+of "Headings" in the drop-down menu on the left. 
+
+\verbatim
+## Headings 
+\endverbatim
+
+You can even keep this going. Create a third nested level with three hash symbols ( ''' ### '''' )
+and so on.
+
+## Comments 
+
+We use html-style comments.
+
+\verbatim
+
+<!--
+
+Anything in here is ignored by doxygen.
+
+-->
+
+\endverbatim
+
+
+## Code snippets
+
+If you want code to appear neatly on the page, you have two options.
+
+You can either use tilde (~):
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+double answer;
+int    counter;
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Under the hood:
+
+\verbatim
+~~~~~~~~~~~~~~~~~~~~~~~~~
+double answer;
+int    counter;
+~~~~~~~~~~~~~~~~~~~~~~~~~
+\endverbatim
+
+You also have the much more powerful "verbatim" keyword:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\verbatim
+
+Anything in here is rendered exactly as written. Keywords and all.
+
+\endverbatim
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Inline "code snippets" can be done like so:
+
+\verbatim
+```import peano4```
+\endverbatim
+
+## TeX
+
+Inline math environments can be done as normal. If we want to write
+@f$ \int_a^b f(x) dx @f$, then we must write:
+
+\verbatim
+
+@f$ \int_a^b f(x) dx @f$
+
+Note the change $ -> @f$
+
+\endverbatim
+
+You can also render a lot more fancy equations as well. This is the expected output, if 
+you have a proper build of Latex on your system:
+
+\f{eqnarray*}{
+      g &=& \frac{Gm_2}{r^2} \\ 
+        &=& \frac{(6.673 \times 10^{-11}\,\mbox{m}^3\,\mbox{kg}^{-1}\,
+            \mbox{s}^{-2})(5.9736 \times 10^{24}\,\mbox{kg})}{(6371.01\,\mbox{km})^2} \\ 
+        &=& 9.82066032\,\mbox{m/s}^2
+\f}
+
+The pattern is something like:
+
+\verbatim
+
+\f{eqnarray*}{
+	Anything between these braces is rendered in the math environment. 
+	Make sure to end your lines with \\
+\f}
+
+\endverbatim
+
+[You can read further on the Doxygen website here.](https://www.doxygen.nl/manual/formulas.html)
+
+## Including hyperlinks
+
+Recall that a page typically begins with 
+
+\verbatim
+
+...
+@page page_ref Page Title
+...
+
+\endverbatim
+
+You can then reference this page from any other. Just state:
+
+\verbatim
+
+... for further reference please see \ref page_ref ...
+
+\endverbatim
+
+We can do the same for weblinks, like [this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano):
+
+\verbatim
+
+[this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano)
+
+\endverbatim
+
+
+## Including images 
+
+Simply write:
+
+\verbatim
+
+@image html relative/path/to/file.png
+
+\endverbatim
+
+
+## Misc
+
+You can enumerate lists by starting each new line with \verbatim \li \endverbatim
+
+The standard newline character \verbatim \n \endverbatim works as expected. 
+However, it is easiest to create new enumerations or lists via
+
+~~~~~~~~~~~~~~~~~~~~~
+1. This is the first item
+2. This is the second item
+
+
+- This is the first item
+- This is the second item
+~~~~~~~~~~~~~~~~~~~~~
+
+
+## Links to existing code snippets
+
+This section is particularly relevant for tutorials and the documentation of 
+benchmark scripts. Whenever you want to refer to a particular part of a script,
+a convenient way is to mark this part with
+
+~~~~~~~~~~~~~~~~~~~~~~
+/ / ! [My label]
+My fancy source code
+/ / ! [My label]
+~~~~~~~~~~~~~~~~~~~~~~
+
+In Python, it is 
+
+~~~~~~~~~~~~~~~~~~~~~~
+#! [My label]
+My fancy source code
+#! [My label]
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+Please remove the spaces above between the slashes and the exlamation mark.
+They are in there, as the parser otherwise fails.
+Once the source code annotation is in, you can refer to this code snippet in the doxygen docu via
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~
+@snippet myfile.py My label
+~~~~~~~~~~~~~~~~~~~~~~
+
+This reference will display the code snippet in the generated html code.
+The outcome resembles what we know from Jupyter notebooks.
+
+
+*/

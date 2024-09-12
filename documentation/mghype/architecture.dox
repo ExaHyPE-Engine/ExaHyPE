@@ -1,0 +1,71 @@
+/**
+
+@page multigrid_architecture Architecture
+
+
+The multigrid solvers consist of two ingredients: a Python-API and a set of 
+C++ tools. 
+The C++ tools use Peano's tarch and the matrixfree toolbox.
+Overall, the multigrid solvers realise the @ref page_architecture_home "blueprint of Peano's application architecture".
+They focus, as stand-alone applications, on stationary, elliptic problems that materialise in
+
+@f$ A x = b @f$
+
+
+With the stand-along multigrid solvers, they all realise the following pattern:
+
+1. There is a multigrid project, which serves as a container or general wrapper.
+   and defines the core multigrid solver steps.
+   
+2. The project hosts one or multiple solvers for a particular partial 
+   differential equation.
+   
+3. The multigrid is basically a factory producing a plain Peano 4 Python 
+   representation of the code.
+   
+4. The Peano 4 Python project then finally produces the C++ code.
+
+The multigrid project defines what is to be solved and how (in terms of numerics).
+The Peano 4 project then represents how this is realised in principle, i.e. it
+accommodates a Python representation of all data models and computational steps.
+The C++ outcome is the actual realisation.
+
+
+# File and matrix conventions
+
+Each multigrid solver is represented by one instance of 
+petsc.solvers.Solver. Please consult this class' documentation for available 
+subclasses (solver flavours) and information about files that are generated.
+
+A solver has a name. For each solver, the Python API generates two classes in 
+the project's directory: If NAME is the solver name, there is an AbstractNAME
+solver with a header and source file, and there is also a subclass of this one
+called NAME. Everytime you rerun the Python script, AbstractNAME.h and
+AbstractNAME.cpp are overwritten. The Python run will never alter NAME.h or
+NAME.cpp, as these are the files where you are supposed to make changes.
+
+While the Python API gives users the opportunity to specify the type of 
+solver to be used and the core operators, the API in its plain form is not 
+"sophisticated enough" to provide all the additional solver info, such as 
+refinement patterns, initial conditions, or types of boundary data. Instead,
+the Python call create the file NAME.h and NAME.cpp, and there are C++ code
+snippets in there which users should befill to implement these ingredients.
+By default, AbstractNAME.h defines a lot of further functions and default
+functionality, which you might want to refined/overwrite in NAME.h, too.
+
+The most important ingredient is the matrix operators which define the left-hand
+and right-hand side of the PDE. Every matrix ingredient consists of two 
+parts: The actual matrix and an h-scaling of it. You can always overwrite
+the matrix assembly. This is important if you need different h-scalings of
+the matrix parts, e.g. Overwriting is always an option (the underlying 
+function is a virtual one). To do so, simply pipe in the matrix of interest
+(if you want the code to store the matrix in AbstractNAME.h) with a scaling
+of @f$ h^0 @f$, i.e. the argument 1, and redefine the getLhsMatrix() (or 
+another function of interest, respectively) in NAME.h and NAME.cpp with a 
+different scaling. 
+
+
+
+
+ */
+ 

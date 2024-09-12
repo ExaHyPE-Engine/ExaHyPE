@@ -1,0 +1,47 @@
+/**
+
+ @page page_exahype_multicore Multicore configuration
+ 
+  
+ ExaHyPE's multicore parallelism requires user to follow three steps:
+ 
+ 1. @ref page_installation_home "Configure" Peano with multithreading support.
+ 2. Ensure that you have picked a proper load balancing scheme.
+ 3. Tweak the task orchestration.
+ 
+ 
+ ## Load balancing
+ 
+ The load balancing applies to both MPI and the multicore parallelism. To 
+ select a load balancing, add
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, 8))",
+    )
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ to your project. The exahype2.Project.set_load_balancing() provides more 
+ information on variations. Also study exahype2::LoadBalancingConfiguration.
+ 
+ 
+ ## Switch task orchestration
+ 
+ By default, ExaHyPE uses the task orchestration that we have introduced with 
+ our IWOMP paper (see the generated README-xxx.md file once the Python script
+ has terminated). You can alter this scheme by
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ for example, which replaces Peano's bespoke tasking back-end with a native
+ back-end where literally each and every task are directly mapped onto a 
+ TBB, OpenMP, SYCL or C++ task.
+ 
+
+
+ */
+ 
+ 

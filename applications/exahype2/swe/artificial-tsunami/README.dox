@@ -1,0 +1,52 @@
+/**
+
+@page applications_exahype2_swe_artificial_tsunami Artificial Tsunami
+
+Scenario simulating an artificial tsunami in a "swimming pool".
+The swimming pool has constant bathymetry of @f$ -100 m @f$ before the "earthquake" and a size of @f$ 10 \times 10 km @f$.
+The earthquake generates a displacement in a @f$ 1 \times 1 km @f$ square in the center of the the swimming pool.
+The displacement can be described via the function @f$ d(x, y) @f$:
+
+\f{align*}{
+d(x, y) &= 5m \cdot d_x(x)d_y(y) \\
+d_x(x) &= sin((\frac{x}{500m}+1) \cdot \pi) \\
+d_y(y) &= -(\frac{y}{500m})^2+1
+\f}
+
+\image html ArtificialTsunami.gif
+
+## How to Build and Run
+
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+
+### Using CMake
+
+    cd myPeanoDirectory && mkdir build && cd build
+    CC=gcc CXX=g++ cmake .. -DWITH_MULTITHREADING=omp -DWITH_NETCDF=ON -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
+    make -j && make test
+    cd applications/exahype2/swe/artificial-tsunami/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 artificial-tsunami.py
+    ./ExaHyPE2-SWE-RusanovRiemannGlobalAdaptiveFV-Release
+
+### Using Automake
+
+    cd myPeanoDirectory
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    CFLAGS="-fopenmp" CC=gcc CXXFLAGS="-std=c++20 -fopenmp" CXX=g++ LDFLAGS="-fopenmp" \
+    ./configure --with-multithreading=omp --with-netcdf --enable-exahype --enable-loadbalancing --enable-blockstructured
+    make -j && make check
+    cd applications/exahype2/swe/artificial-tsunami/
+    export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
+    python3 artificial-tsunami.py
+    ./ExaHyPE2-SWE-RusanovRiemannGlobalAdaptiveFV-Release
+
+Where `CC=gcc CXX=g++` can be any set of compilers.
+
+This scenario requires the NetCDF library.
+
+## Visualise the Simulation Output
+
+    python3 artificial-tsunami.py --visualise
+
+*/

@@ -42,8 +42,8 @@ ReconstructLinearCombination = """
             {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
-              {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
+              timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }      
@@ -108,7 +108,14 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   """  
     
   SolveRiemannProblemsOverPatch = jinja2.Template( ReconstructLinearCombination + """
-      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), timeStamp, timeStepSize, newQ );
+      double subTimeStamp=timeStamp;
+      {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+      if ({{PREDICATES[PREDICATE_NO]}}) {
+        subTimeStamp += {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}}*timeStepSize;
+      }
+      {% endfor %} 
+
+      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), subTimeStamp, timeStepSize, newQ );
            
       ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 

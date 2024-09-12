@@ -2387,7 +2387,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     TemplateImplementationFilePrologue = """
 #include "{{CLASSNAME}}.h"
-#include "repositories/DataRepository.h"
+#include "../repositories/DataRepository.h"
 
 #include "peano4/grid/PeanoCurve.h"
 
