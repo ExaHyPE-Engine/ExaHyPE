@@ -1,0 +1,48 @@
+/**
+
+@page page_applications_overview Applications Overview
+
+The applications are embedded into their respective extension documentation.
+However, the list below provides an overview over some applications.
+
+
+# ExaHyPE 2
+
+<table border="0">
+ <tr>
+  <td>
+   <h2> ExaGRyPE </h2>
+   @image html applications/exahype2/ccz4/black-holes-small.png
+   @ref to_be_done "ExaGRyPE - an "
+  </td>
+  <td>
+   <h2> ExaSeis </h2>
+   @image html applications/exahype2/ExaSeis/zugspitze.png
+   @ref to_be_done "ExaSeis - title to be done"
+  </td>
+ </tr>
+</table>
+
+# Swift 2
+
+<table border="0">
+ <tr>
+  <td></td>
+  <td></td>
+  <td></td>
+ </tr>
+</table>
+
+# MGHyPE
+
+<table border="0">
+ <tr>
+  <td></td>
+  <td></td>
+  <td></td>
+ </tr>
+</table>
+
+
+*/
+
