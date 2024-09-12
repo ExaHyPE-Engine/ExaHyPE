@@ -47,7 +47,8 @@ project = exahype2.Project(
   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
   project_name  = "Poisson",
   directory     = ".",
-  executable    = "subcycling-scheme"
+  executable    = "subcycling-scheme",
+  abstract_overwrite = False,
 )
 
 #

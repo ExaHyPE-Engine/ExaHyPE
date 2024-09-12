@@ -6,7 +6,6 @@ lib_LIBRARIES = libToolboxBlockstructured2d.a libToolboxBlockstructured2d_debug.
                 libToolboxBlockstructured3d.a libToolboxBlockstructured3d_debug.a libToolboxBlockstructured3d_trace.a libToolboxBlockstructured3d_stats.a libToolboxBlockstructured3d_asserts.a
 endif
 
-
 ToolboxBlockstructured_SOURCES = \
   Copy.cpp \
   Derivative.cpp \
@@ -16,9 +15,10 @@ ToolboxBlockstructured_SOURCES = \
   Projection.cpp \
   Restriction.cpp \
   UnitTests.cpp \
-  tests/InterpolationTest.cpp 
+  tests/InterpolationTest.cpp \
+  tests/IandRInMatricesTest.cpp \
+  tests/IandRSecondOrderTest.cpp
   
-
 libToolboxBlockstructured2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
 libToolboxBlockstructured2d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE) 
 libToolboxBlockstructured2d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG) 
@@ -42,5 +42,3 @@ libToolboxBlockstructured3d_trace_a_SOURCES   = $(ToolboxBlockstructured_SOURCES
 libToolboxBlockstructured3d_debug_a_SOURCES   = $(ToolboxBlockstructured_SOURCES)
 libToolboxBlockstructured3d_stats_a_SOURCES   = $(ToolboxBlockstructured_SOURCES)
 libToolboxBlockstructured3d_asserts_a_SOURCES = $(ToolboxBlockstructured_SOURCES)
-
-

@@ -228,7 +228,7 @@ void applications::exahype2::landslide::sourceTerm(
                         * ih;
 
     const double     Fr    = ubar / std::sqrt(g * Q[s::h] * std::cos(Zeta));
-    constexpr double Hstar = (BetaStar + Gamma) * Hstop / Beta;
+    const double     Hstar = (BetaStar + Gamma) * Hstop / Beta;
     double           Mu    = 1.0;
 
     if (Fr > BetaStar) {

@@ -3,7 +3,7 @@
  @page applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling Subcycling of coupled hyperbolic solver
  
 
-In the present application, we solve the @ref application_exahype2_selfgravitation "underlying problem's" 
+In the present application, we solve the @ref applications_exahype2_selfgravitation "underlying problem's" 
 Poisson equation by mapping it onto yet another hyperbolic system which evolves 
 on a different time cale. 
 Our discussion follows the ideas published in 
