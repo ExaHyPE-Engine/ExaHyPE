@@ -44,7 +44,7 @@ Packed-Type: short int;
     return self.data.name + ".def"
 
   def __get_full_qualified_file_name(self):
-    return self.data.namespace[-1] + "/" + self.__get_file_name()
+    return self.data.subdirectory + self.data.namespace[-1] + "/" + self.__get_file_name()
 
 
   __Template_DebugFlags = """  
@@ -58,7 +58,7 @@ Packed-Type: short int;
 
 
   def __generate_dastgen_input_file(self):
-    directory = self.data.namespace[-1]
+    directory = self.data.subdirectory + self.data.namespace[-1]
     if not os.path.exists( directory ):
       os.mkdir(directory)
       print( "created directory " + directory + " for DaStGen legacy file" )
@@ -105,6 +105,6 @@ Packed-Type: short int;
       first before we start any compile or so. So I add them first. 
     """
     self.__generate_dastgen_input_file()
-    output.makefile.add_cpp_file( self.data.namespace[-1] + "/" + self.data.name + ".cpp", generated=True )
-    output.add( peano4.output.InvokeExternalTool( "java -jar " + self.DaStGenJarFile + " " + self.__DaStGenArguments + " " + self.__get_file_name() + " .", self.data.namespace[-1] ), False )
+    output.makefile.add_cpp_file( self.data.subdirectory + self.data.namespace[-1] + "/" + self.data.name + ".cpp", generated=True )
+    output.add( peano4.output.InvokeExternalTool( "java -jar " + self.DaStGenJarFile + " " + self.__DaStGenArguments + " " + self.__get_file_name() + " .", self.data.subdirectory + self.data.namespace[-1] ), False )
 

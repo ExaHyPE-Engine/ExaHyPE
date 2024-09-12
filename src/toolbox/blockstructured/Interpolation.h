@@ -314,12 +314,77 @@ namespace toolbox {
       double* __restrict__                      fineGridFaceValues
     );
 
+    void interpolateHaloLayer_AoS_matrix(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                interpolationData,
+      const int* __restrict__                   columnIndices,
+      const int* __restrict__                   rowIndices,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateHaloLayer_AoS_second_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    
+    void interpolateHaloLayer_AoS_second_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
+    );
+    
+    void interpolateHaloLayer_AoS_matrix(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__ interpolationData,
+      const int* __restrict__ columnIndices,
+      const int* __restrict__ rowIndices,
+      int 			dataStart,
+      int 			rowIndicesStart,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
+    );
 
     void interpolateCell_AoS_tensor_product(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
       const double* __restrict__                interpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
+    void interpolateCell_AoS_matrix(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                interpolationData,
+      const int* __restrict__                   columnIndices,
+      const int* __restrict__                   rowIndices,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
+    void interpolateCell_AoS_second_order(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
       const double* __restrict__                coarseGridCellValues,
       double* __restrict__                      fineGridCellValues
     );

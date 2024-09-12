@@ -12,3 +12,7 @@ from .kernels import KernelVariant
 
 from .amr import switch_to_FD4_tensor_product_interpolation
 from .amr import switch_to_FD4_tensor_product_restriction
+from .amr import switch_to_FD4_matrix_interpolation
+from .amr import switch_to_FD4_matrix_restriction
+from .amr import switch_to_FD4_second_order_interpolation
+from .amr import switch_to_FD4_second_order_restriction
