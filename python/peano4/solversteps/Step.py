@@ -120,6 +120,8 @@ class Step:
         to the project's steps.
         """
         self.project = project
+        self.namespace = project.namespace
+        self.subdirectory = project.subdirectory
 
     def use_cell(self, submodel):
         self.cell_data.append(submodel)

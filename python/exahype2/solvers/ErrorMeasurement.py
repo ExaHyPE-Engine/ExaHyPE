@@ -7,14 +7,54 @@ from .PDETerms import PDETerms
 
 class ErrorMeasurement:
     """!
-    Error measurement tool for various ExaHyPE 2 solvers.
-    Takes as arguments some information about what errors should be measured, then
-    at each timestep of the solver this measures the absolute error at each data
-    point of the solver and, using this, computes the L0, L2 and L_inf errors integrated
-    over each cell. Finally, it sums these up over the entire volume to get the integrated
-    errors over the whole domain.
-    These are then added to a GlobalDatabase object by the global master thread, and
+    Error measurement tool for ExaHyPE 2 solvers, this is the base class that must
+    be specialised for different solvers.
+
+    Used by calling the corresponding specialisation by calling it using the solver
+    instance as an argument. For an example, see /applications/exahype/aderdg
+    i.e. ErrorMeasurement(solver=theSolver)
+
+    When called, it adds an additional function analyticalSolution() to the user-defined
+    code snippets, through which the user can define what the solution should be.
+
+    The errormeasurement also adds a postprocessing step to the corresponding solver,
+    which computes the L0, L2 and L_inf error between the computed solution and the
+    analytical solution at each data point over the domain. These are then summed up
+    over the entire volume to get the integrated errors over the entire domain.
+
+    Finally, these are added to a GlobalDatabase object by the global master thread, and
     outputted to csv files at regular intervals.
+
+    @parameters:
+
+    solver: the solver for which the errors should be measured
+
+    error_measurement_implementation: allows one to specify the analytical
+      solution directly instead of manually filling it in the user-defined
+      code snippets, analogously to fluxes and such in the solvers.
+
+    delta_between_database_flushes: how often should the entire database be
+      printed to a file. By default the database is only printed once at the
+      end of the entire simulation, but this parameters can be used to produce
+      intermediary results
+
+    output_file_name: specify what the output .csv files should be named
+
+    data_delta_between_snapshots: which data deltas should be used for the
+      database, i.e. if a measurement already exists for the given timestamp
+      but the difference is greater than this value, the existing measurement
+      is replaced.
+
+    time_delta_between_snapshots: how often a new measurement should be added
+      to the database. By default the database is updated every timestep, but
+      using this parameter it can be set to only happen at regular intervals,
+      analogously to plotting in ExaHyPE2.
+
+    clear_database_after_flush: If the parameter "delta_between_database_flushes"
+      has been set and several database flushes are going to occur, this 
+      parameter can be used to flush the database between each flush in order
+      to avoid printing redundant information.
+
     """
 
     def __init__(

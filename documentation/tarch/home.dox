@@ -1,0 +1,15 @@
+/**
+
+@page page_tarch_home Technical Architecture (tarch)
+
+\tableofcontents
+
+\li \subpage tarch_logging
+\li \subpage tarch_plotting
+\li \subpage tarch_tests
+\li \subpage tarch_patch_files
+\li \subpage tarch_services
+\li \subpage tarch_accelerator_SYCL
+\li \subpage tarch_NoncriticalAssertions
+
+*/

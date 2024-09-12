@@ -1,0 +1,73 @@
+/**
+
+@mainpage Peano
+
+@image html documentation/Peano-logo.png
+
+\tableofcontents
+
+\li @subpage page_installation_home
+\li @subpage page_compiler_specific_settings_home
+\li @subpage page_third_party_home
+\li @subpage page_conventions_home
+\li @subpage page_version_control_home
+\li @subpage page_documentation_home
+\li @subpage page_continuous_integration
+\li @subpage page_architecture_home
+\li @subpage page_dastgen_home
+\li @subpage page_tarch_home
+\li @subpage page_peano4_home
+\li @subpage page_toolbox_home
+\li @subpage page_exahype2_home
+\li @subpage page_multigrid_home
+\li @subpage page_swift2_home
+\li @subpage page_faq_home
+
+This is the documentation of Peano which is generated automatically through Doxygen.
+Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
+The most important extensions at the moment are ExaHyPE 2, our PETSc toolkit and a prototype version of Swift 2.
+
+## Overview
+
+Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes.
+Its core is built with C++, but many tools around it are written in Python.
+Peano  is based upon the fact that spacetrees, a generalisation of the
+classical octree concept, yield a cascade of adaptive Cartesian grids.
+Consequently, any spacetree traversal is equivalent to an element-wise
+traversal of the hierarchy of the adaptive Cartesian grids. The software
+Peano  realises such a grid traversal and storage algorithm, and it provides
+hook-in points for applications performing per-element, per-vertex, and so
+forth operations on the grid. It also provides interfaces for dynamic load
+balancing, sophisticated geometry representations, and other features.
+
+## History
+
+Peano is currently available in its fourth generation.
+The development of the original set of Peano codes started around 2002.
+2005-2009, we merged these codes into one Peano kernel (2nd generation).
+In 2009, I started a complete reimplementation of the kernel with special
+emphasis on reusability, application-independent design and the support for rapid prototyping.
+This third generation of the code ended around 2019 when we released the
+ExaHyPE code - a hyperbolic equation system solver engine which uses Peano's
+AMR meshes.
+The documentation discusses Peano 4, which reuses ideas and lessons learned
+from Peano 3 as well as lots of code building blocks, but can be seen as a
+major rewrite starting from scratch.
+
+Peano has been the code base for multiple projects over the past years.
+One of them is ExaHyPE.
+The first generation of ExaHyPE has been a stand-alone project using Peano
+as one required library or framework out of many.
+Peano had been an external (git) dependency.
+The second generation, ExaHyPE 2, is merged into Peano as an extension.
+This document therefore covers ExaHyPE 2, too.
+
+## Getting started
+
+- Read through the @ref page_installation_home "installation instructions" and build Peano's core libraries.
+- Skim through the high-level @ref page_architecture_home "architecture"
+- Pick your project of interest and run through the tutorials and documentation there.
+- Consult the @ref page_conventions_home "coding conventions" and the info on
+  @ref page_documentation_home "Peano's documentation" before you continue.
+
+*/
