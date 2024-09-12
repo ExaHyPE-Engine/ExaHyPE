@@ -1,6 +1,9 @@
 /**
 
-@page page_multigrid_unfolding Unfolding the linear algebra steps over the mesh entities
+@page page_multigrid_unfolding Design principle: Unfolding the linear algebra steps over the mesh entities
+
+\tableofcontents
+
 
 A fundamental technique employed in our solver is the unfolding of the compute
 steps over the mesh entities. Discontinuous Galerkin solvers and variants 
@@ -45,7 +48,8 @@ guidelines:
   
 The conventions can be generalised. Some auxiliary variables can be eliminated
 or don't have to be stored explicitly, as we can directly feed them into 
-subsequent compute steps.  
+subsequent compute steps. All conventions are directly reflected by our
+@ref page_multigrid_terminology "terminology".
 
 
 
@@ -78,6 +82,37 @@ In the code, we might slightly weaken the constraint above: If we have,
 for example, cell data, we might project it onto all @f$ 2d @f$ adjacent
 faces in one rush. Formally, we still have @f$ 2d @f$ operations, but we 
 might combine them into one for convenience.
+
+
+# Realisation of solvers
+
+  \f$
+  \left(
+    \begin{array}{cccc}
+      A^{cc} &   &   & P_{c \gets f} \\
+      P_{f \gets c} & id & & \\
+      P_{f \gets c} & & id  \\
+      & id & id & A^{ff}
+    \end{array}
+  \right)
+  \left(
+    \begin{array}{c}
+      u^c \\
+      u^+ \\
+      u^- \\
+      q
+    \end{array}
+  \right)
+  =
+  \left(
+    \begin{array}{c}
+      M b \\
+      0 \\
+      0 \\
+      0
+    \end{array}
+  \right)
+  \f$
 
 */
  
