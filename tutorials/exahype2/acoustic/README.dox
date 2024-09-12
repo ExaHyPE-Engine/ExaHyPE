@@ -12,7 +12,7 @@ We will ignore most of these for now but know that these contain the implementat
 One file, in particular, is of interest to us now: the file simply named ExaHyPE2-Acoustic-* is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
-    ./ExaHyPE2-Acoustic-<dimensions>d
+    ./Acoustic
 
 The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
