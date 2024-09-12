@@ -11,11 +11,11 @@ if __name__ == "__main__":
     my_parser = landslide.setup_parser()
     my_parser.set_defaults(
         solver="RusanovGlobalAdaptiveFV",
-        end_time=1.0,
+        end_time=2.0,
         width="[1.58, 0.70]",
         offset="[0.0, 0.0]",
         min_depth=2,
-        amr_levels=2,
+        amr_levels=4,
         patch_size=4,
         peano_dir="../../../../",
     )

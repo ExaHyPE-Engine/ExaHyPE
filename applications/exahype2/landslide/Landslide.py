@@ -304,10 +304,10 @@ class Landslide:
             "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
             "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
             "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "::applications::exahype2::landslide::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-            "ncp": "::applications::exahype2::landslide::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ);",
-            "eigenvalues": "return ::applications::exahype2::landslide::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-            "source_term": "::applications::exahype2::landslide::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
+            "flux": "applications::exahype2::landslide::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+            "ncp": "applications::exahype2::landslide::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ);",
+            "eigenvalues": "return applications::exahype2::landslide::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+            "source_term": "applications::exahype2::landslide::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
         }
 
         solver.set_implementation(**implementation_params)
@@ -365,7 +365,7 @@ class Landslide:
         project.set_number_of_threads(args.threads)
 
         project.set_multicore_orchestration(
-            "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
+            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
             % str(args.fuse_tasks)
         )
 
@@ -376,7 +376,7 @@ class Landslide:
         project.set_Peano4_installation(args.peano_dir, mode=build_mode)
         project = project.generate_Peano4_project(verbose=True)
 
-        project.constants.export_const_with_type("g", str(9.81), "double")
+        project.constants.export_constexpr_with_type("g", str(9.81), "double")
         project.constants.export_const_with_type(
             "Zeta",
             str("35.0 * std::numbers::pi / 180.0; // Conversion of degrees to radians"),
