@@ -30,15 +30,17 @@ spack:
       btop,
       htop,
       nvtop,
+    ]
+  - clang_packages: [
+      scorep+cuda+papi+mpi,
       libxsmm+generator,
       memkind,
       blis,
       boost,
       openblas,
       eigen+ipo,
-      papi+cuda,
+      papi,
       likwid+cuda,
-      scorep+cuda+papi+mpi,
       hwloc+cuda,
       ucx+cuda,
       openmpi+cuda fabrics=ucx,
@@ -56,12 +58,15 @@ spack:
   packages:
     all:
       target: [x86_64]
-      compiler: [llvm@17.0.6]
+    llvm:
+      externals:
+      - spec: llvm@18.1.8
   specs:
-  - llvm@17.0.6+clang+libomptarget+libomptarget_debug
   - matrix:
     - [$packages]
-    #- ['llvm@17.0.6']
+  - matrix:
+    - [$clang_packages]
+    - ['%clang@18.1.8']
   concretizer:
     unify: true
   config:

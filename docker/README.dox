@@ -8,7 +8,7 @@ Here we maintain Dockerfiles for different compilers.
 
 To build the Docker images, make sure to execute the following commands in the Peano root directory.
 
-### Building the base images
+### Building Base Images
 
 ```shell
 docker build -t peanoframework/base -f docker/Dockerfile.base .
@@ -16,22 +16,15 @@ docker build -t peanoframework/spack -f docker/Dockerfile.spack .
 docker build -t peanoframework/apptainer -f docker/Dockerfile.apptainer .
 ```
 
-### Building the compiler images
+### Building Compiler Images
 
 ```shell
-docker build --build-arg SPACK_ENV_FILE=spack/compilers/amd/spack.yaml -t peanoframework/amd -f docker\Dockerfile.spack-env .
-docker build --build-arg SPACK_ENV_FILE=spack/compilers/gcc/spack.yaml -t peanoframework/gcc -f docker\Dockerfile.spack-env .
-docker build --build-arg SPACK_ENV_FILE=spack/compilers/intel/spack.yaml -t peanoframework/intel -f docker\Dockerfile.spack-env .
-docker build --build-arg SPACK_ENV_FILE=spack/compilers/llvm/spack.yaml -t peanoframework/llvm -f docker\Dockerfile.spack-env .
-docker build --build-arg SPACK_ENV_FILE=spack/compilers/nvidia/spack.yaml -t peanoframework/nvidia -f docker\Dockerfile.spack-env .
-docker build -t peanoframework/targetdart -f docker/Dockerfile.targetdart .
-```
-
-Note that if you want to build the Intel image with GPU offloading (Codeplay plugins),
-you can use the dedicated Dockerfile for that:
-
-```shell
+docker build -t peanoframework/amd -f docker/Dockerfile.amd .
+docker build -t peanoframework/gcc -f docker/Dockerfile.gcc .
+docker build -t peanoframework/llvm -f docker/Dockerfile.llvm .
 docker build -t peanoframework/intel -f docker/Dockerfile.intel .
+docker build -t peanoframework/nvidia -f docker/Dockerfile.nvidia .
+docker build -t peanoframework/targetdart -f docker/Dockerfile.targetdart .
 ```
 
 ### Building Extension Images

@@ -35,7 +35,7 @@ spack:
       boost,
       openblas,
       eigen+ipo,
-      papi+cuda,
+      papi,
       likwid+cuda,
       hwloc+cuda,
       ucx+cuda,
@@ -54,12 +54,12 @@ spack:
   packages:
     all:
       target: [x86_64]
-      compiler: [nvhpc@24.5]
+      compiler: [nvhpc@24.7]
   specs:
-  - nvhpc@24.5
+  - nvhpc@24.7
   - matrix:
     - [$packages]
-    #- ['nvhpc@24.5']
+    #- ['nvhpc@24.7']
   concretizer:
     unify: true
   config:

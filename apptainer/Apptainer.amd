@@ -1,16 +1,20 @@
 Bootstrap: docker
-From: spack/ubuntu-jammy:0.21.2
+From: peanoframework/spack:latest
 Stage: build
 
-%post
-  # Create the manifest file for the installation in /opt/spack-environment
-  mkdir /opt/spack-environment && cd /opt/spack-environment
+%files
+  spack/compilers/amd/spack.yaml /spack.yaml
 
-  # Install all the required software
+%post
+  mkdir /opt/spack-environment && cd /opt/spack-environment
+  cp /spack.yaml .
+
   . /opt/spack/share/spack/setup-env.sh
   spack -e . concretize
   spack -e . install
   spack gc -y
+  spack clean
+  spack compiler find
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
 
 Bootstrap: docker

@@ -38,7 +38,7 @@ spack:
       boost,
       openblas,
       eigen+ipo,
-      papi+cuda,
+      papi,
       likwid+cuda,
       babelstream+cuda cuda_arch=70,
       parmetis+int64+shared+ipo,

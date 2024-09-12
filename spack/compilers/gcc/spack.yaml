@@ -36,7 +36,7 @@ spack:
       boost,
       openblas,
       eigen+ipo,
-      papi+cuda,
+      papi,
       likwid+cuda,
       scorep+cuda+papi+mpi,
       hwloc+cuda,

@@ -1,0 +1,30 @@
+FROM peanoframework/spack:latest as builder
+
+WORKDIR /opt/spack-environment
+
+RUN . /opt/spack/share/spack/setup-env.sh && spack install llvm@18.1.8+clang+libomptarget+libomptarget_debug+gold && spack load llvm && spack compiler find
+COPY spack/compilers/llvm/fix_fortran.py fix_fortran.py
+RUN python3 fix_fortran.py
+
+COPY spack/compilers/llvm/spack.yaml spack.yaml
+RUN . /opt/spack/share/spack/setup-env.sh && spack env activate . && spack concretize && spack install --fail-fast && spack gc -y && spack clean -a && \
+spack env activate --sh -d . > activate.sh
+RUN spack gc -y && spack clean
+
+RUN { \
+      echo '#!/bin/sh' \
+      && echo '.' /opt/spack-environment/activate.sh \
+      && echo 'exec "$@"'; \
+    } > /entrypoint.sh \
+&& chmod a+x /entrypoint.sh \
+&& ln -s /opt/views/view /opt/view
+
+FROM peanoframework/base:latest
+
+COPY --from=builder /opt/spack-environment /opt/spack-environment
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/views /opt/views
+COPY --from=builder /entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]

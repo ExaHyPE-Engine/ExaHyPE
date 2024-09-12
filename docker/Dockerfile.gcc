@@ -1,6 +1,6 @@
 FROM peanoframework/spack:latest as builder
 
-ARG SPACK_ENV_FILE
+ARG SPACK_ENV_FILE=spack/compilers/gcc/spack.yaml
 
 WORKDIR /opt/spack-environment
 COPY ${SPACK_ENV_FILE} spack.yaml
