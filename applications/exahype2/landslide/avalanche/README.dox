@@ -13,7 +13,7 @@
 
 ## How to Build and Run
 
-For a general overview on how to retrieve and configure the project, refer to @ref page_installation.
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
 
 ### Using CMake
 

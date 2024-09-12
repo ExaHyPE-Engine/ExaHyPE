@@ -32,6 +32,7 @@ generate the executable and run
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 performance_testbed.py -et 0.01
+export OMP_NUM_THREADS=4
 ./peano_test
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -129,6 +130,18 @@ To get rid of the output files, type in
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 rm *patch-file *vtu *.pvd *.bak *.csv
+~~~~~~~~~~~~~~~~~~~~~~~
+
+# Visualisation
+
+The output of ExaHyPE is given in peano patch file and one can use the following commands to 
+convert them into normal vtu files, and inspect them in other tools like paraview.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module unload python/2.7.15
+module load python/3.6.5 paraview/5.8.1
+export PYTHONPATH=/path/to/Peano/python/
+pvpython /path/to/Peano/python/peano4/visualisation/render.py path/to/solution.peano-patch-file 
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 */

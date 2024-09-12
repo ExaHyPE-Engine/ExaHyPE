@@ -2,14 +2,21 @@
 
 @page page_exahype_benchmarks Benchmarks
 
+\tableofcontents
+
 \li \subpage benchmarks_exahype2_euler_kernel_benchmarks
-\li \subpage benchmarks_exahype2_acoustic_wave_kernel_benchmarks
+\li \subpage benchmarks_exahype2_acoustic_kernel_benchmarks
 \li \subpage benchmarks_exahype2_elastic_wave_kernel_benchmarks
 \li \subpage benchmarks_exahype2_advection_kernel_benchmarks
-\li \subpage benchmarks_exahype2_ccz4_gauge_wave
+\li \subpage benchmarks_exahype2_swe_kernel_benchmarks
 \li \subpage benchmarks_exahype2_ccz4_kernel_benchmarks
+
+\li \subpage benchmarks_exahype2_swe_artificial_tsunami
+
+\li \subpage benchmarks_exahype2_ccz4_gauge_wave
 \li \subpage benchmarks_exahype2_ccz4_single_black_hole
 \li \subpage benchmarks_exahype2_ccz4_single_black_hole_performance
+
 \li \subpage benchmarks_exahype2_euler_spherical_accretion_upscaling
 
 ExaHyPE comes along with a set of benchmarks.

@@ -728,7 +728,7 @@ void exahype2::fd::fd4::reconstruct_first_derivatives(
           gridCellIndex3d(x,y,z),
           unknown,
           patchData.QOut[patchIndex],
-          QOutEnumeratorWithAuxiliary
+          QOutEnumerator
         );
       }
     } else if (Dimensions==2) {
@@ -742,7 +742,7 @@ void exahype2::fd::fd4::reconstruct_first_derivatives(
           gridCellIndex2d(x,y),
           unknown,
           patchData.QOut[patchIndex],
-          QOutEnumeratorWithAuxiliary
+          QOutEnumerator
         );
       }
     }
