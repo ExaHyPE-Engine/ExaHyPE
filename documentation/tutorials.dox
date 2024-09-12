@@ -5,36 +5,25 @@
 The tutorials are embedded into their respective extension documentation.
 However, the list below provides an overview over some tutorials.
 
-# ExaHyPE 2
-
 <table border="0">
  <tr>
   <td style="vertical-align: bottom">
    @image html documentation/icons/ExaHyPE-flows.png
-   <h2> The simple Euler equations </h2>
+   @ref page_exahype2_tutorials "ExaHyPE 2"
+  </td>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/SWIFT.png
+   @ref page_swift2_tutorials "Swift 2"
+  </td>
+ </tr>
+ <tr>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/MGHyPE.png
+   @ref page_exahype2_tutorials "MGHyPE"
   </td>
  </tr>
 </table>
 
-# Swift 2
-
-<table border="0">
- <tr>
-  <td></td>
-  <td></td>
-  <td></td>
- </tr>
-</table>
-
-# MGHyPE
-
-<table border="0">
- <tr>
-  <td></td>
-  <td></td>
-  <td></td>
- </tr>
-</table>
 
 
 */
