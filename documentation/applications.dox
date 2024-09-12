@@ -10,15 +10,15 @@ However, the list below provides an overview over some applications.
 
 <table border="0">
  <tr>
-  <td>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/exagrype.png
    <h2> ExaGRyPE </h2>
-   @image html applications/exahype2/ccz4/black-holes-small.png
-   @ref to_be_done "ExaGRyPE - an "
+   @ref to_be_done "ExaGRyPE: Numerical General Relativity Solvers Based upon the Hyperbolic PDEs Solver Engine ExaHyPE"
   </td>
-  <td>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/exaseis.jpg
    <h2> ExaSeis </h2>
-   @image html applications/exahype2/ExaSeis/zugspitze.png
-   @ref to_be_done "ExaSeis - title to be done"
+   @ref to_be_done " ExaSeis: A dynamically adaptive discontinuous Galerkin framework for the simulation of earthquakes with mesh generation avoiding schemes"
   </td>
  </tr>
 </table>
