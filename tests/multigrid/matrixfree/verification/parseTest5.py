@@ -1,5 +1,5 @@
 import numpy as np
-from postProcess import parse_patch_file, reorder_array
+from postProcess import parse_patch_file, reorder_array, plot_field, plot_field_dg
 
 if __name__ == "__main__":
     # Read v_ACG = A_CG * u_cg_random
@@ -18,3 +18,5 @@ if __name__ == "__main__":
 
     print(f'|R*A_DG*P*u_cg_random - A_CG*u_cg_random|_max = {np.max(np.abs(v_restricted_ADG[:,2] - v_ACG[:,2]))}')
     print(f'|R*M_DG*P*u_cg_random - M_CG*u_cg_random|_max = {np.max(np.abs(v_restricted_MDG[:,2] - v_MCG[:,2]))}')
+
+    #plot_field( parse_patch_file("Test5CG.rand-0.peano-patch-file","CG"))

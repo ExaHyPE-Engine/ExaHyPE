@@ -68,6 +68,7 @@ dg_solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPoi
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
+  custom_plot_actionset=[("vector1", "getVector1")],
   custom_init_actionset=InitDofsDGTest4
 )
 
