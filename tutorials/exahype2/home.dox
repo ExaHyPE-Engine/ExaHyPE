@@ -9,6 +9,8 @@
   - \subpage page_exahype2_tutorials_project
   - \subpage page_exahype2_tutorials_solver
   - \subpage page_exahype2_tutorials_postprocessing
+- Numerics tour de force
+  - Finite Volumes for the Euler equations 
 - Toy problems
   - \subpage page_exahype2_tutorials_acoustic
   - \subpage page_exahype2_tutorials_advection
@@ -16,5 +18,9 @@
   - \subpage page_exahype2_tutorials_euler
   - \subpage page_exahype2_tutorials_swe
 - Adding features	
+  - Adding your own compute kernels <!-- (Harrison's work) -->
+  - Coupling different solvers
+  - Adding additional mesh sweeps
+
 
 */
