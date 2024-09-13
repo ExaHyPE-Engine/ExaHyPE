@@ -515,7 +515,7 @@ class ADERDG(object):
 
         self._action_set_AMR.descend_invocation_order = 3
         self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
-        self._action_set_AMR_commit_throughout_grid_construction.descend_invocation_order = 3
+        self._action_set_AMR_throughout_grid_construction.descend_invocation_order = 3
         self._action_set_postprocess_solution.descend_invocation_order = 3
 
     def create_readme_descriptor(self, domain_offset, domain_size):
