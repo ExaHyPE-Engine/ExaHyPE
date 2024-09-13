@@ -6,15 +6,8 @@
 
 - Hitchhiker's guide
   - \subpage page_exahype2_tutorials_start
-  - \subpage page_exahype2_tutorials_project
-  - \subpage page_exahype2_tutorials_solver
-  - \subpage page_exahype2_tutorials_postprocessing
-- Toy problems
-  - \subpage page_exahype2_tutorials_acoustic
-  - \subpage page_exahype2_tutorials_advection
-  - \subpage page_exahype2_tutorials_elastic
-  - \subpage page_exahype2_tutorials_euler
+  - \subpage page_exahype2_tutorials_config
+  - \subpage page_exahype2_tutorials_implementation
   - \subpage page_exahype2_tutorials_swe
-- Adding features	
-
+  - \subpage page_exahype2_tutorials_euler
 */

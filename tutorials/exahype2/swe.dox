@@ -1,0 +1,77 @@
+/**
+
+@page page_exahype2_tutorials_swe The Shallow Water Equations
+
+\tableofcontents
+ 
+Now that we have an example of how to implement an equation,
+we can try implementing our own equation, let's try out the shallow-water equations, or SWE for short:
+
+@f$
+\begin{equation*} \label{SWE_wo}
+    \frac{\partial}{\partial t}\left(
+    \begin{array}{lr} h \\
+        h u_1 \\
+        h u_2 \\
+        b
+        \end{array} \right) +
+    \nabla \underbrace{\begin{pmatrix}
+        h u_1                       & h u_2     \\
+        h u_1^2 + \frac{g*h^2}{2}   & h u_1 u_2 \\
+        h u_2 u_1                   & h u_2^2  + \frac{g*h^2}{2} \\
+        0                           & 0
+    \end{pmatrix}} = \vec{0}
+\end{equation*}
+@f$
+
+With eigenvalues:
+
+@f$
+\begin{equation*}
+    \left(
+    \begin{array}{lr}
+        \lambda_1 \\
+        \lambda_2 \\
+        \lambda_3
+    \end{array} \right) =
+    \left(
+    \begin{array}{lr}
+        h u_n + \sqrt{g (h+b)} \\
+        h u_n \\
+        h u_n - \sqrt{g (h+b)} \\
+    \end{array} \right)
+\end{equation*}
+@f$
+
+These are an approximation for the movement of shallow non-viscous fluids, i.e., they assume that there is no pressure
+differential within the fluid, and no loss of velocity due to friction.
+Their components are the water height \b h, the momentum in \b x- and \b y- direction \b hu_1 and \b hu_2 respectively,
+and the bathymetry \b b, which is the height of the ground below the liquid. They also use the gravity \b g=9.81.
+
+We want to simulate a so-called \e dam-break scenario, that is a scenario where a large mass of fluid spreads rapidly from an initial resting position, such as might happen when you jump into a pool, or when you jump into a bathtub, or when you jump into a puddle.
+A configuration file has already been created for you at `tutorials/SWE/SWe.ipynb`.
+Try running it, and then look into the generated implementation file `SWESolver.cpp`.
+
+- Exercices
+  - First, let's implement some initial conditions. Let's start simple and set all values to \b 0, except for the initial water height, which should be \b 1.0 on the left half of the domain, and \bb 2.0 on the right half of the domain.
+    You can access the position of the point you are at via the parameter `x`.
+    (Hint: The size and position of your domain can be found in the configuration file.)
+
+  - Second, let's do the same thing for the boundary conditions. Here you will need to set the values outside of the domain through the
+    parameter $Qoutside$, set the velocities and the bathymetry to be equal to $0$, and the water height to $1.0$ everywhere.
+
+  - Thirdly, fill out the \texttt{maxEigenvalue} function. Take care to use the proper velocity for whatever direction is being computed.\\
+    (Hint: remember that the base unknowns are not $u$, but $hu$)
+
+  - Next, let's implement the flux according to \ref{SWE_wo}, in addition to this, zero out the NCP, that is to say set \texttt{BTimesDeltaQ} to $0$
+    for all its components, after all we do not need an NCP here, do we?
+
+  - Once all of this is done, re-compile the project using by running the Jupyterlab cell again,
+    then run the executable \texttt{DamBreak} and go do some stretches while it runs.
+    Maybe get a glass of water as well. Once you are finished stretching and the code is finished running,
+    convert the output and visualize it, does it look like what you'd expect?
+
+TODO: fix image
+@image html documentation/exahype2/tutorials/Acoustic_2D_start.png
+
+*/
