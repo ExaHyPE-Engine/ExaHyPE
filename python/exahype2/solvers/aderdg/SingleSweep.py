@@ -66,12 +66,12 @@ class SingleSweep(ADERDG):
         self._rhs_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::InitialPrediction or "
+            + ".isFirstGridSweepOfTimeStep() or "
             + "repositories::"
             + self.get_name_of_global_instance()
-            + ".isFirstGridSweepOfTimeStep() or "
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::PredictionOnHangingCells or "
             + "repositories::"
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
@@ -93,12 +93,12 @@ class SingleSweep(ADERDG):
         self._flux_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::InitialPrediction or "
+            + ".isFirstGridSweepOfTimeStep() or "
             + "repositories::"
             + self.get_name_of_global_instance()
-            + ".isFirstGridSweepOfTimeStep() or "
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::PredictionOnHangingCells or "
             + "repositories::"
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
