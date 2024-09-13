@@ -74,4 +74,57 @@ Try running it, and then look into the generated implementation file `SWESolver.
 TODO: fix image
 @image html documentation/exahype2/tutorials/Acoustic_2D_start.png
 
+
+Extending SWE
+===============================
+
+So we have to admit something. When we described the shallow-water equations to you, we sort of lied.
+Well not really, it's just that the equation above is the form of the SWE without bathymetry.
+With bathymetry, it looks as follows (note that the gravity term was moved from the flux to the NCP):
+
+@f$
+\begin{equation*} \label{SWE_w}
+    \frac{\partial}{\partial t}\left(
+    \begin{array}{lr} h \\
+        h u_1 \\
+        h u_2 \\
+        b
+        \end{array} \right) +
+    \nabla \underbrace{\begin{pmatrix}
+        h u_1           & h u_2     \\
+        h u_1^2         & h u_1 u_2 \\
+        h u_2 u_1       & h u_2^2   \\
+        0               & 0
+    \end{pmatrix}}_{ flux } +
+    \underbrace{\begin{pmatrix}
+        0                     & 0\\
+        h g*\partial_x(b+h)   & 0\\
+        0                     & h g*\partial_y(b+h) \\
+        0                     & 0
+    \end{pmatrix}}_{ ncp }  = \vec{0}
+\end{equation*}
+@f$
+
+Let's modify our implementation to take this into account, and while we're at it change our scenario a little, and heck why not learn about mesh refinement too?
+Mesh refinement in ExaHyPE 2 is controlled via a so-called <e>refinement criterion<\e>.
+Cells can be sub-divided into \b 3^d cells so long as this would not cause the sub-cells to be smaller than the lowest cell size as defined in the configuration.
+
+- Exercices
+  - First, let's modify our flux to remove the term that shouldn't be in it, and implement our NCP.
+    The NCP is implemented into the parameter `BTimesDeltaQ`, and depends on the gradients of the values, which are stored in the parameter `deltaQ`.
+  - Then, let's modify our starting conditions. Let's try running a <e>radial dam-break<\e>, that is a circular one.
+    And let's have it be dependent on the bathymetry.
+    For this, set the water height to be constant at \b 1.0, and the bathymetry to be \b 0.2 within a distance of \b 0.5 of the center of the domain,
+    and \b 0.0 otherwise. The velocities can remain \b 0.
+    (Hint: You can use the function `tarch::la::norm2()` to compute the norm of a vector)
+  - With these parameters, re-compile and re-run the simulation.
+  - Finally, let's try some adaptive mesh refinement. There is a function `refinementCriterion` within your implementation file which currently always returns `::exahype2::RefinementCommand::Keep`.
+    Conditionally set it to return `::exahype2::RefinementCommand::Refine` if within a distance of \b 0.4 to \b 0.6 of the center of the domain.
+    With this, re-compile the project, and run it one final time.
+
+TODO: fix image
+@image html documentation/exahype2/tutorials/Acoustic_2D_start.png
+
+@ref page_exahype2_tutorials_euler
+
 */
