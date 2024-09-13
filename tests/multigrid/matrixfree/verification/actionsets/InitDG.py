@@ -834,7 +834,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
   ) {
     // project the u^\pm into a temporary vector
     tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
-      repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{DG_SOLVER_NAME}}.getProjection();
+      repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{DG_SOLVER_NAME}}.getRandProjections();
 
     for (int i=0; i<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
       fineGridFace{{DG_SOLVER_NAME}}.setRandSolutions(
@@ -868,7 +868,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
       double rowSolution = 0;
       for (int col=0; col<boundaryMatrix.cols(); col++)
       {
-        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{DG_SOLVER_NAME}}.getProjection( col + startIndexProjection );
+        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{DG_SOLVER_NAME}}.getRandProjections( col + startIndexProjection );
       }
       // place this solution into the face
       fineGridFace{{DG_SOLVER_NAME}}.setRandSolutions( row, rowSolution );
