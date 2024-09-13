@@ -154,11 +154,11 @@ ExaHyPE2_Kernels:
   allow_failure: false
   parallel:
     matrix:
-    - benchmark: [euler, acoustic, elastic, advection]
+    - kernel: [euler, acoustic, elastic, advection]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -fpe -m Release"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; ./kernel-benchmarks-fv-rusanov-2d-ps-16-Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks.py -e -fpe -m Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
   needs:
     - job: Build
   dependencies:
