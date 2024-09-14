@@ -24,5 +24,4 @@ solution-*
 Constants.h
 README-*
 CMakeLists.txt
-gpu-launch
 .gitignore
