@@ -9,24 +9,10 @@
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
-  struct VariableMetrics;
   class VariableShortcuts;
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
-struct {{NAMESPACE | join("::")}}::VariableMetrics {
-  static constexpr int NumberOfDistinctVariables  = {{VARIABLE_NAMES|length}};
-  static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-  static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-  static constexpr int Size                       = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
-};
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
 
 /**
  * Positions of fields in the vector of unknowns.
@@ -40,8 +26,10 @@ struct {{NAMESPACE | join("::")}}::VariableMetrics {
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-class {{NAMESPACE | join("::")}}::VariableShortcuts : public {{NAMESPACE | join("::")}}::VariableMetrics {
+class {{NAMESPACE | join("::")}}::VariableShortcuts {
 public:
+  static constexpr int NumberOfDistinctVariables  = {{VARIABLE_NAMES|length}};
+
   // Positions of fields inside the unknown vector (solution vector) Q
   static constexpr int Q[NumberOfDistinctVariables + 1] = { {% for VARIABLE_NO in range(0, VARIABLE_NAMES|length-1) -%}
   {{VARIABLE_POSITIONS[VARIABLE_NO]}},
