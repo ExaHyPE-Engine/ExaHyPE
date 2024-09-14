@@ -45,7 +45,7 @@ We however use a whole set of tools around it.
 * Python3 (optional but recommended; not required if you work only with the C++ baseline).
 * MPI (optional). MPI's multithreaded support is required.
 * Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
-* CUDA, ROCm, OpenSYCL or Intel oneAPI for GPU offloading (optional).
+* ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading (optional).
 * The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
 * HDF5 (optional).
 * NetCDF (optional).

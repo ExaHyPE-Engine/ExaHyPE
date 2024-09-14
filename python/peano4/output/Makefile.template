@@ -9,13 +9,11 @@
 CXX = {{CXX}}
 FC  = {{FC}}
 DIMENSIONS = {{DIM}}
-NVCC = {{NVCC}}
 
 {% if MODE=="RELEASE" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% endif %}
 
 {% if MODE=="STATS" and DIM=="2" %}
@@ -25,63 +23,54 @@ NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_STATS}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_STATS}}
 {% endif %}
 
 {% if MODE=="ASSERTS" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_ASSERTS}}
 LDFLAGS  += {{LDFLAGS_PEANO_ASSERTS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_ASSERTS}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_ASSERTS}}
 {% endif %}
 
 {% if MODE=="TRACE" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_TRACE}}
 LDFLAGS  += {{LDFLAGS_PEANO_TRACE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_TRACE}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_TRACE}}
 {% endif %}
 
 {% if MODE=="DEBUG" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_DEBUG}}
 LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_DEBUG}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_DEBUG}}
 {% endif %}
 
 {% if MODE=="RELEASE" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_RELEASE}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% endif %}
 
 {% if MODE=="STATS" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_STATS}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_STATS}}
 {% endif %}
 
 {% if MODE=="ASSERTS" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_ASSERTS}}
 LDFLAGS  += {{LDFLAGS_PEANO_ASSERTS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_ASSERTS}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_ASSERTS}}
 {% endif %}
 
 {% if MODE=="TRACE" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_TRACE}}
 LDFLAGS  += {{LDFLAGS_PEANO_TRACE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_TRACE}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_TRACE}}
 {% endif %}
 
 {% if MODE=="DEBUG" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_DEBUG}}
 LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_DEBUG}} {{LIBS}}
-NVCCFLAGS += {{NVCC_FLAGS_DEBUG}}
 {% endif %}
 
 FCFLAGS+={{FCFLAGS}}
@@ -89,18 +78,14 @@ FCFLAGS+={{FCFLAGS}}
 H_HEADERS={% for item in H_HEADERS -%} {{item+" "}} {%- endfor %}
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
-CU_SOURCES={% for item in CU_SOURCES -%} {{item+" "}} {%- endfor %}
 
 GENERATED_H_HEADERS={% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %}
 GENERATED_CXX_SOURCES={% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 GENERATED_FORTRAN_SOURCES={% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
-GENERATED_CU_SOURCES={% for item in GENERATED_CU_SOURCES -%} {{item+" "}} {%- endfor %}
 {% if APP_SUBDIRECTORY %}APP_SUBDIRECTORY={{APP_SUBDIRECTORY}}{% endif %}
 
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
 CXX_OBJS+=$(subst .cpp,.o,$(GENERATED_CXX_SOURCES))
-CU_OBJS=$(subst .cu,.o,$(CU_SOURCES))
-CU_OBJS+=$(subst .cu,.o,$(GENERATED_CU_SOURCES))
 FORTRAN_OBJS=$(subst .f,.o,$(subst .f90,.o,$(FORTRAN_SOURCES)))
 FORTRAN_OBJS+=$(subst .f,.o,$(subst .f90,.o,$(GENERATED_FORTRAN_SOURCES)))
 FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".o") +" "}} {%- endfor %}
@@ -121,9 +106,6 @@ all: solver
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c -o $@ $<
 
-%.o: %.cu
-	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) -c -o $@ $<
-
 {% for module in FORTRAN_MODULES -%}
 .NOTPARALLEL: {{module | replace(".f90", ".mod") }}
 {{module | replace(".f90", ".mod")}}: {{module | replace(".f90", ".o") + "\n\n" }}
@@ -134,27 +116,24 @@ all: solver
 # per step if they are not required anymore. That is: left libraries can
 # depend objects right but not the other way round.
 #
-solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) $(CU_OBJS)
-	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
+solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS)
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(LIBS) -o {{EXECUTABLENAME}}
 
 {% if USING_CMAKE %}
 clean:
 	bash -c "{{CMAKE_MAKE_COMMAND}} && make clean"
 {% else %}
 clean:
-	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
+	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS)
 	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}
 {% endif %}
 
 distclean:
-	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
-	rm -f *.mod
-	rm -f {{EXECUTABLENAME}}
+	make clean
 	rm -f $(GENERATED_H_HEADERS)
 	rm -f $(GENERATED_CXX_SOURCES)
 	rm -f ${GENERATED_FORTRAN_SOURCES}
-	rm -f ${GENERATED_CU_SOURCES}
 	{% if APP_SUBDIRECTORY %}cd ${APP_SUBDIRECTORY}{% endif %}
 	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated __pycache__
 	rm -f Constants.h
@@ -163,7 +142,6 @@ distclean:
 	rm -f README-*
 	rm -f .gitignore
 	rm -f Makefile
-	rm -f gpu-launch
 	{% if USING_CMAKE %}rm -f CMakeLists.txt{% endif %}
 
 maintainer-clean: distclean
