@@ -284,27 +284,27 @@ class SWE:
             "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
             "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
             "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "::applications::exahype2::swe::flux(Q, x, h, t, dt, normal, F);",
-            # "ncp": "::applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);", # TODO: Not working at the moment.
-            "eigenvalues": "::applications::exahype2::swe::eigenvalues(Q, x, h, t, dt, normal, L);",
+            "flux": "applications::exahype2::swe::flux(Q, x, h, t, dt, normal, F);",
+            # "ncp": "applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
+            "eigenvalues": "applications::exahype2::swe::eigenvalues(Q, x, h, t, dt, normal, L);",
         }
 
         if "RusanovRiemann" in args.solver:
             implementation_params.update(
                 {
-                    "riemann_solver": "return ::applications::exahype2::swe::rusanov(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
+                    "riemann_solver": "return applications::exahype2::swe::rusanov(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
                 }
             )
         elif "FWaveRiemann" in args.solver:
             implementation_params.update(
                 {
-                    "riemann_solver": "return ::applications::exahype2::swe::fwave(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
+                    "riemann_solver": "return applications::exahype2::swe::fwave(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
                 }
             )
         elif "HLLEMRiemann" in args.solver:
             implementation_params.update(
                 {
-                    "riemann_solver": "return ::applications::exahype2::swe::hllem(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
+                    "riemann_solver": "return applications::exahype2::swe::hllem(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
                 }
             )
 
@@ -317,7 +317,7 @@ class SWE:
             namespace=["applications", "exahype2", "swe"],
             project_name="SWE",
             directory=".",
-            executable=f"ExaHyPE2-SWE-{args.solver}{'-Stateless' if args.stateless else ''}-{args.build_mode}",
+            executable=f"SWE.{args.build_mode}",
         )
 
         project.add_solver(solver)
@@ -363,7 +363,7 @@ class SWE:
         project.set_number_of_threads(args.threads)
 
         project.set_multicore_orchestration(
-            "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
+            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
             % str(args.fuse_tasks)
         )
 
@@ -373,8 +373,6 @@ class SWE:
         build_mode = getattr(build_mode_class, args.build_mode)
         project.set_Peano4_installation(args.peano_dir, mode=build_mode)
         project = project.generate_Peano4_project(verbose=True)
-
-        project.constants.export_constexpr_with_type("g", str(9.81), "double")
 
         if args.fpe:
             project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

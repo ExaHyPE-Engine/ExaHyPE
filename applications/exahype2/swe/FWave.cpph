@@ -1,33 +1,26 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "FWave.h"
 
-#include "Constants.h"
-#include "tarch/Assertions.h"
-#include "tarch/NonCriticalAssertions.h"
-#include "VariableShortcuts.h"
-
-using s = applications::exahype2::swe::VariableShortcuts;
-
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
 double applications::exahype2::swe::fwave(
-  const double* __restrict__ QR,
-  const double* __restrict__ QL,
-  const double* __restrict__ FR,
-  const double* __restrict__ FL,
-  const double* __restrict__ LR,
-  const double* __restrict__ LL,
-  const ::tarch::la::Vector<Dimensions, double>& xR,
-  const ::tarch::la::Vector<Dimensions, double>& xL,
-  const ::tarch::la::Vector<Dimensions, double>& h,
-  double                                         t,
-  double                                         dt,
-  int                                            normal,
-  double* __restrict__ APDQ,
-  double* __restrict__ AMDQ
+  const double* const __restrict__             QR,
+  const double* const __restrict__             QL,
+  const double* const __restrict__             FR,
+  const double* const __restrict__             FL,
+  const double* const __restrict__             LR,
+  const double* const __restrict__             LL,
+  const tarch::la::Vector<Dimensions, double>& xR,
+  const tarch::la::Vector<Dimensions, double>& xL,
+  const tarch::la::Vector<Dimensions, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const __restrict__                   APDQ,
+  double* const __restrict__                   AMDQ
 ) {
+  using s = VariableShortcuts;
+
+  static constexpr double g = 9.81;
+
   const bool leftWet  = tarch::la::greater(QL[s::h], DRY_TOLERANCE);
   const bool rightWet = tarch::la::greater(QR[s::h], DRY_TOLERANCE);
   const bool leftDry  = !leftWet;
@@ -127,6 +120,3 @@ double applications::exahype2::swe::fwave(
 
   return std::max(std::abs(lambda_roe[0]), std::abs(lambda_roe[1]));
 }
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
