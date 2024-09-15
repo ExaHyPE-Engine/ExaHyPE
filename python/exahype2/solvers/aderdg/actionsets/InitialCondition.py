@@ -17,7 +17,7 @@ class InitialCondition(AbstractADERDGActionSet):
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       marker.x(),
       marker.h(),
-      0,
+      //0,
       {{GRID_IS_CONSTRUCTED}}
     );
     {% else %}
@@ -32,7 +32,7 @@ class InitialCondition(AbstractADERDGActionSet):
           kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
         ),
         marker.h(),
-        index,
+        //index,
         {{GRID_IS_CONSTRUCTED}}
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};

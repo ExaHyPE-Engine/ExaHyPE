@@ -139,11 +139,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-    {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    const tarch::la::Vector<Dimensions,double>&  x,
-    const tarch::la::Vector<Dimensions,double>&  h,
-    const tarch::la::Vector<Dimensions,int>&     index,
-    bool                                         gridIsConstructed
+  {{SOLUTION_STORAGE_PRECISION}}* __restrict__  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  //const tarch::la::Vector<Dimensions, int>&      index,
+  bool                                          gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }

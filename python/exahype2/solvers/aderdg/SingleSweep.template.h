@@ -65,10 +65,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* __restrict__  Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}}* __restrict__  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      const tarch::la::Vector<Dimensions,int>&      index,
+      //const tarch::la::Vector<Dimensions, int>&     index,
       bool                                          gridIsConstructed
     ) override;
     {% endif %}
