@@ -70,7 +70,7 @@ void applications::exahype2::landslide::Landslide::boundaryConditions(
       result = ::exahype2::RefinementCommand::Refine;
     }
   } else {
-    if (tarch::la::greater(Q[s::h], 0.0)) {
+    if (tarch::la::greater(Q[s::h], 0.001)) {
       //result = ::exahype2::RefinementCommand::Refine;
     } else {
       //result = ::exahype2::RefinementCommand::Erase;
