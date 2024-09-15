@@ -61,7 +61,6 @@ class Euler:
             type=str,
             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]).",
         )
-
         parser.add_argument(
             "-offset",
             "--offset",
@@ -73,9 +72,10 @@ class Euler:
             "-stateless",
             "--stateless",
             action="store_true",
-            default=True,
+            default=False,
             help="Use stateless PDE terms for GPU offloading (requires a GPU enabled Peano build and an enclave solver).",
         )
+
         parser.add_argument(
             "-o",
             "--output",
@@ -128,9 +128,20 @@ class Euler:
         )
 
         parser.add_argument(
+            "-rk-order",
+            "--rk-order",
+            type=int,
+            help="Order of time discretisation for Runge-Kutta scheme.",
+        )
+        parser.add_argument(
+            "-dg-order",
+            "--dg-order",
+            type=int,
+            help="Order of space discretisation for Discontinuous Galerkin.",
+        )
+        parser.add_argument(
             "-ps",
             "--patch-size",
-            dest="patch_size",
             type=int,
             help="Number of finite volumes per axis (dimension) per patch.",
         )
@@ -285,20 +296,34 @@ class Euler:
                     "min_volume_h": min_h,
                 }
             )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+            }
+        elif "ADERDG" in args.solver:
+            solver_params.update(
+                {
+                    "order": args.dg_order,
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
+            }
 
         solver = self._available_solvers[args.solver](**solver_params)
         solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
         # solver.plot_description += ", ".join(
         #    solver_params["auxiliary_variables"].keys()
         # )
-
-        implementation_params = {
-            "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-            "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-        }
 
         solver.set_implementation(**implementation_params)
 
