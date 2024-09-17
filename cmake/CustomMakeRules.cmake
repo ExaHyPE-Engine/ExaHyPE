@@ -20,9 +20,4 @@ foreach(BUILD_TYPE DEBUG;RELEASE;ASSERTS;TRACE;STATS)
   set(CMAKE_CXX_FLAGS_${BUILD_TYPE}_INIT "")
   set(${BUILD_TYPE}_DEFINITIONS "")
   set(${BUILD_TYPE}_LDFLAGS "")
-  set(CUDA_NVCC_FLAGS "") # Not used normally, but in case it is used by any platform
-  set(CUDA_NVCC_FLAGS_${BUILD_TYPE} "") # Same as above
-  set(CMAKE_CUDA_FLAGS_INIT "")
-  set(CMAKE_CUDA_FLAGS_${BUILD_TYPE} "")
-  set(CMAKE_CUDA_FLAGS_${BUILD_TYPE}_INIT "")
 endforeach()

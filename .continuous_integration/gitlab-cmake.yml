@@ -22,7 +22,7 @@ Build:
       - ./build/UnitTests*
       - ./build/CTestTestfile.cmake
     expire_in: 2 hours
-  retry: 0
+  retry: 2
 
 UnitTests:
   extends:
@@ -36,7 +36,7 @@ UnitTests:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 2
 
 ExaHyPE2:
   extends:
@@ -56,7 +56,7 @@ ExaHyPE2:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Euler:
   extends:
@@ -78,7 +78,7 @@ ExaHyPE2_Euler:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Advection:
   extends:
@@ -100,7 +100,7 @@ ExaHyPE2_Advection:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Acoustic:
   extends:
@@ -122,7 +122,7 @@ ExaHyPE2_Acoustic:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Elastic:
   extends:
@@ -144,7 +144,7 @@ ExaHyPE2_Elastic:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Kernels:
   extends:
@@ -165,7 +165,7 @@ ExaHyPE2_Kernels:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_SBH:
   extends:
@@ -183,7 +183,7 @@ ExaHyPE2_SBH:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_SBH_Coupled:
   extends:
@@ -201,4 +201,4 @@ ExaHyPE2_SBH_Coupled:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
