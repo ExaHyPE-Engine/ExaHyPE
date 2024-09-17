@@ -120,7 +120,8 @@ class CollocatedLowOrderDiscretisation(Solver):
                custom_init_actionset = None,
                custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
                custom_init_vertex = "",
-               custom_boundary_conditions = ""
+               custom_boundary_conditions = "",
+               enable_plotting = True # sometimes we want to disable standard plotting...
                ):
     """!
    
@@ -161,6 +162,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._custom_init_vertex            = custom_init_vertex
     self._custom_boundary_conditions    = custom_boundary_conditions
 
+    self._enable_plotting               = enable_plotting
+
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
@@ -176,8 +179,9 @@ class CollocatedLowOrderDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "value", "getValue") )
-    observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs") )
+    if self._enable_plotting: # true by default
+      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "value", "getValue") )
+      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs") )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:

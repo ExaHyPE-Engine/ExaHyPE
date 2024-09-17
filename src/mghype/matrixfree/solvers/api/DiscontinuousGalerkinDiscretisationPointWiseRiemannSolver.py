@@ -257,6 +257,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
               custom_init_cell = "",
               custom_init_face = "",
+              enable_plotting = True # sometimes we want to disable standard plotting...
               ):
     """!
     
@@ -400,6 +401,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._custom_init_cell            = custom_init_cell
     self._custom_init_face            = custom_init_face
 
+    self._enable_plotting               = enable_plotting
+
     # assertions for matrix shapes
     # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     # assert assembly_matrix.shape == mass_matrix.shape
@@ -422,8 +425,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     solution and right-hand side. 
     
     """
-    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution") )
-    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs") )
+    if self._enable_plotting: # true by default
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution") )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs") )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:
