@@ -164,4 +164,13 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 """
 
   def add_entries_to_text_replacement_dictionary(self, d):
+    """!
+    
+    Invoce superclass and then add one more field:
+    
+    - RECONSTRUCTION_STAGES
+    
+    """
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
     d["RECONSTRUCTION_STAGES"]=self._reconstruction_stages
+    
