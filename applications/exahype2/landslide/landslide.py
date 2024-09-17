@@ -68,8 +68,8 @@ class Landslide:
             "-stateless",
             "--stateless",
             action="store_true",
-            default=False,
-            help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
+            default=True,
+            help="Use stateless PDE terms for GPU offloading (requires a GPU enabled Peano build and an enclave solver).",
         )
         parser.add_argument(
             "-o",
@@ -233,7 +233,7 @@ class Landslide:
     def setup_solver(self, args):
         solver_params = {
             "name": "Landslide",
-            "unknowns": {"h": 1, "hu": 2},
+            "unknowns": {"h": 1, "hu": 1, "hv": 1},
             "auxiliary_variables": {
                 "b": 1,
                 "hx": 1,
@@ -292,22 +292,22 @@ class Landslide:
         )
 
         solver._preprocess_reconstructed_patch = """
-          extrapolateHalo(oldQWithHalo, {NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables});
-          computeDerivatives(oldQWithHalo, {NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables});
+      extrapolateHalo<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
+      computePartialDerivatives<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
 """.format(
             NumberOfDofs=args.patch_size,
-            NumberOfUnknowns=3,
-            NumberOfAuxiliaryVariables=13,
+            NumberOfUnknowns=sum(solver_params["unknowns"].values()),
+            NumberOfAuxiliaryVariables=sum(solver_params["auxiliary_variables"].values()),
         )
 
         implementation_params = {
             "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
             "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
             "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "::applications::exahype2::landslide::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-            "ncp": "::applications::exahype2::landslide::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ);",
-            "eigenvalues": "return ::applications::exahype2::landslide::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-            "source_term": "::applications::exahype2::landslide::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
+            "flux": "applications::exahype2::landslide::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+            "ncp": "applications::exahype2::landslide::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ);",
+            "eigenvalues": "return applications::exahype2::landslide::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+            "source_term": "applications::exahype2::landslide::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
         }
 
         solver.set_implementation(**implementation_params)
@@ -319,7 +319,7 @@ class Landslide:
             namespace=["applications", "exahype2", "landslide"],
             project_name="Landslide",
             directory=".",
-            executable=f"ExaHyPE2-Landslide-{args.solver}{'-Stateless' if args.stateless else ''}-{args.build_mode}",
+            executable=f"Landslide.{args.build_mode}",
         )
 
         project.add_solver(solver)
@@ -365,7 +365,7 @@ class Landslide:
         project.set_number_of_threads(args.threads)
 
         project.set_multicore_orchestration(
-            "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
+            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
             % str(args.fuse_tasks)
         )
 
@@ -376,7 +376,7 @@ class Landslide:
         project.set_Peano4_installation(args.peano_dir, mode=build_mode)
         project = project.generate_Peano4_project(verbose=True)
 
-        project.constants.export_const_with_type("g", str(9.81), "double")
+        project.constants.export_constexpr_with_type("g", str(9.81), "double")
         project.constants.export_const_with_type(
             "Zeta",
             str("35.0 * std::numbers::pi / 180.0; // Conversion of degrees to radians"),
