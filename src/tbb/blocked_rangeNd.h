@@ -69,14 +69,22 @@ public:
       __TBB_ASSERT(my_dims.size()==N, "range is not properly initialised" );
     }
 
+    /**
+     *
+     * # Rationale
+     *
+     * I originally had a begin array as well, but Intel colleagues pointed out
+     * that we'd better have no begin array but only a size array.
+     */
     blocked_rangeNd_impl(
-      Value begin[N],
+      //Value begin[N],
       Value end[N],
       typename tbb::blocked_range<value_type>::size_type grainsize
     ):
       my_dims() {
       for (int d=0; d<N; d++) {
-        my_dims.push_back( dim_range_type( begin[d], end[d], grainsize ) );
+        // my_dims.push_back( dim_range_type( begin[d], end[d], grainsize ) );
+        my_dims.push_back( dim_range_type( 0, end[d], grainsize ) );
       }
       __TBB_ASSERT(my_dims.size()==N, "range is not properly initialised" );
     }
