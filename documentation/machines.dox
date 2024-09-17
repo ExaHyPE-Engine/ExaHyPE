@@ -335,5 +335,35 @@ moduel load aomp/amdclang
 
 A good starting point for the GPU work is benchmarks/exahype2/ccz4/performance-testbed.
 
+# Example: Local WSL Ubuntu 22.04
+
+This configuration is meant to be a minimal build configuration when working with TBB locally. It is important
+to use an up-to-date c++ compiler such as icpx (e.g. g++-12 will not work with the c++-20 features used
+in Peano's tbb code).
+
+First, the oneapi environment has to be set up:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+load module intel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+or
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source [path to oneapi installation]/setvars.sh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Configuration:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=icx CXX=icpx LIBS="-ltbb" CXXFLAGS="-std=c++20" --with-multithreading=tbb
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With exahype2:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=icx CXX=icpx LIBS="-ltbb" CXXFLAGS="-std=c++20" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 */
 
