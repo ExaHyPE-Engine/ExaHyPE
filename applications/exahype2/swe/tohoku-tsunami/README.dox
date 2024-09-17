@@ -15,7 +15,7 @@
 
 ## How to Build and Run
 
-For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation_home.
 
 ### Using CMake
 
@@ -25,7 +25,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd applications/exahype2/swe/tohoku-tsunami/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 tohoku-tsunami.py
-    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveFV-Release
+    ./SWE.Release
 
 ### Using Automake
 
@@ -37,7 +37,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd applications/exahype2/swe/tohoku-tsunami/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 tohoku-tsunami.py
-    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveFV-Release
+    ./SWE.Release
 
 Where `CC=gcc CXX=g++` can be any set of compilers.
 

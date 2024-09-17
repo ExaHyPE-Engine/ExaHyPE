@@ -7,7 +7,6 @@
 
 {% for item in GENERATED_H_HEADERS -%} {{item+"\n"}} {%- endfor %}
 {% for item in GENERATED_CXX_SOURCES -%} {{item+"\n"}} {%- endfor %}
-{% for item in GENERATED_CU_SOURCES -%} {{item+"\n"}} {%- endfor %}
 {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+"\n"}} {%- endfor %}
 
 {{EXECUTABLENAME}}
@@ -25,5 +24,4 @@ solution-*
 Constants.h
 README-*
 CMakeLists.txt
-gpu-launch
 .gitignore
