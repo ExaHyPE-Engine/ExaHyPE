@@ -262,3 +262,7 @@ Return the name of the object that will be created for this solver.
             
       """
       return "Yet to be written"
+
+  @property
+  def name(self):
+      return self._name

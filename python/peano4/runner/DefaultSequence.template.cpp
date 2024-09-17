@@ -6,7 +6,6 @@
 // **********************************************************************************************
 
 #include "{{MAIN_NAME}}.h"
-#include "Constants.h"
 
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
@@ -16,8 +15,17 @@
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+{% if SUBDIRECTORIES -%}
+{% for subdirectory in SUBDIRECTORIES %}
+#include "{{subdirectory}}Constants.h"
+#include "{{subdirectory}}repositories/DataRepository.h"
+#include "{{subdirectory}}repositories/StepRepository.h"
+{% endfor -%}
+{% else %}
+#include "Constants.h"
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
+{%- endif %}
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"

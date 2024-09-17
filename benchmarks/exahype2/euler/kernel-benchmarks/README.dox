@@ -27,13 +27,13 @@ To build the executables you can run following commands:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
     export PYTHONPATH=../../../python
 
-    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 4 --num-patches 512
-    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 6 --num-patches 512
-    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 8 --num-patches 512
+    python3 kernel-benchmarks.py --dim 2 --patch-size 4 --num-patches 512
+    python3 kernel-benchmarks.py --dim 2 --patch-size 6 --num-patches 512
+    python3 kernel-benchmarks.py --dim 2 --patch-size 8 --num-patches 512
 
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 4 --num-patches 512
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 6 --num-patches 512
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8 --num-patches 512
+    python3 kernel-benchmarks.py --dim 3 --patch-size 4 --num-patches 512
+    python3 kernel-benchmarks.py --dim 3 --patch-size 6 --num-patches 512
+    python3 kernel-benchmarks.py --dim 3 --patch-size 8 --num-patches 512
 
     make -j
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -185,21 +185,6 @@ launching multiple kernels in parallel should improve the throughput.
 
 # Plotting
 The directory hosts a script called plot.py which solely takes the output piped into a file as input.
-
-We provide example plots of outputs obtained from Leonardo.
-
-The benchmarks were run with a 3D Euler setup using 1024 patches per kernel launch,
-32 compute threads, 1 launching thread and 8 finite volumes per axis.
-The maximal eigenvalue has been evaluated and we took 10 measurements samples.
-
-The following Python command was used:
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8 --num-patches 1024 -s 10 -e
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We show the best case throughputs.
-
-@image html plot_Euler_Leonardo.png
 
 These scatter plots report the throughput for particular combinations of
 threads which launch kernels simultaenously and patches per kernel launch.

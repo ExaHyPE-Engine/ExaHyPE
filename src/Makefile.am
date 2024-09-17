@@ -45,6 +45,9 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/ScalarOperations.cpp \
 	tarch/la/Scalar.cpp \
 	tarch/la/DynamicMatrix.cpp \
+	tarch/la/DynamicMatrixOperations.cpp \
+	tarch/la/GramSchmidt.cpp \
+	tarch/la/LUDecompositionDynamic.cpp \
 	tarch/accelerator/accelerator.cpp \
 	tarch/accelerator/Device.cpp \
 	tarch/accelerator/cpp/accelerator.cpp \

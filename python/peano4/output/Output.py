@@ -32,12 +32,12 @@ class Output(object):
     else:
       self.artefacts = [artefact] + self.artefacts
 
-  def generate(self,overwrite,directory,subdirectory=""):
+  def generate(self,overwrite,directory,subdirectories=[]):
     """
     Iterates over all stored artefacts and, hence, finally generates all the
     C files, makefiles, and so forth.
     """
-    self.makefile.generate(overwrite, directory, subdirectory)
+    self.makefile.generate(overwrite, directory, subdirectories)
     for artefact in self.artefacts:
       artefact.generate(overwrite,directory)
 

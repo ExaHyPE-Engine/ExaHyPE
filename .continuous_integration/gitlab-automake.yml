@@ -23,7 +23,7 @@ Build:
       - ".git*"
       - ".git/**/*"
     expire_in: 2 hours
-  retry: 0
+  retry: 2
 
 UnitTests:
   extends:
@@ -37,7 +37,7 @@ UnitTests:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 2
 
 ExaHyPE2:
   extends:
@@ -56,7 +56,7 @@ ExaHyPE2:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Euler:
   extends:
@@ -68,16 +68,16 @@ ExaHyPE2_Euler:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler; PYTHONPATH=$CI_PROJECT_DIR/python python3 euler.py -s $solver_type -d $dimensions -m $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/point-explosion/euler; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type"
   needs:
     - job: Build
   dependencies:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Advection:
   extends:
@@ -98,9 +98,9 @@ ExaHyPE2_Advection:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
-ExaHyPE2_AcousticWave:
+ExaHyPE2_Acoustic:
   extends:
     - .BeforeScript
     - .SanitiseAutomake
@@ -110,16 +110,16 @@ ExaHyPE2_AcousticWave:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic-wave; PYTHONPATH=$CI_PROJECT_DIR/python python3 acoustic-wave.py -s $solver_type -d $dimensions -m $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type"
   needs:
     - job: Build
   dependencies:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_ElasticWave:
   extends:
@@ -140,7 +140,7 @@ ExaHyPE2_ElasticWave:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_Kernels:
   extends:
@@ -150,7 +150,7 @@ ExaHyPE2_Kernels:
   allow_failure: false
   parallel:
     matrix:
-    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
+    - benchmark: [euler, acoustic, elastic-wave, advection]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -fpe -m Release"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; ./kernel-benchmarks-fv-rusanov-2d-ps-16-Release"
@@ -160,7 +160,7 @@ ExaHyPE2_Kernels:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_SBH:
   extends:
@@ -177,7 +177,7 @@ ExaHyPE2_SBH:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2
 
 ExaHyPE2_SBH_Coupled:
   extends:
@@ -194,4 +194,4 @@ ExaHyPE2_SBH_Coupled:
     - Build
   rules:
     - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 0
+  retry: 2

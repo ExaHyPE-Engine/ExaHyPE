@@ -785,12 +785,35 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
         self.postprocess_updated_patch += construct_FD4_postprocessing_kernel()
 
+        # Use second order interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction(
+            self
+        )
+
+        """
+        # Use matrix interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction(
+            self
+        )
+        """
+
+        """
+        # Use tensor product interpolation and restriction
         exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation(
-            self, "TP_linear_with_linear_extrap_normal_interp"
+            self,
+            "TP_linear_with_linear_extrap_normal_interp"
         )
         exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(
-            self, "TP_average_normal_extrap"
+            self,
+            "TP_average_normal_extrap"
         )
+        """
 
     def add_tracer(
         self,
@@ -891,12 +914,35 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
 
         self.postprocess_updated_patch += construct_FD4_postprocessing_kernel()
 
+        # Use second order interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction(
+            self
+        )
+
+        """
+        # Use matrix interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction(
+            self
+        )
+        """
+
+        """
+        # Use tensor product interpolation and restriction
         exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation(
-            self, "TP_linear_with_linear_extrap_normal_interp"
+            self,
+            "TP_linear_with_linear_extrap_normal_interp"
         )
         exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(
-            self, "TP_average_normal_extrap"
+            self,
+            "TP_average_normal_extrap"
         )
+        """
 
     def add_tracer(
         self,
@@ -1049,12 +1095,35 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   }
 """
 
+        # Use second order interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction(
+            self
+        )
+
+        """
+        # Use matrix interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction(
+            self
+        )
+        """
+
+        """
+        # Use tensor product interpolation and restriction
         exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation(
-            self, "TP_linear_with_linear_extrap_normal_interp"
+            self,
+            "TP_linear_with_linear_extrap_normal_interp"
         )
         exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(
-            self, "TP_average_normal_extrap"
+            self,
+            "TP_average_normal_extrap"
         )
+        """
 
         self.preprocess_reconstructed_patch += (
             """

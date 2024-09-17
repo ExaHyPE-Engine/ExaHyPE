@@ -65,10 +65,12 @@ mark these steps as private via a leading underscore.
                directory  = ".", 
                executable = "peano4petsc",
                preconditioner_type = "None",
-               solver_type         = "GMRES"
+               solver_type         = "GMRES",
+               subdirectory="",
                ):
-    self._project = peano4.Project(namespace, project_name, directory)
+    self._project = peano4.Project(namespace, project_name, directory, subdirectory)
     self._project.output.makefile.add_cmake_core_library("petsc")
+    self._subdirectory = subdirectory
     
     self._domain_offset = [0.0, 0.0, 0.0]
     self._domain_size   = [1.0, 1.0, 1.0]
@@ -237,6 +239,13 @@ This yet has to be written.
     return self._project
 
 
+  def __set_solver_repository_dict(self):
+      self.dictionary = {}
+      self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+      self.dictionary[ "PRECONDITIONER_TYPE" ] = "::petsc::LinearEquationSystem::PreconditionerType::" + self.preconditioner_type
+      self.dictionary[ "SOLVER_TYPE" ]         = "::petsc::LinearEquationSystem::KSPSolverType::" + self.solver_type
+ 
+
   def __generate_solver_repository(self):
     """!
 
@@ -245,10 +254,7 @@ This yet has to be written.
     
     
     """
-    dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-    dictionary[ "PRECONDITIONER_TYPE" ] = "::petsc::LinearEquationSystem::PreconditionerType::" + self.preconditioner_type
-    dictionary[ "SOLVER_TYPE" ]         = "::petsc::LinearEquationSystem::KSPSolverType::" + self.solver_type
+    self.__set_solver_repository_dict()
     
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
@@ -257,14 +263,14 @@ This yet has to be written.
       template_name + ".cpp",
       "SolverRepository", 
       self._project.namespace,
-      "repositories", 
-      dictionary,
+      self._project.subdirectory + "repositories", 
+      self.dictionary,
       True,
       True)
 
     self._project.output.add( generated_repository_files )
-    self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h", generated=True )
-    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
+    self._project.output.makefile.add_h_file( self._project.subdirectory + "repositories/SolverRepository.h", generated=True )
+    self._project.output.makefile.add_cpp_file( self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True )
 
 
   def add_solver( self, solver ):
@@ -296,7 +302,7 @@ This yet has to be written.
     solver.add_to_map_solution_onto_mesh     (self.algorithm_step_map_solution_onto_mesh)
     solver.add_to_plot                       (self.algorithm_step_plot)
 
-    solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+    solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
     
     self._solvers.append( solver )
 
@@ -371,3 +377,7 @@ This is yet to be written, and we need to have a paper on our work.
                 i.create_readme_descriptor()
             )
 
+
+  @property
+  def subdirectory(self):
+    return self._subdirectory
