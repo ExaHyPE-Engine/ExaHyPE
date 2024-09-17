@@ -262,7 +262,7 @@ class Test5Coupling(Test4Coupling):
       repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
       0;
     for (int p=0; p<repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
-      fineGridFaces{{DG_SOLVER_NAME}}(f).setProjection(
+      fineGridFaces{{DG_SOLVER_NAME}}(f).setProjectionTest(
         p + startIndexProjection,
         faceProjections( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
       );
@@ -357,7 +357,7 @@ class Test5Coupling(Test4Coupling):
         rowSolution += boundaryMatrix( row, col ) * fineGridFace{{DG_SOLVER_NAME}}.getProjection( col + startIndexProjection );
       }
       // place this solution into the face
-      fineGridFace{{DG_SOLVER_NAME}}.setSolution( row, rowSolution );
+      fineGridFace{{DG_SOLVER_NAME}}.setSolutionTest( row, rowSolution );
     }
 
   }
