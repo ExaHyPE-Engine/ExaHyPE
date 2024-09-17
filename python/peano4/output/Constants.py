@@ -165,25 +165,8 @@ class Constants(object):
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
-  def use(self, original):
-    new_entry = "using " + original
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
-    pass
-
-  def use_alias(self, alias, original):
-    new_entry = "using " + alias + "=" + original
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
-    pass
-
-  def use_namespace_alias(self, alias, original):
-    new_entry = "namespace " + alias + "=" + original
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
-    pass
-
   def readme_entry(self):
     """!
-
-
 
     """
     result = """

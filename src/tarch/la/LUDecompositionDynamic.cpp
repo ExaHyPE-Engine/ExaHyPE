@@ -32,5 +32,7 @@ tarch::la::DynamicMatrix tarch::la::invertUpperTriangular(
       inverseR(j, i) = col[j];
     }
   }
+  delete[] e;
+  delete[] col;
   return inverseR;
 }

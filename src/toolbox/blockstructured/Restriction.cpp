@@ -50,6 +50,16 @@ void toolbox::blockstructured::restrictCell_AoS_second_order(
   assertionMsg( false, "To be implemented" );
 }
 
+/*void toolbox::blockstructured::restrictCell_AoS_third_order(
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] double*                                   fineGridValues,
+  [[maybe_unused]] double*                                   coarseGridValues
+) {
+  assertionMsg( false, "To be implemented" );
+}
+*/
 
 void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
   const peano4::datamanagement::FaceMarker& marker,
@@ -94,6 +104,19 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_second_order(
   restrictInnerHalfOfHaloLayer_AoS_second_order( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true);
 }
 
+/*void toolbox::blockstructured::restrictHaloLayer_AoS_third_order(
+    const peano4::datamanagement::FaceMarker& marker,
+    int                                       numberOfDoFsPerAxisInPatch,
+    int                                       overlap,
+    int                                       unknowns,
+    double* fineGridValues,
+    double* coarseGridValues
+){
+  restrictInnerHalfOfHaloLayer_AoS_third_order( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false);
+  restrictInnerHalfOfHaloLayer_AoS_third_order( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true);
+}
+*/
+
 void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -105,7 +128,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 ) {
   const int normal = marker.getSelectedFaceNumber() % Dimensions;
   double*   stencilCenterValues = new double[unknowns];
-
   tarch::la::DynamicMatrix A(2, 2);
   int                      row = 0;
 
@@ -170,11 +192,132 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix c = Q_T * deltas;
     tarch::la::DynamicMatrix derivatives = inverseR * c;
 
+
     tarch::la::DynamicMatrix coarseMatrix(overlap, 2);
     for (int i = 0; i < overlap; i++){
       int distance = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
+
       coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
-      coarseMatrix(i, 1) = (1.0 / 18.0) * distance;
+      coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
+    }
+    tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
+    for (int i = 0; i < overlap; i++) {
+      tarch::la::Vector<Dimensions, int> coarseCell = kCoarse + coarseStart;
+      coarseCell(normal)                            = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? i + overlap : overlap - i - 1;
+      int index = serialiseVoxelIndexInOverlap(
+        coarseCell,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        normal
+      );
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        coarseGridValues[index * unknowns + unknown]
+          = stencilCenterValues[unknown] + coarseValues(i, unknown);
+//file << coarseGridValues[index * unknowns + unknown] << "\n\n\n";
+      }
+    }
+  }
+
+  delete[] stencilCenterValues;
+}
+
+
+/*void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_third_order(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
+) {
+  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+  double*   stencilCenterValues = new double[unknowns];
+
+  tarch::la::DynamicMatrix A(3, 3);
+  int                      row = 0;
+
+  A(0, 0) = 1.0 / 3.0;
+  A(0, 1) = 1.0 / 18.0;
+  A(0, 2) = 1.0 / 162.0;
+  A(1, 0) = -1.0 / 3.0;
+  A(1, 1) = 1.0 / 18.0;
+  A(1, 2) = -1.0 / 162.0;
+
+  double factor = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? -1.0 : 1.0;
+  A(2, 0) = factor * 2.0 / 3.0;
+  A(2, 1) = 2.0 / 9.0;
+  A(2, 2) = factor * 4.0 / 81.0;
+
+  tarch::la::DynamicMatrix Q(A.rows(), A.rows());
+  tarch::la::DynamicMatrix R(A.rows(), A.cols());
+  tarch::la::modifiedGramSchmidt(A, Q, R);
+
+  tarch::la::DynamicMatrix Q_T = tarch::la::transpose(Q);
+  tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+
+  const int i = (normal + 1) % 3;
+  const int j = (normal + 2) % 3;
+
+  tarch::la::Vector<Dimensions, int> coarseStart(0);
+  coarseStart(i) = (marker.getRelativePositionWithinFatherCell()(i) * numberOfDoFsPerAxisInPatch + 1) / 3;
+  coarseStart(j) = (marker.getRelativePositionWithinFatherCell()(j) * numberOfDoFsPerAxisInPatch + 1) / 3;
+
+  tarch::la::Vector<Dimensions, int> coarseEnd(0);
+  coarseEnd(i) = ((marker.getRelativePositionWithinFatherCell()(i) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+  coarseEnd(j) = ((marker.getRelativePositionWithinFatherCell()(j) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+
+  tarch::la::Vector<Dimensions, int> fineDataStart(0);
+  fineDataStart(i) = (marker.getRelativePositionWithinFatherCell()(i) * numberOfDoFsPerAxisInPatch) % 3;
+  fineDataStart(j) = (marker.getRelativePositionWithinFatherCell()(j) * numberOfDoFsPerAxisInPatch) % 3;
+
+  if (fineDataStart(i) == 1) fineDataStart(i) = -1;
+  if (fineDataStart(j) == 1) fineDataStart(j) = -1;
+  if (fineDataStart(i) == 2) fineDataStart(i) = 1;
+  if (fineDataStart(j) == 2) fineDataStart(j) = 1;
+
+  tarch::la::Vector<Dimensions, int> faceDimensions = coarseEnd - coarseStart;
+  faceDimensions(normal) = (overlap - 1) / 3 + 1;
+
+  dfor(kCoarse, faceDimensions){
+    tarch::la::Vector<Dimensions, int> fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>{1, 1, 1} + fineDataStart;
+    fineCenter(normal) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? overlap + 1: overlap - 2;
+
+    int centerIndex    = serialiseVoxelIndexInOverlap(fineCenter, numberOfDoFsPerAxisInPatch, overlap, normal);
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      stencilCenterValues[unknown] = fineGridValues[centerIndex * unknowns + unknown];
+    }
+
+    tarch::la::DynamicMatrix deltas(3, unknowns);
+    tarch::la::Vector<Dimensions, int> offset(0);
+    offset(normal) = 1;
+
+    int index = serialiseVoxelIndexInOverlap(fineCenter + offset, numberOfDoFsPerAxisInPatch, overlap, normal);
+    for (int unknown = 0; unknown < unknowns; unknown++){
+      deltas(0, unknown) = fineGridValues[index * unknowns + unknown] - stencilCenterValues[unknown];
+    }
+
+    index = serialiseVoxelIndexInOverlap(fineCenter - offset, numberOfDoFsPerAxisInPatch, overlap, normal);
+    for (int unknown = 0; unknown < unknowns; unknown++){
+      deltas(1, unknown) = fineGridValues[index * unknowns + unknown] - stencilCenterValues[unknown];
+    }
+
+    offset(normal) = factor * 2.0;
+    index = serialiseVoxelIndexInOverlap(fineCenter + offset, numberOfDoFsPerAxisInPatch, overlap, normal);
+    for (int unknown = 0; unknown < unknowns; unknown++){
+      deltas(2, unknown) = fineGridValues[index * unknowns + unknown] - stencilCenterValues[unknown];
+    }
+
+
+    tarch::la::DynamicMatrix c = Q_T * deltas;
+    tarch::la::DynamicMatrix derivatives = inverseR * c;
+
+    tarch::la::DynamicMatrix coarseMatrix(overlap, 3);
+    for (int i = 0; i < overlap; i++){
+      int distance = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? i * 3 + 3 - overlap : overlap - 3 - i * 3;
+      coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
+      coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
+      coarseMatrix(i, 2) = (1.0 / 162.0) * distance * distance * distance;
     }
   
     tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
@@ -196,9 +339,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 
   delete[] stencilCenterValues;
 }
-
-#include <iostream>
-#include <fstream>
+*/
 
 void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
   const peano4::datamanagement::FaceMarker& marker,

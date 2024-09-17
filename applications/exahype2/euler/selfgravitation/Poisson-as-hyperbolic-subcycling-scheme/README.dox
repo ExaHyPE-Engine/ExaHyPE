@@ -64,7 +64,7 @@ We rephrase the latter elliptic equation into a hyperbolic variant with
 @image html time_stepping.png
 
 We will model both equations as completely separate PDEs and hence 
-follow @page_exahype_coupling "ExaHyPE's generic coupling description". The Poisson  
+follow @tutorials_exahype2_coupling "ExaHyPE's generic coupling description". The Poisson  
 equation @f$ - \Delta \phi = -\pi G/\rho @f$
 advances on tiny time scales which we indicate by switching from 
 @f$ Q(t) @f$
@@ -115,7 +115,7 @@ note that this value does not depend on @f$ \phi @f$, i.e. is
 solution-independent.
 
 
-In line with @ref page_exahype_coupling "ExaHyPE's generic coupling discussion",
+In line with @ref tutorials_exahype2_coupling "ExaHyPE's generic coupling discussion",
 we go down the route with separate solvers: We simply create two
 solvers over the corresponding number of unknowns, i.e. 5 for Euler and
 4 for the Poisson operator which we have transformed into a stationary
@@ -154,7 +154,7 @@ from one equation onto material parameters in the other equations. As we
 deal with a quasi-stationary second PDE, this coupling is trivial in the
 sense that we do not have to interpolate in time.
 
-The @ref page_exahype_coupling "generic coupling" discussion clarifies
+The @ref tutorials_exahype2_coupling "generic coupling" discussion clarifies
 that our code can insert the two-PDE coupling in the data postprocessing
 or the preprocessing of each time step. In our example here, these two 
 options don't make a difference on the Poisson side, as we will run it
