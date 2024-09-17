@@ -1,15 +1,19 @@
 /**
 
-@page applications_exahype2_landslide_avalanche Landslide Avalanche
+@page applications_exahype2_landslide_avalanche Landslide Avalanche of Granular Material
 
 <div style="display: flex;">
     <div style="flex: 50%; padding: 5px;">
-        \image html Avalanche.gif
+        \image html Avalanche-1.png
     </div>
     <div style="flex: 50%; padding: 5px;">
-        \image html Avalanche_Wireframe.gif
+        \image html Avalanche-2.png
     </div>
 </div>
+
+<p align="center">
+  <img src="Avalanche-3.png" />
+</p>
 
 ## How to Build and Run
 
@@ -23,7 +27,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd applications/exahype2/landslide/avalanche/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 avalanche.py
-    ./ExaHyPE2-Landslide-RusanovGlobalAdaptiveFV-Release
+    ./Landslide.Release
 
 ### Using Automake
 
@@ -35,7 +39,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd applications/exahype2/landslide/avalanche/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 avalanche.py
-    ./ExaHyPE2-Landslide-RusanovGlobalAdaptiveFV-Release
+    ./Landslide.Release
 
 Where `CC=gcc CXX=g++` can be any set of compilers.
 
@@ -48,19 +52,19 @@ Where `CC=gcc CXX=g++` can be any set of compilers.
 ### With Friction
 
 <p align="center">
-  <img src="Sand-theta_35.gif" />
+  <img src="Avalanche-Sand-theta_35.gif" />
 </p>
 
 ### Without Friction
 
 <p align="center">
-  <img src="Sand-Zero-Friction-theta_35.gif" />
+  <img src="Avalanche-Sand-Zero-Friction-theta_35.gif" />
 </p>
 
 ## Simulation of Carborundum
 
 <p align="center">
-  <img src="Carborundum-theta_35.gif" />
+  <img src="Avalanche-Carborundum-theta_35.gif" />
 </p>
 
 */

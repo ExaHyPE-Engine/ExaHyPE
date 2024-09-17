@@ -22,6 +22,7 @@ from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeS
 class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
+    reconstruction_with_rk=False,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=PDETerms.None_Implementation, 
     point_source=PDETerms.None_Implementation,
@@ -46,6 +47,13 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
       incorporate such an additional scaling within time_step_relaxation.
       
     """  
+
+
+    if reconstruction_with_rk:
+      self._reconstruction_stages=rk_order
+    else:
+      self._reconstruction_stages=0
+
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
@@ -154,3 +162,15 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
 #include "exahype2/fd/fd4/FD4.h"
 """
+
+  def add_entries_to_text_replacement_dictionary(self, d):
+    """!
+    
+    Invoce superclass and then add one more field:
+    
+    - RECONSTRUCTION_STAGES
+    
+    """
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
+    d["RECONSTRUCTION_STAGES"]=self._reconstruction_stages
+    

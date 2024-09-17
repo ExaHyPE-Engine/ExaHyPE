@@ -65,13 +65,12 @@ compile_mode = peano4.output.CompileMode.Release
 """
 We first create a new ExaHyPE 2 project.
 For this, we specify the (nested) namespaces, the name of our main file and our executable name.
-We amend the executable name by the space dimensions.
 """
 my_project = exahype2.Project(
     namespace=["tutorials", "exahype2", "advection"],
     project_name="Advection",
     directory=".",
-    executable="ExaHyPE2-Advection-" + str(dimensions) + "d",
+    executable="Advection"
 )
 
 """
