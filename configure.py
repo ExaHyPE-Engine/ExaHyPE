@@ -42,10 +42,9 @@ parser.add_argument(
     "--scorep", "-scorep", action="store_true", help="Enable Score-P support"
 )
 parser.add_argument(
-    "--gpu", choices=["no", "omp", "sycl", "cpp", "hip", "cuda"], help="Enable GPU support"
+    "--gpu", choices=["no", "omp", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
 parser.add_argument("--asm", action="store_true", help="Dump generated assembly code")
-parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
@@ -76,7 +75,6 @@ Specify compatible C and C++ compilers by using the environment flags CC and CXX
 
 cflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
 cxxflags = "-std=c++20 -w -O3 -march=native -mtune=native -fomit-frame-pointer"
-nvccflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
 ldflags = "-march=native -mtune=native"
 configure_args = []
 
@@ -210,15 +208,6 @@ elif args.gpu == "sycl" and "icx" in cc and "icpx" in cxx:
             + args.arch
         )
 
-elif args.gpu == "cuda":
-    nvccflags += f" -arch={args.arch}"
-    if args.with_cuda is not None:
-        configure_args.append(f"--with-cuda={args.with_cuda}")
-    else:
-        raise Exception(
-            "You need to specify the path to the CUDA toolkit when compiling with CUDA. Use --with-cuda=<CUDA_PATH>."
-        )
-
 else:
     if args.gpu is not None and args.gpu != "no":
         raise Exception(
@@ -346,9 +335,6 @@ else:
         "CXX": "{}".format(cxx),
         "LDFLAGS": "{}".format(env_ldflags),
     }
-
-if args.gpu == "cuda":
-    env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
 
 # Create a string to display environment variables like in a terminal
 if args.scorep:
