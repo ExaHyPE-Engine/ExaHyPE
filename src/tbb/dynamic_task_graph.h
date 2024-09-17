@@ -24,7 +24,7 @@ namespace tbb {
 
 
 /**
- * @page tbb_dynamic_task_graph_design TBB dynamic task graph wrapper
+ * @page tbb_extension TBB extensions
  *
  * TBB's current release version lacks support for two important features
  * that we need in several extensions built on top of Peano:
@@ -32,18 +32,33 @@ namespace tbb {
  * - ranges of arbitrary dimension which facilitate/prioritise vectorisation; and
  * - dynamic task graphs
  *
- * We add both features through a "manual" tbb add-on. It is built
- * automatically once you translate Peano with --with-tbb and will end
- * up in a library called tbbtaskgraph.a, tbbtaskgraph_debug.a or
- * tbbtaskgraph_trace.a. This means that you have to add
+ * We add both features through a "manual" tbb add-on. We also try to bring
+ * those changes into the UXL foundation standard, but it is not clear when
+ * these attempts will be successful.
+ *
+ * Therefore, this extension is always shipped with Peano, and it is
+ * automatically built and added once you translate Peano with --with-tbb.
+ * The outcome will end
+ * up in a library called tbb_extension.a, tbb_extension_debug.a or
+ * tbb_extension_trace.a. This means that you have to add
+ *
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * --with-tbb LDFLAGS=-Lsrc/tb LIBS=-ltbb_extension
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * to your build. Peano's autotools configuration will do this for you.
+ * to your build. Peano's autotools configuration will do this for you. Further
+ * to that, you have to tell the tools that you require the features. That happens
+ * by adding
  *
- * to your build
+ * - -DTBBExtensionAddRanges if your TBB version does not yet have n-dimensional
+ *   ranges. Note that every very early versions of TBB did ship n-dimensional
+ *   ranges as optional extension. However, that default version might not be
+ *   compatible with the way Peano needs the ranges to work.
+ * - -DTBBExtensionAddTaskGraph if your TBB version does not yet support
+ *   dynamic task graphs.
+ *
+ *
  *
  * ## Code usage
  *

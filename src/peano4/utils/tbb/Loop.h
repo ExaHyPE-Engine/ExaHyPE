@@ -24,12 +24,10 @@
 #define parallelDforWithSchedulerInstructions2d(counter, max, loopParallelism) \
 { \
   tarch::la::Vector<2,int> counter##Max(max); \
-  int counter##Begin[] = {0,0}; \
-  int counter##End[]   = {counter##Max(0),counter##Max(1)}; \
+  int counter##Size[]   = {counter##Max(0),counter##Max(1)}; \
   tbb::parallel_for( \
     tbb::blocked_rangeNd<int,2>( \
-      counter##Begin, \
-      counter##End, \
+      counter##Size, \
       loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
     [&]( const tbb::blocked_rangeNd<int,2>&  range ) { \
@@ -41,12 +39,10 @@
 #define parallelDforWithSchedulerInstructions3d(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<3,int> counter##Max(max); \
-  int counter##Begin[] = {0,0,0}; \
-  int counter##End[]   = {counter##Max(0),counter##Max(1),counter##Max(2)}; \
+  int counter##Size[]   = {counter##Max(0),counter##Max(1),counter##Max(2)}; \
   tbb::parallel_for( \
     tbb::blocked_rangeNd<int,3>( \
-      counter##Begin, \
-      counter##End, \
+      counter##Size,\
       loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
     [&]( const tbb::blocked_rangeNd<int,3>&  range ) { \
@@ -59,12 +55,10 @@
 #define parallelDforWithSchedulerInstructions4d(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<4,int> counter##Max(max); \
-  int counter##Begin[] = {0,0,0,0}; \
-  int counter##End[]   = {counter##Max(0),counter##Max(1),counter##Max(2),counter##Max(3)}; \
+  int counter##Size[]   = {counter##Max(0),counter##Max(1),counter##Max(2),counter##Max(3)}; \
   tbb::parallel_for( \
     tbb::blocked_rangeNd<int,4>( \
-      counter##Begin, \
-      counter##End, \
+      counter##Size,\
       loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
     [&]( const tbb::blocked_rangeNd<int,4>&  range ) { \
@@ -78,12 +72,10 @@
 #define parallelDforWithSchedulerInstructions5d(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<5,int> counter##Max(max); \
-  int counter##Begin[] = {0,0,0,0,0}; \
-  int counter##End[]   = {counter##Max(0),counter##Max(1),counter##Max(2),counter##Max(3),counter##Max(4)}; \
+  int counter##Size[]   = {counter##Max(0),counter##Max(1),counter##Max(2),counter##Max(3),counter##Max(4)}; \
   tbb::parallel_for( \
     tbb::blocked_rangeNd<int,5>( \
-      counter##Begin, \
-      counter##End, \
+      counter##Size,\
       loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
     [&]( const tbb::blocked_rangeNd<int,5>&  range ) { \

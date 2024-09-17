@@ -196,7 +196,6 @@ list(APPEND ACCELERATOR_BACKENDS
   "sycl"
   "cpp"
   "hip"
-  "cuda"
 )
 set(WITH_GPU "no" CACHE STRING "${ACCELERATOR_BACKENDS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
@@ -230,16 +229,6 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "s
   #target_link_libraries(project_options INTERFACE IntelSYCL)
 endif()
 
-if("${WITH_GPU}" STREQUAL "cuda")
-  set(ENABLE_CUDA_COMPILATION_OPTIONS ON)
-  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
-  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
-  find_package(CUDAToolkit REQUIRED)
-  target_link_libraries(project_options INTERFACE CUDA::toolkit)
-else()
-  set(ENABLE_CUDA_COMPILATION_OPTIONS OFF)
-endif()
-
 if(WITH_GPU)
   string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
   target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
@@ -262,16 +251,6 @@ if(WITH_GPU)
     endif()
   elseif(WITH_GPU STREQUAL "hip")
     message(WARNING "Currently the flags for HIP need to be passed manually")
-  elseif(WITH_GPU STREQUAL "cuda")
-    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
-    set(CMAKE_CUDA_STANDARD 17 CACHE STRING "")
-    enable_language(CUDA)
-    option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON)
-    option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON)
-    find_package(CUDAToolkit REQUIRED)
-    target_link_libraries(project_options INTERFACE CUDA::toolkit)
-    string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA architecture" FORCE)
   endif()
 endif()
 
@@ -309,24 +288,19 @@ endif()
 # Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 set(PEANO_CXX_FLAGS_RELEASE -O3)
-set(PEANO_CUDA_FLAGS_RELEASE -O3)
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 
 #-O2 -fno-omit-frame-pointer
 set(PEANO_CXX_FLAGS_DEBUG -g -O0)
-set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
 
 set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
-set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
 set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
 
 set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
-set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
 
 set(PEANO_CXX_FLAGS_TRACE -g -O2)
-set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
@@ -539,19 +513,6 @@ display_variable(PEANO_TRACE_DEFINITIONS)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
-
-if(WITH_GPU STREQUAL "cuda")
-  display_variable(CMAKE_CUDA_FLAGS)
-  display_variable(PEANO_CUDA_FLAGS_RELEASE)
-  display_variable(PEANO_CUDA_FLAGS_DEBUG)
-  display_variable(PEANO_CUDA_FLAGS_STATS)
-  display_variable(PEANO_CUDA_FLAGS_ASSERTS)
-  display_variable(PEANO_CUDA_FLAGS_TRACE)
-  display_variable(CMAKE_CUDA_HOST_COMPILER)
-  display_variable(CMAKE_CUDA_ARCHITECTURES)
-  display_variable(CUDA_SEPARABLE_COMPILATION)
-  display_variable(CUDA_RESOLVE_DEVICE_SYMBOLS)
-endif()
 
 display_subseparator("Options to Install")
 display_variable(CMAKE_INSTALL_FULL_BINDIR)

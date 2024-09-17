@@ -6,22 +6,41 @@
 
 \tableofcontents
 
-\li @subpage page_installation_home
-\li @subpage page_compiler_specific_settings_home
-\li @subpage page_third_party_home
-\li @subpage page_conventions_home
-\li @subpage page_version_control_home
-\li @subpage page_documentation_home
-\li @subpage page_continuous_integration
-\li @subpage page_architecture_home
-\li @subpage page_dastgen_home
-\li @subpage page_tarch_home
-\li @subpage page_peano4_home
-\li @subpage page_toolbox_home
-\li @subpage page_exahype2_home
-\li @subpage page_multigrid_home
-\li @subpage page_swift2_home
-\li @subpage page_faq_home
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+Peano (with any extension) is <b>not</b> a code. It is a tool to build your code. 
+However, some of the extensions come along with applications built on top of them, which are contained in this repository.
+These pages document how to use the extensions, how to build new applications with Peano, and how to extend Peano's core.
+</div>
+
+
+
+
+## Content
+
+- Getting started
+  - @subpage page_installation_home
+  - @subpage page_compiler_specific_settings_home
+  - @subpage page_third_party_home
+  - @subpage page_architecture_home
+  - @subpage page_faq_home
+- Contributing
+  - @subpage page_conventions_home
+  - @subpage page_version_control_home
+  - @subpage page_documentation_home
+  - @subpage page_continuous_integration
+- @subpage page_tutorials_overview
+- @subpage page_applications_overview
+- Extensions
+  - @subpage page_peano4_home
+  - @subpage page_toolbox_home
+  - @subpage page_exahype2_home
+  - @subpage page_multigrid_home
+  - @subpage page_swift2_home
+- The Python core
+  - @subpage page_dastgen_home
+- The C++ core
+  - @subpage page_tarch_home
 
 This is the documentation of Peano which is generated automatically through Doxygen.
 Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
@@ -39,6 +58,10 @@ Peano  realises such a grid traversal and storage algorithm, and it provides
 hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic load
 balancing, sophisticated geometry representations, and other features.
+
+On top of Peano, we have created multiple extensions which use this meshing infrastructure for particular application domains.
+Examples are extensions for SPH, hyperbolic solvers or multigrid.
+The @ref page_architecture_home "architecture page" gives an overview including some illustrations.
 
 ## History
 
@@ -62,12 +85,5 @@ Peano had been an external (git) dependency.
 The second generation, ExaHyPE 2, is merged into Peano as an extension.
 This document therefore covers ExaHyPE 2, too.
 
-## Getting started
-
-- Read through the @ref page_installation_home "installation instructions" and build Peano's core libraries.
-- Skim through the high-level @ref page_architecture_home "architecture"
-- Pick your project of interest and run through the tutorials and documentation there.
-- Consult the @ref page_conventions_home "coding conventions" and the info on
-  @ref page_documentation_home "Peano's documentation" before you continue.
 
 */

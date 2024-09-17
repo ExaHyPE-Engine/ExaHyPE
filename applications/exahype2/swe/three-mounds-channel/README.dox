@@ -16,7 +16,7 @@ Taken from https://doi.org/10.48550/arXiv.1607.04547
 
 ## How to Build and Run
 
-For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation_home.
 
 ### Using CMake
 
@@ -26,7 +26,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd applications/exahype2/swe/three-mounds-channel/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 three-mounds-channel.py
-    ./ExaHyPE2-SWE-HLLEMRiemannGlobalAdaptiveFV-Release
+    ./SWE.Release
 
 ### Using Automake
 
@@ -38,7 +38,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd applications/exahype2/swe/three-mounds-channel/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 three-mounds-channel.py
-    ./ExaHyPE2-SWE-HLLEMRiemannGlobalAdaptiveFV-Release
+    ./SWE.Release
 
 Where `CC=gcc CXX=g++` can be any set of compilers.
 
