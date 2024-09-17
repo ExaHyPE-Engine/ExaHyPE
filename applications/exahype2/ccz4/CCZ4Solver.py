@@ -1125,8 +1125,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             self
         )
 
-    """
-    # Use matrix interpolation and restriction
+        """
+        # Use matrix interpolation and restriction
         exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation(
             self
         )
