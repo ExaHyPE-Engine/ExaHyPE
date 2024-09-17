@@ -33,7 +33,7 @@ volume_size = 0.01
 """
 The simulation end time.
 """
-end_time = 1
+end_time = 1.0
 
 """
 Choose domain size and offset.
@@ -60,13 +60,12 @@ compile_mode = peano4.output.CompileMode.Release
 """
 We first create a new ExaHyPE 2 project.
 For this, we specify the (nested) namespaces, the name of our main file and our executable name.
-We amend the executable name by the space dimensions.
 """
 my_project = exahype2.Project(
     namespace=["tutorials", "exahype2", "euler"],
     project_name="Euler",
     directory=".",
-    executable="ExaHyPE2-Euler-" + str(dimensions) + "d",
+    executable="Euler",
 )
 
 """

@@ -13,9 +13,9 @@ Build:
   stage: Build
   allow_failure: false
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} make -j $(nproc --all)"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} make -j $(nproc --all)"
     - mv build/src/unittests/CTestTestfile.cmake build/CTestTestfile.cmake
   artifacts:
     paths:
@@ -31,7 +31,7 @@ UnitTests:
   stage: Test
   allow_failure: false
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   needs:
     - job: Build
   dependencies:
@@ -48,8 +48,8 @@ ExaHyPE2:
     matrix:
     - tutorial: [euler, acoustic, elastic, advection, swe]
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
   needs:
     - job: Build
   dependencies:
@@ -68,10 +68,10 @@ ExaHyPE2_Euler:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/euler; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 euler.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
   needs:
     - job: Build
   dependencies:
@@ -90,10 +90,10 @@ ExaHyPE2_Advection:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/advection; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 advection.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
   needs:
     - job: Build
   dependencies:
@@ -102,7 +102,7 @@ ExaHyPE2_Advection:
     - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 0
 
-ExaHyPE2_AcousticWave:
+ExaHyPE2_Acoustic:
   extends:
     - .BeforeScript
     - .SanitiseCMake
@@ -112,10 +112,10 @@ ExaHyPE2_AcousticWave:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/acoustic-wave; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 acoustic-wave.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
   needs:
     - job: Build
   dependencies:
@@ -124,7 +124,7 @@ ExaHyPE2_AcousticWave:
     - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 0
 
-ExaHyPE2_ElasticWave:
+ExaHyPE2_Elastic:
   extends:
     - .BeforeScript
     - .SanitiseCMake
@@ -134,10 +134,10 @@ ExaHyPE2_ElasticWave:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/elastic-wave; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 elastic-wave.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
   needs:
     - job: Build
   dependencies:
@@ -154,11 +154,11 @@ ExaHyPE2_Kernels:
   allow_failure: false
   parallel:
     matrix:
-    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
+    - kernel: [euler, acoustic, elastic, advection]
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -fpe -m Release"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; ./kernel-benchmarks-fv-rusanov-2d-ps-16-Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks.py -e -fpe -m Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
   needs:
     - job: Build
   dependencies:
@@ -174,9 +174,9 @@ ExaHyPE2_SBH:
   stage: Benchmarks
   allow_failure: false
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance_testbed.py -et 0.01"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance_testbed.py -et 0.01"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
   needs:
     - job: Build
   dependencies:
@@ -192,9 +192,9 @@ ExaHyPE2_SBH_Coupled:
   stage: Benchmarks
   allow_failure: false
   script:
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
-    - singularity exec -e --bind "$SINGULARITY_BINDDIR" $SINGULARITY_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/single-black-hole; OMP_NUM_THREADS=1 ./peano_sbh"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/single-black-hole; OMP_NUM_THREADS=1 ./peano_sbh"
   needs:
     - job: Build
   dependencies:
