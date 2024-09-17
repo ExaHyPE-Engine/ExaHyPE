@@ -6,12 +6,4 @@
 // **********************************************************************************************
 #pragma once
 
-#include <string>
-
-{% for item in NAMESPACE -%}
-  namespace {{ item }} {
-{%- endfor %}
-  int main(int argc, char** argv);
-{% for item in NAMESPACE -%}
-  }
-{%- endfor %}
+int main(int argc, char** argv);

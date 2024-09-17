@@ -39,8 +39,8 @@
 tarch::logging::Log _log("::");
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess         = 0;
-  const int ExitCodeUnitTestsFailed = 1;
+  constexpr int ExitCodeSuccess         = 0;
+  constexpr int ExitCodeUnitTestsFailed = 1;
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
