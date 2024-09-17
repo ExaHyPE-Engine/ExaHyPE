@@ -4,20 +4,46 @@
 
 Here we maintain Apptainer Definition Files for different compilers.
 
-# Build
+## Build
+
+To build the Apptainer containers, make sure to execute the following commands in the Peano root directory
+
+Run the Apptainer Docker container:
 
 ```shell
-apptainer build <compiler>.sif Apptainer.<compiler>
+docker run -it -v ${PWD}:/work --privileged peanoframework/apptainer
 ```
+
+Navigate into the /work directory:
 
 ```shell
-docker run -v ${PWD}:/work --privileged peanoframework/base apptainer build work/<compiler>.sif work/Apptainer.<compiler>
+cd /work
 ```
 
-# Usage
+Invoke the following command to build the Apptainer containers:
 
 ```shell
-apptainer shell -e --bind "$PWD" <compiler>.sif
+apptainer build apptainer/amd.sif apptainer/Apptainer.amd
+apptainer build apptainer/gcc.sif apptainer/Apptainer.gcc
+apptainer build apptainer/llvm.sif apptainer/Apptainer.llvm
+apptainer build apptainer/intel.sif apptainer/Apptainer.intel
+apptainer build apptainer/nvidia.sif apptainer/Apptainer.nvidia
 ```
+
+## Usage
+
+```shell
+apptainer shell -e --bind "$PWD" apptainer/<compiler>.sif
+```
+
+### With GPU Support
+
+```shell
+apptainer shell --nv -e --bind "$PWD" apptainer/<compiler>.sif
+apptainer shell --rocm -e --bind "$PWD" apptainer/<compiler>.sif
+```
+
+For more details, see
+https://apptainer.org/docs/user/1.0/gpu.html
 
 */
