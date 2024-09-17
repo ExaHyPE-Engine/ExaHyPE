@@ -19,8 +19,8 @@
   - \subpage page_exahype2_tutorials_swe
 - Adding features	
   - Adding your own compute kernels <!-- (Harrison's work) -->
-  - Coupling different solvers
-  - Adding additional mesh sweeps
+  - \subpage tutorials_exahype2_coupling
+  - \subpage tutorials_exahype2_additional_mesh_sweeps
 
 
 */

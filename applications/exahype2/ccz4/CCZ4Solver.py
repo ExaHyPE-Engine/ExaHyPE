@@ -1083,48 +1083,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 """,
         )
 
-        self.postprocess_updated_patch += """
-{
-    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-      applications::exahype2::ccz4::enforceCCZ4constraintsSecondOrderFormulation( newQ+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
-
-        # Use second order interpolation and restriction
-        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation(
-            self
-        )
-        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction(
-            self
-        )
-
-        """
-        # Use matrix interpolation and restriction
-        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation(
-            self
-        )
-        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction(
-            self
-        )
-        """
-
-        """
-        # Use tensor product interpolation and restriction
-        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation(
-            self,
-            "TP_linear_with_linear_extrap_normal_interp"
-        )
-        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(
-            self,
-            "TP_average_normal_extrap"
-        )
-        """
-
         self.preprocess_reconstructed_patch += (
             """
 ::exahype2::CellData  reconstructedPatchData( 
@@ -1146,6 +1104,48 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 );
 """
         )
+
+        self.postprocess_updated_patch += """
+{
+    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraintsSecondOrderFormulation( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+    # Use second order interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction(
+            self
+        )
+
+        """
+        # Use matrix interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation(
+            self
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction(
+            self
+        )
+        """
+
+        """
+        # Use tensor product interpolation and restriction
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation(
+            self,
+        "TP_linear_with_linear_extrap_normal_interp"
+        )
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(
+            self,
+        "TP_average_normal_extrap"
+        )
+        """
 
     def add_tracer(
         self,

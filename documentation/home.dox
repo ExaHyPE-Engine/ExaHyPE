@@ -8,11 +8,12 @@
 
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
-Peano (with any extension) is <b>not</b> a code. It is a tool to build your code.  
+Peano (with any extension) is <b>not</b> a code. It is a tool to build your code. 
+However, some of the extensions come along with applications built on top of them, which are contained in this repository.
+These pages document how to use the extensions, how to build new applications with Peano, and how to extend Peano's core.
 </div>
 
 
-However, some of the extensions come along with applications built on top of them, which are contained in this repository.
 
 
 ## Content
