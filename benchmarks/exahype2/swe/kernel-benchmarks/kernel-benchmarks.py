@@ -5,7 +5,7 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/swe"))
 
-from SWE import SWE
+from swe import SWE
 
 if __name__ == "__main__":
     swe = SWE()
@@ -137,9 +137,6 @@ if __name__ == "__main__":
     )  # Reduction
 
     my_project.output.makefile.add_cpp_file("SWE-main.cpp")
-    my_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/swe/SWE.cpp"
-    )
 
     swe.build(my_args, my_project)
 
