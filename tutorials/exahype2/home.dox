@@ -6,21 +6,14 @@
 
 - Hitchhiker's guide
   - \subpage page_exahype2_tutorials_start
-  - \subpage page_exahype2_tutorials_project
-  - \subpage page_exahype2_tutorials_solver
-  - \subpage page_exahype2_tutorials_postprocessing
-- Numerics tour de force
-  - Finite Volumes for the Euler equations 
+  - \subpage page_exahype2_tutorials_config
+  - \subpage page_exahype2_tutorials_implementation
+  - \subpage page_exahype2_tutorials_swe
+  - \subpage page_exahype2_tutorials_euler
 - Toy problems
-  - \subpage page_exahype2_tutorials_acoustic
   - \subpage page_exahype2_tutorials_advection
   - \subpage page_exahype2_tutorials_elastic
-  - \subpage page_exahype2_tutorials_euler
-  - \subpage page_exahype2_tutorials_swe
 - Adding features	
-  - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
   - \subpage tutorials_exahype2_additional_mesh_sweeps
-
-
 */

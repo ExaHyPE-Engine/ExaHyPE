@@ -1,6 +1,4 @@
-/**
-
- @page page_exahype2_tutorials_project A new ExaHyPE 2 project
+@page page_exahype2_tutorials_project A new ExaHyPE 2 project
 
 
 \section{Our First Configuration File}
@@ -459,9 +457,4 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 \centering
 \includegraphics[width=0.40\linewidth]{Euler_initial.png}\label{euler_initial}
 \caption{The initial condition of the Euler equations for our scenario.}
-\end{figure}
-
-
-
- */
- 
+\end{figure} 
