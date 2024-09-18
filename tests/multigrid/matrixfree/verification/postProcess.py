@@ -182,4 +182,41 @@ def plot_field_dg(data, H):
     ax.set_ylabel('y')
     ax.set_zlabel('val')
     ax.set_title(' ')
-    plt.show()
+    #plt.show()
+
+def construct_dg_function(data, H):
+    """
+    Construct exact solution with the same structure as data
+
+    :arg data: parsed patch data in the form of a dictionary as output of parse_patch_file()
+    :arg H: mesh size as list of cell sizes in each direction: [hx, hy]
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    import mghype
+
+    assert len(H) == 2, "Only works for 2D"
+
+    # Create dictionary with the same keys as data and zero values
+    result = {key: [0] * len(value) for key, value in data.items()}
+    
+    # Local coordinates of cell nodes
+    poly_degree = int(np.sqrt(len(data[(0.0, 0.0)]))) - 1
+    matrices = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(poly_degree)
+    local_node_coordinates = matrices._Xi_C
+    num_of_nodes = len(local_node_coordinates[0])
+
+    for key in data.keys():
+        # Coordinates of the left-bottom cell vertex
+        xlb = key[0]
+        ylb = key[1]
+
+        # Local-to-global mapping:
+        # x = xlb + hx/2*(xi  + 1)
+        # y = ylb + hy/2*(eta + 1)
+        for i in range(num_of_nodes):
+            x_node = xlb + 0.5 * H[0] * (local_node_coordinates[0][i][0] + 1.0)
+            y_node = ylb + 0.5 * H[1] * (local_node_coordinates[0][i][1] + 1.0)
+            result[key][i] = np.sin(2.0*np.pi*x_node) * np.sin(2.0*np.pi*y_node)
+
+    return result
