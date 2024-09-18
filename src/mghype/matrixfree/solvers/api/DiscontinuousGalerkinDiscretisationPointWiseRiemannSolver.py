@@ -257,7 +257,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
               custom_init_cell = "",
               custom_init_face = "",
-              enable_plotting = True # sometimes we want to disable standard plotting...
+              enable_plotting = True, # sometimes we want to disable standard plotting...,
+              plot_predicate = "true" # enable custom plotting behaviour
               ):
     """!
     
@@ -402,6 +403,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._custom_init_face            = custom_init_face
 
     self._enable_plotting               = enable_plotting
+    self._plot_predicate                = plot_predicate
 
     # assertions for matrix shapes
     # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
@@ -426,12 +428,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     """
     if self._enable_plotting: # true by default
-      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution") )
-      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs") )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", predicate_plot=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", predicate_plot=self._plot_predicate) )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:
-        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter) )
+        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, predicate_plot=self._plot_predicate) )
 
   def add_to_create_grid(self, observer):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))

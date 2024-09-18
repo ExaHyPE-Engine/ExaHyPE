@@ -10,7 +10,8 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
   def __init__(self,
                solver,
                variable_name,
-               getter
+               getter,
+               predicate_plot = "true"
                ):
     """
     
@@ -24,6 +25,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
     self.d["SOLVER_NAME"]            = solver.typename()
     self.d[ "VARIABLE" ]             = variable_name
     self.d[ "GETTER" ]               = getter
+    self.d["PREDICATE_PLOT"]         = predicate_plot
 
   __Template_Constructor = """
   _writer          = nullptr;
@@ -41,17 +43,19 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
 
 
   __Template_EndTraversal = """
-  assertion(_dataWriter!=nullptr);
-  assertion1(_dataWriter!=nullptr,_treeNumber);
-  
-  _dataWriter->close();
-  _writer->writeToFile();
-  
-  delete _dataWriter;
-  delete _writer;
+  if ( {{PREDICATE_PLOT}} ) {
+    assertion(_dataWriter!=nullptr);
+    assertion1(_dataWriter!=nullptr,_treeNumber);
+    
+    _dataWriter->close();
+    _writer->writeToFile();
+    
+    delete _dataWriter;
+    delete _writer;
 
-  _dataWriter = nullptr;
-  _writer      = nullptr;
+    _dataWriter = nullptr;
+    _writer      = nullptr;
+  }
 """
 
   def get_destructor_body(self):
@@ -71,7 +75,11 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
 
 
   Template_TouchCellFirstTime = """ 
-if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior) {
+if (
+  fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior
+  and
+  {{PREDICATE_PLOT}}
+) {
 
   logTraceInWith1Argument("Plot::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
   
@@ -107,31 +115,33 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
 """
 
   __Template_BeginTraversal = """
-  tarch::mpi::Lock lock( _semaphore );
+  if ({{PREDICATE_PLOT}}) {
+    tarch::mpi::Lock lock( _semaphore );
 
-  static int counter = -1;
-  counter++;
-  
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
-
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
-    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
-  }
-
-  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{SOLVER_NAME}}.{{VARIABLE}}",
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    counter
-  );
+    static int counter = -1;
+    counter++;
     
-  _dataWriter = _writer->createVertexDataWriter( 
-    "{{VARIABLE}}", 
-    repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
-    repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
-    "Solution",
-    "Solution as delivered through MF Solver"
-  );
+    std::ostringstream snapshotFileName;
+    snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
+
+    if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
+      snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
+    }
+
+    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+      Dimensions, snapshotFileName.str(), "{{SOLVER_NAME}}.{{VARIABLE}}",
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+      counter
+    );
+      
+    _dataWriter = _writer->createVertexDataWriter( 
+      "{{VARIABLE}}", 
+      repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
+      repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
+      "Solution",
+      "Solution as delivered through MF Solver"
+    );
+  }
 """
 
 
