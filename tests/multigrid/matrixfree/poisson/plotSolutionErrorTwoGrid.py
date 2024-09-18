@@ -7,7 +7,7 @@ import time
 from verification.postProcess import parse_patch_file, plot_field_dg, construct_dg_function
 
 MaxNorm = []
-for i in range(0,200,1):
+for i in range(0,219,1):
     file_name = f"DGPoisson.solution-{i}.peano-patch-file"
     dg_solution = parse_patch_file(file_name, "DG")
 
@@ -25,13 +25,18 @@ for i in range(0,200,1):
     MaxNorm.append(max_norm)
     print(max_norm)
 
-    #fig, ax = plot_field_dg(dg_solution, [1/9,1/9])
+    # plot_field_dg(dg_solution, [1/9,1/9])
     # plt.title(f'|dg_sov - exact_sol|_max = {max_norm}')
-    #plt.show()
+    # plt.show()
 
 plt.plot(MaxNorm, label='|sol_dg - sol_exact|_max', marker='o')
 plt.yscale('log')
 plt.xlabel('DG Iterations')
 plt.ylabel('|sol_dg - sol_exact|_max')
+plt.show()
+
+# Plot resulting solution
+plot_field_dg(diff, [1/9,1/9])
+plt.title(f'|dg_sov - exact_sol|_max = {max_norm}')
 plt.show()
 
