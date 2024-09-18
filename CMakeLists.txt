@@ -66,8 +66,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
-set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
-message(STATUS "Compiler is: ${META_COMPILER_VERSION}")
 
 include(GNUInstallDirs)
 set(DEFAULT_CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
@@ -85,19 +83,11 @@ else()
 endif()
 
 include(MessageUtils)
-include(Clang-Format)
-#include(Cppcheck)
-#include(Coverage)
-include(Sanitisers)
-include(IWYU)
-include(Clang-Tidy)
 include(Ccache)
-include(Doxygen)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
 include(ProcessorCount)
 ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
-find_package(Slurm)
 find_package(Threads REQUIRED)
 include(CTest)
 enable_testing()
@@ -115,14 +105,81 @@ endif()
 
 add_library(project_warnings INTERFACE)
 add_library(project_options INTERFACE)
-target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
-include(CompilerDefinitions)
-set_project_compiler_definitions(project_options)
-include(CompilerFlags)
-set_project_compiler_flags(project_warnings)
-target_compile_options(project_warnings INTERFACE "-w")
-include(LinkerFlags)
-set_project_linker_flags(project_options)
+
+target_compile_features(project_options INTERFACE
+  cxx_std_${CMAKE_CXX_STANDARD}
+)
+
+if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
+  target_compile_options(project_warnings INTERFACE
+    -W
+    -Wall
+    #-Wextra
+    #-pedantic
+    #-Wpedantic
+    #-Wshadow
+    #-Wunused
+    -Wno-unused-function
+    -Wno-unused-variable
+    -Wno-unused-parameter
+    -Wno-attributes
+    #-Wno-unknown-attributes
+    #-Wno-attributes=clang::
+    -Wno-conversion
+    -Wno-sign-compare
+    -Wnon-virtual-dtor
+    #-Wold-style-cast
+    #-Wcast-align
+    #-Woverloaded-virtual
+    #-Wparentheses
+    #-Wmultichar
+    #-Wtrigraphs
+    #-Wpointer-arith
+    -Wreturn-type
+    -Wno-system-headers
+    #-Wno-deprecated
+    #-Wwrite-strings
+    #-fexceptions
+    #-fnon-call-exceptions
+    #-Wsign-conversion
+    #-Wnull-dereference
+    #-Wdouble-promotion # Warn if float is implicit promoted to double.
+    #-Wformat=2 # Warn on security issues around functions that format output (i.e., printf).
+    #-flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
+    #-ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
+    #-fno-elide-constructors # Disables RVO. For testing purposes only, should be disabled in production code. https://shaharmike.com/cpp/rvo/
+    $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
+    #-Wmisleading-indentation # Warn if indentation implies blocks where blocks do not exist.
+    #-Wduplicated-cond # Warn if if/else chain has duplicated conditions.
+    #-Wduplicated-branches # Warn if if/else branches have duplicated code.
+    #-Wlogical-op # Warn about logical operations being used where bitwise were probably wanted.
+    #-Wuseless-cast
+    #-m64
+    #-ipo
+    #-fp-model precise
+  )
+elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
+  target_compile_options(project_warnings INTERFACE
+    -W
+    -Wall
+    --diag_suppress=unrecognized_attribute
+  )
+elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
+  target_compile_options(project_warnings INTERFACE
+    $<$<COMPILE_LANGUAGE:CXX>:/MP> # Use as many cores as available for compilation. https://blog.kitware.com/cmake-building-with-all-your-cores/
+    $<$<COMPILE_LANGUAGE:CXX>:/W4> #/Wall # Baseline reasonable warnings.
+    $<$<COMPILE_LANGUAGE:CXX>:/permissive-> # Standards conformance mode for MSVC compiler. https://docs.microsoft.com/de-de/cpp/build/reference/permissive-standards-conformance?view=vs-2019
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/Oi>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/O2>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/Ot>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GL>>
+    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GF>>
+  )
+  target_link_options(${project_name} INTERFACE
+    $<$<CONFIG:Release>:/OPT:REF>
+    $<$<CONFIG:Release>:/LTCG>
+  )
+endif()
 
 include(CheckIncludeFiles)
 check_include_files(dlfcn.h HAVE_DLFCN_H)
@@ -242,6 +299,7 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "gfx906"
   "gfx908"
   "gfx90a"
+  "gfx942"
   "spir64"
 )
 set(WITH_GPU_ARCH "none" CACHE STRING "GPU architecture sm_XX or gfxXXX")
