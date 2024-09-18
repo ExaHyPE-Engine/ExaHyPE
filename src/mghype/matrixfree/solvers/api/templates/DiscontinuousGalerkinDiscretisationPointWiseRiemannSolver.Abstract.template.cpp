@@ -356,3 +356,5 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, b
     _state = State::Suspend;
   }
 }
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const { return _state; }
