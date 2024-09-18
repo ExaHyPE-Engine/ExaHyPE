@@ -18,7 +18,6 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
   target_link_options(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
   target_link_libraries(Tarch_${mode_lower} PUBLIC project_options)
   target_compile_options(Tarch_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-  target_compile_options(Tarch_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${mode_upper}}>)
   target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
 
   install(TARGETS Tarch_${mode_lower}

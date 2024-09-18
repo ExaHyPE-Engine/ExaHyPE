@@ -18,4 +18,4 @@ info      exahype2                              -1      white     always-on
 info      exahype2::RefinementControlService    -1      black     always-on
 info      toolbox                               -1      white     always-on
 info      toolbox::loadbalancing                -1      white     always-on
-info     applications::exahype2::landslide      -1      white     always-on
+info      applications::exahype2::landslide     -1      white     always-on

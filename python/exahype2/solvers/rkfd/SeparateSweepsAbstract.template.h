@@ -48,6 +48,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       ,
       RungeKuttaSubStep{{item}}
       {%- endfor %}
+      {% if RECONSTRUCTION_STAGES!=0 %} {% for item in range(RECONSTRUCTION_STAGES) -%}
+      ,
+      ReconstructionSubStep{{item}}
+      {%- endfor %}
+      {% endif %}
     };
 
     static std::string toString(SolverState);

@@ -109,7 +109,7 @@ Consult petsc.Project for details
     
 """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """
 
   def get_attributes(self):
@@ -237,7 +237,7 @@ Consult petsc.Project for details
     
 """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """
 
   def get_attributes(self):

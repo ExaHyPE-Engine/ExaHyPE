@@ -2,17 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SWE.h"
 
-::tarch::logging::Log applications::exahype2::swe::SWE::_log(
+tarch::logging::Log applications::exahype2::swe::SWE::_log(
   "applications::exahype2::swe::SWE"
 );
 
 using s = applications::exahype2::swe::VariableShortcuts;
 
 void applications::exahype2::swe::SWE::initialCondition(
-  double* __restrict__ Q,
-  const ::tarch::la::Vector<Dimensions, double>& x,
-  const ::tarch::la::Vector<Dimensions, double>& h,
-  bool                                           gridIsConstructed
+  double* __restrict__                          Q,
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  bool                                          gridIsConstructed
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
@@ -28,12 +28,12 @@ void applications::exahype2::swe::SWE::initialCondition(
 
 
 void applications::exahype2::swe::SWE::boundaryConditions(
-  const double* __restrict__ Qinside,
-  double* __restrict__ Qoutside,
-  const ::tarch::la::Vector<Dimensions, double>& x,
-  const ::tarch::la::Vector<Dimensions, double>& h,
-  double                                         t,
-  int                                            normal
+  const double* __restrict__                    Qinside,
+  double* __restrict__                          Qoutside,
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  double                                        t,
+  int                                           normal
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
@@ -43,10 +43,10 @@ void applications::exahype2::swe::SWE::boundaryConditions(
 
 ::exahype2::RefinementCommand applications::exahype2::swe::SWE::
   refinementCriterion(
-    const double* __restrict__ Q,
-    const ::tarch::la::Vector<Dimensions, double>& x,
-    const ::tarch::la::Vector<Dimensions, double>& h,
-    double                                         t
+    const double* __restrict__                    Q,
+    const tarch::la::Vector<Dimensions, double>&  x,
+    const tarch::la::Vector<Dimensions, double>&  h,
+    double                                        t
   ) {
   auto result = ::exahype2::RefinementCommand::Keep;
 

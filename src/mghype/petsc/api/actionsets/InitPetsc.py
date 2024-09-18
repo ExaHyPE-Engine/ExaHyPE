@@ -144,5 +144,5 @@ Consult petsc.Project for details
     
 """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """

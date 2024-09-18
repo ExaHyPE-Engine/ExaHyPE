@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/la/Matrix.h"
+#include "tarch/la/DynamicMatrix.h"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "tarch/la/VectorScalarOperations.h"
@@ -41,6 +42,12 @@ namespace tarch {
       Matrix<Rows,Cols,Scalar>   A,
       Matrix<Rows,Cols,Scalar>&  Q,
       Matrix<Cols,Cols,Scalar>&  R
+    );
+
+    void modifiedGramSchmidt (
+      DynamicMatrix   A,
+      DynamicMatrix&  Q,
+      DynamicMatrix&  R
     );
   }
 }

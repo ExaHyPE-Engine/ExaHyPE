@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Makefile  import Makefile
 from .Readme    import Readme
-from .GPULaunch import GPULaunch
 
 
 class Output(object):
@@ -14,7 +13,6 @@ class Output(object):
     self.artefacts  = []
     self.readme     = Readme()
     self.makefile   = Makefile()
-    self.gpu_launch = GPULaunch()
 
 
   def clear(self):
@@ -34,12 +32,12 @@ class Output(object):
     else:
       self.artefacts = [artefact] + self.artefacts
 
-  def generate(self,overwrite,directory,subdirectory=""):
+  def generate(self,overwrite,directory,subdirectories=[]):
     """
     Iterates over all stored artefacts and, hence, finally generates all the
     C files, makefiles, and so forth.
     """
-    self.makefile.generate(overwrite, directory, subdirectory)
+    self.makefile.generate(overwrite, directory, subdirectories)
     for artefact in self.artefacts:
       artefact.generate(overwrite,directory)
 
@@ -48,5 +46,3 @@ class Output(object):
     self.readme.add_package_description( self.makefile.readme_package_descriptor )
 
     self.readme.generate(directory)
-
-    self.gpu_launch.generate(directory)

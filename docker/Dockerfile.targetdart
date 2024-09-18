@@ -1,7 +1,5 @@
 FROM peanoframework/llvm:latest
 
-LABEL peano-framework.org=http://www.peano-framework.org/
-
 RUN { \
       echo '#!/bin/sh' \
       && echo '.' /opt/spack-environment/activate.sh \
@@ -27,18 +25,17 @@ RUN . /entrypoint.sh && \
 mkdir /opt/targetdart/llvm-project/llvm/build && cd /opt/targetdart/llvm-project/llvm/build && \
 CC=clang CXX=clang++ cmake -G Ninja .. \
 -DCMAKE_BUILD_TYPE=Release \
--DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lldb;' \
--DLLVM_ENABLE_RUNTIMES='compiler-rt;libcxx;libcxxabi;libunwind' \
+-DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;lld' \
+-DLLVM_ENABLE_RUNTIMES='compiler-rt;libcxx;libcxxabi;libunwind;openmp;offload' \
 -DCMAKE_INSTALL_PREFIX=/opt/targetdart \
--DLLVM_INSTALL_UTILS=ON && \
-ninja install
-
-RUN . /entrypoint.sh && \
-mkdir /opt/targetdart/llvm-project/openmp/build && cd /opt/targetdart/llvm-project/openmp/build && \
-CC=mpicc CXX=mpicxx cmake -G Ninja .. \
--DCMAKE_BUILD_TYPE=Release \
--DCMAKE_INSTALL_PREFIX=/opt/targetdart && \
-ninja install
+-DLLVM_INSTALL_UTILS=ON \
+-DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
+-DCMAKE_CXX_FLAGS='-std=c++20' \
+-DLIBOMPTARGET_ENABLE_DEBUG=1 \
+-DLIBOMPTARGET_ENABLE_UBSAN=OFF \
+-DLIBOMPTARGET_CMAKE_BUILD_TYPE=Debug \
+-DLIBOMPTARGET_PLUGINS_TO_BUILD='cuda;amdgpu;targetdart' && \
+ninja -j$(nproc --all) install
 
 RUN rm -rf /opt/targetdart/llvm-project
 

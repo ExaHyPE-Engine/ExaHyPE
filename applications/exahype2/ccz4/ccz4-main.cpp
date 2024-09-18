@@ -238,7 +238,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
+  logInfo("step()", "run " << repositories::StepRepository::toString(stepName) << "\t" << applications::exahype2::ccz4::AbstractCCZ4::toString(repositories::instanceOfCCZ4.getSolverState()));
 
   static tarch::timing::Watch watch("::", "step()", false);
 
