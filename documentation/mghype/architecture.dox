@@ -31,6 +31,17 @@ accommodates a Python representation of all data models and computational steps.
 The C++ outcome is the actual realisation.
 
 
+# Solvers
+
+Use the links below to find documentation on each of the solvers currently in use
+
+- Solver \ref mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+- \subpage matrixfree_collocated_solver
+- \subpage petsc_collocated_solver
+- \subpage petsc_dg_solver
+
+
+
 # File and matrix conventions
 
 Each multigrid solver is represented by one instance of 

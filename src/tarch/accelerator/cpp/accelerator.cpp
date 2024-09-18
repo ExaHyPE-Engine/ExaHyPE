@@ -1,6 +1,5 @@
 #include "tarch/accelerator/accelerator.h"
 
-#include "tarch/accelerator/cuda/ErrorCheck.h"
 #include "tarch/Assertions.h"
 
 #if defined(GPUOffloadingCPP)
