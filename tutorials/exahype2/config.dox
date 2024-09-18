@@ -11,7 +11,7 @@ The configuration files are in Python, so it should surprise no one that they st
 
 With our imports out of the way, we are free to define our problem, for this, let's start with a solver:
 
-    my_solver = exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
+    my_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
         name                  = "PlanarAcousticSolver",
         order                 = 5,
         min_cell_h            = cell_h,
@@ -25,6 +25,7 @@ This creates an \e ADER-DG solver of discretization order 5 named \b PlanarAcous
 \b p and \b v, with \b v having a multiplicity of two (i.e., we have two velocities).
 Unknowns and auxiliary variables can be either specified by indicating how many there are (`unknowns = 3`),
 in which case users must keep track of them manually, or they can be specified via a dictionary, which will allow us to access them by name.
+The parameter `time_step_relaxation` is related to the adaptive time-stepping, and serves as a safety factor to guarantee stable time step sizes.
 
 Now that we have a solver, let's define the problem we want to solve, and while we're at it let's add a simple optimization:
 

@@ -4,7 +4,7 @@
  
 \tableofcontents
  
-New exercise, new equation! This time we will be simulating the <e>euler equations<\e>,
+New exercise, new equation! This time we will be simulating the <em>euler equations</em>,
 which approximate the flow of non-viscous fluids, but do take into account pressure differentials.
 In two dimensions, these take following form:
 
@@ -44,7 +44,7 @@ The eigenvalues of the 2 dimensional euler equation are:
 
 We have not provided you with a configuration file, so you will need to make your own.
 However since the Euler equations and the scenario we will attempt next are somewhat more unstable than the previous two (and also just to show of the features of ExaHyPE 2)
-we will use a different solver. This time, we will use a <e>Finite Volumes<\e> solver.
+we will use a different solver. This time, we will use a <em>Finite Volumes</em> solver.
 This can be created in the configuration as follows:
 
     my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
@@ -52,26 +52,30 @@ This can be created in the configuration as follows:
       patch_size            = 22,
       min_volume_h          = min_h,
       max_volume_h          = max_h,
-      time_step_relaxation  = 0.1,
+      time_step_relaxation  = 0.5,
       unknowns              = { "p": 1, "v": 2, "E": 1 },
       auxiliary_variables   = 0
     )
 
+This configuration is similar to that of the ADER-DG solver, obviously.
+The only parameter that we haven't encountered so far is `patch_size`, this controls the number of finite volumes which should be assembled together as one patch, i.e. which are solved at the same time.
+Here \b 22 means that there are 22 volumes per spatial dimension, so for a 2D problem this is 22x22=484 cells per Peano4 patch. 
 
-\begin{enumerate}
+
+- Exercices
     - First, create and fill a configuration file. Use a Finite Volumes solver for this, then set the domain size to \b 120x120,
-      the offset to \b-10x-60 and the end-time to \b 10.0 .
+      the offset to \b -10x-60 and the end-time to \b 10.0 .
       You can choose the mesh refinement of your choice, but we recommend a depth of 5 over the whole domain.
 
     - Once you are content with your configuration file, implement the flux and the eigenvalues for your solver.
 
-    - Next, we will set the boundary conditions. These should be <b>[1.0, 1.0, 0.0, 2.5, 1.0]^T<\b> on the leftmost face of the domain.
+    - Next, we will set the boundary conditions. These should be <b>[1.0, 1.0, 0.0, 2.5, 1.0]^T</b> on the leftmost face of the domain.
       On all other faces, use absorbing boundary conditions.
       That is to say the values outside of the boundary should be equal to the values inside of the boundary.
 
-   -  Finally, we need to implement the initial conditions.
-      We will try to simulate airflow over a symmetrical <e>NACA airfoil<\e>.
-      Specifically we will choose airfoil <e>NACA 0012<\e>.
+    - Finally, we need to implement the initial conditions.
+      We will try to simulate airflow over a symmetrical <em>NACA airfoil</em>.
+      Specifically we will choose airfoil <em>NACA 0012</em>.
       The half-thickness of the airfoil is defined by following equation:
       @f$
       \begin{equation}
@@ -79,17 +83,207 @@ This can be created in the configuration as follows:
       \end{equation}
       @f$
       where \b x_n is \b x/100.
-      The initial conditions within the airfoil should be <b>[1000, 1.0, 0.0, 2.5]^T<\b>, those outside of the airfoil should be <b>[1.0, 1.0, 0.0, 2.5]^T\b>.
+      The initial conditions within the airfoil should be <b>[1000, 1.0, 0.0, 2.5]^T</b>, those outside of the airfoil should be <b>[1.0, 1.0, 0.0, 2.5]^T</b>.
       (Note: We have committed here what we in the business call a "not accurate cheaty fake result", there are many good ways to simulate what we want to simulate and this is not one of them.
       But this is easy and it'll make a nice picture if you did it right, so don't tell anyone.)
 
     - Compile and run! If you have done everything correctly, your initial conditions should look something like the picutre below,
-        and you should see a so-called <e>bow shock<\e> develop over time as the flow causes higher pressure in front of your airfoil and lower pressure behind it.
+      and you should see a so-called <em>bow shock</em> develop over time as the flow causes higher pressure in front of your airfoil and lower pressure behind it.
 
     - You are finished with all of the tasks we've prepared so you'll have to think up some more yourself, congratulations!
       Feel free to experiment some more, or go take a look in the `applications` folder to see what other people have done.
-\end{enumerate}
 
-TODO: fix fig
-@image html documentation/exahype2/tutorials/Acoustic_2D_start.png
+
+The initial conditions should look like this:
+@image html documentation/exahype2/tutorials/Euler_Airfoil_start.png
+
+Solutions
+===============================
+
+If you are stuck, you can look at the solutions over at: @ref page_exahype2_tutorials_euler_solution
+
+*/
+
+
+/**
+
+@page page_exahype2_tutorials_euler_solution The Euler Equations and Air Flow Over a Symmetric Airfoil: solutions
+ 
+\tableofcontents
+
+Python file
+===============================
+
+A sample python file for this problem:
+
+    import peano4, exahype2
+
+    domain_size   = [120.0, 120.0]
+    domain_offset = [-10.0, -60.0]
+
+    min_level = 5 # Increase for finer mesh
+
+    unknowns = { "p": 1, "v": 2, "E": 1 }
+    auxiliary_variables = {}
+    max_h = 1.1 * min(domain_size) / (3.0 ** min_level)
+    min_h = max_h
+
+    my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+        name                  = "EulerSolver",
+        patch_size            = 22,
+        min_volume_h          = min_h,
+        max_volume_h          = max_h,
+        time_step_relaxation  = 0.5,
+        unknowns              = unknowns,
+        auxiliary_variables   = auxiliary_variables
+    )
+
+    my_solver.plot_description = ", ".join(unknowns.keys())
+
+    my_solver.set_implementation(
+      initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
+      boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+      eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+      flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation
+    )
+
+    exahype2_project = exahype2.Project(
+        namespace     = ["exahype2", "training", "euler"],
+        directory     = ".",
+        project_name  = "Airfoil",
+        executable    = "Airfoil"
+    )
+
+    exahype2_project.add_solver(my_solver)
+    exahype2_project.set_output_path("solutions")
+
+    exahype2_project.set_global_simulation_parameters(
+        dimensions            = 2,
+        size                  = domain_size,
+        offset                = domain_offset,
+        min_end_time          = 10.,
+        max_end_time          = 10.,
+        first_plot_time_stamp = 0.0,
+        time_in_between_plots = 0.5,
+        periodic_BC           = [False, False],
+    )
+
+    exahype2_project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+        "new ::exahype2::LoadBalancingConfiguration()"
+    )
+
+    exahype2_project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
+    peano4_project = exahype2_project.generate_Peano4_project()
+    peano4_project.generate()
+    peano4_project.build(make=True, make_clean_first=False, throw_away_data_after_build=False)
+
+
+C++ Implementation
+===============================
+
+A sample implementation for this problem:
+
+initial conditions:
+
+    // c chord length, t maximum relative thickness.
+    double airfoilSymmetric(double x, double c = 100, double t = 0.12) {
+      return 5.0 * t * c
+            * (0.2969 * sqrt(x / c) + ((((-0.1015) * (x / c) + 0.2843) * (x / c) - 0.3516) * (x / c) - 0.1260) * (x / c));
+    }
+
+    void exahype2::training::euler::EulerSolver::initialCondition(
+      [[maybe_unused]] double* __restrict__                         Q,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] bool                                         gridIsConstructed
+    ) {
+
+      const double y     = airfoilSymmetric(volumeCentre[0]);
+      const double alpha = (y > volumeCentre[1] && -y < volumeCentre[1]) ? 0.0 : 1.0;
+
+      Q[0] = (y > volumeCentre[1] && -y < volumeCentre[1]) ? 1000.0 : 1.0;
+      Q[1] = alpha * 1.0;
+      Q[2] = 0.0;
+      Q[3] = alpha * 2.5;
+
+    }
+
+boundary conditions:
+
+    void exahype2::training::euler::EulerSolver::boundaryConditions(
+      [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[4+0]
+      [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] int                                          normal
+    ) {
+
+      if (normal == 0 && faceCentre[0] == DomainOffset[0]) {
+        Qoutside[0] = 1.0;
+        Qoutside[1] = 1.0;
+        Qoutside[2] = 0.0;
+        Qoutside[3] = 2.5;
+      } else {
+        Qoutside[0] = Qinside[0];
+        Qoutside[1] = Qinside[1];
+        Qoutside[2] = Qinside[2];
+        Qoutside[3] = Qinside[3];
+      }
+
+    }
+
+eigenvalues:
+
+    double ::exahype2::training::euler::EulerSolver::maxEigenvalue(
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal
+    ) {
+
+      const double     irho  = 1.0 / Q[0];
+      constexpr double gamma = 1.4;
+      const double     p     = (gamma - 1)
+                      * (Q[3] - 0.5 * irho * (Q[1] * Q[1] + Q[2] * Q[2]));
+
+      const double c = std::sqrt(gamma * p * irho);
+      const double u = Q[normal + 1] * irho;
+
+      return std::max(std::abs(u - c), std::abs(u + c));
+
+    }
+
+flux:
+
+    void ::exahype2::training::euler::EulerSolver::flux(
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         F // F[4]
+    ) {
+
+      const double     irho  = 1.0 / Q[0];
+      constexpr double gamma = 1.4;
+      const double     p     = (gamma - 1)
+                      * (Q[3] - 0.5 * irho * (Q[1] * Q[1] + Q[2] * Q[2]));
+
+      F[0] = Q[normal + 1];
+      F[1] = Q[normal + 1] * Q[1] * irho;
+      F[2] = Q[normal + 1] * Q[2] * irho;
+      F[3] = Q[normal + 1] * irho * (Q[3] + p);
+
+      F[normal + 1] += p;
+
+    }    
+
+
+These should yield following solution for the final time:
+@image html documentation/exahype2/tutorials/Euler_Airfoil_end.png
 */
