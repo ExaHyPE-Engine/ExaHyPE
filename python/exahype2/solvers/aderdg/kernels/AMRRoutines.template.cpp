@@ -87,7 +87,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
     // Apply the single level restriction operator.
     // Use the fine level unknowns as input in the first iteration.
 {% if DIMENSIONS==2 %}
-    {{ m.gemm('face_F_x', 'lFhbndFine', 'restrictor[subfaceIndex[0]]', 'lFhbndCoarse',
+    {{ m.gemm('face_F_x_add', 'lFhbndFine', 'restrictor[subfaceIndex[0]]', 'lFhbndCoarse',
       '0',
       '0',
       '0') | indent(4) }}{##}
@@ -99,7 +99,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
         'y*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
     }
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-      {{ m.gemm('face_F_y', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lFhbndCoarse',
+      {{ m.gemm('face_F_y_add', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lFhbndCoarse',
         'x*'~NUMBER_OF_UNKNOWNS_PADDED,
         '0',
         'x*'~NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}

@@ -166,16 +166,13 @@ class SingleSweep(ADERDG):
             self.get_name_of_global_instance()
         )
 
-    def _shift_face_data_default_guard(self):
-        return (
-            super(SingleSweep, self)._shift_face_data_default_guard()
-            + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
-                self.get_name_of_global_instance(), self._name
-            )
-            + " and fineGridFace"
-            + self._name
-            + "FaceLabel.getAboveHanging()"
+    def _delete_face_data_default_guard(self):
+        return super(
+            SingleSweep, self
+        )._delete_face_data_default_guard() + " and repositories::{}.isFirstGridSweepOfTimeStep()".format(
+            self.get_name_of_global_instance()
         )
+
 
     def _restrict_face_data_default_guard(self):
         return super(

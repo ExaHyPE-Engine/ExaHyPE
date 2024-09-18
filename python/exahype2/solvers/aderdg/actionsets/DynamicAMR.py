@@ -16,44 +16,14 @@ class DynamicAMR(AbstractADERDGActionSet):
     def __init__(
         self,
         solver,
-        shift_guard="true",
-        interpolate_guard="true",
-        restrict_guard="true",
+        delete_guard="false",
+        interpolate_guard="false",
+        restrict_guard="false",
     ):
         super(DynamicAMR, self).__init__(solver)
-        self._shift_guard = shift_guard
+        self._delete_guard = delete_guard
         self._interpolate_guard = interpolate_guard
         self._restrict_guard = restrict_guard
-
-        self._Template_TouchFaceFirstTime = """
-  #if Dimensions == 2
-  constexpr int SpaceFaceSize      = {{ORDER}} + 1;
-  #else
-  constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-  #endif
-
-  constexpr int FluxElementsPerFace = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-
-  const bool isLeftFace = marker.getSelectedFaceNumber() < Dimensions;
-
-  /*
-   * Data needs to be shifted over because of the order of the operations:
-   * lower faces are created and destroyed one after another, so if the first
-   * is created, then destroyed and writes into the same buffer it is created
-   * from, then the following faces are created from data which is already
-   * mixed up with the results from the first face.
-   * As such we use the outwards side of the face, which is unused since there is
-   * no neighbour on the same level, to temporarily store the fluxes, and clear
-   * the inner side to prepare it for receiving the riemann solutions from the
-   * lower level.
-   */
-  if ({{SHIFT_GUARD}}) {
-    auto* FIn   = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (isLeftFace ? FluxElementsPerFace : 0);
-    auto* FOut  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (isLeftFace ? 0 : FluxElementsPerFace);
-    std::copy_n(FIn, FluxElementsPerFace, FOut);
-    std::fill_n(FIn, FluxElementsPerFace, 0.0);
-  }
-"""
 
         self._Template_CreateHangingFace = """
   if ({{INTERPOLATE_GUARD}}) {
@@ -76,7 +46,7 @@ class DynamicAMR(AbstractADERDGActionSet):
         fineGridFace{{SOLVER_NAME}}QEstimates.value + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + facePosition * {{NUMBER_OF_UNKNOWNS}},
         coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value + facePosition * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
-        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1 - facePosition) * {{NUMBER_OF_UNKNOWNS}},
+        coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + facePosition * {{NUMBER_OF_UNKNOWNS}},
         marker.getRelativePositionWithinFatherFace()
       );
     }
@@ -89,21 +59,31 @@ class DynamicAMR(AbstractADERDGActionSet):
 """
 
         self._Template_DestroyHangingFace = """
-  if ({{RESTRICT_GUARD}}) {
-    #if Dimensions == 2
-    constexpr int SpaceFaceSize      = {{ORDER}} + 1;
-    #else
-    constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
+  #if Dimensions == 2
+  constexpr int SpaceFaceSize      = {{ORDER}} + 1;
+  #else
+  constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
+  #endif
 
-    constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
-    //constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); // TODO: Not used?
+  constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
+
+  if ({{DELETE_GUARD}}) {
+
+    int facePosition = marker.getSelectedFaceNumber() < Dimensions ? 0 : 1;
+    auto* FOut = coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1-facePosition) * FluxElementsPerFace;
+
+    //Delete the elements on the side of the face that the Riemann fluxes will be merged onto. Because of the
+    //  merge operations this must be on the side on which the fine cells are.
+    std::fill_n(FOut, FluxElementsPerFace, 0.0);
+  }
+
+  if ({{RESTRICT_GUARD}}) {
 
     int facePosition = marker.getSelectedFaceNumber() < Dimensions ? 0 : 1;
 
     // Fluxes
     kernels::{{SOLVER_NAME}}::faceFluxRestriction(
-      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + facePosition * FluxElementsPerFace, // const double* lQhbndCoarse
+      coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value + (1-facePosition) * FluxElementsPerFace, // const double* lQhbndCoarse
       fineGridFace{{SOLVER_NAME}}QFluxEstimates.value + facePosition * FluxElementsPerFace, // double* lQhbndFine
       marker.getRelativePositionWithinFatherFace() // const tarch::la::Vector<Dimensions - 1, int>& subfaceIndex
     );
@@ -118,13 +98,7 @@ class DynamicAMR(AbstractADERDGActionSet):
         d = {}
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
-        if (
-            operation_name
-            == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
-        ):
-            d["SHIFT_GUARD"] = self._shift_guard
-            result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
-            pass
+
         if operation_name == peano4.solversteps.ActionSet.OPERATION_CREATE_HANGING_FACE:
             d["INTERPOLATE_GUARD"] = self._interpolate_guard
             result = jinja2.Template(self._Template_CreateHangingFace).render(**d)
@@ -133,6 +107,7 @@ class DynamicAMR(AbstractADERDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_DESTROY_HANGING_FACE
         ):
+            d["DELETE_GUARD"] = self._delete_guard
             d["RESTRICT_GUARD"] = self._restrict_guard
             result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
             pass

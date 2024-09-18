@@ -485,7 +485,7 @@ Material parameters:    """
 
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
             solver=self,
-            shift_guard=self._shift_face_data_default_guard(),
+            delete_guard=self._delete_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
         )
@@ -658,15 +658,8 @@ Material parameters:    """
             + "FaceLabel.getBoundary()"
         )
 
-    def _shift_face_data_default_guard(self):
-        return (
-            "not marker.willBeRefined()"
-            + "and repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridConstruction "
-        )
+    def _delete_face_data_default_guard(self):
+        return "true"
 
     def _interpolate_face_data_default_guard(self):
         return (

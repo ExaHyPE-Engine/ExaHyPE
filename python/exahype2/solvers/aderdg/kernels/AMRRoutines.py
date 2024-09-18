@@ -76,6 +76,22 @@ class AMRRoutines(object):
             "gemm",
             self.d["SOLUTION_STORAGE_PRECISION"],
         )
+        self.d["GEMMS"]["face_F_x_add"] = Gemms(
+            nUnknownsPad,
+            nDof,
+            nDof,
+            nUnknownsPad,
+            nDofPad,
+            nUnknownsPad,
+            1,
+            1,
+            1,
+            1,
+            "face_F_x_add",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"],
+        )
         if nDim == 3:
             self.d["GEMMS"]["face_Q_y"] = Gemms(
                 nDataPad,
@@ -109,105 +125,22 @@ class AMRRoutines(object):
                 "gemm",
                 self.d["SOLUTION_STORAGE_PRECISION"],
             )
-        # nDim volume projection, luh (input/output) is not padded.
-        self.d["GEMMS"]["volume_x"] = Gemms(
-            nData,
-            nDof,
-            nDof,
-            nData,
-            nDofPad,
-            nDataPad,
-            1,
-            0,
-            0,
-            1,
-            "volume_x",
-            "nopf",
-            "gemm",
-            self.d["SOLUTION_STORAGE_PRECISION"],
-        )  # input slice not aligned
-        if nDim == 3:
-            self.d["GEMMS"]["volume_y"] = Gemms(
-                nDataPad,
+            self.d["GEMMS"]["face_F_y_add"] = Gemms(
+                nUnknownsPad,
                 nDof,
                 nDof,
-                nDataPad * nDof,
+                nUnknownsPad * nDof,
                 nDofPad,
-                nDataPad * nDof,
-                1,
-                0,
+                nUnknownsPad * nDof,
                 1,
                 1,
-                "volume_y",
+                1,
+                1,
+                "face_F_y_add",
                 "nopf",
                 "gemm",
                 self.d["SOLUTION_STORAGE_PRECISION"],
             )
-            self.d["GEMMS"]["volume_z"] = Gemms(
-                nData,
-                nDof,
-                nDof,
-                nDataPad * nDof2,
-                nDofPad,
-                nData * nDof2,
-                1,
-                0,
-                1,
-                0,
-                "volume_z",
-                "nopf",
-                "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
-            )  # output slice not aligned
-            self.d["GEMMS"]["volume_z_add"] = Gemms(
-                nData,
-                nDof,
-                nDof,
-                nDataPad * nDof2,
-                nDofPad,
-                nData * nDof2,
-                1,
-                1,
-                1,
-                0,
-                "volume_z_add",
-                "nopf",
-                "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
-            )  # output slice not aligned, add to result
-        else:
-            self.d["GEMMS"]["volume_y"] = Gemms(
-                nData,
-                nDof,
-                nDof,
-                nDataPad * nDof,
-                nDofPad,
-                nData * nDof,
-                1,
-                0,
-                1,
-                0,
-                "volume_y",
-                "nopf",
-                "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
-            )  # output slice not aligned
-            self.d["GEMMS"]["volume_y_add"] = Gemms(
-                nData,
-                nDof,
-                nDof,
-                nDataPad * nDof,
-                nDofPad,
-                nData * nDof,
-                1,
-                1,
-                1,
-                0,
-                "volume_y_add",
-                "nopf",
-                "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
-            )  # output slice not aligned, add to result
 
         if self.d["USE_LIBXSMM"]:
             generate_gemms(
