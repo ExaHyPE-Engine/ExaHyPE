@@ -27,7 +27,7 @@ void ::applications::exahype2::elastic::elastic::pointSource(
   double* const forceVector, // Q[9
   int n) {
 
-  for (int i = 0; i < s.NumberOfUnknowns; i++) {
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = 0.0;
   }
 
@@ -46,7 +46,7 @@ void ::applications::exahype2::elastic::elastic::pointSource(
   float* const forceVector, // Q[9
   int n) {
 
-  for (int i = 0; i < s.NumberOfUnknowns; i++) {
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = 0.0;
   }
 
