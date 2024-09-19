@@ -17,7 +17,7 @@ class UpdateFaceLabel(ActionSet):
    SetLabels is an action set which is automatically merged into all ExaHyPE2
    steps by the project. There's nothing for the user solvers to be done here.
    
-   There are four different fields per face:
+   There are four fields which have a value per side of the face:
    
    - Updated: Boolean[2]
      Shows if the corresponding adjacent cell (left vs right) has performed a
@@ -31,6 +31,24 @@ class UpdateFaceLabel(ActionSet):
    - OldTimeStamp: Double[2]
      Time stamp of previous time step. The old time stamp is required for the
      in-time interpolation, e.g.
+
+  In addition there are three fields that are in common to both faces:
+
+   - Boundary: Boolean
+     Shows whether the cell is at a domain boundary. This is set upon creation
+     by checking one's position in relation to the domain boundaries.
+   - IsHanging: Boolean
+     This states whether the face is a hanging face, i.e. whether the face
+     is adjacent to a cell with a coarser refinement level and therefore there
+     is no face directly "across" from this one for it to merge with.
+     This is set upon the first instance of a "createHangingFace" operation.
+   - AboveHanging: Boolean
+     This states whether the face is above a hanging face, i.e. whether the
+     face is adjacent to a cell with a finer refinement level and therefore
+     the face directly "across" from this one will likely contain no useful
+     information, meaning said information must be obtained from the finer
+     level underneath this one.
+     This is set upon the first instance of a "createHangingFace" operation.
      
    ## Initialisation
    
@@ -41,6 +59,12 @@ class UpdateFaceLabel(ActionSet):
    in return benefits if it is not (properly) initialised, as it then is 
    simpler to spot inconsistencies and missing data updates.
    
+   Relating to IsHanging and AboveHanging: these are currently only used by
+   ADER-DG solvers, though if AMR is implemented for other high-order solvers
+   it will be necessary. Currently it is used to ensure that Riemann-solves
+   are performed on fine faces and not on coarse faces, as the later would
+   cause unphysical transfer of information which lead to uncontrolled
+   oscillations.
   
   """
   def __init__(self, solver_name):
