@@ -102,6 +102,8 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
 # add an extra field for the random vector
 nodes_per_cell = (args.poly_degree + 1) ** args.dimensions
 solver.add_to_cell_data("rand", nodes_per_cell)
+solver.add_to_face_data("randProjection", 2*2*(args.poly_degree+1)**(1))
+solver.add_to_face_data("randSolution",     2*(args.poly_degree+1)**(1))
 
 solver.preprocessing_action_set = InitDofsIntermediatePhaseTest6(solver)
 
