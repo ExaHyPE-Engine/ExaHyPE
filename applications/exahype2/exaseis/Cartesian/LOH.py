@@ -13,6 +13,7 @@ precision           = "double"
 e_t                 = 2.0
 plot_dt             = 0.1
 polynomials         = "legendre"
+use_tracers         = True
 
 size_1d = 9.0 #3.0**min_level
 size    = [size_1d, size_1d, size_1d]   # thousand meters
@@ -45,42 +46,44 @@ theSolver.set_implementation(
   boundary_conditions   = boundary(),
   eigenvalues   = eigenvalue(),
   flux          = flux(),
+  refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
   point_source  = 1
 )
 
 project.add_solver(theSolver)
 
-tracer_particles = project.add_tracer(name="Tracer", attribute_count=12)
+if use_tracers:
+    tracer_particles = project.add_tracer(name="Tracer", attribute_count=12)
 
-project.add_action_set_to_initialisation(
-    exahype2.tracer.InsertParticlesByCoordinates(
-        particle_set=tracer_particles,
-        coordinates=[ [0.693, 0.000, 0.000], [7.348, 7.348, 0.000] ]
+    project.add_action_set_to_initialisation(
+        exahype2.tracer.InsertParticlesByCoordinates(
+            particle_set=tracer_particles,
+            coordinates=[ [0.693, 0.000, 0.000], [7.348, 7.348, 0.000] ]
+        )
     )
-)
 
-project.add_action_set_to_timestepping(
-    peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
-)
-
-project.add_action_set_to_timestepping(
-    exahype2.tracer.DiscontinuousGalerkinTracing(
-        tracer_particles, theSolver,
-        project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+    project.add_action_set_to_timestepping(
+        peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
     )
-)
 
-project.add_action_set_to_timestepping(
-    exahype2.tracer.DumpTracerIntoDatabase(
-        particle_set=tracer_particles, solver=theSolver,
-        filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
-        data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.000001,
-        output_precision=10, clear_database_after_flush=False
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DiscontinuousGalerkinTracing(
+            tracer_particles, theSolver,
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+        )
     )
-)
 
-if not os.path.exists("tracers"):
-    os.makedirs("tracers")
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DumpTracerIntoDatabase(
+            particle_set=tracer_particles, solver=theSolver,
+            filename="tracers/Cartesian_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
+            data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.000001,
+            output_precision=10, clear_database_after_flush=False
+        )
+    )
+
+    if not os.path.exists("tracers"):
+        os.makedirs("tracers")
 
 if plot_dt > 0.0:
   project.set_output_path("solutions")

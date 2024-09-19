@@ -12,17 +12,11 @@
 #include "AbstractElasticSolver.h"
 #include "VariableShortcuts.h"
 #include "tarch/logging/Log.h"
-#include "kernels/ElasticSolver/Kernels.h"
 
 #define _CUSTOM_COORDINATES
 #define ASAGI_NOMPI
 #define ISOTROPIC
 #define _TOP 2
-
-// #include "../ExaSeis_core/Numerics/routines_curvilinear.h"
-// #include "../ExaSeis_core/Numerics/pml.h"
-// #include "../ExaSeis_core/Context/ContextCurvilinearPML.h"
-// #include "../ExaSeis_core/Refinement/refinement.h"
 
 #include "../ExaSeis_core/Context/ContextCurvilinearPML.h"
 #include "../ExaSeis_core/Numerics/routines_curvilinear.h"

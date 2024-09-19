@@ -6,7 +6,6 @@ if UseExaHyPE
 endif
 
 ExaHyPE2Sources = \
-  CellData.cpp \
   CellAccess.cpp \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
@@ -46,7 +45,6 @@ ExaHyPE2Sources = \
   fd/fd4/FD4_patchwise_functors.cpp \
   fv/riemann/Riemann.cpp \
   fv/rusanov/rusanov.cpp \
-  fv/rusanov/sycl/GPUCellData.cpp \
   dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp

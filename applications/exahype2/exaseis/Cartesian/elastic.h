@@ -22,5 +22,11 @@ class applications::exahype2::elastic::elastic: public Abstractelastic {
 
     void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) override;
 
+    ::exahype2::RefinementCommand refinementCriterion(
+        const double* __restrict__                    Q,
+        const tarch::la::Vector<Dimensions, double>&  x,
+        const tarch::la::Vector<Dimensions, double>&  h,
+        double                                        t
+      ) override;
 };
 
