@@ -179,6 +179,7 @@ void mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual(
     const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  systemMatrix,
     const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
     const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgRhs,
+    const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        faceSolutions,
     auto&           cgVertices
 ) {
   static tarch::logging::Log _log( "mghype::matrixfree::solvers::dgcgcoupling" );
@@ -186,7 +187,10 @@ void mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual(
   tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > residual =
       massMatrix * dgRhs
       -
-      systemMatrix * dgSolution;
+      systemMatrix * dgSolution
+      -
+      faceSolutions;
+
 
   tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > restrictedValues =
     restrictionMatrix * residual;

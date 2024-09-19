@@ -317,12 +317,51 @@ class AbstractDGCGCoupling(ActionSet):
   
       tarch::la::Matrix< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode, double > composedRestrictionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( restrictionMatrices, restrictionMatricesScaleFactors, marker.h() );
 
+      // ============================
+      // update the solutions on all 4 adjacent faces so that we 
+      // can correctly restrict the residual. by now, all 
+      // projections have been set correctly, but we might 
+      // redundantly set solutions...
+      // ============================
+      
+      // vector to hold "updated" solutions
+      tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSolutions;
+
+      for (int f=0; f<TwoPowerD; f++) {
+        tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > solutionOnFace;
+        if ( fineGridFaces{{DG_SOLVER_NAME}}(f).getType() == facedata::{{DG_SOLVER_NAME}}::Type::Interior ) {
+          solutionOnFace = repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFaces{{DG_SOLVER_NAME}}(f).getProjection();
+        }
+
+        else if ( fineGridFaces{{DG_SOLVER_NAME}}(f).getType() == facedata::{{DG_SOLVER_NAME}}::Type::Boundary ) {
+          int startIndex = f < Dimensions ? 
+                           repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+                           0;
+          const auto boundaryMatrix = repositories::{{DG_SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+          for (int row=0; row<boundaryMatrix.rows(); row++)
+          {
+            double rowSolution = 0;
+            for (int col=0; col<boundaryMatrix.cols(); col++)
+            {
+              rowSolution += boundaryMatrix( row, col ) * fineGridFaces{{DG_SOLVER_NAME}}(f).getProjection( col + startIndex );
+            }
+            // place this solution into the face
+            solutionOnFace(row) = rowSolution;
+          }
+        }
+
+        // place this into the faceSolutions vector
+        for (int s=0; s<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+          faceSolutions( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = solutionOnFace(s);
+      }
+
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedRestrictionMatrix,
         repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
         repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridCell{{DG_SOLVER_NAME}}.getRhs(),
+        repositories::{{DG_SOLVER_INSTANCE}}.getCellFromFaceMatrix( marker.x(), marker.h() ) * faceSolutions,
         fineGridVertices{{CG_SOLVER_NAME}}
       );    
     }
