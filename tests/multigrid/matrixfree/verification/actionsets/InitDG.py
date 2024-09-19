@@ -547,31 +547,31 @@ class InitDofsDGTest6(InitDofsDGTest1):
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > solution;
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > rhs;
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > residual;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > rand;
 
         // first - fill the solution vector with randoms
         for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++) {
           if ( indexIsOnBoundary(i) ) {
-            solution[i] = 0.0; // to satisfy the boundary conditions
+            rand[i] = 0.0; // to satisfy the boundary conditions
           }
           else {
-            solution[i] = dis(rng);
-            //solution[i] = std::sin( 2*tarch::la::PI * marker.x()(0) ) * std::sin( 2*tarch::la::PI * marker.x()(1) );
+            rand[i] = dis(rng);
+            // solution[i] = std::sin( 2*tarch::la::PI * marker.x()(0) ) * std::sin( 2*tarch::la::PI * marker.x()(1) );
           }
-
-          //solution[i] = dis(rng);
 
           // and residual to 0...
           residual[i] = 0;
+          solution[i] = 0;
         }
 
         // save the random field
-        fineGridCell{{SOLVER_NAME}}.setRand( solution );
+        fineGridCell{{SOLVER_NAME}}.setRand( rand );
 
         // set rhs...
-        rhs = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * solution;
+        rhs = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * rand;
 
         // now we need to compute all projections...
-        auto faceProjections = repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * solution;
+        auto faceProjections = repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * rand;
 
         for (int f=0; f<TwoTimesD; f++) {
           int startIndexProjection = 
@@ -579,17 +579,13 @@ class InitDofsDGTest6(InitDofsDGTest1):
             repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
             0;
           for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++) {
-            fineGridFaces{{SOLVER_NAME}}(f).setProjection(
+            fineGridFaces{{SOLVER_NAME}}(f).setRandProjection(
               p + startIndexProjection,
               faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
             );
             }
 
           }
-
-        // and finally, reset the initial guess to 0....
-        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
-          solution[i] = 0;
 
         // send to mesh...
         fineGridCell{{SOLVER_NAME}}.setSolution( solution );
@@ -619,22 +615,68 @@ class InitDofsIntermediatePhaseTest6(InitDofsIntermediatePhaseTest1):
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
     for (int f=0; f<TwoTimesD; f++)
     for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
-      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getRandSolution(s);
 
     // next, we need to project solution on face onto the cell...
     auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
 
     fineGridCell{{SOLVER_NAME}}.setRhs( fineGridCell{{SOLVER_NAME}}.getRhs( ) + projection );
-
-    // we also reset solutions and projections to 0 for the benefit of the solver
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projections(0.0);
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double >   solutions(0.0);
-
-    for (int f=0; f<TwoTimesD; f++) {
-      fineGridFaces{{SOLVER_NAME}}(f).setProjection(projections);
-      fineGridFaces{{SOLVER_NAME}}(f).setSolution(solutions);
-    }
   }
+  """
+
+  templateTouchFaceFirstTime="""
+  if ( 
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior
+    and
+    Counter==0
+  ) {
+
+    // project the u^\pm into a temporary vector
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
+      repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getRandProjection();
+
+    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+      fineGridFace{{SOLVER_NAME}}.setRandSolution(
+        i,
+        repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
+      );
+  }
+
+  else if (
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary
+    and
+    Counter==0
+  ) {
+    // Essentially what we do here is fix the solution on the boundary to be 
+    // the inner-side projection.
+
+    // skip halfway along the projection vector if we are on face 0 or 1
+    int startIndexProjection = 
+      marker.getSelectedFaceNumber() < Dimensions ?
+      repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+      0;
+
+    auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+
+    /*
+    Here we do slightly messy matrix multiplication. We would just multiply the boundary matrix
+    by the projection vector, and place that into the solution, but here we only want to capture
+    half of the projection vector; the other half lies outside the computational domain and
+    should be fixed to 0.
+    */
+    for (int row=0; row<boundaryMatrix.rows(); row++)
+    {
+      double rowSolution = 0;
+      for (int col=0; col<boundaryMatrix.cols(); col++)
+      {
+        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{SOLVER_NAME}}.getRandProjection( col + startIndexProjection );
+      }
+      // place this solution into the face
+      fineGridFace{{SOLVER_NAME}}.setRandSolution( row, rowSolution );
+    }
+
+  }
+
   """
 
 class InitDofsDGTest4(InitDofsDGTest1):
