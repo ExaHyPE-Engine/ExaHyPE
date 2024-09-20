@@ -1,6 +1,6 @@
 /**
 
-@page page_exahype2_tutorials_swe The Shallow Water Equation (SWE)
+@page page_exahype2_tutorials_swe_old The Shallow Water Equation (SWE)
 
 ## Define and Build the Project
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the SWE project:

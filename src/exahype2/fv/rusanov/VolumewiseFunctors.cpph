@@ -12,7 +12,7 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
-  CellData&                            patchData,
+  CellData<double, double>&            patchData,
   const FluxFunctor&                   fluxFunctor,
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,
@@ -562,7 +562,7 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
-  CellData&                            patchData,
+  CellData<double, double>&            patchData,
   const FluxFunctor&                   fluxFunctor,
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,

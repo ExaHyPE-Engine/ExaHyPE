@@ -23,12 +23,12 @@ namespace exahype2 {
           typename TempDataEnumerator
         >
         static void timeStep_batched_heap_multicore_static_calls(
-          ::exahype2::CellData&   patchData,
-          double                  KOSigma,
-          bool                    evaluateFlux,
-          bool                    evaluateDifferentialSource, //for ncp
-          bool                    evaluateAlgebraicSource, //real source
-          bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+          ::exahype2::CellData<double, double>& patchData,
+          double                                KOSigma,
+          bool                                  evaluateFlux,
+          bool                                  evaluateDifferentialSource, //for ncp
+          bool                                  evaluateAlgebraicSource, //real source
+          bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
           DifferentialSourceTermVariant variant
         )
         #if defined(UseManualInlining)

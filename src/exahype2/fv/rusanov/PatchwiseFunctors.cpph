@@ -13,14 +13,14 @@ namespace exahype2::fv::rusanov::internal {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseFunctors(
-    CellData&                                      patchData,
+    CellData<double, double>&                      patchData,
     const FluxFunctor&                             fluxFunctor,
     const NonconservativeProductFunctor&           nonconservativeProductFunctor,
     const SourceFunctor&                           sourceFunctor,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
-    peano4::utils::LoopPlacement                 loopParallelism,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
-    const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+    peano4::utils::LoopPlacement                   loopParallelism,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
     const TempDataEnumeratorType&                  fluxEnumerator,
     const TempDataEnumeratorType&                  ncpEnumerator,
     const TempDataEnumeratorType&                  eigenvalueEnumerator,
@@ -359,13 +359,13 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors(
-  CellData&                            patchData,
+  CellData<double, double>&            patchData,
   const FluxFunctor&                   fluxFunctor,
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,
   const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
   tarch::timing::Measurement&          measurement,
-  peano4::utils::LoopPlacement       loopParallelism
+  peano4::utils::LoopPlacement         loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseHeapFunctors()");
@@ -466,12 +466,12 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors(
-  CellData&                            patchData,
+  CellData<double, double>&            patchData,
   const FluxFunctor&                   fluxFunctor,
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,
   const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
-  peano4::utils::LoopPlacement       loopParallelism
+  peano4::utils::LoopPlacement         loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseHeapFunctors()");

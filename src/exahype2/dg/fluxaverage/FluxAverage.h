@@ -94,7 +94,7 @@ namespace exahype2 {
        * static keyword required to avoid multiple definition linker errors.
        */
       static void cellIntegral_patchwise_in_situ_GaussLegendre_functors(
-        ::exahype2::CellData&                          cellData,
+        ::exahype2::CellData<double, double>&          cellData,
         const int                                      order,
         const int                                      unknowns,
         const int                                      auxiliaryVariables,
@@ -130,7 +130,7 @@ namespace exahype2 {
        * static keyword required to avoid multiple definition linker errors.
        */
       static void multiplyWithInvertedMassMatrix_GaussLegendre(
-        ::exahype2::CellData&                          cellData,
+        ::exahype2::CellData<double, double>&          cellData,
         const int                                      order,
         const int                                      unknowns,
         const int                                      auxiliaryVariables,
@@ -210,7 +210,7 @@ namespace exahype2 {
         int      auxiliaryVariables
       >
       void cellIntegral_patchwise_in_situ_GaussLegendre(
-        ::exahype2::CellData&                          cellData,
+        ::exahype2::CellData<double, double>&          cellData,
         bool                                           evaluateFlux,
         bool                                           evaluateNonconservativeProduct,
         bool                                           evaluateSource,
