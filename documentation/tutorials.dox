@@ -25,6 +25,37 @@ However, the list below provides an overview over some tutorials.
 </table>
 
 
+# How to add your own tutorial
+
+Tutorials are written as plain Doxygen files and typically have the extension dox.
+If you prefer to have Python notebooks, please store the notebook (without any 
+binary content) in the repo. The notebooks then have to be converted before we 
+actually invoke doxygen. This is done through the following steps per notebook
+file:
+
+- Invoke
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+jupyter nbconvert --to markdown tutorials/exahype2/exercises/swe/swe.ipynb
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  It is important that you stay within the directory hosting tutorials, as 
+  follow-up steps will use this information to construct some file handles.
+- Call the Peano-specific postprocessing script on this file:  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 tutorials/postprocess-markdown-of-jupyter-notebook.py tutorials/exahype2/exercises/swe/swe
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Note that we omit the extension here.
+- Remove the converted md file:
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rm tutorials/exahype2/exercises/swe/swe.md
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  This is important as we otherwise will get garbage.
+  
+If you now call Doxygen, the notebook is integrated into the static webpage.
+It will be given the identifier that corresponds to the qualified file path, 
+where all / are replaced with underscores.
+
+
+
 
 */
 
