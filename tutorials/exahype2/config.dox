@@ -4,7 +4,7 @@
  
 \tableofcontents
 
-We have Peano 4 and ExaHyPE 2 installed, but how do we use it? For this, let's take a look at our first configuration file, in `tutorials/toyproblems/Acoustic/Acoustic.ipynb`
+We have Peano 4 and ExaHyPE 2 installed, but how do we use it? For this, let's take a look at our first configuration file, in `tutorials/toyproblems/acoustic/Acoustic.ipynb`
 The configuration files are in Python, so it should surprise no one that they start with the following:
 
     import peano4, exahype2
