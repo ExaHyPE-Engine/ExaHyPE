@@ -1,6 +1,7 @@
 /**
 
-@page page_exahype2_tutorials_swe_old The Shallow Water Equation (SWE)
+@page page_exahype2_tutorials_toy_problems_swe_fv The Shallow Water Equation (SWE) with Finite Volumes and SymPy
+
 
 ## Define and Build the Project
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the SWE project:
