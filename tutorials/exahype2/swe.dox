@@ -39,9 +39,9 @@ With eigenvalues:
     \end{array} \right) =
     \left(
     \begin{array}{lr}
-        h u_n + \sqrt{g (h+b)} \\
-        h u_n \\
-        h u_n - \sqrt{g (h+b)} \\
+        u_n + \sqrt{g (h+b)} \\
+        u_n \\
+        u_n - \sqrt{g (h+b)} \\
     \end{array} \right)
 \end{equation*}
 @f$
