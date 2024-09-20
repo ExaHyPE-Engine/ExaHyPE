@@ -52,7 +52,7 @@ Their components are the water height \b h, the momentum in \b x- and \b y- dire
 and the bathymetry \b b, which is the height of the ground below the liquid. They also use the gravity \b g=9.81.
 
 We want to simulate a so-called \e dam-break scenario, that is a scenario where a large mass of fluid spreads rapidly from an initial resting position, such as might happen when you jump into a pool, or when you jump into a bathtub, or when you jump into a puddle.
-A configuration file has already been created for you at `tutorials/SWE/SWe.ipynb`.
+A configuration file has already been created for you at `tutorials/toyproblems/SWE/SWE.ipynb`.
 Try running it, and then look into the generated implementation file `SWESolver.cpp`.
 
 - Exercices

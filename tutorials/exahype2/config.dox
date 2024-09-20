@@ -4,7 +4,7 @@
  
 \tableofcontents
 
-We have Peano 4 and ExaHyPE 2 installed, but how do we use it? For this, let's take a look at our first configuration file, in `tutorials/Acoustic/Acoustic.ipynb`
+We have Peano 4 and ExaHyPE 2 installed, but how do we use it? For this, let's take a look at our first configuration file, in `tutorials/toyproblems/Acoustic/Acoustic.ipynb`
 The configuration files are in Python, so it should surprise no one that they start with the following:
 
     import peano4, exahype2
@@ -66,7 +66,7 @@ We can also specify here whether we want to use periodic boundary conditions:
       periodic_BC           = [True, True],
     )
 
-Finally, we have some more optimizations for the project, and then we can generate all the glue code we need and compile it:
+Finally, we have some more optimizations for the project, we inform the project of where to look for the peano libraries, and then we can generate all the glue code we need and compile it:
 
 
     exahype2_project.set_load_balancing(
@@ -74,7 +74,7 @@ Finally, we have some more optimizations for the project, and then we can genera
       "new ::exahype2::LoadBalancingConfiguration()"
     )
 
-    exahype2_project.set_Peano4_installation("", peano4.output.CompileMode.Release)
+    exahype2_project.set_Peano4_installation("../../../../", peano4.output.CompileMode.Release)
     peano4_project = exahype2_project.generate_Peano4_project()
     peano4_project.generate()
     peano4_project.build(make=True, make_clean_first=False, throw_away_data_after_build=False)
