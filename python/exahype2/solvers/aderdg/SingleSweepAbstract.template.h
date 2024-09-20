@@ -6,6 +6,8 @@
 // **********************************************************************************************
 #pragma once
 
+#include <algorithm>
+
 #include "Constants.h"
 
 #include "exahype2/Solver.h"
