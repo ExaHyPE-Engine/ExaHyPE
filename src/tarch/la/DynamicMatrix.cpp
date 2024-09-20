@@ -139,9 +139,16 @@ void tarch::la::DynamicMatrix::scale(double value) {
 void tarch::la::DynamicMatrix::multiply( double* result, double* x ) {
   std::fill_n(result,_rows,0.0);
 
-  for (int col=0; col<_cols; col++)
+/*  for (int col=0; col<_cols; col++)
   for (int row=0; row<_rows; row++) {
     result[row] += _m[ serialise(row,col) ] * x[row];
+  }
+*/
+
+  for (int row = 0; row < _rows; row++){
+    for (int col = 0; col < _cols; col++){
+      result[row] += _m[serialise(row, col)] * x[col];
+    }
   }
 }
 

@@ -1,0 +1,87 @@
+/**
+
+@page page_exahype_solvers Solvers
+
+
+\li \subpage page_exahype_solvers_finite_volumes
+\li \subpage page_exahype_solvers_enclave_solvers
+\li \subpage page_exahype_solvers_aderdg
+
+## Time step sizes (CFL)
+
+All solvers with adaptive time step sizes, i.e. time step sizes that are computed from the solution, will require the user to inject admissible CFL conditions. 
+That is, they will operate with a time step size which they compute through 
+
+@f$ dt \leq C \cdot \frac{dx}{\lambda_{max}} @f$
+
+This formula implies:
+
+- If the maximum eigenvalue increases, the time step size has to decrease. The maximum eigenvalue denotes the signal propagation speed and if it grows, information travels faster, and we have to sample the signal more often.
+- If the mesh size decreases, the time step size has to decrease, too. Otherwise, it cannot capture information propagation on finer scales.
+
+
+      Calibration factor of CFL condition. The Runge-Kutta order is multiplied
+      with this value following the formula for Cockburn-Shu damping
+
+In the context of higher-order or flexible-order methods, we employ a variation of this formula:
+
+@f$ dt \leq C \cdot \frac{dx}{\lambda_{max} ((2N+1)) } @f$
+
+where N denotes the polynomial order. 
+This altered formula is taken from <a href="https://www-users.cse.umn.edu/~bcockbur//lecture_notes/DG-1.pdf">Cockburn</a>
+and takes into account that the spatial stencil is becoming wider with increasing polynomial order.
+Therefore, signals can travel wider in one time step.
+Therefore, the time step size has to be smaller, too.
+
+Dumbser et al discuss this phenomenon (and actually introduced us to this concept) in 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz:
+A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes
+Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+##### Solver initialisation
+
+If you have a complex solver setup, you might want to run some complex
+initialisation at startup. However, important parts of the
+ infrastructure might not be up yet when the solver's constructor is
+invoked. So it is generally not a good idea to add too much setup
+routines to the constructor.
+
+Each solver has eight further routines that are of interest to squeeze
+in any initialisation or global state update:
+
+-   startGridConstructionStep
+
+-   finishGridConstructionStep
+
+-   startGridInitialisationStep
+
+-   finishGridInitialisationStep
+
+-   startTimeStep
+
+-   finishTimeStep
+
+-   startPlottingStep
+
+-   finishPlottingStep
+
+If you plug into these, please ensure you continue to call the original
+(superclass) routine still. A typical pattern we've seen is to run some
+initialisation just prior to the first grid construction step:
+
+class MyClass \... void startGridConstructionStep() override; \... ;
+
+void MyClass::startGridConstructionStep() // call superclass routine
+AbstractMyClass::startGridConstructionStep(); static bool isInitialised
+= false; if (not isInitialised) isInitialised = true; // your
+initialisation ;
+
+
+
+ */
+ 

@@ -109,6 +109,32 @@ tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
 }
 
 #else
+template<int Rows, typename Scalar>
+tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
+  const tarch::la::Matrix<Rows,Rows,Scalar>&  M
+){
+  tarch::la::Matrix<Rows,Rows,Scalar> result;
+  tarch::la::Matrix<Rows,Rows,Scalar> LU = M;
+  lu(LU);
+  for (int j = 0; j < Rows; j++) {
+    for (int i = 0; i < Rows; i++) {
+      result(i,j) = (i==j) ? 1.0 : 0.0;
+      for (int k = 0; k < i; k++) {
+        result(i,j) -= LU(i,k) * result(k,j);
+      }
+    }
+
+    for (int i = Rows - 1; i >= 0; i--) {
+      for (int k = i + 1; k < Rows; k++) {
+        result(i,j) -= LU(i,k) * result(k,j);
+      }
+      result(i,j) /= LU(i,i);
+    }
+  }
+  return result;
+}
+#endif
+
 
 template<typename Scalar>
 tarch::la::Matrix<2,2,Scalar> tarch::la::invert(
@@ -160,5 +186,3 @@ tarch::la::Matrix<3,3,Scalar> tarch::la::invert(
   
   return result;
 }
-
-#endif

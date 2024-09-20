@@ -8,7 +8,7 @@ import jinja2
 
 
 class DiscontinuousGalerkinTracing(
-    peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
+    peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets
 ):
     """!
 
@@ -91,9 +91,8 @@ if (
     p->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
   }
 """
-
-        peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.__init__(
-            self,
+ 
+        super(DiscontinuousGalerkinTracing,self).__init__(
             particle_set,
             jinja2.Template(cell_compute_kernel).render(**self.tracerDict),
             jinja2.Template(touch_vertex_first_time_compute_kernel).render(
@@ -124,19 +123,14 @@ if (
 #include "exahype2/dg/Tracer.h"
 """
         )
-        return (
-            peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.get_includes(
-                self
-            )
+        return (super(DiscontinuousGalerkinTracing,self).get_includes()
             + "\n"
             + result.render(**self.tracerDict)
         )
 
     def get_attributes(self):
         return (
-            peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.get_attributes(
-                self
-            )
+            super(DiscontinuousGalerkinTracing,self).get_attributes()
             + """
 double _timeStepSize;    
 """

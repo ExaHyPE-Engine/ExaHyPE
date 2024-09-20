@@ -35,11 +35,11 @@ set(META_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
 set(META_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
 message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
 
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 17 CACHE STRING "")
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(CMAKE_C_EXTENSIONS OFF)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20 CACHE STRING "")
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -77,7 +77,7 @@ include(Clang-Format)
 include(Sanitisers)
 include(IWYU)
 include(Clang-Tidy)
-include(CCache)
+include(Ccache)
 include(Doxygen)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
@@ -123,14 +123,14 @@ check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
 
 list(APPEND TOOLCHAINS
-  " "
+  "no"
   "intel"
   "nvidia"
   "scorep"
   "chrome"
   "gnu"
 )
-set(WITH_TOOLCHAIN "" CACHE STRING "${TOOLCHAINS}")
+set(WITH_TOOLCHAIN "no" CACHE STRING "${TOOLCHAINS}")
 set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${TOOLCHAINS})
 
 if(WITH_TOOLCHAIN STREQUAL "scorep")
@@ -156,18 +156,16 @@ elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   target_link_libraries(project_options INTERFACE CUDA::nvToolsExt)
   add_compile_definitions(UseNVTX)
   add_compile_definitions(UseLogService=NVTXLogger)
-elseif(NOT WITH_TOOLCHAIN STREQUAL "")
-  message(FATAL_ERROR "CMake build system currently does not support the logger ${WITH_TOOLCHAIN}")
 endif()
 
 list(APPEND MULTICORES_BACKENDS
-  " "
-  "cpp"
+  "no"
   "omp"
-  "tbb"
   "sycl"
+  "tbb"
+  "cpp"
 )
-set(WITH_MULTITHREADING "" CACHE STRING "${MULTICORES_BACKENDS}")
+set(WITH_MULTITHREADING "no" CACHE STRING "${MULTICORES_BACKENDS}")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
 
 if(WITH_MULTITHREADING)
@@ -193,18 +191,17 @@ elseif(WITH_MULTITHREADING STREQUAL "sycl")
 endif()
 
 list(APPEND ACCELERATOR_BACKENDS
-  " "
-  "cpp"
+  "no"
   "omp"
   "sycl"
+  "cpp"
   "hip"
-  "cuda"
 )
-set(WITH_GPU "" CACHE STRING "${ACCELERATOR_BACKENDS}")
+set(WITH_GPU "no" CACHE STRING "${ACCELERATOR_BACKENDS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
 
 list(APPEND ACCELERATOR_ARCHITECTURES
-  " "
+  "none"
   "sm_70"
   "sm_72"
   "sm_75"
@@ -217,7 +214,7 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "gfx90a"
   "spir64"
 )
-set(WITH_GPU_ARCH "" CACHE STRING "GPU architecture sm_XX or gfxXXX")
+set(WITH_GPU_ARCH "none" CACHE STRING "GPU architecture sm_XX or gfxXXX")
 set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${ACCELERATOR_ARCHITECTURES})
 
 string(SUBSTRING "${WITH_GPU_ARCH}" 0 3 GPU_PREFIX)
@@ -230,21 +227,6 @@ endif()
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
   find_package(IntelSYCL REQUIRED)
   #target_link_libraries(project_options INTERFACE IntelSYCL)
-endif()
-
-if(WITH_CUDA)
-  target_compile_options(project_options INTERFACE -cuda)
-  target_link_options(project_options INTERFACE -cuda)
-endif()
-
-if("${WITH_GPU}" STREQUAL "cuda")
-  set(ENABLE_CUDA_COMPILATION_OPTIONS ON)
-  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
-  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
-  find_package(CUDAToolkit REQUIRED)
-  target_link_libraries(project_options INTERFACE CUDA::toolkit)
-else()
-  set(ENABLE_CUDA_COMPILATION_OPTIONS OFF)
 endif()
 
 if(WITH_GPU)
@@ -269,16 +251,6 @@ if(WITH_GPU)
     endif()
   elseif(WITH_GPU STREQUAL "hip")
     message(WARNING "Currently the flags for HIP need to be passed manually")
-  elseif(WITH_GPU STREQUAL "cuda")
-    set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
-    set(CMAKE_CUDA_STANDARD 17)
-    enable_language(CUDA)
-    option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON)
-    option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON)
-    find_package(CUDAToolkit REQUIRED)
-    target_link_libraries(project_options INTERFACE CUDA::toolkit)
-    string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA architecture" FORCE)
   endif()
 endif()
 
@@ -316,24 +288,19 @@ endif()
 # Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 set(PEANO_CXX_FLAGS_RELEASE -O3)
-set(PEANO_CUDA_FLAGS_RELEASE -O3)
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 
 #-O2 -fno-omit-frame-pointer
 set(PEANO_CXX_FLAGS_DEBUG -g -O0)
-set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
 
 set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
-set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
 set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
 
 set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
-set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
 
 set(PEANO_CXX_FLAGS_TRACE -g -O2)
-set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
@@ -344,13 +311,13 @@ option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" OFF)
 option(WITH_NETCDF "Build with NetCDF support" OFF)
-option(ENABLE_EXAHYPE "Enable ExaHyPE2" OFF)
-option(ENABLE_SWIFT "Enable Swift2" OFF)
-option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
-option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
-option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
+option(ENABLE_SWIFT "Enable Swift 2" OFF)
 option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
+option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
+option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
+option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
 option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
+option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
@@ -491,13 +458,14 @@ add_subdirectory(src)
 
 display_separator("Project Configuration Summary")
 display_variable(AVAILABLE_PROCESSOR_COUNT)
-display_variable(WITH_TOOLCHAIN)
+
+display_variable(WITH_DIMENSIONS)
 display_variable(WITH_MULTITHREADING)
 display_variable(WITH_GPU)
 display_variable(WITH_GPU_ARCH)
-display_variable(WITH_DIMENSIONS)
 display_variable(WITH_MPI)
 display_variable(WITH_TARGETDART)
+display_variable(WITH_TOOLCHAIN)
 display_variable(WITH_OTTER)
 if(DEFINED Otter_DIR)
   display_variable(Otter_DIR)
@@ -507,12 +475,18 @@ display_variable(WITH_LIBXSMM)
 display_variable(WITH_VTK)
 display_variable(WITH_HDF5)
 display_variable(WITH_NETCDF)
-display_variable(ENABLE_EXAHYPE)
-display_variable(ENABLE_FINITEELEMENTS)
-display_variable(ENABLE_MULTIPRECISION)
-display_variable(ENABLE_LOADBALANCING)
+
+display_subseparator("Options for Extensions")
+display_variable(ENABLE_SWIFT)
 display_variable(ENABLE_PARTICLES)
+display_variable(ENABLE_FINITEELEMENTS)
+display_variable(ENABLE_EXAHYPE)
+display_variable(ENABLE_LOADBALANCING)
 display_variable(ENABLE_BLOCKSTRUCTURED)
+display_variable(ENABLE_MULTIPRECISION)
+
+display_subseparator("Options for Tools")
+display_variable(USE_CCACHE)
 
 display_subseparator("Options for Sanitisers")
 display_variable(SANITISE_ADDRESS)
@@ -539,19 +513,6 @@ display_variable(PEANO_TRACE_DEFINITIONS)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
-
-if(WITH_GPU STREQUAL "cuda")
-  display_variable(CMAKE_CUDA_FLAGS)
-  display_variable(PEANO_CUDA_FLAGS_RELEASE)
-  display_variable(PEANO_CUDA_FLAGS_DEBUG)
-  display_variable(PEANO_CUDA_FLAGS_STATS)
-  display_variable(PEANO_CUDA_FLAGS_ASSERTS)
-  display_variable(PEANO_CUDA_FLAGS_TRACE)
-  display_variable(CMAKE_CUDA_HOST_COMPILER)
-  display_variable(CMAKE_CUDA_ARCHITECTURES)
-  display_variable(CUDA_SEPARABLE_COMPILATION)
-  display_variable(CUDA_RESOLVE_DEVICE_SYMBOLS)
-endif()
 
 display_subseparator("Options to Install")
 display_variable(CMAKE_INSTALL_FULL_BINDIR)

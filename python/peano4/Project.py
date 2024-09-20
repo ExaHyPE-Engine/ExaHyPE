@@ -41,12 +41,21 @@ class Project (object):
     if subdirectory and not os.path.exists(subdirectory):
       os.mkdir(subdirectory)
 
-    self.namespace    = namespace
-    self.directory    = directory
-    self.subdirectory    = subdirectory
-    if(subdirectory):
-      self.subdirectory += "/"
+    self.rootnamespace = namespace.copy()
+    self.namespace = namespace
+    self.namespaces = []
+    self.subdirectories = []
     self.project_name = project_name
+    self.directory = directory
+    self._subdirectory = subdirectory
+    if subdirectory:
+      self.namespace += [ subdirectory ]
+    if self.namespace:
+      if not self.namespace in self.namespaces:
+        self.namespaces.append(self.namespace)
+      if not self.subdirectory in self.subdirectories:
+        self.subdirectories.append(self.subdirectory)
+    print("project.subdirectories = ", self.subdirectories)
 
     #
     # Create default output model, i.e. those parts that have to be there
@@ -57,7 +66,7 @@ class Project (object):
     #
     # Empty model by default
     #
-    self.datamodel    = peano4.datamodel.Model(namespace, self.subdirectory)
+    self.datamodel    = peano4.datamodel.Model(self.namespace, self._subdirectory)
 
     self.solversteps  = peano4.solversteps.Steps(self)
 
@@ -68,6 +77,7 @@ class Project (object):
     self.build_was_successful = False
 
     self.constants  = peano4.output.Constants(self)
+    self.subconstants = []
 
     if executable:
       self.output.makefile.set_executable_name(executable)
@@ -93,6 +103,7 @@ class Project (object):
     self.is_built     = False
 
     self.constants  = peano4.output.Constants(self)
+    self.subconstants = []
 
   def generate(self,
                overwrite=peano4.output.Overwrite.Default,
@@ -130,9 +141,17 @@ class Project (object):
 
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
+
+    # print("project.subdirectories = ", self.subdirectories)
+    # print("main.subdirectories = ", self.main.project.subdirectories)
+
     self.main.construct_output(self.output,self.project_name + "-main")
-    self.output.generate(overwrite, self.directory, self.subdirectory)
-    self.constants.generate(overwrite, self.directory, self.subdirectory)
+    self.output.generate(overwrite, self.directory, self.subdirectories)
+    if self.subconstants:
+      for i in range(len(self.subconstants)):
+        self.subconstants[i].generate(overwrite, self.directory, self.subdirectories[i])
+    else:
+      self.constants.generate(overwrite, self.directory)
 
     print( "generation complete" )
 
@@ -276,9 +295,9 @@ class Project (object):
     return success
 
 
-  def add_subproject(self, subproject: 'Project'): #, subnamespace: str #def merge
-            # project_name = 'merged_project',
-            # executable = 'merged_executable'
+  def add_subproject(self,
+                     subproject: 'Project',
+                     master = False): #, subnamespace: str #def merge
     """!
     Adds a new Peano4 project into this Peano 4 project
     """
@@ -324,10 +343,17 @@ class Project (object):
       #         dict_merged[key] = value
       #   return dict_merged
 
-    # result_project = Project(lhs.namespace, project_name, lhs.directory)
+    self.namespace = subproject.namespace
+    self.namespaces.append(subproject.namespace)
+    self.datamodel.namespace = subproject.datamodel.namespace
+    self.datamodel._subdirectory = subproject.datamodel._subdirectory
+    if not subproject.subdirectory in self.subdirectories:
+      self.subdirectories.append(subproject.subdirectory)
+    if not self.datamodel.namespace in self.datamodel.namespaces:
+      self.datamodel.namespaces.append(self.datamodel.namespace)
+    if not self.datamodel.subdirectory in self.datamodel.subdirectories:
+      self.datamodel.subdirectories.append(self.datamodel.subdirectory)
 
-    # result_project.output.makefile.set_executable_name(executable)
-    # result_project.output.readme.set_executable_name(executable)
 
     #
     # merge all DaStGen2 and ParticleSet attributes of datamodel
@@ -347,8 +373,8 @@ class Project (object):
     # merge all steps of solversteps
     #
     for step in subproject.solversteps._steps:
-      # step.name = lhs.project_name
-      self.solversteps.add_step(step)
+      # self.solversteps.add_step(step)
+      self.solversteps._steps.append(step)
 
     #
     # merge all keys and strings of output.makefile
@@ -382,10 +408,13 @@ class Project (object):
     for flag in subproject.output.makefile.d["LDFLAGS"].split():
       self.output.makefile.add_linker_flag(flag)
 
+    self.output.makefile.d["LIBS"] += subproject.output.makefile.d["LIBS"]
+    self.output.makefile.d["GENERATED_INCLUDE_DIRS"] |= subproject.output.makefile.d["GENERATED_INCLUDE_DIRS"]
+    self.output.makefile.d["MODE"] = subproject.output.makefile.d["MODE"]
+    # self.output.makefile.d["GPUOBJS"] += subproject.output.makefile.d["GPUOBJS"]
+
     # result_project.output.makefile.add_gpu_object()
     # result_project.output.makefile.d["CMAKE_LIBS"]
-
-    self.output.makefile.d["LIBS"] += subproject.output.makefile.d["LIBS"]
 
     for module in subproject.output.makefile.d["FORTRAN_MODULES"]:
       self.output.makefile.add_Fortran_module(module)
@@ -399,8 +428,6 @@ class Project (object):
       assert (
           self.output.makefile.d["DIM"] == subproject.output.makefile.d["DIM"]
       ), "the dimensions of the added subproject doesn't match the current one of the main project"
-
-    self.output.makefile.d["GENERATED_INCLUDE_DIRS"] |= subproject.output.makefile.d["GENERATED_INCLUDE_DIRS"]
 
     # ... for filepaths
     for filename in subproject.output.makefile.hfiles:
@@ -436,18 +463,25 @@ class Project (object):
     for i in subproject.output.artefacts:
       self.output.add(i)
 
-    # What "HEADER_FILE_TEMPLATE" and "CPP_FILE_TEMPLATE" are to be in the main project, if subprojects have individual values
-    # if not self.main.d["HEADER_FILE_TEMPLATE"]:
-    #   self.main.d["HEADER_FILE_TEMPLATE"] = subproject.main.d["HEADER_FILE_TEMPLATE"]
-    # if not self.main.d["CPP_FILE_TEMPLATE"]:
-    #   self.main.d["CPP_FILE_TEMPLATE"] = subproject.main.d["CPP_FILE_TEMPLATE"]
+
+    #
+    # the last added subproject becomes the master project (which will provide the template for the main file)
+    #
+    if master:
+      self.main = subproject.main
+      self.rootnamespace = subproject.rootnamespace
+      self._subdirectory = subproject._subdirectory
+
+    self.main.project = self
+    # self.main.overwrite = subproject.main.overwrite
+    # self.main.d.update(subproject.main.d)
 
     #
     # merge all constants
     #
-    self.constants.d = {**self.constants.d, **subproject.constants.d}
+    self.subconstants.append(subproject.constants)
 
-    # ...
+    ## not needed, automatically done by subproject
     # result_project.set_solver_repository_dict()
     # result_project.generate_solver_repository()
 
@@ -469,3 +503,10 @@ class Project (object):
     # print("=== END main dict: ===")
 
     # return result_project
+
+  @property
+  def subdirectory(self):
+      subdirectory = self._subdirectory
+      if subdirectory:
+          subdirectory += "/"
+      return subdirectory

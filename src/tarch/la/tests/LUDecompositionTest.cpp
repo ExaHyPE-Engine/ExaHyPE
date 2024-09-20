@@ -15,7 +15,8 @@ tarch::la::tests::LUDecompositionTest::LUDecompositionTest():
 void tarch::la::tests::LUDecompositionTest::run() {
   testMethod (testLUNoPivoting);
   testMethod (testLU);
-  testMethod (testInversion);
+  testMethod (testInversion0 );
+  testMethod (testInversion1 );
 }
 
 
@@ -26,43 +27,22 @@ void tarch::la::tests::LUDecompositionTest::testLUNoPivoting() {
 void tarch::la::tests::LUDecompositionTest::testLU() {
   // Test is obviously buggy. The pivot values are doubles but the test uses
   // them as integer in line 57.
-/*
-  Matrix<4,4,double> A;
-  assignList(A) =
-      5.0, 2.0, 3.0, 1.0,
-      6.0, 3.0, 6.0, 1.0,
-      3.0, 2.0, 5.0, 4.0,
-      4.0, 1.0, 2.0, 1.0;
-  Matrix<4,4,double> Acopy(A);
-  Vector<4,double> pivots;
-  lu(A,pivots);
-  Matrix<4,4,double> L(A);
-  for (int i=0; i < 4; i++){
-    L(i,i) = 1.0;
-    for (int j=i+1; j < 4; j++){
-      L(i,j) = 0.0;
-    }
-  }
-  Matrix<4,4,double> R(A);
-  for (int j=0; j < 4; j++){
-    for (int i=j+1; i < 4; i++){
-      R(i,j) = 0.0;
-    }
-  }
-  A = L * R;
-  for (int i=0; i < 4; i++){
-    for (int j=0; j < 4; j++){
-      double temp = Acopy(i,j);
-      Acopy(i,j) = Acopy(pivots(i),j);
-      Acopy(pivots(i),j) = temp;
-    }
-  }
-*/
+  Matrix<2,2,double> A = {
+    4.0, 3.0,
+    6.0, 3.0
+  };
+  Matrix<2,2,double> LU = {
+    4.0, 3.0,
+    1.5, -1.5
+  };
+
+  tarch::la::lu(A);
+
+  validateEquals( A, LU );
 }
 
-void tarch::la::tests::LUDecompositionTest::testInversion(){
-  #ifdef UseLapack
-  
+
+void tarch::la::tests::LUDecompositionTest::testInversion0(){
   // checking if Lapack correctly configured. Invert
   // a diagonal matrix.
 
@@ -83,6 +63,22 @@ void tarch::la::tests::LUDecompositionTest::testInversion(){
   };
 
   validateEquals( invert(A), AInverted );
-  
-  #endif
+}
+
+
+void tarch::la::tests::LUDecompositionTest::testInversion1(){
+  // checking if Lapack correctly configured. Invert
+  // a diagonal matrix.
+
+  Matrix<2,2,double> A = {
+    -1.0, 3.0/2.0,
+    1.0, -1.0
+  };
+
+  Matrix<2,2,double> AInverted = {
+    2, 3,
+    2, 2
+  };
+
+  validateEquals( invert(A), AInverted );
 }

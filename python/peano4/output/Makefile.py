@@ -9,7 +9,6 @@ import jinja2
 
 from .Helper import write_file
 from .Helper import find_CMake_build_dir
-from .Helper import using_cuda_backend
 from .Helper import caller_distance_to_build_root
 
 from .Overwrite import Overwrite
@@ -36,7 +35,6 @@ CXXFLAGS        = {{CXXFLAGS}}
 FC              = {{FC}}
 FCFLAGS         = {{FCFLAGS}}
 LDFLAGS         = {{LDFLAGS}}
-GPUOBJS         = {{GPUOBJS}}
 LIBS            = {{LIBS}}
 DIM             = {{DIM}}
 CONFIGUREPATH   = {{CONFIGUREPATH}}
@@ -144,7 +142,6 @@ the SISC paper
         self.d["FC"] = ""
         self.d["FCFLAGS"] = ""
         self.d["LDFLAGS"] = ""
-        self.d["GPUOBJS"] = ""
         self.d["LIBS"] = ""
         self.d["DIM"] = "2"
         self.d["CONFIGUREPATH"] = "."
@@ -156,7 +153,7 @@ the SISC paper
         self.d["CMAKE_LDFLAGS"] = []
         self.d["CMAKE_COMPILE_DEFINITIONS"] = []
         self.d["USING_CMAKE"] = False
-        self.d["APP_SUBDIRECTORY"] = ""
+        self.d["APP_SUBDIRECTORIES"] = []
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
         self.d["CMAKE_MAKE_COMMAND"] = ""
         self.set_mode(CompileMode.Debug)
@@ -172,11 +169,9 @@ the SISC paper
     def clear_files(self):
         self.hfiles = []
         self.cppfiles = []
-        self.cufiles = []
         self.fortranfiles = []
         self.generated_hfiles = []
         self.generated_cppfiles = []
-        self.generated_cufiles = []
         self.generated_fortranfiles = []
 
     def set_dimension(self, dimension):
@@ -203,15 +198,6 @@ the SISC paper
         self.d["FCFLAGS"] += " -I" + path
         self.d["GENERATED_INCLUDE_DIRS"].add(path)
 
-    def add_gpu_object(self, object_path):
-        """
-        This is a temporary fix for GPU offloading with OpenMP and LLVM and will
-        be required ntil linking to static libraries is supported. We need to
-        collect all object files that contain offload instructions and later
-        add them to the linker command. NOTE: the order matters i.e. the
-        objects must be left of the static libs later.
-        """
-        self.d["GPUOBJS"] += " {}".format(object_path)
 
     def add_library(self, library_name, library_path=""):
         """
@@ -379,15 +365,6 @@ did search for a file """
                 "CXXFLAGS",
                 "LDFLAGS",
                 "LIBS",
-                "CUDA_LIBS",
-                "NVCC",
-                "CUDA_PATH",
-                "CUDA_INCLUDE_FLAGS",
-                "NVCC_FLAGS_RELEASE",
-                "NVCC_FLAGS_STATS",
-                "NVCC_FLAGS_ASSERTS",
-                "NVCC_FLAGS_TRACE",
-                "NVCC_FLAGS_DEBUG"
             ]
 
             for line in input:
@@ -455,35 +432,6 @@ did search for a file """
         if filename in self.hfiles:
             self.hfiles.remove(filename)
 
-    def add_cu_file(self, filename, generated=False):
-        """
-        Adds a CUDA (.cu) file to the list of files. If the file is not generated, it is assumed that the
-        file was existing at time of the call (a generated file will be generated later) therefore we need
-        two separate lists for both files
-
-        :param filename: The name of the CUDA file to add.
-        :type filename: str
-        :param generated: Indicates whether the file is generated (True) or not (False). Default is False.
-        :type generated: bool
-        """
-        if generated:
-            if (
-                self.generated_cufiles.count(filename) == 0
-                and self.cufiles.count(filename) == 0
-            ):
-                self.generated_cufiles.append(filename)
-        else:
-            if self.cufiles.count(filename) == 0:
-                self.cufiles.append(filename)
-                if self.generated_cufiles.count(filename) > 0:
-                    self.generated_cufiles.remove(filename)
-
-    def remove_cu_file(self, filename):
-        if filename in self.generated_cufiles:
-            self.generated_cufiles.remove(filename)
-        if filename in self.cufiles:
-            self.cufiles.remove(filename)
-
     def add_cpp_file(self, filename, generated=False):
         """
         Add a new cpp filename. This is basically a set implementation, i.e., you can
@@ -495,43 +443,29 @@ did search for a file """
         generated files to the build environment. Nothing stops you however to
         add more files yourself.
 
-        Since the GPU code is templated, using CUDA backend means that the main file and the
-        subsequent compilation units need to be CUDA (.cu) files. To preserve backward
-        compatability and seamless user experience; this call generates CUDA (.cu) files
-        instead of C++ (.cpp) files when using CUDA backend.
-
         filename: String
            Filename of a C++ file. They usually should have the .cpp/.cxx extension.
         generated: Bool
            Use this flag for generated files which can be tracked
            by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
         """
-        if using_cuda_backend():
-            old_filename = filename
-            filename = filename.replace(".cpp", ".cu")
-            try:
-                shutil.copy(old_filename, filename)
-            except:
-                pass
-            self.add_cu_file(filename=filename, generated=True)
+        if generated:
+            # Non-generated file takes precedence over generated files.
+            # We only add a generated file if has not been added yet as a non-generated file instead.
+            if (
+                self.generated_cppfiles.count(filename) == 0
+                and self.cppfiles.count(filename) == 0
+              ):
+                self.generated_cppfiles.append(filename)
         else:
-            if generated:
-                # Non-generated file takes precedence over generated files.
-                # We only add a generated file if has not been added yet as a non-generated file instead.
-                if (
-                    self.generated_cppfiles.count(filename) == 0
-                    and self.cppfiles.count(filename) == 0
-                ):
-                    self.generated_cppfiles.append(filename)
-            else:
-                # If a file is a non-generated file we definitely want to add it.
-                if self.cppfiles.count(filename) == 0:
-                    self.cppfiles.append(filename)
-                    # We ensure that we only add a .cpp file once.
-                    # Otherwise we would get duplicated symbols errors.
-                    # But we never delete a non-generated file.
-                    if self.generated_cppfiles.count(filename) > 0:
-                        self.generated_cppfiles.remove(filename)
+            # If a file is a non-generated file we definitely want to add it.
+            if self.cppfiles.count(filename) == 0:
+                self.cppfiles.append(filename)
+                # We ensure that we only add a .cpp file once.
+                # Otherwise we would get duplicated symbols errors.
+                # But we never delete a non-generated file.
+                if self.generated_cppfiles.count(filename) > 0:
+                    self.generated_cppfiles.remove(filename)
 
     def remove_cpp_file(self, filename):
         if filename in self.generated_cppfiles:
@@ -623,7 +557,7 @@ then this message can typically be ignored.
         for i in module_files:
             self.add_Fortran_module(i)
 
-    def generate(self, overwrite, directory, subdirectory=""):
+    def generate(self, overwrite, directory, subdirectories=[]):
         """
         Generates build files and other project-related files based on templates.
 
@@ -644,15 +578,15 @@ then this message can typically be ignored.
         self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
-        self.d["CU_SOURCES"] = self.cufiles
         self.d["FORTRAN_SOURCES"] = self.fortranfiles
         self.d["GENERATED_H_HEADERS"] = self.generated_hfiles
         self.d["GENERATED_CXX_SOURCES"] = self.generated_cppfiles
-        self.d["GENERATED_CU_SOURCES"] = self.generated_cufiles
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
         self.d["USING_CMAKE"] = cmake_build_dir != ""
-        self.d["APP_SUBDIRECTORY"] = subdirectory
+        if subdirectories:
+            for subdirectory in subdirectories:
+                self.d["APP_SUBDIRECTORIES"].append(subdirectory)
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
         # In CMake, we add a command that allows to build the generated project in the project's directory.

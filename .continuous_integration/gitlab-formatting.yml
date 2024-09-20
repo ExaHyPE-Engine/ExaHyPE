@@ -1,0 +1,14 @@
+include:
+  - .continuous_integration/gitlab-templates.yml
+
+Formatting:
+  extends: .BeforeScript
+  stage: Formatting
+  allow_failure: true
+  dependencies: []
+  script:
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_TAG_BASE} python3 format.py -d -v -f=.
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
+  when: always
+  retry: 2

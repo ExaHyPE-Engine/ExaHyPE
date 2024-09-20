@@ -1,0 +1,42 @@
+Patch Size: 3
+Halo Size: 2
+Unknowns: 59
+Matrix: 0.001276s
+Tensor Product: 0.002211s
+Second Order: 0.001801s
+
+Patch Size: 6
+Halo Size: 2
+Unknowns: 59
+Matrix: 0.005351s
+Tensor Product: 0.023758s
+Second Order: 0.006826s
+
+Patch Size: 9
+Halo Size: 2
+Unknowns: 59
+Matrix: 0.012127s
+Tensor Product: 0.117314s
+Second Order: 0.015093s
+
+Patch Size: 3
+Halo Size: 3
+Unknowns: 59
+Matrix: 0.002109s
+Tensor Product: 0.004052s
+Second Order: 0.001971s
+
+Patch Size: 6
+Halo Size: 3
+Unknowns: 59
+Matrix: 0.008608s
+Tensor Product: 0.055647s
+Second Order: 0.007612s
+
+Patch Size: 9
+Halo Size: 3
+Unknowns: 59
+Matrix: 0.019947s
+Tensor Product: 0.282037s
+Second Order: 0.017059s
+

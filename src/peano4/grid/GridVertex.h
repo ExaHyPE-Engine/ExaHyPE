@@ -82,23 +82,40 @@ public:
   GridVertex& operator=(const GridVertex& other);
 
 #ifdef Parallel
-  PragmaPush SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
-    [[clang::map_mpi_datatype]] static MPI_Datatype
-    getForkDatatype();
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getForkDatatype();
 
-  [[clang::map_mpi_datatype]] static MPI_Datatype getJoinDatatype();
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
 
-  [[clang::map_mpi_datatype]] static MPI_Datatype getBoundaryExchangeDatatype();
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
 
-  [[clang::map_mpi_datatype]] static MPI_Datatype getMultiscaleDataExchangeDatatype();
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
 
-  [[clang::map_mpi_datatype]] static MPI_Datatype getGlobalCommunciationDatatype();
-  PragmaPop
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeGlobalCommunciationDatatype();
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -153,11 +170,10 @@ public:
   );
 #endif
 
-
   enum ObjectConstruction { NoData };
 
   GridVertex(ObjectConstruction):
-    GridVertex() {}
+  GridVertex() {}
 
 #ifdef Parallel
   static void sendAndPollDanglingMessages(
@@ -177,7 +193,7 @@ public:
   std::string toString() const;
 
 private:
-  PragmaPush SilenceUnknownAttribute [[clang::pack]] State _state;
+  [[clang::pack]] State _state;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
   [[clang::pack_range(-1, std::numeric_limits<int>::max())]] int _adjacentRanks[TwoPowerD];
 #endif
@@ -198,7 +214,6 @@ private:
   tarch::la::Vector<Dimensions, double> _x;
 #endif
 #endif
-  PragmaPop
 
     int _level;
 

@@ -24,34 +24,74 @@ namespace tbb {
 
 
 /**
- * @page tbb_dynamic_task_graph_design TBB dynamic task graph wrapper
+ * @page tbb_extension TBB extensions
  *
- * Users build up the task graph by creating instances of task graph
- * node objects. Once we submit a node to the task graph, it is given a
- * link to a task graph node on the heap and becomes itself invariant,
- * i.e. you cannot add further dependencies anymore. Before that, each
- * node can be added links to previously submitted task graph nodes. When
- * it is invariant, you can still copy the task node around. You can also
+ * TBB's current release version lacks support for two important features
+ * that we need in several extensions built on top of Peano:
+ *
+ * - ranges of arbitrary dimension which facilitate/prioritise vectorisation; and
+ * - dynamic task graphs
+ *
+ * We add both features through a "manual" tbb add-on. We also try to bring
+ * those changes into the UXL foundation standard, but it is not clear when
+ * these attempts will be successful.
+ *
+ * Therefore, this extension is always shipped with Peano, and it is
+ * automatically built and added once you translate Peano with --with-tbb.
+ * The outcome will end
+ * up in a library called tbb_extension.a, tbb_extension_debug.a or
+ * tbb_extension_trace.a. This means that you have to add
+ *
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * --with-tbb LDFLAGS=-Lsrc/tb LIBS=-ltbb_extension
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * to your build. Peano's autotools configuration will do this for you. Further
+ * to that, you have to tell the tools that you require the features. That happens
+ * by adding
+ *
+ * - -DTBBExtensionAddRanges if your TBB version does not yet have n-dimensional
+ *   ranges. Note that every very early versions of TBB did ship n-dimensional
+ *   ranges as optional extension. However, that default version might not be
+ *   compatible with the way Peano needs the ranges to work.
+ * - -DTBBExtensionAddTaskGraph if your TBB version does not yet support
+ *   dynamic task graphs.
+ *
+ *
+ *
+ * ## Code usage
+ *
+ * Users create an instance of dynamic_task_graph. After that, they
+ * create an arbitrary number of objects of type dynamic_task_graph_node.
+ * They have in-dependencies, i.e. each instance of dynamic_task_graph_node
+ * can have many other instances of dynamic_task_graph_node which
+ * feed into it and have to be completed before it starts to run.
+ *
+ * Once we submit a node to the task graph through put(), it becomes itself invariant,
+ * i.e. you cannot add further dependencies anymore. When
+ * it is invariant, you can still copy the task node around or make it
+ * feed into other tasks. You can also
  * forget about it. The underlying task is submitted and therefore will
  * stay alive.
  *
  *
+ * ## Code design
  *
- * ## Design and usage
+ * The instances of dynamic_task_graph_node form a DAG with reverse
+ * dependencies, i.e. each object holds a set of tasks it depends upon.
  *
- * Users create an instance of dynamic_task_graph. After that, they
- * create an arbitrary number of object of type dynamic_task_graph_spawned_node.
- * They have in-dependencies, i.e. each instance of dynamic_task_graph_spawned_node
- * can have many other instances of dynamic_task_graph_spawned_node which
- * feed into it. Eventually, the user has to put their objects of type
- * dynamic_task_graph_spawned_node into the task graph object.
- *
- * The put submits the task. Internally, the submission process now
+ * The put() submits the task. Internally, the submission process now
  * builds up an object graph over instances of dynamic_task_graph_spawned_node.
- * The spawned nodes invert the dependencies: When we construct the task graph
- * over in-dependencies. When we submit, these in-dependencies are translates
+ * The spawned nodes invert the dependencies: We construct the task graph
+ * over in-dependencies. When we submit, these in-dependencies are translated
  * into out-dependencies, i.e. each task knows now exactly which follow-up
  * tasks to inform upon completion.
+ *
+ * The rationale here is simple: Once a task finishes, we want to inform
+ * all follow-up tasks that this dependency is cleared. If all in-dependencies
+ * are done, the task is ready and can be released into oneTBB's scheduler.
+ * We never want to poll the tasks to see which ones are ready to go.
  *
  *
  * ## Implementation and memory management

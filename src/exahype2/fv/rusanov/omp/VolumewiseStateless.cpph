@@ -12,7 +12,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targetDevice, CellData<double, double>&patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
@@ -581,7 +581,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targetDevice, CellData<double, double>&patchData, tarch::timing::Measurement& measurement) {
   tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovVolumewiseStateless", false, true);
   timeStepWithRusanovVolumewiseStateless<
     SolverType,

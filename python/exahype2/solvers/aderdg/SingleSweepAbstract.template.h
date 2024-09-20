@@ -8,21 +8,18 @@
 
 #include "Constants.h"
 
+#include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
-#include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
 
-#include "exahype2/aderdg/kernels/Kernels.h"
-{% if USE_KERNEL_GENERATOR %}
-#include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
-#include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
-{% endif %}
+#include "kernels/{{SOLVER_NAME}}/Quadrature.h"
+#include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
 
 {% if USE_HALF_PRECISION==True %}
 #include <stdfloat>
@@ -35,44 +32,23 @@
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
-
+namespace {{ item }} {
 {%- endfor %}
+
   class {{CLASSNAME}};
 
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::aderdg::ADERDGSolver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    /**
-     * This is a "fake" enum, i.e. we do not use it to distinguish different
-     * variants. Instead, we use it as a fix that allows us to "overload"
-     * operations:
-     *
-     * In C++ you cannot overload w.r.t. static. We however need functions which
-     * exist twice in ExaHyPE: Once as standard (virtual) member functions and
-     * once at static version which an be offloaded to a GPU as it does not
-     * have a state. Both function variants, in theory, have the same signature
-     * but if they had, a compiler could not distinguish them. So I use this
-     * enum for the GPU version.
-     *
-     * If you create a solver without GPU support, this enum will not be used.
-     * It is however always created. Once you write a GPU version and then compile
-     * without GPU support, you will thus still be able to have all your GPU
-     * function variants, and you don't have to work with ifdefs.
-     */
-    enum class Offloadable {
-      Yes
-    };
-
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
-      Prediction,
+      InitialPrediction,
       PredictionOnHangingCells,
-      Correction,
+      Timestep,
       Plotting,
       Suspended
     };
@@ -82,13 +58,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     static constexpr int    Order                      = {{ORDER}};
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    static constexpr int    MaxPicardIterations        = {{ORDER}}+1;
-    static constexpr bool   UseMaxPicardIterations     = true;
-    static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}};
+    //static constexpr int    MaxPicardIterations        = {{ORDER}} + 1; // TODO: Not used (maybe use in nonlinear FSTPVI?)
+    //static constexpr bool   UseMaxPicardIterations     = true; // TODO: Not used (maybe use in nonlinear FSTPVI?)
+    //static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}}; // TODO: Not used
     static constexpr double CFL                        = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                       = {{CFL_ADER}};
-    
-    {% if USE_POINT_SOURCE!="<none>" %}
+
+    // User-defined solver constants
+    {{SOLVER_CONSTANTS}}
+
+    {% if USE_POINT_SOURCE %}
     static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
     double pointSourceLocation[NumberOfPointSources][Dimensions];
     {% endif %}
@@ -109,25 +88,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * coarser MinH.
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
-    
-    
-    /*
-     * Maximal mesh size that can actually be reached, this is the greatest size
-     * that can be reached by 3-subdivision of the domain size but is still lower
-     * than MaxAdmissibleCellH
-     * Minimal and maximal levels of the mesh, i.e upper and lower limits
-     * for how many times the mesh can be divided in order to keep it in
-     * between the maximal and minimal admissible cell sizes
-     */
-    double realCoarsestMeshSize;
-    double coarsestMeshLevel;
-    double maxAdaptiveMeshLevel;
-    
-
-    /**
-     * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
-     */
-    {{BASIS_DECLARATIONS | indent(4,True) }}
 
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
@@ -141,7 +101,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
-
 
     /**
      * Evaluate refinement criterion over cell
@@ -157,7 +116,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      *
@@ -176,13 +134,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      *
      */
     virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-			const tarch::la::Vector<Dimensions,double>&  h,
-			const tarch::la::Vector<Dimensions,int>&     index,
-      bool                                         gridIsConstructed
+      {{SOLUTION_STORAGE_PRECISION}}* __restrict__  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      //const tarch::la::Vector<Dimensions, int>&     index,
+      bool                                          gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      * Apply boundary conditions. You can overwrite both the inside and
@@ -190,10 +147,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * note that the boundary conditions you set here are after that subject
      * to the Riemann solver, i.e. flux and eigenvalues.
      *
-     * \param[in]    x         the physical coordinate on the face.
      * \param[in]    t         the start of the time interval.
-     * \param[in]    dt        the width of the time interval.
-     * \param[in]    faceIndex indexing of the face (0 -- {x[0]=xmin}, 1 -- {x[1]=xmax}, 2 -- {x[1]=ymin}, 3 -- {x[2]=ymax}, and so on,
+     * \param[in]    x         the physical coordinate on the face or indexing of the face (0 -- {x[0]=xmin}, 1 -- {x[1]=xmax}, 2 -- {x[1]=ymin}, 3 -- {x[2]=ymax}, and so on,
      *                         where xmin,xmax,ymin,ymax are the bounds of the cell containing point x.
      * \param[in]    d         the coordinate direction the face normal is pointing to.
      * \param[in]    QIn       the conserved variables at point x from inside of the domain
@@ -208,8 +163,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     virtual void boundaryConditions(
       const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       int                                          normal
     ){% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -282,9 +237,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     virtual void finishGridInitialisationStep() override;
 
-
     virtual void suspendSolversForOneGridSweep() override;
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -303,7 +256,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     virtual void finishTimeStep() override;
 
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -320,7 +272,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * operation is still invoked.
      */
     virtual void finishPlottingStep() override;
-
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the
@@ -339,20 +290,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
-    
-    /**
-     * Functions inherited from Solver.h in the aderdg context, these provide
-     * information to ExaSeis expansions
-     *
-     * @todo Should not be here
-     */    
-    virtual tarch::la::Vector<Dimensions,double> getDomainSize()    const override final;
-    virtual tarch::la::Vector<Dimensions,double> getDomainOffset()  const override final;
-    virtual double getCoarsestMeshSize()                            const override final;
-    virtual int getCoarsestMeshLevel()                              const override final;
-    virtual int getMaximumAdaptiveMeshLevel()                       const override final;
-    virtual int getMaximumAdaptiveMeshDepth()                       const override final;
-    
 
     /**
      * Update the global solver state, i.e. inform the solver about some
@@ -388,7 +325,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     virtual void finishSimulation() override;
 
-
+    {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
     static tarch::logging::Log  _log;
@@ -419,9 +356,4 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     int        _cellUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
-
-
-  {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };
-
-

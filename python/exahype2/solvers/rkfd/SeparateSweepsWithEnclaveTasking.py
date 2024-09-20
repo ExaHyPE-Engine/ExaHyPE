@@ -16,6 +16,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
 )
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
+from exahype2.solvers.Storage import Storage
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
@@ -48,8 +49,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
-              {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
+              timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
           }      
@@ -73,10 +74,17 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
+      double subTimeStamp=timeStamp;
+      {% for PREDICATE_NO in range(0,PREDICATES|length-1) %}
+      if ({{PREDICATES[PREDICATE_NO]}}) {
+        subTimeStamp += {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}}*timeStepSize;
+      }
+      {% endfor %} 
+  
       if ( marker.willBeSkeletonCell() ) {
         tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
           marker,
-          timeStamp,
+          subTimeStamp,
           timeStepSize,
           oldQWithHalo,
           newQ
@@ -89,15 +97,31 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         assertion( not marker.willBeRefined() );
         auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
           marker,
-          timeStamp,
+          subTimeStamp,
           timeStepSize,
-          oldQWithHalo
+          oldQWithHalo,
+          {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+          nullptr
+          {% else %}
+          newQ
+          {% endif %}
         );
+        
+        int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
+        
+        tarch::multicore::spawnTask( 
+          newEnclaveTask, 
+          predecessorEnclaveTaskNumber>=0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies, 
+          newEnclaveTask->getTaskId() 
+        );
+        
+        ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+  
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+
         // Time stamp is not updated, as this will be done by final linear combination
         // fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
-        tarch::multicore::spawnTask( newEnclaveTask );
       }
   """
     )
@@ -198,6 +222,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
     }
   }
   {% endfor %}
@@ -655,12 +680,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         output.add(generated_solver_files)
         output.makefile.add_cpp_file(subdirectory + "tasks/" + task_name + ".cpp", generated=True)
 
-        if self._pde_terms_without_state:
-            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
-            # this hack has to suffice
-            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
-            output.makefile.d["PEANODIR"] = peanodir
-            exahype2.gpu.add_exahype_objects(output.makefile)
 
     def add_actions_to_perform_time_step(self, step):
         """!
@@ -699,7 +718,9 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         )
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
-
+        d["MAKE_COPY_OF_ENCLAVE_TASK_DATA"] = self.make_copy_of_enclave_task_data
+        
+        
     @property
     def user_action_set_includes(self):
         return (
@@ -711,3 +732,18 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)
+
+    def switch_storage_scheme(
+        self,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
+    ):
+        if cell_data_storage == Storage.SmartPointers:
+            self.make_copy_of_enclave_task_data = False
+        else:
+            self.make_copy_of_enclave_task_data = True
+            
+        super(SeparateSweepsWithEnclaveTasking, self).switch_storage_scheme(
+            cell_data_storage,
+            face_data_storage
+        )

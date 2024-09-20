@@ -138,7 +138,7 @@ void toolbox::loadbalancing::strategies::SpreadOut::triggerSplit(int numberOfCel
 
   const int sourceTree = 0;
   bool      success    = peano4::parallel::SpacetreeSet::getInstance().split(
-    sourceTree, peano4::SplitInstruction{numberOfCells, peano4::SplitInstruction::Mode::BottomUp}, targetRank
+    sourceTree, peano4::SplitInstruction{numberOfCells, _configuration->getMode(_state)}, targetRank
   );
   if (not success) {
     logInfo("triggerSplit()", "wanted to split local rank " << sourceTree << " but failed");

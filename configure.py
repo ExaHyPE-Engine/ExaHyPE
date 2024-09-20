@@ -4,14 +4,17 @@
 import os
 import re
 import shlex
+import shutil
 import argparse
 import subprocess
 
+
+def is_pkg_config_installed():
+    return shutil.which("pkg-config") is not None
+
+
 parser = argparse.ArgumentParser(
-    description="Configuration helper script for GNU Automake and CMake"
-)
-parser.add_argument(
-    "--cmake", help="Use CMake; specify target build folder via --cmake=..."
+    description="Configuration helper script for GNU Automake"
 )
 parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE 2")
 parser.add_argument("--swift", action="store_true", help="Enable Swift 2")
@@ -24,10 +27,11 @@ parser.add_argument(
 )
 parser.add_argument("--fem", action="store_true", help="Enable finite elements support")
 parser.add_argument("--petsc", action="store_true", help="Enable PETSc support")
+parser.add_argument("--netcdf", action="store_true", help="Enable netCDF support")
 parser.add_argument("--libxsmm", action="store_true", help="Enable LIBXSMM support")
 parser.add_argument(
     "--multithreading",
-    choices=["omp", "tbb", "sycl", "cpp"],
+    choices=["no", "omp", "sycl", "tbb", "cpp"],
     help="Enable multithreading support",
 )
 parser.add_argument("--mpi", help="Enable MPI support")
@@ -38,10 +42,9 @@ parser.add_argument(
     "--scorep", "-scorep", action="store_true", help="Enable Score-P support"
 )
 parser.add_argument(
-    "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
+    "--gpu", choices=["no", "omp", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
 parser.add_argument("--asm", action="store_true", help="Dump generated assembly code")
-parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
@@ -67,16 +70,14 @@ cxx = os.environ.get("CXX")
 if cc is None or cxx is None:
     raise Exception(
         "Invalid C and C++ compilers provided. \
-Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
+Specify compatible C and C++ compilers by using the environment flags CC and CXX."
     )
 
 cflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
 cxxflags = "-std=c++20 -w -O3 -march=native -mtune=native -fomit-frame-pointer"
-nvccflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
 ldflags = "-march=native -mtune=native"
 configure_args = []
 
-# Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == "omp":
     cflags += " -fopenmp"
     cxxflags += " -fopenmp"
@@ -102,22 +103,13 @@ if args.multithreading == "sycl":
     ldflags += " -fsycl"
 
 # Merge in any additional flags needed for the selected GPU backend
-if args.gpu and not args.arch:
+if args.gpu is not None and args.gpu != "no" and not args.arch:
     raise Exception("You need to specify a GPU architecture when using GPU support.")
 
 if args.gpu == "omp" and "icx" in cc and "icpx" in cxx and "spir64" in args.arch:
-    cflags += (
-        " -fopenmp-targets="
-        + args.arch
-    )
-    cxxflags += (
-        " -fopenmp-targets="
-        + args.arch
-    )
-    ldflags += (
-        " -fopenmp-targets="
-        + args.arch
-    )
+    cflags += " -fopenmp-targets=" + args.arch
+    cxxflags += " -fopenmp-targets=" + args.arch
+    ldflags += " -fopenmp-targets=" + args.arch
 
 elif args.gpu == "omp" and "amdclang" in cc and "amdclang++" in cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch + " -D__AMDGPU__"
@@ -160,26 +152,18 @@ elif args.gpu == "omp" and "amdclang" in cc and "amdclang++" in cxx:
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
     ldflags += " -lstdc++fs --offload-arch=" + args.arch
 
-elif (
-    args.gpu == "omp"
-    and ("nvc" in cc or "nvc++ in cc")
-    and "nvc++" in cxx
-):
-    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
-    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+elif args.gpu == "omp" and ("nvc" in cc or "nvc++ in cc") and "nvc++" in cxx:
+    cflags += " -mp=gpu -gpu=cc" + args.arch.split("_")[1]  # -cuda
+    cxxflags += " -mp=gpu -gpu=cc" + args.arch.split("_")[1]  # -cuda
+    ldflags += " -mp=gpu -gpu=cc" + args.arch.split("_")[1]  # -cuda
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mpp"
 
-elif (
-    args.gpu == "cpp"
-    and ("nvc" in cc or "nvc++ in cc")
-    and "nvc++" in cxx
-):
-    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
-    cxxflags += " -cuda -mp=gpu -stdpar=gpu -gpu=cc" + args.arch.split('_')[1]
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+elif args.gpu == "cpp" and ("nvc" in cc or "nvc++ in cc") and "nvc++" in cxx:
+    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split("_")[1]
+    cxxflags += " -cuda -mp=gpu -stdpar=gpu -gpu=cc" + args.arch.split("_")[1]
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split("_")[1]
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
@@ -224,20 +208,8 @@ elif args.gpu == "sycl" and "icx" in cc and "icpx" in cxx:
             + args.arch
         )
 
-elif args.gpu == "cuda":
-    nvccflags += f" -arch={args.arch}"
-    if args.with_cuda is not None:
-        if not args.cmake:
-            # CUDA path is only needed with Automake builds
-            # CMake automatically finds it
-            configure_args.append(f"--with-cuda={args.with_cuda}")
-    else:
-        raise Exception(
-            "You need to specify the path to the CUDA toolkit when compiling with CUDA. Use --with-cuda=<CUDA_PATH>."
-        )
-
 else:
-    if args.gpu is not None:
+    if args.gpu is not None and args.gpu != "no":
         raise Exception(
             "Unsupported compiler and GPU flag/arch combination requested: CC="
             + cc
@@ -250,187 +222,144 @@ else:
         )
 
 if args.multithreading is not None:
-    if args.cmake:
-        configure_args.append(f"-DWITH_MULTITHREADING={args.multithreading}")
-    else:
-        configure_args.append(f"--with-multithreading={args.multithreading}")
+    configure_args.append(f"--with-multithreading={args.multithreading}")
 
 if args.gpu is not None:
-    if args.cmake:
-        configure_args.append(f"-DWITH_GPU={args.gpu}")
-        configure_args.append(f"-DWITH_GPU_ARCH={args.arch}")
-    else:
-        configure_args.append(f"--with-gpu={args.gpu}")
+    configure_args.append(f"--with-gpu={args.gpu}")
 
 if args.mpi is not None:
-    if args.cmake:
-        configure_args.append("-DWITH_MPI=ON")
+    if args.scorep:
+        configure_args.append('--with-mpi="scorep-{}"'.format(args.mpi))
     else:
-        if args.scorep:
-            configure_args.append('--with-mpi="scorep-{}"'.format(args.mpi))
-        else:
-            configure_args.append('--with-mpi="{}"'.format(args.mpi))
+        configure_args.append('--with-mpi="{}"'.format(args.mpi))
 
 if args.targetdart:
-    if args.cmake:
-        configure_args.append("-DWITH_TARGETDART=ON")
-    else:
-        configure_args.append("--with-targetdart")
+    configure_args.append("--with-targetdart")
 
 if args.exahype:
-    if args.cmake:
-        configure_args.append("-DENABLE_EXAHYPE=ON")
-        configure_args.append("-DENABLE_LOADBALANCING=ON")
-        configure_args.append("-DENABLE_BLOCKSTRUCTURED=ON")
-    else:
-        configure_args.append("--enable-exahype")
-        configure_args.append("--enable-loadbalancing")
-        configure_args.append("--enable-blockstructured")
+    configure_args.append("--enable-exahype")
+    configure_args.append("--enable-loadbalancing")
+    configure_args.append("--enable-blockstructured")
 
 if args.loadbalancing:
-    if args.cmake:
-        configure_args.append("-DENABLE_LOADBALANCING=ON")
-    else:
-        configure_args.append("--enable-loadbalancing")
+    configure_args.append("--enable-loadbalancing")
 
 if args.blockstructured:
-    if args.cmake:
-        configure_args.append("-DENABLE_BLOCKSTRUCTURED=ON")
-    else:
-        configure_args.append("--enable-blockstructured")
+    configure_args.append("--enable-blockstructured")
 
 if args.swift:
-    if args.cmake:
-        configure_args.append("-DENABLE_SWIFT=ON")
-        configure_args.append("-DENABLE_PARTICLES=ON")
-        configure_args.append("-DENABLE_LOADBALANCING=ON")
-    else:
-        configure_args.append("--enable-swift")
-        configure_args.append("--enable-particles")
-        configure_args.append("--enable-loadbalancing")
+    configure_args.append("--enable-swift")
+    configure_args.append("--enable-particles")
+    configure_args.append("--enable-loadbalancing")
 
 if args.particles:
-    if args.cmake:
-        configure_args.append("-DENABLE_PARTICLES=ON")
-    else:
-        configure_args.append("--enable-particles")
+    configure_args.append("--enable-particles")
 
 if args.fem:
-    if args.cmake:
-        configure_args.append("-DENABLE_FINITEELEMENTS=ON")
-    else:
-        configure_args.append("--enable-finiteelements")
+    configure_args.append("--enable-finiteelements")
 
 if args.petsc:
-    if args.cmake:
-        configure_args.append("-DWITH_PETSC=ON")
-        configure_args.append("-DENABLE_FINITEELEMENTS=ON")
-    else:
-        configure_args.append("--with-petsc")
-        configure_args.append("--enable-finiteelements")
+    configure_args.append("--with-petsc")
+    configure_args.append("--enable-finiteelements")
+
+
+def find_netcdf_paths():
+    if not is_pkg_config_installed():
+        return None, None
+
+    try:
+        # Use pkg-config to get the NetCDF include directory
+        include_dir = (
+            subprocess.check_output(["pkg-config", "--cflags-only-I", "netcdf"])
+            .decode()
+            .strip()[2:]
+        )
+        # Use pkg-config to get the NetCDF library directory and name
+        lib_dir_and_name = (
+            subprocess.check_output(
+                ["pkg-config", "--libs-only-L", "--libs-only-l", "netcdf"]
+            )
+            .decode()
+            .strip()[2:]
+        )
+        return include_dir, lib_dir_and_name
+    except subprocess.CalledProcessError:
+        return None, None
+
+
+if args.netcdf:
+    netcdf_include_dir, netcdf_lib_dir_and_name = find_netcdf_paths()
+    if netcdf_include_dir is not None:
+        cxxflags += f" -I{netcdf_include_dir}"
+    if netcdf_lib_dir_and_name is not None:
+        ldflags += f" -L{netcdf_lib_dir_and_name}"
+    configure_args.append("--with-netcdf")
 
 if args.libxsmm:
-    if args.cmake:
-        configure_args.append("-WITH_LIBXSMM=ON")
-    else:
-        configure_args.append("--with-libxsmm")
+    configure_args.append("--with-libxsmm")
 
-if args.cmake:
-    # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
-    if args.scorep:
-        env_vars = {
-            "CC": "scorep-{}".format(cc),
-            "CXX": "scorep-{}".format(cxx),
-        }
-    else:
-        env_vars = {
-            "CC": "{}".format(cc),
-            "CXX": "{}".format(cxx),
-        }
+# Prepare the environment variables
+# Read existing C(XX)FLAGS and LDFLAGS to not overwrite them
+env_cflags = os.environ.get("CFLAGS")
+env_cxxflags = os.environ.get("CXXFLAGS")
+env_ldflags = os.environ.get("LDFLAGS")
 
-    # Create a string to display environment variables like in a terminal
-    if args.scorep:
-        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
-    else:
-        env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
-
-    print(f"{env_vars_str} cmake .. {' '.join(configure_args)}")
-
-    # Update the current environment with the specified variables
-    new_env = os.environ.copy()
-    new_env.update(env_vars)
-
-    if not os.path.exists(args.cmake) and not os.path.isdir(args.cmake):
-        subprocess.run("mkdir {}".format(args.cmake), cwd=os.getcwd(), shell=True)
-
-    os.chdir(args.cmake)
-    args_str = " ".join(configure_args)
-    args_list = shlex.split(args_str)
-    subprocess.check_call(["cmake", ".."] + args_list, cwd=os.getcwd(), env=new_env)
-
+if env_cflags is not None:
+    env_cflags += " " + cflags
 else:
-    # Prepare the environment variables
-    # Read existing C(XX)FLAGS and LDFLAGS to not overwrite them
-    env_cflags = os.environ.get("CFLAGS")
-    env_cxxflags = os.environ.get("CXXFLAGS")
-    env_ldflags = os.environ.get("LDFLAGS")
+    env_cflags = cflags
 
-    if env_cflags is not None:
-        env_cflags += " " + cflags
-    else:
-        env_cflags = cflags
+if env_cxxflags is not None:
+    env_cxxflags += " " + cxxflags
+else:
+    env_cxxflags = cxxflags
 
-    if env_cxxflags is not None:
-        env_cxxflags += " " + cxxflags
-    else:
-        env_cxxflags = cxxflags
+if env_ldflags is not None:
+    env_ldflags += " " + ldflags
+else:
+    env_ldflags = ldflags
 
-    if env_ldflags is not None:
-        env_ldflags += " " + ldflags
-    else:
-        env_ldflags = ldflags
+if args.scorep:
+    env_vars = {
+        "CFLAGS": "{}".format(env_cflags),
+        "CC": "scorep-{}".format(cc),
+        "CXXFLAGS": "{}".format(env_cxxflags),
+        "CXX": "scorep-{}".format(cxx),
+        "LDFLAGS": "{}".format(env_ldflags),
+    }
+else:
+    env_vars = {
+        "CFLAGS": "{}".format(env_cflags),
+        "CC": "{}".format(cc),
+        "CXXFLAGS": "{}".format(env_cxxflags),
+        "CXX": "{}".format(cxx),
+        "LDFLAGS": "{}".format(env_ldflags),
+    }
 
-    if args.scorep:
-        env_vars = {
-            "CFLAGS": "{}".format(env_cflags),
-            "CC": "scorep-{}".format(cc),
-            "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "scorep-{}".format(cxx),
-            "LDFLAGS": "{}".format(env_ldflags),
-        }
-    else:
-        env_vars = {
-            "CFLAGS": "{}".format(env_cflags),
-            "CC": "{}".format(cc),
-            "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "{}".format(cxx),
-            "LDFLAGS": "{}".format(env_ldflags),
-        }
+# Create a string to display environment variables like in a terminal
+if args.scorep:
+    env_vars_str = (
+        'SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--user --nocompiler --thread=omp:ompt" '
+        + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    )
+else:
+    env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
 
-    if args.gpu == "cuda":
-        env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
+print(f"{env_vars_str} ./configure {' '.join(configure_args)}")
 
-    # Create a string to display environment variables like in a terminal
-    if args.scorep:
-        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
-    else:
-        env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+# Update the current environment with the specified variables
+new_env = os.environ.copy()
+new_env.update(env_vars)
 
-    print(f"{env_vars_str} ./configure {' '.join(configure_args)}")
+subprocess.run(["libtoolize"], cwd=os.getcwd())
+subprocess.run(["aclocal"], cwd=os.getcwd())
+subprocess.run(["autoconf"], cwd=os.getcwd())
+subprocess.run(["autoheader"], cwd=os.getcwd())
+subprocess.run(["cp", f"{os.getcwd()}/src/config.h.in", os.getcwd()])
+subprocess.run(["automake", "--add-missing"], cwd=os.getcwd())
 
-    # Update the current environment with the specified variables
-    new_env = os.environ.copy()
-    new_env.update(env_vars)
+# Call the ./configure script with the specified arguments
+args_str = " ".join(configure_args)
+args_list = shlex.split(args_str)
 
-    subprocess.run(["libtoolize"], cwd=os.getcwd())
-    subprocess.run(["aclocal"], cwd=os.getcwd())
-    subprocess.run(["autoconf"], cwd=os.getcwd())
-    subprocess.run(["autoheader"], cwd=os.getcwd())
-    subprocess.run(["cp", f"{os.getcwd()}/src/config.h.in", os.getcwd()])
-    subprocess.run(["automake", "--add-missing"], cwd=os.getcwd())
-
-    # Call the ./configure script with the specified arguments
-    args_str = " ".join(configure_args)
-    args_list = shlex.split(args_str)
-
-    subprocess.check_call(["./configure"] + args_list, cwd=os.getcwd(), env=new_env)
+subprocess.check_call(["./configure"] + args_list, cwd=os.getcwd(), env=new_env)

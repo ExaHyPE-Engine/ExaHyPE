@@ -1,6 +1,6 @@
 /**
 
-@page application_exahype2_selfgravitation Spherical accretion due to self-gravitation
+@page applications_exahype2_selfgravitation Spherical accretion due to self-gravitation
 
 
 In these case studies, we study an incompressible Euler, which means we
@@ -31,7 +31,7 @@ or explicitly solve the Poisson problem's linear equation system per time
 step.
  
 \li \subpage applications_exahype2_euler_selfgravitation_rhs_through_petsc
-\li \subpage application_exahype2_selfgravitation_accretion_through_approximated_rhs
+\li \subpage applications_exahype2_selfgravitation_accretion_through_approximated_rhs
 \li \subpage applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling
 
 

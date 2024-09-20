@@ -115,10 +115,4 @@ namespace peano4 {
    * shutdown will tell all the other ranks to go down as well.
    */
   void shutdownSingletons();
-
-  /**
-   * Runs GPU Offloading tests, GPU Bandwidth benchmarks and
-   * prints the benchmark results
-   */
-  void runTestsAndBenchmarks();
 } // namespace peano4

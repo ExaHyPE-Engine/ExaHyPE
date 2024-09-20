@@ -13,12 +13,13 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
-	exahype2 \
-	swift2 \
-	petsc \
 	convert \
-	unittests \
-	tbb
+	exahype2 \
+	mghype \
+	petsc \
+	swift2 \
+	tbb \
+	unittests
 
 #
 # I want Peano to be as fast as possible and thus build it as static library
@@ -32,7 +33,7 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
 
 Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/Enumerator.cpp \
-    tarch/NonCriticalAssertions.cpp \
+	tarch/NonCriticalAssertions.cpp \
 	tarch/UnitTests.cpp \
 	tarch/la/tests/DynamicMatrixTest.cpp \
 	tarch/la/tests/MatrixVectorTest.cpp \
@@ -44,24 +45,20 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/ScalarOperations.cpp \
 	tarch/la/Scalar.cpp \
 	tarch/la/DynamicMatrix.cpp \
+	tarch/la/DynamicMatrixOperations.cpp \
+	tarch/la/GramSchmidt.cpp \
+	tarch/la/LUDecompositionDynamic.cpp \
 	tarch/accelerator/accelerator.cpp \
 	tarch/accelerator/Device.cpp \
-	tarch/accelerator/DeviceInfo.cpp \
 	tarch/accelerator/cpp/accelerator.cpp \
 	tarch/accelerator/cpp/Device.cpp \
-	tarch/accelerator/cpp/DeviceInfo.cpp \
 	tarch/accelerator/omp/accelerator.cpp \
 	tarch/accelerator/omp/Device.cpp \
-	tarch/accelerator/omp/DeviceInfo.cpp \
 	tarch/accelerator/omp/GPUMemoryManager.cpp \
 	tarch/accelerator/sycl/accelerator.cpp \
 	tarch/accelerator/sycl/Device.cpp \
-	tarch/accelerator/sycl/DeviceInfo.cpp \
 	tarch/accelerator/sycl/GPUMemoryManager.cpp \
-	tarch/accelerator/cuda/ErrorCheck.cpp \
-	tarch/accelerator/cuda/DeviceInfo.cpp \
-	tarch/accelerator/cuda/Device.cpp \
-	tarch/accelerator/cuda/accelerator.cpp \
+	tarch/accelerator/hip/accelerator.cpp \
 	tarch/multicore/BooleanSemaphore.cpp \
 	tarch/multicore/multicore.cpp \
 	tarch/multicore/Core.cpp \
@@ -191,7 +188,9 @@ Peano4Core_SOURCES = \
 	peano4/parallel/tests/NodeTest.cpp \
 	peano4/stacks/stacks.cpp \
 	peano4/stacks/STDVectorStack.cpp \
-	peano4/utils/Loop.cpp
+	peano4/utils/Loop.cpp \
+	peano4/utils/tests/ParallelDForTest.cpp
+	
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
@@ -216,57 +215,3 @@ libPeano4Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
 libPeano4Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)
 libPeano4Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)
 libPeano4Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)
-
-if GPUOffloadingCUDA
-# The pattern syntax is necessary to compile CUDA source files to multiple targets.
-# Pattern syntax is a GNU extension therefore we can't use it (due to treat-warnings-as-error).
-# Therefore, we need to statistically list all of the object files.
-# Any kind of for-loops are GNU extensions too, therefore one has to do it per hand and
-# due to the limitations of the pattern rule, the rules have to be defined per directory.
-# I will give some examples for GNU extensions, as one will surely ask, why do not use a for loop?
-# CUDA_OBJS_RELEASE = $(addprefix libTarch_a-, $(CUDA_OBJS))
-# $(foreach item,$(ITEMS),libTarch_stats_a-$(item)) is a GNU extension
-# CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o, $(ITEMS))
-# libTarch_debug_a-%.o: %.cu again a GNU extension (% is a GNU Extension) unless
-# $(CUDA_OBJS_RELEASE): libTarch_a-%.o: %.cu (static pattern)
-# also see here:
-# https://stackoverflow.com/questions/27975545/how-to-deal-with-autoconf-warning-style-pattern-rules-are-a-gnu-make-extens
-
-# The CUDA objects added with LDADD are also tracked as dependencies
-# Therefore adding the sources to the <target>_Sources not necessary
-Tarch_CUDA_OBJS					= tarch/accelerator/cuda/libTarch_a-TestKernels.o
-Tarch_stats_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
-Tarch_trace_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
-Tarch_asserts_CUDA_OBJS	= tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
-Tarch_debug_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
-
-# Common flags given to nvcc is used in both device and host code.
-# These should be optimisation flags (e.g., -O3), warning flags (e.g. -Wall),
-# debugging flags (e.g., -g), std flags (e.g., -std=c++20), definitions (e.g., -DPEANO_DEBUG=4),
-# include paths (e.g., -I/path/...) or linker flags (e.g., -L/path/...).
-# In case these do not work, you might need to do $(FLAGS) -Xcompiler="$(FLAGS)" but then also
-# split the $(CXX) to compiler=CXX[0] and args=CXX[1:] and to $(args) -Xcompiler="$(args) if not
-# using a common flag that needs to be replicated.
-$(Tarch_CUDA_OBJS): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
-	$(NVCC) $(NVCC_FLAGS_RELEASE) $(CXXFLAGS_PEANO_2D_RELEASE) -c $< -o $@
-
-$(Tarch_stats_CUDA_OBJS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
-	$(NVCC) $(NVCC_FLAGS_STATS) $(CXXFLAGS_PEANO_2D_STATS) -c $< -o $@
-
-$(Tarch_trace_CUDA_OBJS): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
-	$(NVCC) $(NVCC_FLAGS_TRACE) $(CXXFLAGS_PEANO_2D_TRACE) -c $< -o $@
-
-$(Tarch_asserts_CUDA_OBJS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
-	$(NVCC) $(NVCC_FLAGS_ASSERTS) $(CXXFLAGS_PEANO_2D_ASSERTS) -c $< -o $@
-
-$(Tarch_debug_CUDA_OBJS): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
-	$(NVCC) $(NVCC_FLAGS_DEBUG) $(CXXFLAGS_PEANO_2D_DEBUG) -c $< -o $@
-
-# Adding $(CUDA_LIBS) to libTarch is not necessary as it is only needed for executables and it is already added
-# to PEANO_LDADD; having it twice might cause issues.
-libTarch_a_LIBADD         = $(Tarch_CUDA_OBJS)
-libTarch_stats_a_LIBADD   = $(Tarch_stats_CUDA_OBJS)
-libTarch_trace_a_LIBADD   = $(Tarch_trace_CUDA_OBJS)
-libTarch_asserts_a_LIBADD = $(Tarch_asserts_CUDA_OBJS)
-libTarch_debug_a_LIBADD   = $(Tarch_debug_CUDA_OBJS)
-endif

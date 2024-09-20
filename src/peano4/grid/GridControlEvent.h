@@ -58,8 +58,6 @@ struct peano4::grid::GridControlEvent {
 
 
     #ifdef Parallel
-    PragmaPush
-    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -79,7 +77,21 @@ struct peano4::grid::GridControlEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PragmaPop
+
+    [[clang::map_mpi_datatype]]
+    static void  freeForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeGlobalCommunciationDatatype();
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -136,13 +148,10 @@ struct peano4::grid::GridControlEvent {
     std::string toString() const;
 
   private:
-    PragmaPush
-    SilenceUnknownAttribute
     [[clang::pack]]  RefinementControl   _refinementControl;
     tarch::la::Vector<Dimensions,double>   _offset;
     tarch::la::Vector<Dimensions,double>   _width;
     tarch::la::Vector<Dimensions,double>   _h;
-    PragmaPop
 
     #ifdef Parallel
     private:

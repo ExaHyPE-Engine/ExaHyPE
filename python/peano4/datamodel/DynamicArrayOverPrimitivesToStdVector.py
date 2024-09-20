@@ -32,7 +32,7 @@ class DynamicArrayOverPrimitivesToStdVector(object):
       None,
       self.data.name, 
       self.data.namespace,
-      self.data.namespace[-1],
+      self.data.subdirectory + self.data.namespace[-1],
       {
         "TYPE" : self.data.primitive_type
       }, 

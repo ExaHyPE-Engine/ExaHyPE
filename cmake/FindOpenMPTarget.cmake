@@ -6,7 +6,6 @@ cmake_push_check_state()
 
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   if(NVIDIA_GPU)
-    find_package(CUDA REQUIRED)
     set(OpenMP_Offloading_CXX_FLAGS "-fopenmp;-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target=nvptx64-nvidia-cuda;-march=${WITH_GPU_ARCH}")
     set(OpenMP_Offloading_LINK_LIBRARIES "-lomptarget")
   elseif(AMD_GPU)
@@ -23,8 +22,8 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
   endif()
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   string(REPLACE "sm_" "cc" OMP_DEVICE_ARCH "${WITH_GPU_ARCH}")
-  set(OpenMP_Offloading_CXX_FLAGS "-cuda;-mp=gpu;-gpu=${OMP_DEVICE_ARCH}")
-  set(OpenMP_Offloading_LINK_LIBRARIES "-cuda;-mp=gpu;-gpu=${OMP_DEVICE_ARCH}")
+  set(OpenMP_Offloading_CXX_FLAGS "-mp=gpu;-gpu=${OMP_DEVICE_ARCH}") # -cuda
+  set(OpenMP_Offloading_LINK_LIBRARIES "-mp=gpu;-gpu=${OMP_DEVICE_ARCH}") # -cuda
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "IntelLLVM")
   set(OpenMP_Offloading_CXX_FLAGS "-fiopenmp;-fopenmp-targets=spir64")
   set(OpenMP_Offloading_LINK_LIBRARIES "-fiopenmp")

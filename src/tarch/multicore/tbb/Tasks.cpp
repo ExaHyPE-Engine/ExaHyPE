@@ -145,7 +145,7 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  if (taskNumber==NoDependencies) {
+  if (taskNumber==NoOutDependencies) {
     ::oneapi::tbb::dynamic_task_graph_node node(
       [job]() -> void {
         while (job->run()) {
@@ -194,7 +194,7 @@ void tarch::multicore::native::processFusedTask(
   getArena(myTask)->execute([&, myTask, copyOfTasksOfSameType] {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
     } else {
       delete myTask;
     }

@@ -37,7 +37,7 @@ If you can see an output similar to the one above then we are ready to proceed.
 
 ## Usage
 
-```shel
+```shell
 spack info exahype2
 spack install exahype2 <OPTIONS>
 ```
@@ -66,6 +66,7 @@ spack repo remove Peano
 
 ```shell
 spack gc -y
+spack clean -a
 ```
 
 */

@@ -1,0 +1,19 @@
+#include <cmath> // for std::pow
+
+
+template <int Rows, int Cols>
+tarch::la::Matrix< Rows, Cols, double > mghype::composeMatrixFromHWeightedLinearCombination(
+  const std::vector< tarch::la::Matrix< Rows, Cols, double > >&   matrices,
+  const std::vector<int>&                                         scaleFactors,
+  const tarch::la::Vector<Dimensions, double>&                    h
+) {
+  assertionEquals( scaleFactors.size(), matrices.size() );
+  tarch::la::Matrix<Rows,Cols,double> output(0);
+  auto scaleIter  = scaleFactors.begin();
+  auto matrixIter = matrices.begin();
+  // no need to compare both iterators, as the vectors have same size
+  for (; matrixIter!=matrices.end(); matrixIter++, scaleIter++) {
+    output = output + (*matrixIter) * std::pow(h(0), *scaleIter);
+  }
+  return output;
+}

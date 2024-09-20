@@ -1,0 +1,9 @@
+/**
+
+@page applications_exahype2_advection Advection
+
+## Scenarios
+
+\li \subpage applications_exahype2_advection_smooth_advection
+
+*/

@@ -4,44 +4,55 @@
 
 Here we maintain Dockerfiles for different compilers.
 
-## Build a Docker Image
+## Build
+
+To build the Docker images, make sure to execute the following commands in the Peano root directory.
+
+### Building Base Images
 
 ```shell
-docker build -t peanoframework/<compiler> -f Dockerfile.<compiler> .
+docker build -t peanoframework/base -f docker/Dockerfile.base .
+docker build -t peanoframework/spack -f docker/Dockerfile.spack .
+docker build -t peanoframework/apptainer -f docker/Dockerfile.apptainer .
 ```
 
-### Login Into Your Dockerhub Account
+### Building Compiler Images
 
 ```shell
-docker login
+docker build -t peanoframework/amd -f docker/Dockerfile.amd .
+docker build -t peanoframework/gcc -f docker/Dockerfile.gcc .
+docker build -t peanoframework/llvm -f docker/Dockerfile.llvm .
+docker build -t peanoframework/intel -f docker/Dockerfile.intel .
+docker build -t peanoframework/nvidia -f docker/Dockerfile.nvidia .
+docker build -t peanoframework/targetdart -f docker/Dockerfile.targetdart .
 ```
 
-### Push the Docker Image to Dockerhub
+### Building Extension Images
 
 ```shell
-docker push peanoframework/<compiler>
+docker build -t peanoframework/exahype2 -f docker/Dockerfile.exahype2 .
 ```
 
-You can find prebuilt Docker images for each compiler we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
-
-## Run a Docker Image
+## Usage
 
 ```shell
 docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler> /bin/bash
 ```
 
-where `<compiler>` needs to be replaced by the compiler you want to use.
-
-### Run with GPU Support
+### With GPU Support
 
 ```shell
 docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler> /bin/bash
 ```
 
-### Run with Port Forwarding
+### With Port Forwarding (JupyterLab)
 
 ```shell
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
 ```
+
+## Dockerhub
+
+You can find prebuilt Docker images for each compiler we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
 
 */

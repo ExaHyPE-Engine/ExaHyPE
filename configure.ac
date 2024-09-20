@@ -102,14 +102,14 @@ srcdir_full_path=`cd $srcdir && pwd`
 #
 CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 "
 CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics "
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g "
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0 "
 
 CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 "
 CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics "
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g "
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 
 # Note: the flag "-g" is essentially a flag for the compiler driver.
@@ -185,6 +185,25 @@ if test "$multithreading" == tbb; then
   CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS -DTBB_USE_ASSERT -Isrc/tbb"
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   -DTBB_USE_ASSERT -Isrc/tbb"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   -DTBB_USE_ASSERT -Isrc/tbb"
+  
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/tbb "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/tbb "
+
+  LDADD_PEANO_2D_RELEASE+=" -ltbb_extension"
+  LDADD_PEANO_2D_STATS+="   -ltbb_extension"
+  LDADD_PEANO_2D_ASSERTS+=" -ltbb_extension_debug"
+  LDADD_PEANO_2D_TRACE+="   -ltbb_extension_trace"
+  LDADD_PEANO_2D_DEBUG+="   -ltbb_extension_debug"
+
+  LDADD_PEANO_3D_RELEASE+=" -ltbb_extension"
+  LDADD_PEANO_3D_STATS+="   -ltbb_extension"
+  LDADD_PEANO_3D_ASSERTS+=" -ltbb_extension_debug"
+  LDADD_PEANO_3D_TRACE+="   -ltbb_extension_trace"
+  LDADD_PEANO_3D_DEBUG+="   -ltbb_extension_debug"
+
 fi
 AM_CONDITIONAL([UseTBB], [test "x$multithreading" = xtbb])
 
@@ -238,13 +257,12 @@ AC_ARG_WITH(
   [
     AC_MSG_CHECKING(for gpu)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                    gpu=false ;;
-      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);  gpu=omp ;;
-      hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
-      cpp)   AC_MSG_RESULT(build with C++ GPU support);            gpu=cpp ;;
-      sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
-      cuda)  AC_MSG_RESULT(build with CUDA GPU suppport);          gpu=cuda ;;
-      *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
+      no)    AC_MSG_RESULT(no);                                                   gpu=false ;;
+      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);                 gpu=omp ;;
+      sycl)  AC_MSG_RESULT(build with SYCL GPU support);                          gpu=sycl ;;
+      cpp)   AC_MSG_RESULT(build with C++ GPU support);                           gpu=cpp ;;
+      hip)   AC_MSG_RESULT(build with HIP GPU support);                           gpu=hip ;;
+      *)     AC_MSG_FAILURE([use omp, sycl, cpp or hip to define target]);  gpu=false ;;
     esac
   ],
   [
@@ -255,9 +273,8 @@ AC_ARG_WITH(
 
 AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
 AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
-AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
-AM_CONDITIONAL([GPUOffloadingCUDA],   [test "$gpu" == cuda])
+AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 
 if test "$gpu" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
@@ -275,81 +292,6 @@ fi
 if test "$gpu" == cpp; then
   AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
 fi
-
-if test "$gpu" == cuda; then
-  AC_DEFINE([GPUOffloadingCUDA], [1], [GPUOffloadingCUDA])
-
-  AC_ARG_WITH([cuda],
-    [AS_HELP_STRING([--with-cuda=PATH], [specify CUDA installation path])],
-    [with_cuda="$withval"],
-    [with_cuda=""],
-  )
-
-  # We need to apply further checks on CUDA
-  if test -n "$with_cuda"
-  then
-    # Check the option has argument (empty argument results with a "yes")
-    if test "$with_cuda" = yes
-    then
-      AC_MSG_ERROR([The argument --with-cuda requires the path to CUDA: --with-cuda=<CUDA_PATH>])
-    fi
-
-    # Extract the path from the "--with-cuda" argument and check if the path is valid
-    cuda_path=$(echo "$with_cuda" | sed 's/--with-cuda=//')
-
-    # Check if the path is valid
-    if test ! -d "$cuda_path"; then
-      AC_MSG_ERROR([The input for --with-cuda=$cuda_path is not a valid directory])
-    fi
-
-    CUDA_INCLUDE_FLAGS="-I$with_cuda/include"
-    CUDA_LIBS="-L$with_cuda/lib64 -lcudart_static"
-    CUDA_PATH="$with_cuda"
-    # NVCC is read from the environment variable
-    NVCC="$NVCC"
-
-    AC_SUBST(CUDA_INCLUDE_FLAGS)
-    AC_SUBST(CUDA_LIBS)
-    AC_SUBST(NVCC)
-    AC_SUBST(CUDA_PATH)
-  else
-    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit])
-  fi
-
-  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG   $CUDA_INCLUDE_FLAGS"
-
-  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
-
-  # Necessary for executables and unittests to link to CUDA libraries as we will have compiled CUDA code.
-  LDADD_PEANO_2D_RELEASE=" $LDADD_PEANO_2D_RELEASE $CUDA_LIBS"
-  LDADD_PEANO_2D_STATS="   $LDADD_PEANO_2D_STATS   $CUDA_LIBS"
-  LDADD_PEANO_2D_ASSERTS=" $LDADD_PEANO_2D_ASSERTS $CUDA_LIBS"
-  LDADD_PEANO_2D_TRACE="   $LDADD_PEANO_2D_TRACE   $CUDA_LIBS"
-  LDADD_PEANO_2D_DEBUG="   $LDADD_PEANO_2D_DEBUG   $CUDA_LIBS"
-
-  LDADD_PEANO_3D_RELEASE=" $LDADD_PEANO_3D_RELEASE $CUDA_LIBS"
-  LDADD_PEANO_3D_STATS="   $LDADD_PEANO_3D_STATS   $CUDA_LIBS"
-  LDADD_PEANO_3D_ASSERTS=" $LDADD_PEANO_3D_ASSERTS $CUDA_LIBS"
-  LDADD_PEANO_3D_TRACE="   $LDADD_PEANO_3D_TRACE   $CUDA_LIBS"
-  LDADD_PEANO_3D_DEBUG="   $LDADD_PEANO_3D_DEBUG   $CUDA_LIBS"
-
-  NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
-
-  NVCC_FLAGS_RELEASE=" $NVCC_FLAGS "
-  NVCC_FLAGS_STATS="   $NVCC_FLAGS "
-  NVCC_FLAGS_ASSERTS=" $NVCC_FLAGS "
-  NVCC_FLAGS_TRACE="   $NVCC_FLAGS "
-  NVCC_FLAGS_DEBUG="   $NVCC_FLAGS -g -O0 "
-fi
-
 
 #
 # PETSc
@@ -477,6 +419,24 @@ fi
 
 
 #
+# NetCDF
+#
+AC_ARG_WITH(netcdf,
+  AS_HELP_STRING([--with-netcdf],[enable NetCDF [default=false]]),
+  [ AC_MSG_CHECKING(for netcdf)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_netcdf=false ;;
+      *)     AC_MSG_RESULT(yes);   use_netcdf=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for openblas); AC_MSG_RESULT(no); use_netcdf=false ])
+AM_CONDITIONAL([UseNetCDF],[test "x$use_netcdf" = xtrue])
+
+if test "$use_netcdf" == true; then
+  AC_DEFINE([UseNetCDF], [UseNetCDF], [UseNetCDF])
+fi
+
+
+#
 # Otter
 #
 AC_ARG_WITH(otter,
@@ -498,9 +458,8 @@ fi
 #
 # OPENBLAS
 # This is needed by LAPACK and libxsmmjit, so we enable/disable
-# here, make sure we add "-lopenblas" to LIBS, and do not 
-# allow configuring --with-lapack or --with-libxsmm without
-# it
+# here, make sure we add "-lopenblas" to LIBS, and do not
+# allow configuring --with-lapack or --with-libxsmm without it.
 #
 AC_ARG_WITH(openblas,
   AS_HELP_STRING([--with-openblas],[enable OpenBLAS [default=false]]),
@@ -537,8 +496,8 @@ fi
 
 #
 # LIBXSMM JIT
-# 
-# Check to see if user enabled openblas...
+#
+# Check to see if user enabled OpenBLAS
 #
 AC_ARG_WITH(libxsmmjit,
   AS_HELP_STRING([--with-libxsmmjit],[enable LIBXSMM JIT [default=false]]),
@@ -552,7 +511,7 @@ AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
 
 if test "$use_libxsmmJIT" == true; then
   if test "$use_openblas" == false; then
-  AC_MSG_ERROR([LIBXSMM JIT requires OpenBlas. Re-reun with --with-openblas])
+  AC_MSG_ERROR([LIBXSMM JIT requires OpenBLAS. Re-reun with --with-openblas])
   else
   AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
   fi
@@ -610,7 +569,7 @@ AM_CONDITIONAL([UseLapack],[test "x$use_lapack" = xtrue])
 
 if test "$use_lapack" == true; then
   if test "$use_openblas" == false; then
-  AC_MSG_ERROR([Lapack requires OpenBlas. Re-reun with --with-openblas])
+  AC_MSG_ERROR([Lapack requires OpenBLAS. Re-reun with --with-openblas])
   else
   AC_DEFINE([UseLapack], [UseLapack], [UseLapack])
   fi
@@ -688,8 +647,6 @@ fi
 if test "$toolchain" == scorep; then
   AC_DEFINE([UseLogService], [ScorePLogger], [ScorePLogger])
   AC_DEFINE([UseScoreP],     [UseScoreP], [UseScoreP])
-  #LDFLAGS+=-ipo
-  #CXXFLAGS+=" -ip -ipo "
 fi
 
 if test "$toolchain" == nvptx; then
@@ -703,7 +660,11 @@ if test "$toolchain" == chrome; then
 fi
 
 if test "$toolchain" == gnu; then
-  LDFLAGS+=-flto
+  LDFLAGS_PEANO_RELEASE+=" -flto "
+  LDFLAGS_PEANO_STATS+="   -flto "
+  LDFLAGS_PEANO_ASSERTS+=" -flto "
+  LDFLAGS_PEANO_TRACE+="   -flto "
+  LDFLAGS_PEANO_DEBUG+="   -flto "
 fi
 
 
@@ -800,6 +761,20 @@ AC_ARG_ENABLE(swift,
     esac ],
   [ AC_MSG_CHECKING(for swift); AC_MSG_RESULT(no); toolbox_swift=false ])
 AM_CONDITIONAL([UseSWIFT],[test "x$toolbox_swift" = xtrue])
+
+
+#
+# Multigrid
+#
+AC_ARG_ENABLE(mghype,
+  AS_HELP_STRING([--enable-mghype],[enable MGHyPE [default=false]]),
+  [ AC_MSG_CHECKING(for mghype)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_mghype=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_mghype=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for mghype); AC_MSG_RESULT(no); toolbox_mghype=false ])
+AM_CONDITIONAL([UseMGHyPE],[test "x$toolbox_mghype" = xtrue])
 
 
 #
@@ -982,7 +957,7 @@ fi
 if test "$petsc" != false; then
   AC_DEFINE([UsePETSc], [1], [UsePETSc])
   if test "$toolbox_finiteelements" == false; then
-    AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
+    AC_MSG_ERROR([PETSc requires the finiteelements toolbox (run with --help to see the correct enable statement)])
   fi
   AC_CHECK_HEADER([petsc.h], [
   ], [
@@ -1046,6 +1021,35 @@ fi
 
 
 #
+# Multigrid
+#
+if test "$toolbox_mghype" != false; then
+  AC_DEFINE([UseMGHyPE], [1], [UseMGHyPE])
+  if test "$toolbox_finiteelements" == false; then
+    AC_MSG_ERROR([MGHyPE (mghype) requires the finiteelements toolbox (run with --help to see the correct enable statement)])
+  fi
+
+  LDADD_PEANO_2D_RELEASE=" -lMultigrid2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lMultigrid2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lMultigrid2d_asserts $LDADD_PEANO_2D_ASSERTS "
+  LDADD_PEANO_2D_TRACE="   -lMultigrid2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lMultigrid2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lMultigrid3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lMultigrid3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lMultigrid3d_asserts $LDADD_PEANO_3D_ASSERTS "
+  LDADD_PEANO_3D_TRACE="   -lMultigrid3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lMultigrid3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/mghype "
+fi
+
+
+#
 # OPENBLAS
 #
 if test "$use_openblas" != false; then
@@ -1063,6 +1067,27 @@ if test "$use_openblas" != false; then
   AC_SUBST([OPENBLAS_LIBS])
   OPENBLAS_INCLUDE_DIR=$(dirname $OPENBLAS_LIBS)
   AC_SUBST([OPENBLAS_INCLUDE_DIR])
+fi
+
+
+#
+# NetCDF
+#
+if test "$use_netcdf" != false; then
+  # Find the NetCDF header
+  AC_CHECK_HEADERS([netcdf.h], [
+  ], [
+    AC_MSG_ERROR([NetCDF headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([netcdf], [nc_open], [
+    NETCDF_LIBS="netcdf"
+  ], [
+    AC_MSG_ERROR([NetCDF library not found. Did you forget to include -lnetcdf to LDFLAGS?])
+  ])
+  AC_SUBST([NETCDF_LIBS])
+  NETCDF_INCLUDE_DIR=$(dirname $NETCDF_LIBS)
+  AC_SUBST([NETCDF_INCLUDE_DIR])
 fi
 
 
@@ -1200,9 +1225,9 @@ if test "$use_lapack" != false; then
   ], [
     AC_MSG_ERROR([LAPACK headers not found])
   ])
-  # Check for libraries. The lapack libraries are 
-  # libopenblas, but if this doesn't work, try 
-  # configuring with -llapack
+  # Check for libraries. The lapack libraries are
+  # libopenblas, but if this doesn't work, try
+  # configuring with -llapack.
   AC_CHECK_LIB([openblas], [LAPACKE_dgetrf], [
     LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
   ], [
@@ -1301,12 +1326,6 @@ AC_SUBST(CXXFLAGS_PEANO_3D_ASSERTS)
 AC_SUBST(CXXFLAGS_PEANO_3D_TRACE)
 AC_SUBST(CXXFLAGS_PEANO_3D_DEBUG)
 
-AC_SUBST(NVCC_FLAGS_RELEASE)
-AC_SUBST(NVCC_FLAGS_STATS)
-AC_SUBST(NVCC_FLAGS_ASSERTS)
-AC_SUBST(NVCC_FLAGS_TRACE)
-AC_SUBST(NVCC_FLAGS_DEBUG)
-
 AC_SUBST(LDFLAGS_PEANO_RELEASE)
 AC_SUBST(LDFLAGS_PEANO_STATS)
 AC_SUBST(LDFLAGS_PEANO_ASSERTS)
@@ -1335,6 +1354,7 @@ AC_CONFIG_FILES([Makefile
   src/tbb/Makefile
   src/convert/Makefile
   src/exahype2/Makefile
+  src/mghype/Makefile
   src/petsc/Makefile
   src/swift2/Makefile
   src/unittests/Makefile

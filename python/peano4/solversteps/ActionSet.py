@@ -6,15 +6,15 @@ from abc import abstractmethod
 class ActionSet(object):
     """!
 
-    Action set (reactions to observations made by the grid traversal observer)
+    Action set (reactions to events)
 
-    Actions are triggered by the observer and represent the highest
-    grid traversal view that I have implemented within Peano. They
-    listen to the tree traversal through notifications alike "this
-    is the first time I see (touch) a vertex". A list of messages
+    Peano runs through the mesh tied to an observer. The observer 
+    "sees" events and issues actions tied to these events. That is
+    the observer listens to the tree traversal for events alike "this
+    is the first time I see (touch) a vertex". A list of events
     that we can listen to is specified by this class through class
     attributes starting with OPERATION_. Peano's documentation holds
-    a @pageref peano_action_sets "discussion of events and their temporal and spatial ordering".
+    a @ref peano_action_sets "discussion of events and their temporal and spatial ordering".
 
     For each grid traversal, Peano expects one C++ observer. The
     observer is represented within Python through
@@ -96,45 +96,20 @@ class ActionSet(object):
     To be able to do so, it makes sense to let get_action_set_name() return
     a unique name, so it is easier for you to find what C++ file corresponds
     to which action set.
+    
+    A discussion some event functions and their semantics as well as further
+    info on the arguments can be found in the documentation of
+    @ref peano_action_sets.
 
 
     ## Order of invocation and concurrency level
-
-    There are two properties which feed into the order in which actions are 
-    executed:
-
-    - descend_invocation_order: 
-      Each action set has a descend_invocation_order. The action sets are invoked later
-      in order following their descend_invocation_order throughout the steps down within
-      the tree. Their call order is inverted when we backtrace within the
-      tree. The order allows you to add the action sets in a different
-      order than they are actually used later on. See peano4.solversteps.Step.add_action_set().
-
-    - parallel:
-      Different action sets might be run in parallel if this flag is set.
-      
-    Assume there are four action sets A, B, C and D all tied to an algorithmic 
-    step. The following properties hold:
     
-    - A: order=4,  parallel=False
-    - B: order=-1,  parallel=False
-    - C: order=6,  parallel=True
-    - D: order=6,  parallel=True
-
-    When the traversal hits touchVertexFirstTime(), it will call
+    A discussion of the order of events can be found in the documentation of
+    @ref peano_action_sets.
     
-    - B.touchVertexFirstTime() (as this one has the smallest order value), then
-    - A.touchVertexFirstTime(), and finally
-    - C.touchVertexFirstTime() and D.touchVertexFirstTime() in parallel.
+
+
     
-    For touchCellFirstTime(), the same order is used. However, when we go up 
-    the tree, we invert the order. That is
-
-    - C.touchVertexLastTime() and D.touchVertexLastTime() are invoked in 
-      parallel before
-    - A.touchVertexLastTime(), which in turn precedes
-    - B.touchVertexLastTime().
-
     @param parallel: Boolean
       See section on "Order of invocation and concurrency level" in class
       documentation.

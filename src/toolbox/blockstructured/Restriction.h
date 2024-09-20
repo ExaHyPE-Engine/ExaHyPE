@@ -231,6 +231,26 @@ namespace toolbox {
       double* coarseGridValues
     );
 
+    void restrictCell_AoS_matrix(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__ restrictionData,
+      const int* __restrict__ columnIndices,
+      const int* __restrict__ rowIndices,
+      double* fineGridValues,
+      double* coarseGridValues
+    );
+
+    void restrictCell_AoS_second_order(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double* fineGridValues,
+      double* coarseGridValues
+    );
+
+
     /**
      * Restrict whole halo layer
      *
@@ -253,6 +273,29 @@ namespace toolbox {
       const double* __restrict__ tangentialRestrictionMatrix1d,
       double* fineGridValues,
       double* coarseGridValues
+    );
+
+    void restrictHaloLayer_AoS_matrix(
+	const peano4::datamanagement::FaceMarker& marker,
+	int					  numberOfDoFsPerAxisInPatch,
+	int					  overlap,
+	int					  unknowns,
+	const double* __restrict__ 		  restrictionData,
+	const int* __restrict__		  columnIndices,
+	const int* __restrict__		  rowIndices,
+	int				  	  dataOffset,
+	int					  rowIndicesOffset,
+	double* fineGridValues,
+	double* coarseGridValues
+    );
+
+    void restrictHaloLayer_AoS_second_order(
+	const peano4::datamanagement::FaceMarker& marker,
+	int					  numberOfDoFsPerAxisInPatch,
+	int					  overlap,
+	int					  unknowns,
+	double* fineGridValues,
+	double* coarseGridValues
     );
 
     /**
@@ -435,11 +478,36 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ normalRestrictionMatrix1d,
-      const double* __restrict__ tangentialRestrictionMatrix1d,
-      double* fineGridValues,
-      double* coarseGridValues,
-      bool    swapInsideOutside = false
+      const double* __restrict__ 		normalRestrictionMatrix1d,
+      const double* __restrict__ 		tangentialRestrictionMatrix1d,
+      double* 					fineGridValues,
+      double* 					coarseGridValues,
+      bool    					swapInsideOutside = false
+    );
+
+    void restrictInnerHalfOfHaloLayer_AoS_matrix(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__   		restrictionMatrixData,
+      const int* __restrict__ 			columnIndices,
+      const int* __restrict__ 			rowIndices,
+      int				  	dataOffset,
+      int					rowIndicesOffset,
+      double* 					fineGridValues,
+      double* 					coarseGridValues,
+      bool    					swapInsideOutside = false
+    );
+
+    void restrictInnerHalfOfHaloLayer_AoS_second_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside = false
     );
 
     namespace internal {

@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "exahype2/CellData.h"
 
 namespace exahype2 {
   namespace dg {
@@ -15,7 +16,7 @@ namespace exahype2 {
         >
         void cellIntegral_patchwise_in_situ_GaussLegendre(
           int                                            targetDevice,
-          ::exahype2::CellData&                          cellData,
+          ::exahype2::CellData<double, double>&          cellData,
           bool                                           evaluateFlux,
           bool                                           evaluateNonconservativeProduct,
           bool                                           evaluateSource,

@@ -20,7 +20,8 @@ private:
 
   void testLU();
 
-  void testInversion();
+  void testInversion0();
+  void testInversion1();
 
 public:
 

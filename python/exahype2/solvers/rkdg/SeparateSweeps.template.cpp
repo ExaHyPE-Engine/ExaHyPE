@@ -32,9 +32,9 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  const tarch::la::Vector<Dimensions,int>&     point,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     index,
   bool                                         gridIsConstructed
 ) {
   logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );

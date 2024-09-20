@@ -19,7 +19,8 @@ import CCZ4Helper
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts, 
+  "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",            help="|".join(modes.keys()) )
     parser.add_argument(         "--gpu",             dest="GPU",             default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top of the evolving solution. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-adaptive", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk2-adaptive", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
     parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",   dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -55,7 +56,8 @@ if __name__ == "__main__":
     parser.add_argument("-exn",  "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory", dest="path",     type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
     parser.add_argument("-so",   "--second-order",    dest="SO_flag",     default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
-
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp", "matrix", "second_order"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "matrix", "second_order" ], default="average",  help="restriction scheme for AMR" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -68,7 +70,9 @@ if __name__ == "__main__":
     SuperClass = None
 
     print(args.implementation)
-    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
+    if args.implementation=="fv-adaptive":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk2-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
@@ -104,10 +108,20 @@ if __name__ == "__main__":
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
 """
-
-        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
-          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_mesh_unit_h, max_volume_h=max_mesh_unit_h,
+            time_step_relaxation=cfl
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+          if args.implementation=="fd4-rk1-adaptive":
             rk_order = 1
+          elif args.implementation=="fd4-rk2-adaptive":
+            rk_order = 2
           else:
             rk_order = 4
           SuperClass.__init__(
@@ -117,10 +131,11 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_meshcell_h=min_mesh_unit_h, max_meshcell_h=max_mesh_unit_h,
             time_step_relaxation=cfl,
-            KOSigma=KOSig
+            KOSigma=KOSig,
+            reconstruction_with_rk=args.SO_flag
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
-          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+          if args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
             rk_order = 4
@@ -179,12 +194,31 @@ if __name__ == "__main__":
             kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
             KOSigma                                  = self._KO_Sigma
           )
-
-          self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
-            )
         
-        self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          self.postprocess_updated_patch += """{
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+
+
+        else:
+          self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
@@ -209,7 +243,7 @@ if __name__ == "__main__":
     """
 
         self._preprocess_reconstructed_patch = CCZ4Helper.get_body_of_adm_constraints(
-          self._patch.dim[0], self._auxiliary_variables)
+          self._patch.dim[0], self._auxiliary_variables, args.SO_flag)
 
         self.create_data_structures()
         self.create_action_sets()
@@ -226,7 +260,7 @@ if __name__ == "__main__":
     """
 
         self._preprocess_reconstructed_patch = CCZ4Helper.get_body_of_Psi_Calc(
-          self._patch.dim[0], self._auxiliary_variables)
+          self._patch.dim[0], self._auxiliary_variables, args.SO_flag)
 
         self.create_data_structures()
         self.create_action_sets()
@@ -313,9 +347,21 @@ if __name__ == "__main__":
     tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
     if ("fd4-rk" in args.implementation):
-      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
-      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
-      userinfo.append(("FD4 Interpolation: " + tem_interp[1] + " & Restriction: " + tem_restrict[1], None))
+      if args.interpolation == "matrix":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation( my_solver ) 
+      elif args.interpolation == "second_order":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation( my_solver ) 
+      else:
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] )
+        userinfo.append(("FD4 Interpolation: " + tem_interp[1], None))
+
+      if args.restriction == "matrix":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction( my_solver ) 
+      elif args.interpolation == "second_order":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction( my_solver ) 
+      else:
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction( my_solver, tem_restrict[1] )
+        userinfo.append(("FD4 Restriction: " + tem_restrict[1], None))
 
 ########################################################################################
 #Add postpocessing function
@@ -586,10 +632,10 @@ if __name__ == "__main__":
       additional_mesh_traversal.add_action_set( roll_over_projected_faces )
       additional_mesh_traversal.add_action_set( dynamic_AMR )
       
-      project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
-      peano4_project.solversteps.add_step( additional_mesh_traversal )
+      #project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
+      #peano4_project.solversteps.add_step( additional_mesh_traversal )
 
-      peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
+      #peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )//maybe we need to change to InTimeStep scheme completely.
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )

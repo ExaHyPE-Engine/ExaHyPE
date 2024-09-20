@@ -41,7 +41,7 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
       Pass in a version of output
     """
         output.makefile.add_cpp_file(
-            self.data.namespace[-1] + "/" + self.data.name + ".cpp", generated=True
+            self.data.subdirectory + self.data.namespace[-1] + "/" + self.data.name + ".cpp", generated=True
         )
         templatefile_prefix = (
             os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
@@ -51,7 +51,7 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
             templatefile_prefix + ".template.cpp",
             self.data.name,
             self.data.namespace,
-            self.data.namespace[-1],
+            self.data.subdirectory + self.data.namespace[-1],
             d,
             True,
         )

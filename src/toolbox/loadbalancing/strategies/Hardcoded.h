@@ -48,7 +48,14 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
      * then tree 2 will split in the grid sweeps 4, 5 and eight. It will try to
      * deploy 11, 12 or 13 cells to the ranks 22, 23 or 24, respectively.
      */
-    Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore);
+    Hardcoded(
+      std::initializer_list<int> timeStamps,
+      std::initializer_list<int> splittingTrees,
+      std::initializer_list<int> numberOfCells,
+      std::initializer_list<int> destinationRanks,
+      std::initializer_list<peano4::SplitInstruction::Mode> modes,
+      bool handOutOnePartitionPerCore
+    );
 
     virtual void finishStep() override;
 
@@ -61,8 +68,9 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
       int  splittingTree;
       int  numberOfCells;
       int  destinationRank;
+      peano4::SplitInstruction::Mode mode;
       Split( const Split& split );
-      Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_ );
+      Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_, peano4::SplitInstruction::Mode mode_ );
     };
 
     std::queue< Split >   _splits;

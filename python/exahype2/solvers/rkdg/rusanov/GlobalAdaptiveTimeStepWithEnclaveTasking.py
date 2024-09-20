@@ -17,13 +17,23 @@ from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
 
 from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+
 
 class GlobalAdaptiveTimeStepWithEnclaveTasking(SeparateSweepsWithEnclaveTasking):
+  """!
+  
+  RKDG solver with global adaptive time step 
+  
+  Please consult GlobalAdaptiveTimeStep for more documentation. This version is
+  basically the same with the "only" exception being that we employ enclave
+  tasking here.
+  
+  """  
   def __init__(self,
     name,
     rk_order,
     polynomials,
-    face_projections,
     unknowns,
     auxiliary_variables,
     min_cell_h,
@@ -40,10 +50,15 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(SeparateSweepsWithEnclaveTasking)
     plot_grid_properties=False,
     pde_terms_without_state=False,
   ):
+    """!
+        
+    Construct RKDG solver with adaptive global time step and enclave tasking
+        
+    """
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name,
                                                 rk_order,
                                                 polynomials,
-                                                face_projections,
+                                                FaceProjections.Solution,
                                                 unknowns,
                                                 auxiliary_variables,
                                                 min_cell_h,
@@ -57,7 +72,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(SeparateSweepsWithEnclaveTasking)
     self._kernel_namespace                                    = "rusanov"
     self._volumetric_compute_kernel_call                      = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
     self._volumetric_compute_kernel_call_stateless            = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
-    self._Riemann_compute_kernel_call                         = create_Riemann_solver_call(self._basis, face_projections)
+    self._Riemann_compute_kernel_call                         = create_Riemann_solver_call(self._basis, FaceProjections.Solution)
     # TODO: self._Riemann_compute_kernel_call_stateless       =
     self._fused_volumetric_compute_kernel_call_stateless_cpu  = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
     self._fused_volumetric_compute_kernel_call_stateless_gpu  = create_volumetric_solver_call(self._basis, SolverVariant.Accelerator)

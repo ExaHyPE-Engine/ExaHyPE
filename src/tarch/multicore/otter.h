@@ -102,14 +102,7 @@
  */
 namespace otter {
   namespace label {
-    static const char* root                     = "[ROOT TASK]";
     static const char* step                     = "[STEP TASK]";
-    static const char* enclave                  = "[anonymous enclave task]";
-    static const char* enclave_with_typeid      = "[enclave task (typeid=%d)]";
-    static const char* traverse_fmt             = "[traversal task %d of %d]";
-    static const char* unknown                  = "unknown task";
-    static const char* TaskWithCopyOfFunctor    = "TaskWithCopyOfFunctor";
-    static const char* TaskWithoutCopyOfFunctor = "TaskWithoutCopyOfFunctor";
   } // namespace label
 
   namespace phase {
@@ -127,19 +120,25 @@ namespace otter {
 #include <otter/otter-task-graph-user.h>
 #else
 
+#define OTTER_UTIL_ASSERT(...)
 #define OTTER_INITIALISE()
 #define OTTER_FINALISE()
 #define OTTER_DECLARE_HANDLE(...)
-#define OTTER_DEFINE_TASK(...)
 #define OTTER_INIT_TASK(...)
+#define OTTER_DEFINE_TASK(...)
 #define OTTER_POOL_ADD(...)
 #define OTTER_POOL_POP(...)
-#define OTTER_POOL_BORROW(...)
 #define OTTER_POOL_DECL_POP(...)
+#define OTTER_POOL_BORROW(...)
 #define OTTER_POOL_DECL_BORROW(...)
+#define OTTER_POOL_SIZE(...)
 #define OTTER_TASK_START(...)
 #define OTTER_TASK_END(...)
-#define OTTER_TASK_WAIT_FOR(...)
+#define OTTER_TASK_WAIT_START(...)
+#define OTTER_TASK_WAIT_END(...)
+#define OTTER_TASK_YIELD_START(...)
+#define OTTER_TASK_YIELD_END(...)
+#define OTTER_TASK_WAIT_IMPLICIT(...)
 #define OTTER_PHASE_BEGIN(...)
 #define OTTER_PHASE_END(...)
 #define OTTER_PHASE_SWITCH(...)

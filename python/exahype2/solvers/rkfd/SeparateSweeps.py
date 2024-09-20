@@ -65,23 +65,81 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       if ({{PREDICATES[PREDICATE_NO]}}) {
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
-    
+        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                      10,11,12,13,14,15,16,17,18,19,
+                                      20,21,22,53,54};
+        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
+                                        33,34,35,36,37,38,39,40,41,42,
+                                        43,44,45,46,47,48,49,50,51,52,
+                                        55,56,57,58}; 
+        
         dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+        {% if RECONSTRUCTION_STAGES==0 %}
           for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
             {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
             {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
             oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
-              {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
+              timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
             {% endif %}
             {% endfor %}
-          }      
+          }
+        {% else %}                        
+          for (int unknown : primaryVarsIndices) {
+            {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+            {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
+              timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+            {% endif %}
+            {% endfor %}
+          }
+          for (int unknown : auxiliaryVarsIndices) {
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = //abuse of RHS, auxiliary variables are stored there.
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},dof,unknown) ];
+          }
+        {% endif %}
+              
         }
-        
+
         newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
       }
       {% endfor %} 
-   
+
+      {% for PREDICATE_NO in range(0,PREDICATES_RECONSTRUCTION|length) %}
+      if ({{PREDICATES_RECONSTRUCTION[PREDICATE_NO]}}) {
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+        int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                      10,11,12,13,14,15,16,17,18,19,
+                                      20,21,22,53,54};
+        int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,
+                                        33,34,35,36,37,38,39,40,41,42,
+                                        43,44,45,46,47,48,49,50,51,52,
+                                        55,56,57,58}; 
+        
+        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {                          
+          for (int unknown : primaryVarsIndices) {
+            {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+            {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
+              timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+            {% endif %}
+            {% endfor %}
+          }
+          for (int unknown : auxiliaryVarsIndices) {
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] = 0;
+            // actually no need for this initialization as we do overwritten in reconstruction, but we keep it for safety.
+          }
+              
+        }
+
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+      }
+      {% endfor %} 
+
+
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
       assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
@@ -95,10 +153,31 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         {{HALO_SIZE}}, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
-  
-      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), timeStamp, timeStepSize, newQ );
-           
-      ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
+
+      double subTimeStamp=timeStamp;
+      {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+      if ({{PREDICATES[PREDICATE_NO]}}) {
+        subTimeStamp += {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}}*timeStepSize;
+      }
+      {% endfor %} 
+
+      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), subTimeStamp, timeStepSize, newQ );
+
+      {% if RECONSTRUCTION_STAGES==0 %}
+        ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
+      {% else %}
+      if ({{IS_UNDER_RECONSTRUCTION}}) {
+        ::exahype2::fd::fd4::reconstruct_first_derivatives(
+            patchData,
+            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},  // int                     numberOfGridCellsPerPatchPerAxis,
+            {{HALO_SIZE}}, 
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          );
+      } else if ({{IS_UNDER_RKSTEP}}) {
+        ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
+      }
+      {% endif %}
 
       ::exahype2::fd::validatePatch(
         newQ,
@@ -157,6 +236,43 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             )
             for step in range(0, self._solver.number_of_Runge_Kutta_steps())
         ]
+        if self._solver._reconstruction_stages != 0 :
+            d["PREDICATES_RECONSTRUCTION"] = [
+                "{} and repositories::{}.getSolverState()=={}::SolverState::ReconstructionSubStep{}".format(
+                    self._solver._store_cell_data_default_guard(),
+                    self._solver.get_name_of_global_instance(),
+                    self._solver._name,
+                    step,
+                )
+                for step in range(0, self._solver._reconstruction_stages)
+            ]
+
+            re_condition_text="repositories::{}.getSolverState()=={}::SolverState::ReconstructionSubStep{}".format(
+                    self._solver.get_name_of_global_instance(),
+                    self._solver._name,
+                    0,
+                )
+            for step in range(1,self._solver._reconstruction_stages):
+                re_condition_text += " or repositories::{}.getSolverState()=={}::SolverState::ReconstructionSubStep{}".format(
+                    self._solver.get_name_of_global_instance(),
+                    self._solver._name,
+                    step)
+
+            rk_condition_text="repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(
+                    self._solver.get_name_of_global_instance(),
+                    self._solver._name,
+                    0,
+                )
+            for step in range(1,self._solver.number_of_Runge_Kutta_steps()):
+                rk_condition_text += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(
+                    self._solver.get_name_of_global_instance(),
+                    self._solver._name,
+                    step)
+
+            d["IS_UNDER_RECONSTRUCTION"]=re_condition_text
+            d["IS_UNDER_RKSTEP"]=rk_condition_text
+
+
         d["BUTCHER_TABLEAU_WEIGHTS"] = self._butcher_tableau.weight_matrix()
         d[
             "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"
@@ -297,7 +413,22 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
             first_iteration_after_initialisation_guard
         )
 
-        first_sweep_of_time_step_or_plotting_guard = """(
+        if self._reconstruction_stages != 0 :
+            first_sweep_of_time_step_or_plotting_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::ReconstructionSubStep0 or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended
+    )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+        )
+        else:
+            first_sweep_of_time_step_or_plotting_guard = """(
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
@@ -375,6 +506,17 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
                 self._name,
             )
         ]
+        if self._reconstruction_stages != 0 :
+            for step in range(0,self._reconstruction_stages):
+                self._action_set_project_patch_onto_faces.guards.append(
+                    "{} and repositories::{}.getSolverState()=={}::SolverState::ReconstructionSubStep{}".format(
+                    self._store_cell_data_default_guard(),
+                    self.get_name_of_global_instance(),
+                    self._name,
+                    step)
+                )
+
+
 
     @property
     def user_action_set_includes(self):

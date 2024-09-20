@@ -2,6 +2,9 @@
 
 @page benchmarks_exahype2_ccz4_single_black_hole Single black hole test
 
+<!-- Add this one for href links to subitems -->
+@tableofcontents
+
 
 Benchmark which solves the single black hole described in a CCZ4 simulation. 
 While the output is not particularly exciting (the simulation should yield a 
@@ -12,12 +15,20 @@ so forth. Therefore, this benchmark combines two different solvers - a
 dissipative Finite Volume scheme and a higher order scheme - to obtain a
 compromise between accuracy and stability. 
 
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+  For this benchmark, the following extensions are mandatory:
+  
+  - blockstructured (`--enable-blockstructured`)
+  - exahype2 (`--enable-exahype2`)
+  
+  Furthermore, you will need the GNU Scientific Library (GSL) installed on your system. 
+</div>
+
 
 # Build executable
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=../../../../python
-export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 
 python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -70,7 +81,7 @@ export PYTHONPATH=../../../../python
 /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-CCZ4SBH_FD4.peano-patch-file
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The picture below is taken from @ref page_exahype_coupling "ExaHyPE's coupling discussion" and
+The picture below is taken from @ref tutorials_exahype2_coupling "ExaHyPE's coupling discussion" and
 illustrates that the higher order solver covers the whole domain, while the FV 
 is only active in a tiny cross-shaped region within.
 
@@ -494,7 +505,7 @@ advance in time by one time step. After that one, the Finite Volume scheme
 overwrites the FD4 scheme in points which are covered by both numerical 
 schemes (restriction).
 
-This coupling strategy follows @ref page_exahype_coupling "the default coupling schema" of
+This coupling strategy follows @ref tutorials_exahype2_coupling "the default coupling schema" of
 ExaHyPE. Different to the generic coupling recipes there, we let the higher-order 
 solver cover the whole domain. As FV only will be used in a tiny region, this 
 overhead is acceptable. Furthermore, we do not use any fancy colouring to 
@@ -561,7 +572,7 @@ benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImp
 and their cousins.
 That is, we implement the actual logic where to apply the limiter within the C++ class.
 
-Within the Python code, we follow @ref page_exahype_coupling "localisation recommendations for solver coupling" and
+Within the Python code, we follow @ref tutorials_exahype2_coupling "localisation recommendations for solver coupling" and
 overwrite the routines 
 
 - _store_cell_data_default_guard()
@@ -686,7 +697,7 @@ fact that postprocessing steps always plug into touchCellLastTime (cmp
 
 For the realisation, we employ the built-in routines. For example, we call
 toolbox::blockstructured::restrictCellIntoOverlappingCell_inject() for every cell which holds Finite Volume data, i.e. overlaps
-with the black hole. This is slightly different to @ref page_exahype_coupling "ExaHypE's generic coupling sketch", where
+with the black hole. This is slightly different to @ref tutorials_exahype2_coupling "ExaHypE's generic coupling sketch", where
 I recommend to have at least one whole cell overlap between any two solvers:
 I do not only inject data from Finite Volume patches back which are completely
 surrounded by further FV patches.
@@ -739,7 +750,7 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
         rm tasks/*.o
         $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FD4EnclaveTask.cpp -o tasks/CCZ4SBH_FD4EnclaveTask.o
         $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FVEnclaveTask.cpp  -o tasks/CCZ4SBH_FVEnclaveTask.o
-        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
+        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    This follows @ref page_peano_performance_optimisation "Peano's recommendations"
    how to obtain meaningful optimisation reports. However, it will result in

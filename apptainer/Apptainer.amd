@@ -1,75 +1,21 @@
 Bootstrap: docker
-From: spack/ubuntu-jammy:0.21.2
+From: peanoframework/spack:latest
 Stage: build
 
+%files
+  spack/compilers/amd/spack.yaml /spack.yaml
+
 %post
-  # Create the manifest file for the installation in /opt/spack-environment
   mkdir /opt/spack-environment && cd /opt/spack-environment
-  cat << EOF > spack.yaml
-spack:
-  packages:
-      all:
-        target: ['x86_64']
+  cp /spack.yaml .
 
-  specs:
-  - py-pip
-  - py-black
-  - py-jinja2
-  - py-h5py
-  - py-hpccm
-  - py-sympy
-  - py-numpy
-  - py-mpmath
-  - py-jsonschema
-  - py-jupyterlab
-  - py-scipy
-  - py-matplotlib
-  - py-pspamm
-  - libxsmm+generator
-  - slurm
-  - memkind
-  - blis
-  - boost
-  - openblas
-  - gsl
-  - mesa
-  - llvm-amdgpu
-  - papi+rocm amdgpu_target=gfx908
-  - scorep+papi+mpi
-  - likwid
-  - easi+asagi
-  - eigen+ipo
-  - hwloc+rocm amdgpu_target=gfx908
-  - mpich+rocm amdgpu_target=gfx908
-  - parmetis+int64+shared+ipo
-  - metis+int64+real64+ipo+shared
-  - hdf5+fortran+threadsafe+mpi+shared
-  - netcdf-c+mpi+shared
-  - netcdf-cxx4+pic+shared
-  - netcdf-fortran+pic+shared
-  - parallel-netcdf+cxx+fortran+pic+shared
-  - petsc+mpi+memkind+metis+rocm+hwloc+openmp amdgpu_target=gfx908
-  - paraview+mpi+osmesa+ipo+python+hdf5+rocm amdgpu_target=gfx908 ^llvm-amdgpu
-
-  concretizer:
-    unify: true
-  config:
-    install_tree: /opt/software
-  view: /opt/views/view
-EOF
-
-  # Install all the required software
   . /opt/spack/share/spack/setup-env.sh
   spack -e . concretize
   spack -e . install
   spack gc -y
+  spack clean
+  spack compiler find
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
-
-  . /opt/spack-environment/environment_modifications.sh && \
-  python3 -m pip install --upgrade \
-  pip \
-  clang-html
-  #VTUInterface
 
 Bootstrap: docker
 From: peanoframework/base:latest

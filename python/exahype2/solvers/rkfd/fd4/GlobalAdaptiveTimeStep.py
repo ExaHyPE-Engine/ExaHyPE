@@ -21,6 +21,7 @@ from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeS
 class GlobalAdaptiveTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
+    reconstruction_with_rk=False,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=PDETerms.None_Implementation, 
     point_source=PDETerms.None_Implementation,
@@ -42,7 +43,13 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
       through an additional @f$ p^{-2} @f$ scaling. We expect the user to 
       incorporate such an additional scaling within time_step_relaxation.
       
-    """  
+    """
+
+    if reconstruction_with_rk:
+      self._reconstruction_stages=rk_order
+    else:
+      self._reconstruction_stages=0
+
     super(GlobalAdaptiveTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
@@ -130,3 +137,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
 #include "exahype2/fd/fd4/FD4.h"
 """
+
+
+  def add_entries_to_text_replacement_dictionary(self, d):
+    d["RECONSTRUCTION_STAGES"]=self._reconstruction_stages

@@ -9,7 +9,7 @@ template <
   int      auxiliaryVariables
 >
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
-  ::exahype2::CellData&                          cellData,
+  ::exahype2::CellData<double, double>&          cellData,
   bool                                           evaluateFlux,
   bool                                           evaluateNonconservativeProduct,
   bool                                           evaluateSource,

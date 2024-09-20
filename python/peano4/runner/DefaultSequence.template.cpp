@@ -6,7 +6,6 @@
 // **********************************************************************************************
 
 #include "{{MAIN_NAME}}.h"
-#include "Constants.h"
 
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
@@ -16,8 +15,17 @@
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+{% if SUBDIRECTORIES -%}
+{% for subdirectory in SUBDIRECTORIES %}
+#include "{{subdirectory}}Constants.h"
+#include "{{subdirectory}}repositories/DataRepository.h"
+#include "{{subdirectory}}repositories/StepRepository.h"
+{% endfor -%}
+{% else %}
+#include "Constants.h"
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
+{%- endif %}
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
@@ -31,8 +39,8 @@
 tarch::logging::Log _log("::");
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess         = 0;
-  const int ExitCodeUnitTestsFailed = 1;
+  constexpr int ExitCodeSuccess         = 0;
+  constexpr int ExitCodeUnitTestsFailed = 1;
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetDebug, 

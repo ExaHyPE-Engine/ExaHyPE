@@ -2,7 +2,6 @@
 
 #include "tarch/Assertions.h"
 
-
 #include <cstring>
 
 std::string tarch::toString(MemoryLocation value) {
@@ -15,26 +14,37 @@ std::string tarch::toString(MemoryLocation value) {
   return "<undef>";
 }
 
-
 #if defined(GPUOffloadingOff)
 
-void* tarch::internal::allocateRawData(int size, [[maybe_unused]] MemoryLocation location) {
+void* tarch::internal::allocateRawData(std::size_t size, MemoryLocation location, int) {
   assertion2(size > 0, size, toString(location));
-  // Aligned alloc requires size to be a multiple of the aligment
-  return std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
+  // Aligned alloc requires size to be a multiple of the alignment
+  void* data = std::aligned_alloc(
+    AlignmentOnHeap,
+    padSizeToAlignment(size, AlignmentOnHeap)
+  );
+  assertion(data);
+  return data;
 }
 
-void tarch::freeMemory(void* data, [[maybe_unused]] MemoryLocation location) { std::free(data); }
+void tarch::freeMemory(void* data, MemoryLocation, int) {
+  if (data!=nullptr) {
+    std::free(data);
+  }
+}
 
 void tarch::gpuAbort() { std::abort(); }
 
 #endif
 
-int tarch::padSizeToAlignment(int size, int aligment){
-  // Aligned alloc requires size to be a multiple of Aligment, therefore we need to check it
-  // Also see: https://en.cppreference.com/w/c/memory/aligned_alloc
-  // Pad to nearest multiple of aligment
-  int padding = size % aligment == 0 ? 0 : aligment - (size % aligment);
+std::size_t tarch::padSizeToAlignment(std::size_t size, std::size_t alignment) {
+  assertion(size > 0);
+  assertion(alignment > 0);
+  // Aligned alloc requires size to be a multiple of alignment, therefore we
+  // need to check it. Also see:
+  // https://en.cppreference.com/w/c/memory/aligned_alloc
+  // Pad to nearest multiple of alignment.
+  int padding = size % alignment == 0 ? 0 : alignment - (size % alignment);
   return size + padding;
 }
 

@@ -1,0 +1,21 @@
+FROM peanoframework/gcc:latest
+
+WORKDIR /Peano
+
+RUN . /opt/spack-environment/activate.sh && \
+wget --progress=bar:force:noscroll https://gitlab.lrz.de/hpcsoftware/Peano/-/archive/p4/Peano-p4.tar.gz \
+&& tar -xvf Peano-p4.gz && mv Peano-p4/* . && \
+rm -rf Peano-p4* && \
+CC=gcc CXX=g++ python configure.py --exahype --particles --multithreading=omp && \
+make -j8 && make check
+
+RUN { \
+      echo '#!/bin/sh' \
+      && echo '.' /opt/spack-environment/activate.sh \
+      && echo export PYTHONPATH=$PYTHONPATH:/Peano/python \
+      && echo 'exec "$@"'; \
+    } > /entrypoint.sh \
+&& chmod a+x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]

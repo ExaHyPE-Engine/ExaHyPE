@@ -8,21 +8,21 @@
 #include <iomanip>
 
 #include "config.h"
-#include "Constants.h"
 #include "{{MAIN_NAME}}.h"
 #include "exahype2/UnitTests.h"
 #include "exahype2/UserInterface.h"
-#include "observers/CreateGrid.h"
-#include "observers/CreateGridAndConvergeLoadBalancing.h"
-#include "observers/CreateGridButPostponeRefinement.h"
-#include "observers/InitGrid.h"
-#include "observers/PlotSolution.h"
-#include "observers/TimeStep.h"
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
-#include "repositories/DataRepository.h"
-#include "repositories/SolverRepository.h"
-#include "repositories/StepRepository.h"
+#include "{{SUBDIRECTORY}}Constants.h"
+#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
+#include "{{SUBDIRECTORY}}observers/CreateGridAndConvergeLoadBalancing.h"
+#include "{{SUBDIRECTORY}}observers/CreateGridButPostponeRefinement.h"
+#include "{{SUBDIRECTORY}}observers/InitGrid.h"
+#include "{{SUBDIRECTORY}}observers/PlotSolution.h"
+#include "{{SUBDIRECTORY}}observers/TimeStep.h"
+#include "{{SUBDIRECTORY}}repositories/DataRepository.h"
+#include "{{SUBDIRECTORY}}repositories/SolverRepository.h"
+#include "{{SUBDIRECTORY}}repositories/StepRepository.h"
 #include "tarch/UnitTests.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -69,8 +69,8 @@ bool selectNextAlgorithmicStep() {
   static bool                                  gridConstructed                       = false;
   static bool                                  gridInitialised                       = false;
   static bool                                  gridBalanced                          = false;
-  static double                                nextMaxPlotTimeStamp                  = FirstPlotTimeStamp;
-  static double                                nextMinPlotTimeStamp                  = FirstPlotTimeStamp;
+  static double                                nextMaxPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
+  static double                                nextMinPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
   static bool                                  haveJustWrittenSnapshot               = false;
   static bool                                  haveReceivedNoncriticialAssertion     = false;
   static bool                                  addGridSweepWithoutGridRefinementNext = false;
@@ -82,7 +82,7 @@ bool selectNextAlgorithmicStep() {
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+      {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution)
     );
     haveReceivedNoncriticialAssertion = true;
     logError(
@@ -91,21 +91,21 @@ bool selectNextAlgorithmicStep() {
   } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
   } else if (gridConstructed and not gridBalanced) {
-    if (not repositories::loadBalancer.isEnabled(true) and not repositories::loadBalancer.hasSplitRecently()) {
+    if (not {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(true) and not {{SUBNAMESPACE}}repositories::loadBalancer.hasSplitRecently()) {
       logInfo("selectNextAlgorithmicStep()", "all ranks have switched off their load balancing");
       gridBalanced = true;
     } else {
       logInfo(
-        "selectNextAlgorithmicStep()", "wait for load balancing to become stable: " << repositories::loadBalancer
+        "selectNextAlgorithmicStep()", "wait for load balancing to become stable: " << {{SUBNAMESPACE}}repositories::loadBalancer
       );
     }
 
-    peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(
-      repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing
+    peano4::parallel::Node::getInstance().setNextProgramStep({{SUBNAMESPACE}}repositories::StepRepository::toProgramStep(
+      {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing
     ));
   } else if (gridBalanced and not gridInitialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::InitGrid)
+      {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::InitGrid)
     );
 
     gridInitialised = true;
@@ -116,17 +116,17 @@ bool selectNextAlgorithmicStep() {
         "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement"
       );
       addGridSweepWithoutGridRefinementNext = true;
-    } else if (repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
+    } else if ({{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
       logInfo("selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement)");
       addGridSweepWithoutGridRefinementNext = true;
-      globalNumberOfTrees                   = repositories::loadBalancer.getGlobalNumberOfTrees();
+      globalNumberOfTrees                   = {{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees();
     }
     else if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
       and
       // ensure that a proper creation has been ran before, so the mesh had the opportunity
       // to refine further if it has not done yet
-      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == repositories::StepRepository::Steps::CreateGrid
+      {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid
     ) {
       logInfo(
         "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction"
@@ -140,71 +140,71 @@ bool selectNextAlgorithmicStep() {
           << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString()
       );
       addGridSweepWithoutGridRefinementNext = false;
-      globalNumberOfTrees                   = repositories::loadBalancer.getGlobalNumberOfTrees();
+      globalNumberOfTrees                   = {{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees();
     }
 
     // Actual grid traversal choice
     if (addGridSweepWithoutGridRefinementNext) {
-      peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(
-        repositories::StepRepository::Steps::CreateGridButPostponeRefinement
+      peano4::parallel::Node::getInstance().setNextProgramStep({{SUBNAMESPACE}}repositories::StepRepository::toProgramStep(
+        {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridButPostponeRefinement
       ));
     } else {
       peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGrid)
+        {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid)
       );
     }
 
     continueToSolve = true;
   } else {
-    if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
-      if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
-        nextMinPlotTimeStamp += TimeInBetweenPlots;
+    if ({{SUBNAMESPACE}}TimeInBetweenPlots > 0.0 and {{SUBNAMESPACE}}repositories::getMinTimeStamp() < {{SUBNAMESPACE}}MinTerminalTime and {{SUBNAMESPACE}}repositories::getMaxTimeStamp() < {{SUBNAMESPACE}}MaxTerminalTime and ({{SUBNAMESPACE}}repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or {{SUBNAMESPACE}}repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and {{SUBNAMESPACE}}repositories::mayPlot()) {
+      if ({{SUBNAMESPACE}}repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
+        nextMinPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
       }
-      if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-        nextMaxPlotTimeStamp += TimeInBetweenPlots;
+      if ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
+        nextMaxPlotTimeStamp += {{SUBNAMESPACE}}TimeInBetweenPlots;
       }
 
-      if (nextMinPlotTimeStamp < repositories::getMinTimeStamp()) {
+      if (nextMinPlotTimeStamp < {{SUBNAMESPACE}}repositories::getMinTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
           "code is asked to plot every dt="
-            << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + TimeInBetweenPlots)
+            << {{SUBNAMESPACE}}TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next plot to t=" << ({{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenPlots)
         );
-        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
-      } else if (nextMaxPlotTimeStamp < repositories::getMaxTimeStamp()) {
+        nextMinPlotTimeStamp = {{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenPlots;
+      } else if (nextMaxPlotTimeStamp < {{SUBNAMESPACE}}repositories::getMaxTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
           "code is asked to plot every dt="
-            << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenPlots)
+            << {{SUBNAMESPACE}}TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next plot to t=" << ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenPlots)
         );
-        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenPlots;
+        nextMaxPlotTimeStamp = {{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenPlots;
       }
 
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
 
       peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+        {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution)
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
-    } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
+    } else if ({{SUBNAMESPACE}}repositories::getMinTimeStamp() < {{SUBNAMESPACE}}MinTerminalTime and {{SUBNAMESPACE}}repositories::getMaxTimeStamp() < {{SUBNAMESPACE}}MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep)
+        {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::TimeStep)
       );
       continueToSolve         = true;
       haveJustWrittenSnapshot = false;
     } else {
-      if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and repositories::mayPlot()) {
+      if (not haveJustWrittenSnapshot and {{SUBNAMESPACE}}TimeInBetweenPlots > 0.0 and {{SUBNAMESPACE}}repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(
-          repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+          {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution)
         );
         continueToSolve         = true; // don't want to terminate immediately
         haveJustWrittenSnapshot = true;
         nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
         nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
-      } else if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and not repositories::mayPlot()) {
+      } else if (not haveJustWrittenSnapshot and {{SUBNAMESPACE}}TimeInBetweenPlots > 0.0 and not {{SUBNAMESPACE}}repositories::mayPlot()) {
         continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete
       } else {
         continueToSolve = false;
@@ -218,72 +218,70 @@ bool selectNextAlgorithmicStep() {
 
 void step() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
-  auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
+  auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
   static tarch::logging::Log _log("");
 #if PeanoDebug > 0
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
+  logInfo("step()", "run " << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName));
 
   static tarch::timing::Watch watch("::", "step()", false);
 
   static int creepingNumberOfLocalCells = 0;
 
   switch (stepName) {
-  case repositories::StepRepository::Steps::CreateGridButPostponeRefinement: {
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridButPostponeRefinement: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-but-postpone-refinement");
 
     OTTER_PHASE_SWITCH(otter::phase::create_grid_no_refine);
 
-    repositories::startGridConstructionStep();
+    {{SUBNAMESPACE}}repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::CreateGridButPostponeRefinement observer;
+    {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
-    repositories::finishGridConstructionStep();
+    {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
   } break;
-  case repositories::StepRepository::Steps::CreateGrid: {
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
 
     OTTER_PHASE_SWITCH(otter::phase::create_grid);
 
-    repositories::startGridConstructionStep();
+    {{SUBNAMESPACE}}repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::CreateGrid observer;
+    {{SUBNAMESPACE}}observers::CreateGrid observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
-    repositories::finishGridConstructionStep();
+    {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
 
     // We always overestimate so give the convergence the opportunity to catch up. The constant
     // here is a magic one.
     creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
                                  + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
   } break;
-  case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing: {
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing: {
     if (creepingNumberOfLocalCells < ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1) {
       logInfo(
         "step()",
@@ -298,47 +296,46 @@ void step() {
     OTTER_PHASE_SWITCH(otter::phase::create_grid_converge);
 
     // The smaller here corresponds to the -1 below
-    if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and repositories::loadBalancer.isEnabled(false)) {
+    if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)) {
       logInfo("step()", "rank is degenerated so disable load balancing temporarily");
-      repositories::loadBalancer.enable(false);
+      {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
     }
     if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells
           and
-          repositories::loadBalancer.isEnabled(false)
+          {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)
         ) {
       logInfo(
         "step()",
         "grid construction and decomposition on this rank seem to be stable as we have around "
           << creepingNumberOfLocalCells << " local cells in the heaviest tree. Disable load balancing temporarily"
       );
-      repositories::loadBalancer.enable(false);
+      {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
     }
 
-    repositories::startGridConstructionStep();
+    {{SUBNAMESPACE}}repositories::startGridConstructionStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::CreateGridButPostponeRefinement observer;
+    {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
-    repositories::finishGridConstructionStep();
+    {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
 
     if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
           and
-          not repositories::loadBalancer.hasSplitRecently()
+          not {{SUBNAMESPACE}}repositories::loadBalancer.hasSplitRecently()
           and
-          repositories::loadBalancer.isEnabled(false)
+          {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)
         ) {
       logInfo(
         "step()",
@@ -351,92 +348,89 @@ void step() {
                                    / 2;
     }
   } break;
-  case repositories::StepRepository::Steps::InitGrid: {
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::InitGrid: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("init-grid");
-    repositories::loadBalancer.enable(false);
+    {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
 
     OTTER_PHASE_SWITCH(otter::phase::init);
 
-    repositories::startGridInitialisationStep();
+    {{SUBNAMESPACE}}repositories::startGridInitialisationStep();
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::InitGrid observer;
+    {{SUBNAMESPACE}}observers::InitGrid observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
-    repositories::finishGridInitialisationStep();
+    {{SUBNAMESPACE}}repositories::finishGridInitialisationStep();
   } break;
-  case repositories::StepRepository::Steps::PlotSolution: {
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("plot-solution");
-    const double minTimeStamp    = repositories::getMinTimeStamp();
-    const double maxTimeStamp    = repositories::getMaxTimeStamp();
-    const double minTimeStepSize = repositories::getMinTimeStepSize();
-    const double maxTimeStepSize = repositories::getMaxTimeStepSize();
+    const double minTimeStamp    = {{SUBNAMESPACE}}repositories::getMinTimeStamp();
+    const double maxTimeStamp    = {{SUBNAMESPACE}}repositories::getMaxTimeStamp();
+    const double minTimeStepSize = {{SUBNAMESPACE}}repositories::getMinTimeStepSize();
+    const double maxTimeStepSize = {{SUBNAMESPACE}}repositories::getMaxTimeStepSize();
 
     OTTER_PHASE_SWITCH(otter::phase::plot);
 
-    repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
+    {{SUBNAMESPACE}}repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::PlotSolution observer;
+    {{SUBNAMESPACE}}observers::PlotSolution observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
-    repositories::finishPlottingStep();
+    {{SUBNAMESPACE}}repositories::finishPlottingStep();
   } break;
-  case repositories::StepRepository::Steps::TimeStep: {
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::TimeStep: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("time-step");
-    if (repositories::loadBalancer.isEnabled(false)) {
+    if ({{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)) {
       logInfo("step()", "disable load balancing throughout initialisation (to be removed in later releases)");
-      repositories::loadBalancer.enable(false);
+      {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
     }
 
-    const double minTimeStamp    = repositories::getMinTimeStamp();
-    const double maxTimeStamp    = repositories::getMaxTimeStamp();
-    const double minTimeStepSize = repositories::getMinTimeStepSize();
-    const double maxTimeStepSize = repositories::getMaxTimeStepSize();
-    const double minMeshSize     = repositories::getMinMeshSize();
-    const double maxMeshSize     = repositories::getMaxMeshSize();
+    const double minTimeStamp    = {{SUBNAMESPACE}}repositories::getMinTimeStamp();
+    const double maxTimeStamp    = {{SUBNAMESPACE}}repositories::getMaxTimeStamp();
+    const double minTimeStepSize = {{SUBNAMESPACE}}repositories::getMinTimeStepSize();
+    const double maxTimeStepSize = {{SUBNAMESPACE}}repositories::getMaxTimeStepSize();
+    const double minMeshSize     = {{SUBNAMESPACE}}repositories::getMinMeshSize();
+    const double maxMeshSize     = {{SUBNAMESPACE}}repositories::getMaxMeshSize();
 
     OTTER_PHASE_SWITCH(otter::phase::timestep);
 
-    repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
+    {{SUBNAMESPACE}}repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::TimeStep observer;
+    {{SUBNAMESPACE}}observers::TimeStep observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
-    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
-    OTTER_POOL_POP(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
 
-    repositories::finishTimeStep();
+    {{SUBNAMESPACE}}repositories::finishTimeStep();
   } break;
-  case repositories::StepRepository::Steps::Undef:
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Undef:
     assertion(false);
     break;
   }
@@ -453,24 +447,22 @@ int main(int argc, char** argv) {
   peano4::initParallelEnvironment(&argc, &argv);
 
   // Do this early, so people can use logInfo properly.
-  repositories::initLogFilters();
+  {{SUBNAMESPACE}}repositories::initLogFilters();
 
   tarch::initNonCriticalAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
-  peano4::initSingletons(DomainOffset, DomainSize, PeriodicBC);
+  peano4::initSingletons({{SUBNAMESPACE}}DomainOffset, {{SUBNAMESPACE}}DomainSize, {{SUBNAMESPACE}}PeriodicBC);
 
-  repositories::initSharedMemoryAndGPUEnvironment();
+  {{SUBNAMESPACE}}repositories::initSharedMemoryAndGPUEnvironment();
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
   }
 
-  peano4::runTestsAndBenchmarks();
-
-  repositories::DataRepository::initDatatypes();
+  {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
 
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
   feenableexcept({{FENV_ARGS}} );
@@ -490,7 +482,7 @@ int main(int argc, char** argv) {
   delete unitTests;
 #endif
 
-  repositories::startSimulation();
+  {{SUBNAMESPACE}}repositories::startSimulation();
 
   tarch::logging::Statistics::getInstance().clear();
 
@@ -568,10 +560,10 @@ int main(int argc, char** argv) {
 
   OTTER_FINALISE();
 
-  repositories::finishSimulation();
+  {{SUBNAMESPACE}}repositories::finishSimulation();
 
   peano4::shutdownSingletons();
-  repositories::DataRepository::shutdownDatatypes();
+  {{SUBNAMESPACE}}repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
   tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();

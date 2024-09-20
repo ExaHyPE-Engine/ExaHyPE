@@ -26,6 +26,11 @@
 #define UseManualInlining
 #endif
 
+#if PeanoDebug == 0
+#undef assert
+#define assert(...)
+#endif
+
 #define LittleEndian
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline

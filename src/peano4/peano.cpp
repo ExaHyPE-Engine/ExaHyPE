@@ -10,7 +10,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/tarch.h"
-#include "tarch/accelerator/DeviceInfo.h"
 
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -68,8 +67,6 @@ void peano4:: writeCopyrightMessage() {
     buildInfo += ", sycl";
     #elif defined(GPUOffloadingCPP)
     buildInfo += ", C++ offloading";
-    #elif defined(GPUOffloadingCUDA)
-    buildInfo += ", CUDA offloading";
     #else
     buildInfo += ", no gpu support";
     #endif
@@ -157,10 +154,4 @@ void peano4::shutdownSingletons() {
   peano4::parallel::SpacetreeSet::getInstance().shutdown();
   tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance().shutdown();
   tarch::services::ServiceRepository::getInstance().shutdown();
-}
-
-
-void peano4::runTestsAndBenchmarks() {
-  tarch::accelerator::offloadCapabilityTest();
-  tarch::accelerator::printDeviceInformation();
 }

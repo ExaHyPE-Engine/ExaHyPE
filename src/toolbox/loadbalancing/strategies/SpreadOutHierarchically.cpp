@@ -72,8 +72,7 @@ void toolbox::loadbalancing::strategies::SpreadOutHierarchically::updateState() 
 
 toolbox::loadbalancing::strategies::SpreadOutHierarchically::Action toolbox::loadbalancing::strategies::SpreadOutHierarchically::getAction() const {
   if (_stepsToWaitForNextLoadBalancingDecision>0) {
-      // @todo Debug
-    logInfo(
+    logDebug(
       "getAction()",
       "shall wait for another " << _stepsToWaitForNextLoadBalancingDecision << " step(s) before we rebalance"
     );
@@ -273,7 +272,7 @@ void toolbox::loadbalancing::strategies::SpreadOutHierarchically::triggerSplit( 
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
 
   const int sourceTree = *( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin() );
-  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,peano4::SplitInstruction::Mode::BottomUp},targetRank);
+  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,_configuration->getMode(_state)},targetRank);
   if (not success) {
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
   }

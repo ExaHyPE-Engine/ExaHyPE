@@ -1,0 +1,30 @@
+/**
+
+ @page page_peano_runtime_analysis Runtime analysis and statistics
+
+ Peano and its core toolboxes dump certain information to the terminal after each and 
+ every time step. 
+ Peano's Python API comes along with parsers to extract this information once dumped to the terminal,
+ and it also provides a few command line scripts which invoke the parsers and hand the data 
+ over to matplotlib.
+
+ I consider all the Peano command line scripts to be demonstrators what you can do with the parsers'
+ data. 
+ Typically, they are not production-ready.
+ In this context, they are great for first data inspection, and then they can serve as starting point
+ for "proper" scripts whose outcome goes into papers.
+ 
+ Please note that Peano's runtime analysis cannot replace a proper performance 
+ analysis tool. In this context, it is worth studying @ref compiler_specific_settings "the vendor-specific settings"
+ that are supported for various tools.
+ 
+ Beyond the data that's dumped by the core routines, you can also activate Peano's 
+ 
+
+ @todo This page need more work.
+ 
+ 
+
+*/
+
+

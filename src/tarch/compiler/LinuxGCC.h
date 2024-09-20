@@ -23,6 +23,11 @@
 #define AlignmentOnHeap 16
 #endif
 
+#if PeanoDebug == 0
+#undef assert
+#define assert(...)
+#endif
+
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
 
 #define OpenMPDependenciesInTaskWait

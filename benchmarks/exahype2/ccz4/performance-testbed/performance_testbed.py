@@ -48,7 +48,6 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "adm", "Psi4","phy-debug", "PT"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  default="fd4-rk1-adaptive", choices=["fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave"], help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default=True,  help="switch on or off the periodic BC" )
     parser.add_argument("-sommerfeld",  "--sommerfeld-boundary-conditions",      dest="sommerfeld_bc", action="store_true", default=False,  help="switch on or off the Sommerfeld radiative BC" )
@@ -61,8 +60,8 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="test",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject" ], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp", "matrix", "second_order"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "matrix", "second_order" ], default="average",  help="restriction scheme for AMR" )
     parser.add_argument("-so", "--second-order",  dest="SO_flag",           default=True, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
 
 
@@ -81,6 +80,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
+       args.SO_flag=False
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
 
@@ -125,7 +125,8 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             time_step_relaxation=cfl,
-            KOSigma=KOSig
+            KOSigma=KOSig,
+            reconstruction_with_rk=args.SO_flag
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
@@ -155,18 +156,6 @@ if __name__ == "__main__":
             min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             normalised_time_step_size=0.01,
             KOSigma=KOSig
-          )
-        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-          SuperClass.__init__(
-            self,
-            name=name,
-            rk_order     = 2,
-            polynomials  = exahype2.solvers.GaussLegendreBasis(2),
-            face_projections   = exahype2.solvers.rkdg.FaceProjections.Solution,
-            unknowns=number_of_unknowns,
-            auxiliary_variables=0,
-            min_cell_h=min_volume_h, max_cell_h=max_volume_h, #not a good name, but use for now.
-            time_step_relaxation=cfl
           )
         else:
           SuperClass.__init__(
@@ -202,10 +191,6 @@ if __name__ == "__main__":
             kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
             KOSigma                                  = self._KO_Sigma
           )
-
-          self.switch_to_heap_storage(
-                exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
-            )
 
         self.postprocess_updated_patch = """
 {
@@ -359,9 +344,24 @@ if __name__ == "__main__":
     tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
     if ("fd4-rk" in args.implementation):
-      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
-      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
-      userinfo.append(("FD4 Interpolation: " + tem_interp[1] + " & Restriction: " + tem_restrict[1], None))
+      if args.interpolation == "matrix":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_interpolation( my_solver ) 
+      elif args.interpolation == "second_order":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_interpolation( my_solver ) 
+      else:
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] )
+        userinfo.append(("FD4 Interpolation: " + tem_interp[1], None))
+
+      if args.restriction == "matrix":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_matrix_restriction( my_solver ) 
+      elif args.interpolation == "second_order":
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_second_order_restriction( my_solver ) 
+      else:
+        exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction( my_solver, tem_restrict[1] )
+        userinfo.append(("FD4 Restriction: " + tem_restrict[1], None))
+
+      #userinfo.append(("FD4 Interpolation: " + tem_interp[1] + " & Restriction: " + tem_restrict[1], None))
+
 
 ########################################################################################
 #parameter setting according to scenarios
@@ -455,12 +455,6 @@ if __name__ == "__main__":
     project.set_output_path(path)
     probe_point = [-12,-12,0.0]
     project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
-    if args.extension=="Psi4":
-      my_solver.select_dofs_to_print = [0,12,16,17,18,53,54,59,60]
-    elif args.extension=="adm" or args.extension=="phy-debug":
-      pass
-    else:
-      pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
     #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,500,16))" )
@@ -499,38 +493,6 @@ if __name__ == "__main__":
 
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
-
-    if args.SO_flag==True:
-      userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
-      additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
-                                                           add_user_defined_actions=False,
-                                                           )
-      project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
-      project_patch_onto_faces.guards     = [ "false" for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
-      project_patch_onto_faces.guards[-1] = my_solver._store_cell_data_default_guard()
-
-      roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
-                                                                                       my_solver._store_face_data_default_guard(),
-                                                                                       )
-
-      dynamic_AMR = exahype2.solvers.rkfd.actionsets.DynamicAMR(
-            solver=my_solver,
-            interpolation=my_solver.interpolation,
-            restriction=my_solver.restriction,
-        )
-
-      additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
-                                                                             is_enclave_solver = ("enclave" in args.implementation),
-                                                                             ))
-      additional_mesh_traversal.add_action_set( project_patch_onto_faces )
-      additional_mesh_traversal.add_action_set( roll_over_projected_faces )
-      additional_mesh_traversal.add_action_set( dynamic_AMR )
-      
-      project.init_new_user_defined_algorithmic_step( additional_mesh_traversal )
-      peano4_project.solversteps.add_step( additional_mesh_traversal )
-
-      peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
-
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )

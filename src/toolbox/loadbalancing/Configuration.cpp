@@ -26,3 +26,7 @@ double toolbox::loadbalancing::DefaultConfiguration::getWorstCaseBalancingRatio(
 int toolbox::loadbalancing::DefaultConfiguration::getMinTreeSize(State) {
   return 0;
 }
+
+peano4::SplitInstruction::Mode toolbox::loadbalancing::DefaultConfiguration::getMode(State) {
+  return peano4::SplitInstruction::Mode::BottomUp;
+}

@@ -63,6 +63,7 @@ class UpdateCellLabel(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
       result += """
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setAMDCriterionEvaluatedThroughoutGridConstruction( false );
   if ( tarch::la::equals(repositories::getMinTimeStamp(),0.0) ) {
     fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  0.0 );
     fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( 0.0 );
@@ -91,7 +92,7 @@ class UpdateCellLabel(ActionSet):
 
 
 def create_cell_label(solver_name):
-  """
+  """!
 
    Build up the DaStGen2 data structure that we need per cell to maintain
    per-cell data per solver.
@@ -104,6 +105,7 @@ def create_cell_label(solver_name):
      time stepping, it is important that this time stamp is stored per cell, as 
      some postprocessing (particles, e.g.) rely on the field.
    - TimeStepSize (similar to arguments around TimeStamp).
+   - AMDCriterionEvaluatedThroughoutGridConstruction
      
    solver_name: string
      Name of the solver
@@ -115,6 +117,7 @@ def create_cell_label(solver_name):
   result.data.add_attribute( dastgen2.attributes.Double("TimeStamp") )
   result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize") )
   result.data.add_attribute( dastgen2.attributes.Boolean("HasUpdated") )
+  result.data.add_attribute( dastgen2.attributes.Boolean("AMDCriterionEvaluatedThroughoutGridConstruction") )
     
   result.peano4_mpi_and_storage_aspect.merge_implementation = """
   switch (context) {

@@ -1,0 +1,15 @@
+/**
+
+@page page_toolbox_home Toolbox
+
+\tableofcontents
+
+\li \subpage toolbox_blockstuctured
+\li \subpage toolbox_loadbalancing
+\li \subpage toolbox_particles
+
+A toolbox is a set of routines and algorithms for a specific challenge which
+are not tied to one particular extension or application domain. We can think
+of a toolbox as utilities for various applications.
+
+*/

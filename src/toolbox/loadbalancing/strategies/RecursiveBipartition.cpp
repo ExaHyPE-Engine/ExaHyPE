@@ -193,7 +193,9 @@ void toolbox::loadbalancing::strategies::RecursiveBipartition::triggerSplit(
   int sourceTree, int numberOfCells, int targetRank
 ) {
   bool success = peano4::parallel::SpacetreeSet::getInstance().split(
-    sourceTree, peano4::SplitInstruction{numberOfCells, peano4::SplitInstruction::Mode::AggressiveTopDown}, targetRank
+    sourceTree,
+    peano4::SplitInstruction{numberOfCells, _configuration->getMode(_state) },
+    targetRank
   );
   if (not success) {
     logInfo("triggerSplit()", "wanted to split local rank " << sourceTree << " but failed");
