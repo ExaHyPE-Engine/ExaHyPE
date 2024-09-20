@@ -18,8 +18,7 @@
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
 - Exercises
-  - \subpage page_exahype2_tutorials_acoustic
-  - \subpage page_exahype2_tutorials_advection
+  - \subpage tutorials_exahype2_exercises_swe_swe
 - Adding features	
   - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
