@@ -189,7 +189,7 @@ void mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual(
       -
       systemMatrix * dgSolution
       -
-      faceSolutions;
+      faceSolutions; // This includes multiplication by A_{c<-f}
 
 
   tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > restrictedValues =

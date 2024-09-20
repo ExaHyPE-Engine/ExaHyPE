@@ -556,7 +556,7 @@ class InitDofsDGTest6(InitDofsDGTest1):
           }
           else {
             rand[i] = dis(rng);
-            // solution[i] = std::sin( 2*tarch::la::PI * marker.x()(0) ) * std::sin( 2*tarch::la::PI * marker.x()(1) );
+            // rand[i] = std::sin( 2*tarch::la::PI * marker.x()(0) ) * std::sin( 2*tarch::la::PI * marker.x()(1) );
           }
 
           // and residual to 0...

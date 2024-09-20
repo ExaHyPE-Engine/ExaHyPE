@@ -1,5 +1,6 @@
 import numpy as np
 from postProcess import parse_patch_file, plot_field_dg
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     v_solution = parse_patch_file("DGPoisson.solution-1.peano-patch-file", "DG") 
@@ -18,8 +19,9 @@ if __name__ == "__main__":
         # Update global max norm with local cell max norm
         diff_norm = max( diff_norm, np.max(np.abs(cell_values_solution - cell_values_random)) )
 
-    # N = 9
-    # plot_field_dg(v_solution, [1/N,1/N])
+    N = 9
+    plot_field_dg(v_solution, [1/N,1/N])
+    plt.show()
 
     print(f'|v_solution - v_random|_max = {diff_norm}')
     
