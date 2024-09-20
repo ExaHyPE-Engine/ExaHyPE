@@ -25,6 +25,13 @@ However, the list below provides an overview over some tutorials.
 </table>
 
 
+# How to add your own tutorial
+
+Tutorials are written as plain Doxygen files and typically have the extension dox.
+If you prefer to have Python notebooks, please store the notebook (without any 
+binary content) in the repo.
+
+
 
 */
 
