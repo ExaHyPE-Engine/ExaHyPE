@@ -13,6 +13,8 @@ output_file = open( ouput_file_name, "w" )
 
 output_file.write( "/**\n" )
 
+subpages = []
+
 have_created_header = False
 with open(sys.argv[1] + ".md") as file:
     for line in file:
@@ -29,11 +31,27 @@ Peano's @ref page_tutorials_overview "generic description how to generate web do
 
 """.format(sys.argv[1]))
             have_created_header = True
+        elif "@subpage" in line:
+            new_subpage = line.split( "@subpage" )[1].strip().split( " ")[0]
+            if not new_subpage in subpages:
+                subpages.append( new_subpage )
+            output_file.write( line.replace( "@subpage", "@ref" ))
+        elif "\subpage" in line:
+            new_subpage = line.split( "\subpage" )[1].strip().split( " ")[0]
+            if not new_subpage in subpages:
+                subpages.append( new_subpage )
+            output_file.write( line.replace( "\subpage", "@ref" ))
         else:
             output_file.write(line)
 
         
-        
+for subpage in subpages:
+    if subpage.endswith("."):
+        subpage = subpage[0:-1]
+    output_file.write( """
+    @subpage {}
+""".format(subpage) )
+    print ("add subpage {}".format(subpage) )
 output_file.write( "*/ \n ")
 
         
