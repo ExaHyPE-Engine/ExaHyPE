@@ -1082,12 +1082,12 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
 }
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridFaceValues,
+  double* __restrict__                      fineGridFaceValues
 ) {
   const int normal = marker.getSelectedFaceNumber() % Dimensions;
   const int i = (normal + 1) % 3;
@@ -1107,16 +1107,15 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
 
   tarch::la::Vector<Dimensions, int> faceDimensions = coarseEnd - coarseStart;
   faceDimensions(normal) = (overlap - 1) / 3 + 1;
-  
+
   int* indices = new int[18];
   tarch::la::Vector<Dimensions, int>* stencil = new tarch::la::Vector<Dimensions, int>[18];
   double* centerValues = new double[unknowns];
 
-
   dfor(kCoarse, faceDimensions) {
     tarch::la::Vector<Dimensions, int> center = kCoarse + coarseStart;
     center(normal) = (marker.getSelectedFaceNumber() < Dimensions) ? overlap - kCoarse(normal) - 1 : overlap + kCoarse(normal);  
-    
+
     tarch::la::Vector<Dimensions, int> stencilOffset(0);
 
     if (center(i) == 0) stencilOffset(i) = 1;
@@ -1125,12 +1124,16 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     if (center(j) == numberOfDoFsPerAxisInPatch - 1) stencilOffset(j) = - 1;
 
     int stencilSize = 0;
-    dfor(offset, 3) { 
-        if (offset != tarch::la::Vector<Dimensions, int>{1, 1, 1} - stencilOffset and !(offset(0) + stencilOffset(0) != 1 and offset(1) + stencilOffset(1) != 1 and offset(2) + stencilOffset(2) != 1)){
-            stencil[stencilSize] = stencilOffset + offset - tarch::la::Vector<Dimensions, int>{1, 1, 1};
-            indices[stencilSize] = serialiseVoxelIndexInOverlap(center + offset + stencilOffset - tarch::la::Vector<Dimensions, int>{1, 1, 1}, numberOfDoFsPerAxisInPatch, overlap, normal); 
-            stencilSize++;
-        }
+    dfor(offset, 3) {
+      if (
+        offset != tarch::la::Vector<Dimensions, int>{1, 1, 1} - stencilOffset
+        and
+        !(offset(0) + stencilOffset(0) != 1 and offset(1) + stencilOffset(1) != 1 and offset(2) + stencilOffset(2) != 1)
+      ) {
+        stencil[stencilSize] = stencilOffset + offset - tarch::la::Vector<Dimensions, int>{1, 1, 1};
+        indices[stencilSize] = serialiseVoxelIndexInOverlap(center + offset + stencilOffset - tarch::la::Vector<Dimensions, int>{1, 1, 1}, numberOfDoFsPerAxisInPatch, overlap, normal);
+        stencilSize++;
+      }
     }
 
     int index = serialiseVoxelIndexInOverlap(center, numberOfDoFsPerAxisInPatch, overlap, normal);
@@ -1168,7 +1171,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     auto Q_T = tarch::la::transpose(Q);
     tarch::la::DynamicMatrix c = Q_T * deltas;
 
-    tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);    
+    tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
     tarch::la::DynamicMatrix x = inverseR * c;
 
     tarch::la::Vector<Dimensions, int> fineStart(0);
@@ -1181,12 +1184,11 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     if (modulus % 3 != 0) modulus = modulus % 3;
     else modulus = 3;
     if (kCoarse(i) == faceDimensions(i) - 1) fineEnd(i) = modulus;
-    
+
     modulus = (marker.getRelativePositionWithinFatherCell()(j) + 1) * numberOfDoFsPerAxisInPatch;
     if (modulus % 3 != 0) modulus = modulus % 3;
     else modulus = 3;
     if (kCoarse(j) == faceDimensions(j) - 1) fineEnd(j) = modulus;
-
 
     tarch::la::Vector<Dimensions, int> fineDimensions = fineEnd - fineStart;
     fineDimensions(normal) = std::min(overlap - kCoarse(normal) * 3, 3);
@@ -1195,7 +1197,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix fineMatrix(fineDimensions(i) * fineDimensions(j) * fineDimensions(normal), 9);
     int                      row = 0;
 
-    dfor(kFine, fineDimensions) { 
+    dfor(kFine, fineDimensions) {
       tarch::la::Vector<Dimensions, int> cell = fineStart + kFine - tarch::la::Vector<Dimensions, int>{1, 1, 1};
       //if (marker.getSelectedFaceNumber() >= Dimensions) cell(normal) = cell(normal) + 3 - (overlap % 3);
       int column = 0;
@@ -1211,20 +1213,20 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
       }
       row++;
     }
-    tarch::la::DynamicMatrix fineValues = fineMatrix * x;    
+    tarch::la::DynamicMatrix fineValues = fineMatrix * x;
 
     int fineCellNumber = 0;
     tarch::la::Vector<Dimensions, int> fineCorner = kCoarse * 3 + fineStart - fineDataStart;
     fineCorner(normal) = (marker.getSelectedFaceNumber() < Dimensions) ? (kCoarse(normal) * 3) : overlap + (kCoarse(normal) * 3);
 
     dfor (kFine, fineDimensions){
-    	tarch::la::Vector<Dimensions, int> fineCell = kFine + fineCorner;
-        int index = serialiseVoxelIndexInOverlap(fineCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-   
-        for (int unknown = 0; unknown < unknowns; unknown++){
-          fineGridFaceValues[index * unknowns + unknown] = centerValues[unknown] + fineValues(fineCellNumber, unknown);
-        }
-        fineCellNumber++;
+      tarch::la::Vector<Dimensions, int> fineCell = kFine + fineCorner;
+      int index = serialiseVoxelIndexInOverlap(fineCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+
+      for (int unknown = 0; unknown < unknowns; unknown++){
+        fineGridFaceValues[index * unknowns + unknown] = centerValues[unknown] + fineValues(fineCellNumber, unknown);
+      }
+      fineCellNumber++;
     }
   }
 
@@ -1508,7 +1510,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
 ) {
   logTraceInWith3Arguments( "interpolateHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
-  const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % Dimensions;
 
   dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iFine=0;   iFine<overlap;   iFine++) {

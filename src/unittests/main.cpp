@@ -1,17 +1,16 @@
+#include "config.h"
+
 #include "tarch/logging/Log.h"
 #include "tarch/logging/CommandLineLogger.h"
 #include "tarch/logging/ChromeTraceFileLogger.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/UnitTests.h"
 
 #include "peano4/peano.h"
 #include "peano4/parallel/Node.h"
-
-#include "config.h"
-
 #include "peano4/UnitTests.h"
-#include "tarch/UnitTests.h"
 
 #ifdef UseExaHyPE
 #include "exahype2/UnitTests.h"
@@ -37,8 +36,7 @@
 #include "toolbox/particles/UnitTests.h"
 #endif
 
-
-tarch::logging::Log _log("examples::unittests");
+tarch::logging::Log _log("unittests");
 
 void runTests() {
   int unitTestsErrors = 0;
@@ -53,7 +51,7 @@ void runTests() {
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-  
+
   #ifdef UseExaHyPE
   tests = exahype2::getUnitTests();
   tests->run();
@@ -96,13 +94,11 @@ void runTests() {
   delete tests;
   #endif
 
-
   if (unitTestsErrors != 0) {
     logError("main()", "unit tests failed. Quit.");
     exit(-2);
   }
 }
-
 
 int main(int argc, char** argv) {
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
@@ -130,7 +126,6 @@ int main(int argc, char** argv) {
     tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "toolbox", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
 
-
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetInfo, tarch::logging::LogFilter::FilterListEntry::AnyRank, "tarch", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
@@ -154,14 +149,14 @@ int main(int argc, char** argv) {
   peano4::fillLookupTables();
 
   #ifdef Parallel
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
-	  logWarning( "main()", "it is recommended that you run the unit tests with more than one MPI rank, too");
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
+    logWarning("main()", "it is recommended that you run the unit tests with more than one MPI rank, too");
   }
   #endif
 
   int cores = tarch::multicore::Core::UseDefaultNumberOfThreads;
-  if (argc!=2 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logWarning( "main()", "usage: ./" + std::string(argv[0]) + " core-count (use default core count=1 now)" );
+  if (argc != 2 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logWarning("main()", "usage: ./" + std::string(argv[0]) + " core-count (use default core count=1 now)");
   }
   else if (argc==2) {
     cores = std::atoi( argv[1] );
@@ -172,7 +167,7 @@ int main(int argc, char** argv) {
   runTests();
 
   if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    while ( peano4::parallel::Node::getInstance().continueToRun() ) {
+    while (peano4::parallel::Node::getInstance().continueToRun()) {
       // Do nothing. This is just to ensure that everything shuts down properly
       // and is properly installed.
     }
