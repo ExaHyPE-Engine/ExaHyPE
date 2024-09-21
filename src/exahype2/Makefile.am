@@ -6,7 +6,6 @@ if UseExaHyPE
 endif
 
 ExaHyPE2Sources = \
-  CellData.cpp \
   CellAccess.cpp \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
@@ -18,9 +17,6 @@ ExaHyPE2Sources = \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
-  aderdg/kernels/Basis/GaussLegendreBasis.cpp \
-  aderdg/kernels/Basis/GaussLobattoBasis.cpp \
-  aderdg/kernels/AderUtils.cpp \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
@@ -49,7 +45,6 @@ ExaHyPE2Sources = \
   fd/fd4/FD4_patchwise_functors.cpp \
   fv/riemann/Riemann.cpp \
   fv/rusanov/rusanov.cpp \
-  fv/rusanov/sycl/GPUCellData.cpp \
   dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp

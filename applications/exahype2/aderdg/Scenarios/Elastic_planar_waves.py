@@ -91,25 +91,25 @@ class Elastic_planar_waves(Scenario):
   const double val_z = cos( -std::numbers::pi*x[2]);
 
   //stresses
-  sol[3] = val_x*(lambda+2*mu)  + val_y*lambda        + val_z*lambda;         //xx
-  sol[4] = val_x*lambda         + val_y*(lambda+2*mu) + val_z*lambda;         //yy
-  sol[5] = val_x*lambda         + val_y*lambda        + val_z*(lambda+2*mu);  //zz
-  sol[6] = val_x*mu; //xy
-  sol[7] = val_z*mu; //xz
-  sol[8] = val_y*mu; //yz
+  solution[3] = val_x*(lambda+2*mu)  + val_y*lambda        + val_z*lambda;         //xx
+  solution[4] = val_x*lambda         + val_y*(lambda+2*mu) + val_z*lambda;         //yy
+  solution[5] = val_x*lambda         + val_y*lambda        + val_z*(lambda+2*mu);  //zz
+  solution[6] = val_x*mu; //xy
+  solution[7] = val_z*mu; //xz
+  solution[8] = val_y*mu; //yz
 
   //velocities
-  sol[0] = val_x*cp + val_z*cs; //vx
-  sol[1] = val_y*cp + val_x*cs; //vy
-  sol[2] = val_z*cp + val_y*cs; //vz
+  solution[0] = val_x*cp + val_z*cs; //vx
+  solution[1] = val_y*cp + val_x*cs; //vy
+  solution[2] = val_z*cp + val_y*cs; //vz
 """ if self._dimensions==3 else """
 
   //stresses
-  sol[2] = val_x*(lambda+2*mu)  + val_y*lambda;         //xx
-  sol[3] = val_x*lambda         + val_y*(lambda+2*mu);  //yy
-  sol[4] = val_x*mu + val_y*mu;                         //xy
+  solution[2] = val_x*(lambda+2*mu)  + val_y*lambda;         //xx
+  solution[3] = val_x*lambda         + val_y*(lambda+2*mu);  //yy
+  solution[4] = val_x*mu + val_y*mu;                         //xy
 
   //velocities
-  sol[0] = val_x*cp + val_y*cs; //vx
-  sol[1] = val_y*cp + val_x*cs; //vy
+  solution[0] = val_x*cp + val_y*cs; //vx
+  solution[1] = val_y*cp + val_x*cs; //vy
 """)

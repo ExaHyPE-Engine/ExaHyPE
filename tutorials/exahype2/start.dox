@@ -21,15 +21,13 @@ The user then only needs to specify which optimizations they want, and implement
 
 # Get Peano and configure the core with the ExaHyPE extension
 
-Has to be rewritten. Should refer to installation page.
+Before you can start with anything however, you will need a working version of Peano4 and ExaHyPE2.
+If you have not yet done so, visit the installation page over at @ref page_installation_home and install the project.
 
+There are multiple ways to do this, including docker containers with all dependencies.
+Just make sure that whichever version you have chosen, it comes with ExaHyPE2 configured.
 
-# Prepare a new project
-
-= Create new directory
-- Python environment
-Anything else?
-
+Once you have done so, we can take a look at our first configuration file over at @ref page_exahype2_tutorials_config
 
  */
  

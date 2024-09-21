@@ -18,10 +18,12 @@ class Euler_isotropic_vortex(Scenario):
     _periodic_bc = True
 
     def __init__(
-        self
+        self,
+        velocity=1.
     ):
         self._dimensions  = 2
         self._equation    = Euler(dimensions=2, gamma=1.4)
+        self._velocity    = velocity
 
     def initial_conditions(self):
         return """
@@ -40,8 +42,8 @@ class Euler_isotropic_vortex(Scenario):
 
   constexpr double rho_inf = 1.;
   constexpr double p_inf = 1.;
-  constexpr double u_inf = 1.;
-  constexpr double v_inf = 1.;
+  constexpr double u_inf = """ + str(self._velocity) + """;
+  constexpr double v_inf = """ + str(self._velocity) + """;
 
 	Q[0] = rho_inf + drho; // fluid density
 	Q[1] = Q[0] * (u_inf + du); // momentum
@@ -61,8 +63,8 @@ class Euler_isotropic_vortex(Scenario):
   */
   constexpr double rho_inf = 1.;
   constexpr double p_inf = 1.;
-  constexpr double u_inf = 1.;
-  constexpr double v_inf = 1.;
+  constexpr double u_inf = """ + str(self._velocity) + """;
+  constexpr double v_inf = """ + str(self._velocity) + """;
 
   const double t_capped = t  - (int) t / 10;
   tarch::la::Vector<Dimensions,double> pos = { (x[0] - u_inf*t_capped) < -5.0 ? (x[0] - u_inf*t_capped) + 10. : (x[0] - u_inf*t_capped), 
@@ -81,9 +83,9 @@ class Euler_isotropic_vortex(Scenario):
   const double drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
   const double dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
 
-	sol[0] = rho_inf + drho; // fluid density
-	sol[1] = sol[0] * (u_inf + du); // momentum
-	sol[2] = sol[0] * (v_inf + dv);
+	solution[0] = rho_inf + drho; // fluid density
+	solution[1] = solution[0] * (u_inf + du); // momentum
+	solution[2] = solution[0] * (v_inf + dv);
 	// total energy = internal energy + kinetic energy
-	sol[3] = (p_inf + dp) / (eos_gamma-1) + 0.5*sol[0] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+	solution[3] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[0] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """

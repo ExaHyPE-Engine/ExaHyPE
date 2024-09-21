@@ -136,7 +136,7 @@ distclean:
 	rm -f ${GENERATED_FORTRAN_SOURCES}
 	rm -f ${GENERATED_CU_SOURCES}
 	{% if APP_SUBDIRECTORY %}cd ${APP_SUBDIRECTORY}{% endif %}
-	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated __pycache__
+	rm -rf globaldata celldata facedata vertexdata observers repositories tasks kernels
 	rm -f Constants.h
 	{% if APP_SUBDIRECTORY %}cd ..
 	rm -rf ${APP_SUBDIRECTORY}{% endif %}

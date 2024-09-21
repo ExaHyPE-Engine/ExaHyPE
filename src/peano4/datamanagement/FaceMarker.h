@@ -44,8 +44,16 @@ struct peano4::datamanagement::FaceMarker {
      */
     tarch::la::Vector<Dimensions,double>  _h;
 
+    /**
+     * @see hasBeenRefined()
+     */
     std::bitset<2*Dimensions>             _hasBeenRefined;
+
+    /**
+     * @see hasBeenRefined()
+     */
     std::bitset<2*Dimensions>             _willBeRefined;
+
     std::bitset<2*Dimensions>             _isLocal;
 
     bool                                  _cellIsLocal;
@@ -136,6 +144,15 @@ struct peano4::datamanagement::FaceMarker {
 
     std::string toString() const;
 
+    /**
+     * Has a face been refined
+     *
+     * We do not really refine faces. We refine cells. Cells in turn are
+     * refined if and only if one of their adjacent vertices holds a refine
+     * flag. Consequently, if one vertex adjacent to a face carries the
+     * refine flag, the face will be refined as well. In this case, it is
+     * not hanging.
+     */
     bool hasBeenRefined() const;
     bool hasBeenRefined(int i) const;
 
