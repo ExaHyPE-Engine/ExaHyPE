@@ -57,7 +57,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     """
     super(PlotPatchesInPeanoBlockFormat,self).__init__(descend_invocation_order=1,parallel=False)
 
-    valid_datatypes = {"float", "double", "long double", "std::float16_t", "std::bfloat16_t"}
+    valid_datatypes = {"float", "double", "long double", "_Float16", "std::float16_t", "__bf16", "std::bfloat16_t"}
 
     self._plot_cell_data           = plot_cell_data
     
@@ -114,7 +114,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
     if dataType not in valid_datatypes:
-      raise Exception("Chosen datatype " + datatype + " for plotting of patches is not a recognized choice.")
+      raise Exception("Chosen datatype " + dataType + " for plotting of patches is not a recognized choice.")
 
     self.d[ "PRECISION" ]        = precision
     self.d[ "DATATYPE"  ]        = dataType

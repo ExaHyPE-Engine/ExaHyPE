@@ -14,7 +14,7 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapStateless(
-  CellData&                    patchData,
+  CellData<double, double>&    patchData,
   peano4::utils::LoopPlacement loopPlacement
 ) {
   static tarch::logging::Log _log("exahype2::fv::riemann");

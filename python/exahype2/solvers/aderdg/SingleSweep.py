@@ -1,10 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .ADERDG import ADERDG, PrecisionType
-
-from exahype2.solvers.PDETerms import PDETerms
-
-import jinja2
+from .ADERDG import ADERDG
 
 
 class SingleSweep(ADERDG):
@@ -30,6 +26,11 @@ class SingleSweep(ADERDG):
 
         self._solver_template_file_class_name = "SingleSweep"
 
+        # If turned on it turns the solver from a single sweep to a separate sweeps solver,
+        #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
+        #   this can be useful for debugging, or for some additional features such as limiting.
+        self._split_sweeps = False
+
         self.create_action_sets()
         self.create_data_structures()
 
@@ -51,28 +52,33 @@ class SingleSweep(ADERDG):
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
-            + "::SolverState::TimeStepAfterGridInitialisation or "
-            + "repositories::"
+            + "::SolverState::InitialPrediction or "
+            + "(repositories::"
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
-            + "::SolverState::PlottingAfterGridInitialisation"
-            + ")"
+            + "::SolverState::Plotting"
+            + " and repositories::"
+            + self.get_name_of_global_instance()
+            + ".getMinTimeStamp()==0.))"
         )
 
-        # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step
         self._rhs_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Prediction or "
+            + ".isFirstGridSweepOfTimeStep() or "
             + "repositories::"
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
-            + "::SolverState::PredictionOnHangingCells"
+            + "::SolverState::PredictionOnHangingCells or "
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::Plotting"
         )
+
         self._rhs_estimates_projection.generator.receive_and_merge_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
@@ -81,25 +87,14 @@ class SingleSweep(ADERDG):
             + "::SolverState::PredictionOnHangingCells or "
             + "repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name + "::SolverState::Correction"
+            + ".isLastGridSweepOfTimeStep()"
         )
-
 
         self._flux_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Prediction or "
+            + ".isFirstGridSweepOfTimeStep() or "
             + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PredictionOnHangingCells"
-        )
-        self._flux_estimates_projection.generator.receive_and_merge_condition = (
-            "repositories::"
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
@@ -108,7 +103,18 @@ class SingleSweep(ADERDG):
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
-            + "::SolverState::Correction"
+            + "::SolverState::Plotting"
+        )
+
+        self._flux_estimates_projection.generator.receive_and_merge_condition = (
+            "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::PredictionOnHangingCells or "
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".isLastGridSweepOfTimeStep()"
         )
 
         self._preprocess_reconstructed_patch = ""
@@ -119,41 +125,32 @@ class SingleSweep(ADERDG):
 
         self._action_set_prediction.guard = (
             self._store_cell_data_default_guard()
-            + " and repositories::{}.getSolverState()=={}::SolverState::Prediction and not isHangingCell".format(
-                self.get_name_of_global_instance(),
-                self._name
-            )
-        )
-        self._action_set_prediction_on_hanging_cells.guard = (
-            self._store_cell_data_default_guard() +
-            " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
-                self.get_name_of_global_instance(),
-                self._name
+            + " and not isHangingCell"
+            + " and repositories::{}.isFirstGridSweepOfTimeStep()".format(
+                self.get_name_of_global_instance()
             )
         )
 
-        self._action_set_correction.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
+        self._action_set_prediction_on_hanging_cells.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
             self.get_name_of_global_instance(), self._name
         )
-        if(self._use_kernel_generator):
-            self._action_set_correction.riemann_guard = (
-                self._store_cell_data_default_guard()
-                + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
-                    self.get_name_of_global_instance(),self._name
-                    )
-                + " and not fineGridFace"
-                + self._name
-                + "FaceLabel.getAboveHanging()"
-            )
-        else:
-            self._action_set_correction.riemann_guard = (
-                self._store_cell_data_default_guard()
-                + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
-                    self.get_name_of_global_instance(),
-                    self._name
-                )
-            )
 
+        self._action_set_correction.guard = (
+            self._store_cell_data_default_guard()
+            + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
+                self.get_name_of_global_instance()
+            )
+        )
+
+        self._action_set_correction.riemann_guard = (
+            self._store_cell_data_default_guard()
+            + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
+                self.get_name_of_global_instance()
+            )
+            + " and not fineGridFace"
+            + self._name
+            + "FaceLabel.getAboveHanging()"
+        )
 
     def get_user_action_set_includes(self):
         return (
@@ -162,21 +159,19 @@ class SingleSweep(ADERDG):
 """
         )
 
-
     def _store_boundary_data_default_guard(self):
         return super(
             SingleSweep, self
-        )._store_boundary_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
-            self.get_name_of_global_instance(), self._name
+        )._store_boundary_data_default_guard() + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
+            self.get_name_of_global_instance()
         )
 
-
-    def _clear_face_data_default_guard(self):
+    def _delete_face_data_default_guard(self):
         return super(
             SingleSweep, self
-        )._clear_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
-            self.get_name_of_global_instance(), self._name
-        ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
+        )._delete_face_data_default_guard() + " and repositories::{}.isFirstGridSweepOfTimeStep()".format(
+            self.get_name_of_global_instance()
+        )
 
 
     def _restrict_face_data_default_guard(self):
@@ -186,28 +181,29 @@ class SingleSweep(ADERDG):
             self.get_name_of_global_instance(), self._name
         )
 
-
     def _interpolate_face_data_default_guard(self):
         return super(
-            SingleSweep,
-            self
+            SingleSweep, self
         )._interpolate_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
-            self.get_name_of_global_instance(),
-            self._name
+            self.get_name_of_global_instance(), self._name
         )
-
 
     def set_preprocess_reconstructed_patch_kernel(self, kernel):
         """
         Most subclasses will redefine/overwrite this operation as they have
-        to incorporate the kernel into their generated stuff
+        to incorporate the kernel into their generated stuff.
         """
         self._preprocess_reconstructed_patch += kernel
         self.create_data_structures()
         self.create_action_sets()
 
-
     def set_postprocess_updated_patch_kernel(self, kernel):
         self._postprocess_updated_patch += kernel
         self.create_data_structures()
         self.create_action_sets()
+
+    def _init_dictionary_with_default_parameters(self, d):
+        super(
+            SingleSweep, self
+        )._init_dictionary_with_default_parameters(d)
+        d["USE_SEPARATE_SWEEPS"] = self._split_sweeps

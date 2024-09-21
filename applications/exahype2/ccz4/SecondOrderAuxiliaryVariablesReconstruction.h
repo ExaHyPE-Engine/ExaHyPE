@@ -67,35 +67,35 @@ namespace applications {
        * @see applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody()
        */
       void recomputeAuxiliaryVariablesFD4_4thOrder(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
+        ::exahype2::CellData<double, double>&   patchData,
+        int                                     numberOfGridCellsPerPatchPerAxis,
+        int                                     haloSize,
+        int                                     unknowns,
+        int                                     auxiliaryVariables
       );
 
       void recomputeAuxiliaryVariablesFD4_centralDifferences(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
+        ::exahype2::CellData<double, double>&   patchData,
+        int                                     numberOfGridCellsPerPatchPerAxis,
+        int                                     haloSize,
+        int                                     unknowns,
+        int                                     auxiliaryVariables
       );
 
       void recomputeAuxiliaryVariablesFD4_leftDifferences(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
+        ::exahype2::CellData<double, double>&   patchData,
+        int                                     numberOfGridCellsPerPatchPerAxis,
+        int                                     haloSize,
+        int                                     unknowns,
+        int                                     auxiliaryVariables
       );
 
       void recomputeAuxiliaryVariablesFD4_rightDifferences(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
+        ::exahype2::CellData<double, double>&   patchData,
+        int                                     numberOfGridCellsPerPatchPerAxis,
+        int                                     haloSize,
+        int                                     unknowns,
+        int                                     auxiliaryVariables
       );
 
       namespace internal {

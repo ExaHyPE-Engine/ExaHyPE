@@ -29,11 +29,10 @@ class Jinja2TemplatedHeaderFile(object):
     self.d = deepcopy(dictionary)
     self.d[ "CLASSNAME" ] = classname
     self.d[ "NAMESPACE" ] = []
-    self.d[ "FULL_QUALIFIED_NAMESPACE" ] = ""
-
     for i in namespace:
       self.d["NAMESPACE"].append(i)
-      self.d[ "FULL_QUALIFIED_NAMESPACE" ] += "::" + i
+    # Eliminate the prepending "::" that can lead to compatibility issues across the solvers
+    self.d["FULL_QUALIFIED_NAMESPACE"] = "::".join(namespace)
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     """
