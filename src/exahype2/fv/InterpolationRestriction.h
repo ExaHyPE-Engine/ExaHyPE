@@ -330,7 +330,7 @@ namespace toolbox {
       double*                                   coarseGridValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
 
       restrictHaloLayer_AoS_matrix(
         marker,
@@ -378,7 +378,7 @@ namespace toolbox {
       bool                                      swapInsideOutside=false
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
-      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
+      int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
 
       restrictInnerHalfOfHaloLayer_AoS_matrix(
         marker,
