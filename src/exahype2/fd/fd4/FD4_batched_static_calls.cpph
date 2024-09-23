@@ -18,13 +18,13 @@ namespace exahype2 {
           typename TempDataEnumerator
         >
         static void timeStep_batched_static_calls(
-          ::exahype2::CellData&   patchData,
-          double                  KOSigma,
-          bool                    evaluateFlux,
-          bool                    evaluateDifferentialSource, //for ncp
-          bool                    evaluateAlgebraicSource, //real source
-          bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-          DifferentialSourceTermVariant                  variant,
+          ::exahype2::CellData<double, double>& patchData,
+          double                                KOSigma,
+          bool                                  evaluateFlux,
+          bool                                  evaluateDifferentialSource, //for ncp
+          bool                                  evaluateAlgebraicSource, //real source
+          bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+          DifferentialSourceTermVariant         variant,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
           const TempDataEnumerator& fluxEnumerator,
@@ -583,13 +583,13 @@ template <
   typename TempDataEnumerator
 >
 void exahype2::fd::fd4::timeStep_batched_heap_static_calls(
-  ::exahype2::CellData&   patchData,
-  double                  KOSigma,
-  bool                    evaluateFlux,
-  bool                    evaluateDifferentialSource, //for ncp
-  bool                    evaluateAlgebraicSource, //real source
-  bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-  DifferentialSourceTermVariant                  variant
+  ::exahype2::CellData<double, double>& patchData,
+  double                                KOSigma,
+  bool                                  evaluateFlux,
+  bool                                  evaluateDifferentialSource, //for ncp
+  bool                                  evaluateAlgebraicSource, //real source
+  bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant         variant
 ) {
   assertionEquals(haloSize,3);
 
@@ -658,13 +658,13 @@ template <
   typename TempDataEnumerator
 >
 static void exahype2::fd::fd4::timeStep_batched_heap_multicore_static_calls(
-  ::exahype2::CellData&   patchData,
-  double                  KOSigma,
-  bool                    evaluateFlux,
-  bool                    evaluateDifferentialSource, //for ncp
-  bool                    evaluateAlgebraicSource, //real source
-  bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-  DifferentialSourceTermVariant variant
+  ::exahype2::CellData<double, double>& patchData,
+  double                                KOSigma,
+  bool                                  evaluateFlux,
+  bool                                  evaluateDifferentialSource, //for ncp
+  bool                                  evaluateAlgebraicSource, //real source
+  bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant         variant
 ) {
   #if defined(SharedOMP)
   ::exahype2::fd::fd4::omp::timeStep_batched_heap_multicore_static_calls<

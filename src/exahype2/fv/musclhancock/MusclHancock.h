@@ -13,19 +13,19 @@ namespace exahype2 {
   namespace fv {
     namespace musclhancock {
       static void timeStepWithMusclHancock_patchwise_heap_functors(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        Flux                    flux,
-        NonconservativeProduct  nonconservativeProduct,
-        Source                  source,
-        MaxEigenvalue           maxEigenvalue
+        ::exahype2::CellData<double, double>& patchData,
+        int                                   numberOfVolumesPerAxisInPatch,
+        int                                   haloSize,
+        int                                   unknowns,
+        int                                   auxiliaryVariables,
+        bool                                  evaluateFlux,
+        bool                                  evaluateNonconservativeProduct,
+        bool                                  evaluateSource,
+        bool                                  evaluateMaximumEigenvalueAfterTimeStep,
+        Flux                                  flux,
+        NonconservativeProduct                nonconservativeProduct,
+        Source                                source,
+        MaxEigenvalue                         maxEigenvalue
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))

@@ -1,0 +1,33 @@
+/**
+
+@page page_exahype2_tutorials Tutorials
+
+@image html documentation/exahype2/ExaHyPE-logo.jpg
+
+- Hitchhiker's guide
+  - \subpage page_exahype2_tutorials_start
+  - \subpage page_exahype2_tutorials_project
+  - \subpage page_exahype2_tutorials_solver
+  - \subpage page_exahype2_tutorials_postprocessing
+- Numerics tour de force
+  - Finite Volumes for the Euler equations 
+- Toy problems
+  - \subpage page_exahype2_tutorials_toyproblems_acoustic
+  - \subpage page_exahype2_tutorials_toyproblems_advection
+  - \subpage page_exahype2_tutorials_toyproblems_elastic
+  - \subpage page_exahype2_tutorials_toyproblems_euler
+  - \subpage page_exahype2_tutorials_toyproblems_swe
+- Exercises
+  - \subpage tutorials_exahype2_exercises_swe_swe
+- Adding features	
+  - Adding your own compute kernels <!-- (Harrison's work) -->
+  - \subpage tutorials_exahype2_coupling
+  - Adding additional mesh sweeps
+
+
+## How to add your own tutorial
+
+All of Peano's and ExaHyPE's follow the same @ref page_tutorials_overview "tutorial conventions".
+
+
+*/

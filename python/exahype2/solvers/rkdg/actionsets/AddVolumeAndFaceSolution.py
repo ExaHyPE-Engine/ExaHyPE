@@ -40,7 +40,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
 
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{ADD_SOLVER_CONTRIBUTIONS_CALL}}
 
-    ::exahype2::CellData cellData(
+    ::exahype2::CellData<double, double> cellData(
       nullptr,
       marker.x(),
       marker.h(),

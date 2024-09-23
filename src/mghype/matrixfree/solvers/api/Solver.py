@@ -61,6 +61,12 @@ Return the name of the object that will be created for this solver.
   def create_readme_descriptor(self):
     return "not written yet"
 
+<<<<<<< HEAD
   def add_to_abstract_solver(self, header, implementation):
     self._abstract_solver_header_extras         = header
     self._abstract_solver_implementation_extras = implementation
+=======
+  @property
+  def name(self):
+      return self._name
+>>>>>>> refs/remotes/origin/p4

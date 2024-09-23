@@ -5,7 +5,7 @@
 
 ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
 stand-alone solvers, but nothing stops you from using them as a posteriori
-limiters by @ref page_exahype_coupling "coupling them to higher order schemes".
+limiters by @ref tutorials_exahype2_coupling "coupling them to higher order schemes".
 
 
 ## Data structures

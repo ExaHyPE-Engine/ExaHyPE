@@ -39,13 +39,17 @@ class Project:
   def __init__(self, 
                namespace, 
                project_name, 
-               directory  = ".", 
+               directory  = ".",
                executable = "peano4matrixfree",
+               subdirectory="",
+               abstract_overwrite=True,
                ):
-    self._project = peano4.Project(namespace, project_name, directory)
+    self._project = peano4.Project(namespace, project_name, directory, subdirectory)
     
     # what to do about this line?
     # self._project.output.makefile.add_cmake_core_library("petsc")
+    self._subdirectory = subdirectory
+    self._abstract_overwrite = abstract_overwrite
 
     # does this get overwritten later?
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -62,6 +66,7 @@ class Project:
     self._output_path   = "./" 
 
     self._solvers     = []
+# @todo remove
     self._aux_solvers = []
 
     self.algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
@@ -178,6 +183,11 @@ you require to run this Peano4 application with PETSc.
     return self._project
 
 
+  def __set_solver_repository_dict(self):
+      self.dictionary = {}
+      self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+
+
   def __generate_solver_repository(self):
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
@@ -189,15 +199,15 @@ you require to run this Peano4 application with PETSc.
       template_name + ".h",
       template_name + ".cpp",
       "SolverRepository", 
-      self._project.namespace,
-      "repositories", 
-      dictionary,
+      self._project.namespace, # + ["repositories"],
+      self._project.subdirectory + "repositories", 
+      self.dictionary,
       True,
       True)
 
     self._project.output.add( generated_repository_files )
-    self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h", generated=True )
-    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
+    self._project.output.makefile.add_h_file( self._project.subdirectory + "repositories/SolverRepository.h", generated=True )
+    self._project.output.makefile.add_cpp_file( self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True )
 
   def add_solver( self, solver, auxiliary=False ):
     """!
@@ -229,7 +239,10 @@ you require to run this Peano4 application with PETSc.
 
     solver.add_to_plot         (self.algorithm_step_plot)
 
-    solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+    if self._abstract_overwrite==False:
+      solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory, self._abstract_overwrite )
+    else:
+      solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
     
     if auxiliary:
       self._aux_solvers.append( solver )
@@ -305,3 +318,7 @@ This is yet to be written, and we need to have a paper on our work.
             self._project.output.readme.add_entry(
                 i.create_readme_descriptor()
             )
+
+  @property
+  def subdirectory(self):
+    return self._subdirectory

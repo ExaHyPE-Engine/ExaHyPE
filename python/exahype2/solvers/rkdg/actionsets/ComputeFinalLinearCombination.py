@@ -76,7 +76,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     {{POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION}}
 
     {% if COMPUTE_MAX_EIGENVALUE %}
-    ::exahype2::CellData  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+    ::exahype2::CellData<double, double>  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
 
     ::exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
       cellData,
