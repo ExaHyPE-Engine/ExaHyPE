@@ -1178,8 +1178,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
         }
     }
 
-    tarch::la::DynamicMatrix Q(A.rows(), A.rows());
-    tarch::la::DynamicMatrix R(A.rows(), A.cols());
+    tarch::la::DynamicMatrix Q(A.rows(), A.cols());
+    tarch::la::DynamicMatrix R(A.cols(), A.cols());
+
     tarch::la::modifiedGramSchmidt(A, Q, R);
 
     auto Q_T = tarch::la::transpose(Q);

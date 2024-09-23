@@ -367,16 +367,22 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
   const int matrixColumns = 2 * overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
   const int matrixRows = overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
 
-  const int i = (normal + 1) % 3;
-  const int j = (normal + 2) % 3;
+  const int i = (normal + 1) % Dimensions;
+#if Dimensions == 3
+  const int j = (normal + 2) % Dimensions;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseStart(0);
   coarseStart(i) = (marker.getRelativePositionWithinFatherCell()(i) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#if Dimensions == 3
   coarseStart(j) = (marker.getRelativePositionWithinFatherCell()(j) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseEnd(0);
   coarseEnd(i) = ((marker.getRelativePositionWithinFatherCell()(i) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#if Dimensions == 3
   coarseEnd(j) = ((marker.getRelativePositionWithinFatherCell()(j) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseFaceDimensions = coarseEnd - coarseStart;
   coarseFaceDimensions(normal) = overlap;
