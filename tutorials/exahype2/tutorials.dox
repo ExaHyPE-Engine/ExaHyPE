@@ -4,11 +4,7 @@
 
 @image html documentation/exahype2/ExaHyPE-logo.jpg
 
-- Hitchhiker's guide
-  - \subpage page_exahype2_tutorials_start
-  - \subpage page_exahype2_tutorials_project
-  - \subpage page_exahype2_tutorials_solver
-  - \subpage page_exahype2_tutorials_postprocessing
+- \subpage tutorials_exahype2_hitchhikers-guide
 - Numerics tour de force
   - Finite Volumes for the Euler equations 
 - Toy problems
@@ -18,11 +14,13 @@
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
 - Exercises
+  - \subpage tutorials_exahype2_exercises_acoustic_Acoustic
+  - \subpage page_exahype2_tutorials_euler
   - \subpage tutorials_exahype2_exercises_swe_swe
 - Adding features	
   - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
-  - Adding additional mesh sweeps
+  - \subpage tutorials_exahype2_additional_mesh_sweeps
 
 
 ## How to add your own tutorial
