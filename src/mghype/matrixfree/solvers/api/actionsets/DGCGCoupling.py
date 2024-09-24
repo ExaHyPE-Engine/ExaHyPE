@@ -759,6 +759,8 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         
         self.smoothing_steps_DG = smoothing_steps_DG
         self.smoothing_steps_CG = smoothing_steps_CG
+
+        self.cg_solver = cg_solver
           
 
     def get_attributes(self):
@@ -767,16 +769,21 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
           Add a new static attribute to the class.
       
         """
+
         if self.smoothing_steps_CG==-1:
           smoothing_steps_CG_string = "std::numeric_limits<int>::max()"
         else:
           smoothing_steps_CG_string = self.smoothing_steps_CG
+
+        CG_solver_tolerance = self.cg_solver._solver_tolerance
+
         return """
     static constexpr int DGSmoothingSteps = {};
     static constexpr int CGSmoothingSteps = {};
+    static constexpr double CGSolverTolerance = {};
     static int DGCycleCounter;
     static int CGCycleCounter;
-""".format(self.smoothing_steps_DG,smoothing_steps_CG_string)
+""".format(self.smoothing_steps_DG, smoothing_steps_CG_string, CG_solver_tolerance)
 
       
     def get_static_initialisations(self, full_qualified_classname):
@@ -814,9 +821,9 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
       CGCycleCounter<CGSmoothingSteps
       and not
       (
-        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() > 0
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() > 0.0
         and
-        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() <= 1e-8
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() <= CGSolverTolerance
       ) 
     ) {
       /*
