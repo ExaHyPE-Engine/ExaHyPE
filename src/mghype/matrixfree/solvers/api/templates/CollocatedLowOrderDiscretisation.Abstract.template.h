@@ -89,7 +89,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      */
     void suspend();
 
+    bool isSuspended() const;
+
     bool update() const;
+
+    {{ABSTRACT_SOLVER_HEADER_EXTRAS}}
+    
   protected:
     static tarch::logging::Log  _log;
 

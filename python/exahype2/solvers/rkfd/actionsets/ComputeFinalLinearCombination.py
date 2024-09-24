@@ -75,7 +75,7 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     ); // outcome has to be valid
 
     {% if COMPUTE_MAX_EIGENVALUE %}
-    ::exahype2::CellData  patchData( 
+    ::exahype2::CellData<double, double>  patchData( 
       nullptr,      // QIn
       marker.x(), 
       marker.h(), 

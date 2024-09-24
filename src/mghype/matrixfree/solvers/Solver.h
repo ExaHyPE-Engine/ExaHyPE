@@ -42,6 +42,8 @@ class mghype::matrixfree::solvers::Solver {
       double h
     );
 
+    double getGlobalResidualMaxNorm() const;
+
     virtual std::string toString() const;
 
     virtual void beginMeshSweep() = 0;

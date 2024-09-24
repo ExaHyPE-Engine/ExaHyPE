@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     my_parser = euler.setup_parser()
     my_parser.set_defaults(
-        solver="RusanovGlobalAdaptiveFV",
+        solver="RusanovGlobalAdaptiveADERDG",
         dimensions=2,
         end_time=3.0,
         width="[1.0, 1.0, 1.0]",
@@ -18,6 +18,8 @@ if __name__ == "__main__":
         min_depth=1,
         amr_levels=5,
         patch_size=16,
+        rk_order = 2,
+        dg_order = 3,
         peano_dir="../../../../",
     )
     my_args = my_parser.parse_args()

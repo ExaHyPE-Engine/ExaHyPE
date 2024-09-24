@@ -163,7 +163,7 @@ namespace exahype2 {
      *
      */
     void cellIntegral_patchwise_in_situ_GaussLegendre_functors(
-      ::exahype2::CellData&                          cellData,
+      ::exahype2::CellData<double, double>&          cellData,
       const int                                      order,
       const int                                      unknowns,
       const int                                      auxiliaryVariables,
@@ -189,7 +189,7 @@ namespace exahype2 {
       int      auxiliaryVariables
     >
     void cellIntegral_patchwise_in_situ_GaussLegendre(
-      ::exahype2::CellData&                          cellData,
+      ::exahype2::CellData<double, double>&          cellData,
       bool                                           evaluateFlux,
       bool                                           evaluateNonconservativeProduct,
       bool                                           evaluateSource,
@@ -224,7 +224,7 @@ namespace exahype2 {
      * unknown then is scaled by the inverse of this diagonal.
      */
     void multiplyWithInvertedMassMatrix_GaussLegendre(
-      ::exahype2::CellData&                          cellData,
+      ::exahype2::CellData<double, double>&          cellData,
       const int                                      order,
       const int                                      unknowns,
       const int                                      auxiliaryVariables,
@@ -237,12 +237,12 @@ namespace exahype2 {
      * result in the respective CellData entry.
      */
     void reduceMaxEigenvalue_patchwise_functors(
-      ::exahype2::CellData&   cellData,
-      const int               order,
-      const int               unknowns,
-      const int               auxiliaryVariables,
-      MaxEigenvalue           maxEigenvalue,
-      const double* __restrict__   QuadratureNodes1d
+      ::exahype2::CellData<double, double>& cellData,
+      const int                             order,
+      const int                             unknowns,
+      const int                             auxiliaryVariables,
+      MaxEigenvalue                         maxEigenvalue,
+      const double* __restrict__            QuadratureNodes1d
     );
 
     namespace internal {

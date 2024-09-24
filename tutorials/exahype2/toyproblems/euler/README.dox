@@ -1,6 +1,6 @@
 /**
 
-@page page_exahype2_tutorials_euler The Euler Equation
+@page page_exahype2_tutorials_toyproblems_euler The Euler Equation
 
 ## Define and Build the Project
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the Euler project:

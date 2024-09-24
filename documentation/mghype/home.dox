@@ -7,7 +7,7 @@
 \li \subpage page_multigrid_terminology
 \li \subpage page_multigrid_unfolding
 \li \subpage documentation_multigrid_petsc
-\li \subpage multigrid_tutorials
+\li \subpage page_multigrid_tutorials
 \li \subpage multigrid_benchmarks
 \li \subpage documentation_multigrid_boundary_conditions
 
