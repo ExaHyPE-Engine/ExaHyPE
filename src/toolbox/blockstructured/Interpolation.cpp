@@ -1496,7 +1496,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
         fineCoords(normal) = 2 * overlap - fineCoords(normal) - 1;
     }*/
     int fineIndex = serialiseVoxelIndexInOverlap(fineCoords, numberOfDoFsPerAxisInPatch, overlap, normal);
-    
+
     int row = kFine(normal);
     int base = overlap;
     for (int d = 1; d < Dimensions; d++){
@@ -1507,7 +1507,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(
     for (int unknown = 0; unknown < unknowns; unknown++){
       fineGridFaceValues[fineIndex * unknowns + unknown] = 0.0;
     }
-    
+
     int columnStart = rowIndices[rowIndicesStart + row];
     int columnEnd = rowIndices[rowIndicesStart + row + 1];
 

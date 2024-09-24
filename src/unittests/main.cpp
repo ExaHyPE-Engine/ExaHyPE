@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "config.h"
 
 #include "tarch/logging/Log.h"
@@ -11,14 +13,6 @@
 #include "peano4/peano.h"
 #include "peano4/parallel/Node.h"
 #include "peano4/UnitTests.h"
-
-#ifdef UseExaHyPE
-#include "exahype2/UnitTests.h"
-#endif
-
-#ifdef UseSWIFT
-#include "swift2/UnitTests.h"
-#endif
 
 #ifdef UseToolboxBlockstructured
 #include "toolbox/blockstructured/UnitTests.h"
@@ -36,6 +30,14 @@
 #include "toolbox/particles/UnitTests.h"
 #endif
 
+#ifdef UseExaHyPE
+#include "exahype2/UnitTests.h"
+#endif
+
+#ifdef UseSWIFT
+#include "swift2/UnitTests.h"
+#endif
+
 tarch::logging::Log _log("unittests");
 
 void runTests() {
@@ -51,20 +53,6 @@ void runTests() {
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-
-  #ifdef UseExaHyPE
-  tests = exahype2::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-  #endif
-
-  #ifdef UseSWIFT
-  tests = swift2::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-  #endif
 
   #ifdef UseToolboxBlockstructured
   tests = toolbox::blockstructured::getUnitTests();
@@ -89,6 +77,20 @@ void runTests() {
 
   #ifdef UseToolboxParticles
   tests = toolbox::particles::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseExaHyPE
+  tests = exahype2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseSWIFT
+  tests = swift2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
