@@ -370,6 +370,31 @@ if(WITH_NETCDF)
   target_include_directories(project_options INTERFACE ${NETCDF_INCLUDES})
 endif()
 
+if(ENABLE_LOADBALANCING)
+  #target_compile_definitions(project_options INTERFACE UseToolboxLoadbalancing)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxLoadbalancing)
+endif()
+
+if(ENABLE_BLOCKSTRUCTURED)
+  #target_compile_definitions(project_options INTERFACE UseToolboxBlockstructured)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxBlockstructured)
+endif()
+
+if(ENABLE_PARTICLES)
+  #target_compile_definitions(project_options INTERFACE UseToolboxParticles)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxParticles)
+endif()
+
+if(ENABLE_MULTIPRECISION)
+  #target_compile_definitions(project_options INTERFACE UseToolboxMultiprecision)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxMultiprecision)
+endif()
+
+if(ENABLE_FINITEELEMENTS)
+  #target_compile_definitions(project_options INTERFACE UseToolboxFiniteElements)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxFiniteElements)
+endif()
+
 if(ENABLE_EXAHYPE)
   #target_compile_definitions(project_options INTERFACE UseExaHyPE)
   set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseExaHyPE)
