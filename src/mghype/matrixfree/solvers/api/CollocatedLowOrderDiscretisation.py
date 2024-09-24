@@ -116,7 +116,11 @@ class CollocatedLowOrderDiscretisation(Solver):
                mass_matrix,
                mass_matrix_scaling,
                solver_tolerance,
-               smoother_relaxation = 0.6
+               smoother_relaxation   = 0.6,
+               custom_init_actionset = None,
+               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
+               custom_init_vertex = "",
+               custom_boundary_conditions = ""
                ):
     """!
    
@@ -149,15 +153,28 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._solver_tolerance              = solver_tolerance
     
     self._basic_descend_order           = 0
-    
     self._smoother_relaxation           = smoother_relaxation
-    
+
+    self._custom_init_actionset         = custom_init_actionset
+    self._custom_plot_actionset         = custom_plot_actionset
+
+    self._custom_init_vertex            = custom_init_vertex
+    self._custom_boundary_conditions    = custom_boundary_conditions
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
   def add_use_statements(self, observer):
     super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
+
+  def add_to_vertex_data(self, name, size=None):
+    """!
+    Use this method to add a DastGen array of given name and size to the
+    vertex datamodel.
+    """
+    if size is None:
+      size = self._unknowns_per_vertex
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( name, size ) )
 
   def add_to_plot(self, observer):
     """!
@@ -170,6 +187,11 @@ class CollocatedLowOrderDiscretisation(Solver):
     """
     observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "value", "getValue") )
     observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs") )
+
+    if self._custom_plot_actionset:
+      for name, getter in self._custom_plot_actionset:
+        observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, name, getter) )
+
     pass
 
   def add_to_create_grid(self, observer):
@@ -179,10 +201,16 @@ class CollocatedLowOrderDiscretisation(Solver):
   def add_to_init_solution(self, observer):
     """!
     
-    Solution initialisation
+    Solution initialisation. We can either use the
+    standard initialisation procedure or pass in 
+    another one when we instantiate this solver
+    class.
     
     """
-    observer.add_action_set( InitDofsCollocated(self) ) 
+    if self._custom_init_actionset is None:
+      observer.add_action_set( InitDofsCollocated(self) )
+    else:
+      observer.add_action_set( self._custom_init_actionset(self) )
     pass
 
   def add_to_solve(self, observer):
@@ -217,7 +245,11 @@ class CollocatedLowOrderDiscretisation(Solver):
         "VERTEX_CARDINALITY":            self._unknowns_per_vertex,
         "SOLVER_NAME":                   self.typename(),
         "SOLVER_TOLERANCE"            :  self._solver_tolerance,
-        "SMOOTHER_RELAXATION":           self._smoother_relaxation
+        "SMOOTHER_RELAXATION":           self._smoother_relaxation,
+        "ABSTRACT_SOLVER_HEADER_EXTRAS"        : self._abstract_solver_header_extras,
+        "ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS": self._abstract_solver_implementation_extras,
+        "CUSTOM_INIT_VERTEX"                   : self._custom_init_vertex,
+        "CUSTOM_BOUNDARY_CONDITIONS"           : self._custom_boundary_conditions,
     }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
