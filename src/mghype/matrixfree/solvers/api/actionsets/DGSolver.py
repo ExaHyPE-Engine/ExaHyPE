@@ -3,7 +3,7 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class UpdateCell(ActionSet):
+class UpdateResidual(ActionSet):
   """!
 
   This is for DG solver
@@ -15,9 +15,10 @@ class UpdateCell(ActionSet):
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
     and
+    // only one condition here - ensures that we don't do this when restricting the residual
     repositories::{{SOLVER_INSTANCE}}.updateCell()
   ) {
-    logTraceInWith4Arguments("touchCellFirstTime", 
+    logTraceInWith4Arguments("UpdateCell", 
       fineGridCell{{SOLVER_NAME}}.getSolution(),
       fineGridCell{{SOLVER_NAME}}.getRhs(),
       marker.toString(),
@@ -28,54 +29,12 @@ class UpdateCell(ActionSet):
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
       repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
 
-    // This vector faceSol will contain: soln on face 0 | soln on face 1 | soln on face 2 | .....
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
-    for (int f=0; f<TwoTimesD; f++)
-    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
-      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
-  
-    logTraceInWith1Argument("UpdateCell::Projection", faceSol);
-    // next, we need to project solution on face onto the cell...
-    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
-    // loop over each face
-    for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
-    {
-      // project the face solution onto the cell; add to r
-      r(f) -= projection(f);
-    }
-
     // also subtract A^cc u^c
     r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
 
-    // residual is now complete
+    fineGridCell{{SOLVER_NAME}}.setResidual( r );
 
-    // compute preconditioned max norm; now it's not used in the stopping criterion. todo: add it to updateGlobalResidual()
-    //double precMaxNorm = tarch::la::max( repositories::{{SOLVER_INSTANCE}}.OmegaCell * repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r );
-
-    repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
-      tarch::la::max( tarch::la::abs(r) ),
-      tarch::la::volume(marker.h()) * tarch::la::max(tarch::la::abs(r)),
-      tarch::la::norm2Squared(tarch::la::abs(r)),
-      marker.h()(0)
-    );
-
-    logTraceOutWith2Arguments("UpdateCell::Projection", r, projection);
-
-    // fetch inverted assembly matrix from abstract solver class. left-multiply r.
-    r = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r;
-
-    logTraceInWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
-    // scale current entries in solution vector by OmegaCell
-    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
-    {
-      double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i);
-
-      // add on r values whilst we are here
-      fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + repositories::{{SOLVER_INSTANCE}}.OmegaCell * r(i) );
-    }
-    logTraceOutWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
-
-    logTraceOut("UpdateCell::touchCellFirstTime");
+    logTraceOut("UpdateCell");
   }
   """
 
@@ -84,7 +43,7 @@ class UpdateCell(ActionSet):
                solver,
                descend_invocation_order=0,
                parallel=True):
-    super( UpdateCell, self ).__init__(
+    super( UpdateResidual, self ).__init__(
       descend_invocation_order,
       parallel
     )
@@ -111,7 +70,7 @@ class UpdateCell(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
+    return __name__.replace(".py", "").replace(".", "_") + "_UpdateResidual"
     
   def user_should_modify_template(self):
     """!
@@ -251,6 +210,114 @@ class ProjectOntoFaces(ActionSet):
 #include "peano4/utils/Loop.h"
 """
 
+class ProjectIntoCellAndUpdateCellSolution(ActionSet):
+  templateTouchCellFirstTime="""
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+    and
+    repositories::{{SOLVER_INSTANCE}}.projectOntoCells()
+  ) {
+    logTraceInWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
+
+    // we intend that the internal residual vector should be reset and updated in the 
+    // cell update procedure
+
+    // This vector faceSol will contain: soln on face 0 | soln on face 1 | soln on face 2 | .....
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
+    for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+
+    // next, we need to project solution on face onto the cell...
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
+    // loop over each face, finish updating residual as we go
+    for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
+    {
+      // project the face solution onto the cell; add to r
+      fineGridCell{{SOLVER_NAME}}.setResidual(f,
+        fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
+    }
+
+    // update global residual
+    repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
+      tarch::la::max( tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() ) ),
+      tarch::la::volume(marker.h()) * tarch::la::max(tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() )),
+      tarch::la::norm2Squared(tarch::la::abs( fineGridCell{{SOLVER_NAME}}.getResidual() )),
+      marker.h()(0)
+    );   
+    
+    // multiply by "smoother" / preconditioner
+    fineGridCell{{SOLVER_NAME}}.setResidual(
+      repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) 
+      * fineGridCell{{SOLVER_NAME}}.getResidual()
+    );
+
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
+      fineGridCell{{SOLVER_NAME}}.setSolution( i,
+        fineGridCell{{SOLVER_NAME}}.getSolution( i ) + 
+        repositories::{{SOLVER_INSTANCE}}.OmegaCell * fineGridCell{{SOLVER_NAME}}.getResidual( i )
+      );
+    }
+
+    logTraceOutWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
+  }
+
+  """
+  def __init__(self,
+               solver,
+               descend_invocation_order=0,
+               parallel=True):
+    super( ProjectIntoCellAndUpdateCellSolution, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      pass
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_") + "_ProjectIntoCellAndUpdateCellSolution"
+    
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+    We need the solver repository in this action set, as we directly access
+    the solver object. We also need access to Peano's d-dimensional loops.
+         
+    """    
+    return """
+#include "repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
+"""
+
 
 class UpdateFaceSolution(ActionSet):
   """!
@@ -267,6 +334,8 @@ class UpdateFaceSolution(ActionSet):
     and
     repositories::{{SOLVER_INSTANCE}}.updateFace()
   ) {
+    logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
+
     // project the u^\pm into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
       repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
@@ -277,11 +346,15 @@ class UpdateFaceSolution(ActionSet):
         (1-repositories::{{SOLVER_INSTANCE}}.OmegaFace)*fineGridFace{{SOLVER_NAME}}.getSolution(i)
          + repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
       );
+    logTraceOutWith1Argument( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution() );
   }
 
-  else if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary )
-  {
-    logTraceInWith1Argument( "InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
+  else if (
+    fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary
+    and
+    repositories::{{SOLVER_INSTANCE}}.updateFace()
+  ) {
+    logTraceInWith1Argument( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
     // Essentially what we do here is fix the solution on the boundary to be 
     // the inner-side projection.
 
@@ -310,7 +383,7 @@ class UpdateFaceSolution(ActionSet):
       fineGridFace{{SOLVER_NAME}}.setSolution( row, rowSolution );
     }
 
-    logTraceOut( "InteriorPenalty");
+    logTraceOut( "updateFaceSolution::InteriorPenalty");
   }
 
 

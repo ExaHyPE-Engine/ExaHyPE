@@ -6,7 +6,8 @@ class MatrixFreeMain(peano4.runner.DefaultSequence):
                project,
                domain_offset,
                domain_size,
-               plot_each_timestep
+               plot_each_timestep,
+               max_iterations
                ):
     super(MatrixFreeMain,self).__init__(project)
     self.overwrite     = True
@@ -24,6 +25,7 @@ class MatrixFreeMain(peano4.runner.DefaultSequence):
     self.d[ "DomainSize" ]   += "}"
 
     self.d["PlotEachTimeStep"] = plot_each_timestep
+    self.d["MAXITERATIONS"]    = max_iterations
     
   def _get_header_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    

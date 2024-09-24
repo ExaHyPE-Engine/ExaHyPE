@@ -1,6 +1,16 @@
 /**
 
-@page multigrid_tutorials Tutorials
+@page page_multigrid_tutorials Tutorials
+
+@image html tree.png
+
+- \li \subpage tutorials_mghype_hitchhikers-guide
+- Numerics tour de force
+  - Finite Volumes for the Euler equations 
+- Toy problems
+- Adding features
+
+
 
 \li \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
 \li \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
@@ -9,5 +19,11 @@
 \li \subpage tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
+
+## How to add your own tutorial
+
+All of Peano's and ExaHyPE's follow the same @ref page_tutorials_overview "tutorial conventions".
+
+
 
 */

@@ -28,6 +28,11 @@ mghype::matrixfree::solvers::Solver::Solver(
 }
 
 
+double mghype::matrixfree::solvers::Solver::getGlobalResidualMaxNorm() const {
+  return _globalResidualMaxNorm;
+}
+
+
 bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   int residualReducedUnderThreshold = 0;
   int residualGrows   = 0;
@@ -79,8 +84,6 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   if (residualGrows==numberOfChecks) numberOfResidualGrowths++;
 
   bool output = (residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5);
-
-  if (not output) return false;
 
   if (residualReducedUnderThreshold==numberOfChecks)
     logInfo( "terminationCriterionHolds()", "terminating because residualReducedUnderThreshold==" << residualReducedUnderThreshold );
