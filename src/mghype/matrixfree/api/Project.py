@@ -244,6 +244,7 @@ you require to run this Peano4 application with PETSc.
     else:
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
     
+    # @todo das muss raus
     if auxiliary:
       self._aux_solvers.append( solver )
     else:

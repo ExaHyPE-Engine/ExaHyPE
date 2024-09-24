@@ -12,14 +12,14 @@ However, the list below provides an overview over some tutorials.
    @ref page_exahype2_tutorials "ExaHyPE 2"
   </td>
   <td style="vertical-align: bottom">
-   @image html documentation/icons/SWIFT.png
+   @image html documentation/icons/swift.png
    @ref page_swift2_tutorials "Swift 2"
   </td>
  </tr>
  <tr>
   <td style="vertical-align: bottom">
    @image html documentation/icons/MGHyPE.png
-   @ref page_exahype2_tutorials "MGHyPE"
+   @ref page_multigrid_tutorials "MGHyPE"
   </td>
  </tr>
 </table>

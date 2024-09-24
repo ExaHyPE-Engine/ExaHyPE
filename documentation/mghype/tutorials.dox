@@ -1,6 +1,8 @@
 /**
 
-@page multigrid_tutorials Tutorials
+@page page_multigrid_tutorials Tutorials
+
+@image html tree.png
 
 \li \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
 \li \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
