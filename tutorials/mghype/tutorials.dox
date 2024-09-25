@@ -2,23 +2,28 @@
 
 @page page_multigrid_tutorials Tutorials
 
-@image html tree.png
+@image html documentation/icons/MGHyPE.png
 
 - \subpage tutorials_mghype_hitchhikers-guide
 - Numerics tour de force
-  - Finite Volumes for the Euler equations 
+  - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson
+  - \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
+  - \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
 - Toy problems
+  - \subpage tutorials_mghype_examples_01_matrix-free-cg
+  - \subpage tutorials_mghype_examples_02_matrix-free-dg
+  - \subpage tutorials_mghype_examples_11_petsc-cg
 - Adding features
 
 
 
-\li \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
-\li \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
-
+<!--
 \li \subpage tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
+-->
+
 
 ## How to add your own tutorial
 

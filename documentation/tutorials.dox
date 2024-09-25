@@ -39,11 +39,27 @@ python3 documentation/convert-jupyter-notebooks.py
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 If you now call Doxygen, the notebook is integrated into the static webpage.
-It will be given the identifier that corresponds to the qualified file path, 
-where all / are replaced with underscores.
+
+## Naming conventions
+
+This webpage will be given the identifier that corresponds to the qualified file path, 
+where all / are replaced with underscores and the postfix is eliminated. So if 
+your file is called
+
+     Peano/tutorials/mghype/hitchhikers-guide.ipynb
+
+then you'll get a page with the identifier 
+
+     tutorials_mghype_hitchhikers-guide
 
 
+## Raw boxes
 
+If you have boxes in your Jupyter notebook which are classified as raw, these are 
+unfortunately not preserved by the markdown export of the notebooks. However, our 
+postprocessing script is able to reconstruct a proper formatting if you indent the 
+lines within your raw box by at least four spaces, just as you would do with 
+markdown in Doxygen. You have to indent every single line of the block though.
 
 */
 
