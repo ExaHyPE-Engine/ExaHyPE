@@ -4,7 +4,7 @@
 
 @image html tree.png
 
-- \li \subpage tutorials_mghype_hitchhikers-guide
+- \subpage tutorials_mghype_hitchhikers-guide
 - Numerics tour de force
   - Finite Volumes for the Euler equations 
 - Toy problems
