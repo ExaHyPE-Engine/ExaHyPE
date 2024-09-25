@@ -3,12 +3,12 @@
 #include "peano4/utils/Loop.h"
 
 void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     overlap,
-  int                     unknowns,
-  int                     auxiliaryVariables,
-  MaxEigenvalue           maxEigenvalue
+  ::exahype2::CellData<double, double>& patchData,
+  int                                   numberOfGridCellsPerPatchPerAxis,
+  int                                   overlap,
+  int                                   unknowns,
+  int                                   auxiliaryVariables,
+  MaxEigenvalue                         maxEigenvalue
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1, numberOfGridCellsPerPatchPerAxis, overlap, unknowns, auxiliaryVariables);
 

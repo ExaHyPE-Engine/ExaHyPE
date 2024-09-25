@@ -7,7 +7,7 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution, ProjectOntoCells
+from .actionsets.DGSolver         import UpdateResidual, ProjectOntoFaces, UpdateFaceSolution, ProjectIntoCellAndUpdateCellSolution
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
@@ -172,7 +172,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
         
     
-    All of this functionality can be found in the subpackage actionsets.UpdateCell.
+    All of this functionality can be found in the subpackage actionsets.UpdateResidual.
 
   ## How does it work?
 
@@ -212,19 +212,19 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   touchFaceFirstTime. We apply the Riemann matrix that is present in the Abstract Solver class. This action set goes first,
   the idea being that we updated the face solution using the updated face projections from the previous sweep.
 
-  ### ProjectOntoCells
-  Code for this is in actionsets.DGSolver.ProjectOntoCells. This action set works when we touch the cell for the first time.
+  ### ProjectIntoCellAndUpdateCellSolution
+  Code for this is in actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution. This action set works when we touch the cell for the first time.
   We project the newly updated face solution back into the cells. In particular we:
    - Write the updated face solution into the residual stored in the cell. This finishes the cell update from the previous sweep.
    - Update the global residual
    - Update the cell solution, which is projected back onto faces in the next action set.
 
   ### ProjectOntoFaces
-  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after ProjectOntoCells, so that we project
+  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after ProjectIntoCellAndUpdateCellSolution, so that we project
   freshly updated Cell values onto the Faces.
 
-  ### UpdateCell
-  Code for this is in actionsets.DGSolver.UpdateCell. We do something nontrivial in touchCellFirstTime, namely perform the cell update
+  ### UpdateResidual
+  Code for this is in actionsets.DGSolver.UpdateResidual. We do something nontrivial in touchCellFirstTime, namely perform the cell update
   rule as above. We set the residual to be \f$ Mb - A^{cc} u^c \f$.
 
     
@@ -462,15 +462,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       self.preprocessing_action_set.descend_invocation_order = descend_order + 0
       observer.add_action_set( self.preprocessing_action_set )
     observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
-    observer.add_action_set( ProjectOntoCells(self, descend_order+2, False) )
+    observer.add_action_set( ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) )
     observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
-    observer.add_action_set( UpdateCell(self, descend_order+4, False) )
+    observer.add_action_set( UpdateResidual(self, descend_order+4, False) )
     if self.postprocessing_action_set != None:
       self.postprocessing_action_set.descend_invocation_order = descend_order + 4
       observer.add_action_set( self.postprocessing_action_set )
 
   
-  def add_implementation_files_to_project(self, namespace, output):
+  def add_implementation_files_to_project(self, namespace, output, subdirectory="", abstract_overwrite=True):
     """!
     
     The solver creates two classes: An abstract base class and its 
@@ -481,6 +481,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     """
     templatefile_prefix  = os.path.dirname( os.path.realpath(__file__) ) + "/templates/"
     templatefile_prefix += self.__class__.__name__
+
+    if(subdirectory):
+        subdirectory += "/"
 
     dictionary = {
         "SOLVER_INCLUDES": "",
@@ -522,24 +525,24 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       templatefile_prefix + ".Abstract.template.cpp",
       "Abstract" + self.typename(), 
       namespace,
-      ".", 
+      subdirectory + ".",
       dictionary,
-      True,
+      abstract_overwrite,
       True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
       templatefile_prefix + ".template.cpp",
       self.typename(), 
       namespace,
-      ".", 
+      subdirectory + ".",
       dictionary,
       False,
       True)
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_h_file( "Abstract" + self._name + ".h", generated=True )
-    output.makefile.add_h_file( self._name + ".h", generated=True )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
-    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
+    output.makefile.add_h_file( subdirectory + "Abstract" + self._name + ".h", generated=True )
+    output.makefile.add_h_file( subdirectory + self._name + ".h", generated=True )
+    output.makefile.add_cpp_file( subdirectory + "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
 

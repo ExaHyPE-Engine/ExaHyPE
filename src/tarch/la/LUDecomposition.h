@@ -4,6 +4,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/la/Matrix.h"
+#include "tarch/la/DynamicMatrix.h"
 
 #include "tarch/Assertions.h"
 
@@ -47,6 +48,16 @@ namespace tarch {
     Vector<Rows,Scalar> backSubstitution(
       const Matrix<Rows,Rows,Scalar>&  R,
       const Vector<Rows,Scalar>&       f
+    );
+
+    void backSubstitution(
+      const DynamicMatrix& R,
+      const double* f,
+      double* x
+    );
+    
+    DynamicMatrix invertUpperTriangular(
+      const DynamicMatrix& R
     );
 
     #ifdef UseLapack

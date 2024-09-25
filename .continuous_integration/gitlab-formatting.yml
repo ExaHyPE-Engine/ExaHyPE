@@ -7,8 +7,8 @@ Formatting:
   allow_failure: true
   dependencies: []
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_IMAGEDIR/${IMAGE_TAG_BASE} python3 format.py -d -v -f=.
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_TAG_BASE} python3 format.py -d -v -f=.
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
   when: always
-  retry: 0
+  retry: 2

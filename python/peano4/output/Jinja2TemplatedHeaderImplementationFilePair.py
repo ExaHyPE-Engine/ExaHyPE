@@ -7,7 +7,6 @@ import jinja2
 from copy import deepcopy
 
 from .Helper import write_file
-from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -47,19 +46,14 @@ dictionary entries besides the ones manually handed over by the user.
     self.d = deepcopy(dictionary)
     self.d[ "CLASSNAME" ] = classname
     self.d[ "NAMESPACE" ] = []
-    self.d[ "FULL_QUALIFIED_NAMESPACE" ] = ""
-
     for i in namespace:
       self.d["NAMESPACE"].append(i)
-      self.d[ "FULL_QUALIFIED_NAMESPACE" ] += "::" + i
+    # Eliminate the prepending "::" that can lead to compatibility issues across the solvers
+    self.d["FULL_QUALIFIED_NAMESPACE"] = "::".join(namespace)
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
       import inspect
-      cuda = using_cuda_backend()
-      if cuda:
-        full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
-
       print( "{} written by {} (from template {})".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__)),  template_file))
 
       template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
@@ -82,12 +76,7 @@ dictionary entries besides the ones manually handed over by the user.
       os.mkdir(directory + "/" + self.subdirectory)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
-
-    cuda = using_cuda_backend()
-    if not cuda:
-      cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"
-    else:
-      cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cu"
+    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"
 
     self.__generate_file(overwrite,header_filename,self.headerfile_template)
     self.__generate_file(overwrite,cpp_filename   ,self.cppfile_template)

@@ -50,20 +50,93 @@ class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
   is properly befilled. You can postprocess it, but if you alter entries 
   therein, these alterations will be lost after the preprocessing step.
   
+  ## Enclave solver variant
+  
+  The action set can work in an enclave solver style or as plain invocation. 
+  Plain invocation means we just reconstruct the patch plus halo, invoke a 
+  compute kernel on it, and then free this reconstruction data structure 
+  again.
+  
+  Enclave-style means that we do the reconstruction, but then embed the actual
+  operation and the freeing into a task. We use the actual enclave task number
+  as task number. Peano does not allow multiple tasks in the system with the 
+  same number, so if an enclave task is spawned afterwards, we have a read-write-read
+  dependency.
+  
+  @todo Das ist falsch
+  
+  
   """  
   def __init__(self,
                solver,
-               compute_kernel_implementation
+               compute_kernel_implementation,
+               enclave_task_cell_label = None
                ):
+    """!
+    
+    Construct the preprocessing
+    
+    If we work with an enclave task, the modelling is pretty straightforward. 
+    However, we have to explicitly delete the reconstructed data structure
+    oldQWithHalo, as we tell the parent class not to delete stuff. If they 
+    deleted the oldQWithHalo, it would be at the end of the function. At this
+    point our task might not have finished yet. We need the delete within the 
+    task.
+    
+    @param enclave_task_cell_label: String or None
+      If this field is none, we do not use any tasking. If it is a string, we assume
+      it denotes a cell label (usually it is something similar to 
+      fineGridCellMySolver_FD4CellLabel). In this case, we spawn a separate task as
+      enclave task.
+    
+    """  
+    if enclave_task_cell_label==None:
+        functor_implementation = compute_kernel_implementation
+        reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
+    else:
+        functor_implementation = """
+            auto taskBody = [=,this]() -> bool { """ + compute_kernel_implementation  + """
+                ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::Heap );
+                return false;
+            };
+
+            if (
+              marker.willBeEnclaveCell() 
+              or 
+              marker.hasBeenEnclaveCell() 
+            ) {
+              taskBody();
+            }
+            else {
+              assertion( """ + enclave_task_cell_label + """.getSemaphoreNumber()<0 );
+              
+              tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
+                tarch::multicore::Task::DontFuse,
+                tarch::multicore::Task::DefaultPriority,
+                taskBody
+              );
+
+              int newTaskNumber = ::exahype2::EnclaveTask::reserveTaskNumber();
+            
+              tarch::multicore::spawnTask( 
+                newTask, 
+                tarch::multicore::NoInDependencies, 
+                newTaskNumber
+              );
+              
+              """ + enclave_task_cell_label + """.setSemaphoreNumber( newTaskNumber );
+            }
+            """
+        reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
+        
     super(PreprocessReconstructedSolutionWithHalo,self).__init__(patch = solver._patch,
-                                             patch_overlap = solver._patch_overlap_new,
-                                             functor_implementation = compute_kernel_implementation,
-                                             reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch,
+                                             patch_overlap                       = solver._patch_overlap_new,
+                                             functor_implementation              = functor_implementation,
+                                             reconstructed_array_memory_location = reconstructed_array_memory_location, 
                                              guard                               = "repositories::instanceOf" + solver._name + ".isFirstGridSweepOfTimeStep()",
                                              add_assertions_to_halo_exchange     = False
                                              )
     self._solver = solver
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
@@ -73,6 +146,8 @@ class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
     return super(PreprocessReconstructedSolutionWithHalo,self).get_includes() + """
 #include <functional>
 #include "exahype2/fd/PatchUtils.h"
+#include "exahype2/EnclaveTask.h"
+#include "tarch/multicore/Tasks.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes 
 
 

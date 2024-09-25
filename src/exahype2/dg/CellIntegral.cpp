@@ -5,7 +5,7 @@
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
-  ::exahype2::CellData&                          cellData,
+  ::exahype2::CellData<double, double>&          cellData,
   const int                                      order,
   const int                                      unknowns,
   const int                                      auxiliaryVariables,
@@ -195,12 +195,12 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
 
 void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
-  ::exahype2::CellData&   cellData,
-  const int               order,
-  const int               unknowns,
-  const int               auxiliaryVariables,
-  MaxEigenvalue           maxEigenvalue,
-  const double* __restrict__   QuadratureNodes1d
+  ::exahype2::CellData<double, double>&   cellData,
+  const int                               order,
+  const int                               unknowns,
+  const int                               auxiliaryVariables,
+  MaxEigenvalue                           maxEigenvalue,
+  const double* __restrict__              QuadratureNodes1d
 ) {
   ::exahype2::enumerator::AoSLexicographicEnumerator  enumerator(
     1, // number of patches stored per continuous memory segment
@@ -256,7 +256,7 @@ void exahype2::dg::internal::copySolution(
 
 
 void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
-  ::exahype2::CellData&                          cellData,
+  ::exahype2::CellData<double, double>&          cellData,
   const int                                      order,
   const int                                      unknowns,
   const int                                      auxiliaryVariables,

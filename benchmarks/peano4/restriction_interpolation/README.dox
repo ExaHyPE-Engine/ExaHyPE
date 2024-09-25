@@ -1,0 +1,22 @@
+/**
+
+@page benchmarks_peano4_interpolation_restriction_performance Coarse Face / Fine Face Interpolation and Restriction Performance Test
+
+Benchmark which restricts fine faces of various sizes to coarse faces, and interpolates fine faces from coarse faces. 
+All other peano functionality is ignored.
+
+# Run the benchmark
+
+To run the benchmark, configure and compile the Peano under main directory following
+
+~~~~~~~~~~~~~~~~~~~~~~
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang::" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
+make -j
+~~~~~~~~~~~~~~~~~~~~~~
+
+The executable can then be found in this directory.
+Run ./InterpolationRestriction3d and read the output from results.txt
+
+*/
+

@@ -15,6 +15,7 @@ namespace exahype2 {
   /**
    * Forward declaration
    */
+  template<typename inType=double, typename outType=double>
   struct CellData;
 
   namespace fv::rusanov::sycl {
@@ -68,14 +69,15 @@ namespace exahype2 {
      * the shared memory, so I can use simple memcopies on the host to
      * get everything set up properly.
      */
+    template<typename inType=double, typename outType=double>
     struct GPUUSMCellData {
-      double**                                 QIn;
+      inType**                                 QIn;
       ::tarch::la::Vector<Dimensions, double>* cellCentre;
       ::tarch::la::Vector<Dimensions, double>* cellSize;
       double*                                  t;
       double*                                  dt;
       int                                      numberOfCells;
-      double**                                 QOut;
+      outType**                                QOut;
       double*                                  maxEigenvalue;
 
       /**
@@ -95,7 +97,7 @@ namespace exahype2 {
        * regions (shared between GPU and CPU), we can simply copy
        * the object over and use it within a queue.
        */
-      GPUUSMCellData(const GPUUSMCellData& copy) = default;
+      GPUUSMCellData(const GPUUSMCellData<inType, outType>& copy) = default;
 
       /**
        * Do nothing.
@@ -125,10 +127,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUUSMCellData(
-        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+        const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
+      void destroy(CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
 
     /**
@@ -153,18 +155,19 @@ namespace exahype2 {
      * account or you might not want to: The whole patch data are copied
      * over into one huge chunk.
      */
+    template<typename inType=double, typename outType=double>
     struct GPUCopyCellData {
-      double**                                 QIn;
+      inType**                                 QIn;
       ::tarch::la::Vector<Dimensions, double>* cellCentre;
       ::tarch::la::Vector<Dimensions, double>* cellSize;
       double*                                  t;
       double*                                  dt;
       int                                      numberOfCells;
-      double**                                 QOut;
+      outType**                                QOut;
       double*                                  maxEigenvalue;
 
-      double* QInCopyInOneHugeBuffer;
-      double* QOutCopyInOneHugeBuffer;
+      inType* QInCopyInOneHugeBuffer;
+      outType* QOutCopyInOneHugeBuffer;
 
       /**
        * We never create a GPU wrapper object directly
@@ -183,7 +186,7 @@ namespace exahype2 {
        * regions (shared between GPU and CPU), we can simply copy
        * the object over and use it within a queue.
        */
-      GPUCopyCellData(const GPUCopyCellData& copy) = default;
+      GPUCopyCellData(const GPUCopyCellData<inType, outType>& copy) = default;
 
       /**
        * Do nothing.
@@ -218,10 +221,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUCopyCellData(
-        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+        const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
+      void destroy(CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
 
 
@@ -246,19 +249,20 @@ namespace exahype2 {
      * frees the copies in the shared memory.
      *
      */
+    template<typename inType=double, typename outType=double>
     struct GPUManagedCellData {
-      double**                                 QIn;
+      inType**                                 QIn;
       ::tarch::la::Vector<Dimensions, double>* cellCentre;
       ::tarch::la::Vector<Dimensions, double>* cellSize;
       double*                                  t;
       double*                                  dt;
       int                                      numberOfCells;
-      double**                                 QOut;
+      outType**                                QOut;
       double*                                  maxEigenvalue;
 
 
-      double* QInCopyInOneHugeBuffer;
-      double* QOutCopyInOneHugeBuffer;
+      inType*  QInCopyInOneHugeBuffer;
+      outType* QOutCopyInOneHugeBuffer;
 
       /**
        * We never create a GPU wrapper object directly
@@ -277,7 +281,7 @@ namespace exahype2 {
        * regions (shared between GPU and CPU), we can simply copy
        * the object over and use it within a queue.
        */
-      GPUManagedCellData(const GPUManagedCellData& copy) = default;
+      GPUManagedCellData(const GPUManagedCellData<inType, outType>& copy) = default;
 
       /**
        * Do nothing.
@@ -302,12 +306,14 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUManagedCellData(
-        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+        const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
+      void destroy(CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
   } // namespace fv::rusanov::sycl
 } // namespace exahype2
+
+#include "GPUCellData.cpph"
 
 #endif

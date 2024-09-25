@@ -82,3 +82,7 @@ Return the name of the object that will be created for this solver.
     Add in extra attributes on the fly
     """
     self._face_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( name, size ) )
+
+  @property
+  def name(self):
+      return self._name
