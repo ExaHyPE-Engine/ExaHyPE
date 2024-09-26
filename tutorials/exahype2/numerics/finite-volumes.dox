@@ -1,0 +1,134 @@
+/** 
+
+@page page_tutorials_exahype2_numerics_finite_volumes Finite Volumes
+
+ExaHyPE's Finite Volume scheme is based upon block-structured Cartesian meshes.
+All Finite Volume solvers work with blockstructured AMR: They embed @f$p \times p@f$ patches 
+into the octants (cells of the spacetree). To avoid confusion, I prefer to 
+use the term volume for the cells within the patch, as cell would be
+ambigous given that we construct the  host mesh from spacetree cells.
+
+@image html documentation/exahype2/solvers/block-structured.png
+
+With the Finite Volume methods, we only have single-shot methods at the moment. 
+That is, Peano runs over the octants of the mesh, i.e. the patches.
+Per patch, it calls and ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
+ExaHyPE is shipped with several update schemes. You can obviously also write your own 
+numerical scheme manually, or you employ ExaHyPE's kernel domain-specific language (DSL).
+
+
+## Storage scheme
+
+Every patch has to depends upon its neighbouring, i.e. face-connected patches.
+To be able to do this, ExaHyPE passes a  
+@f$ (p+2N)^d @f$ patch into a kernel.
+The p is the number of volumes per patch. The d is the dimension, i.e. two or three.
+The @f$ N \geq 1 @f$ is a halo around the cell.
+Different Finite Volume schemes have different halo sizes. 
+You may assume that ExaHyPE befills these halo values with valid data from the neighbours, i.e. their synchronisation is none of the kernel's business.
+The input is called @f$ Q_{in} @f$ from hereon.
+The kernel returns a @f$ (p+2\hat N)^d @f$ with the new time step's data. 
+It is called @f$ Q_{out} @f$.
+
+
+Here are some details about the data used within the kernels:
+
+- The halo data, i.e. the @f$ N @f$ layer around the patch is automatically befilled.
+  However, we only maintain the face-connected data. Consequently, the diagonal (corners)
+  do not exist. To make the whole logic easier, the @f$ Q_{in} @f$ nevertheless hold these data.
+  They contain garbage. Example: In a @f$ 7 \times 7 @f$ patch world with @f$ N=2 @f$, we have 
+  49 volumes in the core centre, surrounded by @f$ 2d \cdot (N \cdot p^{d-1}) = 4 \dot (2 \dot 7) @f$ face-connected values. 
+  The @f$ 4 \cdot (2 \cdot 2 ) @f$ corners of the halo do not hold any meaningful data. 
+  Nevertheless, we let @f$ Q_{in} @f$ holds a @f$ (7+2\cdot 2) @f$ volumes
+- The volumes within @f$ Q_{in} @f$ and @f$ Q_{out} @f$ are ordered lexicographically.
+- The data are stores as array of structs (AoS).
+- If a PDE is described by K real values subject to the wave equations and M auxiliary variables
+  (material parameters), then the @f$ Q_{in} @f$ contains K+M values (degrees of freedom) per volume.
+  The @f$ Q_{out} @f$ however contains only the K values, as the M material parameters do not evolve in time.
+- Besides @f$ Q_{in} @f$ and @f$ Q_{out} @f$ a kernel is given the current time @f$ t @f$ and the time step size @f$ \Delta t @f$.
+- We never write a kernel for only one patch. We always write kernels that can advanced multiple patches in one go.
+  So the "update one patch" is a special case.
+ 
+
+## Finite Volumes in a nutshell
+
+In Finite Volumes, we assume that each voxel holds exactly one value per PDE quantity.
+We assume that the solution is constant within the volume.
+
+
+@image html finite-volumes.png
+
+In the 1d illustration above, we have a patch with @f$ p=5 @f$ volumes, one quantity and a halo of one.
+That is, we are given a @f$ Q_{in} @f$ with 7 values and return 5 new values for the next time step.
+So now we do the math:
+
+If the solution per volume is constant, nothing happens within the volume per time step.
+The solution inside is kind of "stable".
+If something happens with a volume, i.e. if the solution grows or goes down, then this must be due to stuff flowing in or out of the voxel.
+We can write this down as integral over each volume V:
+
+@f$ 
+ \int _V Q_k(t+\Delta t) dx = \int _V Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx 
+@f$
+
+We have already used an explicit Euler time integrator here.
+Next, we make the formula a little bit simpler exploiting the fact that a volume shall have the volume length @f$ h @f$ and each volume is a square or cube, respectively.
+Once again, it helps that the solution is constant per volume.
+
+@f{eqnarray*} 
+ \int _V Q_k(t+\Delta t) dx & = & \int _V Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx \\
+ h^d Q_k(t+\Delta t) & = & h^d Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx \\
+ h^d Q_k(t+\Delta t) & = & h^d Q_k(t) dx + \Delta t \cdot \int _V \nabla F(Q_k(t)) + S(Q_k)  dx
+@f}
+
+In the last line, we now insert our PDE written as
+
+@f$ 
+ \partial _t Q(t) = \nabla F(Q(t)) + S(Q) 
+@f$
+
+and use the divergence theorem:
+
+@f{eqnarray*} 
+ h^d Q_k(t+\Delta t) & = & h^d Q_k(t) dx + \Delta t \cdot \int _V \nabla F(Q_k(t)) + S_k(Q)  dx \\
+ Q_k(t+\Delta t) & = & Q_k(t) dx + \frac{\Delta t}{h^d} \cdot \left( \oint _{\partial V} (F(Q_k(t)),n) dS(x) + h^d \cdot S(Q_k) \right)
+@f}
+
+So in principle, we now know exactly what to do:
+
+- Loop over all volumes in the patch.
+- Copy its @f$ Q_{in} @f$ in @f$ Q_{out} @f$.
+- Add the source term @f$ S(Q_k) @f$ scaled by the time step size.
+- Add this additional term of inflow or outflow. Again, we can exploit the fact
+  that the normal n has only one entry with @f$ \pm 1 @f$ (so F returns a 
+  vector, but we pick only one entry and scale it maybe with a -1). And then we
+  scale the whole thing with a @f$ h^{d-1} @f$ as we integrate over a surface, but
+  the straightaway divide by @f$ h^d @f$. 
+  
+The problem is that we don't know the F value at the voxel. That thing doesn't really exist.
+The solution has no value there, as it jumps.
+So we have to approximate this term @f$ F(Q) @f$ at the voxel boundary with a numerical flux.
+
+
+
+## Rusanov
+
+One of the simlest flux is Rusanov:
+
+@f$
+    {F|}_{n}(Q) \approx \frac{1}{2} (F_n^+(Q) + F_n^-(Q)) - (Q^+ - Q^-) \cdot \text{max}(\lambda_{max,n}(Q^+),\lambda_{max,n}(Q^-))
+@f$
+
+The flux on a face @f$ {F}_{n}(Q) @f$ is the average of the flux within the left adjacent cell and the right adjacent cell.
+This average is denoted by a red circle in the sketch above.
+If we only used the average, we would get a solution where shocks smear out quickly.
+In the sketch above, the wave/shock travels from left to right, so it makes sense to assume that actually way more flow goes left-right than right-to-left.
+Averaging is not a good idea.
+So we take the difference @f$ Q^+ - Q^- @f$ between left and right into account as well, but now we have to know the direction of travel.
+The speed also matters, i.e. if this flow is very slow, then we only should correct the average by a tiny amount.
+If the wave travels very fast, we should significantly take this solution gradient into account.
+The wave direction and speed is given by the 
+
+
+
+*/

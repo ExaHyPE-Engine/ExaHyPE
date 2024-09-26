@@ -6,7 +6,7 @@
 
 - \subpage tutorials_exahype2_hitchhikers-guide
 - Numerics tour de force
-  - Finite Volumes for the Euler equations 
+  - \subpage page_tutorials_exahype2_numerics_finite_volumes
 - Toy problems
   - \subpage page_exahype2_tutorials_toyproblems_acoustic
   - \subpage page_exahype2_tutorials_toyproblems_advection
