@@ -1,4 +1,4 @@
-// This file is part of the Peano's PETSc extension. For conditions of
+// This file is part of the Peano's MGHyPE extension. For conditions of
 // distribution and use, please see the copyright notice at
 // www.peano-framework.org
 #pragma once
@@ -92,6 +92,7 @@ namespace mghype {
           bool   fas
         );
 
+        extern tarch::logging::Log _log;
 
         /**
          * Restrict counters

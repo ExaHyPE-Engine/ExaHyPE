@@ -184,10 +184,9 @@ you require to run this Peano4 application with PETSc.
 
 
   def __set_solver_repository_dict(self):
-    self.dictionary = {}
-    self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-    self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
-
+      self.dictionary = {}
+      self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+      self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
 
   def __generate_solver_repository(self):
     # make sure solver repository dict is set    

@@ -1,12 +1,12 @@
-"""
-Draft for h-multigrid itergrid operators
-"""
-
 import numpy as np
 
 class IntergridOperatorsH:
+    """!
+    Class to produce restriction/prolongation matrices for multigrid tasks.
+    
+    """
 
-    def __init__(self, dim, refinement_order):
+    def __init__(self, dim=2, refinement_order=1):
         self.dim = dim
         self.refinement_order = refinement_order
 

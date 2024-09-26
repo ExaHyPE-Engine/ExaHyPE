@@ -4,3 +4,4 @@
 from .DGPoisson2dBlockMatrix        import DGPoisson2dBlockMatrix
 from .DGPoisson2dPenaltyBlockMatrix import DGPoisson2dPenaltyBlockMatrix
 from .IntergridOperators            import IntergridOperators
+from .IntergridOperatorsH           import IntergridOperatorsH
