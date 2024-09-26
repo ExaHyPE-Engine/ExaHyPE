@@ -112,6 +112,6 @@ project.set_load_balancing(
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
 peano4_project = project.generate_Peano4_project("False")
-peano4_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+#peano4_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=16)
