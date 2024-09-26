@@ -19,21 +19,8 @@ namespace tarch {
  @namespace tarch::multicore
 
 
- This page describes Peano 4's multithreading layer.
- To compile with multicore support, you have to invoke the configure script with
- the option --with-multithreading=value where value is
-
- - cpp. This adds support through C++14 threads.
- - tbb. This adds support through Intel's Threading Building Blocks. If you use
-   this option, you first have to ensure that your CXXFLAGS and LDFLAGS point to
-   the right include or library, respectively, directories. LDFLAGS also has to
-   compromise either -ltbb or -tbb_debug.
- - openmp. This adds OpenMP support. We currently develop against OpenMP 4.x
-   though some of our routines use OpenMP target and thus are developed against
-   OpenMP 5.
- - sycl. We have a SYCL support for the multithreading, through, within the Intel
-   toolchain, it might be more appropriate to combine sycl on the GPU with the
-   tbb backend for multithreading.
+ This page describes Peano 4's multithreading namespace. A more high-level
+ overview is provided through @ref page_tarch_multicore.
 
 
  ## Writing your own code with multithreading features
@@ -56,11 +43,6 @@ and
  OpenMP, TBB or C++ threading.
 
 
- Our vision is that each code should be totally independent of the multithreading
- implementation chosen. Indeed, Peano 4 itself does not contain any direct
- multithreading library calls. It solely relies on the classes and functions from
- tarch::multicore.
-
 
  ## Multicore architecture
 
@@ -75,21 +57,6 @@ and
  subdirectories.
 
   @image html multicore_architecture.png
-
- The central instance managing the threads on a system is tarch::multicore::Core.
- This is a singleton and the name thus is slightly wrong. It does not really represent
- one core but rather represents the landscape of cores. You can setup the
- multithreading environment through Core's configure() routine, but this is optional.
- Indeed, multithreading should work without calling configure() at all. Each
- multitheading backend offers its own realisation of the
- Core class.
-
- For multithreaded code, it is important that the code can lock (protect) code
- regions and free them. For this, the multithreading layer offers different
- semaphores. Each multithreading backend maps these logical concepts onto its
- internal synchronisation mechanism. Usually, I use the semaphores through lock
- objects. As they rely on the semaphore implementations, they are generic and work
- for any backend.
 
 
  ## Task model
