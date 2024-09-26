@@ -82,7 +82,16 @@ distinguish single-threaded realisation from bespoke variants.
 
 ## Work with tasks
 
-All the tasking is offered through the class
+All the tasking is modelld through the class tarch::multicore::Task.
+That is, Peano expects each task to be a subclass of this guy.
+The actually task submission, dependency tracking, and synchronisation
+then is all realised through functions within the namespace
+tarch::multicore.
+
+The namespace's documentation also explains how we are using the tasks in 
+codes such as ExaHyPE and what typical task execution patterns look like.
+It also provides an overview of different task characteristics.
+
 
  */
  

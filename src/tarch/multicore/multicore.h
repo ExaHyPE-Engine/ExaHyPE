@@ -59,7 +59,7 @@ and
   @image html multicore_architecture.png
 
 
- ## Task model
+ ## Tasking model in Peano
 
  Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
  tarch::multicore::Task. However, these classes might not be mapped 1:1 onto
