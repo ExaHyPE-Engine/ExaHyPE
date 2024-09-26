@@ -9,9 +9,6 @@
 #include "tarch/la/LUDecomposition.h"
 #include "tarch/la/DynamicMatrixOperations.h"
 
-#include <fstream>
-#include <iostream>
-
 namespace {
   [[maybe_unused]] tarch::logging::Log _log( "toolbox::blockstructured" );
 }
@@ -143,31 +140,41 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
   tarch::la::DynamicMatrix Q_T = tarch::la::transpose(Q);
   tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
 
-  const int i = (normal + 1) % 3;
-  const int j = (normal + 2) % 3;
+  const int i = (normal + 1) % Dimensions;
+#if Dimensions == 3
+  const int j = (normal + 2) % Dimensions;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseStart(0);
   coarseStart(i) = (marker.getRelativePositionWithinFatherCell()(i) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#if Dimensions == 3
   coarseStart(j) = (marker.getRelativePositionWithinFatherCell()(j) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseEnd(0);
   coarseEnd(i) = ((marker.getRelativePositionWithinFatherCell()(i) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#if Dimensions == 3
   coarseEnd(j) = ((marker.getRelativePositionWithinFatherCell()(j) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#endif
 
   tarch::la::Vector<Dimensions, int> fineDataStart(0);
   fineDataStart(i) = (marker.getRelativePositionWithinFatherCell()(i) * numberOfDoFsPerAxisInPatch) % 3;
+#if Dimensions == 3
   fineDataStart(j) = (marker.getRelativePositionWithinFatherCell()(j) * numberOfDoFsPerAxisInPatch) % 3;
+#endif
 
   if (fineDataStart(i) == 1) fineDataStart(i) = -1;
-  if (fineDataStart(j) == 1) fineDataStart(j) = -1;
   if (fineDataStart(i) == 2) fineDataStart(i) = 1;
+#if Dimensions == 3
+  if (fineDataStart(j) == 1) fineDataStart(j) = -1;
   if (fineDataStart(j) == 2) fineDataStart(j) = 1;
+#endif
 
   tarch::la::Vector<Dimensions, int> faceDimensions = coarseEnd - coarseStart;
   faceDimensions(normal) = (overlap - 1) / 3 + 1;
 
   dfor(kCoarse, faceDimensions){
-    tarch::la::Vector<Dimensions, int> fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>{1, 1, 1} + fineDataStart;
+    tarch::la::Vector<Dimensions, int> fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>(1) + fineDataStart;
     fineCenter(normal) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? overlap + 1: overlap - 2;
 
     int centerIndex    = serialiseVoxelIndexInOverlap(fineCenter, numberOfDoFsPerAxisInPatch, overlap, normal);
@@ -213,7 +220,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
       for (int unknown = 0; unknown < unknowns; unknown++) {
         coarseGridValues[index * unknowns + unknown]
           = stencilCenterValues[unknown] + coarseValues(i, unknown);
-//file << coarseGridValues[index * unknowns + unknown] << "\n\n\n";
       }
     }
   }
@@ -361,16 +367,22 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
   const int matrixColumns = 2 * overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
   const int matrixRows = overlap * std::pow(numberOfDoFsPerAxisInPatch, Dimensions - 1);
 
-  const int i = (normal + 1) % 3;
-  const int j = (normal + 2) % 3;
+  const int i = (normal + 1) % Dimensions;
+#if Dimensions == 3
+  const int j = (normal + 2) % Dimensions;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseStart(0);
   coarseStart(i) = (marker.getRelativePositionWithinFatherCell()(i) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#if Dimensions == 3
   coarseStart(j) = (marker.getRelativePositionWithinFatherCell()(j) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseEnd(0);
   coarseEnd(i) = ((marker.getRelativePositionWithinFatherCell()(i) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#if Dimensions == 3
   coarseEnd(j) = ((marker.getRelativePositionWithinFatherCell()(j) + 1) * numberOfDoFsPerAxisInPatch + 1) / 3;
+#endif
 
   tarch::la::Vector<Dimensions, int> coarseFaceDimensions = coarseEnd - coarseStart;
   coarseFaceDimensions(normal) = overlap;
