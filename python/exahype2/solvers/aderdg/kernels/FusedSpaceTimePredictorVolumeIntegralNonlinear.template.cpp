@@ -9,7 +9,6 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 #include "CellData.h"
-#include "PicardIteration.h"
 
 {% if USE_LIBXSMM %}
 #include "Gemms.h"
@@ -19,6 +18,31 @@
 #include <algorithm>
 
 {% import 'Gemms.template.h' as m with context %}{# get template macros #}
+
+{% for item in NAMESPACE -%}
+namespace {{ item }} {
+{%- endfor %}
+
+template <typename cStoreType, typename pCompType>
+pCompType picardIteration(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
+  pCompType* __restrict__                       lQi,
+  pCompType* __restrict__                       rhs,
+  pCompType* __restrict__                       lFi,
+  pCompType* __restrict__                       lSi,
+  pCompType* __restrict__                       gradQ,
+  pCompType* __restrict__                       new_lQi_slice,
+  const pCompType* __restrict__                 dudxT_by_dx,
+  const cStoreType* const __restrict__          luh,
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize
+);
+
+{% for item in NAMESPACE -%}
+}
+{%- endfor %}
 
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
@@ -31,7 +55,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   const double                                  timeStamp,
   const double                                  timeStepSize
 ) {
-
   pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
 
   pCompType* lQi   = memory + getlQiShift();
@@ -354,5 +377,238 @@ template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral
   const tarch::la::Vector<Dimensions, double>&                      cellSize,
   const double                                                      timeStamp,
   const double                                                      timeStepSize
+);
+{% endfor %}
+
+template <typename cStoreType, typename pCompType>
+pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
+  pCompType* __restrict__                       lQi,
+  pCompType* __restrict__                       rhs,
+  pCompType* __restrict__                       lFi,
+  pCompType* __restrict__                       lSi,
+  pCompType* __restrict__                       gradQ,
+  pCompType* __restrict__                       new_lQi_slice,
+  const pCompType* __restrict__                 dudxT_by_dx,
+  const cStoreType* const __restrict__          luh,
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize
+) {
+  // Assume dx[0] == dx[1] == dx[2]
+  const double invDx = 1.0 / cellSize[0];
+
+  const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
+  const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
+  const pCompType dtByDx = invDx * timeStepSize;
+
+  for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {  // Time DOFs
+{% if USE_NCP %}
+    std::memset(gradQ, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED*DIMENSIONS}} * sizeof(pCompType));
+
+    // Compute the "derivatives" (contributions of the stiffness matrix)
+    // x-direction (independent from the y- and z-derivatives)
+    for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
+      for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
+        {{ m.gemm('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ',
+          '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED,
+          '0',
+          '(z*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF) | indent(10) }}{##}
+      }
+    }
+
+    // y-direction (independent from the x- and z-derivatives)
+    for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
+      for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+        {{ m.gemm('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ',
+          '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
+          '0',
+          '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)) | indent(10) }}{##}
+      }
+    }
+
+{% if DIMENSIONS==3 %}
+    // z-direction (independent from the x- and y-derivatives)
+    for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
+      for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+        {{ m.gemm('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ',
+          '((t*'~NUMBER_OF_DOF_3D*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
+          '0',
+          '(y*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)) | indent(10) }}{##}
+      }
+    }
+{% endif %}
+{% endif %}{# USE_NCP #}
+
+{% if USE_FLUX %}
+    pCompType* F[{{DIMENSIONS}}];
+
+    for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+      F[0] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
+      F[1] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
+{% if DIMENSIONS==3 %}
+      F[2] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
+{% endif %}
+
+      for(int d = 0; d < Dimensions; d++){
+        solver.flux(
+          lQi + (t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_DATA_PADDED}},
+          cellCentre, // TODO: Fix to node position
+          cellSize,
+          timeStamp, //+ Quadrature<pCompType>::nodes[t] * timeStepSize // Exact timeStamp for node
+          timeStepSize,
+          d,
+          F[d]
+        );
+      }
+    }
+{% endif %}{# USE_FLUX #}
+
+    // Compute the contribution of the initial condition uh to the right-hand side (rhs)
+    for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+      const pCompType weight = Quadrature<pCompType>::weights3[xyz] * DGMatrices<pCompType>::FLCoeff[t];
+      #ifdef SharedOMP
+      #pragma omp simd aligned(rhs,luh:{{ALIGNMENT}})
+      #endif
+      for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
+        rhs[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t)] = weight * luh[n + {{NUMBER_OF_DATA}} * xyz];
+      }
+    }
+
+{% if USE_FLUX %}
+    // Compute the "derivatives" (contributions of the stiffness matrix)
+    // x-direction (independent from the y- and z-derivatives)
+    for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
+      for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
+        {{ m.gemm('rhs_x', 'lFi', 'coeffRhsX', 'rhs',
+          '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF,
+          '0',
+          '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF,
+          true_B='Kxi',
+          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+y] * dtByDx') | indent(10) }}{##}
+      }
+    }
+
+    // y-direction (independent from the x- and z-derivatives)
+    for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
+      for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+        {{ m.gemm('rhs_y', 'lFi', 'coeffRhsY', 'rhs',
+          '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED,
+          '0',
+          '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED,
+          true_B='Kxi',
+          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+x] * dtByDx') | indent(10) }}{##}
+      }
+    }
+
+{% if DIMENSIONS==3 %}
+    // z-direction (independent from the x- and y-derivatives)
+    for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
+      for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+        {{ m.gemm('rhs_z', 'lFi','coeffRhsZ', 'rhs',
+          '((t*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED,
+          '0',
+          '((t*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED,
+          true_B='Kxi',
+          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+y*'~NUMBER_OF_DOF~'+x] * dtByDx') | indent(10) }}{##}
+      }
+    }
+{% endif %}
+{% endif %}{# USE_FLUX #}
+
+{% if USE_NCP or USE_SOURCE %}
+    pCompType tmpNCP[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+    pCompType gradQ_PDE[{{NUMBER_OF_UNKNOWNS*DIMENSIONS}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+
+    for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE);
+      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{1*NUMBER_OF_UNKNOWNS}});
+{% if DIMENSIONS==3 %}
+      std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{2*NUMBER_OF_UNKNOWNS}});
+{% endif %}
+
+{% if USE_SOURCE %}
+      solver.algebraicSource(
+        {0.0},
+        0.0,
+        lQi + (xyz * {{NUMBER_OF_DOF}} + t) * {{NUMBER_OF_DATA_PADDED}},
+        lSi + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}
+      );
+{% else %}
+      std::fill_n(&lSi[0 + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}], {{NUMBER_OF_UNKNOWNS_PADDED}}, 0.0);
+{% endif %}
+
+{% if USE_NCP %}
+      for (int d = 0; d < Dimensions; d++) {
+        solver.nonconservativeProduct(
+          lQi + (t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_DATA_PADDED}},
+          gradQ_PDE + {{NUMBER_OF_UNKNOWNS_PADDED}} * d,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          d,
+          tmpNCP
+        );
+
+        #ifdef SharedOMP
+        #pragma omp simd aligned(lSi,tmpNCP:{{ALIGNMENT}})
+        #endif
+        for(int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+          lSi[n + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}] -= tmpNCP[n];
+        }
+      }
+{% endif %}
+
+      // Update rhs
+      const pCompType updateSize = Quadrature<pCompType>::weights1[t] * Quadrature<pCompType>::weights3[xyz] * timeStepSize;
+      #ifdef SharedOMP
+      #pragma omp simd aligned(rhs,lSi:{{ALIGNMENT}})
+      #endif
+      for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+        rhs[n + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}]
+          += updateSize * lSi[n + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
+      }
+    }
+{% endif %}{# USE_NCP or USE_SOURCE #}
+  } // t
+
+  // 3: Multiply with (K1)^(-1) to get the discrete time integral of the discrete Picard iteration
+  pCompType sqRes = 0.0;
+  for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+    {{ m.gemm('lqi', 'rhs', 's_m_QSlice', 'new_lQi_slice',
+      NUMBER_OF_UNKNOWNS_PADDED~'*xyz', '0', '0',
+      true_B='iK1_T',
+      true_alpha='Quadrature<pCompType>::iweights3[xyz]') | indent(6) }}{##}
+
+    for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
+      for (int n = 0; n< {{NUMBER_OF_UNKNOWNS}}; n++) {
+        sqRes += (new_lQi_slice[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * t] - lQi[n + {{NUMBER_OF_DATA_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t)])
+          * (new_lQi_slice[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * t] - lQi[n + {{NUMBER_OF_DATA_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t)]);
+
+        lQi[n + {{NUMBER_OF_DATA_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t)] = new_lQi_slice[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * t];
+      }
+    }
+  }
+
+  return sqRes;
+}
+
+{% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
+template {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                                         solver,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       lQi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       rhs,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       lFi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       lSi,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       gradQ,
+  {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       new_lQi_slice,
+  const {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ dudxT_by_dx,
+  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__                luh,
+  const tarch::la::Vector<Dimensions, double>&                            cellCentre,
+  const tarch::la::Vector<Dimensions, double>&                            cellSize,
+  const double                                                            timeStamp,
+  const double                                                            timeStepSize
 );
 {% endfor %}
