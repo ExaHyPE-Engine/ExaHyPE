@@ -2,6 +2,9 @@
 
 @page page_tutorials_exahype2_numerics_finite_volumes Finite Volumes
 
+\tableofcontents
+
+
 ExaHyPE's Finite Volume scheme is based upon block-structured Cartesian meshes.
 All Finite Volume solvers work with blockstructured AMR: They embed @f$p \times p@f$ patches 
 into the octants (cells of the spacetree). To avoid confusion, I prefer to 
@@ -27,7 +30,7 @@ The @f$ N \geq 1 @f$ is a halo around the cell.
 Different Finite Volume schemes have different halo sizes. 
 You may assume that ExaHyPE befills these halo values with valid data from the neighbours, i.e. their synchronisation is none of the kernel's business.
 The input is called @f$ Q_{in} @f$ from hereon.
-The kernel returns a @f$ (p+2\hat N)^d @f$ with the new time step's data. 
+The kernel returns a @f$ (p+2 N)^d @f$ with the new time step's data. 
 It is called @f$ Q_{out} @f$.
 
 
@@ -42,9 +45,9 @@ Here are some details about the data used within the kernels:
   Nevertheless, we let @f$ Q_{in} @f$ holds a @f$ (7+2\cdot 2) @f$ volumes
 - The volumes within @f$ Q_{in} @f$ and @f$ Q_{out} @f$ are ordered lexicographically.
 - The data are stores as array of structs (AoS).
-- If a PDE is described by K real values subject to the wave equations and M auxiliary variables
-  (material parameters), then the @f$ Q_{in} @f$ contains K+M values (degrees of freedom) per volume.
-  The @f$ Q_{out} @f$ however contains only the K values, as the M material parameters do not evolve in time.
+- If a PDE is described by @f$ K_{pde} @f$  real values subject to the wave equations and @f$ K_{aux} @f$ auxiliary variables
+  (material parameters), then the @f$ Q_{in} @f$ contains @f$ K_{pde} + K_{aux} @f$ values (degrees of freedom) per volume.
+  The @f$ Q_{out} @f$ however contains only the @f$ K_{pde} + K_{aux} @f$ values, too, but the @f$ K_{aux} @f$ material parameters do not evolve in time and therefore are the same as in @f$ Q_{in} @f$.
 - Besides @f$ Q_{in} @f$ and @f$ Q_{out} @f$ a kernel is given the current time @f$ t @f$ and the time step size @f$ \Delta t @f$.
 - We never write a kernel for only one patch. We always write kernels that can advanced multiple patches in one go.
   So the "update one patch" is a special case.
@@ -124,11 +127,79 @@ This average is denoted by a red circle in the sketch above.
 If we only used the average, we would get a solution where shocks smear out quickly.
 In the sketch above, the wave/shock travels from left to right, so it makes sense to assume that actually way more flow goes left-right than right-to-left.
 Averaging is not a good idea.
-So we take the difference @f$ Q^+ - Q^- @f$ between left and right into account as well, but now we have to know the direction of travel.
-The speed also matters, i.e. if this flow is very slow, then we only should correct the average by a tiny amount.
+So we take the difference @f$ Q^+ - Q^- @f$, we know how to correct the numerical flux.
+Take into account that the "remaining" eigenvalues are all positive for a stricly hyperbolic system.
+Globally, there is one negative eigenvalue but that one corresponds to the time dimension and is already taken care of.
+
+Yet, the speed matters: If the flow is very slow, then we only should correct the average by a tiny amount.
 If the wave travels very fast, we should significantly take this solution gradient into account.
-The wave direction and speed is given by the 
+The wave speed it approximated/bounded by the maximum eigenvalue along the direction of interest.
+Again, we cannot evaluate the maximum eigenvalue on the face directly, but we only are interested in the maximum eigenvalue.
+Therefore, we can evaluate the directional eigenvalue in the left and right volume and again take the maximum of those guys.
 
 
+## An implementation 
+
+Our discussion of an implementation of the scheme - which can be read as 
+blueprint of our compute kernels in ExaHyPE - is inspired by 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@article{10.1145/3406835,
+author = {Uphoff, Carsten and Bader, Michael},
+title = {Yet Another Tensor Toolbox for Discontinuous Galerkin Methods and Other Applications},
+year = {2020},
+issue_date = {December 2020},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {46},
+number = {4},
+issn = {0098-3500},
+url = {https://doi.org/10.1145/3406835},
+doi = {10.1145/3406835},
+abstract = {The numerical solution of partial differential equations is at the heart of many grand challenges in supercomputing. Solvers based on high-order discontinuous Galerkin (DG) discretisation have been shown to scale on large supercomputers with excellent performance and efficiency if the implementation exploits all levels of parallelism and is tailored to the specific architecture. However, every year new supercomputers emerge and the list of hardware-specific considerations grows simultaneously with the list of desired features in a DG code. Thus, we believe that a sustainable DG code needs an abstraction layer to implement the numerical scheme in a suitable language. We explore the possibility to abstract the numerical scheme as small tensor operations, describe them in a domain-specific language (DSL) resembling the Einstein notation, and to map them to small General Matrix-Matrix Multiplication routines. The compiler for our DSL implements classic optimisations that are used for large tensor contractions, and we present novel optimisation techniques such as equivalent sparsity patterns and optimal index permutations for temporary tensors. Our application examples, which include the earthquake simulation software SeisSol, show that the generated kernels achieve over 50\% peak performance of a recent 48-core Skylake system while the DSL considerably simplifies the implementation.},
+journal = {ACM Trans. Math. Softw.},
+month = oct,
+articleno = {34},
+numpages = {40},
+keywords = {ADER-DG, Tensor operations, finite element method, high-performance computing}
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+who write down the algorithm as a sequence of tensor multiplications, i.e. generalised matrix-matrix equations.
+This does not work in ExaHyPE 1:1 as we support non-linear PDEs in the generic kernel formulations.
+However, we can use similar operator concatenation ideas.
+
+
+We demonstate the data flow by means of the simplified numerical flux which only takes the average.
+This algorithm consists of a strict sequence of steps:
+
+- We evaluate @f$ S(Q) @f$ per voxel. The output is stored in a @f$ p \times p \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{S} @f$.
+- We evaluate @f$ F(Q)_x @f$ per voxel. That the flux in one direction. The output is stored in a @f$ (p+2N) \times p \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{F_x} @f$. Note that this is the core patch extended by the halo in one direction!
+- We evaluate @f$ F(Q)_y @f$ per voxel. That the flux in one direction. The output is stored in a @f$ p \times (p+2N) \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{F_y} @f$. Note that this is the core patch extended by the halo in one direction!
+- We evaluate @f$ F(Q)_z @f$ per voxel. That the flux in one direction. The output is stored in a @f$ p \times p \times (p+2N) @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{F_z} @f$. Note that this is the core patch extended by the halo in one direction!
+
+Now all temporary data are available. We prepare the output and then add the 
+PDE contributions. This part is basically a stencil variant. Or we can write it 
+down as a tensor-vector product which is added to @f$ Q_{out} @f$:
+
+- We copy over @f$ Q_{in} @f$ into @f$ Q_{out} @f$. Per voxel, we have o copy @f$ K_{pde} + K_{aux} @f$ unknowns.
+- Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \Delta t \cdot Q_{S}[x,y,z] @f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
+- Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \frac{\Delta t}{2h} \cdot (Q_{F_x}[x-1,y,z]+Q_{F_x}[x,y,z]+Q_{F_x}[x,y,z]+Q_{F_x}[x+1,y,z])@f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
+- Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \frac{\Delta t}{2h} \cdot (Q_{F_y}[x,y-1,z]+2Q_{F_y}[x,y,z]+Q_{F_y}[x,y+1,z])@f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
+- Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \frac{\Delta t}{2h} \cdot (Q_{F_z}[x,y,z-1]+2Q_{F_z}[x,y,z]+Q_{F_z}[x,y,z+1])@f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
+
+The extension to Rusanov for example is straightforward, as long as we take into account that our "stencil" here has to incorporate the max function.
+Below is schematic illustration of the data flow:
+
+@image html data-flow-finite-volumes.png
+
+Note that the scheme as well as the description lack an important detail: 
+Every single step is to be done over a set of patches, as we update multiple patches in one go.
+In the kernels, we can write down this logic as a sequence of operators, but once you employ our xDSL kernel language, the underlying kernel generator will permute and fuse all the loops and operations.
 
 */
