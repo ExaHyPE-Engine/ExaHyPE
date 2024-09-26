@@ -106,15 +106,12 @@ project.add_solver(theSolver)
 
 scenario.set_global_simulation_parameters(project)
 
-#
-# So here's the parallel stuff. This is new compared to the serial
-# prototype we did start off with.
-#
 project.set_load_balancing(
   "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
   "new ::exahype2::LoadBalancingConfiguration(0.98)"
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
 peano4_project = project.generate_Peano4_project("False")
+peano4_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=16)
