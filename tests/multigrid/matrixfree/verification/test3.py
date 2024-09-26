@@ -59,7 +59,7 @@ poisson_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
 )
 
 system_matrix, system_matrix_scaling = poisson_equation_matrices.get_cell_system_matrix_for_laplacian()
-mass_matrix,   maxx_matrix_scaling   = poisson_equation_matrices.get_cell_mass_matrix()
+mass_matrix,   mass_matrix_scaling   = poisson_equation_matrices.get_cell_mass_matrix()
 #! [Construct matrices]
 
 solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("CollocatedPoisson",
@@ -70,14 +70,14 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                               local_assembly_matrix = system_matrix,
                                                               local_assembly_matrix_scaling=system_matrix_scaling,
                                                               mass_matrix = mass_matrix,
-                                                              mass_matrix_scaling = maxx_matrix_scaling,
-                                                              solver_tolerance=1e-6,
+                                                              mass_matrix_scaling = mass_matrix_scaling,
+                                                              solver_tolerance=1e-9,
                                                               custom_init_actionset=InitDofsCollocatedRandomRhs,
                                                               custom_plot_actionset=[("rand","getRand")]
                                                             )
 
 # need to make sure we have the correct field name to support extra random field
-solver.add_to_vertex_data("rand")
+solver.add_to_vertex_data("rand", 1)
 
 project.add_solver(solver)
 

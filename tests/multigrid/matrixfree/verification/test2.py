@@ -75,7 +75,7 @@ solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation("Colloca
                                                             )
 
 # need to make sure we have the correct field name to support extra random field
-solver.add_to_vertex_data("rand")
+solver.add_to_vertex_data("rand", 1)
 
 project.add_solver(solver)
 

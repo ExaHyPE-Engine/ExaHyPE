@@ -150,6 +150,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      * state.
      */
     void suspend(bool projectOntoFaces, bool updateAndRestrictResidual);
+
+    State getState() const;
+
   protected:
     static tarch::logging::Log  _log;
 
