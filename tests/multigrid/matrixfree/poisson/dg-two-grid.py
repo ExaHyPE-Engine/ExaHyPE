@@ -73,7 +73,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 0.01,
+  solver_tolerance = 1.0e-6,
 )
 #! [Instantiate solver]
 
@@ -157,6 +157,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_each_timestep    = args.plot_each_timestep,
+  max_iterations = 2000
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )

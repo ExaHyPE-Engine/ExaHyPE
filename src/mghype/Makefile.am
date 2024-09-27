@@ -10,7 +10,8 @@ endif
 MultigridSources = \
   mghype.cpp \
   matrixfree/solvers/DGCGCoupling.cpp \
-  matrixfree/solvers/Solver.cpp
+  matrixfree/solvers/Solver.cpp \
+  matrixfree/solvers/CGMultigrid.cpp
   
 
 libMultigrid2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
