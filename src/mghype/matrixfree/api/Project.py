@@ -186,12 +186,11 @@ you require to run this Peano4 application with PETSc.
   def __set_solver_repository_dict(self):
       self.dictionary = {}
       self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-
+      self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
 
   def __generate_solver_repository(self):
-    dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-    dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
+    # make sure solver repository dict is set    
+    self.__set_solver_repository_dict()
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"

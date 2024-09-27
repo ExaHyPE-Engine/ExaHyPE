@@ -51,6 +51,8 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualReducedUnderThreshold++;
   }
 
+  // Comment out l2- and h-norm of the residual checks. Check only max-norm for now
+  /*
   if ( tarch::la::equals(_initialGlobalResidualEukledianNormSquared,0.0) ) {
     _initialGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   }
@@ -72,6 +74,7 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   else if (_globalResidualHNormSquared / _initialGlobalResidualHNormSquared < _tolerance ) {
     residualReducedUnderThreshold++;
   }
+  */
 
   _previousGlobalResidualMaxNorm              = _globalResidualMaxNorm;
   _previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
@@ -79,16 +82,17 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
 
   logDebug( "terminationCriterionHolds()", "residualReducedUnderThreshold=" << residualReducedUnderThreshold );
   static int numberOfResidualGrowths = 0;
-  const int numberOfChecks = 3;
+  const int numberOfChecks = 1; // reset to 3 for all-norms check and uncomment the blocks above... 
+  const int residualGrowthsLimit = 50; // stop if the residual norm increases over several consecutive iterations
 
   if (residualGrows==numberOfChecks) numberOfResidualGrowths++;
 
-  bool output = (residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > 5);
+  bool output = (residualReducedUnderThreshold==numberOfChecks or numberOfResidualGrowths > residualGrowthsLimit);
 
   if (residualReducedUnderThreshold==numberOfChecks)
-    logInfo( "terminationCriterionHolds()", "terminating because residualReducedUnderThreshold==" << residualReducedUnderThreshold );
+    logInfo( "terminationCriterionHolds()", "ONLY CHECKING MAX-NORM: terminating because residualReducedUnderThreshold==" << residualReducedUnderThreshold );
     
-  if (numberOfResidualGrowths > 5)
+  if (numberOfResidualGrowths > residualGrowthsLimit)
     logInfo( "terminationCriterionHolds()", "terminating because numberOfResidualGrowths==" << numberOfResidualGrowths );
 
   return output;

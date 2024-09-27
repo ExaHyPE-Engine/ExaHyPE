@@ -1,3 +1,8 @@
+"""
+This test checks that the DG solver leaves the input invariant if the RHS is constructed as 
+b = A_DG * u_{random} and u = u_{random} is the initial guess.
+"""
+
 import os, sys
 import argparse
 import peano4
@@ -94,8 +99,13 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 1e-6,
-  custom_init_actionset=InitDofsDGTest1
+  custom_init_actionset=InitDofsDGTest1,
+  custom_plot_actionset=[("rand","getRand")]
 )
+
+# add an extra field for the random vector
+nodes_per_cell = (args.poly_degree + 1) ** args.dimensions
+solver.add_to_cell_data("rand", nodes_per_cell)
 
 solver.preprocessing_action_set = InitDofsIntermediatePhaseTest1(solver)
 
