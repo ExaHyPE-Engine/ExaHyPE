@@ -22,7 +22,7 @@ Build:
       - ./build/UnitTests*
       - ./build/CTestTestfile.cmake
     expire_in: 2 hours
-  retry: 2
+  retry: 1
 
 UnitTests:
   extends:
@@ -36,12 +36,13 @@ UnitTests:
     - job: Build
   dependencies:
     - Build
-  retry: 2
+  retry: 1
 
 ExaHyPE2:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Tutorials
   allow_failure: false
   parallel:
@@ -54,14 +55,13 @@ ExaHyPE2:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_Euler:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Applications
   allow_failure: false
   parallel:
@@ -76,14 +76,13 @@ ExaHyPE2_Euler:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_Advection:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Applications
   allow_failure: false
   parallel:
@@ -98,14 +97,13 @@ ExaHyPE2_Advection:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_Acoustic:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Applications
   allow_failure: false
   parallel:
@@ -120,14 +118,13 @@ ExaHyPE2_Acoustic:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_Elastic:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Applications
   allow_failure: false
   parallel:
@@ -142,14 +139,13 @@ ExaHyPE2_Elastic:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_Kernels:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Benchmarks
   allow_failure: false
   parallel:
@@ -163,14 +159,13 @@ ExaHyPE2_Kernels:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_SBH:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Benchmarks
   allow_failure: false
   script:
@@ -181,14 +176,13 @@ ExaHyPE2_SBH:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
 
 ExaHyPE2_SBH_Coupled:
   extends:
     - .BeforeScript
     - .SanitiseCMake
+    - .RunOnlyOnDevelopmentBranches
   stage: Benchmarks
   allow_failure: false
   script:
@@ -199,6 +193,4 @@ ExaHyPE2_SBH_Coupled:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
-  retry: 2
+  retry: 1
