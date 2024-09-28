@@ -79,26 +79,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     + ".cpp",
                     generated=True,
                 )
-        else:  # nonlinear
-            generated_kernels = (
-                peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                    headfile_template=template_prefix + "PicardIteration.template.h",
-                    cppfile_template=template_prefix + "PicardIteration.template.cpp",
-                    classname=output_path + "/PicardIteration",
-                    namespace=namespace,
-                    subdirectory=subdirectory + ".",
-                    dictionary=self.d,
-                    default_overwrite=True,
-                    apply_iteratively=True,
-                )
-            )
-            output.add(generated_kernels)
-            output.makefile.add_h_file(
-                output_path + "/PicardIteration" + ".h", generated=True
-            )
-            output.makefile.add_cpp_file(
-                output_path + "/PicardIteration" + ".cpp", generated=True
-            )
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix

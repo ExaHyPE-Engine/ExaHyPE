@@ -1,4 +1,4 @@
-// This file is part of the Peano's PETSc extension. For conditions of
+// This file is part of the Peano's MGHyPE extension. For conditions of
 // distribution and use, please see the copyright notice at
 // www.peano-framework.org
 #pragma once
@@ -60,10 +60,31 @@ namespace mghype {
          * It does not hurt if we do this for outer or boundary vertices, so we
          * simply do it everywhere.
          *
+         * Updates: Align this docu later.
+         * We need this function to do two things: send newRestrictedRhs -> rhs on the
+         * CG vertices before solving on the CG vertices
+         *
+         * We also need it to send the CG solution into the delta field, so that
+         * we interpolate it correctly before the DG step. 
+         *
+         * So we transform this function using restrictRhsAndInjectSolution.
+         *
+         *
+         *
          * @param restrictRhsAndInjectSolution Flag to control the behaviour
          *   that allows us to use this routine in different context such as
          *   additive vs multiplicative MG or schemes with multiple coarse
-         *   grid sweeps.
+         *   grid sweeps. If the flag is true, then we are about to start
+         *   CG, and we can set value <- 0, rhs <- newRestrictedRhs.
+         *   delta <- 0. This works because we use touchCellLastTime
+         *   during DGCGCoupling to set the newRestrictedRhs at the final 
+         *   stage of the DG solver.
+         *   If the flag is false, then we are starting DG, so we can 
+         *   erase newRestrictedRhs, but more importantly set delta 
+         *   so that we can interpolate against this in touchCellFirstTime
+         *   of the DGCGCoupling stage.
+         *
+
          */
         void rollOverAndPrepareCGVertex(
           auto&  vertex,
@@ -71,6 +92,7 @@ namespace mghype {
           bool   fas
         );
 
+        extern tarch::logging::Log _log;
 
         /**
          * Restrict counters
@@ -137,6 +159,7 @@ namespace mghype {
           const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  systemMatrix,
           const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
           const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgRhs,
+          const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        faceSolutions,
           auto&           cgVertices
         );
 

@@ -18,7 +18,7 @@ parser.add_argument("-fas",   "--use-fas",          dest="fas", action="store_tr
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
+parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=2, help="Polynomial Degree")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Smoothing parameter for cells")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Smoothing parameter for faces")
@@ -73,13 +73,13 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 0.01,
+  solver_tolerance = 1.0e-6,
 )
 #! [Instantiate solver]
 
 
 #! [Construct correction matrices]
-correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
+correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
@@ -119,7 +119,7 @@ restriction_matrix_scaling = [0]
 injection_matrix = [intergrid_operators.injection()]
 injection_matrix_scaling = [0]
 
-solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.AdditiveDGCGCoupling(
+solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.MultiplicativeDGCGCoupling(
     solver,                      # dg_solver
     correction_equation_solver,  # cg_solver
     prolongation_matrix,
@@ -134,7 +134,7 @@ solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.Addit
 
 
 #! [Add solvers]
-project.add_solver(correction_equation_solver)
+project.add_solver(correction_equation_solver, auxiliary=True)
 project.add_solver(solver)
 #! [Add solvers]
 
@@ -157,6 +157,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_each_timestep    = args.plot_each_timestep,
+  max_iterations = 2000
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )

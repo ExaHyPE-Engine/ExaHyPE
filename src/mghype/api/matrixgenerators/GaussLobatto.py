@@ -668,3 +668,6 @@ class GLMatrixFree(GaussLobatto):
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
   
+  def get_cell_identity_matrix(self):
+    return [super(GLMatrixFree,self).get_cell_identity_matrix()], [0]
+  

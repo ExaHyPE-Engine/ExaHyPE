@@ -1067,6 +1067,12 @@ if test "$use_openblas" != false; then
   AC_SUBST([OPENBLAS_LIBS])
   OPENBLAS_INCLUDE_DIR=$(dirname $OPENBLAS_LIBS)
   AC_SUBST([OPENBLAS_INCLUDE_DIR])
+
+  LDFLAGS_PEANO_RELEASE+=" -lopenblas "
+  LDFLAGS_PEANO_STATS+="   -lopenblas "
+  LDFLAGS_PEANO_ASSERTS+=" -lopenblas "
+  LDFLAGS_PEANO_TRACE+="   -lopenblas "
+  LDFLAGS_PEANO_DEBUG+="   -lopenblas "
 fi
 
 

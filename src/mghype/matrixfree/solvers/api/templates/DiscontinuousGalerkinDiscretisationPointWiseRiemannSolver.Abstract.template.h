@@ -31,9 +31,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
 
   public:
     enum class State {
-      UpdateAndProjectImmediately,
-      ProjectOnly,
-      Suspend
+      Solve,                    // for use in middle DG stage
+      ProjectOntoFacesOnly,     // for use in first DG stage
+      Suspend,
+      UpdateAndRestrictResidual // for use in final DG stage
     };
 
     static constexpr double     MinH = {{MIN_H}};
@@ -138,14 +139,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     bool updateCell() const;
     bool updateFace() const;
     bool projectOntoFaces() const;
+    bool projectOntoCells() const;
 
+    bool isSuspended() const;
+    
     /**
      * Suspends solver for one sweep
      *
      * After this sweep, the solver will toggle back to the normal solver
      * state.
      */
-    void suspend(bool projectOntoFaces);
+    void suspend(bool projectOntoFaces, bool updateAndRestrictResidual);
+
+    State getState() const;
+
   protected:
     static tarch::logging::Log  _log;
 

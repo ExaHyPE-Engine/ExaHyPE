@@ -22,6 +22,7 @@
   #define TwoPowerDTimesTwoPowerDMinusOne  (BasePowerExponent<2,Dimensions>::value*(BasePowerExponent<2,Dimensions>::value-1))
 
   #define ThreePowerD        (BasePowerExponent<3,Dimensions>::value)
+  #define FourPowerD         (BasePowerExponent<4,Dimensions>::value)
   #define FivePowerD         (BasePowerExponent<5,Dimensions>::value)
   #define SevenPowerD        (BasePowerExponent<7,Dimensions>::value)
   #define NinePowerD         (BasePowerExponent<9,Dimensions>::value)
