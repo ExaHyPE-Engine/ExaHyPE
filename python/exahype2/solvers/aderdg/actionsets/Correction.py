@@ -97,6 +97,8 @@ class Correction(AbstractADERDGActionSet):
       }
     } // for d
 
+    {{POSTPROCESS_UPDATED_PATCH}}
+
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
