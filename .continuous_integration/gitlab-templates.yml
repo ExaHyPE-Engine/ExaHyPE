@@ -36,6 +36,11 @@
     - echo $APPTAINER_BINDDIR
     - echo $APPTAINER_IMAGEDIR
     - echo $CCACHE_DIR
+    - echo $CC
+    - echo $CXX
+    - echo $CFLAGS
+    - echo $CXXFLAGS
+    - echo $LDFLAGS
     - echo $CONFIGURATION_OPTIONS
 
 .SanitiseAutomake:
