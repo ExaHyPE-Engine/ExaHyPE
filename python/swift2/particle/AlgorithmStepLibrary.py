@@ -243,8 +243,10 @@ def get_algorithm_step_dict(particle):
         name="PredictHydro",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = v_iter.insert("::swift2::timestepping::resetMovedParticleMarker") +
-            v_iter.insert("::swift2::kernels::legacy::hydroPredictExtra"),
+        touch_vertex_first_time_kernel=v_iter.insert(
+            "::swift2::timestepping::resetMovedParticleMarker"
+        )
+        + v_iter.insert("::swift2::kernels::legacy::hydroPredictExtra"),
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"

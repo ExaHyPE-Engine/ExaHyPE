@@ -2,13 +2,13 @@
 
 set -e
 
-# Script to run experiment (Noh 2D)
+# Script to run experiment (Noh 3D)
 
 # set threads number
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=4
 
 # Parameters
-N_PART=32
+N_PART=64
 END_TIME=0.2
 TIMESTEP_SIZE=0.0001
 CFL_FACTOR=0.2

@@ -61,7 +61,6 @@ P = partData.pressure
 rho = partData.density
 
 
-
 r = np.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2)
 v = -np.sqrt(vx**2 + vy**2)
 

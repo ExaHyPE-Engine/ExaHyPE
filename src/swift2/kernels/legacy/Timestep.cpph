@@ -36,8 +36,8 @@ double swift2::kernels::legacy::hydro_compute_timestep(Particle* particle) {
     particle->toString()
   );
 
-  // this is what we should return, but we stick with initialTimeStepSize for now.
-  // return dt_cfl;
+  // this is what we should return, but we stick with initialTimeStepSize for
+  // now. return dt_cfl;
   return initialTimeStepSize;
 }
 
