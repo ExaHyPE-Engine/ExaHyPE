@@ -9,20 +9,17 @@
   - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson
   - \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
   - \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
-- Toy problems
+- Exercises: Solver variants 
   - \subpage tutorials_mghype_examples_01_matrix-free-cg
   - \subpage tutorials_mghype_examples_02_matrix-free-dg
   - \subpage tutorials_mghype_examples_11_petsc-cg
+- Not yet worked in:
+  - \subpage tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson
+  - \subpage tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson
+  - \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
+  - \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
 - Adding features
 
-
-
-<!--
-\li \subpage tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson
-\li \subpage tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson
-\li \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
-\li \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
--->
 
 
 ## How to add your own tutorial

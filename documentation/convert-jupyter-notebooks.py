@@ -60,7 +60,7 @@ def postprocess_notebook_markdown(filename: str):
         for line in file:
             if line.startswith("#") and not have_created_header:
                 line = line.replace("#", "")
-                path = filename.replace( "./", "" ).replace( "/", "_" )
+                path = filename.replace( "./", "" ).replace( "/", "_" ).replace( ".", "_" )
                 output_file.write( "@page " + path + " " + line)
                 output_file.write( """
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
