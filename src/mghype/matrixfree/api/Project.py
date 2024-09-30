@@ -44,6 +44,11 @@ class Project:
                subdirectory="",
                abstract_overwrite=True,
                ):
+    """!
+    
+    Create a matrix project
+    
+    """
     self._project = peano4.Project(namespace, project_name, directory, subdirectory)
     
     # what to do about this line?
@@ -55,7 +60,7 @@ class Project:
     self._domain_offset = [0.0, 0.0, 0.0]
     self._domain_size   = [1.0, 1.0, 1.0]
     self._dimensions    = 2
-
+    
     self._load_balancer_name      = ""
     self._load_balancer_arguments = ""
     self._Peano_src_directory = "."
@@ -74,15 +79,24 @@ class Project:
     self.algorithm_step_solve          = peano4.solversteps.Step( "Solve", False )
 
     self.algorithm_step_plot            = peano4.solversteps.Step( "Plot", False )
+    
+    self.set_global_simulation_parameters( dimensions  = 2,
+                                           offset      = [0.0, 0.0],
+                                           domain_size = [1.0, 1.0],
+                                           plot_each_timestep = False,
+                                           )
+
 
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
-    """
+    """!
     
-      load_balancer_name: string
+    Set the load balancing scheme
+    
+    @param load_balancer_name: string
         Should be full-qualified name of the load balancer. 
         By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
         
-      load_balancer_arguments: string
+    @param load_balancer_arguments: string
         If your load balancing requires parameters, add them
         here. It is a string that will be copied into the C++ class instantiation. 
         Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not. 
@@ -95,13 +109,19 @@ class Project:
 
   def set_Peano4_installation(self, src_path, mode=peano4.output.CompileMode.Release ):
     """!
+    
+    Tell the project where to find Peano
 
-src_path: string
-  Path (relative or absolute) to the src directory of Peano. This path 
-  should hold both the headers (in subdirectories) and all the static
-  libraries.
+    Once we know where to find Peano, we can parse the configuration/makefile
+    there and know which compile parameters to use. We also know then where to
+    search for the static libraries.
+
+    @param src_path: string
+      Path (relative or absolute) to the src directory of Peano. This path 
+      should hold both the headers (in subdirectories) and all the static
+      libraries.
         
-mode: peano4.output.CompileMode
+    @param mode: peano4.output.CompileMode
 
     """
     self._Peano_src_directory = src_path
@@ -110,10 +130,12 @@ mode: peano4.output.CompileMode
 
   def __configure_makefile(self):
     """!
+    
+    Parse makefile of Peano to extract the configuration settings
 
-We parse the configure script's/CMAKE outcome first via parse_configure_script_outcome().
-After that, we set the dimension manually as well as the executable name and 
-the build mode. The values for these parameters step from set_Peano4_installation().
+    We parse the configure script's/CMAKE outcome first via parse_configure_script_outcome().
+    After that, we set the dimension manually as well as the executable name and 
+    the build mode. The values for these parameters step from set_Peano4_installation().
     
     """
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
@@ -133,7 +155,12 @@ the build mode. The values for these parameters step from set_Peano4_installatio
                                        ):
     """
     
-      offset and size should be lists with dimensions double entries.
+    Configure global simulation settings
+    
+    @param offset: [Float]
+    
+    @param size: [Float]
+       should be lists with dimensions double entries.
             
     """
     self._domain_offset      = offset
@@ -154,10 +181,10 @@ the build mode. The values for these parameters step from set_Peano4_installatio
   def generate_Peano4_project(self, verbose=False):
     """!
 
-Build project
-    
-Construct and return the Peano4 project, i.e. all the action sets et al that 
-you require to run this Peano4 application with PETSc. 
+    Build project
+      
+    Construct and return the Peano4 project, i.e. all the action sets et al that 
+    you require to run this Peano4 application with PETSc. 
      
     """
     self._project.main = MatrixFreeMain(self._project,
@@ -211,6 +238,8 @@ you require to run this Peano4 application with PETSc.
   def add_solver( self, solver, auxiliary=False ):
     """!
     
+    Add a new solver
+    
     Takes the solver and runs through the individual steps of the algorithm.
     Per step, it tells the solver to inject its particular stuff to the 
     underlying observers.
@@ -252,11 +281,15 @@ you require to run this Peano4 application with PETSc.
     pass
 
   def __export_constants(self):
-        """
+        """!
+        
+        Export all the constrants of the project into a Configure.h file 
+        
         We export ExaHyPE's constants. Besides the constants from ExaHyPE,
         I also export some parameters from Peano onto the ExaHyPE constants
         file. Therefore, it is important that you parse the configure output
         before we export the constants.
+        
         """
         self._project.constants.clear()
         offset_string = "{" + str(self._domain_offset[0])
@@ -289,7 +322,7 @@ you require to run this Peano4 application with PETSc.
         )
 
         self._project.output.readme.add_package_description(
-            """
+            """!
 
 ### Peano's multigrid extension
 
