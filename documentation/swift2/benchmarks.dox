@@ -2,7 +2,8 @@
 
 @page swift_benchmarks Benchmarks
 
-\li \subpage benchmarks_swift2_hydro_noh_imposion_test
+\li \subpage benchmarks_swift2_hydro_noh_imposion_test_2D
+\li \subpage benchmarks_swift2_hydro_noh_imposion_test_3D
 
 
 Swift comes along with a set of benchmarks.
