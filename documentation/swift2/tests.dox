@@ -11,6 +11,8 @@
 \li \subpage tests_swift2_test_leapfrog
 \li \subpage tests_swift2_test_smoothing_length_computation
 \li \subpage tests_swift2_test_boundary_conditions
+\li \subpage tests_swift2_planet-orbit_plots-time-integration-test
+\li \subpage tests_swift2_hydro-simple-sph-physics_sedov-blast_plot-sedov-1d
 
 
 Swift comes along with a set of test programs.
