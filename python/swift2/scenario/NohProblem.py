@@ -147,6 +147,9 @@ class NohProblemIC:
       logDebug( "Init()", "v_ini = " << v_ini );
       logDebug( "Init()", "Particle: " << particle->toString() );
 
+      #if PeanoDebug > 0
+      // TODO MLADEN: REMOVE THIS ONCE YOU'RE SATISFIED.
+
       int max_reasonable;
       if (HYDRO_DIMENSIONS == 1)
         max_reasonable = MAX_PART_NUMBER + 1;
@@ -157,6 +160,8 @@ class NohProblemIC:
 
       assertion2(partid <= max_reasonable, partid, max_reasonable);
       assertion1(partid >= 0, partid);
+
+      #endif
 
       /* End of inserted block */
 
