@@ -32,14 +32,14 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
         return (
             """
     if (isLastGridSweepOfTimeStep()) {
-      assertion(_minVolumeH >= 0.0);
+      assertion(_minCellH >= 0.0);
       assertion(MaxAdmissibleCellH > 0.0);
       if (_minCellH <= MaxAdmissibleCellH) {
         _timeStepSize  = """
             + str(self._normalised_time_step_size)
             + """ * _minCellH  / MaxAdmissibleCellH;
       } else {
-      _timeStepSize = 0.0;
+        _timeStepSize = 0.0;
       }
     }
 """

@@ -70,17 +70,15 @@ class examples::exahype2::mgccz4::ADERDGMGCCZ4: public AbstractADERDGMGCCZ4 {
       int                                          normal,
       double * __restrict__                        BgradQ // BgradQ[59]
     ) override;
-    
 
-
-    
     virtual void algebraicSource(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
+      double                                       dt,
       double * __restrict__ S // S[59]
     ) override;
 };
-
 
 #endif
