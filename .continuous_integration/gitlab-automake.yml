@@ -49,7 +49,7 @@ ExaHyPE2:
     matrix:
     - tutorial: [euler, acoustic, elastic, advection, swe]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/toyproblems/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py"
   needs:
     - job: Build
   dependencies:

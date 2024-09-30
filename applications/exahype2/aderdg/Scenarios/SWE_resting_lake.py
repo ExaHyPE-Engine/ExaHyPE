@@ -63,8 +63,7 @@ class SWE_resting_lake(Scenario):
   initialCondition(
       _Q,
       x,
-      nullptr,
-      nullptr,
+      tarch::la::Vector<Dimensions, double>(),
       true
   );
 

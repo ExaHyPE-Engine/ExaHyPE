@@ -81,12 +81,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
-  [[maybe_unused]] double                                            t,
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* const        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
+  [[maybe_unused]] double                                            t,
+  [[maybe_unused]] double                                            dt,
   [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}*                    S
 ) {
-  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
+  logTraceInWith6Arguments("algebraicSource(...)", Q, x, h, t, dt, S);
   // @todo implement
   logTraceOut("algebraicSource(...)");
 }
@@ -222,21 +224,25 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduc
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
-  [[maybe_unused]] double                                                        t,
   [[maybe_unused]] const T* const                                                Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
+  [[maybe_unused]] double                                                        t,
+  [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] T*                                                            S
 ) {
-  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
+  logTraceInWith6Arguments("algebraicSource(...)", Q, x, h, t, dt, S);
   // @todo implement
   logTraceOut("algebraicSource(...)");
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
-  [[maybe_unused]] double                                                        t,
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const        Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
+  [[maybe_unused]] double                                                        t,
+  [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*                    S
 );
 {% endfor%}
