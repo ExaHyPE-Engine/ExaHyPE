@@ -67,8 +67,6 @@ void peano4:: writeCopyrightMessage() {
     buildInfo += ", sycl";
     #elif defined(GPUOffloadingCPP)
     buildInfo += ", C++ offloading";
-    #elif defined(GPUOffloadingCUDA)
-    buildInfo += ", CUDA offloading";
     #else
     buildInfo += ", no gpu support";
     #endif

@@ -20,12 +20,12 @@ namespace exahype2 {
        *
        */
       void reduceMaxEigenvalue_patchwise_functors(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     overlap,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        MaxEigenvalue           maxEigenvalue
+        ::exahype2::CellData<double, double>&   patchData,
+        int                                     numberOfGridCellsPerPatchPerAxis,
+        int                                     overlap,
+        int                                     unknowns,
+        int                                     auxiliaryVariables,
+        MaxEigenvalue                           maxEigenvalue
       );
 
       namespace internal {

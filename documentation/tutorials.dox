@@ -1,0 +1,49 @@
+/**
+
+@page page_tutorials_overview Tutorials Overview
+
+The tutorials are embedded into their respective extension documentation.
+However, the list below provides an overview over some tutorials.
+
+<table border="0">
+ <tr>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/ExaHyPE-flows.png
+   @ref page_exahype2_tutorials "ExaHyPE 2"
+  </td>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/swift.png
+   @ref page_swift2_tutorials "Swift 2"
+  </td>
+ </tr>
+ <tr>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/MGHyPE.png
+   @ref page_multigrid_tutorials "MGHyPE"
+  </td>
+ </tr>
+</table>
+
+
+# How to add your own tutorial
+
+Tutorials are written as plain Doxygen files and typically have the extension dox.
+
+
+If you prefer to have Python notebooks, please store the notebook (without any 
+binary content) in the repo. The notebooks then have to be converted before we 
+actually invoke doxygen. This is done by calling
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 documentation/convert-jupyter-notebooks.py
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If you now call Doxygen, the notebook is integrated into the static webpage.
+It will be given the identifier that corresponds to the qualified file path, 
+where all / are replaced with underscores.
+
+
+
+
+*/
+

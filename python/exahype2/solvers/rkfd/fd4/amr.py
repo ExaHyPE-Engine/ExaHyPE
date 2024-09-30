@@ -169,9 +169,10 @@ def __compute_restriction_matrix_nd_csr(patch_size, halo_size, patchIndexLinear,
     u^f_i = P_ij u^c_j
     
     """
-    patch_index = np.zeros(2)
+    patch_index = np.zeros(d - 1)
     patch_index[0] = patchIndexLinear % 3
-    patch_index[1] = patchIndexLinear // 3
+    if d == 3:
+        patch_index[1] = patchIndexLinear // 3
 
     fine_start = np.zeros(d)
     fine_start[1:] = patch_size * patch_index
@@ -179,12 +180,12 @@ def __compute_restriction_matrix_nd_csr(patch_size, halo_size, patchIndexLinear,
     fine_face_dimensions[0] = 2 * halo_size
 
     coarse_start = np.zeros(d, dtype=np.int32)
-    coarse_start[1:] = np.floor((patch_size * patch_index + np.ones(2)) / 3)
+    coarse_start[1:] = np.floor((patch_size * patch_index + np.ones(d - 1)) / 3)
     coarse_start[0] = halo_size
 
     coarse_end = np.zeros(d, dtype=np.int32)
     coarse_end[0] = 2 * halo_size
-    coarse_end[1:] = np.floor((patch_size * (patch_index + np.ones(2)) + np.ones(2)) / 3)
+    coarse_end[1:] = np.floor((patch_size * (patch_index + np.ones(d - 1)) + np.ones(d - 1)) / 3)
 
     coarse_face_dimensions = coarse_end - coarse_start
 
@@ -196,35 +197,56 @@ def __compute_restriction_matrix_nd_csr(patch_size, halo_size, patchIndexLinear,
     while (coarse_index[-1] < coarse_face_dimensions[-1]):
         row = linearise_index_reverse(coarse_index, coarse_face_dimensions)
         
-        local_restriction = np.zeros((3, 3, 3))
+        local_restriction = np.zeros((3,) * d)
+
         if (coarse_index[0] + 1) * 3 <= halo_size:
-            local_restriction[1, 1] = np.array([1/3, 1/3, 1/3])
+            if d == 3:
+                local_restriction[1, 1] = np.array([1/3, 1/3, 1/3])
+            if d == 2:
+                local_restriction[1] = np.array([1/3, 1/3, 1/3])
         else:
             ghost_fine_index = coarse_index * 3
             distance = ghost_fine_index[0] - halo_size + 3
             contribution1 = 1 - distance
             contribution2 = distance
-            local_restriction[1, 1] = np.array([0, contribution1, contribution2])
+            if d == 3:
+                local_restriction[1, 1] = np.array([0, contribution1, contribution2])
+            if d == 2:
+                local_restriction[1] = np.array([0, contribution1, contribution2])
 
         
         ghost_fine_index = ((coarse_start + coarse_index) * 3 - fine_start).astype(np.int32)
         ghost_fine_index[0] = halo_size# + coarse_index[0]
 
-        if ghost_fine_index[1] >= 0 and ghost_fine_index[1] + 2 < fine_face_dimensions[1]:
-            local_restriction[1, 1] /= 3
-            local_restriction[1, 0] = np.copy(local_restriction[1, 1])
-            local_restriction[1, 2] = np.copy(local_restriction[1, 1])
+        if d == 3:
+            if ghost_fine_index[1] >= 0 and ghost_fine_index[1] + 2 < fine_face_dimensions[1]:
+                local_restriction[1, 1] /= 3
+                local_restriction[1, 0] = np.copy(local_restriction[1, 1])
+                local_restriction[1, 2] = np.copy(local_restriction[1, 1])
 
-        if ghost_fine_index[2] >= 0 and ghost_fine_index[2] + 2 < fine_face_dimensions[2]:
-            local_restriction[1] /= 3
-            local_restriction[0] = np.copy(local_restriction[1])
-            local_restriction[2] = np.copy(local_restriction[1])
+            if ghost_fine_index[2] >= 0 and ghost_fine_index[2] + 2 < fine_face_dimensions[2]:
+                local_restriction[1] /= 3
+                local_restriction[0] = np.copy(local_restriction[1])
+                local_restriction[2] = np.copy(local_restriction[1])
 
-        for j in range(3):
+        if d == 2:
+            if ghost_fine_index[1] >= 0 and ghost_fine_index[1] + 2 < fine_face_dimensions[1]:
+                local_restriction[1] /= 3
+                local_restriction[0] = np.copy(local_restriction[1])
+                local_restriction[2] = np.copy(local_restriction[1])
+
+        if d == 3:
+            for j in range(3):
+                for i in range(3):
+                    index = linearise_index_reverse(ghost_fine_index + np.array([0, j, i]), fine_face_dimensions)
+                    if index >= 0 and index < np.prod(fine_face_dimensions) - 2:
+                        matrix[row, index : index + 3] = local_restriction[i, j]
+
+        if d == 2:
             for i in range(3):
-                index = linearise_index_reverse(ghost_fine_index + np.array([0, j, i]), fine_face_dimensions)
+                index = linearise_index_reverse(ghost_fine_index + np.array([0, i]), fine_face_dimensions)
                 if index >= 0 and index < np.prod(fine_face_dimensions) - 2:
-                    matrix[row, index : index + 3] = local_restriction[i, j]
+                    matrix[row, index : index + 3] = local_restriction[i]
 
         # Iterate to next fine cell
         coarse_index[0] += 1

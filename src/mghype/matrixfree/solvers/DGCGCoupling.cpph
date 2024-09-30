@@ -3,68 +3,69 @@
 #include "tarch/la/VectorSlice.h"
 #include "tarch/logging/Log.h"
 
-
+/*
+@TODO - the bookkeeping here isn't done correctly. The number of restrictions
+  is updated correctly at certain stages, but is always 0 when it's needed.
+  This is due to resetting this value at the wrong time. Further testing is
+  needed.
+*/
 void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
   auto&  vertex,
   bool   restrictRhsAndInjectSolution,
   bool   fas
 ) {
-  if (
-    vertex.getNumberOfRestrictions()<=0
-    or
-    vertex.getNumberOfRestrictions()>TwoPowerD
-  ) {
+  logTraceInWith7Arguments("rollOver", vertex.getValue(), vertex.getRhs(), vertex.getNumberOfRestrictions(), vertex.getNewRestrictedRhs(), vertex.getDelta(), restrictRhsAndInjectSolution, fas);
+
+  /*
+  About to start CG. So, let's reset value, and send whatever is
+  in newRestrictedRhs into rhs. This should have been set during
+  the final stage of the DG Solver (in the coupling action set).
+  We can also reset delta and newRestrictedRhs.
+  */
+  if ( restrictRhsAndInjectSolution ) {
+    vertex.setValue(0.0);
+    vertex.setOldValue( 0.0 );
     vertex.setDelta(0.0);
+    vertex.setRhs( vertex.getNewRestrictedRhs() );
+  }
+
+  // Ditto but for FAS
+  else if ( restrictRhsAndInjectSolution and fas ) {
+    auto rescaledNewValue =
+      1.0 / vertex.getNumberOfRestrictions()
+      *
+      vertex.getSumOfInjectedValues();
+
+    vertex.setValue(
+      rescaledNewValue
+    );
+    vertex.setOldValue(
+      rescaledNewValue
+    );
+    vertex.setRhs(
+      vertex.getNewRestrictedRhs()
+    );
+  }
+
+  /*
+  About to start DG. We have just finished CG and we are
+  interpolating back up to DG. So, we need to set delta
+  so that we have something to interpolate. For now,
+  we just take whatever we find in the value field. We
+  can set all the other vertex fields to 0.0.
+  */
+  else {
+    vertex.setDelta(
+      vertex.getValue() - vertex.getOldValue()
+    );
     vertex.setValue(0.0);
     vertex.setRhs( 0.0 );
-    vertex.setOldValue(0.0);
   }
-  else {
-    if (
-      vertex.getNumberOfRestrictions()<TwoPowerD
-    ) {
-      vertex.setDelta(0.0);
-    }
-    else {
-      vertex.setDelta(
-        vertex.getValue()
-        -
-        vertex.getOldValue()
-      );
-    }
 
-    assertion1(
-      vertex.getNumberOfRestrictions() == TwoPowerD
-      or
-      tarch::la::equals( vertex.getDelta(), 0.0 ),
-      vertex.toString()
-    );
-
-    if (restrictRhsAndInjectSolution and fas) {
-      auto rescaledNewValue =
-        1.0 / vertex.getNumberOfRestrictions()
-        *
-        vertex.getSumOfInjectedValues();
-
-      vertex.setValue(
-        rescaledNewValue
-      );
-      vertex.setOldValue(
-        rescaledNewValue
-      );
-      vertex.setRhs(
-        vertex.getNewRestrictedRhs()
-      );
-    }
-    else if (restrictRhsAndInjectSolution) {
-      vertex.setValue( 0.0 );
-      vertex.setOldValue( 0.0 );
-      vertex.setRhs( vertex.getNewRestrictedRhs() );
-    }
-  }
   vertex.setSumOfInjectedValues( 0.0 );
   vertex.setNumberOfRestrictions( 0 );
   vertex.setNewRestrictedRhs( 0.0 );
+  logTraceOutWith5Arguments("rollOver", vertex.getValue(), vertex.getRhs(), vertex.getNumberOfRestrictions(), vertex.getNewRestrictedRhs(), vertex.getDelta());
 }
 
 
@@ -72,11 +73,13 @@ void mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters(
   auto&  vertices
 ) {
   for (int vertex=0; vertex<TwoPowerD; vertex++) {
+    logTraceInWith1Argument("RestrictionCounters", vertices(vertex).getNumberOfRestrictions());
     vertices(vertex).setNumberOfRestrictions(
       vertices(vertex).getNumberOfRestrictions()+1
     );
     assertion1( vertices(vertex).getNumberOfRestrictions()>0,          vertices(vertex).toString() );
     assertion1( vertices(vertex).getNumberOfRestrictions()<=TwoPowerD, vertices(vertex).toString() );
+    logTraceOutWith1Argument("RestrictionCounters", vertices(vertex).getNumberOfRestrictions());
   }
 }
 
@@ -87,7 +90,6 @@ void mghype::matrixfree::solvers::dgcgcoupling::injectSolution(
   const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
   auto&         cgVertices
 ) {
-  static tarch::logging::Log _log( "mghype::matrixfree::solvers::dgcgcoupling" );
   logDebug( "injectSolution(...)", injectionMatrix.toString() );
 
   tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > injectedValues = injectionMatrix * dgSolution;
@@ -140,22 +142,29 @@ void mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual(
     const tarch::la::Matrix< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&  systemMatrix,
     const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
     const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgRhs,
+    const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        faceSolutions,
     auto&           cgVertices
 ) {
+
   tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > residual =
       massMatrix * dgRhs
       -
-      systemMatrix * dgSolution;
+      systemMatrix * dgSolution
+      -
+      faceSolutions; // This includes multiplication by A_{c<-f}
+
 
   tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > restrictedValues =
     restrictionMatrix * residual;
 
   for (int vertex=0; vertex<TwoPowerD; vertex++) {
+    logTraceInWith1Argument("restrict", cgVertices(vertex).getNewRestrictedRhs());
     cgVertices(vertex).setNewRestrictedRhs(
       cgVertices(vertex).getNewRestrictedRhs()
       +
       tarch::la::slice<CGSolver::VertexUnknowns>(restrictedValues,vertex*CGSolver::VertexUnknowns)
     );
+    logTraceOutWith1Argument("restrict", cgVertices(vertex).getNewRestrictedRhs());
   }
 }
 
@@ -179,15 +188,21 @@ tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, doubl
   const tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double >&                                        dgSolution,
   const auto&           cgVertices
 ) {
+
   tarch::la::Vector< TwoPowerD * CGSolver::VertexUnknowns, double > coarseDeltaValues;
   for (int vertex=0; vertex<TwoPowerD; vertex++)
   for (int unknown=0; unknown<CGSolver::VertexUnknowns; unknown++) {
     coarseDeltaValues( vertex*CGSolver::VertexUnknowns+unknown ) = cgVertices(vertex).getDelta(unknown);
   }
 
+  logTraceInWith3Arguments("prolongate", dgSolution, coarseDeltaValues, prolongationMatrix);
+
   tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > prolongatedValues =
     prolongationMatrix * coarseDeltaValues;
+  
+  auto output = dgSolution + prolongatedValues;
 
-  return dgSolution + prolongatedValues;
+  logTraceOutWith2Arguments("prolongate", prolongatedValues, output);
+  return output;
 }
 

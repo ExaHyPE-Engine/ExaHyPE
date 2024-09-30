@@ -1,22 +1,18 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "config.h"
-#include "peano4/parallel/Node.h"
-#include "peano4/peano.h"
-#include "peano4/UnitTests.h"
-#include "tarch/logging/ChromeTraceFileLogger.h"
-#include "tarch/logging/CommandLineLogger.h"
+
 #include "tarch/logging/Log.h"
+#include "tarch/logging/CommandLineLogger.h"
+#include "tarch/logging/ChromeTraceFileLogger.h"
 #include "tarch/logging/LogFilter.h"
-#include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/mpi/Rank.h"
 #include "tarch/UnitTests.h"
 
-#ifdef UseExaHyPE
-#include "exahype2/UnitTests.h"
-#endif
-
-#ifdef UseSWIFT
-#include "swift2/UnitTests.h"
-#endif
+#include "peano4/peano.h"
+#include "peano4/parallel/Node.h"
+#include "peano4/UnitTests.h"
 
 #ifdef UseToolboxBlockstructured
 #include "toolbox/blockstructured/UnitTests.h"
@@ -35,8 +31,15 @@
 #include "toolbox/particles/UnitTests.h"
 #endif
 
+#ifdef UseExaHyPE
+#include "exahype2/UnitTests.h"
+#endif
 
-tarch::logging::Log _log("examples::unittests");
+#ifdef UseSWIFT
+#include "swift2/UnitTests.h"
+#endif
+
+tarch::logging::Log _log("unittests");
 
 void runTests() {
   int                     unitTestsErrors = 0;
@@ -51,20 +54,6 @@ void runTests() {
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
-
-#ifdef UseExaHyPE
-  tests = exahype2::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-#endif
-
-#ifdef UseSWIFT
-  tests = swift2::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-#endif
 
 #ifdef UseToolboxBlockstructured
   tests = toolbox::blockstructured::getUnitTests();
@@ -99,13 +88,26 @@ void runTests() {
   delete tests;
 #endif
 
+#ifdef UseExaHyPE
+  tests = exahype2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+#endif
+
+#ifdef UseSWIFT
+  tests = swift2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+#endif
+
 
   if (unitTestsErrors != 0) {
     logError("main()", "unit tests failed. Quit.");
     exit(-2);
   }
 }
-
 
 int main(int argc, char** argv) {
   tarch::logging::LogFilter::getInstance().addFilterListEntry(
@@ -201,7 +203,6 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
-
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry(
     tarch::logging::LogFilter::FilterListEntry(

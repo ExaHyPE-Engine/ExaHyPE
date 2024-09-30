@@ -72,7 +72,7 @@ NVIDIA:
   stage: Compiler
   parallel:
     matrix:
-    - multithreading: ["omp"]
+    - multithreading: ["no"]
   variables:
     CC: "nvc"
     CXX: "nvc++"

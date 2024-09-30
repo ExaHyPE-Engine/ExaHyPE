@@ -5,10 +5,6 @@
 #include "config.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
-#if defined(GPUOffloadingCUDA)
-#include "exahype2/tests/KernelLaunchTest.h"
-#endif
-
 #include "exahype2/dg/rusanov/tests/RiemannTest.h"
 #include "exahype2/dg/tests/CellIntegralTest.h"
 #include "exahype2/dg/tests/DGUtilsTest.h"
@@ -21,10 +17,6 @@
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
-
-#if defined(GPUOffloadingCUDA)
-  result->addTestCase(new exahype2::tests::KernelLaunchTest());
-#endif
 
   // result->addTestCase( new exahype2::dg::tests::CellIntegralTest() );
   // result->addTestCase( new exahype2::dg::tests::DGUtilsTest() );

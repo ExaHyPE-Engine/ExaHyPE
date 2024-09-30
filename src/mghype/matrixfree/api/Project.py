@@ -20,6 +20,11 @@ class Project:
 
   The rest is yet to be fleshed out.
 
+  Now that we have multiple solvers in a project, we may not
+  want to use all of them for stopping criteria. Hence, we
+  have a second array for solvers which participate, but are
+  not asked if their stopping criteria have been reached.
+
   """
 
   """
@@ -60,7 +65,9 @@ class Project:
     self._executable_name = executable
     self._output_path   = "./" 
 
-    self._solvers = []
+    self._solvers     = []
+# @todo remove
+    self._aux_solvers = []
 
     self.algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
     self.algorithm_step_init_solution  = peano4.solversteps.Step( "InitSolution", False )
@@ -121,6 +128,7 @@ the build mode. The values for these parameters step from set_Peano4_installatio
                                        offset,
                                        domain_size,
                                        plot_each_timestep,
+                                       max_iterations=5000,
                                        plotter_precision = 5,
                                        ):
     """
@@ -132,6 +140,7 @@ the build mode. The values for these parameters step from set_Peano4_installatio
     self._domain_size        = domain_size
     self._dimensions         = dimensions
     self._plot_each_timestep = plot_each_timestep
+    self._max_iterations     = max_iterations
     self._plotter_precision  = plotter_precision
     if plotter_precision<=0:
       raise Exception( "Plotter precision has to be bigger than 0" ) 
@@ -154,7 +163,8 @@ you require to run this Peano4 application with PETSc.
     self._project.main = MatrixFreeMain(self._project,
                                 self._domain_offset,
                                 self._domain_size,
-                                self._plot_each_timestep
+                                self._plot_each_timestep,
+                                self._max_iterations
                                 )
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
@@ -176,10 +186,10 @@ you require to run this Peano4 application with PETSc.
   def __set_solver_repository_dict(self):
       self.dictionary = {}
       self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-
+      self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
 
   def __generate_solver_repository(self):
-
+    # make sure solver repository dict is set    
     self.__set_solver_repository_dict()
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
@@ -198,12 +208,16 @@ you require to run this Peano4 application with PETSc.
     self._project.output.makefile.add_h_file( self._project.subdirectory + "repositories/SolverRepository.h", generated=True )
     self._project.output.makefile.add_cpp_file( self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True )
 
-  def add_solver( self, solver ):
-    """
+  def add_solver( self, solver, auxiliary=False ):
+    """!
     
     Takes the solver and runs through the individual steps of the algorithm.
     Per step, it tells the solver to inject its particular stuff to the 
     underlying observers.
+
+    The auxiliary flag allows us to distinguish the "main" solver from the
+    helpers. The rationale for this is that we only want to measure the
+    termination conditions for a subset of the solvers.
     
     """  
     print( "---------------------------------------")
@@ -229,7 +243,11 @@ you require to run this Peano4 application with PETSc.
     else:
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
     
-    self._solvers.append( solver )
+    # @todo das muss raus
+    if auxiliary:
+      self._aux_solvers.append( solver )
+    else:
+      self._solvers.append( solver )
 
     pass
 

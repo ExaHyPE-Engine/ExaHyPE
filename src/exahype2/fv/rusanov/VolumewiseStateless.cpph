@@ -12,7 +12,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData& patchData, peano4::utils::LoopPlacement loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData<double, double>&patchData, peano4::utils::LoopPlacement loopParallelism) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov");
@@ -530,7 +530,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData<double, double>&patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism) {
   tarch::timing::Watch watch("exahype2::fv::rusanov", "timeStepWithRusanovVolumewiseStateless", false, true);
   timeStepWithRusanovVolumewiseStateless<
     SolverType,

@@ -1,0 +1,38 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+double applications::exahype2::advection::maxEigenvalue(
+  [[maybe_unused]] const double* const __restrict__             Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal
+) {
+  return ADVECTION_SPEED;
+}
+
+void applications::exahype2::advection::flux(
+  [[maybe_unused]] const double* const __restrict__             Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] double* const __restrict__                   F
+) {
+  using s = VariableShortcuts;
+
+  #ifdef GPUOffloadingOff
+  assertion(normal >= 0);
+  assertion(normal < Dimensions);
+  #endif
+
+  F[s::v + 0] = 0.0;
+  F[s::v + 1] = 0.0;
+  #if Dimensions == 3
+  F[s::v + 2] = 0.0;
+  #endif
+
+  F[normal] = Q[normal];
+}

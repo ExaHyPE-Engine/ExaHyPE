@@ -13,7 +13,7 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapFunctors(
-  CellData&                            patchData,
+  CellData<double, double>&            patchData,
   const FluxFunctor&                   fluxFunctor,
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,

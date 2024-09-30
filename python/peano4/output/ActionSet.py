@@ -4,7 +4,6 @@ import os
 import re
 
 from .Helper import write_file
-from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -91,9 +90,6 @@ class ActionSet(object):
 
     if write_file(overwrite,default_overwrite,filename):
       import inspect, os
-      cuda = using_cuda_backend()
-      if cuda:
-        filename = filename.replace(".cpp", ".cu")
       print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
 
       with open( filename, "w" ) as outputfile:
@@ -170,9 +166,6 @@ class ActionSet(object):
       default_overwrite = False
     if write_file(overwrite,default_overwrite,filename):
       import inspect, os
-      cuda = using_cuda_backend()
-      if cuda:
-        filename = filename.replace(".cpp", ".cu")
       print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
       outputfile = open( filename, "w" )
 

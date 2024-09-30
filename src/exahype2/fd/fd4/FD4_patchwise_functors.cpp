@@ -7,20 +7,20 @@
 #include "tarch/accelerator/accelerator.h"
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     haloSize,
-  int                     unknowns,
-  int                     auxiliaryVariables,
-  double                  KOSigma,
-  bool                    evaluateFlux,
-  bool                    evaluateDifferentialSource, //for ncp
-  bool                    evaluateAlgebraicSource, //real source
-  bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-  DifferentialSourceTermVariant                  variant,
-  Flux                    flux,
-  NonconservativeProduct  DifferentialSource,
-  Source                  AlgebraicSource
+  ::exahype2::CellData<double, double>& patchData,
+  int                                   numberOfGridCellsPerPatchPerAxis,
+  int                                   haloSize,
+  int                                   unknowns,
+  int                                   auxiliaryVariables,
+  double                                KOSigma,
+  bool                                  evaluateFlux,
+  bool                                  evaluateDifferentialSource, //for ncp
+  bool                                  evaluateAlgebraicSource, //real source
+  bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant         variant,
+  Flux                                  flux,
+  NonconservativeProduct                DifferentialSource,
+  Source                                AlgebraicSource
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 
@@ -627,11 +627,11 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
 }
 
 void exahype2::fd::fd4::reconstruct_first_derivatives(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     haloSize,
-  int                     unknowns,
-  int                     auxiliaryVariables
+  ::exahype2::CellData<double, double>& patchData,
+  int                                   numberOfGridCellsPerPatchPerAxis,
+  int                                   haloSize,
+  int                                   unknowns,
+  int                                   auxiliaryVariables
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 

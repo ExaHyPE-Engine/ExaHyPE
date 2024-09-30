@@ -6,7 +6,7 @@
 
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
-  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/index.html">Documentation</a> •
+  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/">Documentation</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
@@ -28,7 +28,7 @@ load balancing, sophisticated geometry representations, and other features.
 
 # Installation
 
-Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dce/page_installation.html).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dd9/page_installation_home.html).
 
 # Availability
 
@@ -45,7 +45,7 @@ We however use a whole set of tools around it.
 * Python3 (optional but recommended; not required if you work only with the C++ baseline).
 * MPI (optional). MPI's multithreaded support is required.
 * Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
-* CUDA, ROCm, OpenSYCL or Intel oneAPI for GPU offloading (optional).
+* ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading (optional).
 * The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
 * HDF5 (optional).
 * NetCDF (optional).

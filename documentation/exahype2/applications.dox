@@ -4,12 +4,15 @@
 
 \tableofcontents
 
+\li \subpage applications_exahype2_advection
 \li \subpage applications_exahype2_acoustic
+\li \subpage applications_exahype2_elastic
 \li \subpage applications_exahype2_swe
 \li \subpage applications_exahype2_landslide
 \li \subpage applications_exahype2_euler
 \li \subpage applications_exahype2_selfgravitation
 \li \subpage applications_exahype2_ccz4
+\li \subpage applications_exahype2_exaseis
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".
