@@ -40,7 +40,7 @@ class Project(object):
         self._solvers = []
         self._domain_offset = [0.0, 0.0, 0.0]
         self._domain_size = [1.0, 1.0, 1.0]
-        self._dimensions = 2
+        self._dimensions = 3
         self._min_terminal_time = 1.0
         self._max_terminal_time = 0.0
         self._first_plot_time_stamp = 0.0
@@ -304,15 +304,27 @@ thus appreciate any citation of the original release paper
         max_end_time=0.0,
     ):
         """
-        offset and size should be lists with dimensions double entries.
+        ! Set the global simulation parameters
+        
+        @param dimensions: 2 or 3
+        
+        @param offset: [Float]
+          Has to have dimension number of entries.
+          
+        @param size: [Float}
+          Has to have dimension number of entries and all of them have to be 
+          positive. At this point, we strongly suggest that all size entries
+          are exactly the same. While Peano and ExaHyPE do support anisotropic
+          meshes, most compute kernels do not, so working with something else
+          than a square or cube will likely break all numerics.
 
-        first_plot_time_stamp: Float
+        @param first_plot_time_stamp: Float
           Is irrelevant if time_in_between_plots equals zero
 
-        time_in_between_plots: Float
+        @param time_in_between_plots: Float
           Set to zero if you don't want to have any plots
 
-        max_end_time: Float
+        @param max_end_time: Float
           If you set it zero (or actually any value smaller than min_end_time), then
           the code will run until the cell that lags behind the most hits the min time.
           If you specify a valid max time however, you can stop the sim as soon as the

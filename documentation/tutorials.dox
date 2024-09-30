@@ -13,13 +13,17 @@ However, the list below provides an overview over some tutorials.
   </td>
   <td style="vertical-align: bottom">
    @image html documentation/icons/swift.png
-   @ref page_swift2_tutorials "Swift 2"
+   @ref swift_tutorials "Swift 2"
   </td>
  </tr>
  <tr>
   <td style="vertical-align: bottom">
    @image html documentation/icons/MGHyPE.png
    @ref page_multigrid_tutorials "MGHyPE"
+  </td>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/peano4.png
+   @ref tutorials_peano4_tutorials "Peano 4 - core"
   </td>
  </tr>
 </table>
