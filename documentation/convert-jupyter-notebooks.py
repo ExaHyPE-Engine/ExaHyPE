@@ -11,7 +11,31 @@ import os.path
 import subprocess
 
 
+currently_in_raw_data_box = False
+
 def postprocess_markdown_line(line):
+    """!
+
+    currently_in_raw_data_box: Jupyter's markdown export does not preserve raw
+      data cells. But we use them quite frequently. So we follow the convention
+      that raw data cells should be indendented. And then we automatically 
+      filter those lines out, and add the markup box around them.
+    """
+    global currently_in_raw_data_box
+    
+    if line.startswith( "    " ) and not currently_in_raw_data_box:
+        currently_in_raw_data_box = True
+        line = """
+        
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+""" + line        
+    elif not line.startswith( "    " ) and currently_in_raw_data_box:
+        currently_in_raw_data_box = False
+        line = """
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+""" + line        
+    
     return line.replace( "$$", "@f$ ")
 
 
