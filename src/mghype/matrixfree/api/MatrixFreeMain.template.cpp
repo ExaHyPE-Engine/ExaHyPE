@@ -9,9 +9,6 @@
 #include "{{SUBDIRECTORY}}observers/InitSolution.h"
 #include "{{SUBDIRECTORY}}observers/Solve.h"
 #include "{{SUBDIRECTORY}}observers/Plot.h"
-// @todo @author Dmitry
-// # I think, further automation of including steps from observers of different extensions is worth of consideration ->
-// # see in the comments below between the {% ... %} exepressions
 {% if SUBDIRECTORIES -%}
 {% for subdirectory in SUBDIRECTORIES %}
 // {% for step in OBSERVERS[subdirectory] %}
@@ -60,11 +57,11 @@ tarch::timing::Measurement plotMeasurement;
 
 
 bool selectNextAlgorithmicStep() {
-  static bool         gridCreated         = false;
-  static int          solverSteps;
-  bool                continueToSolve     = true;
-  static bool         plotThenExit        = false;
-  const int           MaxIterations       = 5000;
+  static bool gridCreated = false;
+  static int solverSteps;
+  bool continueToSolve = true;
+  static bool plotThenExit = false;
+  const int MaxIterations = {{MAXITERATIONS}};
 
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
@@ -143,7 +140,7 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Plot:
         {
           if ( plotThenExit ) {
-            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " steps");
+            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " sweeps");
             continueToSolve = false;
           }
           else 

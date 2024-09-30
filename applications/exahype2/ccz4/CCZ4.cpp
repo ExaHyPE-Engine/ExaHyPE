@@ -363,44 +363,11 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       else {result = ::exahype2::RefinementCommand::Keep;}
     }
   }
-  if (CCZ4ReSwi==4){ //5 level, not used
-    if (tarch::la::equals(t,0.0)){  
-      constexpr int NumberOfRefinementLayers = 4;
- //   with some alter
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5};
-      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01};
-
-      result = ::exahype2::RefinementCommand::Keep;
-      for (int i=0; i<NumberOfRefinementLayers; i++) {
-        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
-          result=::exahype2::RefinementCommand::Refine;
-        }
-      }
-    }
-  }
-  if (CCZ4ReSwi==8){ //not used
-    if (tarch::la::equals(t,0.0)){  
-      constexpr int NumberOfRefinementLayers = 1;
-      double Radius[NumberOfRefinementLayers] = {2};
-      double MaxH[NumberOfRefinementLayers]   = {0.04};
-
-      result = ::exahype2::RefinementCommand::Keep;
-      for (int i=0; i<NumberOfRefinementLayers; i++) {
-        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
-          result=::exahype2::RefinementCommand::Refine;
-        }
-      }
-    }
-  }
-  if (CCZ4ReSwi==5){ //4 level, not used yet
-    if (tarch::la::equals(t,0.0)){   
-      constexpr int NumberOfRefinementLayers = 3;
-//    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
-      double MaxH[NumberOfRefinementLayers]   = {0.2, 0.06, 0.02};
-//    with some alter
-//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
-//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
+  if (CCZ4ReSwi==5){
+    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==0, 2
+      constexpr int NumberOfRefinementLayers = 2;
+      double Radius[NumberOfRefinementLayers] = {4, 3};
+      double MaxH[NumberOfRefinementLayers]   = {0.17,0.06};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
@@ -415,6 +382,20 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
       constexpr int NumberOfRefinementLayers = 2;
       double Radius[NumberOfRefinementLayers] = {4, 3};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
+
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
+  if (CCZ4ReSwi==8){
+    if (tarch::la::equals(t,0.0)){  //static AMR, for bbh, type==0, 2
+      constexpr int NumberOfRefinementLayers = 2;
+      double Radius[NumberOfRefinementLayers] = {4, 3};
+      double MaxH[NumberOfRefinementLayers]   = {0.1,0.035};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {

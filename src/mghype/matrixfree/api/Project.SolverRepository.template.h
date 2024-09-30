@@ -4,11 +4,11 @@
 //
 #pragma once
 
-
 {% for SOLVER in SOLVER_INSTANCES %}
-
 #include "{{SOLVER[0]}}.h"
-
+{% endfor %}
+{% for SOLVER in AUX_SOLVER_INSTANCES %}
+#include "{{SOLVER[0]}}.h"
 {% endfor %}
 
 {% for N in NAMESPACE %}
@@ -17,8 +17,11 @@ namespace {{N}} {
   namespace repositories {
 
     {% for SOLVER in SOLVER_INSTANCES %}
-    extern {{SOLVER[0]}}  {{SOLVER[1]}}; // {{NAMESPACE | join("::")}}::
-
+    extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
+    {% endfor %}
+    // @todo das sollte weg
+    {% for SOLVER in AUX_SOLVER_INSTANCES %}
+    extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
     
     bool terminationCriterionHolds();

@@ -9,7 +9,7 @@ class SWE_radial_dam_break(Scenario):
     
     """
     Classic radial dam break SWE equations, with constant initial water height but
-    a bump in the bathimetry in the centre.
+    a bump in the bathymetry in the centre.
     """
 
     _plot_dt     = 0.05

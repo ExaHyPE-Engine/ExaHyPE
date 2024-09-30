@@ -8,7 +8,7 @@ Refer to the \ref applications_exahype2_swe_artificial_tsunami application for d
 
 ## How to Build and Run
 
-For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
+For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation_home.
 
 ### Using CMake
 
@@ -18,7 +18,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd benchmarks/exahype2/swe/artificial-tsunami/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 artificial-tsunami.py
-    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveEnclaveFV-Stateless-Release
+    ./SWE.Release
 
 ### Using Automake
 
@@ -30,7 +30,7 @@ For a general overview and all options on how to retrieve and configure the proj
     cd benchmarks/exahype2/swe/artificial-tsunami/
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
     python3 artificial-tsunami.py
-    ./ExaHyPE2-SWE-FWaveRiemannGlobalAdaptiveEnclaveFV-Stateless-Release
+    ./SWE.Release
 
 Where `CC=gcc CXX=g++` can be any set of compilers.
 

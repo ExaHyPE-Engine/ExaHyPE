@@ -19,8 +19,16 @@ class FloatTypes():
         self.cpp = "long double"
         self.mpi = "MPI_LONG_DOUBLE"
         self.number_of_mpi_types_per_element = 1
+      elif float_type=="_Float16":
+        self.cpp = "_Float16"
+        self.mpi = "MPI_BYTE"
+        self.number_of_mpi_types_per_element = 2
       elif float_type=="std::float16_t":
         self.cpp = "std::float16_t"
+        self.mpi = "MPI_BYTE"
+        self.number_of_mpi_types_per_element = 2
+      elif float_type=="__bf16":
+        self.cpp = "__bf16"
         self.mpi = "MPI_BYTE"
         self.number_of_mpi_types_per_element = 2
       elif float_type=="std::bfloat16_t":

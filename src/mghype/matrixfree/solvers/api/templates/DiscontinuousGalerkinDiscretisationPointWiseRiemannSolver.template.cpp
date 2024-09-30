@@ -15,7 +15,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCell(
   tarch::la::Vector< CellUnknowns, double >&  value,
   tarch::la::Vector< CellUnknowns, double >&  rhs
 ) {
-  // @todo insert your code here
+{{CUSTOM_INIT_CELL}}
 }
 
 
@@ -28,13 +28,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initFace(
   // @todo insert your code here. For most codes can stay empty
 }
 
-
-/**
-* Returns true if we are outside the expected
-* tolerance, and false if we can terminate.
-*
-*/
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds()
-{
-  return true;
-}

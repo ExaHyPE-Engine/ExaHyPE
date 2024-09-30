@@ -14,17 +14,17 @@ namespace exahype2::fv::rusanov::cpp::internal {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(
-    int       targetDevice,
-    CellData& patchData,
-    double*   tempFluxX,
-    double*   tempFluxY,
-    double*   tempFluxZ,
-    double*   tempNonconservativeProductX,
-    double*   tempNonconservativeProductY,
-    double*   tempNonconservativeProductZ,
-    double*   tempEigenvalueX,
-    double*   tempEigenvalueY,
-    double*   tempEigenvalueZ
+    int                       targetDevice,
+    CellData<double, double>& patchData,
+    double*                   tempFluxX,
+    double*                   tempFluxY,
+    double*                   tempFluxZ,
+    double*                   tempNonconservativeProductX,
+    double*                   tempNonconservativeProductY,
+    double*                   tempNonconservativeProductZ,
+    double*                   tempEigenvalueX,
+    double*                   tempEigenvalueY,
+    double*                   tempEigenvalueZ
   ) InlineMethod {
     const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
     const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
@@ -616,7 +616,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData<double, double>&patchData, tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::cpp");
@@ -708,7 +708,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData<double, double>&patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::cpp");
