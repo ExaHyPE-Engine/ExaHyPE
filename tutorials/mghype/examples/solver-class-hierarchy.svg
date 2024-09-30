@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="solver-class-hierarchy.svg"
+   inkscape:export-filename="solver-class-hierarchy.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.1893044"
+     inkscape:cx="197.59449"
+     inkscape:cy="228.70512"
+     inkscape:window-width="1854"
+     inkscape:window-height="1131"
+     inkscape:window-x="66"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="TriangleStart"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="5.3244081"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="TriangleStart-0"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="5.3244081"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135-9" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111"
+       width="30.972912"
+       height="7.5132909"
+       x="62.506657"
+       y="19.966801" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-3"
+       width="30.972912"
+       height="7.5132909"
+       x="62.506657"
+       y="27.611645" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-6"
+       width="30.972912"
+       height="7.5132909"
+       x="62.506657"
+       y="35.043919" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.38088px;line-height:1.25;font-family:sans-serif;stroke-width:0.205354"
+       x="66.293251"
+       y="24.947514"
+       id="text315"><tspan
+         sodipodi:role="line"
+         id="tspan313"
+         style="stroke-width:0.205354"
+         x="66.293251"
+         y="24.947514">Some base</tspan></text>
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-7"
+       width="30.972912"
+       height="7.5132909"
+       x="64.04866"
+       y="53.619148" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-3-5"
+       width="30.972912"
+       height="7.5132909"
+       x="64.04866"
+       y="61.263992" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-6-3"
+       width="30.972912"
+       height="7.5132909"
+       x="64.04866"
+       y="68.696266" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.56477px;line-height:1.25;font-family:sans-serif;stroke-width:0.167099"
+       x="66.247757"
+       y="58.608021"
+       id="text315-5"><tspan
+         sodipodi:role="line"
+         id="tspan313-6"
+         style="stroke-width:0.167099"
+         x="66.247757"
+         y="58.608021">AbstractPoisson</tspan></text>
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-2"
+       width="30.972912"
+       height="7.5132909"
+       x="65.274826"
+       y="87.755562" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-3-9"
+       width="30.972912"
+       height="7.5132909"
+       x="65.274826"
+       y="95.400406" />
+    <rect
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.665001"
+       id="rect111-6-1"
+       width="30.972912"
+       height="7.5132909"
+       x="65.274826"
+       y="102.83268" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.38088px;line-height:1.25;font-family:sans-serif;stroke-width:0.205354"
+       x="72.765587"
+       y="92.736275"
+       id="text315-2"><tspan
+         sodipodi:role="line"
+         id="tspan313-7"
+         style="stroke-width:0.205354"
+         x="72.765587"
+         y="92.736275">Poisson</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.87462px;line-height:1.25;font-family:sans-serif;stroke-width:0.181623"
+       x="116.66064"
+       y="30.614468"
+       id="text474"><tspan
+         sodipodi:role="line"
+         id="tspan472"
+         style="stroke-width:0.181623"
+         x="116.66064"
+         y="30.614468">Somewhere within </tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="116.66064"
+         y="35.457737"
+         id="tspan476">MGHyPE</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.87462px;line-height:1.25;font-family:sans-serif;stroke-width:0.181623"
+       x="126.058"
+       y="54.676392"
+       id="text480"><tspan
+         sodipodi:role="line"
+         id="tspan478"
+         style="stroke-width:0.181623"
+         x="126.058"
+         y="54.676392">Generated. Yields a .h</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="126.058"
+         y="59.519665"
+         id="tspan482">and a .cpp file. Don't edit, </tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="126.058"
+         y="64.362938"
+         id="tspan484">as will be regenerated every </tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="126.058"
+         y="69.206215"
+         id="tspan486">time you run the Python</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="126.058"
+         y="74.049484"
+         id="tspan488">script</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.87462px;line-height:1.25;font-family:sans-serif;stroke-width:0.181623"
+       x="121.25988"
+       y="90.047707"
+       id="text492"><tspan
+         sodipodi:role="line"
+         id="tspan490"
+         style="stroke-width:0.181623"
+         x="121.25988"
+         y="90.047707">Split into a .h and .cpp file. Is</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="121.25988"
+         y="94.890984"
+         id="tspan494">generated the first time you</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="121.25988"
+         y="99.734253"
+         id="tspan496">run the Python script. After </tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="121.25988"
+         y="104.57753"
+         id="tspan498">that, you can implement &quot;your&quot;</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.181623"
+         x="121.25988"
+         y="109.42081"
+         id="tspan500">solver here.</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.865;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleStart)"
+       d="M 77.629029,53.601593 V 45.316092"
+       id="path599"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.865;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleStart-0)"
+       d="M 78.865646,87.765814 V 79.480313"
+       id="path599-3"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>
