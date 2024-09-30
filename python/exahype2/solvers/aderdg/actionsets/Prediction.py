@@ -42,7 +42,11 @@ class Prediction(AbstractADERDGActionSet):
 
     {{CREATE_PREDICTOR_ALLOCATIONS}}
 
-    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
+    auto* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value;
+
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+
+    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), oldQ);
 """
 
     _Template_TouchCellFirstTime_Core = """
@@ -58,8 +62,7 @@ class Prediction(AbstractADERDGActionSet):
 """
 
     _Template_PredictorAllocations = """
-
-    {{CORRECTOR_COMPUTATION_PRECISION}}  boundaryData[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize()+kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()];
+    {{CORRECTOR_COMPUTATION_PRECISION}}  boundaryData[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize() + kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()];
     {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = boundaryData;
     {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = boundaryData + kernels::{{SOLVER_NAME}}::getBndFaceTotalSize();
 
@@ -71,7 +74,6 @@ class Prediction(AbstractADERDGActionSet):
       timeStepSize,
       boundaryData
     );
-
 """
 
     _Template_FSTPVI_Linear_Without_PS = """
@@ -158,14 +160,14 @@ class Prediction(AbstractADERDGActionSet):
 
     switch (myPrecision) {
     {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
-        case ::exahype2::PrecisionCommand::{{PRECISIONS_CAPITALIZED[PRECISION_NUM]}}:
-          {{ITERATION_CONTENT}}
-          break;
+      case ::exahype2::PrecisionCommand::{{PRECISIONS_CAPITALIZED[PRECISION_NUM]}}:
+        {{ITERATION_CONTENT}}
+        break;
     {% endfor %}
-        default:
-          assertion1WithExplanation(
-            false, myPrecision, "chosen precision was not in the previously specified options, as such there are no compiled kernels for this option."
-          );
+      default:
+        assertion1WithExplanation(
+          false, myPrecision, "chosen precision was not in the previously specified options, as such there are no compiled kernels for this option."
+        );
     }
 """
 
