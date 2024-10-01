@@ -14,7 +14,7 @@ namespace {{ item }} {
   constexpr int getlQiSize()     {return {{lQiSize}};}
   constexpr int getlFiSize()     {return {{lFiSize}};}
   constexpr int getlSiSize()     {return {{lSiSize}};}
-  constexpr int getgradQSize()   {return {{gradQSize}};}
+  constexpr int getGradQSize()   {return {{gradQSize}};}
   constexpr int getlQhiSize()    {return {{lQhiSize}};}
   constexpr int getlFhiSize()    {return {{lFhiSize}};}
   constexpr int getlShiSize()    {return {{lShiSize}};}
@@ -50,12 +50,12 @@ namespace {{ item }} {
 {% set shift = shift+lQhiSize %}
 
 {% if not IS_LINEAR %}
-  constexpr int getrhsShift()   {return {{shift}};} // Same size as lQi
+  constexpr int getRhsShift()   {return {{shift}};} // Same size as lQi
 {% set shift = shift+lQiSize %}
 {% endif %}
 
 {% if gradQSize > 0 %}
-  constexpr int getgradQShift() {return {{shift}};}
+  constexpr int getGradQShift() {return {{shift}};}
 {% set shift = shift+gradQSize %}
 {% endif %}
 

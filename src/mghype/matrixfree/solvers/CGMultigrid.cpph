@@ -1,0 +1,53 @@
+#include "CGMultigrid.h"
+#include "peano4/utils/Loop.h"
+
+// tarch::logging::Log mghype::matrixfree::solvers::cgmultigrid::_log("mghype::matrixfree::solvers::cgmultigrid");
+
+template<class CGSolver>
+void mghype::matrixfree::solvers::cgmultigrid::restrict(
+  const tarch::la::Matrix< TwoPowerD, FourPowerD, double >& restrictionMatrix,
+  auto& coarseGridVertices,
+  auto& fineGridVertex,
+  const auto& vertexMarker
+) {
+  logTraceInWith3Arguments("restrict", fineGridVertex.getLevel(), fineGridVertex.getResidual(), restrictionMatrix);
+
+  int col = peano4::utils::dLinearised( vertexMarker.getRelativePositionWithinFatherCell(), TwoPowerD );
+  
+  for (int v=0; v<TwoPowerD; v++) {
+    for (int unknown=0; unknown<CGSolver::VertexUnknowns; unknown++) {
+      logTraceInWith1Argument("restrictLoop", coarseGridVertices(v).getRhs());
+      coarseGridVertices(v).setRhs(
+        unknown,
+        coarseGridVertices(v).getRhs(unknown) + restrictionMatrix(v,col) * fineGridVertex.getResidual(unknown)
+      );
+      logTraceOutWith1Argument("restrictLoop", coarseGridVertices(v).toString());
+    }
+  }
+  logTraceOut("restrict");
+}
+
+template<class CGSolver>
+void mghype::matrixfree::solvers::cgmultigrid::prolongate(
+  const tarch::la::Matrix< FourPowerD, TwoPowerD, double >& prolongationMatrix,
+  auto& coarseGridVertices,
+  auto& fineGridVertex,
+  const auto& vertexMarker
+) {
+  logTraceInWith3Arguments("prolongate", fineGridVertex.getLevel(), fineGridVertex.getU(), coarseGridVertices(0).getLevel());
+  int row = peano4::utils::dLinearised( vertexMarker.getRelativePositionWithinFatherCell(), TwoPowerD );
+  
+  for (int unknown=0; unknown<CGSolver::VertexUnknowns; unknown++) {
+    double delta = 0;
+    for (int v=0; v<TwoPowerD; v++) {
+      logTraceInWith3Arguments("getDelta", delta, coarseGridVertices(v).getDelta(unknown), prolongationMatrix(row,v));
+      delta += prolongationMatrix(row,v) * coarseGridVertices(v).getDelta(unknown);
+      logTraceOutWith1Argument("getDelta", delta);
+    }
+    fineGridVertex.setU(
+      unknown,
+      fineGridVertex.getU(unknown) + delta
+    );
+  }
+  logTraceOutWith1Argument("prolongate", fineGridVertex.getU());
+}

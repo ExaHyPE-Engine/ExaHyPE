@@ -136,8 +136,14 @@ public:
     double* __restrict__ BgradQ
   ) override;
 
-  void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double* const Q, double* S)
-    override;
+  void algebraicSource(
+    const double* const Q,
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
+    double                                       t,
+    double                                       dt,
+    double* S
+  ) override;
 
   void multiplyMaterialParameterMatrix(
     const double* const                          Q,

@@ -228,25 +228,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 {% if USE_SEPARATE_SWEEPS is sameas True %}
       _solverState = SolverState::InitialPrediction;
 {% else %}
-      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::Timestep;
+      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
 {% endif %}
       break;
     case SolverState::Plotting:
-      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::Timestep;
+      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
       break;
     case SolverState::InitialPrediction:
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
-        SolverState::PredictionOnHangingCells : _solverState = SolverState::Timestep;
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::TimeStep;
       break;
     case SolverState::PredictionOnHangingCells:
-      _solverState = SolverState::Timestep;
+      _solverState = SolverState::TimeStep;
       break;
-    case SolverState::Timestep:
+    case SolverState::TimeStep:
 {% if USE_SEPARATE_SWEEPS is sameas True %}
       _solverState = SolverState::InitialPrediction;
 {% else %}
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
-        SolverState::PredictionOnHangingCells : _solverState = SolverState::Timestep;
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::TimeStep;
 {% endif %}
       break;
   }
@@ -402,28 +402,28 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "initial-prediction";
     case SolverState::PredictionOnHangingCells:
       return "prediction-on-hanging-cells";
-    case SolverState::Timestep:
-      return "timestep";
+    case SolverState::TimeStep:
+      return "time-step";
     }
   return "<undef>";
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState==SolverState::InitialPrediction or _solverState==SolverState::GridInitialisation or
-   ( (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? _solverState==SolverState::PredictionOnHangingCells : _solverState==SolverState::Timestep);
+   ( (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? _solverState==SolverState::PredictionOnHangingCells : _solverState==SolverState::TimeStep);
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
 {% if USE_SEPARATE_SWEEPS is sameas True %}
   return _solverState==SolverState::InitialPrediction;
 {% else %}
-  return ( _solverState==SolverState::Timestep
+  return ( _solverState==SolverState::TimeStep
         or _solverState==SolverState::InitialPrediction);
 {% endif %}
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Timestep;
+  return _solverState==SolverState::TimeStep;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}

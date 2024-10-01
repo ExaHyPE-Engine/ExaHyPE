@@ -202,8 +202,8 @@ template <
   class TempDataEnumerator,
   ::peano4::utils::LoopPlacement loopParallelism>
 void wrapPatchwiseHeapFunctorsHostKernel(
-  int                   device,
-  ::exahype2::CellData& patchData
+  int                                   device,
+  ::exahype2::CellData<double, double>& patchData
 ) {
   assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
 
@@ -283,8 +283,8 @@ template <
   class TempDataEnumerator,
   ::peano4::utils::LoopPlacement loopParallelism>
 void wrapBatchedHeapFunctorHostKernels(
-  int                   device,
-  ::exahype2::CellData& patchData
+  int                                   device,
+  ::exahype2::CellData<double, double>& patchData
 ) {
   assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
 
@@ -364,8 +364,8 @@ template <
   class TempDataEnumerator,
   ::peano4::utils::LoopPlacement loopParallelism>
 void wrapVolumewiseFunctorHostKernels(
-  int                   device,
-  ::exahype2::CellData& patchData
+  int                                   device,
+  ::exahype2::CellData<double, double>& patchData
 ) {
   assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
 
@@ -443,20 +443,20 @@ void wrapVolumewiseFunctorHostKernels(
  */
 template <
   void (*Function)(
-    ::exahype2::CellData&,
+    ::exahype2::CellData<double, double>&,
     ::tarch::timing::Measurement&,
     ::peano4::utils::LoopPlacement
   ),
   ::peano4::utils::LoopPlacement loopParallelism>
-void wrapStatelessHostKernel(int device, ::exahype2::CellData& patchData) {
+void wrapStatelessHostKernel(int device, ::exahype2::CellData<double, double>& patchData) {
   assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
   Function(patchData, timingComputeKernel, loopParallelism);
 }
 
 
 template <
-  void (*Function)(int, ::exahype2::CellData&, ::tarch::timing::Measurement&)>
-void wrapDeviceKernel(int device, ::exahype2::CellData& patchData) {
+  void (*Function)(int, ::exahype2::CellData<double, double>&, ::tarch::timing::Measurement&)>
+void wrapDeviceKernel(int device, ::exahype2::CellData<double, double>& patchData) {
   assertion(device != ::tarch::accelerator::Device::HostDevice);
   Function(device, patchData, timingComputeKernel);
 }
@@ -487,7 +487,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
   auto assessKernel =
     [&](
-      std::function<void(int device, ::exahype2::CellData& patchData)> kernel,
+      std::function<void(int device, ::exahype2::CellData<double, double>& patchData)> kernel,
       const std::string& markerName,
       int                launchingThreads,
       int                device,
@@ -499,7 +499,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     // TODO: Does the number of samples change the outcome of the solution?
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
-        ::exahype2::CellData patchData(patches);
+        ::exahype2::CellData<double, double> patchData(patches);
         for (int i = 0; i < patches; i++) {
           patchData.QIn[i] = ::tarch::allocateMemory<double>(
             NumberOfInputEntries,
