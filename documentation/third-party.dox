@@ -92,4 +92,11 @@ or cousins of it, such that you can directly visualise the outcome with
 Paraview of VisIt, e.g. Most users do not need to build Peano directly against
 any third-party visualisation libraries.
 
+
+# Score-P
+
+Use 'SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--user --nocompiler --thread=omp:ompt"'
+
+TODO: Yet to be written.
+
 */
