@@ -255,6 +255,9 @@ class ADERDG(object):
         """
         self._action_set_postprocess_solution = None
 
+        self._preprocess_reconstructed_patch = ""
+        self._postprocess_updated_patch = ""
+
         # Create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified.
         self.create_data_structures()
         self.create_action_sets()
@@ -1068,6 +1071,26 @@ Material parameters:    """
     def auxiliary_variables(self):
         return self._auxiliary_variables
 
+    @property
+    def preprocess_reconstructed_patch(self):
+        return self._preprocess_reconstructed_patch
+
+    @preprocess_reconstructed_patch.setter
+    def preprocess_reconstructed_patch(self, kernel):
+        self._preprocess_reconstructed_patch = kernel
+        self.create_data_structures()
+        self.create_action_sets()
+
+    @property
+    def postprocess_updated_patch(self):
+        return self._postprocess_updated_patch
+
+    @postprocess_updated_patch.setter
+    def postprocess_updated_patch(self, kernel):
+        self._postprocess_updated_patch = kernel
+        self.create_data_structures()
+        self.create_action_sets()
+
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
@@ -1161,6 +1184,13 @@ Material parameters:    """
         ).render(**d)
         d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["PREPROCESS_RECONSTRUCTED_PATCH"] = jinja2.Template(
+            self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["POSTPROCESS_UPDATED_PATCH"] = jinja2.Template(
+            self._postprocess_updated_patch, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["USE_FLUX"]                 = self._flux_implementation != PDETerms.None_Implementation

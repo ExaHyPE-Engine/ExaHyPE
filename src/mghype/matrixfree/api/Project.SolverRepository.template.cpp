@@ -1,5 +1,8 @@
 #include "SolverRepository.h"
 
+#include "tarch/logging/Log.h"
+
+
 {% for N in NAMESPACE %}
 namespace {{N}} {
 {% endfor %}
