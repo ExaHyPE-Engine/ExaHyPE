@@ -7,17 +7,21 @@
 - \subpage tutorials_exahype2_hitchhikers-guide
 - Numerics tour de force
   - \subpage page_tutorials_exahype2_numerics_finite_volumes
+- Exercises
+  - \subpage tutorials_exahype2_exercises_acoustic_Acoustic
+  - \subpage page_exahype2_tutorials_project
+  - \subpage page_exahype2_tutorials_implementation
+  - \subpage page_exahype2_tutorials_config
+  - \subpage page_exahype2_tutorials_euler
+  - \subpage tutorials_exahype2_exercises_swe_swe
 - Toy problems
   - \subpage page_exahype2_tutorials_toyproblems_acoustic
   - \subpage page_exahype2_tutorials_toyproblems_advection
   - \subpage page_exahype2_tutorials_toyproblems_elastic
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
-- Exercises
-  - \subpage tutorials_exahype2_exercises_acoustic_Acoustic
-  - \subpage page_exahype2_tutorials_euler
-  - \subpage tutorials_exahype2_exercises_swe_swe
 - Adding features	
+  - \subpage tutorials_exahype_gpu
   - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
   - \subpage tutorials_exahype2_additional_mesh_sweeps

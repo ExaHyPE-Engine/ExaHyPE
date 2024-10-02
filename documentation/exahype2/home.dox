@@ -20,6 +20,7 @@
 \li \subpage page_exahype_cpp_kernels
 \li \subpage page_exahype_solvers
 \li \subpage exahype2_enumerator
+\li \subpage benchmarks_peano4_interpolation_restriction_performance
 
 @image html documentation/exahype2/ExaHyPE-logo.jpg
 

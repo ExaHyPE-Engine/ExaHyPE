@@ -1,12 +1,21 @@
 /**
 
-@page page_exahype2_tutorials_toyproblems_acoustic The Acoustic Wave Equation
+@page page_exahype2_tutorials_toyproblems_acoustic The Acoustic Wave Equation: ExaHyPE's solver principles explained
 
-## Define and Build the Project
-Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the acoustic project:
+\tableofcontents 
 
-    python3 acoustic.py
+# Black-box usage of this code
 
+Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build 
+the acoustic project which you find in tutorials/exahype2/toyproblems/acoustic:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../../python
+python3 acoustic.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Ensure you set the PYTHONPATH properly before that.
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
 One file, in particular, is of interest to us now: the file simply named ExaHyPE2-Acoustic-* is the executable for our implementation.
@@ -16,6 +25,9 @@ We will therefore run this executable file by using the following command:
 
 The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
+
+
+# Dive into the script
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
