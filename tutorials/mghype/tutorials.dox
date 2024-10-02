@@ -6,6 +6,7 @@
 
 - \subpage tutorials_mghype_hitchhikers-guide
 - Numerics tour de force
+  - \subpage tutorials_mghype_numerics_continuous_galerkin_poisson
   - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson
   - \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
   - \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
