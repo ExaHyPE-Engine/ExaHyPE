@@ -79,8 +79,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
     is copied 1:1 into the implementation. If you pass in None, then the
     set value so far won't be overwritten.
 
-    Please note that not all options are supported by all solvers. You
-    cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
+    Please note that not all options are supported by all solvers.
 
     This routine should be the very last invoked by the constructor.
     """

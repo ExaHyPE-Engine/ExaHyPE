@@ -407,9 +407,13 @@ void ::exahype2::elastic::ElasticSolver::nonconservativeProduct(
 }
 
 void ::exahype2::elastic::ElasticSolver::algebraicSource(
-  const tarch::la::Vector<Dimensions, double>& x, double t, const double* const Q, double* S
+  const double* const Q,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  double                                       t,
+  double                                       dt,
+  double* S
 ) {
-
   double rho = Q[s.rho];
   double cp  = Q[s.cp];
   double cs  = Q[s.cs];
