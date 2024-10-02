@@ -1,0 +1,206 @@
+include:
+  - .continuous_integration/gitlab-templates.yml
+
+stages:
+  - Build
+  - Test
+  - Tutorials
+  - Applications
+  - Benchmarks
+
+Build:
+  extends: .BeforeScript
+  stage: Build
+  allow_failure: false
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "CFLAGS=\"${CFLAGS}\" CC=${CC} CXXFLAGS=\"${CXXFLAGS}\" CXX=${CXX} LDFLAGS=\"${LDFLAGS}\" ./configure ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} make -j $(nproc --all)
+  artifacts:
+    paths:
+      - ./*
+    exclude:
+      - ".git*"
+      - ".git/**/*"
+    expire_in: 2 hours
+  retry: 1
+
+UnitTests:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+  stage: Test
+  allow_failure: false
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} make check
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Tutorials
+  allow_failure: false
+  parallel:
+    matrix:
+    - tutorial: [euler, acoustic, elastic, advection, swe]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/toyproblems/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_Euler:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Applications
+  allow_failure: false
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/point-explosion/euler; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_Advection:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Applications
+  allow_failure: false
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_Acoustic:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Applications
+  allow_failure: false
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_Elastic:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Applications
+  allow_failure: false
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+      solver_type: [RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveEnclaveRKDG, RusanovGlobalAdaptiveADERDG]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_Kernels:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Benchmarks
+  allow_failure: false
+  parallel:
+    matrix:
+    - kernel: [euler, acoustic, elastic, advection]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks.py -e -fpe -m Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_SBH:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Benchmarks
+  allow_failure: false
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance_testbed.py -et 0.01"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
+
+ExaHyPE2_SBH_Coupled:
+  extends:
+    - .BeforeScript
+    - .SanitiseAutomake
+    - .RunOnlyOnDevelopmentBranches
+  stage: Benchmarks
+  allow_failure: false
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; OMP_NUM_THREADS=1 ./peano_sbh"
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+  retry: 1
