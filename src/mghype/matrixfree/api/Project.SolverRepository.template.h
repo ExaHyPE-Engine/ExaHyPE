@@ -19,7 +19,7 @@ namespace {{N}} {
     {% for SOLVER in SOLVER_INSTANCES %}
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
-    // @todo das sollte weg
+    // @todo remove these aux solvers
     {% for SOLVER in AUX_SOLVER_INSTANCES %}
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
