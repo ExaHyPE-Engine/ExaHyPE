@@ -80,9 +80,11 @@ class AbstractSolverDeclarations:
 
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      double                                                        t,
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const        Q,
+      const tarch::la::Vector<Dimensions, double>&                  x,
+      const tarch::la::Vector<Dimensions, double>&                  h,
+      double                                                        t,
+      double                                                        dt,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*                    S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}

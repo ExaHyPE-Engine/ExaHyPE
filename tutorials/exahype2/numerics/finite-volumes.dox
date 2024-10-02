@@ -5,6 +5,16 @@
 \tableofcontents
 
 
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+This page is a crude run-through through the Finite Volumes numerical scheme as we find it in ExaHyPE.
+It covers the basics without most of the actual maths that you find in textbooks.
+In a first run through the tutorials, it might be reasonable to skip this page, to continue
+with some hands-on examples and then to return to this description once you have a code 
+up and running and want to deep dive into the methodology.
+</div>
+    
+    
 ExaHyPE's Finite Volume scheme is based upon block-structured Cartesian meshes.
 All Finite Volume solvers work with blockstructured AMR: They embed @f$p \times p@f$ patches 
 into the octants (cells of the spacetree). To avoid confusion, I prefer to 
@@ -20,7 +30,7 @@ ExaHyPE is shipped with several update schemes. You can obviously also write you
 numerical scheme manually, or you employ ExaHyPE's kernel domain-specific language (DSL).
 
 
-## Storage scheme
+# Storage scheme
 
 Every patch has to depends upon its neighbouring, i.e. face-connected patches.
 To be able to do this, ExaHyPE passes a  
@@ -53,7 +63,7 @@ Here are some details about the data used within the kernels:
   So the "update one patch" is a special case.
  
 
-## Finite Volumes in a nutshell
+# Finite Volumes in a nutshell
 
 In Finite Volumes, we assume that each voxel holds exactly one value per PDE quantity.
 We assume that the solution is constant within the volume.
@@ -114,7 +124,7 @@ So we have to approximate this term @f$ F(Q) @f$ at the voxel boundary with a nu
 
 
 
-## Rusanov
+# Rusanov
 
 One of the simlest flux is Rusanov:
 
@@ -138,7 +148,7 @@ Again, we cannot evaluate the maximum eigenvalue on the face directly, but we on
 Therefore, we can evaluate the directional eigenvalue in the left and right volume and again take the maximum of those guys.
 
 
-## An implementation 
+# An implementation 
 
 Our discussion of an implementation of the scheme - which can be read as 
 blueprint of our compute kernels in ExaHyPE - is inspired by 

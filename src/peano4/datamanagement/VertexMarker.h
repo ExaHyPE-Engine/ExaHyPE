@@ -107,13 +107,13 @@ private:
 
   int _select;
 
-  [[clang::pack]] std::bitset<TwoPowerD>    _hasBeenRefined;
-  [[clang::pack]] std::bitset<TwoPowerD>    _willBeRefined;
-  [[clang::pack]] std::bitset<TwoPowerD>    _isLocal;
-  [[clang::pack]] std::bitset<TwoPowerD>    _isHanging;
-  [[clang::pack]] std::bitset<TwoPowerD>    _isParentVertexLocal;
-  [[clang::pack]] std::bitset<ThreePowerD>  _isAdjacentCellLocal;
-  [[clang::pack]] std::bitset<TwoPowerD>    _isParentOfSubtree;
+  std::bitset<TwoPowerD>    _hasBeenRefined;
+  std::bitset<TwoPowerD>    _willBeRefined;
+  std::bitset<TwoPowerD>    _isLocal;
+  std::bitset<TwoPowerD>    _isHanging;
+  std::bitset<TwoPowerD>    _isParentVertexLocal;
+  std::bitset<ThreePowerD>  _isAdjacentCellLocal;
+  std::bitset<TwoPowerD>    _isParentOfSubtree;
 
   bool _isParentCellLocal;
 

@@ -117,9 +117,6 @@ class SingleSweep(ADERDG):
             + ".isLastGridSweepOfTimeStep()"
         )
 
-        self._preprocess_reconstructed_patch = ""
-        self._postprocess_updated_patch = ""
-
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
 
@@ -173,7 +170,6 @@ class SingleSweep(ADERDG):
             self.get_name_of_global_instance()
         )
 
-
     def _restrict_face_data_default_guard(self):
         return super(
             SingleSweep, self
@@ -187,20 +183,6 @@ class SingleSweep(ADERDG):
         )._interpolate_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         )
-
-    def set_preprocess_reconstructed_patch_kernel(self, kernel):
-        """
-        Most subclasses will redefine/overwrite this operation as they have
-        to incorporate the kernel into their generated stuff.
-        """
-        self._preprocess_reconstructed_patch += kernel
-        self.create_data_structures()
-        self.create_action_sets()
-
-    def set_postprocess_updated_patch_kernel(self, kernel):
-        self._postprocess_updated_patch += kernel
-        self.create_data_structures()
-        self.create_action_sets()
 
     def _init_dictionary_with_default_parameters(self, d):
         super(

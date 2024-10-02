@@ -75,9 +75,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 x,
-  [[maybe_unused]] double                                                       t,
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const       Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 h,
+  [[maybe_unused]] double                                                       t,
+  [[maybe_unused]] double                                                       dt,
   [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*                   S
 ) {
   {{SOURCE_TERM_IMPLEMENTATION}}

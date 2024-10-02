@@ -60,7 +60,9 @@ void examples::exahype2::ccz4::ADERDGCCZ4::adjustSolution(
 void examples::exahype2::ccz4::ADERDGCCZ4::algebraicSource(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
+  double                                       dt,
   double * __restrict__ S
 ) {
   constexpr int nVars = 59;

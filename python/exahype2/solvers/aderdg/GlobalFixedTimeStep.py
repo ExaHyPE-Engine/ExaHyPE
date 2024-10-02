@@ -19,7 +19,7 @@ class GlobalFixedTimeStep(SingleSweep):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
-        time_step_size,
+        normalised_time_step_size,
         flux=PDETerms.User_Defined_Implementation,
         ncp=PDETerms.None_Implementation,
         eigenvalues=PDETerms.User_Defined_Implementation,
@@ -41,7 +41,7 @@ class GlobalFixedTimeStep(SingleSweep):
             plot_grid_properties,
         )
 
-        self._time_step_size = time_step_size
+        self._normalised_time_step_size = normalised_time_step_size
 
         self.set_implementation(
             flux=flux,
@@ -94,7 +94,7 @@ class GlobalFixedTimeStep(SingleSweep):
         if self._solution_persistent_storage_precision not in computation_precisions:
             computation_precisions.append(self._solution_persistent_storage_precision)
 
-        solver_code_snippets = FixedTimeSteppingCodeSnippets(self._time_step_size)
+        solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size)
         abstract_solver_declarations = AbstractSolverDeclarations(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
