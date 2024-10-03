@@ -166,7 +166,23 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
     {% endif -%}
 
-  
+    /**
+     * To integrate this with tarch, we provide a getter that takes the raw
+     * pointer and constructs a tarch vector with it on the fly.
+     * 
+     */
+    tarch::la::Vector< Cardinality, {{FLOAT_TYPE}} > get() const;
+
+    {{FLOAT_TYPE}} get(int index) const;
+
+    /**
+     * To integrate with tarch, we provide a setter that takes a tarch
+     * vector and puts it in place...
+     */
+    void set( const tarch::la::Vector< Cardinality, {{FLOAT_TYPE}} >& );
+
+    void set(int index, {{FLOAT_TYPE}} value);
+
   
     #ifdef Parallel
     /**
