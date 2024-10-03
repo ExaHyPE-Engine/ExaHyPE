@@ -10,8 +10,10 @@
 - Exercises
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
-  - \subpage page_exahype2_tutorials_euler
-  - \subpage tutorials_exahype2_exercises_swe_swe
+  - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
+  - \subpage tutorials_exahype2_exercises_swe_SWE-bathymetry
+  - \subpage tutorials_exahype2_exercises_euler_Euler-parallel
+  - \subpage tutorials_exahype2_exercises_euler_Euler-gpus
 - Toy problems
   - \subpage page_exahype2_tutorials_toyproblems_acoustic
   - \subpage page_exahype2_tutorials_toyproblems_advection
