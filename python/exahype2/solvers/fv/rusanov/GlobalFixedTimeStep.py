@@ -28,18 +28,27 @@ class GlobalFixedTimeStep(SingleSweep):
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False,
-    pde_terms_without_state=False, overlap=1
+    pde_terms_without_state=False, 
   ):
-    """
-    time_step_size: Float
+    """!
+ 
+    Construct a Finite Volume scheme with a Rusanov solver and fixed time step sizes
+  
+    @param time_step_size: Float
       This is the normalised time step size w.r.t. the coarsest admissible h value. If
       the code employs AMR on top of it and refines further, it will automatically
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
       to max_volume_h.
+       
+    @param normalised_time_step_size: Float
+      Please consult exahype2.solvers.fv.FixedTimeSteppingCodeSnippets. The logic how 
+      this field is translated into a time step size is outsourced into this utility 
+      class.
+      
     """
     super(GlobalFixedTimeStep,self).__init__(name,
                                              patch_size,
-                                             overlap,
+                                             1,    # overlap
                                              unknowns,
                                              auxiliary_variables,
                                              min_volume_h,
@@ -84,7 +93,10 @@ class GlobalFixedTimeStep(SingleSweep):
                          additional_action_set_includes  = "",
                          additional_user_includes        = ""
   ):
-    """
+    """!
+
+    Configure implementation
+  
     If you pass in User_Defined, then the generator will create C++ stubs
     that you have to befill manually. If you pass in None_Implementation, it
     will create nop, i.e., no implementation or defaults. Any other string
