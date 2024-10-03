@@ -55,8 +55,6 @@ ExaHyPE2:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_Euler:
@@ -78,8 +76,6 @@ ExaHyPE2_Euler:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_Advection:
@@ -101,8 +97,6 @@ ExaHyPE2_Advection:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_Acoustic:
@@ -124,8 +118,6 @@ ExaHyPE2_Acoustic:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_Elastic:
@@ -147,8 +139,6 @@ ExaHyPE2_Elastic:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_Kernels:
@@ -169,8 +159,6 @@ ExaHyPE2_Kernels:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_SBH:
@@ -188,8 +176,6 @@ ExaHyPE2_SBH:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
 
 ExaHyPE2_SBH_Coupled:
@@ -207,6 +193,4 @@ ExaHyPE2_SBH_Coupled:
     - job: Build
   dependencies:
     - Build
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "p4"'
   retry: 1
