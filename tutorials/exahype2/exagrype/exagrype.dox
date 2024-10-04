@@ -3,7 +3,7 @@
 @page tutorials_exahype2_applications_exagrype ExaGRyPE
 
 
-@image html two-black-holes.png
+@image html arty.png
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
@@ -53,6 +53,8 @@ evolving variables yields a system of 58 independent variables with
 @f$
 
 
+# Content
+
 - \subpage tutorials_exahype2_applications_exagrype_howto
 - Numerics
   - first-order formulation
@@ -60,6 +62,20 @@ evolving variables yields a system of 58 independent variables with
 - Scenarios and benchmarks
   - \ref benchmarks_exahype2_ccz4_gauge_wave
   - \ref benchmarks_exahype2_ccz4_single_black_hole
+
+
+# Reference papers
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@article{Zhang:2024:ExaGRyPE,
+  author = {Han Zhang and Baojiu Li and Tobias Weinzierl and  Cristian Barrera-Hinojosa},
+  title  = {ExaGRyPE: Numerical General Relativity Solvers Based upon the Hyperbolic PDEs Solver Engine ExaHyPE},
+  journal = {Computer Physics Communications},
+  note    = {arXiv:},
+  year    = 2024
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
  */
 
