@@ -158,8 +158,20 @@ Python 2 is not supported.
 Package Installation
 ----------------------
 
-The easiest way to install the Peano Python packages is to navigate to
-`myPeanoDirectory/` first (you're in the right place if you see the
+Our code base relies on several Python packages. There's a requirements
+specification file which you can use to ensure that all requirements are
+met:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+pip install -r requirements.txt
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where the requirements.txt file resides within Peano's root directory.
+Depending on your system, you might have to use pip3 or install the
+packages in your user space by adding ```--user```.
+
+The easiest way to install the Peano Python packages and to set the Python path directly
+is to navigate to `myPeanoDirectory/` first (you're in the right place if you see the
 `pyproject.toml` file), and then run
 
     pip3 install -e .
@@ -167,6 +179,7 @@ The easiest way to install the Peano Python packages is to navigate to
 to install the packages.
 
 Note:
+- The Python path is set automatically to the respective Peano modules.
 - It is strongly recommended to install the Python packages in editable mode
   (which is what the `-e` flag does). Otherwise, you'll have to re-install the
   packages every time something is changed.
@@ -174,11 +187,11 @@ Note:
   other official Python package distributions. It simply doesn't make sense for
   them to be published this way.
 
-Python Path
+Manually Adding the Python Path
 -------------------
 
-As an alternative to installing the packages, you can modify your Python path. There
-are multiple ways to do so.
+As an alternative to installing the packages, you can modify your Python path manually.
+There are multiple ways to do so.
 The standard way is to set the `PYTHONPATH`, e.g.:
 
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
@@ -192,7 +205,7 @@ Python Dependencies
 
 Peano currently relies on the following Python packages/projects:
 
-- jinja2 for all the templated glue code. Most Linux distributions ship this
+- Jinja2 for all the templated glue code. Most Linux distributions ship this
   one as
 
     python3-jinja2
@@ -221,7 +234,7 @@ Peano currently relies on the following Python packages/projects:
   href="https://github.com/joergbuchwald/VTUinterface"> ``on GitHub``</a>.
 
 
-Fortran
+Fortran (Deprecated)
 ==================
 
 If you don't use Fortran in your own code, ignore this section.
