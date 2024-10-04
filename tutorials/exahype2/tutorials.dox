@@ -11,9 +11,7 @@
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
   - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
-  - \subpage tutorials_exahype2_exercises_swe_SWE-bathymetry
-  - \subpage tutorials_exahype2_exercises_euler_Euler-parallel
-  - \subpage tutorials_exahype2_exercises_euler_Euler-gpus
+  - \subpage tutorials_exahype2_exercises_swe_SWE-aderdg
 - Toy problems
   - \subpage page_exahype2_tutorials_toyproblems_acoustic
   - \subpage page_exahype2_tutorials_toyproblems_advection
