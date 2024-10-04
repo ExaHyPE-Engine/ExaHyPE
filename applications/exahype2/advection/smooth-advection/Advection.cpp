@@ -32,10 +32,6 @@ void applications::exahype2::advection::Advection::boundaryConditions(
   double                                        t,
   int                                           normal
 ) {
-#ifdef GPUOffloadingOff
-  nonCriticalAssertion4(Qinside[s::rho] > 1e-12, x, t, normal, Qinside[s::rho]);
-#endif
-
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
   }

@@ -10,15 +10,18 @@ if __name__ == "__main__":
 
     my_parser = advection.setup_parser()
     my_parser.set_defaults(
-        solver="RusanovGlobalAdaptiveFV",
+        solver="RusanovGlobalAdaptiveADERDG",
         dimensions=2,
         end_time=3.0,
         width="[1.0, 1.0, 1.0]",
         offset="[0.0, 0.0, 0.0]",
         periodic_boundary_conditions_x = True,
-        min_depth=1,
-        amr_levels=5,
+        min_depth=4,
+        amr_levels=0,
         patch_size=16,
+        rk_order = 2,
+        dg_order = 3,
+        number_of_snapshots = 20,
         peano_dir="../../../../",
     )
     my_args = my_parser.parse_args()
