@@ -1,6 +1,6 @@
 /**
 
-@page page_exahype_solvers_enclave_solvers Enclave and optimistic solvers
+@page documentation_exahype2_solvers_enclave_solvers Enclave and optimistic solvers
 
 For most solver variants, I provide plain solvers which basically map each
 algorithm step onto one mesh sweep. For Runge-Kutta, we do, for example, one
