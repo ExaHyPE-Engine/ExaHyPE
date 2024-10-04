@@ -2,6 +2,8 @@
 
 @page page_exahype_gpu GPU support (and aggressive vectorisation)
 
+@todo Needs revision. Currently some of this stuff is already covered by the tutorials ,where it belongs. This should be more about the interna.
+
 Before you dive into this technical description of how GPU offloading (and 
 very aggressive vectorisation) work, it makes sense to read through the 
 @ref tutorials_exahype_gpu "tutorial on GPU offloading".  

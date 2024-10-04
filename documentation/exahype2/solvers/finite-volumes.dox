@@ -1,6 +1,6 @@
 /** 
 
-@page page_exahype_solvers_finite_volumes Finite Volumes
+@page documentation_exahype2_solvers_finite_volumes Finite Volumes
 
 
 ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
@@ -9,7 +9,7 @@ limiters by @ref tutorials_exahype2_coupling "coupling them to higher order sche
 Some hands-on descriptions of the numerics can be found in @ref page_tutorials_exahype2_numerics_finite_volumes "the tutorial section".
 
 
-@todo Das sollte viel mehr Projektionen enthalten
+@todo Das sollte viel mehr Projektionen enthalten, also wie die Realisiert sind
 
 
 ## Data structures
