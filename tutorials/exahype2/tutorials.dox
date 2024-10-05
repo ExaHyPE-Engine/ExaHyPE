@@ -18,16 +18,16 @@
   - \subpage page_exahype2_tutorials_toyproblems_elastic
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
+- \subpage tutorials_exahype2_design-patterns
+- Applications built on top of Peano
+  - \subpage tutorials_exahype2_applications_exagrype
+  - \subpage tutorials_exahype2_applications_exaseis
 - Adding features	
   - \subpage tutorials_exahype_gpu
   - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
   - \subpage tutorials_exahype2_additional_mesh_sweeps
 
-
-- More elegant formulations: symbolic names in C++, kernel builder, and SymPy
-- RKDG and ADER-DG
-- Parallelisation
 
 
 ## How to add your own tutorial
