@@ -1,0 +1,81 @@
+/**
+
+@page tutorials_exahype2_applications_exagrype ExaGRyPE
+
+
+@image html arty.png
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+The ExaGRyPE extension solves the Einstein equations
+
+@f{eqnarray*}{
+    R_{ab}-&\frac{1}{2} g_{ab}R+\nabla_{a} Z_{b}+\nabla_{b} Z_{a}-g_{ab}\nabla^c
+    Z_c \\
+    &-\kappa_{1}[n_{a} Z_{b}+n_{b} Z_{a}+\kappa_{2} g_{ab} n_{c}
+    Z^{c}]  =  8\pi T_{ab}
+@f}
+
+in various formulations. Noabely, we transfer it into 
+
+@f$
+  \partial_t Q +\nabla_i F_i(Q) +B_i (Q) \nabla_i Q = S(Q).
+@f$
+
+Collecting all derived quantities and the helper variables $b^i$ from the gauge
+condition yields an evolving system over 24 variables
+
+@f$
+  Q(t) = 
+  \left( \tilde{\gamma}_{ij}, \alpha, \beta^i, \phi, \tilde{A}_{ij},K, \Theta,
+  \hat{\Gamma}^i, b^i \right)(t),
+@f$
+
+with a first-order time-derivative and second-order spatial derivatives defined in the 
+hypersurface. Let
+
+@f$
+   A_{i}:=\partial_{i} \alpha, \ B_{k}^{i}:=\partial_{k} \beta^{i}, \ D_{k i
+   j}:=\frac{1}{2} \partial_{k} \tilde{\gamma}_{i j}, \
+   P_{i}:=\partial_{i} \phi
+@f$
+
+
+be auxiliary variables. Adding them to the system and treating them as further
+evolving variables yields a system of 58 independent variables with 
+
+@f$
+  Q(t) = 
+  \left(
+   \tilde{\gamma}_{ij}, \alpha, \beta^i, \phi, \tilde{A}_{ij},K, \Theta, \hat{\Gamma}^i, b^i, A_k, B^i_k,
+    D_{kij}, P_k \right).
+@f$
+
+
+# Content
+
+- \subpage tutorials_exahype2_applications_exagrype_howto
+- Numerics
+  - first-order formulation
+  - second-order formulation
+- Scenarios and benchmarks
+  - \ref benchmarks_exahype2_ccz4_gauge_wave
+  - \ref benchmarks_exahype2_ccz4_single_black_hole
+
+
+# Reference papers
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@article{Zhang:2024:ExaGRyPE,
+  author = {Han Zhang and Baojiu Li and Tobias Weinzierl and  Cristian Barrera-Hinojosa},
+  title  = {ExaGRyPE: Numerical General Relativity Solvers Based upon the Hyperbolic PDEs Solver Engine ExaHyPE},
+  journal = {Computer Physics Communications},
+  note    = {arXiv:},
+  year    = 2024
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ */
+

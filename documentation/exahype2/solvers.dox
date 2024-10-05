@@ -1,0 +1,28 @@
+/**
+
+@page page_exahype_solvers ExaHyPE 2 solvers
+
+\tableofcontents
+
+
+# Finite Volume solvers
+
+- exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
+- exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
+- exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+- exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
+
+# Runge-Kutta Finite Differences solvers
+
+- exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+- exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
+
+# Runge-Kutta Discontinuous Galerkin solvers
+
+
+# ADER-DG solvers
+
+
+  */
+  
+  
