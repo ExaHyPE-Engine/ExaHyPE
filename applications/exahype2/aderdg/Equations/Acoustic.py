@@ -16,7 +16,7 @@ class Acoustic(Equations):
 
   def eigenvalues(self):
     return """
-  constexpr double c = std::sqrt(""" + str(self.K0) + "/" + str(self.rho) + """);
+  const double c = std::sqrt(""" + str(self.K0) + "/" + str(self.rho) + """);
   return c;
 """
 

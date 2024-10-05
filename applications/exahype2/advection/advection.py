@@ -19,8 +19,8 @@ class Advection:
         "RusanovGlobalFixedRKDG": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
         "RusanovGlobalAdaptiveEnclaveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-        "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep,
+        "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
+        "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
     }
 
     def setup_parser(self):

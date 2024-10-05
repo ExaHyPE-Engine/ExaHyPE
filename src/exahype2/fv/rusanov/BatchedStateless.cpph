@@ -14,10 +14,10 @@ namespace exahype2::fv::rusanov::internal {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(
-    CellData&                                      patchData,
-    peano4::utils::LoopPlacement                 loopParallelism,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
-    const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+    CellData<double, double>&                      patchData,
+    peano4::utils::LoopPlacement                   loopParallelism,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
     const TempDataEnumeratorType&                  fluxEnumerator,
     const TempDataEnumeratorType&                  ncpEnumerator,
     const TempDataEnumeratorType&                  eigenvalueEnumerator,
@@ -390,7 +390,7 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovBatchedCallStackStateless(
-  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism
+  CellData<double, double>&patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovBatchedCallStackStateless()");
@@ -458,7 +458,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovBatchedCallStackStateless(CellData& patchData, peano4::utils::LoopPlacement loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovBatchedCallStackStateless(CellData<double, double>&patchData, peano4::utils::LoopPlacement loopParallelism) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovBatchedCallStackStateless()");
 
@@ -522,7 +522,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless(CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless(CellData<double, double>&patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovBatchedHeapStateless()");
 
@@ -619,7 +619,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless(CellData& patchData, peano4::utils::LoopPlacement loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless(CellData<double, double>&patchData, peano4::utils::LoopPlacement loopParallelism) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovBatchedHeapStateless()");
 

@@ -73,12 +73,13 @@ namespace exahype2 {
    * hence makes the file compile, but in all tests that I ran the code then
    * did crash.
    */
+  template<typename inType=double, typename outType=double>
   struct CellData {
     /**
      * QIn may not be const, as some kernels delete it straightaway once
      * the input data has been handled.
      */
-    double**                                QIn;
+    inType**                                QIn;
     tarch::la::Vector<Dimensions,double>*   cellCentre;
     tarch::la::Vector<Dimensions,double>*   cellSize;
 
@@ -112,7 +113,7 @@ namespace exahype2 {
     /**
      * Out values.
      */
-    double**   QOut;
+    outType**  QOut;
 
     /**
      * Out values.
@@ -130,12 +131,12 @@ namespace exahype2 {
      * read it later.
      */
     CellData(
-      double*                                     QIn_,
+      inType*                                     QIn_,
       const tarch::la::Vector<Dimensions,double>& cellCentre_,
       const tarch::la::Vector<Dimensions,double>& cellSize_,
       double                t_,
       double                dt_,
-      double*               QOut_,
+      outType*              QOut_,
       tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
       int                   targetDevice_   = tarch::accelerator::Device::HostDevice
     );
@@ -146,10 +147,14 @@ namespace exahype2 {
       int                   targetDevice   = tarch::accelerator::Device::HostDevice
     );
 
-    CellData(const CellData& copy) = delete;
+    CellData(const CellData<inType,outType>& copy) = delete;
 
     ~CellData();
 
     std::string toString() const;
   };
+
+//  using CellData = CellData<double, double>;
 }
+
+#include "CellData.cpph"

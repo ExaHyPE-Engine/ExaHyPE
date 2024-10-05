@@ -36,6 +36,11 @@
     - echo $APPTAINER_BINDDIR
     - echo $APPTAINER_IMAGEDIR
     - echo $CCACHE_DIR
+    - echo $CC
+    - echo $CXX
+    - echo $CFLAGS
+    - echo $CXXFLAGS
+    - echo $LDFLAGS
     - echo $CONFIGURATION_OPTIONS
 
 .SanitiseAutomake:
@@ -48,3 +53,12 @@
   before_script:
     - python3 .continuous_integration/sanitise_path.py build/CTestTestfile.cmake build/CMakeCache.txt
 
+.RunOnlyOnDevelopmentBranches:
+  extends: .Tags
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "p4"'
+    - if: '$CI_COMMIT_BRANCH == "exahype"'
+    - if: '$CI_COMMIT_BRANCH == "applications"'
+    - if: '$CI_COMMIT_BRANCH == "infrastructure"'
+    - if: '$CI_COMMIT_BRANCH == "multigrid"'
+    - if: '$CI_COMMIT_BRANCH == "particles"'

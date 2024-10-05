@@ -49,17 +49,17 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     point,
-	bool                                         gridIsConstructed
+  {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  //const tarch::la::Vector<Dimensions, int>&     point,
+  bool                                          gridIsConstructed
 ) {
-  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
+  logTraceInWith2Arguments("initialCondition(...)", x, gridIsConstructed);
 
   // @todo Implement your stuff here
 
-  logTraceOut( "initialCondition(...)" );
+  logTraceOut("initialCondition(...)");
 }
 {% endif %}
 
@@ -67,8 +67,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   int                                          normal
 ){
@@ -85,15 +85,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double t,
-  const double dt, 
+  const double dt,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
-  const int direction, 
-  bool isBoundaryFace, 
-  int faceIndex) {
-
-  // @todo Implement your stuff here    
-
+  const int direction,
+  bool isBoundaryFace,
+  int faceIndex
+) {
+  // @todo Implement your stuff here
 }
 {% endif %}
 

@@ -13,26 +13,11 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 
-
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                           = kernels::{{POLYNOMIAL_TYPE}}::weights;
-double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                             = kernels::{{POLYNOMIAL_TYPE}}::nodes;
-double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                               = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
-double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                              = kernels::{{POLYNOMIAL_TYPE}}::dudx;
-double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                               = kernels::{{POLYNOMIAL_TYPE}}::iK1;
-double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                          = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
-double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                            = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
-double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                                 = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                  = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative   = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
-
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-{{BASIS_INITIALIZERS | indent(2,True) }}
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
@@ -47,137 +32,56 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
-  {% if USE_KERNEL_GENERATOR==True %}
-  //initialise nodes, weights and matrices for use of the kernels
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}    
-  generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
-  generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
+  // Initialise nodes, weights and matrices for use of the kernels.
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
   {% endfor %}
-  {% endif %}
-  
-  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
-  double maxDSize = std::numeric_limits<double>::min();
-  double minDSize = std::numeric_limits<double>::max();
-  tarch::la::Vector<Dimensions, double> sizes = {{NAMESPACE | join("::")}}::DomainSize;
-  
-  for(int i=0; i<Dimensions; i++){
-    if(sizes[i]>maxDSize){
-      maxDSize = sizes[i];
-    }
-    if(sizes[i]<minDSize){
-      minDSize = sizes[i];
-    }    
-  }
-  
-  int depth = 0;
-  
-  //finding coarsest possible Mesh level
-  while(maxDSize>MaxAdmissibleCellH){
-    depth += 1;
-    maxDSize /= 3.0;
-  }
-  
-  realCoarsestMeshSize = maxDSize;
-  coarsestMeshLevel = depth;  
-  
-  depth = 0;
-  while(minDSize>MinAdmissibleCellH){
-    depth += 1;
-    minDSize /= 3.0;
-  }
-  
-  maxAdaptiveMeshLevel = depth;
-  
-
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
-
   {{DESTRUCTOR_IMPLEMENTATION}}
 
-  {% if USE_KERNEL_GENERATOR==True %}
-  //free the generated nodes, weights and matrices
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
-  generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
-  generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
+  // Free the generated nodes, weights and matrices.
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
   {% endfor %}
-  {% endif %}
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
   return getMaxCellSize();
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
 }
-
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDomainSize() const {
-  return {{NAMESPACE | join("::")}}::DomainSize;
-
-}
-
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDomainOffset() const {
-  return {{NAMESPACE | join("::")}}::DomainOffset;
-}
-
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCoarsestMeshSize() const {
-  return realCoarsestMeshSize;
-}
-
-
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCoarsestMeshLevel() const {
-  return coarsestMeshLevel;
-}
-
-
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaximumAdaptiveMeshLevel() const {
-  return maxAdaptiveMeshLevel;
-}
-
-
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaximumAdaptiveMeshDepth() const {
-  return (maxAdaptiveMeshLevel- coarsestMeshLevel);
-}
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _minCellHThisTimeStep : _minCellH;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _maxCellHThisTimeStep : _maxCellH;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
   return _minTimeStepSize;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return _maxTimeStepSize;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double cellSize) {
   tarch::multicore::Lock lock(_semaphore);
@@ -233,26 +137,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 }
 {% endif %}
 
-
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-    {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    const tarch::la::Vector<Dimensions,double>&  x,
-    const tarch::la::Vector<Dimensions,double>&  h,
-    const tarch::la::Vector<Dimensions,int>&     index,
-    bool                                         gridIsConstructed
+  {{SOLUTION_STORAGE_PRECISION}}* __restrict__  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  //const tarch::la::Vector<Dimensions, int>&      index,
+  bool                                          gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
 {% endif %}
 
-
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   int                                          normal
 ) {
@@ -279,11 +181,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const double t,
-      const double dt, 
+      const double dt,
       const tarch::la::Vector<Dimensions, double>& x,
       const tarch::la::Vector<Dimensions, double>& h,
-      const int direction, 
-      bool isBoundaryFace, 
+      const int direction,
+      bool isBoundaryFace,
       int faceIndex) {
   {{RIEMANN_SOLVER_IMPLEMENTATION}}
 }
@@ -293,28 +195,21 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
 }
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   _solverState = SolverState::GridInitialisation;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
-
-	if ( _solverState==SolverState::GridInitialisation ) {
+  if (_solverState==SolverState::GridInitialisation) {
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
@@ -327,27 +222,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::GridInitialisation;
       break;
     case SolverState::GridInitialisation:
-      _solverState = SolverState::Prediction;
+      _solverState = SolverState::InitialPrediction;
       break;
     case SolverState::Suspended:
-      _solverState = SolverState::Prediction;
+{% if USE_SEPARATE_SWEEPS is sameas True %}
+      _solverState = SolverState::InitialPrediction;
+{% else %}
+      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
+{% endif %}
       break;
     case SolverState::Plotting:
-      _solverState = SolverState::Prediction;
+      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
       break;
-    case SolverState::Prediction:
+    case SolverState::InitialPrediction:
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
-        SolverState::PredictionOnHangingCells : _solverState = SolverState::Correction;
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::TimeStep;
       break;
     case SolverState::PredictionOnHangingCells:
-      _solverState = SolverState::Correction;
+      _solverState = SolverState::TimeStep;
       break;
-    case SolverState::Correction:
-      _solverState = SolverState::Prediction;
+    case SolverState::TimeStep:
+{% if USE_SEPARATE_SWEEPS is sameas True %}
+      _solverState = SolverState::InitialPrediction;
+{% else %}
+      _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::TimeStep;
+{% endif %}
       break;
   }
 
-  if (_solverState==SolverState::Prediction) {
+  {{START_TIME_STEP_IMPLEMENTATION}}
+
+  if (isFirstGridSweepOfTimeStep()) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
 
@@ -370,114 +276,107 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
     _cellUpdates    = 0;
-
   }
-
-  {{START_TIME_STEP_IMPLEMENTATION}}
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("startTimeStep()", "phase " + toString(_solverState));
+    logInfo("startTimeStep(...)", "phase " + toString(_solverState));
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-	if ( isLastGridSweepOfTimeStep() ) {
+  if (isLastGridSweepOfTimeStep()) {
+    #ifdef Parallel
+    double newMinTimeStamp    = _minTimeStampThisTimeStep;
+    double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
+    double newMinCellH        = _minCellHThisTimeStep;
+    double newMaxCellH        = _maxCellHThisTimeStep;
+    double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
+    double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  #ifdef Parallel
-  double newMinTimeStamp    = _minTimeStampThisTimeStep;
-  double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
-  double newMinCellH        = _minCellHThisTimeStep;
-  double newMaxCellH        = _maxCellHThisTimeStep;
-  double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
-  double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
+    double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
-  double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
-  double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+    int newCellUpdates = _cellUpdates;
 
-  int newCellUpdates = _cellUpdates;
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinTimeStamp,
+        &_minTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxTimeStamp,
+        &_maxTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStamp,
-      &_minTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
-      &_maxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinCellH,
+        &_minCellHThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxCellH,
+        &_maxCellHThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinCellH,
-      &_minCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxCellH,
-      &_maxCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinTimeStepSize,
+        &_minTimeStepSizeThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxTimeStepSize,
+        &_maxTimeStepSizeThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStepSize,
-      &_minTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newLocalMinTimeStamp,
+        &_localMinTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newLocalMaxTimeStamp,
+        &_localMaxTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMinTimeStamp,
-      &_localMinTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMaxTimeStamp,
-      &_localMaxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newCellUpdates,
+        &_cellUpdates,
+        1, MPI_INT,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    #endif
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newCellUpdates,
-      &_cellUpdates,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  #endif
+    if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+      _minTimeStampThisTimeStep = 0.0;
+    }
+    if (_maxTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+      _maxTimeStampThisTimeStep = 0.0;
+    }
 
-		if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-			_minTimeStampThisTimeStep = 0.0;
-		}
-		if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-			_maxTimeStampThisTimeStep = 0.0;
-		}
-
-  {{FINISH_TIME_STEP_IMPLEMENTATION}}
-
+    {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStamp,
@@ -489,10 +388,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   _solverState = SolverState::Plotting;
 }
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
@@ -502,44 +398,36 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
-    case SolverState::Prediction:
-      return "prediction";
-      break;
+    case SolverState::InitialPrediction:
+      return "initial-prediction";
     case SolverState::PredictionOnHangingCells:
-      return "prediction on hanging cells";
-      break;
-    case SolverState::Correction:
-			return "correction";
-      break;
+      return "prediction-on-hanging-cells";
+    case SolverState::TimeStep:
+      return "time-step";
     }
   return "<undef>";
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return (_solverState!=SolverState::Prediction
-      and _solverState!=SolverState::PredictionOnHangingCells);
+  return _solverState==SolverState::InitialPrediction or _solverState==SolverState::GridInitialisation or
+   ( (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? _solverState==SolverState::PredictionOnHangingCells : _solverState==SolverState::TimeStep);
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Prediction;
+{% if USE_SEPARATE_SWEEPS is sameas True %}
+  return _solverState==SolverState::InitialPrediction;
+{% else %}
+  return ( _solverState==SolverState::TimeStep
+        or _solverState==SolverState::InitialPrediction);
+{% endif %}
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Correction;
+  return _solverState==SolverState::TimeStep;
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
-
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

@@ -59,20 +59,20 @@ namespace exahype2 {
        *   evaluated at all.
        */
       void timeStep_patchwise_heap_functors(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        double                  KOSigma,
-        bool                    evaluateFlux,
-        bool                    evaluateDifferentialSource, //for ncp
-        bool                    evaluateAlgebraicSource, //real source
-        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        ::exahype2::CellData<double, double>& patchData,
+        int                                   numberOfGridCellsPerPatchPerAxis,
+        int                                   haloSize,
+        int                                   unknowns,
+        int                                   auxiliaryVariables,
+        double                                KOSigma,
+        bool                                  evaluateFlux,
+        bool                                  evaluateDifferentialSource, //for ncp
+        bool                                  evaluateAlgebraicSource, //real source
+        bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
         DifferentialSourceTermVariant variant,
-        Flux                    flux,
-        NonconservativeProduct  DifferentialSource,
-        Source                  AlgebraicSource
+        Flux                          flux,
+        NonconservativeProduct        DifferentialSource,
+        Source                        AlgebraicSource
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -93,11 +93,11 @@ namespace exahype2 {
        *   can set them to anything you like. The function doesn't care.
        */
       void reconstruct_first_derivatives(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
+        ::exahype2::CellData<double, double>& patchData,
+        int                                   numberOfGridCellsPerPatchPerAxis,
+        int                                   haloSize,
+        int                                   unknowns,
+        int                                   auxiliaryVariables
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -113,13 +113,13 @@ namespace exahype2 {
         typename TempDataEnumerator
       >
       static void timeStep_batched_heap_static_calls(
-        ::exahype2::CellData&   patchData,
-        double                  KOSigma,
-        bool                    evaluateFlux,
-        bool                    evaluateDifferentialSource, //for ncp
-        bool                    evaluateAlgebraicSource, //real source
-        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-        DifferentialSourceTermVariant variant
+        ::exahype2::CellData<double, double>& patchData,
+        double                                KOSigma,
+        bool                                  evaluateFlux,
+        bool                                  evaluateDifferentialSource, //for ncp
+        bool                                  evaluateAlgebraicSource, //real source
+        bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant         variant
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -136,13 +136,13 @@ namespace exahype2 {
         typename TempDataEnumerator
       >
       static void timeStep_patchwise_heap_static_calls(
-        ::exahype2::CellData&   patchData,
-        double                  KOSigma,
-        bool                    evaluateFlux,
-        bool                    evaluateDifferentialSource, //for ncp
-        bool                    evaluateAlgebraicSource, //real source
-        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-        DifferentialSourceTermVariant variant
+        ::exahype2::CellData<double, double>& patchData,
+        double                                KOSigma,
+        bool                                  evaluateFlux,
+        bool                                  evaluateDifferentialSource, //for ncp
+        bool                                  evaluateAlgebraicSource, //real source
+        bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant         variant
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -159,13 +159,13 @@ namespace exahype2 {
         typename TempDataEnumerator
       >
       static void timeStep_batched_heap_multicore_static_calls(
-        ::exahype2::CellData&   patchData,
-        double                  KOSigma,
-        bool                    evaluateFlux,
-        bool                    evaluateDifferentialSource, //for ncp
-        bool                    evaluateAlgebraicSource, //real source
-        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
-        DifferentialSourceTermVariant variant
+        ::exahype2::CellData<double, double>& patchData,
+        double                                KOSigma,
+        bool                                  evaluateFlux,
+        bool                                  evaluateDifferentialSource, //for ncp
+        bool                                  evaluateAlgebraicSource, //real source
+        bool                                  copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant         variant
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))

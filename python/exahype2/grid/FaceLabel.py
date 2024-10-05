@@ -17,7 +17,7 @@ class UpdateFaceLabel(ActionSet):
    SetLabels is an action set which is automatically merged into all ExaHyPE2
    steps by the project. There's nothing for the user solvers to be done here.
    
-   There are four different fields per face:
+   There are four fields which have a value per side of the face:
    
    - Updated: Boolean[2]
      Shows if the corresponding adjacent cell (left vs right) has performed a
@@ -31,6 +31,22 @@ class UpdateFaceLabel(ActionSet):
    - OldTimeStamp: Double[2]
      Time stamp of previous time step. The old time stamp is required for the
      in-time interpolation, e.g.
+
+  In addition there are three fields that are in common to both faces:
+
+   - Boundary: Boolean
+     Shows whether the cell is at a domain boundary. This is set upon creation
+     by checking one's position in relation to the domain boundaries.
+   - IsHanging: Boolean
+     This states whether the face is a hanging face, i.e. whether the face
+     is adjacent to a cell with a coarser refinement level and therefore there
+     is no face directly "across" from this one for it to merge with.
+   - AboveHanging: Boolean
+     This states whether the face is above a hanging face, i.e. whether the
+     face is adjacent to a cell with a finer refinement level and therefore
+     the face directly "across" from this one will likely contain no useful
+     information, meaning said information must be obtained from the finer
+     level underneath this one.
      
    ## Initialisation
    
@@ -41,6 +57,30 @@ class UpdateFaceLabel(ActionSet):
    in return benefits if it is not (properly) initialised, as it then is 
    simpler to spot inconsistencies and missing data updates.
    
+   ## IsHanging and AboveHanging
+   
+   IsHanging is a redundant information. If a face is hanging, it is not held
+   persistently. Consequently, we get a createHangingFace() in each and every
+   mesh traversal and hence know implicitly that the face is hanging. The flag
+   therefore replicates information which is implicitly available anyway.
+   
+   AboveHanging is stored persistently. At the moment, it is only used by
+   ADER-DG solvers. Most solvers should be able to work without this additional
+   information. For ADER-DG, it is used to ensure that Riemann-solves
+   are performed on fine faces and not on coarse faces, as the later would
+   cause unphysical transfer of information which lead to uncontrolled
+   oscillations.
+   
+   AboveHanging is historical information. If the mesh is just about to refine,
+   then the flag might not be set even though we literally just add new 
+   "subfaces". If a mesh coarsens, the flag might be set, even though we 
+   literally just remove the adjacen fine grid cells. If you need to know what
+   happened in this very iteration, you can read out the flag NewAboveHanging,
+   but this one is only valid in touchFaceLastTime(), i.e. while we ascend in
+   the tree.
+   
+   Please consult peano4::datamanagement::FaceMarger::hasBeenRefined() in this
+   context, too.
   
   """
   def __init__(self, solver_name):
@@ -59,6 +99,7 @@ class UpdateFaceLabel(ActionSet):
 
   _Template_TouchFaceFirstTime = """
   fineGridFace{{FACE_LABEL_NAME}}.setUpdated( false );
+  fineGridFace{{FACE_LABEL_NAME}}.setNewAboveHanging( false );
 """
 
 
@@ -75,6 +116,7 @@ class UpdateFaceLabel(ActionSet):
   fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( false );
   fineGridFace{{FACE_LABEL_NAME}}.setAboveHanging( false );
+  fineGridFace{{FACE_LABEL_NAME}}.setNewAboveHanging( false );
   fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
@@ -86,7 +128,7 @@ class UpdateFaceLabel(ActionSet):
   _Template_CreateHangingFace = """
   logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( true );
-  coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setAboveHanging( true );
+  coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setNewAboveHanging( true );
   logTraceOutWith1Argument( "createHangingFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """  
   
@@ -95,6 +137,13 @@ class UpdateFaceLabel(ActionSet):
 """  
 
 
+  _Template_TouchFaceLastTime = """
+  logTraceInWith1Argument( "touchFaceLastTime(...)", marker.toString() );
+  fineGridFace{{FACE_LABEL_NAME}}.setAboveHanging( fineGridFace{{FACE_LABEL_NAME}}.getNewAboveHanging() );
+  logTraceOutWith1Argument( "touchFaceLastTime(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
+"""  
+
+  
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
@@ -115,6 +164,8 @@ class UpdateFaceLabel(ActionSet):
       result = jinja2.Template( self._Template_CreateHangingFace ).render( **d )
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template( self._Template_TouchFaceFirstTime ).render( **d )
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
+      result = jinja2.Template( self._Template_TouchFaceLastTime ).render( **d )
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
       result = jinja2.Template( self._Template_DestroyHangingFace ).render( **d )
       
@@ -146,6 +197,7 @@ def create_face_label(solver_name):
   result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
   result.data.add_attribute( dastgen2.attributes.Boolean("IsHanging") )
   result.data.add_attribute( dastgen2.attributes.Boolean("AboveHanging") )
+  result.data.add_attribute( dastgen2.attributes.Boolean("NewAboveHanging") )
   result.data.add_attribute( dastgen2.attributes.BooleanArray("Updated","2",compress=True) )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
@@ -156,7 +208,9 @@ def create_face_label(solver_name):
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
-        _Boundary = _Boundary or neighbour._Boundary;
+
+        _Boundary     = _Boundary or neighbour._Boundary;
+        _AboveHanging = _AboveHanging or neighbour._AboveHanging;
   
         const int normal         = marker.getSelectedFaceNumber() % Dimensions;
         const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;

@@ -14,10 +14,12 @@
 {% for subdirectory in SUBDIRECTORIES %}
 #include "{{subdirectory}}repositories/DataRepository.h"
 #include "{{subdirectory}}repositories/StepRepository.h"
+#include "{{subdirectory}}repositories/SolverRepository.h"
 {% endfor -%}
 {% else %}
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
+#include "repositories/SolverRepository.h"
 {%- endif %}
 
 #include "tarch/UnitTests.h"
@@ -61,7 +63,7 @@ bool selectNextAlgorithmicStep() {
 
   static bool plotThenExit = false;
 
-  const int MaxIterations = 5000;
+  const int MaxIterations = {{MAXITERATIONS}};
 
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
@@ -140,7 +142,7 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::Plot:
         {
           if ( plotThenExit ) {
-            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " steps");
+            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " sweeps");
             continueToSolve = false;
           }
           else 
@@ -275,7 +277,7 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("multigrid.log-filter")) {
+  if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("mghype.log-filter")) {
     logWarning(
       "main()", "no multigrid.log-filter file found or file has been corrupted. Use default logging configuration"
     );
