@@ -5,16 +5,6 @@ set(META_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on d
 set(META_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
 set(META_AUTHOR_DOMAIN "www.peano-framework.org")
 
-# This has to be done before the project is created and before any languages are added.
-# Adding a subdirectory does not help here and needs to be explicitly given with the path(cmake/...),
-# Because this file is needed by CMake itself and not by the project.
-# We need to override specific compiler flags initialized by CMake, to
-# match them exactly with the flags defined in Peano Automake build system.
-# More details can be found in the cmake/CustomMakeRules.cmake file.
-# For example, the Peano release optimisation flag is -O3 (and -DNDEBUG in definitions);
-# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
-set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
-
 project(${META_PROJECT_NAME}
   DESCRIPTION ${META_PROJECT_DESCRIPTION}
   HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
