@@ -12,14 +12,6 @@ if(ENABLE_LOADBALANCING)
   add_subdirectory(loadbalancing)
 endif()
 
-if(ENABLE_MULTIPRECISION)
-  add_subdirectory(multiprecision)
-endif()
-
 if(ENABLE_PARTICLES)
   add_subdirectory(particles)
 endif()
-
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/toolbox"
-)

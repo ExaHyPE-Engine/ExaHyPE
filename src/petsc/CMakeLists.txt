@@ -10,14 +10,10 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
   string(TOUPPER ${mode} mode_upper)
 
   add_library(PETSc_${mode_lower} STATIC)
-  #display_header("Creating Makefile of PETSc_${mode_lower}")
-
   target_sources(PETSc_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-  target_include_directories(PETSc_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-  target_compile_definitions(PETSc_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
-  target_link_options(PETSc_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
-  target_link_libraries(PETSc_${mode_lower} PRIVATE project_warnings)
-  target_compile_options(PETSc_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
+  target_link_libraries(PETSc_${mode_lower} PRIVATE ProjectOptions)
+  target_compile_definitions(PETSc_${mode_lower} PRIVATE ${PEANO_${mode_upper}_DEFINITIONS})
+  target_compile_options(PETSc_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
   install(TARGETS PETSc_${mode_lower}
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
@@ -31,10 +27,6 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
     PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
     )
 endforeach()
-
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/petsc"
-)
 
 foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
   install(

@@ -10,15 +10,10 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
   string(TOUPPER ${mode} mode_upper)
 
   add_library(Tarch_${mode_lower} STATIC)
-  #display_header("Creating Makefile of Tarch_${mode_lower}")
-
   target_sources(Tarch_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-  target_include_directories(Tarch_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-  target_compile_definitions(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
-  target_link_options(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
-  target_link_libraries(Tarch_${mode_lower} PUBLIC project_options)
-  target_compile_options(Tarch_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
-  target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
+  target_link_libraries(Tarch_${mode_lower} PRIVATE ProjectOptions)
+  target_compile_definitions(Tarch_${mode_lower} PRIVATE ${PEANO_${mode_upper}_DEFINITIONS})
+  target_compile_options(Tarch_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
   install(TARGETS Tarch_${mode_lower}
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
@@ -32,10 +27,6 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
     PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
   )
 endforeach()
-
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/tarch"
-)
 
 foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
   install(

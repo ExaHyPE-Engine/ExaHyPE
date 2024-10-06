@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.20.5)
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+cmake_minimum_required(VERSION 3.21)
 
 set(META_PROJECT_NAME "Peano")
 set(META_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
@@ -36,24 +38,9 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(PEANO_COMPILE_DEFINITIONS "" CACHE INTERNAL "")
-set(PEANO_COMPILE_OPTIONS "" CACHE INTERNAL "")
-set(PEANO_LINK_OPTIONS "" CACHE INTERNAL "")
-set(PEANO_LINK_LIBRARIES "" CACHE INTERNAL "")
-set(USE_COMPONENT_DEFINITIONS "" CACHE INTERNAL "")
-set(PEANO_INCLUDES ${CMAKE_INSTALL_PREFIX}/include CACHE INTERNAL "")
-set(USE_COMPONENT_DEFINITIONS "" CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS "" CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS "" CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS "" CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_LINK_OPTIONS "" CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_COMPILE_OPTIONS "" CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_COMPILE_DEFINITIONS "" CACHE INTERNAL "")
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE INTERNAL "")
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 
@@ -72,7 +59,6 @@ else()
   message(STATUS "Found Jinja2")
 endif()
 
-include(MessageUtils)
 include(Ccache)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
@@ -93,69 +79,37 @@ else()
   message(WARNING "IPO/LTO not supported")
 endif()
 
-add_library(project_warnings INTERFACE)
-add_library(project_options INTERFACE)
-
-target_compile_features(project_options INTERFACE
-  cxx_std_${CMAKE_CXX_STANDARD}
-)
+add_library(ProjectOptions INTERFACE)
+target_compile_features(ProjectOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
-  target_compile_options(project_warnings INTERFACE
+  target_compile_options(ProjectOptions INTERFACE
+    -w
     -W
     -Wall
-    #-Wextra
-    #-pedantic
-    #-Wpedantic
-    #-Wshadow
-    #-Wunused
-    -Wno-unused-function
-    -Wno-unused-variable
-    -Wno-unused-parameter
+    -Wextra
+    -pedantic
+    -Wpedantic
+    -Wshadow
+    -Wunused
     -Wno-attributes
-    #-Wno-unknown-attributes
-    #-Wno-attributes=clang::
-    -Wno-conversion
-    -Wno-sign-compare
+    -Wno-unknown-attributes
     -Wnon-virtual-dtor
-    #-Wold-style-cast
-    #-Wcast-align
-    #-Woverloaded-virtual
-    #-Wparentheses
-    #-Wmultichar
-    #-Wtrigraphs
-    #-Wpointer-arith
     -Wreturn-type
     -Wno-system-headers
-    #-Wno-deprecated
-    #-Wwrite-strings
-    #-fexceptions
-    #-fnon-call-exceptions
-    #-Wsign-conversion
-    #-Wnull-dereference
-    #-Wdouble-promotion # Warn if float is implicit promoted to double.
-    #-Wformat=2 # Warn on security issues around functions that format output (i.e., printf).
     #-flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
     #-ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
     #-fno-elide-constructors # Disables RVO. For testing purposes only, should be disabled in production code. https://shaharmike.com/cpp/rvo/
     $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
-    #-Wmisleading-indentation # Warn if indentation implies blocks where blocks do not exist.
-    #-Wduplicated-cond # Warn if if/else chain has duplicated conditions.
-    #-Wduplicated-branches # Warn if if/else branches have duplicated code.
-    #-Wlogical-op # Warn about logical operations being used where bitwise were probably wanted.
-    #-Wuseless-cast
-    #-m64
-    #-ipo
-    #-fp-model precise
   )
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  target_compile_options(project_warnings INTERFACE
+  target_compile_options(ProjectOptions INTERFACE
     -W
     -Wall
     --diag_suppress=unrecognized_attribute
   )
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
-  target_compile_options(project_warnings INTERFACE
+  target_compile_options(ProjectOptions INTERFACE
     $<$<COMPILE_LANGUAGE:CXX>:/MP> # Use as many cores as available for compilation. https://blog.kitware.com/cmake-building-with-all-your-cores/
     $<$<COMPILE_LANGUAGE:CXX>:/W4> #/Wall # Baseline reasonable warnings.
     $<$<COMPILE_LANGUAGE:CXX>:/permissive-> # Standards conformance mode for MSVC compiler. https://docs.microsoft.com/de-de/cpp/build/reference/permissive-standards-conformance?view=vs-2019
@@ -165,7 +119,7 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GL>>
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GF>>
   )
-  target_link_options(${project_name} INTERFACE
+  target_link_options(ProjectOptions INTERFACE
     $<$<CONFIG:Release>:/OPT:REF>
     $<$<CONFIG:Release>:/LTCG>
   )
@@ -183,7 +137,7 @@ check_include_files(sys/stat.h HAVE_SYS_STAT_H)
 check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
 
-list(APPEND TOOLCHAINS
+list(APPEND AVAILABLE_TOOLCHAINS
   "no"
   "intel"
   "nvidia"
@@ -191,93 +145,69 @@ list(APPEND TOOLCHAINS
   "chrome"
   "gnu"
 )
-set(WITH_TOOLCHAIN "no" CACHE STRING "${TOOLCHAINS}")
-set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${TOOLCHAINS})
+set(WITH_TOOLCHAIN "no" CACHE STRING "${AVAILABLE_TOOLCHAINS}")
+set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${AVAILABLE_TOOLCHAINS})
 
 if(WITH_TOOLCHAIN STREQUAL "scorep")
   find_library(PAPI libpapi.a papi)
   find_library(CUBE4W libcube4w.a cube4w)
-  target_link_libraries(project_options INTERFACE ${PAPI})
-  target_link_libraries(project_options INTERFACE ${CUBE4W})
-  target_link_libraries(project_options INTERFACE ${SCOREP_LIBRARIES})
-  target_link_directories(project_options INTERFACE ${LD_LIBRARY_PATH})
-  target_compile_options(project_options INTERFACE ${SCOREP_COMPILE_FLAGS})
-  target_link_options(project_options INTERFACE ${SCOREP_LINK_OPTION})
-  add_compile_definitions(UseScoreP)
-  add_compile_definitions(UseLogService=ScorePLogger)
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseLogService=ScorePLogger UseScoreP CACHE INTERNAL "")
-  set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} ${SCOREP_COMPILE_FLAGS} CACHE INTERNAL "")
-  set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} ${SCOREP_LINK_OPTION} CACHE INTERNAL "")
+  target_link_libraries(ProjectOptions INTERFACE ${PAPI} ${CUBE4W} ${SCOREP_LIBRARIES})
+  target_link_options(ProjectOptions INTERFACE ${SCOREP_LINK_OPTION})
+  target_compile_options(ProjectOptions INTERFACE ${SCOREP_COMPILE_FLAGS})
+  target_compile_definitions(ProjectOptions INTERFACE UseScoreP UseLogService=ScorePLogger)
 elseif(WITH_TOOLCHAIN STREQUAL "itac")
-  target_link_libraries(project_options INTERFACE VT::VT)
-  target_include_directories(project_options SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
-  target_link_directories(project_options INTERFACE ${VT_LIBRARIES_DIR})
-  add_compile_definitions(UseITAC)
-  add_compile_definitions(UseLogService=ITACLogger)
-  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${VT_INCLUDE_DIRS} CACHE INTERNAL "")
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseLogService=ITACLogger UseITAC CACHE INTERNAL "")
-  set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} ${SCOREP_COMPILE_FLAGS} CACHE INTERNAL "")
-  set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} ${SCOREP_LINK_OPTION} CACHE INTERNAL "")
+  target_link_libraries(ProjectOptions INTERFACE VT::VT)
+  target_include_directories(ProjectOptions SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
+  target_link_directories(ProjectOptions INTERFACE ${VT_LIBRARIES_DIR})
+  target_compile_definitions(ProjectOptions INTERFACE UseITAC UseLogService=ITACLogger)
 elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
   find_package(CUDAToolkit REQUIRED)
-  target_link_libraries(project_options INTERFACE CUDA::nvToolsExt)
-  add_compile_definitions(UseNVTX)
-  add_compile_definitions(UseLogService=NVTXLogger)
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseLogService=NVTXLogger UseNVTX CACHE INTERNAL "")
-elseif(NOT WITH_TOOLCHAIN STREQUAL "no")
-  message(FATAL_ERROR "CMake build system currently does not support the logger ${WITH_TOOLCHAIN}")
+  target_link_libraries(ProjectOptions INTERFACE CUDA::nvToolsExt)
+  target_compile_definitions(ProjectOptions INTERFACE UseNVTX UseLogService=NVTXLogger)
 endif()
 
-list(APPEND MULTICORES_BACKENDS
+list(APPEND AVAILABLE_MULTITHREADING
   "no"
   "omp"
   "sycl"
   "tbb"
   "cpp"
 )
-set(WITH_MULTITHREADING "no" CACHE STRING "${MULTICORES_BACKENDS}")
-set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
-
-if(WITH_MULTITHREADING)
-  string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
-  target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
-  target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
-endif()
+set(WITH_MULTITHREADING "no" CACHE STRING "${AVAILABLE_MULTITHREADING}")
+set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${AVAILABLE_MULTITHREADING})
 
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-  target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
-  set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} ${OpenMP_CXX_FLAGS} CACHE INTERNAL "")
-  # The -fopenmp is also required at the linking step, but it is not often set in the linker flags therefore cxx flags are passed twice
-  set(_PROJECT_OPTIONS_LINK_OPTIONS ${_PROJECT_OPTIONS_LINK_OPTIONS} ${OpenMP_EXE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS} CACHE INTERNAL "")
+  target_link_libraries(ProjectOptions INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+  target_compile_definitions(ProjectOptions INTERFACE SharedOMP)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
-  target_link_libraries(project_options INTERFACE TBB::tbb)
+  target_link_libraries(ProjectOptions INTERFACE TBB::tbb)
+  target_compile_definitions(ProjectOptions INTERFACE SharedTBB)
 elseif(WITH_MULTITHREADING STREQUAL "cpp")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
   target_link_libraries(project_options INTERFACE Threads::Threads)
+  target_compile_definitions(ProjectOptions INTERFACE SharedCPP)
 elseif(WITH_MULTITHREADING STREQUAL "sycl")
   check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
   target_compile_options(project_options INTERFACE -fsycl)
   target_link_options(project_options INTERFACE -fsycl)
-  set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} -fsycl CACHE INTERNAL "")
-  set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} -fsycl CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE SharedSYCL)
 endif()
 
-list(APPEND ACCELERATOR_BACKENDS
+list(APPEND AVAILABLE_ACCELERATOR
   "no"
   "omp"
   "sycl"
   "cpp"
-  "hip"
 )
-set(WITH_GPU "no" CACHE STRING "${ACCELERATOR_BACKENDS}")
-set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
+set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
+set_property(CACHE WITH_GPU PROPERTY STRINGS ${AVAILABLE_ACCELERATORS})
 
-list(APPEND ACCELERATOR_ARCHITECTURES
+list(APPEND AVAILABLE_ACCELERATOR_ARCHITECTURES
   "none"
   "sm_70"
   "sm_72"
@@ -292,93 +222,60 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "gfx942"
   "spir64"
 )
-set(WITH_GPU_ARCH "none" CACHE STRING "GPU architecture sm_XX or gfxXXX")
-set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${ACCELERATOR_ARCHITECTURES})
+set(WITH_GPU_ARCH "none" CACHE STRING "${AVAILABLE_ACCELERATOR_ARCHITECTURES}")
+set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${AVAILABLE_ACCELERATOR_ARCHITECTURES})
 
 string(SUBSTRING "${WITH_GPU_ARCH}" 0 3 GPU_PREFIX)
 if("${GPU_PREFIX}" STREQUAL "sm_")
-  set(NVIDIA_GPU TRUE)
+  set(PEANO_NVIDIA_GPU TRUE)
 elseif("${GPU_PREFIX}" STREQUAL "gfx")
-  set(AMD_GPU TRUE)
+  set(PEANO_AMD_GPU TRUE)
+elseif("${GPU_PREFIX}" STREQUAL "spir")
+  set(PEANO_INTEL_GPU TRUE)
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
   find_package(IntelSYCL REQUIRED)
-  #target_link_libraries(project_options INTERFACE IntelSYCL)
+  target_link_libraries(ProjectOptions INTERFACE IntelSYCL)
 endif()
 
-if(WITH_GPU)
-  string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
-  target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
-  if(WITH_GPU STREQUAL "omp")
-    find_package(OpenMPTarget REQUIRED)
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMPTarget)
-    set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} ${OpenMP_Offloading_CXX_FLAGS} CACHE INTERNAL "")
-    set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} ${OpenMP_Offloading_LINK_LIBRARIES} CACHE INTERNAL "")
-    set(PEANO_LINK_LIBRARIES ${PEANO_LINK_LIBRARIES} ${OpenMP_Offloading_LINK_LIBRARIES} CACHE INTERNAL "")
-  elseif(WITH_GPU STREQUAL "cpp")
-    if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-      string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-      # -mp=gpus etc. are link and compile options, but are not libraries
-      target_link_options(project_options INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
-      target_compile_options(project_options INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
-      set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu CACHE INTERNAL "")
-      set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu CACHE INTERNAL "")
-    endif()
-  elseif(WITH_GPU STREQUAL "sycl")
-    if(NVIDIA_GPU)
-      target_compile_options(project_options INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
-      target_link_options(project_options INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
-      set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH} CACHE INTERNAL "")
-      set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH} CACHE INTERNAL "")
-    elseif(AMD_GPU)
-      target_compile_options(project_options INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
-      target_link_options(project_options INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
-      set(PEANO_COMPILE_OPTIONS ${PEANO_COMPILE_OPTIONS} -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH} CACHE INTERNAL "")
-      set(PEANO_LINK_OPTIONS ${PEANO_LINK_OPTIONS} -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH} -stdpar=gpu CACHE INTERNAL "")
-    endif()
-  elseif(WITH_GPU STREQUAL "hip")
-    message(WARNING "Currently the flags for HIP need to be passed manually")
+if(WITH_GPU STREQUAL "omp")
+  find_package(OpenMPTarget REQUIRED)
+  target_link_libraries(ProjectOptions INTERFACE OpenMP::OpenMPTarget)
+  target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingOMP)
+elseif(WITH_GPU STREQUAL "cpp")
+  if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
+    string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
+    target_link_options(ProjectOptions INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
+    target_compile_options(ProjectOptions INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
+    target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingCPP)
+  endif()
+elseif(WITH_GPU STREQUAL "sycl")
+  if(PEANO_NVIDIA_GPU)
+    target_compile_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
+    target_link_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
+  elseif(PEANO_AMD_GPU)
+    target_compile_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
+    target_link_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
   endif()
 endif()
 
-# Set default build type if not specified
+list(APPEND AVAILABLE_BUILD_TYPES
+  "Release"
+  "Debug"
+  "Trace"
+  "Asserts"
+  "Stats"
+)
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, Asserts, Trace, Stats)" FORCE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "${AVAILABLE_BUILD_TYPES}" FORCE)
 endif()
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS " " "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${AVAILABLE_BUILD_TYPES}")
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Dimensions to build with ;-separated list of values")
 
-if(PEANO_BUILD_TYPE)
-  if(CMAKE_BUILD_TYPE)
-    list(FIND CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} index)
-    if(index EQUAL -1)
-      set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} ${PEANO_BUILD_TYPE} CACHE STRING "List of build types" FORCE)
-    endif()
-  else()
-    set(CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} CACHE STRING "List of build types" FORCE)
-  endif()
-endif()
-
-if(PEANO_DIMENSIONS)
-  foreach(DIMENSION IN LISTS PEANO_DIMENSIONS)
-    list(FIND WITH_DIMENSIONS "${PEANO_DIMENSIONS}" index)
-    if(index EQUAL -1)
-      if (WITH_DIMENSIONS)
-        set(WITH_DIMENSIONS "${WITH_DIMENSIONS};${DIMENSION}" CACHE STRING "Dimensions to build with ;-separated list of values" FORCE)
-      else()
-        set(WITH_DIMENSIONS "${DIMENSION}" CACHE STRING "Dimensions to build with ;-separated list of values" FORCE)
-      endif()
-    endif()
-  endforeach()
-endif()
-
-# Note: linkers (ld, lld) ignore the flag -g when passed.
-# Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 set(PEANO_CXX_FLAGS_RELEASE -O3 CACHE INTERNAL "")
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG CACHE INTERNAL "")
 
-#-O2 -fno-omit-frame-pointer
 set(PEANO_CXX_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4 CACHE INTERNAL "")
 
@@ -399,81 +296,96 @@ option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" OFF)
 option(WITH_NETCDF "Build with NetCDF support" OFF)
-option(ENABLE_SWIFT "Enable Swift 2" OFF)
+
 option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
 option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
-option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
-option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
 option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
-option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
+option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
+option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
+option(ENABLE_SWIFT "Enable Swift 2" OFF)
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-  target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
-  target_compile_definitions(project_options INTERFACE Parallel)
-  # Using the target for MPI::MPI_CXX results with the executable to segfault
-  # target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
-  # The garget is MPI_CXX (C bindings available from C++) and not MPI_MPICXX (dead MPI C++ library)
-  target_compile_options(project_options INTERFACE ${MPI_CXX_FLAGS})
-  target_link_libraries(project_options INTERFACE ${MPI_CXX_LIBRARIES})
-  target_compile_definitions(project_options INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
-  target_include_directories(project_options INTERFACE ${MPI_CXX_INCLUDE_DIRS})
-  target_link_options(project_options INTERFACE ${MPI_CXX_LINK_FLAGS})
+  target_compile_definitions(ProjectOptions INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
+  target_compile_definitions(ProjectOptions INTERFACE Parallel)
+  # target_link_libraries(ProjectOptions INTERFACE MPI::MPI_CXX)
+  target_compile_options(ProjectOptions INTERFACE ${MPI_CXX_FLAGS})
+  target_link_libraries(ProjectOptions INTERFACE ${MPI_CXX_LIBRARIES})
+  target_compile_definitions(ProjectOptions INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
+  target_include_directories(ProjectOptions INTERFACE ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
+  target_link_options(ProjectOptions INTERFACE ${MPI_CXX_LINK_FLAGS})
 endif()
 
 if(WITH_OTTER)
   find_package(Otter CONFIG)
-  target_compile_definitions(project_options INTERFACE UseOtter)
-  target_link_libraries(project_options INTERFACE Otter::Otter)
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseOtter CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UseOtter)
+  target_link_libraries(ProjectOptions INTERFACE Otter::Otter)
 endif()
 
 if(WITH_PETSC)
   find_package(PETSc REQUIRED)
-  target_compile_definitions(project_options INTERFACE UsePETSc)
-  target_link_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
-  target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
-  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${PETSc_INCLUDE_DIRS} CACHE INTERNAL "")
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UsePETSc CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UsePETSc)
+  target_link_libraries(ProjectOptions INTERFACE ${PETSc_LIBRARIES})
+  target_include_directories(ProjectOptions INTERFACE ${PETSc_INCLUDE_DIRS})
 endif()
 
 if(WITH_TARGETDART)
-  target_compile_definitions(project_options INTERFACE UseTargetDART)
-  set(PEANO_COMPILE_DDEFINITIONS ${PEANO_COMPILE_DDEFINITIONS} UseTargetDART CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UseTargetDART)
 endif()
 
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
-  target_compile_definitions(project_options INTERFACE UseLibXSMM)
-  target_link_libraries(project_options INTERFACE LIBXSMM::LIBXSMM)
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DDEFINITIONS} UseLibXSMM CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UseLibXSMM)
+  target_link_libraries(ProjectOptions INTERFACE LIBXSMM::LIBXSMM)
 endif()
 
 if(WITH_VTK)
   find_package(VTK REQUIRED)
-  target_compile_definitions(project_options INTERFACE UseVTK)
-  target_link_libraries(project_options INTERFACE VTK::CommonCore)
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseVTK CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UseVTK)
+  target_link_libraries(ProjectOptions INTERFACE VTK::CommonCore)
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
-  target_compile_definitions(project_options INTERFACE UseHDF5)
-  target_link_libraries(project_options INTERFACE HDF5::HDF5)
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseHDF5 CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UseHDF5)
+  target_link_libraries(ProjectOptions INTERFACE HDF5::HDF5)
 endif()
 
 if(WITH_NETCDF)
   find_package(NetCDF REQUIRED)
-  target_compile_definitions(project_options INTERFACE UseNetCDF)
-  target_link_libraries(project_options INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
-  target_include_directories(project_options INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
-  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${NETCDF_INCLUDES} CACHE INTERNAL "")
-  set(PEANO_COMPILE_DEFINITIONS ${PEANO_COMPILE_DEFINITIONS} UseNetCDF CACHE INTERNAL "")
+  target_compile_definitions(ProjectOptions INTERFACE UseNetCDF)
+  target_link_libraries(ProjectOptions INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
+  target_include_directories(ProjectOptions INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
 endif()
 
+if(ENABLE_LOADBALANCING)
+  target_compile_definitions(ProjectOptions INTERFACE UseToolboxLoadbalancing)
+endif()
+
+if(ENABLE_BLOCKSTRUCTURED)
+  target_compile_definitions(ProjectOptions INTERFACE UseToolboxBlockstructured)
+endif()
+
+if(ENABLE_PARTICLES)
+  target_compile_definitions(ProjectOptions INTERFACE UseToolboxParticles)
+endif()
+
+if(ENABLE_MULTIPRECISION)
+  target_compile_definitions(ProjectOptions INTERFACE UseToolboxMultiprecision)
+endif()
+
+if(ENABLE_FINITEELEMENTS)
+  target_compile_definitions(ProjectOptions INTERFACE UseToolboxFiniteElements)
+endif()
+
+if(ENABLE_EXAHYPE)
+  target_compile_definitions(ProjectOptions INTERFACE UseExaHyPE)
+endif()
+
+if(ENABLE_SWIFT)
+  target_compile_definitions(ProjectOptions INTERFACE UseSWIFT)
+endif()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
@@ -482,272 +394,21 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-function(create_symlinks source_dir dest_dir)
-  file(MAKE_DIRECTORY "${dest_dir}")
-  file(GLOB_RECURSE items LIST_DIRECTORIES TRUE RELATIVE "${source_dir}" "${source_dir}/*")
-  foreach(item IN LISTS items)
-    set(source_dir_item "${source_dir}/${item}")
-    set(dest_dir_item "${dest_dir}/${item}")
-    if(IS_DIRECTORY ${source_dir_item})
-      file(MAKE_DIRECTORY "${dest_dir_item}")
-    else()
-      get_filename_component(dest_dir_item_path "${dest_dir_item}" DIRECTORY)
-      file(RELATIVE_PATH relative_source_item "${dest_dir_item_path}" "${source_dir_item}")
-      execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${relative_source_item}" "${dest_dir_item}")
-    endif()
-  endforeach()
-endfunction()
-
-list(APPEND DIRECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications" "documentation" "cmake")
-foreach(directory IN LISTS DIRECTORIES_TO_LINK_OVER)
-  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${directory}")
-    create_symlinks("${CMAKE_SOURCE_DIR}/${directory}" "${CMAKE_BINARY_DIR}/${directory}")
-  endif()
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${directory}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-endforeach()
-
-file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
-include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
+install(DIRECTORY
+  ${CMAKE_SOURCE_DIR}/cmake
+  ${CMAKE_SOURCE_DIR}/python
+  DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
 install(FILES
   ${CMAKE_SOURCE_DIR}/LICENSE
   ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
   ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
-  ${CMAKE_BINARY_DIR}/Config.cmake
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
 )
 
-install(FILES
-  ${CMAKE_SOURCE_DIR}/src/config.h
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
-)
-
-set(PARSE_CACHE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/parse_cache.py")
-file(CHMOD "${PARSE_CACHE_SCRIPT}" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
-add_custom_target(parse_cache ALL
-  COMMAND echo "${PYTHON_EXECUTABLE} ${PARSE_CACHE_SCRIPT} ${CMAKE_BINARY_DIR}/CMakeCache.txt"
-  COMMAND ${PYTHON_EXECUTABLE} ${PARSE_CACHE_SCRIPT} "${CMAKE_BINARY_DIR}/CMakeCache.txt"
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  COMMENT "Parse CMake cache after build"
+target_include_directories(ProjectOptions INTERFACE
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_BINARY_DIR}/src
 )
 
 add_subdirectory(src)
-
-#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/tests/*")
-#foreach(SOURCE_FILE ${UNIT_TEST_SOURCES})
-#    get_filename_component(TEST_NAME ${SOURCE_FILE} NAME_WE)
-#    add_executable(${TEST_NAME} ${SOURCE_FILE})
-#    target_link_libraries(${TEST_NAME} PRIVATE TArch)
-#    set_target_properties(${TEST_NAME} PROPERTIES
-#        DEBUG_POSTFIX "d"
-#        SOVERSION ${TARCH_VERSION_MAJOR}
-#        VERSION ${TARCH_VERSION}
-#        CXX_STANDARD ${CMAKE_CXX_STANDARD}
-#    )
-#    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-#endforeach()
-
-#if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-#    add_coverage(
-#        NAME Coverage
-#        EXECUTABLE ctest -V
-#        EXCLUDE "/usr/*"
-#        GENHTML_ARGS -s --legend
-#    )
-#    add_coverage_cobertura(
-#        NAME CoverageCobertura
-#        EXECUTABLE ctest -V
-#    )
-#    add_coverage_gcovr(
-#        NAME CoverageGcovr
-#        EXECUTABLE ctest -V
-#    )
-#elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-#    add_coverage(
-#        TARGET TestRunnerTest
-#        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}"
-#        CONTINUE_AFTER_CPP_EXCEPTION
-#        REPORT_FOR_PROJECT
-#        REPORT_FOR_TARGET
-#    )
-#endif()
-
-display_separator("Project Configuration Summary")
-display_variable(AVAILABLE_PROCESSOR_COUNT)
-
-display_variable(WITH_DIMENSIONS)
-display_variable(WITH_MULTITHREADING)
-display_variable(WITH_GPU)
-display_variable(WITH_GPU_ARCH)
-display_variable(WITH_MPI)
-display_variable(WITH_TARGETDART)
-display_variable(WITH_TOOLCHAIN)
-display_variable(WITH_OTTER)
-if(DEFINED Otter_DIR)
-  display_variable(Otter_DIR)
-endif()
-display_variable(WITH_PETSC)
-display_variable(WITH_LIBXSMM)
-display_variable(WITH_VTK)
-display_variable(WITH_HDF5)
-display_variable(WITH_NETCDF)
-
-display_subseparator("Options for Extensions")
-display_variable(ENABLE_SWIFT)
-display_variable(ENABLE_PARTICLES)
-display_variable(ENABLE_FINITEELEMENTS)
-display_variable(ENABLE_EXAHYPE)
-display_variable(ENABLE_LOADBALANCING)
-display_variable(ENABLE_BLOCKSTRUCTURED)
-display_variable(ENABLE_MULTIPRECISION)
-
-display_subseparator("Options for Tools")
-display_variable(USE_CCACHE)
-
-display_subseparator("Options for Sanitisers")
-display_variable(SANITISE_ADDRESS)
-display_variable(SANITISE_UNDEFINED)
-display_variable(SANITISE_THREAD)
-
-display_subseparator("Options to Build")
-display_variable(CMAKE_C_COMPILER)
-display_variable(CMAKE_C_STANDARD)
-display_variable(CMAKE_CXX_COMPILER)
-display_variable(CMAKE_CXX_STANDARD)
-display_variable(MPI_CXX_COMPILER)
-display_variable(CMAKE_BUILD_TYPE)
-display_variable(PEANO_CXX_FLAGS_RELEASE)
-display_variable(PEANO_RELEASE_DEFINITIONS)
-display_variable(PEANO_CXX_FLAGS_DEBUG)
-display_variable(PEANO_DEBUG_DEFINITIONS)
-display_variable(PEANO_CXX_FLAGS_STATS)
-display_variable(PEANO_STATS_DEFINITIONS)
-display_variable(PEANO_CXX_FLAGS_ASSERTS)
-display_variable(PEANO_ASSERTS_DEFINITIONS)
-display_variable(PEANO_CXX_FLAGS_TRACE)
-display_variable(PEANO_TRACE_DEFINITIONS)
-display_variable(CMAKE_VERBOSE_MAKEFILE)
-display_variable(BUILD_SHARED_LIBS)
-display_variable(CMAKE_CXX_FLAGS_INIT)
-
-display_subseparator("Options to Install")
-display_variable(CMAKE_INSTALL_FULL_BINDIR)
-display_variable(CMAKE_INSTALL_FULL_LIBDIR)
-
-display_subseparator("End of Summary")
-
-get_target_property(PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS project_options INTERFACE_COMPILE_OPTIONS)
-get_target_property(PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS project_options INTERFACE_COMPILE_DEFINITIONS)
-get_target_property(PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS project_options INTERFACE_LINK_OPTIONS)
-
-if(PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS)
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} CACHE INTERNAL "")
-else()
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS "" CACHE INTERNAL "")
-endif()
-
-if(PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS)
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} CACHE INTERNAL "")
-else()
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS "" CACHE INTERNAL "")
-endif()
-
-if(PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS)
-  set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} CACHE INTERNAL "")
-else()
-  set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS "" CACHE INTERNAL "")
-endif()
-
-get_target_property(PROJECT_WARNINGS_INTERFACE_COMPILE_OPTIONS project_warnings INTERFACE_COMPILE_OPTIONS)
-get_target_property(PROJECT_WARNINGS_INTERFACE_COMPILE_DEFINITIONS project_warnings INTERFACE_COMPILE_DEFINITIONS)
-get_target_property(PROJECT_WARNINGS_INTERFACE_LINK_OPTIONS project_warnings INTERFACE_LINK_OPTIONS)
-
-if(PROJECT_WARNINGS_INTERFACE_COMPILE_DEFINITIONS)
-  set(_PROJECT_WARNINGS_INTERFACE_COMPILE_DEFINITIONS ${PROJECT_WARNINGS_INTERFACE_COMPILE_DEFINITIONS} CACHE INTERNAL "")
-else()
-  set(_PROJECT_WARNINGS_INTERFACE_COMPILE_DEFINITIONS "" CACHE INTERNAL "")
-endif()
-
-if(PROJECT_WARNINGS_INTERFACE_COMPILE_OPTIONS)
-  set(_PROJECT_WARNINGS_INTERFACE_COMPILE_OPTIONS ${PROJECT_WARNINGS_INTERFACE_COMPILE_OPTIONS} CACHE INTERNAL "")
-else()
-  set(_PROJECT_WARNINGS_INTERFACE_COMPILE_OPTIONS "" CACHE INTERNAL "")
-endif()
-
-if(PROJECT_WARNINGS_INTERFACE_LINK_OPTIONS)
-  set(_PROJECT_WARNINGS_INTERFACE_LINK_OPTIONS ${PROJECT_WARNINGS_INTERFACE_LINK_OPTIONS} CACHE INTERNAL "")
-else()
-  set(_PROJECT_WARNINGS_INTERFACE_LINK_OPTIONS "" CACHE INTERNAL "")
-endif()
-
-
-get_target_property(INTERFACE_LINK_LIBRARIES project_options INTERFACE_LINK_LIBRARIES)
-message(WARNING ${INTERFACE_LINK_LIBRARIES})
-
-# Iterate the options of the libraries linked to the project_options interface library
-if(INTERFACE_LINK_LIBRARIES)
-    message("Link libraries for my_target: ${INTERFACE_LINK_LIBRARIES}")
-    foreach(lib ${INTERFACE_LINK_LIBRARIES})
-      if(TARGET ${lib})
-        message(WARNING ${lib})
-        get_target_property(COMPILE_OPTIONS ${lib} INTERFACE_COMPILE_OPTIONS)
-        if(COMPILE_OPTIONS)
-            message("Interface Compile options for ${lib}: ${COMPILE_OPTIONS}")
-            set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${COMPILE_OPTIONS} CACHE INTERNAL "")
-        endif()
-        get_target_property(COMPILE_DEFINITIONS ${lib} INTERFACE_COMPILE_DEFINITIONS)
-        if(COMPILE_DEFINITIONS)
-            message("Interface Compile definitions for ${lib}: ${COMPILE_DEFINITIONS}")
-            set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${COMPILE_DEFINITIONS} CACHE INTERNAL "")
-        endif()
-        get_target_property(LINK_OPTIONS ${lib} INTERFACE_LINK_OPTIONS)
-        if(LINK_OPTIONS)
-            message("Interface Link options for ${lib}: ${LINK_OPTIONS}")
-            set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${LINK_OPTIONS} CACHE INTERNAL "")
-        endif()
-        get_target_property(COMPILE_OPTIONS ${lib} COMPILE_OPTIONS)
-        if(COMPILE_OPTIONS)
-            message("Compile options for ${lib}: ${COMPILE_OPTIONS}")
-            set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${COMPILE_OPTIONS} CACHE INTERNAL "")
-        endif()
-        get_target_property(COMPILE_DEFINITIONS ${lib} COMPILE_DEFINITIONS)
-        if(COMPILE_DEFINITIONS)
-            message("Compile definitions for ${lib}: ${COMPILE_DEFINITIONS}")
-            set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${COMPILE_DEFINITIONS} CACHE INTERNAL "")
-        endif()
-        get_target_property(LINK_OPTIONS ${lib} LINK_OPTIONS)
-        if(LINK_OPTIONS)
-            message("Link options for ${lib}: ${LINK_OPTIONS}")
-            set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${LINK_OPTIONS} CACHE INTERNAL "")
-        endif()
-      endif()
-    endforeach()
-endif()
-
-# Add options of MPI, it is handled differently than the libraries linked to project options
-if(WITH_MPI)
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${MPI_CXX_COMPILE_OPTIONS} CACHE INTERNAL "")
-  set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${MPI_CXX_COMPILE_DEFINITIONS} CACHE INTERNAL "")
-  set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${MPI_CXX_LINK_FLAGS} CACHE INTERNAL "")
-  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS} CACHE INTERNAL "")
-  set(PEANO_LINK_LIBRARIES ${PEANO_LINK_LIBRARIES} ${MPI_CXX_LIBRARIES} CACHE INTERNAL "")
-endif()
-
-# Cache and save the options set globally (calls to e.g., add_compile_options) and anything set to CMAKE_REQUIRED_*
-get_property(_GLOBAL_COMPILE_OPTIONS DIRECTORY PROPERTY COMPILE_OPTIONS)
-get_property(_GLOBAL_COMPILE_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
-get_property(_GLOBAL_LINK_OPTIONS DIRECTORY PROPERTY LINK_OPTIONS)
-set(PEANO_INCLUDES ${PEANO_INCLUDES} ${CMAKE_REQUIRED_INCLUDES} CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${_GLOBAL_COMPILE_OPTIONS} ${CMAKE_REQUIRED_FLAGS} CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${_GLOBAL_COMPILE_DEFINITIONS} CACHE INTERNAL "")
-set(_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${_GLOBAL_COMPILE_OPTIONS} ${CMAKE_REQUIRED_LIBRARIES} ${CMAKE_REQUIRED_LINK_OPTIONS} CACHE INTERNAL "")
-
-
-message("Interface compile options for project_options after expanding: ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS}")
-message("Interface compile definitions for project_options after expanding: ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS}")
-message("Interface link options for project_options after expanding: ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS}")
-
-set(C_COMPILER_NAME "${CMAKE_C_COMPILER}" CACHE INTERNAL "")
-set(CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER}" CACHE INTERNAL "")
-set(LINKER_NAME "${CMAKE_LINKER}" CACHE INTERNAL "")

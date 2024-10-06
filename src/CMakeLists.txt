@@ -1,15 +1,39 @@
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake.config.h.in
-  ${CMAKE_CURRENT_SOURCE_DIR}/config.h
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/config.h")
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/config.h
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
 )
 
-set(SOURCE_EXTENSIONS_TO_GLOB "*.c" "*.cxx" "*.c++" "*.cpp" "*.cu" "*.csnippet")
-set(HEADER_EXTENSIONS_TO_GLOB "*.h" "*.hxx" "*.h++" "*.hpp" "*.cuh" "*.cpph" "*.inc" "*.inl" "*.hsnippet")
+set(SOURCE_EXTENSIONS_TO_GLOB
+  "*.c"
+  "*.cxx"
+  "*.c++"
+  "*.cpp"
+  "*.cu"
+  "*.csnippet"
+)
+set(HEADER_EXTENSIONS_TO_GLOB
+  "*.h"
+  "*.hxx"
+  "*.h++"
+  "*.hpp"
+  "*.cuh"
+  "*.cpph"
+  "*.inc"
+  "*.inl"
+  "*.hsnippet"
+)
 
 add_subdirectory(tarch)
 add_subdirectory(peano4)
-add_subdirectory(convert)
 add_subdirectory(toolbox)
+
+if(WITH_PETSC)
+  add_subdirectory(petsc)
+endif()
 
 if(ENABLE_EXAHYPE)
   add_subdirectory(exahype2)
@@ -17,10 +41,6 @@ endif()
 
 if(ENABLE_SWIFT)
   add_subdirectory(swift2)
-endif()
-
-if(WITH_PETSC)
-  add_subdirectory(petsc)
 endif()
 
 add_subdirectory(unittests)

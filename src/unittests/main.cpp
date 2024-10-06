@@ -23,8 +23,7 @@
 #endif
 
 #ifdef UseToolboxMultiprecision
-// File does not exist in this branch
-//#include "toolbox/multiprecision/UnitTests.h"
+#include "toolbox/multiprecision/UnitTests.h"
 #endif
 
 #ifdef UseToolboxParticles
@@ -70,10 +69,10 @@ void runTests() {
   #endif
 
   #ifdef UseToolboxMultiprecision
-  //tests = toolbox::multiprecision::getUnitTests();
-  //tests->run();
-  //unitTestsErrors += tests->getNumberOfErrors();
-  //delete tests;
+  tests = toolbox::multiprecision::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
   #endif
 
   #ifdef UseToolboxParticles
