@@ -270,7 +270,7 @@ make clean && make distclean
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
 
 # Configure Peano with whatever we need
-CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp"
+CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-attributes" LDFLAGS="-fopenmp"
 
 # Get number of threads available for quicker compilation
 THREADS_NUM=$(nproc --all)
@@ -301,6 +301,7 @@ rm -rf build
 
 # Standard operations
 mkdir build && cd build
+export PEANO_BUILD_DIR=build
 
 # Configure Peano with whatever we need
 /CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp

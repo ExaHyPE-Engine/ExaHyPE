@@ -9,7 +9,6 @@ import jinja2
 
 from .Helper import write_file
 from .Helper import find_CMake_build_dir
-from .Helper import caller_distance_to_build_root
 
 from .Overwrite import Overwrite
 
@@ -148,21 +147,10 @@ the SISC paper
         self.d["EXECUTABLENAME"] = ""
         self.d["FORTRAN_MODULES"] = []
         self.d["GENERATED_INCLUDE_DIRS"] = set()
-        self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
-        self.d["CMAKE_LIBS"] = []
-        self.d["CMAKE_LDFLAGS"] = []
-        self.d["CMAKE_CXXFLAGS"] = []
-        self.d["CMAKE_COMPILE_DEFINITIONS"] = []
-        self.d["USING_CMAKE"] = False
         self.d["APP_SUBDIRECTORIES"] = []
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
-        self.d["CMAKE_MAKE_COMMAND"] = ""
         self.set_mode(CompileMode.Debug)
         self.clear_files()
-
-    def add_cmake_core_library(self, name):
-        if name not in self.d["CMAKE_CORE_LIBS"]:
-            self.d["CMAKE_CORE_LIBS"].append(name)
 
     def set_executable_name(self, fname):
         self.d["EXECUTABLENAME"] = fname
@@ -253,10 +241,6 @@ the SISC paper
             )
         else:
             self.d["CXXFLAGS"] += " " + value
-            if find_CMake_build_dir() != "" and "-D" in value:
-                self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
-            else:
-                self.d["CMAKE_CXXFLAGS"].append(value)
 
     def set_Fortran_compiler(self, value):
         self.d["FC"] = value
@@ -273,13 +257,9 @@ the SISC paper
             )
         else:
             self.d["FCFLAGS"] += " " + value
-            if find_CMake_build_dir() != "" and "-D" in value:
-                self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
 
     def add_linker_flag(self, value):
         self.d["LDFLAGS"] += " " + value
-        if find_CMake_build_dir() != "":
-            self.d["CMAKE_LDFLAGS"].append(value.replace("-l", ""))
 
     def set_linker_flags(self, value):
         self.d["LDFLAGS"] = value + " "
@@ -288,12 +268,11 @@ the SISC paper
         """
         directory should point to the directory which holds the ./configure script.
         It furthermore has to be invoked after configure has passed successfully.
-        This script does not accept relative paths. I then search for the subdirector
+        This script does not accept relative paths. We then search for the subdirector
         src and parse the Makefile there.
         """
         self.d["CONFIGUREPATH"] = directory
-        cmake_path = find_CMake_build_dir()
-        if cmake_path != "":
+        if find_CMake_build_dir() != "":
             return
 
         MakefileDefined = [
@@ -307,11 +286,7 @@ the SISC paper
         try:
             input = open(input_file, "r")
             self.configure_call = ""
-            print(
-                "parse configure outcome "
-                + input_file
-                + " to extract configure settings"
-            )
+            print("parse configure outcome " + input_file + " to extract configure settings")
             for line in input:
                 if "./configure" in line and self.configure_call == "":
                     print("found the configure call info " + line)
@@ -333,9 +308,7 @@ did search for a file """
         input_file = directory + "/src/Makefile"
         try:
             input = open(input_file, "r")
-            print(
-                "parse configure outcome " + input_file + " to extract compile settings"
-            )
+            print("parse configure outcome " + input_file + " to extract compile settings")
 
             MakefileConstants = [
                 "CXXFLAGS_PEANO_2D_RELEASE",
@@ -564,21 +537,12 @@ then this message can typically be ignored.
         """
         Generates build files and other project-related files based on templates.
 
-        If using Automake, then a Makefile is generated; if using CMake then
-        a CMakeLists.txt for the project is generated. A 'GeneratedSubdirectories.cmake'
-        file is generated to add the project's target to the CMake build tree.
-        With CMake, a modified Makefile is also generated where invoking 'make' will
-        change directories and forward to CMake's own Makefile.
-
-        A .gitignore is also generated depending on the project files.
-
         :param overwrite: Specifies whether existing files should be overwritten.
         :type overwrite: bool
         :param directory: The directory where the generated files will be placed.
         :type directory: str
         """
-        cmake_build_dir = find_CMake_build_dir()
-        self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
+        self.d["CMAKE_BUILD_DIR"] = find_CMake_build_dir()
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
         self.d["FORTRAN_SOURCES"] = self.fortranfiles
@@ -586,69 +550,25 @@ then this message can typically be ignored.
         self.d["GENERATED_CXX_SOURCES"] = self.generated_cppfiles
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
-        self.d["USING_CMAKE"] = cmake_build_dir != ""
-        self.d["PROJECT_ROOT_DIR"]  = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../..', ))
         if subdirectories:
             for subdirectory in subdirectories:
                 self.d["APP_SUBDIRECTORIES"].append(subdirectory)
-        self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
-        if cmake_build_dir != "":
-            command = 'cd . '
-            self.d["CMAKE_MAKE_PATH"] = "."
-            self.d["CMAKE_MAKE_COMMAND"] = command
-
-        # Anonymous function that generates the output_file_path from input_file_path template.
-        # We generate output files for CMake (2 files) and the Makefile (1 file) or only for the Makefile.
-        # We also use the anoynmous function to generate the .gitignore.
-        def generate_build_file(input_file_path, output_file_path):
+        # Encapsulate file generation as a function
+        def generate_output_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
                 print("write " + output_file_path)
-
-                # Encapsulate file generation as a function
-
-                template_loader = jinja2.FileSystemLoader(
-                    searchpath=os.path.split(input_file_path)[0]
-                )
+                template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(input_file_path)[0])
                 templateEnv = jinja2.Environment(loader=template_loader)
                 template = templateEnv.get_template(os.path.split(input_file_path)[1])
-
-                try:
-                    # We first eliminate the precompiled variant, and then we get rid of the
-                    # postfix in the case where it is a source file.
-                    with open(output_file_path, "w") as output:
-                        output.write(template.render(self.d))
-                except Exception as e:
-                    print(
-                        "ERROR: have not been able to write main file {} from template {}".format(
-                            output_file_path, input_file_path
-                        )
-                    )
-                    print(str(e))
+                with open(output_file_path, "w") as output:
+                    output.write(template.render(self.d))
 
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
-        # Pairs in the form of (input file, output file)
-        template_output_pairs = list()
+        generate_output_file(os.path.join(file_dir, "Gitignore.template"), os.path.join(directory, ".gitignore"))
 
-        template_output_pairs.append(
-            (
-                os.path.join(file_dir, "Makefile.template"),
-                os.path.join(directory, "Makefile"),
-            )
-        )
-
-        template_output_pairs.append(
-            (
-                os.path.join(file_dir, "Gitignore.template"),
-                os.path.join(directory, ".gitignore"),
-            )
-        )
-
-        cmake_list_output_pair = (
-                os.path.join(file_dir, "CMakeLists.txt.template"),
-                os.path.join(directory, "CMakeLists.txt"),)
-
-        # Generate CMakeLists.txt only if we are using CMake (CMake build directory found).
-        if cmake_build_dir != "":
-          generate_build_file(cmake_list_output_pair[0], cmake_list_output_pair[1])
+        if find_CMake_build_dir() != "":
+            generate_output_file(os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
+        else:
+            generate_output_file(os.path.join(file_dir, "Makefile.template"), os.path.join(directory, "Makefile"))

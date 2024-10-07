@@ -39,8 +39,8 @@ class Exahype2(CMakePackage, CudaPackage):
     )
     variant(
         "build_type",
-        default="Debug;Release;Asserts;Trace;Stats",
-        values=("Debug", "Release", "Asserts", "Trace", "Stats", "Debug;Release;Asserts;Trace;Stats"),
+        default="Release",
+        values=("Debug", "Release", "Asserts", "Trace", "Stats"),
         multi=False,
         description="Build type",
     )
@@ -136,6 +136,9 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def setup_run_environment(self, env):
         env.prepend_path("PEANO_ROOT", self.spec.prefix)
+        env.prepend_path("PEANO_BUILD_DIR", self.spec.prefix)
         env.prepend_path("EXAHYPE_ROOT", self.spec.prefix)
+        env.prepend_path("EXAHYPE_BUILD_DIR", self.spec.prefix)
         env.prepend_path("EXAHYPE2_ROOT", self.spec.prefix)
+        env.prepend_path("EXAHYPE2_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")

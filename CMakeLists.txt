@@ -189,16 +189,16 @@ elseif(WITH_MULTITHREADING STREQUAL "tbb")
 elseif(WITH_MULTITHREADING STREQUAL "cpp")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
-  target_link_libraries(project_options INTERFACE Threads::Threads)
+  target_link_libraries(ProjectOptions INTERFACE Threads::Threads)
   target_compile_definitions(ProjectOptions INTERFACE SharedCPP)
 elseif(WITH_MULTITHREADING STREQUAL "sycl")
   check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
-  target_compile_options(project_options INTERFACE -fsycl)
-  target_link_options(project_options INTERFACE -fsycl)
+  target_compile_options(ProjectOptions INTERFACE -fsycl)
+  target_link_options(ProjectOptions INTERFACE -fsycl)
   target_compile_definitions(ProjectOptions INTERFACE SharedSYCL)
 endif()
 
-list(APPEND AVAILABLE_ACCELERATOR
+list(APPEND AVAILABLE_ACCELERATORS
   "no"
   "omp"
   "sycl"
@@ -234,11 +234,6 @@ elseif("${GPU_PREFIX}" STREQUAL "spir")
   set(PEANO_INTEL_GPU TRUE)
 endif()
 
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
-  find_package(IntelSYCL REQUIRED)
-  target_link_libraries(ProjectOptions INTERFACE IntelSYCL)
-endif()
-
 if(WITH_GPU STREQUAL "omp")
   find_package(OpenMPTarget REQUIRED)
   target_link_libraries(ProjectOptions INTERFACE OpenMP::OpenMPTarget)
@@ -251,27 +246,32 @@ elseif(WITH_GPU STREQUAL "cpp")
     target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingCPP)
   endif()
 elseif(WITH_GPU STREQUAL "sycl")
+  target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingSYCL)
   if(PEANO_NVIDIA_GPU)
     target_compile_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
     target_link_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
   elseif(PEANO_AMD_GPU)
     target_compile_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
     target_link_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
+  elseif(PEANO_INTEL_GPU)
+    find_package(IntelSYCL REQUIRED)
+    target_link_libraries(ProjectOptions INTERFACE IntelSYCL)
   endif()
 endif()
 
-list(APPEND AVAILABLE_BUILD_TYPES
+list(APPEND PEANO_DIMENSIONS
+  "2"
+  "3"
+)
+
+set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
+list(APPEND PEANO_BUILD_TYPES
   "Release"
   "Debug"
   "Trace"
   "Asserts"
   "Stats"
 )
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "${AVAILABLE_BUILD_TYPES}" FORCE)
-endif()
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${AVAILABLE_BUILD_TYPES}")
-set(WITH_DIMENSIONS "2;3" CACHE STRING "Dimensions to build with ;-separated list of values")
 
 set(PEANO_CXX_FLAGS_RELEASE -O3 CACHE INTERNAL "")
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG CACHE INTERNAL "")

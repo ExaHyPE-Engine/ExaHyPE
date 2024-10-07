@@ -5,11 +5,11 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
 
-foreach(mode IN LISTS CMAKE_BUILD_TYPE)
+foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS WITH_DIMENSIONS)
+  foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_library(ToolboxBlockStructured${dimension}d_${mode_lower} STATIC)
     target_sources(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
     target_link_libraries(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE ProjectOptions Peano4Core${dimension}d_${mode_lower})

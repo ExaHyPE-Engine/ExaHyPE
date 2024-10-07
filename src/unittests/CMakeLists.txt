@@ -1,10 +1,10 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-foreach(mode IN LISTS CMAKE_BUILD_TYPE)
+foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS WITH_DIMENSIONS)
+  foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_executable(UnitTests${dimension}d_${mode_lower})
     add_test(NAME UnitTests${dimension}d_${mode_lower} COMMAND UnitTests${dimension}d_${mode_lower})
 
