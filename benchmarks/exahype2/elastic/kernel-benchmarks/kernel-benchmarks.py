@@ -60,8 +60,8 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="RusanovGlobalAdaptiveEnclaveFV",
         dimensions=2,
-        width="[10.0, 10.0, 10.0]",
-        offset="[0.0, 0.0, 0.0]",
+        width=[10.0, 10.0, 10.0],
+        offset=[0.0, 0.0, 0.0],
         patch_size=16,
         stateless=True,
         number_of_snapshots=0,
