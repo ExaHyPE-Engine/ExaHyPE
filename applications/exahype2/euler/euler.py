@@ -407,12 +407,12 @@ class Euler:
     def parse_coordinate_pair(self, coords, dim):
       try:
         return [
-          float(num) for num in #convert strings to python floats
-            coords.translate( #strip left and right brackets from input
-              { ord('['): None, 
+          float(num) for num in  # Convert strings to Python floats
+            coords.translate(  # Strip left and right brackets from input
+              { ord('['): None,
                 ord(']'): None
-              }).split(',') #split input along commas
-          ][0:dim] #if more inputs were specified than there are dimensions, discard the rest
+              }).split(',')  # Split input along commas
+          ][0:dim]  # If more inputs were specified than there are dimensions, discard the rest
       except:
         raise ValueError(
           "Could not parse the coordinates: {}!".format(coords)
