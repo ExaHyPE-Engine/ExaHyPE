@@ -14,11 +14,10 @@ class Euler:
     _available_solvers = {
         "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
         "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
+
         "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
         "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-        "RusanovGlobalFixedRKDG": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalAdaptiveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
-        "RusanovGlobalAdaptiveEnclaveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
+
         "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
     }
@@ -128,6 +127,12 @@ class Euler:
         )
 
         parser.add_argument(
+            "-ps",
+            "--patch-size",
+            type=int,
+            help="Number of finite volumes per axis (dimension) per patch.",
+        )
+        parser.add_argument(
             "-rk-order",
             "--rk-order",
             type=int,
@@ -139,12 +144,7 @@ class Euler:
             type=int,
             help="Order of space discretisation for Discontinuous Galerkin.",
         )
-        parser.add_argument(
-            "-ps",
-            "--patch-size",
-            type=int,
-            help="Number of finite volumes per axis (dimension) per patch.",
-        )
+
         parser.add_argument(
             "-md",
             "--min-depth",
@@ -299,6 +299,22 @@ class Euler:
                 "flux": "applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
                 "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
             }
+        elif "RKDG" in args.solver:
+            solver_params.update(
+                {
+                    "rk_order": args.rk_order,
+                    "polynomials": exahype2.solvers.GaussLegendreBasis(args.dg_order),
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
+            }
         elif "ADERDG" in args.solver:
             solver_params.update(
                 {
@@ -317,11 +333,12 @@ class Euler:
 
         solver = self._available_solvers[args.solver](**solver_params)
         solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
-        # solver.plot_description += ", ".join(
-        #    solver_params["auxiliary_variables"].keys()
-        # )
-
+        if solver_params["auxiliary_variables"] != 0:
+            solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
+
+        if "ADERDG" in args.solver:
+            solver.add_kernel_optimisations(is_linear = False,)
 
         return solver
 

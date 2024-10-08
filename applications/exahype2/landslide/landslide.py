@@ -119,7 +119,6 @@ class Landslide:
         parser.add_argument(
             "-ps",
             "--patch-size",
-            dest="patch_size",
             type=int,
             help="Number of finite volumes per axis (dimension) per patch.",
         )
@@ -285,9 +284,8 @@ class Landslide:
 
         solver = self._available_solvers[args.solver](**solver_params)
         solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
-        solver.plot_description += ", ".join(
-            solver_params["auxiliary_variables"].keys()
-        )
+        if solver_params["auxiliary_variables"] != 0:
+            solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
 
         solver._preprocess_reconstructed_patch = """
       extrapolateHalo<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);

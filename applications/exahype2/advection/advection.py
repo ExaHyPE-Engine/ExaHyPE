@@ -14,11 +14,10 @@ class Advection:
     _available_solvers = {
         "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
         "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
+
         "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
         "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-        "RusanovGlobalFixedRKDG": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalAdaptiveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
-        "RusanovGlobalAdaptiveEnclaveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
+
         "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
     }
@@ -73,7 +72,7 @@ class Advection:
             "-stateless",
             "--stateless",
             action="store_true",
-            default=True,
+            default=False,
             help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
         )
         parser.add_argument(
@@ -130,10 +129,22 @@ class Advection:
         parser.add_argument(
             "-ps",
             "--patch-size",
-            dest="patch_size",
             type=int,
             help="Number of finite volumes per axis (dimension) per patch.",
         )
+        parser.add_argument(
+            "-rk-order",
+            "--rk-order",
+            type=int,
+            help="Order of time discretisation for Runge-Kutta scheme.",
+        )
+        parser.add_argument(
+            "-dg-order",
+            "--dg-order",
+            type=int,
+            help="Order of space discretisation for Discontinuous Galerkin.",
+        )
+
         parser.add_argument(
             "-md",
             "--min-depth",
@@ -279,22 +290,37 @@ class Advection:
                     "min_volume_h": min_h,
                 }
             )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::advection::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::advection::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+            }
+        elif "ADERDG" in args.solver:
+            solver_params.update(
+                {
+                    "order": args.dg_order,
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::advection::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::advection::maxEigenvalue(Q, x, h, t, dt, normal);",
+            }
 
         solver = self._available_solvers[args.solver](**solver_params)
         solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
-        # solver.plot_description += ", ".join(
-        #    solver_params["auxiliary_variables"].keys()
-        # )
-
-        implementation_params = {
-            "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "applications::exahype2::advection::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-            "eigenvalues": "return applications::exahype2::advection::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-        }
-
+        if solver_params["auxiliary_variables"] != 0:
+            solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
+
+        if "ADERDG" in args.solver:
+            solver.add_kernel_optimisations(is_linear = True,)
 
         return solver
 
