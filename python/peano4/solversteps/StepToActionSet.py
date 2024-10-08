@@ -30,11 +30,11 @@ class StepToActionSet(object):
       )
  
       for i in self.step.vertex_data:
-        new_action_set.include_files.append( self.step.project.subdirectory + "vertexdata/" + i.name + ".h" )    
+        new_action_set.include_files.append( i.subdirectory + "vertexdata/" + i.name + ".h" )    
       for i in self.step.face_data:
-        new_action_set.include_files.append( self.step.project.subdirectory + "facedata/" + i.name + ".h" )    
+        new_action_set.include_files.append( i.subdirectory + "facedata/" + i.name + ".h" )    
       for i in self.step.cell_data:
-        new_action_set.include_files.append( self.step.project.subdirectory + "celldata/" + i.name + ".h" )    
+        new_action_set.include_files.append( i.subdirectory + "celldata/" + i.name + ".h" )    
 
       if len(self.step.vertex_data)>0:
         new_action_set.operations.append( [ peano4.solversteps.ActionSet.OPERATION_CREATE_PERSISTENT_VERTEX,  "void" ] + self.step.get_vertex_operations_signature() )

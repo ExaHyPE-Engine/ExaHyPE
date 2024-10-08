@@ -24,22 +24,13 @@
 #include "{{SUBDIRECTORY}}observers/InitGrid.h"
 #include "{{SUBDIRECTORY}}observers/PlotSolution.h"
 #include "{{SUBDIRECTORY}}observers/TimeStep.h"
-// @todo @author Dmitry
-// # I think, further automation of including steps from observers of different extensions is worth of consideration ->
-// # see in the comments below between the {% ... %} exepressions
-{% if SUBDIRECTORIES -%} // or EXTENSIONS (better naming?)
+{% if SUBDIRECTORIES -%}
 {% for subdirectory in SUBDIRECTORIES %}
-// {% for step in OBSERVERS[subdirectory] %}
-// #include "{{subdirectory}}observers/{{step}}.h"
-// {% endfor -%}
 #include "{{subdirectory}}repositories/DataRepository.h"
 #include "{{subdirectory}}repositories/SolverRepository.h"
 #include "{{subdirectory}}repositories/StepRepository.h"
 {% endfor -%}
 {% else %}
-// {% for step in OBSERVERS[""] %}
-// #include "observers/{{step}}.h"
-// {% endfor -%}
 #include "repositories/DataRepository.h"
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"

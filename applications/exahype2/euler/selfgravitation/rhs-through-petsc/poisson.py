@@ -348,11 +348,10 @@ peano4_project = peano4.Project(
   executable    = "selfgravitation-new",
 )
 peano4_project.add_subproject(
-  poisson_project.generate_Peano4_project(args.verbose),
+  euler_project.generate_Peano4_project(args.verbose),
 )
 peano4_project.add_subproject(
-  euler_project.generate_Peano4_project(args.verbose),
-  True
+  poisson_project.generate_Peano4_project(args.verbose),
 )
 
 # peano4_project.add_subproject(
