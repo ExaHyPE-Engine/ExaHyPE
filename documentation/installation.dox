@@ -26,24 +26,32 @@ However, we now work with the fourth generation of Peano (p4).
 Therefore, the default master is called ```p4```.
 
 
-Dependencies and Prerequisites
-===============================
+# Dependencies and Prerequisites
 
 Peano's core is plain C++17/C++20 code.
 We however use a whole set of tools around it.
 
-- C++17/C++20-compatible C++ compiler (required).
-- GNU Autotools (automake) to set up the system (required).
-- CMake > 3.20 (required).
+## Required 
+
+- C++17/C++20-compatible C++ compiler.
+- GNU Autotools (automake) to set up the system <b>or alternatively</b> CMake (3.20 or newer).
 - Python3 (optional but recommended; not required if you work only with the C++ baseline).
-- MPI (optional). MPI's multithreaded support is required.
-- Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
-- ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading (optional).
+
+You will also need Doxygen if you want to create HTML pages of the documentation yourself.
+
+## Recommended 
+
+- MPI. MPI's multithreaded support is required.
+- Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading.
+
+## Optional 
+
+- BLAS
 - The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
+- ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading (optional).
 - HDF5 (optional).
 - NetCDF (optional).
 - LIBXSMM (optional).
-- Doxygen if you want to create HTML pages of the documentation (optional).
 
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
@@ -51,8 +59,7 @@ mandatory tools from above, but we won't be able to help.
 Peano is well-integrated with a number of @ref page_third_party_home "third party tools",
 but these are all optional.
 
-Configure Peano
-===================
+# Configure Peano
 
 We currently provide support for Autotools and CMake with Peano.
 After you have cloned the repository, you will have to to set up your
@@ -61,22 +68,25 @@ This will allow you to build the Peano core libraries and is a step
 required before you use any application or tool built on top of Peano
 such as ExaHyPE or our PETSc multigrid environment.
 
-Prepare the Configure Environment (Autotools)
-----------------------------------------------
+## Prepare the Configure Environment (Autotools)
 
 - Ensure you have the Autotools packages installed on your system. They
   typically are shipped in the packages `autoconf`, `automake` and
   `libtool`.
 - Set up the configure environment:
 
-    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
-    automake --add-missing
+~~~~~~~~~~~~~~~~~~~~~~~~~
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
+automake --add-missing
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
   These steps should only be required once, unless you push major
   revisions to the development branch.
 - Next, type in
 
-    ./configure --help
+~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure --help
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
   The `--help` option should give you some information about the available
   variants of Peano, its extensions and toolboxes.
@@ -104,8 +114,7 @@ work with the code in the download/installation directory. So no need to
 specify a proper installation directory via `--prefix`.
 
 
-Build
-=============
+# Build
 
 Once the configuration has been successful, a simple
 
@@ -272,12 +281,9 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 # Configure Peano with whatever we need
 CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp"
 
-# Get number of threads available for quicker compilation
-THREADS_NUM=$(nproc --all)
-
-# Compile and check build
-echo "Starting compilation with $THREADS_NUM threads."
-make -j$THREADS_NUM
+# Compile and check build. You might want to add -jX to build on X cores in parallel
+echo "Starting compilation"
+make 
 echo "Compilation complete. Now Checking..."
 
 # Checks installation and runs the unit tests
