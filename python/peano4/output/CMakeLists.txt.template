@@ -8,4 +8,4 @@ cmake_minimum_required(VERSION 3.21)
 
 project({{EXECUTABLENAME}})
 
-find_package(Peano)
+find_package(Peano CONFIG)

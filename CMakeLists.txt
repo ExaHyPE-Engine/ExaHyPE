@@ -2,14 +2,14 @@
 # use, please see the copyright notice at www.peano-framework.org
 cmake_minimum_required(VERSION 3.21)
 
-set(META_PROJECT_NAME "Peano")
-set(META_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
-set(META_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
-set(META_AUTHOR_DOMAIN "www.peano-framework.org")
+set(PEANO_PROJECT_NAME "Peano")
+set(PEANO_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
+set(PEANO_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
+set(PEANO_AUTHOR_DOMAIN "www.peano-framework.org")
 
-project(${META_PROJECT_NAME}
-  DESCRIPTION ${META_PROJECT_DESCRIPTION}
-  HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
+project(${PEANO_PROJECT_NAME}
+  DESCRIPTION ${PEANO_PROJECT_DESCRIPTION}
+  HOMEPAGE_URL ${PEANO_AUTHOR_DOMAIN}
   LANGUAGES C CXX
 )
 
@@ -20,11 +20,11 @@ get_git_head_revision(GIT_BRANCH GIT_COMMIT_HASH)
 get_git_commit_message(GIT_COMMIT_MESSAGE)
 get_git_commit_timestamp(GIT_COMMIT_TIMESTAMP)
 
-set(META_VERSION_REVISION "${GIT_COMMIT_HASH}")
-set(META_GIT_BRANCH "${GIT_BRANCH}")
-set(META_GIT_HASH "${GIT_COMMIT_HASH}")
-set(META_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
-set(META_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
+set(PEANO_VERSION_REVISION "${GIT_COMMIT_HASH}")
+set(PEANO_GIT_BRANCH "${GIT_BRANCH}")
+set(PEANO_GIT_HASH "${GIT_COMMIT_HASH}")
+set(PEANO_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
+set(PEANO_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
 message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
 
 set(CMAKE_C_STANDARD 17 CACHE STRING "")
@@ -50,14 +50,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jinja2" RESULT_VARIABLE JINJA2_FOUND)
+#find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+#execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jinja2" RESULT_VARIABLE JINJA2_FOUND)
 # We need Jinja2 for code generation
-if(NOT JINJA2_FOUND EQUAL 0)
-  message(WARNING "Jinja2 package (needed for code generation) not found. Please install Jinja2 e.g.: 'pip3 install jinja2'")
-else()
-  message(STATUS "Found Jinja2")
-endif()
+#if(NOT JINJA2_FOUND EQUAL 0)
+#  message(WARNING "Jinja2 package (needed for code generation) not found. Please install Jinja2 e.g.: 'pip3 install jinja2'")
+#else()
+#  message(STATUS "Found Jinja2")
+#endif()
 
 include(Ccache)
 include(TestBigEndian)
@@ -136,6 +136,22 @@ check_include_files(string.h HAVE_STRING_H)
 check_include_files(sys/stat.h HAVE_SYS_STAT_H)
 check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
+
+option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
+option(WITH_TARGETDART "Build with targetDART support" OFF)
+option(WITH_OTTER "Build with Otter support" OFF)
+option(WITH_PETSC "Build with PETSc support" OFF)
+option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
+option(WITH_VTK "Build with VTK support" OFF)
+option(WITH_HDF5 "Build with HDF5 support" OFF)
+option(WITH_NETCDF "Build with NetCDF support" OFF)
+
+option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
+option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
+option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
+option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
+option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
+option(ENABLE_SWIFT "Enable Swift 2" OFF)
 
 list(APPEND AVAILABLE_TOOLCHAINS
   "no"
@@ -288,33 +304,17 @@ set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2 CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_TRACE -g -O2 CACHE INTERNAL "")
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 
-option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
-option(WITH_TARGETDART "Build with targetDART support" OFF)
-option(WITH_OTTER "Build with Otter support" OFF)
-option(WITH_PETSC "Build with PETSc support" OFF)
-option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
-option(WITH_VTK "Build with VTK support" OFF)
-option(WITH_HDF5 "Build with HDF5 support" OFF)
-option(WITH_NETCDF "Build with NetCDF support" OFF)
-
-option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
-option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
-option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
-option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
-option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
-option(ENABLE_SWIFT "Enable Swift 2" OFF)
-
 if(WITH_MPI)
   find_package(MPI REQUIRED)
-  message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
+  #message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
   target_compile_definitions(ProjectOptions INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(ProjectOptions INTERFACE Parallel)
-  # target_link_libraries(ProjectOptions INTERFACE MPI::MPI_CXX)
-  target_compile_options(ProjectOptions INTERFACE ${MPI_CXX_FLAGS})
-  target_link_libraries(ProjectOptions INTERFACE ${MPI_CXX_LIBRARIES})
-  target_compile_definitions(ProjectOptions INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
-  target_include_directories(ProjectOptions INTERFACE ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
-  target_link_options(ProjectOptions INTERFACE ${MPI_CXX_LINK_FLAGS})
+  target_link_libraries(ProjectOptions INTERFACE MPI::MPI_CXX)
+  #target_compile_options(ProjectOptions INTERFACE ${MPI_CXX_FLAGS})
+  #target_link_libraries(ProjectOptions INTERFACE ${MPI_CXX_LIBRARIES})
+  #target_compile_definitions(ProjectOptions INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
+  #target_include_directories(ProjectOptions INTERFACE ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
+  #target_link_options(ProjectOptions INTERFACE ${MPI_CXX_LINK_FLAGS})
 endif()
 
 if(WITH_OTTER)
@@ -387,28 +387,37 @@ if(ENABLE_SWIFT)
   target_compile_definitions(ProjectOptions INTERFACE UseSWIFT)
 endif()
 
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  ${META_PROJECT_NAME}ConfigVersion.cmake
-  VERSION ${META_VERSION_REVISION}
-  COMPATIBILITY SameMajorVersion
-)
-
-install(DIRECTORY
-  ${CMAKE_SOURCE_DIR}/cmake
-  ${CMAKE_SOURCE_DIR}/python
-  DESTINATION "${CMAKE_INSTALL_PREFIX}")
-
-install(FILES
-  ${CMAKE_SOURCE_DIR}/LICENSE
-  ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
-  ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
-  DESTINATION "${CMAKE_INSTALL_PREFIX}"
-)
-
 target_include_directories(ProjectOptions INTERFACE
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_BINARY_DIR}/src
 )
 
 add_subdirectory(src)
+
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+  ${PEANO_PROJECT_NAME}ConfigVersion.cmake
+  VERSION ${PEANO_VERSION_REVISION}
+  COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+  ${CMAKE_SOURCE_DIR}/cmake/Config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+
+install(DIRECTORY
+  ${CMAKE_SOURCE_DIR}/python
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+
+install(FILES
+  ${CMAKE_SOURCE_DIR}/LICENSE
+  ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
+  ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
