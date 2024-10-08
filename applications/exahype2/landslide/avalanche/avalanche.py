@@ -12,8 +12,8 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="RusanovGlobalAdaptiveFV",
         end_time=1.0,
-        width="[1.58, 0.70]",
-        offset="[0.0, 0.0]",
+        width=[1.58, 0.70],
+        offset=[0.0, 0.0],
         min_depth=2,
         amr_levels=4,
         patch_size=16,

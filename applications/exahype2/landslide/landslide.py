@@ -60,7 +60,7 @@ class Landslide:
             "-offset",
             "--offset",
             type=str,
-            default="[0, 0]",
+            default=[0, 0],
             help="Specify offset of domain in meters as [x, y] as string (e.g. [-10, -10], [-7e6, -4e6]).",
         )
 
@@ -271,9 +271,7 @@ class Landslide:
                 }
             )
 
-        max_h = (
-            1.1 * min(self.parse_coordinate_pair(args.width)) / (3.0**args.min_depth)
-        )
+        max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
         min_h = max_h * 3.0 ** (-args.amr_levels)
 
         if "FV" in args.solver:
@@ -332,8 +330,8 @@ class Landslide:
 
         project.set_global_simulation_parameters(
             dimensions=2,
-            size=self.parse_coordinate_pair(args.width),
-            offset=self.parse_coordinate_pair(args.offset),
+            size=args.width,
+            offset=args.offset,
             min_end_time=args.end_time,
             max_end_time=args.end_time,
             first_plot_time_stamp=0.0,
@@ -437,18 +435,4 @@ class Landslide:
             make=not args.no_make,
             make_clean_first=True,
             throw_away_data_after_build=True,
-        )
-
-    def parse_coordinate_pair(self, coords):
-      try:
-        return [
-          float(num) for num in  # Convert strings to Python floats
-            coords.translate(  # Strip left and right brackets from input
-              { ord('['): None,
-                ord(']'): None
-              }).split(',')  # Split input along commas
-          ][0:2]  # If more inputs were specified than there are dimensions, discard the rest
-      except:
-        raise ValueError(
-          "Could not parse the coordinates: {}!".format(coords)
         )
