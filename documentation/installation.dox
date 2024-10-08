@@ -346,6 +346,8 @@ make test
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Containers
+
 \li \subpage page_installation_with_spack
 \li \subpage page_installation_with_docker
 \li \subpage page_installation_with_apptainer

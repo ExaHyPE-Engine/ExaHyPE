@@ -2,6 +2,9 @@
 
 @page applications_exahype2_exaseis_rupture ExaSeis with rupture coupling
 
+\tableofcontents
+
+
 # Code architecture
 
 We realise the solver as a two-solver scheme:
@@ -19,6 +22,8 @@ The mesh resembles a degenerated Finite Volume solver, where the solver does not
 Typically, we employ a @f$ p @f$, i.e. number of voxels per direction, which is significantly finer than the Finite Volume scheme employed or larger than the polynomial degree of the DG scheme.
 It yields a subcell representation of the geometry. 
 The following quantities are stored per volume in this helper mesh:
+
+Colour function
 
 1. The fault identificator @f$ \phi @f$. By default, this is the sinmod function of the distance to the fault.
    Every value of @f$ \phi > 0 @f$ indicates that this voxel is part of the actual fault geometry, whereas @f$ \phi=0 @f$ means that we are far away from the fault and 

@@ -458,4 +458,15 @@ This reference will display the code snippet in the generated html code.
 The outcome resembles what we know from Jupyter notebooks.
 
 
+# Install doxygen
+
+On most Unix environment, Doxygen is shipped as a standard package. 
+On Apple, we can use brew for example:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+brew install doxygen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 */
