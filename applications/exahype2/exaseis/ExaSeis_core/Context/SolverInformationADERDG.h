@@ -12,11 +12,11 @@ public:
     SolverInformation(a_solver) {
 
     const int ndof = order+1;
-    //Invert order because kernelgenerator stores these in opposite order
+
+    std::copy_n(_nodes, order+1 , nodes);
     for(int i=0; i<ndof; i++){
-      nodes[i] = _nodes[order-i];
       for(int j=0; j<ndof; j++){
-        dudx[i][j] = _dudx[(order-j)*ndof+(order-i)];
+        dudx[i][j] = _dudx[j*ndof+i];
       }
     }
 

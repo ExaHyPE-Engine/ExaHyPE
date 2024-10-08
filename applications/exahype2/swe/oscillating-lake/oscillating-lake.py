@@ -14,8 +14,8 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="HLLEMRiemannGlobalAdaptiveFV",
         end_time=10.0,
-        width="[4, 4]",
-        offset="[-2, -2]",
+        width=[4, 4],
+        offset=[-2, -2],
         min_depth=1,
         amr_levels=5,
         patch_size=4,
