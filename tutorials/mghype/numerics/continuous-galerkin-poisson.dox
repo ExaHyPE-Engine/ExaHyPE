@@ -24,6 +24,8 @@ The new weak solution then has to have only a first derivative almost everywhere
 Small sets (nullsets) of points where there is no first derivative then don't count anymore.
 
 
+# D-linear shape functions and vertex-centred discretisation
+
 We illustrate the next steps in one dimension:
 Let the domain split into cells.
 We create some shape functions over the domain.
@@ -50,13 +52,72 @@ i.e. the global linear combination spanning the solution has to fulfill the weak
 \f}
 
 where in the second line we exchanged the definition of @f$ u @f$ for its expansion
-in basis functions. From here onwards, we drop the surface integral term, for reasons we shall 
+in basis functions. 
 
-# Discretisation
+From here onwards, we drop the surface integral term:
 
-# D-linear shape functions and vertex-centred discretisation
+- At the boundary of the support of a shape function (e.g., points @f$ u_0 @f$ and @f$ u_2 @f$ of @f$ \phi _1 @f$ above)
+  the value of the test function is zero and hence this face integral disappears.
+- At the centre of the test function, the face integrals stay there. In the example above, we have two: 
+  one comes from the left and one from the right adjacent cell. These two terms refer to 
+  @f$ \nabla u @f$ and have different directions of the normal. So no matter how we 
+  define @f$ \nabla u @f$ (it doesn't really exist at this point, but we might must make
+  it the average of derivative in the left and right cell), the two terms will cancel 
+  out. 
+  
+So all the surface integrals drop out. They don't drop out if we have boundary 
+conditions that prescribe a derivative. But that's a different story for a more
+advanced textbook.
+
+
+## Computation of integrals
+
+The basis of functions that we use in this example are piecewise linear functions, defined in 
+each cell (which is an interval of width @f$ h @f$):
+
+\f{eqnarray*}{
+  \phi_i(x) \ = \
+\begin{cases}
+  \frac{1}{h}(x - x_{i-1}) &\text{if} \ x_{i-1} \ < \ x < \ x_i \\
+  \frac{1}{h}(x_{i+1} - x) &\text{if} \ x_{i} \ < \ x < \ x_{i+1} \\
+  0                        &\text{otherwise}
+\end{cases}
+\f}
+
+And from this we can write down @f$ \nabla \phi_i @f$:
+
+\f{eqnarray*}{
+  \nabla \phi_i(x) \ = \
+\begin{cases}
+  \frac{1}{h} &\text{if} \ x_{i-1} \ < \ x < \ x_i \\
+  - \frac{1}{h} &\text{if} \ x_{i} \ < \ x < \ x_{i+1} \\
+  0                        &\text{otherwise}
+\end{cases}
+\f}
+
+So now we can finally compute the integrals. Here we integrate over the entire domain (every cell):
+
+\f{eqnarray*}{
+
+\int (\nabla \phi_i, \ \nabla \phi_i) dx \ &=& \ \int_{c_{i}} \frac{1}{h} \cdot \frac{1}{h} dx
+    + \int_{c_{i+1}} \frac{-1}{h} \cdot \frac{-1}{h} dx \ = \ \frac{2}{h} \\
+\int (\nabla \phi_i, \ \nabla \phi_{i+1}) dx \ &=& \ \int_{c_{i+1}} \frac{-1}{h} \cdot \frac{1}{h} dx \ = \ \frac{1}{h}
+
+
+\f}
+
+With all other being 0, due to the lack of overlap of the support of the shape functions. 
+We used here implicitly that the cell had a width of @f$ h @f$.
+One beautiful property of all of this is that we can precompute all of these integrals, as we know exactly what the shape functions look like.
+
+We end up with a matrix @f$ Au \ = \ f @f$.
+The @f$ u @f$ values here are the weights of the shape functions.
+
 
 ## Stencil notation
+
+@todo If someone feels the need to write something here, please do so
+
 
 # Higher-order CG solvers
 
@@ -79,11 +140,8 @@ If we had only two, we'd end up with a d-dimensional shape function.
 That is, DG is a more general formalism, which degenerates to d-dimensional shape functions once we have $p=1$.
 In this special case, it it reasonable to forget about all the realisation details below and to use the description from above.
 
-
-
-## Gauss-Lobatto
-
-## Gauss-Legendre
+If we store the weights of the shape functions within the vertices and faces, we naturally get a continuous shape function: 
+The weight of a function on a face determines the height of this function at this point both from the left cell's and the right cell's point of view.
 
 
  */
