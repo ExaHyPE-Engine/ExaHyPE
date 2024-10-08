@@ -53,7 +53,7 @@ def postprocess_markdown_line(line):
 #
 #""" + line        
     
-    return line.replace( "$$", "@f$ ")
+    return line.replace( "$$", "\n @f$ ").replace( "$", "@f$ ")
 
 
 def postprocess_notebook_markdown(filename: str):

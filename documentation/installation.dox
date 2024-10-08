@@ -38,6 +38,7 @@ We however use a whole set of tools around it.
 - Python3 (optional but recommended; not required if you work only with the C++ baseline).
 
 You will also need Doxygen if you want to create HTML pages of the documentation yourself.
+Unless you work exclusively with the Peano core in C++, you will have to ensure that your Python installation meets all requirements (see remarks below).
 
 ## Recommended 
 
@@ -113,6 +114,29 @@ system. Therefore, I ship Peano with static libraries only, and most users
 work with the code in the download/installation directory. So no need to
 specify a proper installation directory via `--prefix`.
 
+## CMake
+
+CMake's functionality mirrors the capabilities of the autotools. 
+It has one fundamental advantage: 
+It can build <a href="https://cmake.org/cmake/help/book/mastering-cmake/chapter/Getting%20Started.html">out-of-source</a> which means that all the compiled object files and libraries are not held in the same place as your sources. 
+This makes the navigation through the source directories easier.
+
+Using CMake is again relatively simple.
+First, we create a new directory.
+I usually make this director sit outside of the Peano repository's clone, but you can also build stuff into a separate directory within the repository.
+So something similar to:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mkdir build
+cd build
+cmake Peano-src
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where Peano-src points to the checkout.
+
+@todo Mario, can you please add something here?
+
+
 
 # Build
 
@@ -129,8 +153,7 @@ static libraries. The code is not small and you thus might prefer
 with x being the number of parallel builds to use.
 
 
-Installation Test
-====================
+# Installation Test
 
 Once you have compiled, I recommend that you run all tests using
 
@@ -209,42 +232,15 @@ This can even be done in the `.bashrc`. If you "install" the Peano Python
 packages this way, you will also need to manually install additional
 dependencies, as noted below.
 
-Python Dependencies
--------------------
+## Python Dependencies
 
 Peano currently relies on the following Python packages/projects:
 
-- Jinja2 for all the templated glue code. Most Linux distributions ship this
-  one as
 
-    python3-jinja2
-
-- numpy for numeric operations. Most Linux distributions ship this
-  one as
-
-    python3-numpy
-
-- sympy for the symbolic modelling of partial differential equations. Most
-  Linux distributions ship it through
-
-    python3-sympy
-
-- matplotlib for plotting:
-
-    python3-matplotlib
-
-- Optional: Some scripts in the particles/swift2 make use of the Python HDF5
-  package:
-
-    python3-h5py
-
-- Optional: Some scripts in the particles/swift2 make use of the VTUinterface
-  package for visualisation. The package is available <a
-  href="https://github.com/joergbuchwald/VTUinterface"> ``on GitHub``</a>.
+@include ../requirements.txt
 
 
-Fortran (Deprecated)
-==================
+# Fortran 
 
 If you don't use Fortran in your own code, ignore this section.
 
@@ -262,12 +258,13 @@ Fortran---it is only applications built on top of ---you can redefine
 the flags later on.
 
 
-Sample Installation Script for Autotools
-===============================
+# Sample Installation Script for Autotools
 
 Please find below a sample shell script for Autotools that will install Peano with ExaHyPE
 enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
 OpenMP for the multithreading support. We also include some flags to suppress warnings.
+
+@todo Mario, this script below does not work properly anymore, isn't it?
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
 #!/bin/sh
@@ -292,8 +289,7 @@ make check
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Sample Installation Script for CMake
-===============================
+# Sample Installation Script for CMake
 
 Please find below a sample shell script for CMake that will install Peano with ExaHyPE
 enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
@@ -314,9 +310,9 @@ mkdir build && cd build
 # Get number of threads available for quicker compilation
 THREADS_NUM=$(nproc --all)
 
-# Compile and check build
-echo "Starting compilation with $THREADS_NUM threads."
-make -j$THREADS_NUM
+# Compile and check build. You might want to add -jX to build on X cores in parallel
+echo "Starting compilation"
+make 
 echo "Compilation complete. Now Checking..."
 
 # Checks installation and runs the unit tests
