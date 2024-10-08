@@ -5,8 +5,12 @@
 @image html documentation/exahype2/ExaHyPE-logo.jpg
 
 - \subpage tutorials_exahype2_hitchhikers-guide
-- Numerics tour de force
+- Numerics tour de force (hands-on explanation of core numerical ingredients)
   - \subpage page_tutorials_exahype2_numerics_finite_volumes
+  - \subpage page_tutorials_exahype2_numerics_discontinous-Galerkin
+  - \subpage page_tutorials_exahype2_numerics_finite-differences
+  - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
+  - \subpage page_tutorials_exahype2_numerics_ADER-DG
 - Exercises
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced

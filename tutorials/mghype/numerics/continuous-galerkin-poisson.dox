@@ -2,5 +2,48 @@
 
 @page tutorials_mghype_numerics_continuous_galerkin_poisson Continuous Galerkin for the Poisson equation
 
+\tableofcontents
+
+We explain all the numerics in hands-on style for the toy problem
+
+@f$
+  -\Delta u = f
+@f$
+
+
+# Discretisation
+
+# D-linear shape functions and vertex-centred discretisation
+
+## Stencil notation
+
+# Higher-order CG solvers
+
+Higher-order CG solvers are solvers where each cell of the domain hosts a polynomial.
+Along the faces, these polynomials are glued together with their neighbours such that they are continuous.
+That means: There's no derivative here along the face normals, but the function does not jump either.
+
+@image html cg-higher-order-shape-functions.png
+
+In the illustration above, two adjacent cells host a polynomial each.
+The polynomial is continuous if we cross the connecting face along its normal (the face is marked as blue), but the solution is not differentiable along this direction.
+We only have a continuous function!
+
+The sketch kind of suggests that continuous higher order is intrinsically tied to Gauss-Lobatto nodal points, i.e. an arrangements of the unknowns where nodes are placed on the faces.
+This is not true.
+There's no restriction on the faces, even though it is obviously easier to realise continuous Galerkin if we have Lobatto.
+
+The sketch shows an example for quadratic splines, as we have three integration nodes per cell per direction.
+If we had only two, we'd end up with a d-dimensional shape function.
+That is, DG is a more general formalism, which degenerates to d-dimensional shape functions once we have $p=1$.
+In this special case, it it reasonable to forget about all the realisation details below and to use the description from above.
+
+
+
+## Gauss-Lobatto
+
+## Gauss-Legendre
+
+
  */
  
