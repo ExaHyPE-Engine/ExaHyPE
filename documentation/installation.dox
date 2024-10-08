@@ -2,10 +2,6 @@
 
 \page page_installation_home Installation
 
-\li \subpage page_installation_with_spack
-\li \subpage page_installation_with_docker
-\li \subpage page_installation_with_apptainer
-
 \tableofcontents
 
 Peano is typically acquired through a git clone.
@@ -31,28 +27,28 @@ Therefore, the default master is called ```p4```.
 Peano's core is plain C++17/C++20 code.
 We however use a whole set of tools around it.
 
-## Required 
+## Required
 
 - C++17/C++20-compatible C++ compiler.
-- GNU Autotools (automake) to set up the system <b>or alternatively</b> CMake (3.20 or newer).
-- Python3 (optional but recommended; not required if you work only with the C++ baseline).
+- GNU Autotools (Automake) to set up the system <b>or alternatively</b> CMake (3.21 or newer).
 
-You will also need Doxygen if you want to create HTML pages of the documentation yourself.
-Unless you work exclusively with the Peano core in C++, you will have to ensure that your Python installation meets all requirements (see remarks below).
-
-## Recommended 
+## Recommended
 
 - MPI. MPI's multithreaded support is required.
 - Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading.
+- Python 3 (optional but recommended; not required if you work only with the C++ baseline).
 
-## Optional 
+## Optional
 
 - BLAS
-- The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
-- ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading (optional).
-- HDF5 (optional).
-- NetCDF (optional).
-- LIBXSMM (optional).
+- The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities.
+- NVHPC, LLVM Clang, ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading.
+- HDF5.
+- NetCDF.
+- LIBXSMM.
+
+You will also need Doxygen if you want to create HTML pages of the documentation yourself.
+Unless you work exclusively with the Peano core in C++, you will have to ensure that your Python installation meets all requirements (see remarks below).
 
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
@@ -116,15 +112,23 @@ specify a proper installation directory via `--prefix`.
 
 ## CMake
 
-CMake's functionality mirrors the capabilities of the autotools. 
-It has one fundamental advantage: 
-It can build <a href="https://cmake.org/cmake/help/book/mastering-cmake/chapter/Getting%20Started.html">out-of-source</a> which means that all the compiled object files and libraries are not held in the same place as your sources. 
+CMake's functionality mirrors the capabilities of the Autotools.
+It has one fundamental advantage:
+It can build <a href="https://cmake.org/cmake/help/book/mastering-cmake/chapter/Getting%20Started.html">out-of-source</a>
+which means that all the compiled object files and libraries are not held in the same place as your sources.
 This makes the navigation through the source directories easier.
 
 Using CMake is again relatively simple.
 First, we create a new directory.
-I usually make this director sit outside of the Peano repository's clone, but you can also build stuff into a separate directory within the repository.
-So something similar to:
+Typically it is recommended to create a new build directory within the Peano repository's clone:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mkdir build
+cd build
+cmake ..
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Alternatively, you can also create a new build directory anywhere else on your workstation:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mkdir build
@@ -134,8 +138,17 @@ cmake Peano-src
 
 where Peano-src points to the checkout.
 
-@todo Mario, can you please add something here?
+You can use `make help` to identify all available CMake targets to build.
 
+To only build a specific target, simply invoke
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+make <target>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where `<target>` is to be replaced by an actual target as listed.
+
+You may also use `ccmake` to interactively adapt the build configuration.
 
 
 # Build
@@ -153,17 +166,25 @@ static libraries. The code is not small and you thus might prefer
 with x being the number of parallel builds to use.
 
 
-# Installation Test
+# Test
 
-Once you have compiled, I recommend that you run all tests using
+Once you have compiled, we recommend that you run all tests using
 
     make check
+
+for Automake
+
+or
+
+    make test
+
+for CMake.
 
 The call launches Peano's unit test, i.e. all the unit tests for the
 core plus the extensions that you have enabled.
 
-I have written the test target such that it works out-of-the-box for
-non-MPI calls. If you have configured with `--with-mpi`, then the unit
+The test target is written such that it works out-of-the-box for
+non-MPI calls. If you have configured with MPI, then the unit
 tests will fail. But this does not mean that the unit tests are broken.
 It is simply due to the fact that the Makefile's test target does not
 know that you have to use the `mpirun` prefix. To make a long story
@@ -180,15 +201,24 @@ if you have compiled with MPI. The executables contain both node
 correctness tests and MPI ping-pong tests, i.e. you can both assess a
 valid build plus a working MPI environment.
 
+# Install
 
-Python Configuration
-=====================
+CMake allows to install all targets in a self-contained bundle.
+You need to specify the installation path by amending the `CMAKE_INSTALL_PREFIX` variable:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mkdir build
+cd build
+cmake Peano-src -DCMAKE_INSTALL_PREFIX=<install_path>
+make install
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Python Configuration
 
 Peano's Python front-end (API) is developed with Python 3.
 Python 2 is not supported.
 
-Package Installation
-----------------------
+## Package Installation
 
 Our code base relies on several Python packages. There's a requirements
 specification file which you can use to ensure that all requirements are
@@ -236,11 +266,10 @@ dependencies, as noted below.
 
 Peano currently relies on the following Python packages/projects:
 
-
 @include ../requirements.txt
 
 
-# Fortran 
+# Fortran
 
 If you don't use Fortran in your own code, ignore this section.
 
@@ -264,23 +293,21 @@ Please find below a sample shell script for Autotools that will install Peano wi
 enabled. Here we use GCC and G++ as the C and C++ compiler, as well as
 OpenMP for the multithreading support. We also include some flags to suppress warnings.
 
-@todo Mario, this script below does not work properly anymore, isn't it?
-
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
 #!/bin/sh
 
-# Cleanup the Peano directory if files from previous builds are present
-make clean && make distclean
+# Cleanup the Peano directory if files from previous builds are present (comment-in to use)
+#make clean && make distclean
 
 # Standard operations
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
 
 # Configure Peano with whatever we need
-CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp"
+CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes" LDFLAGS="-fopenmp"
 
 # Compile and check build. You might want to add -jX to build on X cores in parallel
 echo "Starting compilation"
-make 
+make
 echo "Compilation complete. Now Checking..."
 
 # Checks installation and runs the unit tests
@@ -288,6 +315,7 @@ make check
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 # Sample Installation Script for CMake
 
@@ -298,21 +326,18 @@ OpenMP for the multithreading support. All required flags are automatically adde
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
 #!/bin/sh
 
-# Cleanup the Peano directory if files from previous builds are present
-rm -rf build
+# Cleanup the Peano directory if files from previous builds are present (comment-in to use)
+#rm -rf build
 
 # Standard operations
 mkdir build && cd build
 
 # Configure Peano with whatever we need
-/CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
-
-# Get number of threads available for quicker compilation
-THREADS_NUM=$(nproc --all)
+CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
 
 # Compile and check build. You might want to add -jX to build on X cores in parallel
 echo "Starting compilation"
-make 
+make
 echo "Compilation complete. Now Checking..."
 
 # Checks installation and runs the unit tests
@@ -320,5 +345,9 @@ make test
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\li \subpage page_installation_with_spack
+\li \subpage page_installation_with_docker
+\li \subpage page_installation_with_apptainer
 
 */
