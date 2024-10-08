@@ -405,20 +405,15 @@ class Euler:
         )
 
     def parse_coordinate_pair(self, coords, dim):
-        coordinate_filter = "((-?[0-9]+\.?[0-9]*(e-?[0-9]+)?)|(inf))"
-        if re.search(
-            "^\[%s\\s*\,\\s*%s\]$" % (coordinate_filter, coordinate_filter), coords
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2])][0:dim]
-        elif re.search(
-            "^\[%s\\s*\,\\s*%s\,\\s*%s\]$"
-            % (coordinate_filter, coordinate_filter, coordinate_filter),
-            coords,
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2]), float(splits[3])][0:dim]
-        else:
-            raise ValueError(
-                "Could not parse the illegal coordinates: {}!".format(coords)
-            )
+      try:
+        return [
+          float(num) for num in #convert strings to python floats
+            coords.translate( #strip left and right brackets from input
+              { ord('['): None, 
+                ord(']'): None
+              }).split(',') #split input along commas
+          ][0:dim] #if more inputs were specified than there are dimensions, discard the rest
+      except:
+        raise ValueError(
+          "Could not parse the coordinates: {}!".format(coords)
+        )
