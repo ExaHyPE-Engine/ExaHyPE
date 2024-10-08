@@ -55,7 +55,6 @@ class Project (object):
         self.namespaces.append(self.namespace)
       if not self.subdirectory in self.subdirectories:
         self.subdirectories.append(self.subdirectory)
-    print("project.subdirectories = ", self.subdirectories)
 
     #
     # Create default output model, i.e. those parts that have to be there
@@ -81,6 +80,9 @@ class Project (object):
 
     if executable:
       self.output.makefile.set_executable_name(executable)
+    
+    self.is_extended = False
+
 
 
   def __str__(self):
@@ -141,9 +143,6 @@ class Project (object):
 
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
-
-    # print("project.subdirectories = ", self.subdirectories)
-    # print("main.subdirectories = ", self.main.project.subdirectories)
 
     self.main.construct_output(self.output,self.project_name + "-main")
     self.output.generate(overwrite, self.directory, self.subdirectories)
@@ -343,6 +342,8 @@ class Project (object):
       #         dict_merged[key] = value
       #   return dict_merged
 
+    assert(subproject._subdirectory != ""), "subdirectory of a subproject mustn't be empty"
+
     self.namespace = subproject.namespace
     self.namespaces.append(subproject.namespace)
     self.datamodel.namespace = subproject.datamodel.namespace
@@ -367,13 +368,30 @@ class Project (object):
     for particle in subproject.datamodel.global_data:
       self.datamodel.add_global(particle)
 
-    # ...
-
     #
     # merge all steps of solversteps
     #
+
+    # make the steps currently contained in the Peano4 project aware of the incoming subproject's data
+    for step in self.solversteps._steps:
+      added_step = subproject.solversteps._steps[0]
+      step.cell_data.extend(added_step.cell_data)
+      step.face_data.extend(added_step.face_data)
+      step.vertex_data.extend(added_step.vertex_data)
+
+    # make the incoming subproject's steps aware of the Peano4 project data
+    if len(self.solversteps._steps):
+      for added_step in subproject.solversteps._steps:
+        step = self.solversteps._steps[0]
+        added_step.cell_data.clear()
+        added_step.cell_data.extend(step.cell_data)
+        added_step.face_data.clear()
+        added_step.face_data.extend(step.face_data)
+        added_step.vertex_data.clear()
+        added_step.vertex_data.extend(step.vertex_data)
+
+    # finally append the incoming subproject's steps to the Peano4 project's steps
     for step in subproject.solversteps._steps:
-      # self.solversteps.add_step(step)
       self.solversteps._steps.append(step)
 
     #
@@ -413,9 +431,6 @@ class Project (object):
     self.output.makefile.d["MODE"] = subproject.output.makefile.d["MODE"]
     # self.output.makefile.d["GPUOBJS"] += subproject.output.makefile.d["GPUOBJS"]
 
-    # result_project.output.makefile.add_gpu_object()
-    # result_project.output.makefile.d["CMAKE_LIBS"]
-
     for module in subproject.output.makefile.d["FORTRAN_MODULES"]:
       self.output.makefile.add_Fortran_module(module)
 
@@ -434,8 +449,6 @@ class Project (object):
       self.output.makefile.add_h_file(filename, False)
     for filename in subproject.output.makefile.cppfiles:
       self.output.makefile.add_cpp_file(filename, False)
-    for filename in subproject.output.makefile.cufiles:
-      self.output.makefile.add_cu_file(filename, False)
     for filename in subproject.output.makefile.fortranfiles:
       self.output.makefile.add_Fortran_file(filename, False)
 
@@ -443,8 +456,6 @@ class Project (object):
       self.output.makefile.add_h_file(filename, True)
     for filename in subproject.output.makefile.generated_cppfiles:
       self.output.makefile.add_cpp_file(filename, True)
-    for filename in subproject.output.makefile.generated_cufiles:
-      self.output.makefile.add_cu_file(filename, True)
     for filename in subproject.output.makefile.generated_fortranfiles:
       self.output.makefile.add_Fortran_file(filename, True)
 
@@ -463,16 +474,17 @@ class Project (object):
     for i in subproject.output.artefacts:
       self.output.add(i)
 
-
     #
     # the last added subproject becomes the master project (which will provide the template for the main file)
     #
-    if master:
+    if not self.is_extended:
       self.main = subproject.main
       self.rootnamespace = subproject.rootnamespace
       self._subdirectory = subproject._subdirectory
+      self.is_extended = True
+    self.main.merge(subproject.main)
 
-    self.main.project = self
+    # self.main.project = self
     # self.main.overwrite = subproject.main.overwrite
     # self.main.d.update(subproject.main.d)
 
@@ -481,28 +493,6 @@ class Project (object):
     #
     self.subconstants.append(subproject.constants)
 
-    ## not needed, automatically done by subproject
-    # result_project.set_solver_repository_dict()
-    # result_project.generate_solver_repository()
-
-    # print("=== BEGIN output artefacts: ===")
-    # artefacts_list = []
-    # for item in result_project.output.artefacts:
-    #   # if isinstance(item, peano4.output.Jinja2TemplatedHeaderImplementationFilePair):
-    #     artefacts_list.append(f"Item = \nHeaderFile:{type(item)}")
-    # output_str = '\n'.join(artefacts_list)
-    # print(output_str)
-    # print("=== END output artefacts: ===")
-
-    # print("=== BEGIN main dict: ===")
-    # main_dict = []
-    # for key, value in self.main.d.items():
-    #     main_dict.append(f"Key = {key}, Value = \n{value}")
-    # output_str = '\n'.join(main_dict)
-    # print(output_str)
-    # print("=== END main dict: ===")
-
-    # return result_project
 
   @property
   def subdirectory(self):
