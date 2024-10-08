@@ -119,6 +119,7 @@ rm -rf /var/lib/apt/lists/*
 RUN python3 -m pip install --upgrade \
 pip \
 pyyaml \
+jupyter \
 umbridge \
 clang-format \
 clang-tidy

@@ -41,8 +41,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   const double                                  timeStepSize,
   const std::vector<int>&                       pointSources
 ) {
-
-
   pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
 
   pCompType* lQi   = memory + getlQiShift();
@@ -57,7 +55,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   {% endif %}
 
   {% if USE_NCP %}
-  pCompType* gradQ = memory + getgradQShift();
+  pCompType* gradQ = memory + getGradQShift();
   {% endif %}
 
   const pCompType invDt = 1.0 / timeStepSize;
@@ -124,7 +122,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             for (int p : pointSources) {
               // Get the source vector located at quadrature node x at time tn
               solver.pointSource(
-                luh + ((z * {{NUMBER_OF_DOF_3D}} + y)*{{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}}, x1, tn, timeStepSize, forceVectorSource, p
+                luh + ((z * {{NUMBER_OF_DOF_3D}} + y)*{{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}},
+                x1,
+                tn,
+                timeStepSize,
+                forceVectorSource,
+                p
               );
 
               // Map point source location onto reference element
@@ -355,9 +358,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_SOURCE %}
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       solver.algebraicSource(
-        cellCentre,
-        timeStamp,
         lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
         lSi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}}
       );
     }

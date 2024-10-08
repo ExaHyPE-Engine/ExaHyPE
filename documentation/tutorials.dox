@@ -13,13 +13,17 @@ However, the list below provides an overview over some tutorials.
   </td>
   <td style="vertical-align: bottom">
    @image html documentation/icons/swift.png
-   @ref page_swift2_tutorials "Swift 2"
+   @ref swift_tutorials "Swift 2"
   </td>
  </tr>
  <tr>
   <td style="vertical-align: bottom">
    @image html documentation/icons/MGHyPE.png
    @ref page_multigrid_tutorials "MGHyPE"
+  </td>
+  <td style="vertical-align: bottom">
+   @image html documentation/icons/peano4.png
+   @ref tutorials_peano4_tutorials "Peano 4 - core"
   </td>
  </tr>
 </table>
@@ -39,11 +43,36 @@ python3 documentation/convert-jupyter-notebooks.py
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 If you now call Doxygen, the notebook is integrated into the static webpage.
-It will be given the identifier that corresponds to the qualified file path, 
-where all / are replaced with underscores.
+
+## Naming conventions
+
+This webpage will be given the identifier that corresponds to the qualified file path, 
+where all / are replaced with underscores and the postfix is eliminated. So if 
+your file is called
+
+     Peano/tutorials/mghype/hitchhikers-guide.ipynb
+
+then you'll get a page with the identifier 
+
+     tutorials_mghype_hitchhikers-guide
 
 
+## Content formatting
 
+- If you have boxes in your Jupyter notebook which are classified as raw, these are 
+  unfortunately not preserved by the markdown export of the notebooks. However, our 
+  postprocessing script is able to reconstruct a proper formatting if you indent the 
+  lines within your raw box by at least give spaces, just as you would do with 
+  markdown in Doxygen. You have to indent every single line of the block though.
+  
+  If all is a mess, just add a line of tilde chars when you start the raw block
+  as well as the very end. You should be all set then.
+- If you use formulae, start them with two dollar signs. You can also use LaTeX
+  commands directly. But don't mix them!
+- Image should be translated one to one, but we faced some issues when relative
+  paths are used. As long as pics reside within the same directory or a 
+  subdirectory, all should be fine.
+  
 
 */
 

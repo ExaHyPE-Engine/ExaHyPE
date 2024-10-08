@@ -4,54 +4,51 @@
 
 \tableofcontents
 
-\li \subpage page_exahype2_tutorials
-\li \subpage page_exahype_applications
-\li \subpage page_exahype_benchmarks
-\li \subpage page_exahype_tracer
-\li \subpage page_exahype_visualisation
-\li \subpage page_exahype_runtime_analysis
-\li \subpage page_exahype_performance_optimisation
-\li \subpage page_exahype_parallelisation
-\li \subpage page_exahype_faq
-\li \subpage page_exahype_multicore
-\li \subpage page_exahype_gpu
-\li \subpage page_exahype_boundary_conditions
-\li \subpage page_exahype_amr
-\li \subpage page_exahype_cpp_kernels
-\li \subpage page_exahype_solvers
-\li \subpage exahype2_enumerator
-
 @image html documentation/exahype2/ExaHyPE-logo.jpg
-
-## Overview
-
-ExaHyPE 2 is part of Peano 4, which is an open source framework for solvers on dynamically adaptive Cartesian meshes that was developed by a team led by Tobias Weinzierl,
-who is at the time of writing Professor at the department of Computer Science of Durham University in the United Kingdom.
 
 ExaHyPE 2 itself is a hyperbolic PDE engine, its goal is to provide a generic engine in which users can
 implement the specifics of their hyperbolic PDEs and have these be solved by the engine.
-This is what we will endeavor to do in the following.
-ExaHyPE 2 solves partial differential equations of the following form:
+It is built on top of ExaHyPE 2 as an extension.
+ExaHyPE 2 solves partial differential equations of the form
 
 @f$
 \frac{\partial Q}{\partial t} + \nabla . F(Q, \nabla Q) + B(Q) . \nabla Q= S(Q) + \sum_{i = 1}^{n_{ps}} \delta_i
 @f$
 
-Here @f$ F @f$ is called the flux, @f$ B @f$ is the non-conservative product (often shortened to NCP)
-and @f$ S @f$ is the source of the equation.
-
-For simplicity the easiest way to think of each of these is as follows:
-
-- The flux contains terms linked to the transmission of a quantity within the domain such as the flow of heat from a hot part of the domain to a colder one. It concerns quantities that do not change but merely move from part to another.
-- The NCP, as the term non-conservative would imply, contains terms that are transmitted but can increase or decrease. One example for this would be friction, which causes the overall velocity of the system to decrease.
-- The source contains terms that are acted upon the system from outside, such as gravity or someone acting upon it.
-
+although there are specialised solver variants within ExaHyPE which support other terms such as second-order spatial operators.
 ExaHyPE 2 is a rewrite of the ExaHyPE engine developed under the umbrella of the EU FET HPC programme ExaHyPE.
 ExaHyPE has received funding from the European Union’s Horizon 2020 research
 and innovation programme under grant agreement No 671698 (ExaHyPE).
-ExaHyPE 2 has been made possible mainly through two funding routes:
-EPSRC funded three projects under their ExCALIBUR programme, and Intel made
-ExaHyPE centerpiece of an Intel oneAPI Academic Centre of Excellence.
+
+
+- \subpage page_exahype_faq
+- \subpage page_exahype_solvers
+- Applications and user guides
+  - \subpage page_exahype2_tutorials
+  - \subpage page_exahype_applications
+  - \subpage page_exahype_benchmarks
+- Realisation of numerics
+  - \subpage documentation_exahype2_solvers_finite_volumes
+  - \subpage documentation_exahype2_solvers_aderdg
+  - \subpage documentation_exahype2_solvers_enclave_solvers
+- Core functionality, numerics and ingredients
+  - \subpage page_exahype_tracer
+  - \subpage page_exahype_boundary_conditions
+  - \subpage page_exahype_amr
+  - \subpage benchmarks_peano4_interpolation_restriction_performance
+- Postprocessing and data analysis
+  - \subpage page_exahype_visualisation
+- HPC  
+  - \subpage page_exahype_runtime_analysis
+  - \subpage page_exahype_performance_optimisation
+  - \subpage page_exahype_parallelisation
+  - \subpage page_exahype_multicore
+  - \subpage page_exahype_gpu
+\li \subpage page_exahype_cpp_kernels
+\li \subpage exahype2_enumerator
+
+
+# Building the ExaHyPE 2 extension
 
 As ExaHyPE 2 is a Peano 4 extension, you first have to
 @ref page_installation_home "configure and build" the core
@@ -73,7 +70,7 @@ Python scripts which are built on top of Peano's Python API.
 Every run of the Python script produces a file called README-executablename.md
 which enlists which software ingredients are used by the resulting code.
 
-## Historical remarks
+# Historical remarks
 
 ExaHyPE 2 is the follow-up development of the ExaHyPE project which has
 been funded by the EU from 2015--2019.

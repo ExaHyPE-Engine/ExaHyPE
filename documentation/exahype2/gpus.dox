@@ -2,34 +2,11 @@
 
 @page page_exahype_gpu GPU support (and aggressive vectorisation)
 
-This page discusses how ExaHyPE supports SIMT and SIMD compute kernels.
-ExaHyPE uses GPUs in a classic ***offloading***, i.e. GPUs as accelerators. This means that
-it takes particular tasks, ships them to the GPU and then ships them
-back. This happens under the hood, and neither does data reside on the
-accelerator permanently nor is the accelerator used all the time.
+@todo Needs revision. Currently some of this stuff is already covered by the tutorials ,where it belongs. This should be more about the interna.
 
-The whole approach assumes that there are computations (cell/patch
-updates) which can be done without any effect on global variables. It
-works if and only if we can ship a task to the GPU, and then get the
-solution data for this task back and no other global variabled changes.
-We furthermore assume that the computations that fit onto the GPU have
-no state. They can use some global, static variables, but they cannot
-access the solver's state which can change over time. We rely on code
-parts which *have no side effects and do not depend on the solver state*
-(minus global variables).
-
-The same argument holds for aggressive vectorisation: Vectorisation 
-works best if the computations on a patch do not have any side effects.
-Basically, ExaHyPE assumes that GPU's SIMT and CPU's SIMD are two 
-realisations of the same pattern.
-
-Working without side-effects might not work for all patches: There are always patches which
-evaluate and analyse some global data, or build up global data
-structures. In this case, ExaHyPE only offloads the remaining, simple patches
-to the GPU.
-That is, having a solver that supports patches/cells without side
-effects does not mean that all cells have to be side effect-free.
-
+Before you dive into this technical description of how GPU offloading (and 
+very aggressive vectorisation) work, it makes sense to read through the 
+@ref tutorials_exahype_gpu "tutorial on GPU offloading".  
 
 
 # Compile with GPU support
@@ -38,48 +15,12 @@ Configure ExaHyPE with the argument `--with-gpu=xxx` and select an
 appropriate GPU programming model. Rebuild the whole Peano core. 
 This includes the ExaHyPE libraries.
 
-If you want to profile or optimise your code further, you might want to pick a
-particular vendor toolchain. See configure's help on --with-toolchain.
-The @ref tarch_logging "logging section" discusses variations of the 
-toolchain support.
-
-If you are "only" interested in the most aggressive vectorisation of your
-kernels, you can skip this part.
-
+@todo More details on teh maturity and working of coce
+@todo Discussion how to introduce your own GPU-specific kernels
 
 # Enable stateless compute kernels
 
-For the aggressive vectorisation and the offloading, you have to use
-an ExaHyPE solver which has support for GPUs and you ahve to instruct it that 
-you plan to have patch updates without access to the solver's internal state.
 
-The Finite Volume enclave solvers for example all support GPUs, but the
-versions without enclave tasking do not support them. The solver
-documentation should clarify which one to select. For most of these
-GPU-enabled solvers, it is sufficient to pass an additional flag
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pde_terms_without_state=True
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-for the FV variants, e.g.) that tells
-the solver that we have PDE terms which have no side effect which also
-do not need the solver object.
-Consult the documentation of the respective solvers. Examples are
-
-- exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
-- yet to be added
-
-
-## Provide the additional PDE terms without state.
-
-To faciliate the offloading, we have to create alternative versions of
-our PDE term functions that can work independent of the solver object
-(and in return cannot modify it). Depending on which terms we have,
-we'll need stateless versions of the flux, the non-conservative product
-and the source term. We'll always needs the eigenvalue function. Per
-function, keep the original one and add a second one which is
 
 -   static;
 
@@ -104,48 +45,6 @@ function, keep the original one and add a second one which is
 
     Though you can leave these annotations away if you use SYCL only.
 
-Very often, the standard flux and eigenvalue routines can invoke the
-static variants and you can thus eliminate code redundancies. For
-example, you might have the normal flux function and a static flux
-function with the additional `Offloadable` parameter, but the normal
-function just invokes the static cousin.
-
-In many of our codes, we take a function like
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void examples::exahype2::SSInfall::SSInfall::flux( ... ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal ); 
-
-  compute something; 
-
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-and simply split it into two variants:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void examples::exahype2::SSInfall::SSInfall::flux( ... ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal ); 
-  
-  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes); 
-  
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-}
-
-
-void examples::exahype2::SSInfall::SSInfall::flux( ..., Offloadable ) {
-  compute something;
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The static version is used on the GPU. The normal one is used on the CPU
-yet defers immediately to the static version. Please note that GPUs are
-quite restrictive w.r.t. terminal outputs and assertions. You will have
-to remove both from your static routine versions. In the example above,
-the non-static version wraps the core functionality into assertions.
-Therefore, we have the assertions on the CPU, but the core part that
-goes to the GPU is free of assertions. The same holds for the logging.
 
 
 Most ExaHyPE solvers allow you to insert the realisation of a routine directly

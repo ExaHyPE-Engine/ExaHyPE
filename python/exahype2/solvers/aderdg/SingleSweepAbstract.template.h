@@ -50,7 +50,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridInitialisation,
       InitialPrediction,
       PredictionOnHangingCells,
-      Timestep,
+      TimeStep,
       Plotting,
       Suspended
     };

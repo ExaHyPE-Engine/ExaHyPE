@@ -60,7 +60,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType* lQi   = memory + getlQiShift();
   pCompType* lQhi  = memory + getlQhiShift();
 
-  pCompType* rhs  = memory + getrhsShift();
+  pCompType* rhs   = memory + getRhsShift();
 
   {% if USE_FLUX %}
   pCompType* lFi   = memory + getlFiShift();
@@ -77,7 +77,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   {% endif %}
 
   {% if USE_NCP %}
-  pCompType* gradQ = memory + getgradQShift();
+  pCompType* gradQ = memory + getGradQShift();
   {% else %}
   pCompType* gradQ = nullptr;
   {% endif %}
@@ -316,11 +316,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //****** Volume Integral ******
   //*****************************
 
-  //define coefficient matrix coeffVolume
+  // Define coefficient matrix coeffVolume
   pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned({{ALIGNMENT}})));
-  for(int i=0; i<{{NUMBER_OF_DOF}}; i++){
-    for(int j=0; j<{{NUMBER_OF_DOF}}; j++){
-      coeffVolume[i*{{NUMBER_OF_DOF_PADDED}}+j] = Kxi_T[i*{{NUMBER_OF_DOF_PADDED}}+j] *
+  for(int i=0; i<{{NUMBER_OF_DOF}}; i++) {
+    for(int j=0; j<{{NUMBER_OF_DOF}}; j++) {
+      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] *
         invDx * timeStepSize * Quadrature<pCompType>::iweights1[i];
     }
   }
@@ -530,9 +530,11 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
 {% if USE_SOURCE %}
       solver.algebraicSource(
-        {0.0},
-        0.0,
         lQi + (xyz * {{NUMBER_OF_DOF}} + t) * {{NUMBER_OF_DATA_PADDED}},
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
         lSi + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}
       );
 {% else %}

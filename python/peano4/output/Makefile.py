@@ -372,7 +372,7 @@ did search for a file """
                     if re.search(constant + " *=", line) and line.startswith(constant):
                         try:
                             flags = line.split("=", 1)[1].strip()
-                            print("add " + constant + "=" + flags)
+                            #print("add " + constant + "=" + flags)
                             self.d[constant] = flags
                         except:
                             print("Error in " + line + " for token " + constant)
