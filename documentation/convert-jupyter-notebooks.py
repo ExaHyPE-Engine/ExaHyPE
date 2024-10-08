@@ -32,7 +32,7 @@ def postprocess_markdown_line(line):
     """
     global current_mode
     
-    if "\\begin{equation" in line:
+    if "\\begin{equation" in line and current_mode == Mode.Text:
         current_mode = Mode.EquationSystem
         line = """ @f{eqnarray*}{
 """
@@ -52,8 +52,11 @@ def postprocess_markdown_line(line):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 #""" + line        
-    
-    return line.replace( "$$", "@f$ ")
+    elif current_mode == Mode.Text:
+        line = line.replace( "$$", "\n @f$ ")
+        # This replacement messes up any dollar sign in raw data cells (which I cannot detect atm)
+        # line = line.replace( "$", "@f$ ")
+    return line
 
 
 def postprocess_notebook_markdown(filename: str):

@@ -55,7 +55,7 @@ class Project (object):
         self.namespaces.append(self.namespace)
       if not self.subdirectory in self.subdirectories:
         self.subdirectories.append(self.subdirectory)
-    print("project.subdirectories = ", self.subdirectories)
+    # print("project.subdirectories = ", self.subdirectories)
 
     #
     # Create default output model, i.e. those parts that have to be there

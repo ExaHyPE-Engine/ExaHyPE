@@ -1,30 +1,29 @@
 /**
 
-@page page_exahype_applications Applications
+@page page_exahype_applications Applications (incl ExaSeis and ExaGRyPE)
 
 \tableofcontents
 
-\li \subpage applications_exahype2_advection
-\li \subpage applications_exahype2_acoustic
-\li \subpage applications_exahype2_elastic
-\li \subpage applications_exahype2_swe
-\li \subpage applications_exahype2_landslide
-\li \subpage applications_exahype2_euler
-\li \subpage applications_exahype2_selfgravitation
-\li \subpage applications_exahype2_ccz4
-\li \subpage applications_exahype2_exaseis
-\li \subpage applications_exahype2_gprdr_GPRDR
-\li \subpage applications_exahype2_loh_1_LOH_1
+
+- Seismology
+  - \subpage applications_exahype2_exaseis
+  - \subpage applications_exahype2_gprdr_GPRDR
+  - \subpage applications_exahype2_loh_1_LOH_1
+- Astrophysics
+  - \subpage applications_exahype2_selfgravitation
+  - \subpage applications_exahype2_ccz4
+- Tsunamis and flooding
+  - \subpage applications_exahype2_swe
+  - \subpage applications_exahype2_landslide
+- Others
+  - \subpage applications_exahype2_advection
+  - \subpage applications_exahype2_acoustic
+  - \subpage applications_exahype2_elastic
+  - \subpage applications_exahype2_euler
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".
 That is, they are rather complex collections of Python scripts, but there are
-simplified ones with hardcoded setting, setups, ...
-
-- \ref applications_exahype2_ccz4 "Black hole simulations with CCZ4".
-
-The documentation files for these applications usually are stored within the
-source code directories next to the actual code. They therefore carry
-identifiers (doxygen page attribute) which mirror the applications' namespaces.
+simplified ones with hardcoded setting, setups, ... which then end up in benchmarks (or tests).
 
 */
