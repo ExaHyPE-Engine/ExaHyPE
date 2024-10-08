@@ -7,9 +7,50 @@
 We explain all the numerics in hands-on style for the toy problem
 
 @f$
-  -\Delta u = f
+  -\Delta u = f.
 @f$
 
+We don't solve this one directly (point-wisely), but we check it against a 
+test function @f$ \phi @f$ and integrate:
+
+@f$ \int (-\Delta u, \ \phi) dx \ = \  \int (f, \ \phi) dx  \ \ \ \forall \phi@f$.
+
+If this holds for all test functions @f$ \phi @f$ we can think of, then the solution also 
+fits to the original PDE exactly.
+Otherwise, it is a ***weak*** solution.
+As we have the integral and the product of two functions on the left-hand side, we can integrate by parts and get rid of the second derivative.
+The original solution to the PDE somehow has to have a second derivative everywhere which matches @f$ f @f$.
+The new weak solution then has to have only a first derivative almost everywhere, as we roll one derivative over to the test function and integrate. 
+Small sets (nullsets) of points where there is no first derivative then don't count anymore.
+
+
+We illustrate the next steps in one dimension:
+Let the domain split into cells.
+We create some shape functions over the domain.
+Each shape function is a hat, i.e. it is one in one vertex and then goes down linearly over the adjacent two cells to zero.
+So we end up with functions like the green ones below:
+
+@image html continuous_shape_functions.png
+
+Any weighted linear combination over these guys yields a global function.
+We want to try to construct a weak solution this way. 
+For this, we also have to decide where the test functions come from.
+A natural choice leading to Ritz-Galerkin Finite Elements is to use the same test and shape functions, 
+i.e. the global linear combination spanning the solution has to fulfill the weak formulation for every single test against one of its shape functions.
+ 
+
+
+\f{eqnarray*}{
+  &\int_\text{cell}& ( \nabla u, \ \nabla \phi )dx + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
+   \ \ \ \forall \phi \\
+  =\sum_i u_i \ &\int_\text{cell}& (\nabla \phi_i, \ \nabla \phi) dx 
+  + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
+  \ \ \ \forall \phi
+
+\f}
+
+where in the second line we exchanged the definition of @f$ u @f$ for its expansion
+in basis functions. From here onwards, we drop the surface integral term, for reasons we shall 
 
 # Discretisation
 

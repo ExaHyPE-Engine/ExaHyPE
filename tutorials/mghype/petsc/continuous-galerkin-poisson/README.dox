@@ -190,102 +190,10 @@ peano4_project.generate()
 
 
 
-This is a brief discussion of key ideas behind the Continuous Galerkin method, 
-i.e. what most people learn as standard Finite Elements in lectures. 
-While we discuss some of the mathematics behind FEM, the focus
-of this text is informal (from a maths point of view) but puts special emphasis
-on how numerical concepts are mapped onto Peano's data structures and mesh 
-traversal. 
-
-
-# Method
-
-@todo This has to be reworked almost from scratch
-
-# Example: the Poisson equation
-
-@todo This has to be reworked almost from scratch
- 
-As ever we aim to solve
-
-@f$ -\Delta u \ = \ f @f$.
-
-And we integrate against a test function @f$ \phi @f$. In brief, we pick our solution
-@f$ u @f$ to be a member of some space of polynomials, and (importantly) we pick
-the test function @f$ \phi @f$ to come from the same space:
-
-@f$ \int (-\Delta u, \ \phi) dx \ = \  \int (f, \ \phi) dx  \ \ \ \forall \phi@f$.
-
-For emphasis, we want the above equation to hold for every test function @f$ \phi @f$ in our function space.
-
-## Some example
-
-Let's attempt make this concrete, by way of an example. We depict in the image below
-the following situation:
-
-- A 1D domain, cut up into discrete chunks of width @f$ h @f$.
-- We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1.
-- We have a value for @f$ u @f$ at the boundary of each cell.
-
-What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
-
-@image html continuous_shape_functions.png
-
-From here onwards, we pick our @f$ u @f$ to be a member of some space of polynomials, and we label the coefficients/weights
-as the @f$ u_i @f$. Concretely:
-
-@f$ u = \sum_i u_i \ \phi_i @f$.
-
-
-Returning to the integral above, we can integrate by parts to obtain
-
-\f{eqnarray*}{
-  &\int_\text{cell}& ( \nabla u, \ \nabla \phi )dx + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
-   \ \ \ \forall \phi \\
-  =\sum_i u_i \ &\int_\text{cell}& (\nabla \phi_i, \ \nabla \phi) dx 
-  + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
-  \ \ \ \forall \phi
-
-\f}
-
-where in the second line we exchanged the definition of @f$ u @f$ for its expansion
-in basis functions. From here onwards, we drop the surface integral term, for reasons we shall 
-explain later. 
-
-Next, let's discretise. Rather than taking an integral across the whole domain, we work cell-by-cell. We label each cell with index @f$ k @f$:
-
-\f{eqnarray*}{
-  = \sum_{i, \ k} \ \int_{c_k} \ (\nabla \phi_i, \ \nabla \phi) dx \ \ \ \forall \phi
-\f}
-
-## A Galerkin Finite Element solver for the Poisson equation with PETSc
-
-@todo Sean, your turn
 
 
 
 */
-
-
-<!-- 
-WE COMMENT THIS OUT. I DON'T THINK IT'S READY YET
-
-Now we are working on a cell-by-cell basis, let us examine the @f$ 1^{st} @f$ cell.
-We note that only @f$ \phi_0 @f$ and @f$ \phi_1 @f$ are non-zero here, so our original equation reduces to:
-
-\f{eqnarray*}{
- u_1 \ \sum_{k=1,2} \int_{c_k} (\nabla \phi_0, \ \phi_0) \ + \
-  
-   dx \ = \ 
-  \int_{c_0} (f, \ \phi_0) dx
-\f}
-
-and we drop the @f$ \forall \phi @f$ requirement since only @f$ \phi_0 @f$ is non-zero here. In effect, this
-
-@f$ \int_{c_0} (\nabla \phi_0, \ \phi_0) dx \ = \ \int_{c_0} (f, \ \phi_0) dx @f$ 
-
-will become our matrix element, as we shall see shortly.
--->
 
 
 ## The nodal basis 
