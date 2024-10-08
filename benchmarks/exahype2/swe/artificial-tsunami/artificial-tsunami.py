@@ -12,8 +12,8 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="FWaveRiemannGlobalAdaptiveEnclaveFV",
         end_time=50.0,
-        width="[10000, 10000]",  # [m]
-        offset="[-5000, -5000]",  # [m]
+        width=[10000, 10000],  # [m]
+        offset=[-5000, -5000],  # [m]
         min_depth=5,
         amr_levels=0,
         patch_size=4,

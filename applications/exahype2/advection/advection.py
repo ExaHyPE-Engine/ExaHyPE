@@ -279,11 +279,7 @@ class Advection:
                 }
             )
 
-        max_h = (
-            1.1
-            * min(self.parse_coordinate_pair(args.width, args.dimensions))
-            / (3.0**args.min_depth)
-        )
+        max_h = (1.1 * min(args.width[0:args.dimensions]) / (3.0**args.min_depth))
         min_h = max_h * 3.0 ** (-args.amr_levels)
 
         if "FV" in args.solver:
@@ -346,8 +342,8 @@ class Advection:
 
         project.set_global_simulation_parameters(
             dimensions=args.dimensions,
-            size=self.parse_coordinate_pair(args.width, args.dimensions),
-            offset=self.parse_coordinate_pair(args.offset, args.dimensions),
+            size=args.width[0:args.dimensions],
+            offset=args.offset[0:args.dimensions],
             min_end_time=args.end_time,
             max_end_time=args.end_time,
             first_plot_time_stamp=0.0,
@@ -402,22 +398,3 @@ class Advection:
             make_clean_first=True,
             throw_away_data_after_build=True,
         )
-
-    def parse_coordinate_pair(self, coords, dim):
-        coordinate_filter = "((-?[0-9]+\.?[0-9]*(e-?[0-9]+)?)|(inf))"
-        if re.search(
-            "^\[%s\\s*\,\\s*%s\]$" % (coordinate_filter, coordinate_filter), coords
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2])][0:dim]
-        elif re.search(
-            "^\[%s\\s*\,\\s*%s\,\\s*%s\]$"
-            % (coordinate_filter, coordinate_filter, coordinate_filter),
-            coords,
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2]), float(splits[3])][0:dim]
-        else:
-            raise ValueError(
-                "Could not parse the illegal coordinates: {}!".format(coords)
-            )

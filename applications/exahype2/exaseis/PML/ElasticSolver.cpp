@@ -72,7 +72,7 @@ exahype2::elastic::ElasticSolver::ElasticSolver():
 
   logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
 
-  context = new ContextCurvilinear<VariableShortcuts, Order + 1>(
+  context = new ContextCurvilinear<VariableShortcutsExpanded, Order + 1>(
     scenario_string, topography_string, domain_info, solver_info
   );
 
@@ -109,7 +109,6 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   double* __restrict__ luh, // Q[36+19]
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
-  const tarch::la::Vector<Dimensions, int>&    point,
   bool                                         gridIsConstructed
 ) {
 
@@ -147,11 +146,11 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
   for (int k = 0; k < Order + 1; k++) { 
-    double computational_z = (offset_z + h[2] * QuadraturePoints1d[Order-k]); //QuadPoints are in opposite order to exa1
+    double computational_z = (offset_z + h[2] * QuadraturePoints1d[k]); //QuadPoints are in opposite order to exa1
     for (int j = 0; j < Order + 1; j++) {
-      double computational_y = (offset_y + h[1] * QuadraturePoints1d[Order-j]); //QuadPoints are in opposite order to exa1
+      double computational_y = (offset_y + h[1] * QuadraturePoints1d[j]); //QuadPoints are in opposite order to exa1
       for (int i = 0; i < Order + 1; i++) {
-        double computational_x = (offset_x + h[0] * QuadraturePoints1d[Order-i]); //QuadPoints are in opposite order to exa1
+        double computational_x = (offset_x + h[0] * QuadraturePoints1d[i]); //QuadPoints are in opposite order to exa1
 
         if (_TOP != 0) { //  No PML on surface
           if (computational_x < dmp_pml_left_x) {
@@ -538,27 +537,13 @@ void exahype2::elastic::ElasticSolver::riemannSolver(
   int                                          faceIndex
 ) {
 
-  // //Local lax-friedrich
-  // generated::kernels::AderDG::linear::riemannSolver(
-  //   *this,
-  //   FL,
-  //   FR,
-  //   QL,
-  //   QR,
-  //   t,
-  //   dt,
-  //   x,
-  //   h,
-  //   direction
-  // );
-
   if (isBoundaryFace) {
     double* FIn  = faceIndex < Dimensions ? FR : FL;
     double* FOut = faceIndex < Dimensions ? FL : FR;
-    std::copy_n(FIn, s.NumberOfUnknowns*(Order+1)*(Order+1), FOut);
+    std::copy_n(FIn, NumberOfUnknowns*(Order+1)*(Order+1), FOut);
   }
 
-  Numerics::riemannSolver<VariableShortcuts, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
+  Numerics::riemannSolver<VariableShortcutsExpanded, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 }

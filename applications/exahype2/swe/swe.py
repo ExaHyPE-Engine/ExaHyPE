@@ -63,7 +63,7 @@ class SWE:
             "-offset",
             "--offset",
             type=str,
-            default="[0, 0]",
+            default=[0, 0],
             help="Specify offset of domain in meters as [x, y] as string (e.g. [-10, -10], [-7e6, -4e6]).",
         )
 
@@ -260,9 +260,7 @@ class SWE:
                 }
             )
 
-        max_h = (
-            1.1 * min(self.parse_coordinate_pair(args.width)) / (3.0**args.min_depth)
-        )
+        max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
         min_h = max_h * 3.0 ** (-args.amr_levels)
 
         if "FV" in args.solver:
@@ -330,8 +328,8 @@ class SWE:
 
         project.set_global_simulation_parameters(
             dimensions=2,
-            size=self.parse_coordinate_pair(args.width),
-            offset=self.parse_coordinate_pair(args.offset),
+            size=args.width,
+            offset=args.offset,
             min_end_time=args.end_time,
             max_end_time=args.end_time,
             first_plot_time_stamp=0.0,
@@ -385,15 +383,3 @@ class SWE:
             make_clean_first=True,
             throw_away_data_after_build=True,
         )
-
-    def parse_coordinate_pair(self, coords):
-        coordinate_filter = "((-?[0-9]+\.?[0-9]*(e-?[0-9]+)?)|(inf))"
-        if re.search(
-            "^\[%s\\s*\,\\s*%s\]$" % (coordinate_filter, coordinate_filter), coords
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2])]
-        else:
-            raise ValueError(
-                "Could not parse the illegal coordinates: {}!".format(coords)
-            )
