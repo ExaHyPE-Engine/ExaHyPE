@@ -65,7 +65,7 @@ This will allow you to build the Peano core libraries and is a step
 required before you use any application or tool built on top of Peano
 such as ExaHyPE or our PETSc multigrid environment.
 
-## Prepare the Configure Environment (Autotools)
+## Autotools
 
 - Ensure you have the Autotools packages installed on your system. They
   typically are shipped in the packages `autoconf`, `automake` and
