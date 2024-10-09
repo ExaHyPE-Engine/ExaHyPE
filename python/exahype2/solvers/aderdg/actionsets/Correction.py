@@ -16,7 +16,10 @@ class Correction(AbstractADERDGActionSet):
 
     _Template_TouchFaceFirstTime = """
   if ({{PREDICATE}}) {
-    const double timeStamp = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    const double timeStamp = std::max(
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0),
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)
+    );
 
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
@@ -131,8 +134,8 @@ class Correction(AbstractADERDGActionSet):
       QR,
       timeStamp,
       timeStepSize,
-      marker.x(),
       faceCentre,
+      marker.h(),
       direction,
       isBoundary,
       faceNumber

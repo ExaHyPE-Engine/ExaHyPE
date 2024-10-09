@@ -14,11 +14,10 @@ class Acoustic:
     _available_solvers = {
         "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
         "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
+
         "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
         "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-        "RusanovGlobalFixedRKDG": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalAdaptiveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
-        "RusanovGlobalAdaptiveEnclaveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
+
         "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
     }
@@ -130,10 +129,22 @@ class Acoustic:
         parser.add_argument(
             "-ps",
             "--patch-size",
-            dest="patch_size",
             type=int,
             help="Number of finite volumes per axis (dimension) per patch.",
         )
+        parser.add_argument(
+            "-rk-order",
+            "--rk-order",
+            type=int,
+            help="Order of time discretisation for Runge-Kutta scheme.",
+        )
+        parser.add_argument(
+            "-dg-order",
+            "--dg-order",
+            type=int,
+            help="Order of space discretisation for Discontinuous Galerkin.",
+        )
+
         parser.add_argument(
             "-md",
             "--min-depth",
@@ -270,11 +281,7 @@ class Acoustic:
                 }
             )
 
-        max_h = (
-            1.1
-            * min(self.parse_coordinate_pair(args.width, args.dimensions))
-            / (3.0**args.min_depth)
-        )
+        max_h = (1.1 * min(args.width[0:args.dimensions]) / (3.0**args.min_depth))
         min_h = max_h * 3.0 ** (-args.amr_levels)
 
         if "FV" in args.solver:
@@ -285,23 +292,39 @@ class Acoustic:
                     "min_volume_h": min_h,
                 }
             )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::acoustic::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+                "source_term": "applications::exahype2::acoustic::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
+            }
+        elif "ADERDG" in args.solver:
+            solver_params.update(
+                {
+                    "order": args.dg_order,
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::acoustic::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal);",
+                "source_term": "applications::exahype2::acoustic::sourceTerm(Q, x, 0.0, t, 0.0, S);",
+            }
 
         solver = self._available_solvers[args.solver](**solver_params)
         solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
-        # solver.plot_description += ", ".join(
-        #    solver_params["auxiliary_variables"].keys()
-        # )
-
-        implementation_params = {
-            "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "applications::exahype2::acoustic::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-            "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-            "source_term": "applications::exahype2::acoustic::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
-        }
-
+        if solver_params["auxiliary_variables"] != 0:
+            solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
+
+        if "ADERDG" in args.solver:
+            solver.add_kernel_optimisations(is_linear = True,)
 
         return solver
 
@@ -323,8 +346,8 @@ class Acoustic:
 
         project.set_global_simulation_parameters(
             dimensions=args.dimensions,
-            size=self.parse_coordinate_pair(args.width, args.dimensions),
-            offset=self.parse_coordinate_pair(args.offset, args.dimensions),
+            size=args.width[0:args.dimensions],
+            offset=args.offset[0:args.dimensions],
             min_end_time=args.end_time,
             max_end_time=args.end_time,
             first_plot_time_stamp=0.0,
@@ -379,22 +402,3 @@ class Acoustic:
             make_clean_first=True,
             throw_away_data_after_build=True,
         )
-
-    def parse_coordinate_pair(self, coords, dim):
-        coordinate_filter = "((-?[0-9]+\.?[0-9]*(e-?[0-9]+)?)|(inf))"
-        if re.search(
-            "^\[%s\\s*\,\\s*%s\]$" % (coordinate_filter, coordinate_filter), coords
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2])][0:dim]
-        elif re.search(
-            "^\[%s\\s*\,\\s*%s\,\\s*%s\]$"
-            % (coordinate_filter, coordinate_filter, coordinate_filter),
-            coords,
-        ):
-            splits = re.split("[\[\]\,]", coords)
-            return [float(splits[1]), float(splits[2]), float(splits[3])][0:dim]
-        else:
-            raise ValueError(
-                "Could not parse the illegal coordinates: {}!".format(coords)
-            )

@@ -27,9 +27,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="1.4289282"
-     inkscape:cx="398.20056"
-     inkscape:cy="585.0539"
+     inkscape:zoom="0.71446409"
+     inkscape:cx="397.50074"
+     inkscape:cy="209.94757"
      inkscape:window-width="1920"
      inkscape:window-height="1006"
      inkscape:window-x="0"
@@ -2404,8 +2404,7 @@
        height="8.953"
        fill="#fff"
        stroke="url(#linearGradient62-9)"
-       id="rect136"
-       style="fill:#00ffff" />
+       id="rect136" />
     <rect
        x="33.298"
        y="39.859"
@@ -2580,8 +2579,7 @@
        height="8.953"
        fill="#fff"
        stroke="url(#linearGradient76-6)"
-       id="rect157"
-       style="fill:#00ffff" />
+       id="rect157" />
     <rect
        transform="rotate(90)"
        x="63.422"
@@ -2927,10 +2925,10 @@
      stroke-width=".4"
      id="g196">
     <path
-       d="M 87.147498,36.726907 C 95.93644,28.000035 114.56031,23.769089 125.55499,31.937344"
+       d="M 78.055253,35.956536 C 82.659653,33.782236 109.751,28.8294 109.751,28.8294 c 9.0343,-2.2412 15.80399,3.107944 15.80399,3.107944"
        marker-end="url(#marker114-2)"
        id="path196"
-       sodipodi:nodetypes="cc"
+       sodipodi:nodetypes="ccc"
        style="fill:none;stroke:#00ff00" />
   </g>
   <use

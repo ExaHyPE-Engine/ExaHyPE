@@ -63,7 +63,7 @@ exahype2::elastic::ElasticSolver::ElasticSolver():
     kernels::ElasticSolver::DGMatrices<double>::dudx
   );
 
-  context = new ContextCurvilinear<VariableShortcuts, Order + 1>(
+  context = new ContextCurvilinear<VariableShortcutsExpanded, Order + 1>(
     scenario_string, topography_string, domain_info, solver_info
   );
 
@@ -78,11 +78,10 @@ void exahype2::elastic::ElasticSolver::initialCondition(
   double* __restrict__ Q, // Q[9+16]
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
-  const tarch::la::Vector<Dimensions, int>&    point,
   bool                                         gridIsConstructed
 ) {
 
-  std::fill_n(Q, (s.NumberOfAuxiliaryVariables + s.NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
+  std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0);
 }
 
@@ -129,7 +128,7 @@ void exahype2::elastic::ElasticSolver::boundaryConditions(
   int                                          normal
 ) {
 
-  std::copy_n(Qinside, s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables, Qoutside);
+  std::copy_n(Qinside, NumberOfUnknowns + NumberOfAuxiliaryVariables, Qoutside);
 }
 
 double ::exahype2::elastic::ElasticSolver::maxEigenvalue(
@@ -338,7 +337,7 @@ void ::exahype2::elastic::ElasticSolver::initPointSourceLocations(
   double sourceLocation[NumberOfPointSources][Dimensions]
 ) {
 
-  dynamic_cast<ContextCurvilinear<VariableShortcuts, Order + 1>*>(context)->initPointSourceLocation(pointSourceLocation
+  dynamic_cast<ContextCurvilinear<VariableShortcutsExpanded, Order + 1>*>(context)->initPointSourceLocation(pointSourceLocation
   );
 }
 
@@ -365,7 +364,7 @@ void ::exahype2::elastic::ElasticSolver::pointSource(
 
   context->setPointSourceVector(Q, x, t, dt, forceVector, n);
 
-  for (int i = 0; i < s.NumberOfUnknowns; i++) {
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;
   }
 }
@@ -387,10 +386,10 @@ void exahype2::elastic::ElasticSolver::riemannSolver(
   if (isBoundaryFace) {
     double* FIn  = faceIndex < Dimensions ? FR : FL;
     double* FOut = faceIndex < Dimensions ? FL : FR;
-    std::copy_n(FIn, s.Size, FOut);
+    std::copy_n(FIn, NumberOfUnknowns+NumberOfAuxiliaryVariables, FOut);
   }
 
-  Numerics::riemannSolver<VariableShortcuts, Order + 1, s.NumberOfUnknowns, (s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables), 1>(
+  Numerics::riemannSolver<VariableShortcutsExpanded, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 }

@@ -208,7 +208,7 @@ private:
   [[clang::pack_range(0, TwoPowerD)]] int _numberOfAdjacentRefinedLocalCells;
 #if PeanoDebug > 0
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  [[clang::truncate_mantissa(23)]] double _x[Dimensions];
+  [[clang::truncate_mantissa(48)]] double _x[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
   tarch::la::Vector<Dimensions, double> _x;
