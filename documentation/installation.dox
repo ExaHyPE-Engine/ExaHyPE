@@ -119,11 +119,14 @@ specify a proper installation directory via `--prefix`.
 
 ## CMake
 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
 CMake's functionality mirrors the capabilities of the Autotools.
-It has one fundamental advantage:
-It can build <a href="https://cmake.org/cmake/help/book/mastering-cmake/chapter/Getting%20Started.html">out-of-source</a>
-which means that all the compiled object files and libraries are not held in the same place as your sources.
-This makes the navigation through the source directories easier.
+While it has some advantages (out-of-source builds), it increases the memory footprint, 
+and we have had consistency issues with it from time to time.
+If you use CMake, follow the instructions below and then continue to work 
+from your build/installation directory rather than Peano's sources.
+</div>
+
 
 Using CMake is again relatively simple.
 First, we create a new directory.
