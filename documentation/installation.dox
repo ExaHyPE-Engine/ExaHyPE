@@ -94,6 +94,13 @@ I recommend that you add further options (IO) and/or parallelisation.
 Please note that the baseline configure is not sufficient for most
 applications, as it builds merely Peano's core libraries.
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+This might be the right time to look ahead and study the tutorials of the codes you wanna use.
+All of them need different toolboxes and extensions. ExaHyPE, for example, requires
+you to activate --enable-blockstructured and --enable-exahype at least (--enable-loadbalancing is recommended),
+while the SPH code Swift needs at least --enable-particles and --enable-swift.
+</div>
+
 Besides Peano's toolboxes and extensions,
 compilers, linkers and both compiler and linker flags can be changed by
 resetting the corresponding environment variables (such as `CXX` or
@@ -138,17 +145,25 @@ cmake Peano-src
 
 where Peano-src points to the checkout.
 
-You can use `make help` to identify all available CMake targets to build.
-
-To only build a specific target, simply invoke
+Next, you might want to type in `cmake help` but this might be a little bit 
+overwhelmning. Try
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-make <target>
+ccmake Peano-dir
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-where `<target>` is to be replaced by an actual target as listed.
+instead, where you replace Peano-dir with the directory of Peano's sources. 
+Handing in .. does the job for most of the setups.
 
-You may also use `ccmake` to interactively adapt the build configuration.
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+This might be the right time to look ahead and study the tutorials of the codes you wanna use.
+All of them need different toolboxes and extensions. ExaHyPE, for example, requires
+you to activate BLOCKSTRUCTURED and EXAHYPE at least (LOADBALANCING is recommended),
+while the SPH code Swift needs at least PARTICLES and SWIFT.
+</div>
+
+Configure by pressing c and then q to finish the configuration. Next, continue 
+with building the code.
 
 
 # Build
@@ -172,9 +187,7 @@ Once you have compiled, we recommend that you run all tests using
 
     make check
 
-for Automake
-
-or
+for the autotools or
 
     make test
 
@@ -201,6 +214,15 @@ if you have compiled with MPI. The executables contain both node
 correctness tests and MPI ping-pong tests, i.e. you can both assess a
 valid build plus a working MPI environment.
 
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+Good time to stop. Jump straight into one of the tutorials if you want to. 
+If things don't work (Python complains for example), return to this page and 
+read through the text below. But maybe it is the right time just to play around 
+with code.
+</div>
+
+
 # Install
 
 CMake allows to install all targets in a self-contained bundle.
@@ -212,6 +234,23 @@ cd build
 cmake Peano-src -DCMAKE_INSTALL_PREFIX=<install_path>
 make install
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The autotools allow you to do the same by passing in --prefix=mydir into the ./configure command and then you call 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure --prefix=mydir -- all the other parameters
+make
+make install
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+Peano is ***not*** a piece of software that you use as a black box. 
+It is an engine that you use to write your own code.
+You can install Peano and its extensions.
+That means basically that you move its static libraries to a separate directory.
+But there is no such thing as a Peano application.  
+</div>
+
 
 # Python Configuration
 
