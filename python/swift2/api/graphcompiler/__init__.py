@@ -1,4 +1,4 @@
-""" This file is part of the SWIFT 2 project. For conditions of distribution and 
+""" This file is part of the SWIFT 2 project. For conditions of distribution and
  use, please see the copyright notice at www.peano-framework.org
 """
 
@@ -18,6 +18,10 @@ from .Sequential import (
     initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory,
     initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory,
     initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory,
+    finalisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory,
+    finalisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory,
+    finalisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory,
+    finalisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory,
 )
 
 
@@ -30,6 +34,10 @@ from .TaskTree import (
     initialisation_steps_onto_task_tree_bucket_sort_scattered_memory,
     initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory,
     initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory,
+    finalisation_steps_onto_task_tree_multiscale_sort_scattered_memory,
+    finalisation_steps_onto_task_tree_bucket_sort_scattered_memory,
+    finalisation_steps_onto_task_tree_multiscale_sort_coalesced_memory,
+    finalisation_steps_onto_task_tree_bucket_sort_coalesced_memory,
 )
 
 
@@ -41,5 +49,8 @@ from .TaskGraph import (
     initialisation_steps_onto_task_graph_multiscale_sort_scattered_memory,
     initialisation_steps_onto_task_graph_bucket_sort_scattered_memory,
     initialisation_steps_onto_task_graph_multiscale_sort_coalesced_memory,
-    initialisation_steps_onto_task_graph_bucket_sort_coalesced_memory,
+    finalisation_steps_onto_task_graph_bucket_sort_coalesced_memory,
+    finalisation_steps_onto_task_graph_multiscale_sort_scattered_memory,
+    finalisation_steps_onto_task_graph_bucket_sort_scattered_memory,
+    finalisation_steps_onto_task_graph_multiscale_sort_coalesced_memory,
 )

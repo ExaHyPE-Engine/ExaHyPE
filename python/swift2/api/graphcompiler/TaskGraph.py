@@ -67,7 +67,7 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
     sequence.
 
     @image html documentation/Doxygen/Swift/task-graph-tree.png
-    
+
     Whenever we spawn a task, we first generate a new task id. This is the
     number of this task which we store within the task and which the task
     has to free eventually. We also store this task within the associated
@@ -105,9 +105,109 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
 # ====================================
 #
 # These functions are made available through the __init__.py file. They are all
-# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
+# "just" wrappers around the generic map_onto_separate_mesh_traversals()
 # function calls, yet with different arguments.
 #
+
+def finalisation_steps_onto_task_graph_multiscale_sort_scattered_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
+    return result
+
+
+def finalisation_steps_onto_task_graph_bucket_sort_scattered_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
+    return result
+
+
+def finalisation_steps_onto_task_graph_multiscale_sort_coalesced_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
+    return result
+
+
+def finalisation_steps_onto_task_graph_bucket_sort_coalesced_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
+    return result
+
+
+
+
+
 
 def initialisation_steps_onto_task_graph_multiscale_sort_scattered_memory(
     species_sets,

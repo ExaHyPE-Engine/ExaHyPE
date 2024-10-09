@@ -194,7 +194,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     #
     if (
         step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or 
+        or
         step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     ):
         alter_particle_position.append(True)
@@ -212,12 +212,12 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
     mapper
 ):
     """!
-    
+
     Generic mapper of separate steps of separate particles onto mesh traversals
-    
+
     expects a mapper that then defines how to actually map the species plus
     step combination.
-    
+
     """
     mesh_traversals = []
     alter_particle_position = []
@@ -333,7 +333,7 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
         # sweep as change, as the initial insertion indeed might be buggy.
         alter_particle_position[0] = True
         alter_particle_position[-1] = True
-        
+
 
     if (
         particle_sorting_and_storage==ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
@@ -358,16 +358,16 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
         sort_with_lifts_and_drops=sort_with_lifts_and_drops,
         verbose=verbose,
     )
-    
+
     if verbose:
         print(
             "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: finished graph construction"
         )
 
     return mesh_traversals
-    
-    
-    
+
+
+
 def map_onto_separate_mesh_traversals(
     sequence_of_steps,
     particle_sorting_and_storage: ParticleSortingAndStorage,
@@ -456,16 +456,104 @@ def map_onto_separate_mesh_traversals(
         verbose,
         translate_one_step_of_species_into_mesh_traversal
     )
-    
-    
+
+
 # ====================================
 # Public API functions
 # ====================================
 #
 # These functions are made available through the __init__.py file. They are all
-# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
+# "just" wrappers around the generic map_onto_separate_mesh_traversals()
 # function calls, yet with different arguments.
 #
+
+def finalisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    return map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+
+
+def finalisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    return map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+
+
+def finalisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    return map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+
+
+def finalisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    return map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE,
+        step_type=StepType.FINALISATION,
+        verbose=verbose,
+    )
+
 
 def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory(
     species_sets,
