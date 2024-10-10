@@ -86,7 +86,7 @@ checking for nc_open in -lnetcdf... yes
 
 # The Visualization Toolkit (VTK)
 
-Peano usually dumps data @ref tarch_patch_files "data in its own native file format".
+Peano usually dumps data @ref documentation_tarch_visualisation "data in its own native file format".
 However, there are several extensions where it directly writes into VTK files
 or cousins of it, such that you can directly visualise the outcome with
 Paraview of VisIt, e.g. Most users do not need to build Peano directly against
