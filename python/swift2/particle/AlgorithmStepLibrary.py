@@ -184,15 +184,11 @@ def get_algorithm_step_dict(particle):
         name="SPH_Kick1",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        #  touch_vertex_first_time_kernel=v_iter.insert(
-        #      "::swift2::timestepping::resetMovedParticleMarker"
-        #  ),
         touch_vertex_last_time_kernel=v_iter.insert(
             "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
         ),
         includes="""
             #include "swift2/kernels/legacy/Leapfrog.h"
-            // #include "swift2/timestepping/TimeStepping.h"
         """,
     )
     algorithm_steps_dict["SPH_Kick1"] = sph_kick1
