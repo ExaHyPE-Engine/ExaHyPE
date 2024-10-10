@@ -1,3 +1,5 @@
+/* Template in python/swift2/output/SWIFTMain.template.cpp */
+
 #include "{{MAIN_NAME}}.h"
 #include "Constants.h"
 
@@ -35,6 +37,7 @@
 #include "observers/CreateGrid.h"
 #include "observers/InitialConditions.h"
 #include "observers/Plot.h"
+#include "observers/Cleanup.h"
 
 {% for STEP in SOLVERSTEP_NAMES %}
 #include "observers/{{STEP}}.h"
@@ -56,6 +59,7 @@ tarch::timing::Measurement   createGridMeasurement;
 tarch::timing::Measurement   initialConditionMeasurement;
 tarch::timing::Measurement   initialisationMeasurement;
 tarch::timing::Measurement   plotMeasurement;
+tarch::timing::Measurement   cleanupMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 
 
@@ -292,7 +296,9 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     and
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
   ) {
-    continueToSolve         = false;
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Cleanup )
+    );
   }
   else if (
     repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::Plot
@@ -300,6 +306,14 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}} )
     );
+  }
+  // ======================================================
+  // Phase 6: Run Cleanup step
+  // ======================================================
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::Cleanup
+  ) {
+    continueToSolve = false;
   }
   else {
     logError( "selectNextAlgorithmicStep", "no switch variant found" );
@@ -425,6 +439,21 @@ void {{NAMESPACE | join("::")}}::step() {
       }
       break;
     {% endfor %}
+    case repositories::StepRepository::Steps::Cleanup:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "cleanup" );
+        watch.start();
+        OTTER_PHASE_SWITCH("cleanup");
+        observers::Cleanup  observer;
+        observers::Cleanup::prepareTraversal();
+        repositories::startCleanupStep();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishCleanupStep();
+        observers::Cleanup::unprepareTraversal();
+        watch.stop();
+        cleanupMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
     case repositories::StepRepository::Steps::Undef:
       assertion(false);
       break;
@@ -515,6 +544,7 @@ int main(int argc, char** argv) {
     logInfo("main()", "initial conditions: " << initialConditionMeasurement.getAccumulatedValue() << "s\t" << initialConditionMeasurement.toString() );
     logInfo("main()", "initialisation:     " << initialisationMeasurement.getAccumulatedValue() << "s\t" << initialisationMeasurement.toString() );
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
+    logInfo("main()", "cleanup:            " << cleanupMeasurement.getAccumulatedValue() << "s\t" << cleanupMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }
   else {
