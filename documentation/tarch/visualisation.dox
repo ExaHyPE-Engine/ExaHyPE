@@ -1,7 +1,10 @@
 /**
 
-@page tarch_patch_files Peano patch files
+@page documentation_tarch_visualisation Visualising in Peano
 
+\tableofcontents 
+
+\li \subpage tarch_patch_file_format
 
 This page discusses how to visualise Peano's native patch files. Some
 extensions of Peano write different file formats. In this case you have 
