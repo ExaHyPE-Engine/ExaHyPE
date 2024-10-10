@@ -495,18 +495,10 @@ levels.
                     current_species_set
                 )
             )
-            #  self.algorithm_step_cleanup.add_action_set(
-            #      peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-            #          current_species_set
-            #      )
-            #  )
 
             self.algorithm_step_plot.add_action_set(
                 peano4.toolbox.particles.api.UpdateParallelState(current_species_set)
             )
-            #  self.algorithm_step_cleanup.add_action_set(
-            #      peano4.toolbox.particles.api.UpdateParallelState(current_species_set)
-            #  )
 
         #
         # Create cleanup action sets
