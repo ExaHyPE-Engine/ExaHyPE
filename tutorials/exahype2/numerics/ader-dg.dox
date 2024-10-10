@@ -1,0 +1,21 @@
+/** 
+
+@page page_tutorials_exahype2_numerics_ADER-DG ADER-DG
+
+\tableofcontents
+
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+This page is not yet written (properly).
+</div>
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+This page is a crude run-through through the Finite Volumes numerical scheme as we find it in ExaHyPE.
+It covers the basics without most of the actual maths that you find in textbooks.
+In a first run through the tutorials, it might be reasonable to skip this page, to continue
+with some hands-on examples and then to return to this description once you have a code 
+up and running and want to deep dive into the methodology.
+</div>
+    
+*/
