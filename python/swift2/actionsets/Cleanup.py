@@ -7,7 +7,10 @@ import peano4
 
 
 class Cleanup(ActionSet):
-    def __init__(self, particle_set,):
+    def __init__(
+        self,
+        particle_set,
+    ):
         """!
         Cleanup action set
 
@@ -17,14 +20,15 @@ class Cleanup(ActionSet):
         """
         self._particle_set = particle_set
         self.d = {}
-        self.d[ "PARTICLE" ]                    = particle_set.particle_model.name
-        self.d[ "PARTICLES_CONTAINER" ]         = particle_set.name
-        self.d[ "MARKER_NAME" ]                 = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-           particle_set.name
+        self.d["PARTICLE"] = particle_set.particle_model.name
+        self.d["PARTICLES_CONTAINER"] = particle_set.name
+        self.d[
+            "MARKER_NAME"
+        ] = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+            particle_set.name
         )
 
         return
-
 
     def user_should_modify_template(self):
         return False
@@ -41,10 +45,8 @@ class Cleanup(ActionSet):
             result = self.__Template_TouchVertexLastTime.render(**self.d)
         return result
 
-
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
-
 
     def get_includes(self):
         result = jinja2.Template(

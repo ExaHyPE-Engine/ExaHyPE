@@ -515,7 +515,6 @@ levels.
         for current_species_set in self._particle_species_set:
             self.algorithm_step_cleanup.add_action_set(Cleanup(current_species_set))
 
-
         #
         # Create mesh traversals aka solver steps
         #
