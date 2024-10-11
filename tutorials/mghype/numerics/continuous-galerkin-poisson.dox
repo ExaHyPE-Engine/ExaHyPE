@@ -2,7 +2,7 @@
 
 @page tutorials_mghype_numerics_continuous_galerkin_poisson Continuous Galerkin for the Poisson equation
 
-\tableofcontents
+@tableofcontents
 
 We explain all the numerics in hands-on style for the toy problem
 
