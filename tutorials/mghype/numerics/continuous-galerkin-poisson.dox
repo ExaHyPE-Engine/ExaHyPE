@@ -13,7 +13,7 @@ We explain all the numerics in hands-on style for the toy problem
 We don't solve this one directly (point-wisely), but we check it against a 
 test function @f$ \phi @f$ and integrate:
 
-@f$ \int (-\Delta u, \ \phi) dx \ = \  \int (f, \ \phi) dx  \ \ \ \forall \phi@f$.
+@f$ \int (-\Delta u, \ \phi) dx \ = \  \int (f, \ \phi) dx  \ \ \ \forall \phi. @f$
 
 If this holds for all test functions @f$ \phi @f$ we can think of, then the solution also 
 fits to the original PDE exactly.
