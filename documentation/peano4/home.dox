@@ -4,6 +4,7 @@
 
 \tableofcontents
 
+\li \subpage tutorials_peano4_tutorials
 \li \subpage peano_main
 \li \subpage page_peano_domain_decomposition
 \li \subpage peano_action_sets

@@ -94,7 +94,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     bool update() const;
 
     State getState() const;
-
     {{ABSTRACT_SOLVER_HEADER_EXTRAS}}
     
   protected:

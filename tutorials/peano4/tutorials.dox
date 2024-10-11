@@ -2,27 +2,11 @@
 
 @page tutorials_peano4_tutorials Tutorials
 
-@image html documentation/icons/MGHyPE.png
+@image html documentation/icons/peano4.png
 
-- \subpage tutorials_mghype_hitchhikers-guide
-- Numerics tour de force
-  - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson
-  - \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
-  - \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
-- Toy problems
-  - \subpage tutorials_mghype_examples_01_matrix-free-cg
-  - \subpage tutorials_mghype_examples_02_matrix-free-dg
-  - \subpage tutorials_mghype_examples_11_petsc-cg
-- Adding features
+- Data manipulation
+  - \subpage tutorials_peano4_assign_data_to_mesh
 
-
-
-<!--
-\li \subpage tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson
-\li \subpage tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson
-\li \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
-\li \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
--->
 
 
 ## How to add your own tutorial

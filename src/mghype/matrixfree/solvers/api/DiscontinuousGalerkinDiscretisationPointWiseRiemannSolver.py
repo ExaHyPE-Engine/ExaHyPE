@@ -348,7 +348,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     @param approximate_system_matrix_scaling: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       
     """  
-    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, unknowns_per_cell_node, 0, 0, min_h, max_h)
 
     # store everything we pass in anyhow
     self._dimensions                = dimensions

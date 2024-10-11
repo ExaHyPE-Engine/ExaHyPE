@@ -11,9 +11,15 @@ class Solver:
 
   def __init__(self, 
                name,
+               unknowns_per_vertex_node,
+               unknowns_per_face_node,
+               unknowns_per_cell_node,
                min_h,
                max_h):
     self._name = name
+    self._unknowns_per_vertex_node = unknowns_per_vertex_node
+    self._unknowns_per_face_node   = unknowns_per_face_node
+    self._unknowns_per_cell_node   = unknowns_per_cell_node
     self.min_h = min_h
     self.max_h = max_h
     

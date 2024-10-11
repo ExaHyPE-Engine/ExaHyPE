@@ -4,6 +4,7 @@
 import mghype.matrixfree.solvers.api.actionsets
 
 from .CollocatedDLinearDiscretisationWithPointJacobi    import CollocatedDLinearDiscretisationWithPointJacobi
+from .CollocatedGaussLobattoWithBlockJacobi             import CollocatedGaussLobattoWithBlockJacobi
 
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .CollocatedMG import CollocatedMG

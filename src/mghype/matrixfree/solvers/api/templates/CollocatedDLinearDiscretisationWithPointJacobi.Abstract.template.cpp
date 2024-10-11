@@ -146,5 +146,4 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update() const {
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
   return _state;
 }
-
 {{ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS}}
