@@ -302,7 +302,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
         << "Consecutive Move starting at x=["
         << ::toString(previousEvent.previousParticleX) << "] at sweep "
         << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
-        << " | old trace: " << previousEvent.trace;
+        << " | old trace: " << previousEvent.trace <<
       " | new trace: " + trace;
 
       // Create new event.
