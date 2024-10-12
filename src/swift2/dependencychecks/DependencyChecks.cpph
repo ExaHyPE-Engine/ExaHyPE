@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-#if PeanoDebug == 0
+#if (PeanoDebug == 0) || defined(NoParticleDependencyChecks)
 template <typename Particle>
 static std::string swift2::dependencychecks::internal::outputParticle(
   const Particle*                                                                        particle,
