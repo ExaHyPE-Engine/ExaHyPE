@@ -49,7 +49,7 @@ def translate_one_step_of_species_into_mesh_traversal(
        markers. This is to ensure that they do not hold any garbage. I can
        clear the set as often as I want. It is just important that I clear
        it at least once per particle species.
-    2. Update the task markers. This is something each and every step in Peano
+    2. Update the task markers. This is something each and every step in Peano 
        does. As we inject the update into each and every action set, we become
        independent of the AMR and when it is actually realised.
     3. Pick computational kernel. This is where the actual computation per step
@@ -83,14 +83,14 @@ def translate_one_step_of_species_into_mesh_traversal(
     @param alter_particle_position: [Bool]
       Inout parameter. We append a new marker to this sequence.
 
-
+     
     ## Use it to construct task graphs
-
-    The routine is not expected to have an argument construct_tree_task_graph
-    in Sequential. But I want to use the routines from Sequential. So I give
+    
+    The routine is not expected to have an argument construct_tree_task_graph 
+    in Sequential. But I want to use the routines from Sequential. So I give 
     this value a default value. This way, I can reuse the routine in TaskGraph,
     where I simply redefine the default.
-
+      
     """
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
@@ -111,28 +111,28 @@ def translate_one_step_of_species_into_mesh_traversal(
     )
     action_set_update_marker.parallel = True
     new_step.add_action_set(action_set_update_marker)
-
+    
     #
     # Need to know this for the action sets later down the line, as they have
     # to know if the tasks have to be waited for immediately.
     #
     current_step_alters_particle_position = (
         step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or
+        or 
         step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     )
 
     #
-    # We have to synchronise after each traversal if we work with a
+    # We have to synchronise after each traversal if we work with a 
     # tree or alter the global state
     #
     synchronise_after_each_mesh_traversal = (
         step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or
+        or 
         step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
-        or
+        or 
         step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
-        or
+        or 
         construct_tree_task_graph
     )
 
@@ -259,7 +259,7 @@ def translate_one_step_of_species_into_mesh_traversal(
         alter_particle_position.append(False)
 
     #
-    # Now add the task number management. First step erases all indices, as it
+    # Now add the task number management. First step erases all indices, as it 
     # might be the first time stepping step overall. Other than that, all steps
     # plug into creational and destroy events.
     #
@@ -302,7 +302,7 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
     sequence.
 
     @image html documentation/Doxygen/Swift/task-graph-tree.png
-
+    
     Whenever we spawn a task, we first generate a new task id. This is the
     number of this task which we store within the task and which the task
     has to free eventually. We also store this task within the associated
@@ -335,15 +335,15 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
     )
 
 
-def add_clear_task_number_to_initialisation_steps(algorithm_steps,
-                                                  species_sets,
+def add_clear_task_number_to_initialisation_steps(algorithm_steps, 
+                                                  species_sets, 
                                                   verbose):
     """!
-
+    
     Take set of mesh run throughs (algorithm steps) and add clear task number action set
-
+    
     Usually called on initialisation routines.
-
+    
     """
 
     for step in algorithm_steps:
@@ -363,111 +363,6 @@ def add_clear_task_number_to_initialisation_steps(algorithm_steps,
                     current_species_set.particle_model.name,
                 )
             )
-
-
-# ====================================
-# Public API functions
-# ====================================
-#
-# These functions are made available through the __init__.py file. They are all
-# "just" wrappers around the generic map_onto_separate_mesh_traversals()
-# function calls, yet with different arguments.
-#
-def finalisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
-    species_sets,
-    verbose,
-):
-    """!
-
-    @see map_onto_separate_mesh_traversals()
-
-    @param concatenate_steps_of_species: [Species]
-      Sequence of particle species to be handled.
-
-    @param verbose: {True, False}
-
-    """
-    result = map_onto_separate_mesh_traversals(
-        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
-        step_type=StepType.FINALISATION,
-        verbose=verbose,
-    )
-    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
-    return result
-
-
-def finalisation_steps_onto_task_tree_bucket_sort_scattered_memory(
-    species_sets,
-    verbose,
-):
-    """!
-
-    @see map_onto_separate_mesh_traversals()
-
-    @param concatenate_steps_of_species: [Species]
-      Sequence of particle species to be handled.
-
-    @param verbose: {True, False}
-
-    """
-    result = map_onto_separate_mesh_traversals(
-        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE,
-        step_type=StepType.FINALISATION,
-        verbose=verbose,
-    )
-    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
-    return result
-
-
-def finalisation_steps_onto_task_tree_multiscale_sort_coalesced_memory(
-    species_sets,
-    verbose,
-):
-    """!
-
-    @see map_onto_separate_mesh_traversals()
-
-    @param concatenate_steps_of_species: [Species]
-      Sequence of particle species to be handled.
-
-    @param verbose: {True, False}
-
-    """
-    result = map_onto_separate_mesh_traversals(
-        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
-        step_type=StepType.FINALISATION,
-        verbose=verbose,
-    )
-    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
-    return result
-
-
-def finalisation_steps_onto_task_tree_bucket_sort_coalesced_memory(
-    species_sets,
-    verbose,
-):
-    """!
-
-    @see map_onto_separate_mesh_traversals()
-
-    @param concatenate_steps_of_species: [Species]
-      Sequence of particle species to be handled.
-
-    @param verbose: {True, False}
-
-    """
-    result = map_onto_separate_mesh_traversals(
-        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE,
-        step_type=StepType.FINALISATION,
-        verbose=verbose,
-    )
-    add_clear_task_number_to_finalisation_steps(result, species_sets, verbose)
-    return result
-
 
 
 def initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
@@ -494,6 +389,14 @@ def initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
     return result
 
 
+# ====================================
+# Public API functions
+# ====================================
+#
+# These functions are made available through the __init__.py file. They are all
+# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
+# function calls, yet with different arguments.
+#
 def initialisation_steps_onto_task_tree_bucket_sort_scattered_memory(
     species_sets,
     verbose,
