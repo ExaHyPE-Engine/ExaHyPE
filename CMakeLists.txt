@@ -50,15 +50,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-#find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-#execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jinja2" RESULT_VARIABLE JINJA2_FOUND)
-# We need Jinja2 for code generation
-#if(NOT JINJA2_FOUND EQUAL 0)
-#  message(WARNING "Jinja2 package (needed for code generation) not found. Please install Jinja2 e.g.: 'pip3 install jinja2'")
-#else()
-#  message(STATUS "Found Jinja2")
-#endif()
-
 include(Ccache)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
@@ -75,15 +66,17 @@ if(IPO_SUPPORTED)
   message(STATUS "IPO/LTO enabled")
   set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION 1)
 else()
-  #message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
+  #message(WARNING "IPO/LTO not supported: ${IPO_ERROR}")
   message(WARNING "IPO/LTO not supported")
 endif()
 
-add_library(ProjectOptions INTERFACE)
-target_compile_features(ProjectOptions INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+add_library(PeanoInterface INTERFACE)
+target_compile_features(PeanoInterface INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+# TODO: Set C++ standard as project options
+install(TARGETS PeanoInterface EXPORT PeanoTargets)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
-  target_compile_options(ProjectOptions INTERFACE
+  target_compile_options(PeanoInterface INTERFACE
     -w
     -W
     -Wall
@@ -93,7 +86,7 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
     -Wshadow
     -Wunused
     -Wno-attributes
-    -Wno-unknown-attributes
+    #-Wno-unknown-attributes
     -Wnon-virtual-dtor
     -Wreturn-type
     -Wno-system-headers
@@ -103,13 +96,13 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
     $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
   )
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  target_compile_options(ProjectOptions INTERFACE
+  target_compile_options(PeanoInterface INTERFACE
     -W
     -Wall
     --diag_suppress=unrecognized_attribute
   )
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
-  target_compile_options(ProjectOptions INTERFACE
+  target_compile_options(PeanoInterface INTERFACE
     $<$<COMPILE_LANGUAGE:CXX>:/MP> # Use as many cores as available for compilation. https://blog.kitware.com/cmake-building-with-all-your-cores/
     $<$<COMPILE_LANGUAGE:CXX>:/W4> #/Wall # Baseline reasonable warnings.
     $<$<COMPILE_LANGUAGE:CXX>:/permissive-> # Standards conformance mode for MSVC compiler. https://docs.microsoft.com/de-de/cpp/build/reference/permissive-standards-conformance?view=vs-2019
@@ -119,7 +112,7 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GL>>
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GF>>
   )
-  target_link_options(ProjectOptions INTERFACE
+  target_link_options(PeanoInterface INTERFACE
     $<$<CONFIG:Release>:/OPT:REF>
     $<$<CONFIG:Release>:/LTCG>
   )
@@ -167,20 +160,20 @@ set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${AVAILABLE_TOOLCHAINS})
 if(WITH_TOOLCHAIN STREQUAL "scorep")
   find_library(PAPI libpapi.a papi)
   find_library(CUBE4W libcube4w.a cube4w)
-  target_link_libraries(ProjectOptions INTERFACE ${PAPI} ${CUBE4W} ${SCOREP_LIBRARIES})
-  target_link_options(ProjectOptions INTERFACE ${SCOREP_LINK_OPTION})
-  target_compile_options(ProjectOptions INTERFACE ${SCOREP_COMPILE_FLAGS})
-  target_compile_definitions(ProjectOptions INTERFACE UseScoreP UseLogService=ScorePLogger)
+  target_link_libraries(PeanoInterface INTERFACE ${PAPI} ${CUBE4W} ${SCOREP_LIBRARIES})
+  target_link_options(PeanoInterface INTERFACE ${SCOREP_LINK_OPTION})
+  target_compile_options(PeanoInterface INTERFACE ${SCOREP_COMPILE_FLAGS})
+  target_compile_definitions(PeanoInterface INTERFACE UseScoreP UseLogService=ScorePLogger)
 elseif(WITH_TOOLCHAIN STREQUAL "itac")
-  target_link_libraries(ProjectOptions INTERFACE VT::VT)
-  target_include_directories(ProjectOptions SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
-  target_link_directories(ProjectOptions INTERFACE ${VT_LIBRARIES_DIR})
-  target_compile_definitions(ProjectOptions INTERFACE UseITAC UseLogService=ITACLogger)
+  target_link_libraries(PeanoInterface INTERFACE VT::VT)
+  target_include_directories(PeanoInterface SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
+  target_link_directories(PeanoInterface INTERFACE ${VT_LIBRARIES_DIR})
+  target_compile_definitions(PeanoInterface INTERFACE UseITAC UseLogService=ITACLogger)
 elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
   find_package(CUDAToolkit REQUIRED)
-  target_link_libraries(ProjectOptions INTERFACE CUDA::nvToolsExt)
-  target_compile_definitions(ProjectOptions INTERFACE UseNVTX UseLogService=NVTXLogger)
+  target_link_libraries(PeanoInterface INTERFACE CUDA::nvToolsExt)
+  target_compile_definitions(PeanoInterface INTERFACE UseNVTX UseLogService=NVTXLogger)
 endif()
 
 list(APPEND AVAILABLE_MULTITHREADING
@@ -196,22 +189,23 @@ set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${AVAILABLE_MULTITHREADI
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-  target_link_libraries(ProjectOptions INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
-  target_compile_definitions(ProjectOptions INTERFACE SharedOMP)
+  target_link_libraries(PeanoInterface INTERFACE OpenMP::OpenMP_CXX)
+  target_link_options(PeanoInterface INTERFACE ${OpenMP_CXX_FLAGS})
+  target_compile_definitions(PeanoInterface INTERFACE SharedOMP)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
-  target_link_libraries(ProjectOptions INTERFACE TBB::tbb)
-  target_compile_definitions(ProjectOptions INTERFACE SharedTBB)
+  target_link_libraries(PeanoInterface INTERFACE TBB::tbb)
+  target_compile_definitions(PeanoInterface INTERFACE SharedTBB)
 elseif(WITH_MULTITHREADING STREQUAL "cpp")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
-  target_link_libraries(ProjectOptions INTERFACE Threads::Threads)
-  target_compile_definitions(ProjectOptions INTERFACE SharedCPP)
+  target_link_libraries(PeanoInterface INTERFACE Threads::Threads)
+  target_compile_definitions(PeanoInterface INTERFACE SharedCPP)
 elseif(WITH_MULTITHREADING STREQUAL "sycl")
   check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
-  target_compile_options(ProjectOptions INTERFACE -fsycl)
-  target_link_options(ProjectOptions INTERFACE -fsycl)
-  target_compile_definitions(ProjectOptions INTERFACE SharedSYCL)
+  target_compile_options(PeanoInterface INTERFACE -fsycl)
+  target_link_options(PeanoInterface INTERFACE -fsycl)
+  target_compile_definitions(PeanoInterface INTERFACE SharedSYCL)
 endif()
 
 list(APPEND AVAILABLE_ACCELERATORS
@@ -250,29 +244,19 @@ elseif("${GPU_PREFIX}" STREQUAL "spir")
   set(PEANO_INTEL_GPU TRUE)
 endif()
 
+if(NOT WITH_GPU STREQUAL "no" AND WITH_GPU_ARCH STREQUAL "none")
+  message(FATAL_ERROR "Make sure to also set WITH_GPU_ARCH")
+endif()
+
 if(WITH_GPU STREQUAL "omp")
-  find_package(OpenMPTarget REQUIRED)
-  target_link_libraries(ProjectOptions INTERFACE OpenMP::OpenMPTarget)
-  target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingOMP)
+  if(WITH_MULTITHREADING STREQUAL "no")
+    message(FATAL_ERROR "Make sure to also enable OpenMP multithreading support as this provides the necessary -fopenmp flag")
+  endif()
+  include(OpenMPTarget)
 elseif(WITH_GPU STREQUAL "cpp")
-  if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-    string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-    target_link_options(ProjectOptions INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
-    target_compile_options(ProjectOptions INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
-    target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingCPP)
-  endif()
+  include(StdPar)
 elseif(WITH_GPU STREQUAL "sycl")
-  target_compile_definitions(ProjectOptions INTERFACE GPUOffloadingSYCL)
-  if(PEANO_NVIDIA_GPU)
-    target_compile_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
-    target_link_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
-  elseif(PEANO_AMD_GPU)
-    target_compile_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
-    target_link_options(ProjectOptions INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
-  elseif(PEANO_INTEL_GPU)
-    find_package(IntelSYCL REQUIRED)
-    target_link_libraries(ProjectOptions INTERFACE IntelSYCL)
-  endif()
+  include(SYCL)
 endif()
 
 list(APPEND PEANO_DIMENSIONS
@@ -307,92 +291,97 @@ set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   #message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
-  target_compile_definitions(ProjectOptions INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
-  target_compile_definitions(ProjectOptions INTERFACE Parallel)
-  target_link_libraries(ProjectOptions INTERFACE MPI::MPI_CXX)
-  #target_compile_options(ProjectOptions INTERFACE ${MPI_CXX_FLAGS})
-  #target_link_libraries(ProjectOptions INTERFACE ${MPI_CXX_LIBRARIES})
-  #target_compile_definitions(ProjectOptions INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
-  #target_include_directories(ProjectOptions INTERFACE ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
-  #target_link_options(ProjectOptions INTERFACE ${MPI_CXX_LINK_FLAGS})
+  target_compile_definitions(PeanoInterface INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
+  target_compile_definitions(PeanoInterface INTERFACE Parallel)
+  target_link_libraries(PeanoInterface INTERFACE MPI::MPI_CXX)
+  #target_compile_options(PeanoInterface INTERFACE ${MPI_CXX_FLAGS})
+  #target_link_libraries(PeanoInterface INTERFACE ${MPI_CXX_LIBRARIES})
+  #target_compile_definitions(PeanoInterface INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
+  #target_include_directories(PeanoInterface INTERFACE ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
+  #target_link_options(PeanoInterface INTERFACE ${MPI_CXX_LINK_FLAGS})
 endif()
 
 if(WITH_OTTER)
   find_package(Otter CONFIG)
-  target_compile_definitions(ProjectOptions INTERFACE UseOtter)
-  target_link_libraries(ProjectOptions INTERFACE Otter::Otter)
+  target_compile_definitions(PeanoInterface INTERFACE UseOtter)
+  target_link_libraries(PeanoInterface INTERFACE Otter::Otter)
 endif()
 
 if(WITH_PETSC)
   find_package(PETSc REQUIRED)
-  target_compile_definitions(ProjectOptions INTERFACE UsePETSc)
-  target_link_libraries(ProjectOptions INTERFACE ${PETSc_LIBRARIES})
-  target_include_directories(ProjectOptions INTERFACE ${PETSc_INCLUDE_DIRS})
+  target_compile_definitions(PeanoInterface INTERFACE UsePETSc)
+  target_link_libraries(PeanoInterface INTERFACE ${PETSc_LIBRARIES})
+  target_include_directories(PeanoInterface INTERFACE ${PETSc_INCLUDE_DIRS})
 endif()
 
 if(WITH_TARGETDART)
-  target_compile_definitions(ProjectOptions INTERFACE UseTargetDART)
+  target_compile_definitions(PeanoInterface INTERFACE UseTargetDART)
 endif()
 
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
-  target_compile_definitions(ProjectOptions INTERFACE UseLibXSMM)
-  target_link_libraries(ProjectOptions INTERFACE LIBXSMM::LIBXSMM)
+  target_compile_definitions(PeanoInterface INTERFACE UseLibXSMM)
+  target_link_libraries(PeanoInterface INTERFACE LIBXSMM::LIBXSMM)
 endif()
 
 if(WITH_VTK)
   find_package(VTK REQUIRED)
-  target_compile_definitions(ProjectOptions INTERFACE UseVTK)
-  target_link_libraries(ProjectOptions INTERFACE VTK::CommonCore)
+  target_compile_definitions(PeanoInterface INTERFACE UseVTK)
+  target_link_libraries(PeanoInterface INTERFACE VTK::CommonCore)
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
-  target_compile_definitions(ProjectOptions INTERFACE UseHDF5)
-  target_link_libraries(ProjectOptions INTERFACE HDF5::HDF5)
+  target_compile_definitions(PeanoInterface INTERFACE UseHDF5)
+  target_link_libraries(PeanoInterface INTERFACE HDF5::HDF5)
 endif()
 
 if(WITH_NETCDF)
   find_package(NetCDF REQUIRED)
-  target_compile_definitions(ProjectOptions INTERFACE UseNetCDF)
-  target_link_libraries(ProjectOptions INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
-  target_include_directories(ProjectOptions INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
+  target_compile_definitions(PeanoInterface INTERFACE UseNetCDF)
+  target_link_libraries(PeanoInterface INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
+  target_include_directories(PeanoInterface INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
 endif()
 
 if(ENABLE_LOADBALANCING)
-  target_compile_definitions(ProjectOptions INTERFACE UseToolboxLoadbalancing)
+  target_compile_definitions(PeanoInterface INTERFACE UseToolboxLoadbalancing)
 endif()
 
 if(ENABLE_BLOCKSTRUCTURED)
-  target_compile_definitions(ProjectOptions INTERFACE UseToolboxBlockstructured)
+  target_compile_definitions(PeanoInterface INTERFACE UseToolboxBlockstructured)
 endif()
 
 if(ENABLE_PARTICLES)
-  target_compile_definitions(ProjectOptions INTERFACE UseToolboxParticles)
+  target_compile_definitions(PeanoInterface INTERFACE UseToolboxParticles)
 endif()
 
 if(ENABLE_MULTIPRECISION)
-  target_compile_definitions(ProjectOptions INTERFACE UseToolboxMultiprecision)
+  target_compile_definitions(PeanoInterface INTERFACE UseToolboxMultiprecision)
 endif()
 
 if(ENABLE_FINITEELEMENTS)
-  target_compile_definitions(ProjectOptions INTERFACE UseToolboxFiniteElements)
+  target_compile_definitions(PeanoInterface INTERFACE UseToolboxFiniteElements)
 endif()
 
 if(ENABLE_EXAHYPE)
-  target_compile_definitions(ProjectOptions INTERFACE UseExaHyPE)
+  target_compile_definitions(PeanoInterface INTERFACE UseExaHyPE)
 endif()
 
 if(ENABLE_SWIFT)
-  target_compile_definitions(ProjectOptions INTERFACE UseSWIFT)
+  target_compile_definitions(PeanoInterface INTERFACE UseSWIFT)
 endif()
 
-target_include_directories(ProjectOptions INTERFACE
+target_include_directories(PeanoInterface INTERFACE
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_BINARY_DIR}/src
 )
 
 add_subdirectory(src)
+
+export(EXPORT PeanoTargets
+  FILE ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
+  NAMESPACE ${PEANO_PROJECT_NAME}::
+)
 
 include(CMakePackageConfigHelpers)
 
@@ -404,7 +393,7 @@ write_basic_package_version_file(
 
 configure_package_config_file(
   ${CMAKE_SOURCE_DIR}/cmake/Config.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
+  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
@@ -417,7 +406,8 @@ install(FILES
   ${CMAKE_SOURCE_DIR}/LICENSE
   ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
   ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
+  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}ConfigVersion.cmake
+  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
   DESTINATION ${CMAKE_INSTALL_PREFIX}
 )

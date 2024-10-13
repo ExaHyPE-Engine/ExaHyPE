@@ -12,7 +12,7 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_library(ToolboxLoadBalancing${dimension}d_${mode_lower} STATIC)
     target_sources(ToolboxLoadBalancing${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxLoadBalancing${dimension}d_${mode_lower} PRIVATE ProjectOptions Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ToolboxLoadBalancing${dimension}d_${mode_lower} PRIVATE PeanoInterface Peano4Core${dimension}d_${mode_lower})
     target_compile_definitions(ToolboxLoadBalancing${dimension}d_${mode_lower} PRIVATE ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_compile_options(ToolboxLoadBalancing${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 

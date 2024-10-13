@@ -5,8 +5,9 @@
 #include <cmath>
 #include <sstream>
 #include <vector>
+#include <limits>
 
-#include "tarch/la/ScalarOperations.h"
+#include "ScalarOperations.h"
 
 /**
  * Forward declaration
@@ -24,8 +25,8 @@ namespace tarch {
     Scalar norm1(const Vector<Size, Scalar>& vector);
 
     /**
-     * Specialisation that is different to standard definition. Works as result
-     * type is not part of the signature
+     * Specialisation that is different to standard definition.
+     * Works as result type is not part of the signature.
      */
     template <int Size>
     double norm1(const Vector<Size, std::complex<double>>& vector);
@@ -35,20 +36,24 @@ namespace tarch {
      * summed up squared component values.
      */
     template <int Size, typename Scalar>
-    Scalar norm2(const Vector<Size, Scalar>& vector);
+    inline GPUCallableMethod
+    Scalar norm2(const Vector<Size, Scalar>& vector) InlineMethod;
 
     template <int Size, typename Scalar>
-    Scalar norm2Squared(const Vector<Size, Scalar>& vector);
+    inline GPUCallableMethod
+    Scalar norm2Squared(const Vector<Size, Scalar>& vector) InlineMethod;
 
     /**
-     * Specialisation that is different to standard definition. Works as result
-     * type is not part of the signature
+     * Specialisation that is different to standard definition.
+     * Works as result type is not part of the signature.
      */
     template <int Size>
-    double norm2(const Vector<Size, std::complex<double>>& vector);
+    inline GPUCallableMethod
+    double norm2(const Vector<Size, std::complex<double>>& vector) InlineMethod;
 
     template <int Size>
-    double norm2Squared(const Vector<Size, std::complex<double>>& vector);
+    inline GPUCallableMethod
+    double norm2Squared(const Vector<Size, std::complex<double>>& vector) InlineMethod;
 
     /**
      * Computes the max-norm of the vector.
@@ -57,8 +62,8 @@ namespace tarch {
     Scalar normMax(const Vector<Size, Scalar>& vector);
 
     /**
-     * Specialisation that is different to standard definition. Works as result
-     * type is not part of the signature
+     * Specialisation that is different to standard definition.
+     * Works as result type is not part of the signature.
      */
     template <int Size>
     double normMax(const Vector<Size, std::complex<double>>& vector);
@@ -73,8 +78,8 @@ namespace tarch {
     Vector<Size, Scalar> abs(const Vector<Size, Scalar>& vector);
 
     /**
-     * Specialisation that is different to standard definition. Works as result
-     * type is not part of the signature
+     * Specialisation that is different to standard definition.
+     * Works as result type is not part of the signature.
      */
     template <int Size>
     Vector<Size, double> abs(const Vector<Size, std::complex<double>>& vector);

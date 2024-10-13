@@ -44,7 +44,7 @@ ExaHyPE2Sources = \
   fd/fd4/LoopBody.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
   fv/riemann/Riemann.cpp \
-  fv/rusanov/rusanov.cpp \
+  fv/rusanov/Rusanov.cpp \
   dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp

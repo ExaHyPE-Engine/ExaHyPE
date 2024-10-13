@@ -10,7 +10,7 @@
 #include "tarch/multicore/Tasks.h"
 #include "tarch/NonCriticalAssertions.h"
 
-#include "exahype2/fv/rusanov/rusanov.h"
+#include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "repositories/SolverRepository.h"

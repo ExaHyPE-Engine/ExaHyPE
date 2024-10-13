@@ -1,6 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "rusanov.h"
+#include "Rusanov.h"
 
 
 tarch::la::Vector<Dimensions + 1, int> exahype2::fv::rusanov::internal::rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns) {

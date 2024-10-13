@@ -362,8 +362,9 @@ namespace exahype2::fv::rusanov::sycl {
 
   namespace internal {
     /**
-     * Read the docu page "ExaHyPE's finite volumes Rusanov kernel implementation"
-     * (from rusanov.h) before you continue.
+     * Read the documentation page
+     * "ExaHyPE's finite volumes Rusanov kernel implementation"
+     * (from Rusanov.h) before you continue.
      * We do not build up a task graph for the individual logical steps,
      * but we build up a task graph per patch.
      *

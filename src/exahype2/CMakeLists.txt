@@ -12,9 +12,13 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_library(ExaHyPE2Core${dimension}d_${mode_lower} STATIC)
     target_sources(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ProjectOptions ToolboxLoadBalancing${dimension}d_${mode_lower} ToolboxBlockStructured${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE PeanoInterface ToolboxBlockStructured${dimension}d_${mode_lower})
     target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+
+    if(ENABLE_LOADBALANCING)
+      target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ToolboxLoadBalancing${dimension}d_${mode_lower})
+    endif()
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

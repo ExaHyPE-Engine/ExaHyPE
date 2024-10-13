@@ -1,6 +1,3 @@
-#include <limits>
-
-
 template <int Size, typename Scalar>
 std::vector<Scalar> tarch::la::toSTLVector(const Vector<Size, Scalar>& vector) {
   std::vector<Scalar> result(Size);

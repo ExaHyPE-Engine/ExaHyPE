@@ -149,5 +149,5 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
   @property
   def user_action_set_includes(self):
     return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
-#include "exahype2/fv/rusanov/rusanov.h"
+#include "exahype2/fv/rusanov/Rusanov.h"
 """

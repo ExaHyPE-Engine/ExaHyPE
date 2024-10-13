@@ -15,7 +15,7 @@ namespace exahype2 {
   /**
    * Forward declaration
    */
-  template<typename inType=double, typename outType=double>
+  template <typename inType, typename outType>
   struct CellData;
 
   namespace fv::rusanov::sycl {

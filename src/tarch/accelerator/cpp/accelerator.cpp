@@ -4,6 +4,10 @@
 
 #if defined(GPUOffloadingCPP)
 
+GPUCallableMethod void tarch::gpuAbort() {
+  std::abort();
+};
+
 void* tarch::internal::allocateRawData(
   std::size_t           size,
   MemoryLocation        location,

@@ -67,6 +67,6 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
           + """
 #include "kernels/"""  + self._solver._name + """/Limiter.h"
 #include "toolbox/blockstructured/Enumeration.h"
-#include "exahype2/fv/rusanov/rusanov.h"
+#include "exahype2/fv/rusanov/Rusanov.h"
     """
       )
