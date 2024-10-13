@@ -11,7 +11,16 @@ import os.path
 import subprocess
 
 
-currently_in_raw_data_box = False
+from enum import Enum
+
+
+class Mode(Enum):
+    Text = 1,
+    RawData = 2 ,
+    EquationSystem = 3
+
+
+current_mode = Mode.Text
 
 def postprocess_markdown_line(line):
     """!
@@ -21,22 +30,33 @@ def postprocess_markdown_line(line):
       that raw data cells should be indendented. And then we automatically 
       filter those lines out, and add the markup box around them.
     """
-    global currently_in_raw_data_box
+    global current_mode
     
-    if line.startswith( "    " ) and not currently_in_raw_data_box:
-        currently_in_raw_data_box = True
-        line = """
-        
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-""" + line        
-    elif not line.startswith( "    " ) and currently_in_raw_data_box:
-        currently_in_raw_data_box = False
-        line = """
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-""" + line        
-    
-    return line.replace( "$$", "@f$ ")
+    if "\\begin{equation" in line and current_mode == Mode.Text:
+        current_mode = Mode.EquationSystem
+        line = """ @f{eqnarray*}{
+"""
+    elif "\\end{equation" in line:
+        current_mode = Mode.Text
+        line = """ @f}
+        """
+#    elif line.startswith( "    " ) and current_mode==Mode.Text:
+#        current_mode = Mode.RawData
+#        line = """
+#        
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#""" + line        
+#    elif not line.startswith( "    " ) and current_mode==Mode.RawData:
+#        current_mode = Mode.Text
+#        line = """
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#""" + line        
+    elif current_mode == Mode.Text:
+        line = line.replace( "$$", "\n @f$ ")
+        # This replacement messes up any dollar sign in raw data cells (which I cannot detect atm)
+        # line = line.replace( "$", "@f$ ")
+    return line
 
 
 def postprocess_notebook_markdown(filename: str):

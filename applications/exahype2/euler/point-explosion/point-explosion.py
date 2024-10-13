@@ -13,13 +13,14 @@ if __name__ == "__main__":
         solver="RusanovGlobalAdaptiveADERDG",
         dimensions=2,
         end_time=3.0,
-        width="[1.0, 1.0, 1.0]",
-        offset="[0.0, 0.0, 0.0]",
-        min_depth=1,
-        amr_levels=5,
+        width=[1.0, 1.0, 1.0],
+        offset=[0.0, 0.0, 0.0],
+        min_depth=4,
+        amr_levels=0,
         patch_size=16,
         rk_order = 2,
         dg_order = 3,
+        number_of_snapshots = 20,
         peano_dir="../../../../",
     )
     my_args = my_parser.parse_args()

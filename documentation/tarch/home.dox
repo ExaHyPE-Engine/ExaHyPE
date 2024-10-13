@@ -7,8 +7,9 @@
 \li \subpage tarch_logging
 \li \subpage tarch_plotting
 \li \subpage tarch_tests
-\li \subpage tarch_patch_files
+\li \subpage documentation_tarch_visualisation
 \li \subpage tarch_services
+\li \subpage page_tarch_multicore 
 \li \subpage tarch_accelerator_SYCL
 \li \subpage tarch_NoncriticalAssertions
 \li \ref tarch::multicore Multicore layer

@@ -223,6 +223,23 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 {% endif -%}
 
+tarch::la::Vector< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Cardinality, {{FLOAT_TYPE}} > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::get() const {
+  tarch::la::Vector< Cardinality, {{FLOAT_TYPE}} > output(0.0);
+  if (value != nullptr) std::copy_n( value, Cardinality, output.data() );
+  return output;
+}
+
+{{FLOAT_TYPE}} {{NAMESPACE | join("::")}}::{{CLASSNAME}}::get(int index) const {
+  return _dataSmartPointer[index];
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::set( const tarch::la::Vector< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Cardinality, {{FLOAT_TYPE}} >& v ) {
+  if (value != nullptr) std::copy_n( v.data(), Cardinality, value );
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::set( int index, {{FLOAT_TYPE}} value ) {
+  _dataSmartPointer[index] = value;
+}
 
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {

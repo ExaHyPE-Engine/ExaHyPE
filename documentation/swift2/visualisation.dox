@@ -11,7 +11,7 @@ spatial filters.
 The latter help you to visualise only subdomains.
 As we rely on Peano's infrastructure, you can use the ``render.py`` script in
 ``python/peano4/visualisation`` to convert the output files into vtu files.
-Consult also @ref tarch_patch_files "Peano's generic discussion" of various
+Consult also @ref documentation_tarch_visualisation "Peano's generic discussion" of various
 visualisation pathways.
 
 

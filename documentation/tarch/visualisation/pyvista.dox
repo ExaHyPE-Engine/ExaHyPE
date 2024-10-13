@@ -1,0 +1,23 @@
+/**
+
+ @page documentation_tarch_visualisation_pyvista Explore data with PyVista
+ 
+ <a href="https://docs.pyvista.org/">PyVista</a> is popular with Peano, as a 
+ lot of end users prefer Python for postprocessing, or even want to embed the
+ postprocessing into Jupyter notebooks.
+ 
+ # Preparation
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ pip3 install pyvista
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+ 
+ # Using PyVista
+ 
+ @todo This is yet to be written.
+
+
+
+ */
+ 
+ 

@@ -217,7 +217,7 @@ We need to set the location of our core libraries ('Peano4').
 This helps us to resolve any dependencies.
 Additionally, we specify the build mode which you can also change to a different mode.
 """
-my_project.set_Peano4_installation("../../../", mode=compile_mode)
+my_project.set_Peano4_installation("../../../../", mode=compile_mode)
 
 """
 We generate and grab the underlying core project of 'Peano4'.
