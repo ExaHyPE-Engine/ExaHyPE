@@ -44,19 +44,22 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
   std::vector<ParticlePosition>::const_iterator pRecordedPosition
     = recordedPositions.begin();
 
+  using Particle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
+
   while (pParticle != container.end()) {
 
-    moveParticle(
-      pruneTypeName<typename std::remove_pointer<
-        typename ParticleContainer::value_type>::type>(),
-      *pRecordedPosition,
-      (*pParticle)->getX(),
-      (*pParticle)->getPartid(),
-      vertexX,
-      vertexH,
-      spacetreeId,
-      "toolbox::particles::assignmentchecks::traceParticleMovements()"
-    );
+    if ((*pParticle)->getParallelState() == Particle::ParallelState::Local){
+      moveParticle(
+        pruneTypeName<Particle>(),
+        *pRecordedPosition,
+        (*pParticle)->getX(),
+        (*pParticle)->getPartid(),
+        vertexX,
+        vertexH,
+        spacetreeId,
+        "toolbox::particles::assignmentchecks::traceParticleMovements()"
+      );
+    }
 
     pParticle++;
     pRecordedPosition++;

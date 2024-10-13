@@ -56,7 +56,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   Event event(Event::Type::Erase, isLocal, treeId, trace);
 
   ParticleEvents& history       = database.addEvent(identifier, event);
-  Event           previousEvent = getPreviousEvent(history, treeId, 1);
+  Event           previousEvent = database.getPreviousEvent(history, treeId, 1);
 
 
   assertion5(
@@ -122,7 +122,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
 
   if (not(particleIsNew and (not checkNewParticles))) {
     // skip the newly added event.
-    Event previousEvent = getPreviousEvent(history, treeId, 1);
+    Event previousEvent = database.getPreviousEvent(history, treeId, 1);
 
     const bool isDropping = previousEvent.type
                               == internal::Event::Type::DetachFromVertex
@@ -215,13 +215,12 @@ void toolbox::particles::assignmentchecks::moveParticle(
     vertexH
   )
 
-    // use old particle position to find history.
-    ParticleSearchIdentifier identifier
-    = ParticleSearchIdentifier(
-      particleName,
-      oldParticleX,
-      particleID,
-      tarch::la::max(vertexH)
+  // use old particle position to find history.
+  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
+    particleName,
+    oldParticleX,
+    particleID,
+    tarch::la::max(vertexH)
     );
 
   ParticleEvents& history = database.getParticleHistory(identifier);
@@ -229,8 +228,8 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // else first.
   assert(history.size() > 0);
 
-  Event previousEvent    = getPreviousEvent(history, treeId);
-  Event anyPreviousEvent = getPreviousEvent(history, Database::AnyTree);
+  Event previousEvent    = database.getPreviousEvent(history, treeId);
+  Event anyPreviousEvent = database.getPreviousEvent(history, Database::AnyTree);
 
   // We need to have at least 1 event somewhere.
   // Even if the database had been trimmed, at least 1 event remains. But the
@@ -241,11 +240,12 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // Exception: erase event. We don't keep track of the vertex data there,
   // because the particle gets detached from vertices first.
   if (anyPreviousEvent.type != internal::Event::Type::Erase){
-    assertion3(
+    assertion4(
       tarch::la::equals(anyPreviousEvent.vertexH, vertexH),
       "Vertices not the same",
       anyPreviousEvent.vertexH,
-      vertexH
+      vertexH,
+      database.particleHistory(identifier)
     );
     assertion3(
       tarch::la::equals(anyPreviousEvent.vertexX, vertexX),
@@ -410,8 +410,9 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     trace
   );
 
-  ParticleEvents& history = Database::getInstance().addEvent(identifier, event);
-  Event           previousEvent = getPreviousEvent(history, treeId, 1);
+
+  ParticleEvents& history = database.addEvent(identifier, event);
+  Event           previousEvent = database.getPreviousEvent(history, treeId, 1);
 
 
   if (previousEvent.type == internal::Event::Type::NotFound and inMergeWithPeriodicBoundarySwap) {
@@ -496,7 +497,7 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
     event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
 
   ParticleEvents& history       = database.addEvent(identifier, event);
-  Event           previousEvent = getPreviousEvent(history, treeId, 1);
+  Event           previousEvent = database.getPreviousEvent(history, treeId, 1);
 
   assertion5(
     previousEvent.type == internal::Event::Type::DetachFromVertex,

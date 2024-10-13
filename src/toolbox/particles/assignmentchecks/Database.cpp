@@ -81,6 +81,7 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
   particles::assignmentchecks::internal::Database::getParticleHistory(
     const ParticleSearchIdentifier& identifier
   ) {
+
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
@@ -367,11 +368,14 @@ void toolbox::particles::assignmentchecks::internal::Database::
 
 
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
-  assignmentchecks::internal::getPreviousEvent(
+  assignmentchecks::internal::Database::getPreviousEvent(
     ParticleEvents& particleHistory,
     int             spacetreeId,
     size_t          nFirstEventsToSkip
   ) {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   if (particleHistory.size() <= nFirstEventsToSkip) {
     return Event(Event::Type::NotFound);

@@ -237,21 +237,21 @@ namespace toolbox {
            * in TracingAPI.h:eliminateExistingParticles() for more.
            */
           void eliminateExistingParticles();
-        };
 
-        /**
-         * get the previous event from a particle history.
-         *
-         * nFirstEventsToSkip: skip this many events. Useful if you've just
-         * added something to the database using addEvent and are trying to
-         * re-use the history it returns.
-         */
-        Event getPreviousEvent(
-          ParticleEvents& particleHistory,
-          int             spacetreeId,
-          size_t          nFirstEventsToSkip = 0
-        );
+          /**
+           * get the previous event from a particle history.
+           *
+           * nFirstEventsToSkip: skip this many events. Useful if you've just
+           * added something to the database using addEvent and are trying to
+           * re-use the history it returns.
+           */
+          Event getPreviousEvent(
+            ParticleEvents& particleHistory,
+            int             spacetreeId,
+            size_t          nFirstEventsToSkip = 0
+          );
 
+        }; // class Database
       } // namespace internal
     }   // namespace assignmentchecks
   }     // namespace particles

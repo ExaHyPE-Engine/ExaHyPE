@@ -349,6 +349,17 @@ namespace toolbox {
        * We only record particles that have moved, but actually the comparison
        * here is only an optimisation, as the moveParticle itself will once
        * again check that the particle has actually changed its position.
+       *
+       * We skip the checks for virtual particles. Virtual particles may end up
+       * here during a lift operation: They have been moved on a lower level
+       * and are now in the process of being lifted. In these cases, the checks
+       * we have set up fail, as the particle being lifted is not assigned to
+       * the correct vertex any more. Skipping these checks is fine because these
+       * virtual particles have already been moved while they've been Local, and
+       * the appropriate event has been noted and checked beforehand. Other
+       * virtual particles, i.e. virtual particles that have been virtual even
+       * before the move operation, should never have been part of the
+       * assignedParticles list that is being looped over.
        */
       template <typename ParticleContainer>
       void traceParticleMovements(
