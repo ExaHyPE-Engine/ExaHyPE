@@ -47,7 +47,7 @@ class Solver:
     observer.use_cell(  self._cell_data)
   
   def typename(self):
-    return self._name;
+    return self._name
 
   def instance_name(self):
     """!

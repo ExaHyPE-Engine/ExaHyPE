@@ -16,7 +16,7 @@
 #define _CUSTOM_COORDINATES
 #define ASAGI_NOMPI
 #define ISOTROPIC
-#define _TOP 2
+#define _TOP 1
 
 #include "../ExaSeis_core/Context/ContextCurvilinearPML.h"
 #include "../ExaSeis_core/Numerics/routines_curvilinear.h"
@@ -27,9 +27,17 @@ namespace exahype2 {
   namespace elastic {
 
     class ElasticSolver;
+    class VariableShortcutsExpanded;
 
   } // namespace elastic
 } // namespace exahype2
+
+class exahype2::elastic::VariableShortcutsExpanded: public ::exahype2::elastic::VariableShortcuts {
+public:
+  static constexpr int NumberOfUnknowns = AbstractElasticSolver::NumberOfUnknowns;
+  static constexpr int NumberOfAuxiliaryVariables = AbstractElasticSolver::NumberOfAuxiliaryVariables;
+  static constexpr int Size = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+};
 
 class exahype2::elastic::ElasticSolver: public AbstractElasticSolver {
 private:
@@ -37,8 +45,8 @@ private:
 
   VariableShortcuts s;
 
-  ContextCurvilinear<VariableShortcuts, Order + 1>*                context;
-  std::vector<Refinement::RefinementCriterion<VariableShortcuts>*> refinementCriteria;
+  ContextCurvilinear<VariableShortcutsExpanded, Order + 1>*                context;
+  std::vector<Refinement::RefinementCriterion<VariableShortcutsExpanded>*> refinementCriteria;
   int                                                              pml_cell_width;
   double                                                           pml_alpha_const;
   double                                                           pml_alpha_scalar;
@@ -79,7 +87,6 @@ public:
     double* __restrict__ Q, // Q[36+19]
     const tarch::la::Vector<Dimensions, double>& x,
     const tarch::la::Vector<Dimensions, double>& h,
-    const tarch::la::Vector<Dimensions, int>&    index,
     bool                                         gridIsConstructed
   ) override;
 

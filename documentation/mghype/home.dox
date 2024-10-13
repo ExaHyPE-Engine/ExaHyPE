@@ -16,7 +16,7 @@ Peano's multigrid extension provides stand-alone multigrid solvers. However, the
 solver ingredients are designed in a way that they can be used by other codes,
 too.
 
-# Quickstart
+# Configuration (Peano extensions and toolboxes)
 
 Users should be familiar with the standard configure process for Peano. That being said,
 to build Multigrid applications, the minimal configure options needed are:

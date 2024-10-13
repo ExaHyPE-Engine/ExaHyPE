@@ -14,7 +14,7 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="FWaveRiemannGlobalAdaptiveFV",
         end_time=40.0,
-        width="[10, 10]",
+        width=[10, 10],
         min_depth=1,
         amr_levels=5,
         patch_size=4,
