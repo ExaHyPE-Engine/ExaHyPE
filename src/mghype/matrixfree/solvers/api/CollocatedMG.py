@@ -73,7 +73,8 @@ class CollocatedMG(Solver):
                descend_order,
                restriction_matrix,
                prolongation_matrix,
-               smoother_relaxation = 0.6
+               smoother_relaxation = 0.6,
+               plot_predicate="true"
                ):
     super( CollocatedMG, self ).__init__( name,
                                           min_h,
@@ -116,6 +117,7 @@ class CollocatedMG(Solver):
     self._basic_descend_order           = descend_order
     
     self._smoother_relaxation           = smoother_relaxation
+    self._plot_predicate                = plot_predicate
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedMG, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -142,9 +144,9 @@ class CollocatedMG(Solver):
     pass
   
   def add_to_plot(self, observer):
-    plot_predicate = f""" fineGridCell{self.typename()}.getLevel() == repositories::{self.instance_name()}.getFinestLevel() """
-    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "u",   "getU",   plot_predicate=plot_predicate))
-    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=plot_predicate))
+    cell_predicate = f"""fineGridCell{self.typename()}.getLevel() == repositories::{self.instance_name()}.getFinestLevel() """
+    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "u",   "getU",   plot_predicate=self._plot_predicate, cell_predicate=cell_predicate))
+    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate, cell_predicate=cell_predicate))
     pass
 
   def add_implementation_files_to_project(self, namespace, output, subdirectory=""):
