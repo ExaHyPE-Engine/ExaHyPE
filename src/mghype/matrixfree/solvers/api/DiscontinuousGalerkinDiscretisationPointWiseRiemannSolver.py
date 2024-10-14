@@ -428,12 +428,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     """
     if self._enable_plotting: # true by default
-      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", predicate_plot=self._plot_predicate) )
-      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", predicate_plot=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", plot_predicate=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate) )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:
-        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, predicate_plot=self._plot_predicate) )
+        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, plot_predicate=self._plot_predicate) )
 
   def add_to_create_grid(self, observer):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
