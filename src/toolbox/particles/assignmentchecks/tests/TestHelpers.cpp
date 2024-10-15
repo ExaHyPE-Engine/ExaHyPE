@@ -707,6 +707,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   namespace ac = toolbox::particles::assignmentchecks;
 
   ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(100);
 
   // IMPORTANT: Needs to be the same as the particle class name you use!
   // In traceParticleMovements(), this will be derived from the class name.
@@ -1794,6 +1795,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   logTraceOut("testSieveSet()");
 #endif
 }
+
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   testMethod(testTruthTableSearchAndIDKeys);

@@ -297,31 +297,8 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
   if ((previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) or (previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex)){
 
-    Event newEvent = Event(Event::Type::NotFound);
-
-    if (previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) {
-      // we turn it into a ConsecutiveMoveWhileAssociatedToVertex and
-      // store the current particle position.
-      std::ostringstream pastTrace;
-      pastTrace
-        << "Consecutive Move starting at x=["
-        << ::toString(previousEvent.previousParticleX) << "] at sweep "
-        << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
-        << " | old trace: " << previousEvent.trace << " | new trace: " + trace;
-
-      // Create new event.
-      newEvent = Event(
-        Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-        previousEvent.isLocal,
-        vertexX,
-        oldParticleX,
-        vertexH,
-        treeId,
-        pastTrace.str(),
-        -1 // will be modified in database.addEvent
-      );
-    } else {
-      newEvent = Event(
+    // Either way, the event we'll write down is a consecutive move
+    Event newEvent = Event(
         Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
         previousEvent.isLocal,
         vertexX,
@@ -331,23 +308,21 @@ void toolbox::particles::assignmentchecks::moveParticle(
         previousEvent.trace,
         -1 // will be modified in database.addEvent
       );
+
+    if (previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) {
+      // Rename the trace.
+      std::ostringstream pastTrace;
+      pastTrace
+        << "Consecutive Move starting at x=["
+        << ::toString(previousEvent.previousParticleX) << "] at sweep "
+        << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
+        << " | old trace: " << previousEvent.trace << " | new trace: " + trace;
+      newEvent.trace = pastTrace.str();
     }
 
-    // In either case, delete old event from history and then re-add it so that
-    // all the mechanisms in addEvent (shortening history, modifying
-    // identifier coordinates) trigger.
-    for (auto it = history.begin(); it != history.end(); it++) {
-      if ((it->meshSweepIndex == previousEvent.meshSweepIndex)
-        and (it->type == previousEvent.type)
-          and (it->treeId == previousEvent.treeId)
-          and (it->isLocal == previousEvent.isLocal)){
-        history.erase(it);
-        break;
-      }
-    }
+    // And replace old event now.
+    database.replaceEvent(identifier, previousEvent, newEvent);
 
-    // Add new event now.
-    database.addEvent(identifier, newEvent, treeId);
   } else {
     // Add a new move event.
     Event newEvent = Event(

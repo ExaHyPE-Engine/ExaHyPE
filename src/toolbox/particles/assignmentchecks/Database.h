@@ -189,6 +189,22 @@ namespace toolbox {
           );
 
           /**
+           * Replace an (old) particle event with a new one.
+           *
+           * This is used e.g. in case where we replace a move event with
+           * a consecutive move event. Put into this function for thread
+           * safety and minimizing lock time of the database.
+           *
+           * Just like addEvent(), it adds the current mesh sweep index to
+           * the newEvent.
+           */
+          void replaceEvent(
+            ParticleSearchIdentifier identifier,
+            Event&                   oldEvent,
+            Event&                   newEvent
+          );
+
+          /**
            * Change the particle's coordinates used to identify it if it moved
            * too much compared to the coordinates stored in its identifier in
            * the database.

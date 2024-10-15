@@ -346,6 +346,48 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::
 }
 
 
+void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
+    ParticleSearchIdentifier identifier,
+    Event& oldEvent,
+    Event& newEvent
+    ){
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
+
+  // Take note of the current mesh sweep index.
+  newEvent.meshSweepIndex = getCurrentMeshSweepIndex();
+
+  auto search = _data.find(identifier);
+
+  assertion1(search != _data.end(), "Trying to replace event of particle with no history");
+
+  ParticleEvents& history = search->second;
+
+  // Get previous event
+  Event previousEventOnThisTree = Event(Event::Type::NotFound);
+
+  for (auto it = history.begin(); it != history.end(); it++) {
+    if ((it->meshSweepIndex == oldEvent.meshSweepIndex) and
+        (it->type == oldEvent.type) and
+        (it->treeId == oldEvent.treeId) and
+        (it->isLocal == oldEvent.isLocal) ){
+
+      it->type = newEvent.type;
+      it->isLocal = newEvent.isLocal;
+      it->vertexX = newEvent.vertexX;
+      it->vertexH = newEvent.vertexH;
+      it->treeId = newEvent.treeId;
+      it->trace = newEvent.trace;
+      it->meshSweepIndex = newEvent.meshSweepIndex;
+
+      break;
+    }
+  }
+}
+
+
+
 void toolbox::particles::assignmentchecks::internal::Database::
   shiftIdentifierCoordinates(
     toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier
