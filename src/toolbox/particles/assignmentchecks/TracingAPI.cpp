@@ -34,10 +34,11 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const std::string&                           trace
 ) {
 
-  logTraceInWith4Arguments(
+  logTraceInWith5Arguments(
     "eraseParticle(...)",
     particleName,
     particleX,
+    particleID,
     isLocal,
     treeId
   );
@@ -86,9 +87,10 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool reassignmentOnSameTreeDepthAllowed
 ) {
 
-  logTraceInWith6Arguments(
+  logTraceInWith7Arguments(
     "assignParticleToVertex(...)",
     particleName,
+    particleID,
     particleX,
     isLocal,
     vertexX,
@@ -119,6 +121,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   );
 
   ParticleEvents& history = database.addEvent(identifier, event);
+
 
   if (not(particleIsNew and (not checkNewParticles))) {
     // skip the newly added event.
@@ -194,9 +197,10 @@ void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                           trace
 ) {
 
-  logTraceInWith3Arguments(
+  logTraceInWith4Arguments(
     "moveParticle(...)",
     particleName,
+    particleID,
     oldParticleX,
     newParticleX
   );
@@ -380,9 +384,10 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           trace
 ) {
 
-  logTraceInWith6Arguments(
+  logTraceInWith7Arguments(
     "detachParticleFromVertex(...)",
     particleName,
+    particleID,
     particleX,
     isLocal,
     vertexX,
@@ -466,9 +471,10 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const std::string&                           trace
 ) {
 
-  logTraceInWith4Arguments(
+  logTraceInWith5Arguments(
     "assignParticleToSieveSet(...)",
     particleName,
+    particleID,
     particleX,
     isLocal,
     treeId
@@ -521,7 +527,9 @@ void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
 
   internal::Database& database = internal::Database::getInstance();
 
-  if (database.getNumberOfSnapshots() != 0) {
+  // During a reset or initialization, we always add the "initial"
+  // mesh sweep, so the database should have at least 1.
+  if (database.getNumberOfSnapshots() != 1) {
     logInfo(
       "ensureDatabaseIsEmpty()",
       "database still holds " << database.getNumberOfSnapshots() << " snapshots"

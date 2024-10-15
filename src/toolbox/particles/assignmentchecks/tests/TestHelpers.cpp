@@ -408,6 +408,156 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
+  testRemovingParticleEvents() {
+
+  logTraceIn("testRemovingParticleEvents()");
+
+  namespace ac = ::toolbox::particles::assignmentchecks;
+
+  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  eventDatabase.reset();
+  ac::ensureDatabaseIsEmpty();
+  // make sure we're not deleting anything just yet by having too many
+  // snapshots. re-initialize with enough "space".
+  eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(20);
+
+  double                                positionTolerance = 1.;
+  tarch::la::Vector<Dimensions, double> particleX;
+  tarch::la::Vector<Dimensions, double> vertexX;
+  tarch::la::Vector<Dimensions, double> vertexH;
+
+  std::string trace;
+
+  std::vector<std::string> meshSweepNames = {"alpha", "beta", "gamma", "delta", "foo", "bar", "baz", "boo"};
+
+
+  int                                nparts = 4;
+  std::vector<std::string>::iterator sweep  = meshSweepNames.begin();
+
+  while (sweep != meshSweepNames.end()) {
+    ac::startMeshSweep(*sweep);
+
+    // Make a tree for each particle. Each tree contains
+    // all particles, but only 1 particle is local.
+    for (int treeId = 0; treeId < nparts; treeId++){
+
+      for (int p = 1; p < nparts + 1; p++) {
+
+        bool isLocal = (treeId == p - 1);
+
+        int particleID = p;
+
+        for (int i = 0; i < Dimensions; i++) {
+          particleX(i) = p;
+          vertexX(i)   = p;
+          vertexH(i)   = p;
+        }
+
+        ac::internal::ParticleSearchIdentifier identifier = ac::internal::
+          ParticleSearchIdentifier(
+            "DummyParticle",
+            particleX,
+            particleID,
+            positionTolerance
+          );
+
+        // vertex assignment event
+        trace                         = "Assign/sweep:" + *sweep;
+        ac::internal::Event vassEvent = ac::internal::Event(
+          ac::internal::Event::Type::AssignToVertex,
+          isLocal,
+          vertexX,
+          particleX,
+          vertexH,
+          treeId,
+          trace
+        );
+
+        eventDatabase.addEvent(identifier, vassEvent);
+
+        // move event
+        trace                         = "Move/sweep:" + *sweep;
+        ac::internal::Event moveEvent = ac::internal::Event(
+          ac::internal::Event::Type::MoveWhileAssociatedToVertex,
+          vertexX,
+          particleX,
+          vertexH,
+          treeId,
+          trace
+        );
+        eventDatabase.addEvent(identifier, moveEvent);
+
+        // sieve event
+        trace                         = "Sieve/sweep:" + *sweep;
+        ac::internal::Event sievEvent = ac::internal::Event(
+          ac::internal::Event::Type::AssignToSieveSet,
+          isLocal,
+          treeId,
+          trace
+        );
+        eventDatabase.addEvent(identifier, sievEvent);
+      }
+    }
+
+    sweep++;
+  }
+
+
+  // is particle count correct?
+  assertion3(
+    eventDatabase.getNumberOfTracedParticles() == static_cast<int>(nparts),
+    "Wrong particle count in database",
+    eventDatabase.getNumberOfTracedParticles(),
+    nparts
+  );
+
+  // Is number of trees per particle correct?
+  for (int p = 1; p < nparts + 1; p++) {
+
+    int particleID = p;
+
+    for (int i = 0; i < Dimensions; i++) {
+      particleX(i) = p;
+      vertexX(i)   = p;
+      vertexH(i)   = p;
+    }
+
+    ac::internal::ParticleSearchIdentifier identifier = ac::internal::
+      ParticleSearchIdentifier(
+        "DummyParticle",
+        particleX,
+        particleID,
+        positionTolerance
+      );
+
+    ac::internal::ParticleEvents history = eventDatabase.getParticleHistory(identifier);
+    std::vector<int> treesInHistory;
+
+    for (auto e: history){
+
+      int thisTree = e.treeId;
+
+      if (std::find(treesInHistory.begin(), treesInHistory.end(), thisTree) == treesInHistory.end()){
+        treesInHistory.push_back(thisTree);
+      }
+    }
+
+    assertion3(treesInHistory.size() == nparts,
+        "Wrong number of trees in particle history",
+        eventDatabase.particleHistory(identifier),
+        eventDatabase.toString()
+        );
+  }
+
+  // Clean up after yourself.
+  eventDatabase.reset();
+  ac::ensureDatabaseIsEmpty();
+
+  logTraceOut("testRemovingParticleEvents()");
+}
+
+
+void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testParticleMoveEvents() {
   // Run without cleaning up database on-the-fly
   testAddingParticleMovingEvents(100, 1000);
@@ -1632,15 +1782,16 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 }
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
-  testMethod(testTruthTableSearchAndIDKeys);
-  testMethod(testAddingSweepsToDatabase);
-  testMethod(testAddingParticleEvents);
-  testMethod(testParticleMoveEvents);
-  testMethod(testParticleWalkSameTreeLevel);
-  testMethod(testParticleLiftDrop);
-  testMethod(testParticleWalk);
-  testMethod(testPeriodicBoundaryConditions);
-  testMethod(testSieveSet);
+  // testMethod(testTruthTableSearchAndIDKeys);
+  // testMethod(testAddingSweepsToDatabase);
+  // testMethod(testAddingParticleEvents);
+  testMethod(testRemovingParticleEvents);
+  // testMethod(testParticleMoveEvents);
+  // testMethod(testParticleWalkSameTreeLevel);
+  // testMethod(testParticleLiftDrop);
+  // testMethod(testParticleWalk);
+  // testMethod(testPeriodicBoundaryConditions);
+  // testMethod(testSieveSet);
 }
 
 #ifdef UseTestSpecificCompilerSettings

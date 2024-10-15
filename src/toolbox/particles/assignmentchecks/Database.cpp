@@ -273,13 +273,42 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     // First: Do we need to downsize the history?
     if (history.size() >= _maxParticleSnapshotsToKeepTrackOf) {
 
-      Event last = history.back();
+      ParticleEvents eventsToKeep;
+      std::vector<int> treesToKeep;
 
-      logDebug("addEvent(...) ", "shortening history to " + last.toString());
+      // Start from the back so we keep the latest event.
+      auto it = history.crbegin();
+      while (it != history.crend()){
 
-      last.trace = "substitute-for-whole-trajectory/" + last.trace;
+        Event past = *it;
+        int thisTree = past.treeId;
+
+#if PeanoDebug > 3
+        if (past.type == Event::Type::NotFound) {
+          logDebug("addEvent(...)", "Particle histroy shouldn't contain an invalid event");
+        }
+#endif
+
+        if (std::find(treesToKeep.begin(), treesToKeep.end(), thisTree) == treesToKeep.end()){
+          treesToKeep.push_back(thisTree);
+          past.trace = "substitute-for-whole-trajectory/" + past.trace;
+          eventsToKeep.push_back(past);
+        }
+
+        it++;
+      }
+
+      logDebug("addEvent(...) ",
+          "shortening history of " << identifier.toString() << " to " << eventsToKeep.size());
+
+      if (eventsToKeep.size() >= _maxParticleSnapshotsToKeepTrackOf) {
+        logError("addEvent(...)", "There are more trees than events the database is allowed to keep track of.");
+      }
+
       history.clear();
-      history.push_back(last);
+      for (Event keep: eventsToKeep){
+        history.push_back(keep);
+      }
     }
 
     // Add the new event now.
