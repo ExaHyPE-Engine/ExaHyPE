@@ -184,17 +184,11 @@ def get_algorithm_step_dict(particle):
         name="SPH_Kick1",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel=v_iter.insert(
-            "::swift2::timestepping::resetMovedParticleMarker"
-        ),
         touch_vertex_last_time_kernel=v_iter.insert(
             "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
         ),
-        prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",
         includes="""
             #include "swift2/kernels/legacy/Leapfrog.h"
-            #include "swift2/timestepping/GlobalTimeStepping.h"
-            #include "swift2/timestepping/TimeStepping.h"
         """,
     )
     algorithm_steps_dict["SPH_Kick1"] = sph_kick1
@@ -245,13 +239,14 @@ def get_algorithm_step_dict(particle):
         name="PredictHydro",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        # touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
         touch_vertex_first_time_kernel=v_iter.insert(
-            "::swift2::kernels::legacy::hydroPredictExtra"
-        ),
+            "::swift2::timestepping::resetMovedParticleMarker"
+        )
+        + v_iter.insert("::swift2::kernels::legacy::hydroPredictExtra"),
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
+            #include "swift2/timestepping/TimeStepping.h"
            """,
         touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
         cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
@@ -318,16 +313,26 @@ def get_algorithm_step_dict(particle):
             )
             + v_iter.insert("::swift2::kernels::legacy::resetPredictedValues")
         ),
-        prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",
-        # TODO: temporary solution for initialization step
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
-            #include "swift2/timestepping/GlobalTimeStepping.h"
-            #include "swift2/timestepping/TimeStepping.h"
         """,
     )
     algorithm_steps_dict["SPH_Kick2"] = sph_kick2
+
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    timestep = AlgorithmStep(
+        name="SPH_Timestep",
+        dependencies=AlgorithmStep.Dependencies.SELF,
+        effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+        touch_vertex_last_time_kernel="::swift2::kernels::legacy::computeNextTimestep(marker, assignedParticles);",
+        includes="""
+            #include "Constants.h"
+            #include "swift2/kernels/legacy/Timestep.h"
+        """,
+    )
+    algorithm_steps_dict["SPH_Timestep"] = timestep
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
@@ -353,5 +358,22 @@ def get_algorithm_step_dict(particle):
         """,
     )
     algorithm_steps_dict["SPH_ReduceGlobalQuantities"] = sph_reduceGlobals
+
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    firstInit = AlgorithmStep(
+        name="SPHFirstInitParticle",
+        dependencies=AlgorithmStep.Dependencies.SELF,
+        effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+        touch_vertex_last_time_kernel=v_iter_for_move.insert(
+            "::swift2::kernels::legacy::firstInitParticle"
+        ),
+        includes="""
+            #include "Constants.h"
+            #include "swift2/kernels/legacy/Swift.h"
+        """,
+        touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+    )
+    algorithm_steps_dict["SPHFirstInitParticle"] = firstInit
 
     return algorithm_steps_dict

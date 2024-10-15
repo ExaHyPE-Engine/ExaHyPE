@@ -180,7 +180,9 @@ class SPHParticle(Particle):
         # Basic SPH properties
         self.density = dastgen2.attributes.Double("density")
         self.pressure = dastgen2.attributes.Double("pressure")
-        self.smoothL = dastgen2.attributes.Double("smoothingLength")
+        # Make sure to initialize SML to zero, not possibly some random value.
+        # Will be checked to see whether ICs have modified it.
+        self.smoothL = dastgen2.attributes.Double("smoothingLength", initval=0.0)
         self.u = dastgen2.attributes.Double("u")
         self.uDot = dastgen2.attributes.Double("uDot")
         self.data.add_attribute(self.density)
@@ -204,12 +206,17 @@ class SPHParticle(Particle):
         self.sml_iteration_count = dastgen2.attributes.Integer(
             "smoothingLengthIterCount"
         )
+        # TODO: add back in later with full left/right fix
+        #  self.sml_iter_left_bound = dastgen2.attributes.Double("smlIterLeftBound")
+        #  self.sml_iter_right_bound = dastgen2.attributes.Double("smlIterRightBound")
         self.data.add_attribute(self.wcount)
         self.data.add_attribute(self.wcount_dh)
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.hDot)
         self.data.add_attribute(self.rho_dh)
         self.data.add_attribute(self.sml_iteration_count)
+        #  self.data.add_attribute(self.sml_iter_left_bound)
+        #  self.data.add_attribute(self.sml_iter_right_bound)
 
         # Extra ------------------------------------------------------------------------
         self.has_no_neighbours = dastgen2.attributes.Boolean("hasNoNeighbours")

@@ -80,27 +80,6 @@ void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 
 
 template <typename Particle>
-void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
-  // temporary to get things to work
-  if (localParticle->getSmoothingLengthConverged())
-    return;
-
-  localParticle->setWcount(0.0);
-  localParticle->setWcount_dh(0.0);
-
-  localParticle->setDensity(0.0);
-  localParticle->setRho_dh(0.0);
-
-  localParticle->setDiv_v(0.0);
-  localParticle->setRot_v(0.0);
-
-#if PeanoDebug > 0
-  localParticle->setDensityNeighbourCount(0);
-#endif
-}
-
-
-template <typename Particle>
 void swift2::kernels::legacy::density_kernel(
   Particle*       localParticle,
   const Particle* activeParticle
