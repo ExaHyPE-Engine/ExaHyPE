@@ -252,7 +252,7 @@ namespace toolbox {
           );
 
         }; // class Database
-      } // namespace internal
-    }   // namespace assignmentchecks
-  }     // namespace particles
+      }    // namespace internal
+    }      // namespace assignmentchecks
+  }        // namespace particles
 } // namespace toolbox

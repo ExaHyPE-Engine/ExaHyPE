@@ -38,13 +38,14 @@ bool toolbox::particles::assignmentchecks::tests::TestParticle::isLocal(
   return _isLocal;
 }
 
-toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState
-toolbox::particles::assignmentchecks::tests::TestParticle::getParallelState(
-) const {
+toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState toolbox::
+  particles::assignmentchecks::tests::TestParticle::getParallelState() const {
   if (_isLocal) {
-    return toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState::Local;
+    return toolbox::particles::assignmentchecks::tests::TestParticle::
+      ParallelState::Local;
   } else {
-    return toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState::Virtual;
+    return toolbox::particles::assignmentchecks::tests::TestParticle::
+      ParallelState::Virtual;
   }
 }
 
@@ -74,7 +75,8 @@ void toolbox::particles::assignmentchecks::tests::TestParticle::setX(
 }
 
 void toolbox::particles::assignmentchecks::tests::TestParticle::setParallelState(
-toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState parallelState
+  toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState
+    parallelState
 ) {
   if (parallelState == toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState::Local) {
     _isLocal = true;

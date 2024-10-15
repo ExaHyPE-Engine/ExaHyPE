@@ -249,8 +249,8 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
-        const bool                                   inMergeWithPeriodicBoundarySwap,
-        const std::string&                           trace
+        const bool         inMergeWithPeriodicBoundarySwap,
+        const std::string& trace
       );
 
       /**
@@ -354,11 +354,11 @@ namespace toolbox {
        * here during a lift operation: They have been moved on a lower level
        * and are now in the process of being lifted. In these cases, the checks
        * we have set up fail, as the particle being lifted is not assigned to
-       * the correct vertex any more. Skipping these checks is fine because these
-       * virtual particles have already been moved while they've been Local, and
-       * the appropriate event has been noted and checked beforehand. Other
-       * virtual particles, i.e. virtual particles that have been virtual even
-       * before the move operation, should never have been part of the
+       * the correct vertex any more. Skipping these checks is fine because
+       * these virtual particles have already been moved while they've been
+       * Local, and the appropriate event has been noted and checked beforehand.
+       * Other virtual particles, i.e. virtual particles that have been virtual
+       * even before the move operation, should never have been part of the
        * assignedParticles list that is being looped over.
        */
       template <typename ParticleContainer>

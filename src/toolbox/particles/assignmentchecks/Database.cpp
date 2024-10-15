@@ -154,11 +154,11 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
-  int cmswi = getCurrentMeshSweepIndex();
+  int                cmswi = getCurrentMeshSweepIndex();
 
   msg << "--------------------------\n";
-  msg << "Last sweep dump: Sweep ["
-      << _meshSweepData.at(cmswi).getName() << "]\n";
+  msg << "Last sweep dump: Sweep [" << _meshSweepData.at(cmswi).getName()
+      << "]\n";
   msg << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
@@ -182,7 +182,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 std::string toolbox::particles::assignmentchecks::internal::Database::
   sweepHistory() {
 
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
   int                counter = 0;
@@ -262,7 +263,8 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     );
     logDebug(
       "addEvent(...) ",
-      "add new particle history thread for " + identifier.toString() + ",Event:" + event.toString()
+      "add new particle history thread for " + identifier.toString()
+        + ",Event:" + event.toString()
     );
     return _data.at(identifier);
 
@@ -273,19 +275,22 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     // First: Do we need to downsize the history?
     if (history.size() >= _maxParticleSnapshotsToKeepTrackOf) {
 
-      ParticleEvents eventsToKeep;
+      ParticleEvents   eventsToKeep;
       std::vector<int> treesToKeep;
 
       // Start from the back so we keep the latest event.
       auto it = history.crbegin();
-      while (it != history.crend()){
+      while (it != history.crend()) {
 
-        Event past = *it;
-        int thisTree = past.treeId;
+        Event past     = *it;
+        int   thisTree = past.treeId;
 
 #if PeanoDebug > 3
         if (past.type == Event::Type::NotFound) {
-          logDebug("addEvent(...)", "Particle histroy shouldn't contain an invalid event");
+          logDebug(
+            "addEvent(...)",
+            "Particle histroy shouldn't contain an invalid event"
+          );
         }
 #endif
 
@@ -298,15 +303,21 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
         it++;
       }
 
-      logDebug("addEvent(...) ",
-          "shortening history of " << identifier.toString() << " to " << eventsToKeep.size());
+      logDebug(
+        "addEvent(...) ",
+        "shortening history of " << identifier.toString(
+        ) << " to " << eventsToKeep.size()
+      );
 
       if (eventsToKeep.size() >= _maxParticleSnapshotsToKeepTrackOf) {
-        logError("addEvent(...)", "There are more trees than events the database is allowed to keep track of.");
+        logError(
+          "addEvent(...)",
+          "There are more trees than events the database is allowed to keep track of."
+        );
       }
 
       history.clear();
-      for (Event keep: eventsToKeep){
+      for (Event keep : eventsToKeep) {
         history.push_back(keep);
       }
     }

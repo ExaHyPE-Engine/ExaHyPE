@@ -26,9 +26,7 @@ private:
 
 public:
   // Mimic proper particle behaviour
-  enum class ParallelState: int {
-    Local=0, Virtual=1
-  };
+  enum class ParallelState : int { Local = 0, Virtual = 1 };
 
 public:
   TestParticle(

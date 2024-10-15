@@ -149,8 +149,8 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
 
     if (isLocal) {
       assertion7(
-        (previousEvent.type == internal::Event::Type::NotFound)
-        or (previousEvent.type == internal::Event::Type::Erase)
+        (previousEvent.type == internal::Event::Type::NotFound
+        ) or (previousEvent.type == internal::Event::Type::Erase)
           or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal)
           or (isDropping and previousEvent.isLocal) or (isDetached),
         identifier.toString(),
@@ -219,12 +219,13 @@ void toolbox::particles::assignmentchecks::moveParticle(
     vertexH
   )
 
-  // use old particle position to find history.
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    oldParticleX,
-    particleID,
-    tarch::la::max(vertexH)
+    // use old particle position to find history.
+    ParticleSearchIdentifier identifier
+    = ParticleSearchIdentifier(
+      particleName,
+      oldParticleX,
+      particleID,
+      tarch::la::max(vertexH)
     );
 
   ParticleEvents& history = database.getParticleHistory(identifier);
@@ -233,7 +234,10 @@ void toolbox::particles::assignmentchecks::moveParticle(
   assert(history.size() > 0);
 
   Event previousEvent    = database.getPreviousEvent(history, treeId);
-  Event anyPreviousEvent = database.getPreviousEvent(history, Database::AnyTree);
+  Event anyPreviousEvent = database.getPreviousEvent(
+    history,
+    Database::AnyTree
+  );
 
   // We need to have at least 1 event somewhere.
   // Even if the database had been trimmed, at least 1 event remains. But the
@@ -243,7 +247,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // We must still be on the same vertex, or something is wrong.
   // Exception: erase event. We don't keep track of the vertex data there,
   // because the particle gets detached from vertices first.
-  if (anyPreviousEvent.type != internal::Event::Type::Erase){
+  if (anyPreviousEvent.type != internal::Event::Type::Erase) {
     assertion4(
       tarch::la::equals(anyPreviousEvent.vertexH, vertexH),
       "Vertices not the same",
@@ -306,8 +310,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
         << "Consecutive Move starting at x=["
         << ::toString(previousEvent.previousParticleX) << "] at sweep "
         << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
-        << " | old trace: " << previousEvent.trace <<
-      " | new trace: " + trace;
+        << " | old trace: " << previousEvent.trace << " | new trace: " + trace;
 
       // Create new event.
       newEvent = Event(
@@ -416,7 +419,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   );
 
 
-  ParticleEvents& history = database.addEvent(identifier, event);
+  ParticleEvents& history       = database.addEvent(identifier, event);
   Event           previousEvent = database.getPreviousEvent(history, treeId, 1);
 
 
@@ -455,7 +458,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
       trace,
       database.particleHistory(identifier)
     );
-
   }
 
   logTraceOut("detachParticleFromVertex(...)");

@@ -428,7 +428,15 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   std::string trace;
 
-  std::vector<std::string> meshSweepNames = {"alpha", "beta", "gamma", "delta", "foo", "bar", "baz", "boo"};
+  std::vector<std::string> meshSweepNames = {
+    "alpha",
+    "beta",
+    "gamma",
+    "delta",
+    "foo",
+    "bar",
+    "baz",
+    "boo"};
 
 
   int                                nparts = 4;
@@ -439,7 +447,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
     // Make a tree for each particle. Each tree contains
     // all particles, but only 1 particle is local.
-    for (int treeId = 0; treeId < nparts; treeId++){
+    for (int treeId = 0; treeId < nparts; treeId++) {
 
       for (int p = 1; p < nparts + 1; p++) {
 
@@ -530,10 +538,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         positionTolerance
       );
 
-    ac::internal::ParticleEvents history = eventDatabase.getParticleHistory(identifier);
+    ac::internal::ParticleEvents history = eventDatabase.getParticleHistory(
+      identifier
+    );
     std::vector<int> treesInHistory;
 
-    for (auto e: history){
+    for (auto e : history) {
 
       int thisTree = e.treeId;
 
@@ -542,11 +552,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       }
     }
 
-    assertion3(treesInHistory.size() == nparts,
-        "Wrong number of trees in particle history",
-        eventDatabase.particleHistory(identifier),
-        eventDatabase.toString()
-        );
+    assertion3(
+      treesInHistory.size() == nparts,
+      "Wrong number of trees in particle history",
+      eventDatabase.particleHistory(identifier),
+      eventDatabase.toString()
+    );
   }
 
   // Clean up after yourself.
