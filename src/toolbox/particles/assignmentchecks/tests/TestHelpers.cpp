@@ -742,7 +742,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // generate (minimal) particle
   ac::tests::TestParticle localPart = ac::tests::TestParticle(
     localPartX,
-    particleID
+    particleID,
+    true
   );
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
@@ -918,7 +919,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // generate (minimal) particle
   ac::tests::TestParticle localPart = ac::tests::TestParticle(
     localPartX,
-    particleID
+    particleID,
+    true
   );
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
@@ -1092,7 +1094,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
   // generate (minimal) particle
   ac::tests::TestParticle localPart = ac::tests::TestParticle(
     localPartX,
-    particleID
+    particleID,
+    true
   );
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
