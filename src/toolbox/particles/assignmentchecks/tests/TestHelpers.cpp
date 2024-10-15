@@ -1793,16 +1793,16 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 }
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
-  // testMethod(testTruthTableSearchAndIDKeys);
-  // testMethod(testAddingSweepsToDatabase);
-  // testMethod(testAddingParticleEvents);
+  testMethod(testTruthTableSearchAndIDKeys);
+  testMethod(testAddingSweepsToDatabase);
+  testMethod(testAddingParticleEvents);
   testMethod(testRemovingParticleEvents);
-  // testMethod(testParticleMoveEvents);
-  // testMethod(testParticleWalkSameTreeLevel);
-  // testMethod(testParticleLiftDrop);
-  // testMethod(testParticleWalk);
-  // testMethod(testPeriodicBoundaryConditions);
-  // testMethod(testSieveSet);
+  testMethod(testParticleMoveEvents);
+  testMethod(testParticleWalkSameTreeLevel);
+  testMethod(testParticleLiftDrop);
+  testMethod(testParticleWalk);
+  testMethod(testPeriodicBoundaryConditions);
+  testMethod(testSieveSet);
 }
 
 #ifdef UseTestSpecificCompilerSettings
