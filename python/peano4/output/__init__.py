@@ -2,6 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .CompileMode                                   import CompileMode
+from .CompileMode                                   import CompileModes
+from .CompileMode                                   import get_compile_mode
 from .Constants                                     import Constants
 from .Helper                                        import Overwrite
 from .InvokeExternalTool                            import InvokeExternalTool
