@@ -9,7 +9,7 @@ class CompileMode(Enum):
     
     The compile mode is required in my get_library() routines. It is also used
     in the Makefile template. You can use CompileModes for a list (overview) of
-    all available modes. get_compile_mode() finally helps you to translate a 
+    all available modes. string_to_mode() finally helps you to translate a 
     string representation into an actual modus.
     
   """
@@ -39,7 +39,7 @@ CompileModes = [ "Release", "Stats", "Trace", "Asserts", "Debug" ]
 Convert a string into a compile mode
 
 """
-def get_compile_mode(mode: CompileModes):
+def string_to_mode(mode: CompileModes):
     if mode==CompileModes[0]:
         return CompileMode.Release
     if mode==CompileModes[1]:
