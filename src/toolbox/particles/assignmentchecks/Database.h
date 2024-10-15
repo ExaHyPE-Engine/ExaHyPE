@@ -124,12 +124,13 @@ namespace toolbox {
            * that after you use it.
            *
            * Cannot be const as we have a semaphore to be
-           * thread-safe.
+           * thread-safe. Returns a copy, not a reference, so that once
+           * semaphore is lifted, the state of the history remains accurate.
            *
            * @return The history of the particle.
            *
            */
-          ParticleEvents& getParticleHistory(
+          ParticleEvents getParticleHistory(
             const ParticleSearchIdentifier& identifier
           );
 
@@ -178,13 +179,13 @@ namespace toolbox {
            * of the last recorded event. The other events in the history
            * will be deleted.
            *
-           * @return the particle history of the particle specified by
-           *   identifier. A convenience so we don't have to search for
-           *   its history again just after we've added an event.
+           * @return the last event on the spacetree with id treeId before
+           * the newly added one.
            */
-          ParticleEvents& addEvent(
+          Event addEvent(
             ParticleSearchIdentifier identifier,
-            Event&                   event
+            Event&                   event,
+            const int treeId
           );
 
           /**

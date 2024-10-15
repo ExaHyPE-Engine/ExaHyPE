@@ -77,7 +77,7 @@ void toolbox::particles::assignmentchecks::internal::Database::reset() {
 }
 
 
-toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
+toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
   particles::assignmentchecks::internal::Database::getParticleHistory(
     const ParticleSearchIdentifier& identifier
   ) {
@@ -93,7 +93,7 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     return *newEventHistory;
   } else {
 
-    ParticleEvents& history = search->second;
+    ParticleEvents history = search->second;
     return history;
   }
 }
@@ -239,14 +239,12 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 }
 
 
-toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
+toolbox::particles::assignmentchecks::internal::Event toolbox::
   particles::assignmentchecks::internal::Database::
-    addEvent(ParticleSearchIdentifier identifier, Event& event) {
+    addEvent(ParticleSearchIdentifier identifier, Event& event, const int treeId) {
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
-
-  ParticleEvents output;
 
   // Take note of the current mesh sweep index.
   event.meshSweepIndex = getCurrentMeshSweepIndex();
@@ -266,7 +264,8 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
       "add new particle history thread for " + identifier.toString()
         + ",Event:" + event.toString()
     );
-    return _data.at(identifier);
+    // there is no previous event.
+    return Event(Event::Type::NotFound);
 
   } else {
 
@@ -322,6 +321,18 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
       }
     }
 
+    // Get previous event
+    Event previousEventOnThisTree = Event(Event::Type::NotFound);
+
+    auto it = history.crbegin();
+    while (it != history.crend()) {
+      if (it->treeId == treeId) {
+        previousEventOnThisTree = *it;
+        break;
+      }
+      it++;
+    }
+
     // Add the new event now.
     history.push_back(event);
     logDebug(
@@ -330,7 +341,7 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
         + ::toString((identifier.particleX));
     );
 
-    return history;
+    return previousEventOnThisTree;
   }
 }
 
@@ -367,7 +378,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
   if (shift) {
     // delete old entry in database and add the new one.
     logDebug(
-      "addEvent(...) ",
+      "shiftIdentifierCoordinates(...) ",
       "shifting particle identifier from "
         << key.particleX << " to " << newParticleX
     );

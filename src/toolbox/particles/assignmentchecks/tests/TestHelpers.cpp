@@ -320,7 +320,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         trace
       );
 
-      eventDatabase.addEvent(identifier, vassEvent);
+      eventDatabase.addEvent(identifier, vassEvent, treeId);
 
       // move event
       trace                         = "Move/sweep:" + *sweep;
@@ -332,7 +332,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId,
         trace
       );
-      eventDatabase.addEvent(identifier, moveEvent);
+      eventDatabase.addEvent(identifier, moveEvent, treeId);
 
       // sieve event
       trace                         = "Sieve/sweep:" + *sweep;
@@ -342,14 +342,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId,
         trace
       );
-      eventDatabase.addEvent(identifier, sievEvent);
+      eventDatabase.addEvent(identifier, sievEvent, treeId);
 
       // invalid event
       trace                            = "NotFound/sweep:" + *sweep;
       ac::internal::Event invalidEvent = ac::internal::Event(
         ac::internal::Event::Type::NotFound
       );
-      eventDatabase.addEvent(identifier, invalidEvent);
+      eventDatabase.addEvent(identifier, invalidEvent, treeId);
     }
 
     sweep++;
@@ -481,7 +481,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           trace
         );
 
-        eventDatabase.addEvent(identifier, vassEvent);
+        eventDatabase.addEvent(identifier, vassEvent, treeId);
 
         // move event
         trace                         = "Move/sweep:" + *sweep;
@@ -493,7 +493,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           treeId,
           trace
         );
-        eventDatabase.addEvent(identifier, moveEvent);
+        eventDatabase.addEvent(identifier, moveEvent, treeId);
 
         // sieve event
         trace                         = "Sieve/sweep:" + *sweep;
@@ -503,7 +503,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           treeId,
           trace
         );
-        eventDatabase.addEvent(identifier, sievEvent);
+        eventDatabase.addEvent(identifier, sievEvent, treeId);
       }
     }
 
@@ -646,7 +646,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       treeId,
       trace
     );
-    eventDatabase.addEvent(identifier, moveEvent);
+    eventDatabase.addEvent(identifier, moveEvent, treeId);
 
     // Do we need to shift the identifier's coordinates?
     eventDatabase.shiftIdentifierCoordinates(identifier, particleX);
