@@ -20,6 +20,7 @@ class DefaultSequence(object):
     self.project   = project
     self.overwrite = False
     self.d         = {}
+    self.is_extended = False
 
   def _get_header_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
@@ -64,3 +65,11 @@ class DefaultSequence(object):
       self.d,
       self.overwrite)
     output.add(generated_files)
+
+  def merge(self, main):
+    """
+      Make subproject's data a part of the project
+      (will be extended)
+    """
+
+    self.is_extended = True

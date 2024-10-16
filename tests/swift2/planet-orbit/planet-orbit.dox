@@ -64,7 +64,7 @@ in assert mode, i.e. it ensures that there are no runtime errors.
 # Visualise resulting mesh
 
 I recommend to use the Python Paraview variant to convert the 
-@ref tarch_patch_files "arising mesh files" into something you can visualise 
+@ref documentation_tarch_visualisation "arising mesh files" into something you can visualise 
 straightforwardly. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
