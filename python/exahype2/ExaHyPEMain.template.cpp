@@ -6,13 +6,17 @@
 // **********************************************************************************************
 
 #include <iomanip>
-
 #include "config.h"
+
 #include "{{MAIN_NAME}}.h"
+
 #include "exahype2/UnitTests.h"
 #include "exahype2/UserInterface.h"
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
+#include "peano4/grid/Spacetree.h"
+#include "peano4/parallel/SpacetreeSet.h"
+
 #include "{{SUBDIRECTORY}}Constants.h"
 #include "{{SUBDIRECTORY}}observers/CreateGrid.h"
 #include "{{SUBDIRECTORY}}observers/CreateGridAndConvergeLoadBalancing.h"
@@ -20,12 +24,19 @@
 #include "{{SUBDIRECTORY}}observers/InitGrid.h"
 #include "{{SUBDIRECTORY}}observers/PlotSolution.h"
 #include "{{SUBDIRECTORY}}observers/TimeStep.h"
-#include "{{SUBDIRECTORY}}repositories/DataRepository.h"
-#include "{{SUBDIRECTORY}}repositories/SolverRepository.h"
-#include "{{SUBDIRECTORY}}repositories/StepRepository.h"
+{% if SUBDIRECTORIES -%}
+{% for subdirectory in SUBDIRECTORIES %}
+#include "{{subdirectory}}repositories/DataRepository.h"
+#include "{{subdirectory}}repositories/SolverRepository.h"
+#include "{{subdirectory}}repositories/StepRepository.h"
+{% endfor -%}
+{% else %}
+#include "repositories/DataRepository.h"
+#include "repositories/SolverRepository.h"
+#include "repositories/StepRepository.h"
+{%- endif %}
+
 #include "tarch/UnitTests.h"
-#include "peano4/grid/Spacetree.h"
-#include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/Statistics.h"
@@ -66,19 +77,19 @@ tarch::timing::Measurement plotMeasurement;
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {
-  static bool                                  gridConstructed                       = false;
-  static bool                                  gridInitialised                       = false;
-  static bool                                  gridBalanced                          = false;
-  static double                                nextMaxPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
-  static double                                nextMinPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
-  static bool                                  haveJustWrittenSnapshot               = false;
-  static bool                                  haveReceivedNoncriticialAssertion     = false;
-  static bool                                  addGridSweepWithoutGridRefinementNext = false;
-  static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
-    std::numeric_limits<double>::max()
-  );
-  static int globalNumberOfTrees = 0;
-  bool       continueToSolve     = true;
+  static bool                                   gridConstructed                       = false;
+  static bool                                   gridInitialised                       = false;
+  static bool                                   gridBalanced                          = false;
+  static double                                 nextMaxPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
+  static double                                 nextMinPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
+  static bool                                   haveJustWrittenSnapshot               = false;
+  static bool                                   haveReceivedNoncriticialAssertion     = false;
+  static bool                                   addGridSweepWithoutGridRefinementNext = false;
+  static tarch::la::Vector<Dimensions, double>  minH                                  = tarch::la::Vector<Dimensions, double>(
+                                                                                          std::numeric_limits<double>::max()
+                                                                                        );
+  static int                                    globalNumberOfTrees                   = 0;
+  bool                                          continueToSolve                       = true;
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
