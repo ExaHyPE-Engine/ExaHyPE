@@ -97,6 +97,14 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
+    "-debug",
+    "--debug",
+    dest="debug",
+    action="store_true",
+    default=False,
+    help="Switch on full debug checks",
+)
+parser.add_argument(
     "-k",
     "--kernel",
     dest="kernel",
@@ -210,7 +218,11 @@ particle.set_parameters()
 particle_set = project.add_particle_species(particle)
 
 if args.asserts:
-    #  build_mode = peano4.output.CompileMode.Asserts
+    build_mode = peano4.output.CompileMode.Asserts
+    if args.debug:
+        print("Overwriting --asserts with --debug")
+        build_mode = peano4.output.CompileMode.Debug
+elif args.debug:
     build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
