@@ -1,15 +1,17 @@
-#if defined(TBB_USE_TASK_GROUP_PREVIEW)
+#include "config.h"
 
-#include "task_handle_repository.h"
+#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+
+#include "TaskHandleRepository.h"
 #include <cassert>
 
 
-tbb::task_handle_repository::task_handle_repository()
+tarch::multicore::tbb::TaskHandleRepository::TaskHandleRepository()
     : _handle_container(), _shadowed_handle_container() {}
 
 
-oneapi::tbb::task_handle& tbb::task_handle_repository::include_handle(
-  oneapi::tbb::task_handle&& handle,
+oneapi::tarch::multicore::tbb::task_handle& tarch::multicore::tbb::TaskHandleRepository::include_handle(
+  oneapi::tarch::multicore::tbb::task_handle&& handle,
   task_handle_number         number
 ) {
   HashMap::accessor hash_map_accessor;
@@ -38,7 +40,7 @@ oneapi::tbb::task_handle& tbb::task_handle_repository::include_handle(
 }
 
 
-oneapi::tbb::task_handle& tbb::task_handle_repository::get_node(const task_handle_number& number) {
+oneapi::tarch::multicore::tbb::task_handle& tarch::multicore::tbb::TaskHandleRepository::get_node(const task_handle_number& number) {
   HashMap::accessor hash_map_accessor;
   __TBB_ASSERT( _handle_container.count(number)==1, std::string( "handle " + std::to_string(number) + " does not exist").c_str() );
   _handle_container.find(hash_map_accessor,number);
@@ -46,7 +48,7 @@ oneapi::tbb::task_handle& tbb::task_handle_repository::get_node(const task_handl
 }
 
 
-void tbb::task_handle_repository::add_dependency( const task_handle_number& new_task_node, const task_handle_number&  number) {
+void tarch::multicore::tbb::TaskHandleRepository::add_dependency( const task_handle_number& new_task_node, const task_handle_number&  number) {
   if (new_task_node==number) {
     HashMap::accessor hash_map_accessor_for_previous_task_with_same_number;
 
@@ -63,14 +65,14 @@ void tbb::task_handle_repository::add_dependency( const task_handle_number& new_
 }
 
 
-void tbb::task_handle_repository::add_dependencies( const task_handle_number& new_task_node, const std::set< task_handle_number >&  in_dependencies ) {
+void tarch::multicore::tbb::TaskHandleRepository::add_dependencies( const task_handle_number& new_task_node, const std::set< task_handle_number >&  in_dependencies ) {
   for (auto& p: in_dependencies) {
     add_dependency( new_task_node, p );
   }
 }
 
 
-void tbb::task_handle_repository::add_dependency( oneapi::tbb::task_handle&  new_task_node, const task_handle_number&  number) {
+void tarch::multicore::tbb::TaskHandleRepository::add_dependency( oneapi::tarch::multicore::tbb::task_handle&  new_task_node, const task_handle_number&  number) {
   HashMap::accessor hash_map_accessor;
   if (_handle_container.find(hash_map_accessor, number)) {
     __TBB_ASSERT( hash_map_accessor->second!=nullptr, std::string( "predecessor task " + std::to_string(number) + " does not exist").c_str() );
@@ -80,13 +82,13 @@ void tbb::task_handle_repository::add_dependency( oneapi::tbb::task_handle&  new
 }
 
 
-void tbb::task_handle_repository::add_dependencies( oneapi::tbb::task_handle&  new_task_node, const std::set< task_handle_number >&  in_dependencies ) {
+void tarch::multicore::tbb::TaskHandleRepository::add_dependencies( oneapi::tarch::multicore::tbb::task_handle&  new_task_node, const std::set< task_handle_number >&  in_dependencies ) {
   for (auto& p: in_dependencies) {
     add_dependency( new_task_node, p );
   }
 }
 
-tbb::task_handle_repository::~task_handle_repository() {
+tarch::multicore::tbb::TaskHandleRepository::~TaskHandleRepository() {
   for (auto& pair : _handle_container) {
     delete pair.second;
   }

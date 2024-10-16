@@ -3,6 +3,11 @@
 #pragma once
 
 
+#include "config.h"
+
+
+#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+
 
 #include <functional>
 #include <set>
@@ -13,29 +18,32 @@
 #include <oneapi/tbb/concurrent_queue.h>
 
 
-namespace tbb {
-  class task_handle_repository;
+namespace tarch {
+  namespace multicore {
+    namespace tbb {
+      class TaskHandleRepository;
+    }
+  }
 }
 
-namespace tbb {
-  /**
-   * Simple utility class around dynamic task graphs to work with integer task numbers
-   *
-   * It handles the management of the nodes, such that users can work with
-   * integer task numbers instead. The only interesting thing here is that
-   * users can obviously "overwrite" tasks, i.e. create a new task with the
-   * same number over and over again. Usually, the newest task is the ruling
-   * one, i.e. hides all previous ones. However, when you add a task dependency
-   * for a task to itself, this bookkeeping interprets this as: Hey, I have a
-   * task with number A and now create a new task with number A, but that one
-   * should only run once the first one has completed.
-   */
-  class task_handle_repository {
+/**
+ * Simple utility class around dynamic task graphs to work with integer task numbers
+ *
+ * It handles the management of the nodes, such that users can work with
+ * integer task numbers instead. The only interesting thing here is that
+ * users can obviously "overwrite" tasks, i.e. create a new task with the
+ * same number over and over again. Usually, the newest task is the ruling
+ * one, i.e. hides all previous ones. However, when you add a task dependency
+ * for a task to itself, this bookkeeping interprets this as: Hey, I have a
+ * task with number A and now create a new task with number A, but that one
+ * should only run once the first one has completed.
+ */
+class tarch::multicore::tbb::TaskHandleRepository {
     public:
       using task_handle_number = int;
 
-      task_handle_repository();
-      ~task_handle_repository();
+      TaskHandleRepository();
+      ~TaskHandleRepository();
       /**
        * Factor mechanism
        *
@@ -91,4 +99,4 @@ namespace tbb {
   };
 }
 
-
+#endif

@@ -20,8 +20,8 @@
 #include <oneapi/tbb/concurrent_hash_map.h>
 #include <atomic>
 
-#if defined(TBB_USE_TASK_GROUP_PREVIEW)
-#include "tbb/task_handle_repository.h"
+#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+#include "TaskHandleRepository.h"
 
 namespace {
   ::oneapi::tbb::task_arena defaultTaskArena;
@@ -81,7 +81,7 @@ namespace {
     }  
   };
  
-  ::oneapi::tbb::task_handle_repository taskHandleRepository; // used to store task_handles and manage dependencies
+  ::oneapi::tbb::TaskHandleRepository taskHandleRepository; // used to store task_handles and manage dependencies
   
   /**
    * Global task group used to execute the majority of tasks

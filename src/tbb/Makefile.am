@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 
-if UseTBB
+if UseTBBExtension
 lib_LIBRARIES = libtbb_extension.a libtbb_extension_debug.a libtbb_extension_trace.a
 endif
 
@@ -11,8 +11,7 @@ TBB_SOURCES = \
 	dynamic_task_graph_node.cpp \
 	dynamic_task_graph_spawned_node.cpp \
 	dynamic_task_graph_node_repository.cpp \
-	dynamic_task_graph_utils.cpp \
-	task_handle_repository.cpp
+	dynamic_task_graph_utils.cpp
 	  
 
 libtbb_extension_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
