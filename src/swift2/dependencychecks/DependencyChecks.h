@@ -55,13 +55,16 @@ namespace swift2 {
     using PCSweepStageEnum = PCParticle<ParticleContainer>::DependencyChecksPeanoEventUsedBySwift;
 
     template <typename Particle>
-    using PAlgorithmStepEnum = typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated;
+    using PAlgorithmStepEnum = typename std::remove_pointer<
+      Particle>::type::DependencyChecksAlgorithmStepLastUpdated;
 
     template <typename Particle>
-    using PInitStepEnum = typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated;
+    using PInitStepEnum = typename std::remove_pointer<
+      Particle>::type::DependencyChecksInitStepLastUpdated;
 
     template <typename Particle>
-    using PSweepStageEnum = typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift;
+    using PSweepStageEnum = typename std::remove_pointer<
+      Particle>::type::DependencyChecksPeanoEventUsedBySwift;
 
 
     namespace internal {
