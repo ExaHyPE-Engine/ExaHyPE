@@ -19,6 +19,8 @@ GCC_OpenMP:
                             --enable-blockstructured \
                             --enable-swift \
                             --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --with-multithreading=omp"
   trigger:
     include:
@@ -40,6 +42,8 @@ Intel_OpenMP:
                             --enable-blockstructured \
                             --enable-swift \
                             --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --with-multithreading=omp"
   trigger:
     include:
@@ -61,6 +65,8 @@ LLVM_OpenMP:
                             --enable-blockstructured \
                             --enable-swift \
                             --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --with-multithreading=omp"
   trigger:
     include:
@@ -81,6 +87,8 @@ NVIDIA:
                             --enable-loadbalancing \
                             --enable-blockstructured \
                             --enable-swift \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --enable-particles"
   trigger:
     include:
