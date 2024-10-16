@@ -160,7 +160,7 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """
 
 

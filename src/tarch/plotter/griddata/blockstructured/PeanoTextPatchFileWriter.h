@@ -26,7 +26,7 @@ namespace tarch {
  * Consult the @ref tarch_plotting "general plotting" remarks on rationale and
  * patterns behind the realisation of this class. This is a technical view. If
  * you are interested in the file format that is written, you have to read the
- * @ref tarch_patch_files "documentation of the Peano patch file format".
+ * @ref documentation_tarch_visualisation "documentation of the Peano patch file format".
  *
  *
  * ## Meta file construction modes

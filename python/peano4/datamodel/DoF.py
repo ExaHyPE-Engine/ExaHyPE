@@ -94,7 +94,6 @@ class DoF(object):
     self.name        = name
     self.namespace   = []
     self._additional_load_and_store_arguments = []
-    self.subdirectories = []
   
   
   def configure(self,namespace,association, subdirectory=""):
@@ -178,3 +177,8 @@ class DoF(object):
     )
     
     return (stack_access_string,data_type,argument_name)
+
+  @property
+  def subnamespace(self):
+    # Replace "/" with "::" in the directory string to make it a namespace
+    return self.subdirectory.replace("/", "::")

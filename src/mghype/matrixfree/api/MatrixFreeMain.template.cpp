@@ -1,15 +1,14 @@
 #include "{{MAIN_NAME}}.h"
 
-#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
-#include "{{SUBDIRECTORY}}observers/InitSolution.h"
-#include "{{SUBDIRECTORY}}observers/Solve.h"
-#include "{{SUBDIRECTORY}}observers/Plot.h"
-
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+#include "{{SUBDIRECTORY}}observers/CreateGrid.h"
+#include "{{SUBDIRECTORY}}observers/InitSolution.h"
+#include "{{SUBDIRECTORY}}observers/Solve.h"
+#include "{{SUBDIRECTORY}}observers/Plot.h"
 {% if SUBDIRECTORIES -%}
 {% for subdirectory in SUBDIRECTORIES %}
 #include "{{subdirectory}}repositories/DataRepository.h"
@@ -33,7 +32,6 @@
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
-
 #include "toolbox/finiteelements/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
@@ -56,54 +54,50 @@ tarch::timing::Measurement plotMeasurement;
 
 bool selectNextAlgorithmicStep() {
   static bool gridCreated = false;
-  
   static int solverSteps;
-
   bool continueToSolve = true;
-
   static bool plotThenExit = false;
-
   const int MaxIterations = {{MAXITERATIONS}};
 
   if (gridCreated){
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
-    auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
+    auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
     switch ( stepName ) {
-      case repositories::StepRepository::Steps::CreateGrid:
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid:
         {
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitSolution )
+              {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::InitSolution )
             );
         }
         break;
      
-      case repositories::StepRepository::Steps::InitSolution:
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::InitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+            {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot )
           );
         }
         break;
 
 {% if PlotEachTimeStep %}
 
-      case repositories::StepRepository::Steps::Solve:
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Solve:
         {
           {
           if (
             ++solverSteps >= MaxIterations
             or
-            repositories::terminationCriterionHolds()
+            {{SUBNAMESPACE}}repositories::terminationCriterionHolds()
           ) plotThenExit = true;
           
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+            {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot )
           );
           }
         } break;
 
-      case repositories::StepRepository::Steps::Plot:
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot:
         {
           if (plotThenExit) {
             continueToSolve = false;
@@ -112,34 +106,34 @@ bool selectNextAlgorithmicStep() {
 
           else 
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+              {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Solve )
             );
         } break;
 
 {% else  %}
 
-      case repositories::StepRepository::Steps::Solve:
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Solve:
         {
           if (
             ++solverSteps >= MaxIterations
             or
-            repositories::terminationCriterionHolds()
+            {{SUBNAMESPACE}}repositories::terminationCriterionHolds()
           )
           {
             plotThenExit = true;
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+              {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot )
             );
           }
           else
           {
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+              {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Solve )
             );
           }
         }
         break;
-      case repositories::StepRepository::Steps::Plot:
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot:
         {
           if ( plotThenExit ) {
             logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " sweeps");
@@ -147,7 +141,7 @@ bool selectNextAlgorithmicStep() {
           }
           else 
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+              {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Solve )
             );
         }
         break;
@@ -162,7 +156,7 @@ bool selectNextAlgorithmicStep() {
     static int globalNumberOfTrees = 0;
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGrid)
+      {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid)
     );
 
     if (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps() > 5) {
@@ -177,21 +171,21 @@ bool selectNextAlgorithmicStep() {
 
 void step() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
-  auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
+  auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
   static tarch::logging::Log _log("");
 #if PeanoDebug > 0
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
+  logInfo("step()", "run " << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName));
 
   static tarch::timing::Watch watch("::", "step()", false);
 
   static int creepingNumberOfLocalCells = 0;
 
   switch ( stepName ) {
-    case repositories::StepRepository::Steps::CreateGrid:
+    case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
@@ -205,7 +199,7 @@ void step() {
       }
       break;
 
-    case repositories::StepRepository::Steps::InitSolution:
+    case {{SUBNAMESPACE}}repositories::StepRepository::Steps::InitSolution:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-solution" );
 
@@ -219,16 +213,16 @@ void step() {
       }
       break;
 
-    case repositories::StepRepository::Steps::Solve:
+    case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Solve:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
         
         observers::Solve observer;
         observers::Solve::prepareTraversal();
         watch.start();
-        repositories::beginMeshSweep();
+        {{SUBNAMESPACE}}repositories::beginMeshSweep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::endMeshSweep();
+        {{SUBNAMESPACE}}repositories::endMeshSweep();
         watch.stop();
         observers::Solve::unprepareTraversal();
 
@@ -236,7 +230,7 @@ void step() {
       }
       break;
 
-    case repositories::StepRepository::Steps::Plot:
+    case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
@@ -249,7 +243,7 @@ void step() {
         plotMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Undef:
+    case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Undef:
       assertion(false);
       break;
   }
@@ -283,7 +277,7 @@ int main(int argc, char** argv) {
     );
   }
 
-  repositories::DataRepository::initDatatypes();
+  {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
 
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
   feenableexcept({{FENV_ARGS}} );
@@ -371,7 +365,7 @@ int main(int argc, char** argv) {
 
 
   peano4::shutdownSingletons();
-  repositories::DataRepository::shutdownDatatypes();
+  {{SUBNAMESPACE}}repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
   peano4::shutdownParallelEnvironment();
 
