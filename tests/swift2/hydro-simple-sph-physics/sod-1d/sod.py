@@ -288,7 +288,6 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     particle_set,
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
-particle_plotter.add_attribute_to_plot(particle.part_id, 1)
 # for some reason, using hydro_dimensions here writes wrong output.
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
@@ -297,7 +296,8 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-if args.asserts:
+if args.asserts or args.debug:
+    particle_plotter.add_attribute_to_plot(particle.part_id, 1)
     particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
     particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)

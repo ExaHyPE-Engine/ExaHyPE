@@ -376,6 +376,8 @@ def get_algorithm_step_dict(particle):
             #include "Constants.h"
             #include "swift2/kernels/legacy/Swift.h"
         """,
+        cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+        touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
     )
     algorithm_steps_dict["SPHFirstInitParticle"] = firstInit
