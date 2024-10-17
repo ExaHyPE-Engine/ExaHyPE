@@ -51,6 +51,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include(Ccache)
+include(CheckIncludeFiles)
 
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
