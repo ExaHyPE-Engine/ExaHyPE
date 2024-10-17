@@ -34,6 +34,10 @@ fv_rusanov_solvers = {
     "FVRusanovGlobalAdaptiveEnclave": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
+rkfd_solvers = {
+    "FD4GlobalAdaptive": exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep,
+}
+
 rkdg_rusanov_solvers = {
     "RKDGRusanovGlobalFixed": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
     "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
@@ -49,6 +53,7 @@ solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(aderdg_rusanov_solvers)
+solvers.update(rkfd_solvers)
 solver = "ADERDGRusanovGlobalAdaptive"
 
 build_modes = {
@@ -316,6 +321,8 @@ elif args.solver in rkdg_rusanov_solvers:
     solver_name = "Euler_RKDG"
 elif args.solver in fv_rusanov_solvers:
     solver_name = "Euler_FV"
+elif args.solver in rkfd_solvers:
+    solver_name = "Euler_FD"
 
 unknowns = {"rho": 1, "v": args.dim, "e": 1}
 
@@ -346,6 +353,20 @@ if args.solver in fv_rusanov_solvers and "Adaptive" in args.solver:
     #  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
     #  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
     # )
+elif args.solver in rkfd_solvers and "Adaptive" in args.solver:
+    my_solver = solvers[args.solver](
+        name=solver_name,
+        patch_size=args.patch_size,
+        rk_order=args.rk_order,
+        unknowns=unknowns,
+        auxiliary_variables=0,
+        max_meshcell_h=args.max_cell_size,
+        min_meshcell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
+        time_step_relaxation=0.05,
+        KOSigma=8.0
+    )
+    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, "TP_linear_with_linear_extrap_normal_interp") 
+    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction( my_solver, "TP_average_normal_extrap" )
 elif args.solver in fv_rusanov_solvers and "Fixed" in args.solver:
     min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
     admissible_time_step_size = min_h / patch_size * 0.5
@@ -475,6 +496,11 @@ my_project.set_global_simulation_parameters(
 
 solution_dir = str(args.output_path) + "-" + str(executable_name)
 my_project.set_output_path(solution_dir)
+
+#my_project.set_output_path("./euler09")
+#probe_point = [-100, -100, 0.0]
+#my_project.add_plot_filter( probe_point, [200.0, 200.0, 0.01], 1 )
+
 if not os.path.exists(solution_dir):
     os.makedirs(solution_dir)
 

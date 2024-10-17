@@ -17,7 +17,7 @@ void applications::exahype2::euler::Euler_FV::initialCondition(
   Q[s::e] = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
 #else
   Q[s::v + 2]                                        = 0;
-  Q[s::e]                                            = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[s::e]                                            = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.01) : (1.0));
 #endif
 #elif SCENARIO == GaussianExplosion
   // Manual offset to make the wave originate slightly to the left of the center --- helps

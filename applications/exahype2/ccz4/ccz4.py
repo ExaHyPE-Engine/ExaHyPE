@@ -483,6 +483,9 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
+    if not os.path.exists(path):
+      os.makedirs(path)
+
     probe_point = [-100, -100, 0.0]
     project.add_plot_filter( probe_point,[200.0, 200.0, 0.01], 1 )
     #if args.extension=="Psi4":
