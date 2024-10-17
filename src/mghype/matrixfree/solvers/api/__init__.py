@@ -5,4 +5,5 @@ import mghype.matrixfree.solvers.api.actionsets
 
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .CollocatedLowOrderDiscretisation import CollocatedLowOrderDiscretisation
+from .CollocatedMG import CollocatedMG
 

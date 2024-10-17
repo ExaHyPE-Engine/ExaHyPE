@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-from SWE import SWE
+from swe import SWE
 
 if __name__ == "__main__":
     swe = SWE()
@@ -14,8 +14,8 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="HLLEMRiemannGlobalAdaptiveFV",
         end_time=10.0,
-        width="[4, 4]",
-        offset="[-2, -2]",
+        width=[4, 4],
+        offset=[-2, -2],
         min_depth=1,
         amr_levels=5,
         patch_size=4,
@@ -43,10 +43,6 @@ if __name__ == "__main__":
     )
 
     my_project.output.makefile.add_cpp_file("SWE.cpp")
-    my_project.output.makefile.add_cpp_file("../SWE.cpp")
-    my_project.output.makefile.add_cpp_file("../FWave.cpp")
-    my_project.output.makefile.add_cpp_file("../HLLEM.cpp")
-    my_project.output.makefile.add_cpp_file("../Rusanov.cpp")
 
     swe.build(my_args, my_project)
 

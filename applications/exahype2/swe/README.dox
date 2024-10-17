@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_swe Shallow Water Equations
+@page applications_exahype2_swe Shallow Water
 
 The shallow water equations (Saint-Venant) are a common (d−1) approximation
 to the d–dimensional Navier-Stokes equations to model incompressible, free

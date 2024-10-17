@@ -6,7 +6,6 @@ import jinja2
 
 
 from .Helper import write_file
-from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -64,6 +63,8 @@ class Observer(object):
             self.d["ATTRIBUTES"] += str(self.included_actions.index(action))
             self.d["ATTRIBUTES"] += "; \n"
 
+        subdirectories = set()
+
         self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"] = ""
         self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"] = ""
         self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] = ""
@@ -75,25 +76,39 @@ class Observer(object):
                 self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += ","
                 self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += ","
             self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"] += (
+                cell.subnamespace +
                 "repositories::DataRepository::_"
                 + cell.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)"
+                + "Stack.getForPop( " +
+                cell.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)"
             )
             self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"] += (
+                cell.subnamespace +
                 "repositories::DataRepository::_"
                 + cell.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)"
+                + "Stack.getForPop( " +
+                cell.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)"
             )
             self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += (
+                cell.subnamespace +
                 "repositories::DataRepository::_"
                 + cell.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)"
+                + "Stack.getForPop( " +
+                cell.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)"
             )
             self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += (
+                cell.subnamespace +
                 "repositories::DataRepository::_"
                 + cell.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)"
+                + "Stack.getForPop( " +
+                cell.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)"
             )
+            if cell.subdirectory:
+              subdirectories.add(cell.subdirectory)
 
         self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT"] = self.d[
             "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"
@@ -117,31 +132,49 @@ class Observer(object):
             self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS"] += (
                 "peano4::datamanagement::FaceEnumerator<"
                 + face.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                face.subnamespace +
+                "repositories::DataRepository::_"
                 + face.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )"
+                + "Stack.getForPop( " +
+                face.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )"
             )
             self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS"] += (
                 "peano4::datamanagement::FaceEnumerator<"
                 + face.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                face.subnamespace +
+                "repositories::DataRepository::_"
                 + face.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )"
+                + "Stack.getForPop( " +
+                face.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )"
             )
             self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] += (
                 "peano4::datamanagement::FaceEnumerator<"
                 + face.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                face.subnamespace +
+                "repositories::DataRepository::_"
                 + face.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )(pick)"
+                + "Stack.getForPop( " +
+                face.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )(pick)"
             )
             self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] += (
                 "peano4::datamanagement::FaceEnumerator<"
                 + face.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                face.subnamespace +
+                "repositories::DataRepository::_"
                 + face.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )(pick)"
+                + "Stack.getForPop( " +
+                face.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )(pick)"
             )
+            if face.subdirectory:
+              subdirectories.add(face.subdirectory)
 
         self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"] = ""
         self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS"] = ""
@@ -160,31 +193,57 @@ class Observer(object):
             self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"] += (
                 "peano4::datamanagement::VertexEnumerator<"
                 + vertex.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                vertex.subnamespace +
+                "repositories::DataRepository::_"
                 + vertex.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )"
+                + "Stack.getForPop( " +
+                vertex.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )"
             )
             self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS"] += (
                 "peano4::datamanagement::VertexEnumerator<"
                 + vertex.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                vertex.subnamespace +
+                "repositories::DataRepository::_"
                 + vertex.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )"
+                + "Stack.getForPop( " +
+                vertex.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )"
             )
             self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"] += (
                 "peano4::datamanagement::VertexEnumerator<"
                 + vertex.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                vertex.subnamespace +
+                "repositories::DataRepository::_"
                 + vertex.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)"
+                + "Stack.getForPop( " +
+                vertex.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)"
             )
             self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"] += (
                 "peano4::datamanagement::VertexEnumerator<"
                 + vertex.get_full_qualified_type()
-                + ">( &repositories::DataRepository::_"
+                + ">( &" +
+                vertex.subnamespace +
+                "repositories::DataRepository::_"
                 + vertex.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)"
+                + "Stack.getForPop( " +
+                vertex.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)"
             )
+            if vertex.subdirectory:
+              subdirectories.add(vertex.subdirectory)
+
+        self.d["DATAREPOSITORY_INCLUDES"] = ""
+        if subdirectories:
+          for subdir in subdirectories:
+            self.d["INCLUDES"] = "#include \"../" + subdir + "repositories/DataRepository.h\"\n" + self.d["INCLUDES"]
+            self.d["DATAREPOSITORY_INCLUDES"] += "#include \"../../" + subdir + "repositories/DataRepository.h\"\n"
+        else:
+          self.d["DATAREPOSITORY_INCLUDES"] = "#include \"../repositories/DataRepository.h\"\n"
 
     def __generate_header(self, overwrite, directory):
         headerfile_template = (
@@ -266,9 +325,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal( const tarch::la::Vector<Dimen
         self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] = ""
         for cell in self.cells:
             self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += (
-                "  repositories::DataRepository::_"
+                "  " +
+                cell.subnamespace +
+                "repositories::DataRepository::_"
                 + cell.get_logical_type_name()
-                + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
+                + "Stack.getForPush( " +
+                cell.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
                 + cell.get_full_qualified_type()
                 + "() );\n"
             )
@@ -279,9 +342,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal( const tarch::la::Vector<Dimen
                 "INITIAL_PUSH_TO_OUTPUT_STREAMS"
             ] += "  for (int i=0; i<TwoTimesD; i++) {\n"
             self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += (
-                "    repositories::DataRepository::_"
+                "  " +
+                face.subnamespace +
+                "repositories::DataRepository::_"
                 + face.get_logical_type_name()
-                + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
+                + "Stack.getForPush( " +
+                face.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
                 + face.get_full_qualified_type()
                 + "() );\n"
             )
@@ -293,9 +360,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal( const tarch::la::Vector<Dimen
                 "INITIAL_PUSH_TO_OUTPUT_STREAMS"
             ] += "  for (int i=0; i<TwoPowerD; i++) {\n"
             self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += (
-                "    repositories::DataRepository::_"
+                "    " +
+                vertex.subnamespace +
+                "repositories::DataRepository::_"
                 + vertex.get_logical_type_name()
-                + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
+                + "Stack.getForPush( " +
+                vertex.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
                 + vertex.get_full_qualified_type()
                 + "() );\n"
             )
@@ -327,9 +398,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal( const tarch::la::Vector<Dimensi
         self.d["FINAL_POP_FROM_INPUT_STREAMS"] = ""
         for cell in self.cells:
             self.d["FINAL_POP_FROM_INPUT_STREAMS"] += (
-                "  repositories::DataRepository::_"
+                "  " +
+                cell.subnamespace +
+                "repositories::DataRepository::_"
                 + cell.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
+                + "Stack.getForPop( " +
+                cell.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
             )
             pass
 
@@ -338,9 +413,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal( const tarch::la::Vector<Dimensi
                 "FINAL_POP_FROM_INPUT_STREAMS"
             ] += "  for (int i=0; i<TwoTimesD; i++) {\n"
             self.d["FINAL_POP_FROM_INPUT_STREAMS"] += (
-                "    repositories::DataRepository::_"
+                "    " +
+                face.subnamespace +
+                "repositories::DataRepository::_"
                 + face.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
+                + "Stack.getForPop( " +
+                face.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
             )
             self.d["FINAL_POP_FROM_INPUT_STREAMS"] += "  }\n"
             pass
@@ -350,9 +429,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal( const tarch::la::Vector<Dimensi
                 "FINAL_POP_FROM_INPUT_STREAMS"
             ] += "  for (int i=0; i<TwoPowerD; i++) {\n"
             self.d["FINAL_POP_FROM_INPUT_STREAMS"] += (
-                "    repositories::DataRepository::_"
+                "    " +
+                vertex.subnamespace +
+                "repositories::DataRepository::_"
                 + vertex.get_logical_type_name()
-                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
+                + "Stack.getForPop( " +
+                vertex.subnamespace +
+                "repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
             )
             self.d["FINAL_POP_FROM_INPUT_STREAMS"] += "  }\n"
             pass
@@ -482,7 +565,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   // Load vertex {{logical_type_name}}
   std::function<bool ()> loadVertex{{logical_type_name}} = 
     [&]()->bool {
-    auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
+    auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStack          = event.getVertexDataFrom(i);
       int outVertexStackPosition = event.getVertexDataTo(i);
@@ -525,8 +608,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
               {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
             ))
         );
-        assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
-        {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
+        assertion4( not {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
+        {{full_qualified_type}} data = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inVertexStack) ) {
           assertionVectorNumericalEquals7( data.getDebugX(), marker.x(outVertexStackPosition), event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, outVertexStackPosition, _spacetreeId );
@@ -639,7 +722,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   // Load face {{logical_type_name}}
   std::function<bool ()> loadFace{{logical_type_name}} = 
     [&]()->bool {
-    auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
+    auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStack          = event.getFaceDataFrom(i);
       int outFaceStackPosition = event.getFaceDataTo(i);
@@ -683,7 +766,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
             ))
         );
         assertion5( 
-          not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), 
+          not {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), 
           event.toString(), 
           peano4::datamanagement::FaceMarker(event).toString(), 
           _spacetreeId, inFaceStack,
@@ -692,7 +775,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
                         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
           ))
         );
-        {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
+        {{full_qualified_type}} data = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inFaceStack) ) {
           assertionVectorNumericalEquals5( data.getDebugX(), marker.x(outFaceStackPosition), data.getDebugX(), data.getDebugH(), marker.toString(), outFaceStackPosition, _spacetreeId );
@@ -812,7 +895,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   // Load cell {{logical_type_name}}
   std::function<bool ()> loadCell{{logical_type_name}} =  
     [&]()->bool {
-    auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
+    auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
     peano4::datamanagement::CellMarker  marker(event);
 
@@ -846,8 +929,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
            {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ))
       );
-      assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
-      {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
+      assertion3( not {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
+      {{full_qualified_type}} data = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
 
       #if PeanoDebug>0
       assertionVectorNumericalEquals4( data.getDebugX(), marker.x(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );
@@ -991,6 +1074,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
                 "logical_type_name": vertex.get_logical_type_name(),
                 "full_qualified_type": vertex.get_full_qualified_type(),
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+                "subnamespace": vertex.subnamespace,
             }
             self.d["name"] = vertex.name
             output_file.write(
@@ -1004,6 +1088,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
                 "logical_type_name": face.get_logical_type_name(),
                 "full_qualified_type": face.get_full_qualified_type(),
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+                "subnamespace": face.subnamespace,
             }
             self.d["name"] = face.name
             output_file.write(
@@ -1016,6 +1101,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
                 "logical_type_name": cell.get_logical_type_name(),
                 "full_qualified_type": cell.get_full_qualified_type(),
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+                "subnamespace": cell.subnamespace,
             }
             self.d["name"] = cell.name
             output_file.write(
@@ -1159,7 +1245,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     peano4::datamanagement::CellMarker  marker(event);
 
-    auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
+    auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
 
     bool dataShallBePushedOntoIntermediateStack = 
         not peano4::grid::PeanoCurve::isInOutStack(outCellStack)
@@ -1176,7 +1262,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         ));
 
     if ( dataShallBePushedOntoIntermediateStack or dataShallBePushedOntoOutputStack ) {
-      repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
+      {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
     }
     else {
       logDebug(
@@ -1259,7 +1345,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   // Store face {{logical_type_name}}
   std::function<bool ()> storeFace{{logical_type_name}} = 
     [&]()->bool {
-    auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
+    auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStackPosition  = event.getFaceDataFrom(i);
       int outFaceStack         = event.getFaceDataTo(i);
@@ -1287,7 +1373,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       
       if ( dataShallBePushedOntoIntermediateStack or dataShallBePushedOntoOutputStack ) {
         logDebug( "storeCell(...)", "store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() );
-        repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
+        {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
       }
       else {
         logDebug( "storeCell(...)", "do not store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() );
@@ -1361,7 +1447,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   // Store vertex {{logical_type_name}}
   std::function<bool ()> storeVertex{{logical_type_name}} = 
     [&]()->bool {
-    auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
+    auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStackPosition  = event.getVertexDataFrom(i);
       int outVertexStack         = event.getVertexDataTo(i);
@@ -1390,7 +1476,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
       if ( dataShallBePushedOntoIntermediateStack or dataShallBePushedOntoOutputStack ) {
         logDebug( "storeCell(...)", "store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
-        repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(repositories::DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
+        {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush({{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
       }
       else {
         logDebug( "storeCell(...)", "do not store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
@@ -1522,6 +1608,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
                 "logical_type_name": cell.get_logical_type_name(),
                 "full_qualified_type": cell.get_full_qualified_type(),
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+                "subnamespace": cell.subnamespace,
             }
             self.d["name"] = cell.name
             output_file.write(
@@ -1535,6 +1622,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
                 "logical_type_name": face.get_logical_type_name(),
                 "full_qualified_type": face.get_full_qualified_type(),
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+                "subnamespace": face.subnamespace,
             }
             self.d["name"] = face.name
             output_file.write(
@@ -1548,6 +1636,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
                 "logical_type_name": vertex.get_logical_type_name(),
                 "full_qualified_type": vertex.get_full_qualified_type(),
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+                "subnamespace": vertex.subnamespace,
             }
             self.d["name"] = vertex.name
             output_file.write(
@@ -1684,8 +1773,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
 
-    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
-      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    const {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
+      {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoPowerD-1-position);
     if (
       ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
@@ -1703,7 +1792,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
     ) {
       logDebug( "sendVertex(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
-      repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
+      {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
         _spacetreeId, toStack
       ) -> push(data);
     }
@@ -1726,8 +1815,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
     TemplateSendFace_SendCall = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
-    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
-      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    const {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
+      {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoTimesD-1-position);
     if (
       ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
@@ -1747,7 +1836,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
     ) {
       logDebug( "sendFace(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
-      repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
+      {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
         _spacetreeId, toStack
       ) -> push(data);
     }
@@ -1770,7 +1859,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
     TemplateSendCell_SendCall = """
   {
     peano4::datamanagement::CellMarker  marker(event);
-    const {{full_qualified_type}}&  data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
+    const {{full_qualified_type}}&  data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     if (
       ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
         marker
@@ -1790,7 +1879,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
     ) {
       logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
 
-      repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
+      {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
         _spacetreeId, toStack
       ) -> push(data);
     }
@@ -1843,8 +1932,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
     TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
-    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
-      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
+      {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoPowerD-1-position);
 
     if (
@@ -1859,11 +1948,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
       )
     ) {
       assertion5(
-        not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->empty(),
+        not {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->empty(),
         _spacetreeId, fromStack, event.toString(), position, marker.toString()
       );
 
-      auto   incomingData = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
+      auto   incomingData = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop() );
 
@@ -1898,8 +1987,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
     TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
-    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
-      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
+      {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoTimesD-1-position);
 
     if (
@@ -1913,7 +2002,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       )
     ) {
-      auto   incomingData = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
+      auto   incomingData = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop() );
 
@@ -1947,8 +2036,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   {
     peano4::datamanagement::CellMarker  marker(event);
 
-    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
-      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    {{full_qualified_type}}& data = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
+      {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top();
 
     if (
@@ -1962,7 +2051,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       )
     ) {
-      auto   incomingData = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
+      auto   incomingData = std::move( {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop() );
 
@@ -2026,7 +2115,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2036,7 +2125,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2046,7 +2135,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2063,7 +2152,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2073,7 +2162,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2083,7 +2172,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2100,7 +2189,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2110,7 +2199,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2120,7 +2209,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2137,7 +2226,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2147,7 +2236,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2157,7 +2246,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2174,7 +2263,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2184,7 +2273,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2194,7 +2283,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2211,7 +2300,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2221,7 +2310,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2231,7 +2320,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2251,6 +2340,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 "full_qualified_type": vertex.get_full_qualified_type(),
                 "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+                "subnamespace": vertex.subnamespace,
             }
             s += jinja2.Template(self.TemplateSendVertex_SendCall).render(**temp)
         s += jinja2.Template(self.TemplateSendVertex_Epilogue).render(
@@ -2268,6 +2358,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 "full_qualified_type": face.get_full_qualified_type(),
                 "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+                "subnamespace": face.subnamespace,
             }
             s += jinja2.Template(self.TemplateSendFace_SendCall).render(**temp)
         s += jinja2.Template(self.TemplateSendFace_Epilogue).render(
@@ -2284,6 +2375,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 "full_qualified_type": cell.get_full_qualified_type(),
                 "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+                "subnamespace": cell.subnamespace,
             }
             s += jinja2.Template(self.TemplateSendCell_SendCall).render(**temp)
         s += jinja2.Template(self.TemplateSendCell_Epilogue).render(
@@ -2300,6 +2392,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 "full_qualified_type": cell.get_full_qualified_type(),
                 "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+                "subnamespace": cell.subnamespace,
             }
             s += jinja2.Template(
                 self.TemplateReceiveAndMergeCell_ReceiveAndMergeCalls
@@ -2319,6 +2412,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 "full_qualified_type": face.get_full_qualified_type(),
                 "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+                "subnamespace": face.subnamespace,
             }
             s += jinja2.Template(
                 self.TemplateReceiveAndMergeFace_ReceiveAndMergeCalls
@@ -2338,6 +2432,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 "full_qualified_type": vertex.get_full_qualified_type(),
                 "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
                 "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+                "subnamespace": vertex.subnamespace,
             }
             s += jinja2.Template(
                 self.TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls
@@ -2354,7 +2449,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_deleteAllStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": cell.subnamespace + "repositories::DataRepository::_"
                     + cell.get_logical_type_name()
                     + "Stack"
                 }
@@ -2364,7 +2459,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_deleteAllStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": face.subnamespace + "repositories::DataRepository::_"
                     + face.get_logical_type_name()
                     + "Stack"
                 }
@@ -2374,7 +2469,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
                 self.TemplateExchangeRoutines_deleteAllStacks_Exchange
             ).render(
                 **{
-                    "DATASET": "repositories::DataRepository::_"
+                    "DATASET": vertex.subnamespace + "repositories::DataRepository::_"
                     + vertex.get_logical_type_name()
                     + "Stack"
                 }
@@ -2387,7 +2482,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     TemplateImplementationFilePrologue = """
 #include "{{CLASSNAME}}.h"
-#include "../repositories/DataRepository.h"
+{{DATAREPOSITORY_INCLUDES}}
 
 #include "peano4/grid/PeanoCurve.h"
 
@@ -2407,10 +2502,6 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSN
     def __generate_implementation(self, overwrite, full_qualified_filename):
         if write_file(overwrite, self.default_overwrite, full_qualified_filename):
             import inspect, os
-
-            cuda = using_cuda_backend()
-            if cuda:
-                full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
 
             print(
                 "{} written by {}".format(

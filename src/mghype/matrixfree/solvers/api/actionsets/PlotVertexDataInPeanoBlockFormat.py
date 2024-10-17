@@ -10,7 +10,8 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
   def __init__(self,
                solver,
                variable_name,
-               getter
+               getter,
+               plot_predicate="true"
                ):
     """!
     
@@ -29,6 +30,7 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
     self.d["SOLVER_NAME"]            = solver.typename()
     self.d[ "VARIABLE" ]             = variable_name
     self.d[ "GETTER" ]               = getter
+    self.d["PLOT_PREDICATE"]         = plot_predicate
         
   __Template_Constructor = """
   _writer      = nullptr;
@@ -77,7 +79,11 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime = """ 
-if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse ) {
+  if (
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse
+    and
+    {{PLOT_PREDICATE}}
+  ) {
   int vertexIndices[TwoPowerD];
 
   int patchIndex = _writer->plotPatch(
@@ -154,7 +160,7 @@ if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::C
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """
 
 

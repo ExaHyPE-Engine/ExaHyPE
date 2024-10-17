@@ -6,7 +6,7 @@
 
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
-  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/index.html">Documentation</a> •
+  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/">Documentation</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
@@ -26,31 +26,13 @@ hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic
 load balancing, sophisticated geometry representations, and other features.
 
-# Installation
-
-Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dce/page_installation.html).
-
 # Availability
 
 All software is available as open source through [www.peano-framework.org](http://www.peano-framework.org).
 
-# Dependencies and Prerequisites
+# Installation (Dependencies and Prerequisites)
 
-Peano's core is plain C++17/C++20 code.
-We however use a whole set of tools around it.
-
-* C++17/C++20-compatible C++ compiler (required).
-* GNU Autotools (automake) to set up the system (required).
-* CMake > 3.20 (required).
-* Python3 (optional but recommended; not required if you work only with the C++ baseline).
-* MPI (optional). MPI's multithreaded support is required.
-* Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
-* CUDA, ROCm, OpenSYCL or Intel oneAPI for GPU offloading (optional).
-* The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
-* HDF5 (optional).
-* NetCDF (optional).
-* LIBXSMM (optional).
-* Doxygen if you want to create HTML pages of the documentation (optional).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/de/dd9/page_installation_home.html).
 
 # Docker
 

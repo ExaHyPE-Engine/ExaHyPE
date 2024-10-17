@@ -16,11 +16,11 @@ namespace {
       int                                          normal
   )>
   void recomputeAuxiliaryVariablesFD4(
-    ::exahype2::CellData&   patchData,
-    int                     numberOfGridCellsPerPatchPerAxis,
-    int                     haloSize,
-    int                     unknowns,
-    int                     auxiliaryVariables
+    ::exahype2::CellData<double, double>&   patchData,
+    int                                     numberOfGridCellsPerPatchPerAxis,
+    int                                     haloSize,
+    int                                     unknowns,
+    int                                     auxiliaryVariables
   ) {
     assertion( haloSize >= 3 );
     ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
@@ -102,11 +102,11 @@ namespace {
 
 
 void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_centralDifferences(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     haloSize,
-  int                     unknowns,
-  int                     auxiliaryVariables
+  ::exahype2::CellData<double, double>&   patchData,
+  int                                     numberOfGridCellsPerPatchPerAxis,
+  int                                     haloSize,
+  int                                     unknowns,
+  int                                     auxiliaryVariables
 ) {
   recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody>(
     patchData,
@@ -119,11 +119,11 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_centralDiffere
 
 
 void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_leftDifferences(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     haloSize,
-  int                     unknowns,
-  int                     auxiliaryVariables
+  ::exahype2::CellData<double, double>&   patchData,
+  int                                     numberOfGridCellsPerPatchPerAxis,
+  int                                     haloSize,
+  int                                     unknowns,
+  int                                     auxiliaryVariables
 ) {
   recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody>(
     patchData,
@@ -136,11 +136,11 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_leftDifference
 
 
 void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_rightDifferences(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     haloSize,
-  int                     unknowns,
-  int                     auxiliaryVariables
+  ::exahype2::CellData<double, double>&   patchData,
+  int                                     numberOfGridCellsPerPatchPerAxis,
+  int                                     haloSize,
+  int                                     unknowns,
+  int                                     auxiliaryVariables
 ) {
   recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody>(
     patchData,
@@ -153,11 +153,11 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_rightDifferenc
 
 
 void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
-  ::exahype2::CellData&   patchData,
-  int                     numberOfGridCellsPerPatchPerAxis,
-  int                     haloSize,
-  int                     unknowns,
-  int                     auxiliaryVariables
+  ::exahype2::CellData<double, double>&   patchData,
+  int                                     numberOfGridCellsPerPatchPerAxis,
+  int                                     haloSize,
+  int                                     unknowns,
+  int                                     auxiliaryVariables
 ) {
   assertion( haloSize >= 3 );
   ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);

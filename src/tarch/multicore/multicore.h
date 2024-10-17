@@ -19,21 +19,8 @@ namespace tarch {
  @namespace tarch::multicore
 
 
- This page describes Peano 4's multithreading layer.
- To compile with multicore support, you have to invoke the configure script with
- the option --with-multithreading=value where value is
-
- - cpp. This adds support through C++14 threads.
- - tbb. This adds support through Intel's Threading Building Blocks. If you use
-   this option, you first have to ensure that your CXXFLAGS and LDFLAGS point to
-   the right include or library, respectively, directories. LDFLAGS also has to
-   compromise either -ltbb or -tbb_debug.
- - openmp. This adds OpenMP support. We currently develop against OpenMP 4.x
-   though some of our routines use OpenMP target and thus are developed against
-   OpenMP 5.
- - sycl. We have a SYCL support for the multithreading, through, within the Intel
-   toolchain, it might be more appropriate to combine sycl on the GPU with the
-   tbb backend for multithreading.
+ This page describes Peano 4's multithreading namespace. A more high-level
+ overview is provided through @ref page_tarch_multicore.
 
 
  ## Writing your own code with multithreading features
@@ -56,12 +43,6 @@ and
  OpenMP, TBB or C++ threading.
 
 
- Our vision is that each code should be totally independent of the multithreading
- implementation chosen. Indeed, Peano 4 itself does not contain any direct
- multithreading library calls. It solely relies on the classes and functions from
- tarch::multicore.
-
-
  ## Multicore architecture
 
  The multithreading environment is realised through a small set of classes. User
@@ -76,34 +57,60 @@ and
 
   @image html multicore_architecture.png
 
- The central instance managing the threads on a system is tarch::multicore::Core.
- This is a singleton and the name thus is slightly wrong. It does not really represent
- one core but rather represents the landscape of cores. You can setup the
- multithreading environment through Core's configure() routine, but this is optional.
- Indeed, multithreading should work without calling configure() at all. Each
- multitheading backend offers its own realisation of the
- Core class.
 
- For multithreaded code, it is important that the code can lock (protect) code
- regions and free them. For this, the multithreading layer offers different
- semaphores. Each multithreading backend maps these logical concepts onto its
- internal synchronisation mechanism. Usually, I use the semaphores through lock
- objects. As they rely on the semaphore implementations, they are generic and work
- for any backend.
+ ## Backends
+
+ ### OpenMP
+
+ If you want to use the OpenMP backend, you have to embed your whole main loop
+ within an
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+#pragma omp parallel
+#pragma omp single
+{
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ environment. Furthermore, you will have to use
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+  export OMP_NESTED=true
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ on some systems, as we rely heavily on nested parallelism.
 
 
- ## Task model
+ ## Statistics
+
+ If the Peano statistics are enabled, the tasking back-end will sample some
+ quantities such as
+
+ - "tarch::multicore::bsp-concurrency-level" Typically corresponds to the
+   number of fork-join traversal tasks.
+ - "tarch::multicore::global-pending-tasks" Global pending tasks.
+ - "tarch::multicore::thread-local-pending-tasks" Pending tasks per thread
+   which are not yet committed to the global queue.
+ - "tarch::multicore::fuse-tasks" Number of tasks which have been fused.
+
+ Depending on the chosen back-end, you might get additional counters on top.
+ Please start to look into tarch/multicore/Tasks.cpp for an overview of the
+ most generic counters.
+
+
+ ## Tasking model in Peano
 
  Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
  tarch::multicore::Task. However, these classes might not be mapped 1:1 onto
- native tasks. Indeed we distinguish different task types:
+ native tasks. In line with other APIs such as OneTBB, we distinguish different
+ task types or task graph types, respectively:
 
- - Tasks. The most generic type of tasks is submitted via spawnTask(). Each
-   task can be assigned a unique number and incoming dependencies.
- - Fork-join tasks. These are created via tarch::multicore::spawnAndWait()
-   and form a subset of the generic tasks. Here, we know the dependency
-   structure and waits quite explicitly, so there's no need to work with task
-   numbers.
+ - ***Tasks***. The most generic type of tasks is submitted via spawnTask().
+   Each task can be assigned a unique number and incoming dependencies. The
+   number in return can be used to specify outgoing dependencies.
+ - ***Fork-join tasks***. These are created via tarch::multicore::spawnAndWait()
+   which accepts a sequence of tasks. They are all run in parallel but then
+   wait for each other, i.e. we define a tree (sub)task graph. With fork-join
+   calls, we mirror the principles behind bulk-synchronous programming (BSP).
  - Free floating tasks (task sinks). Tasks without any outgoing dependencies
    are free floating in the sense that we never wait for them. That's obviously
    almost never true - few tasks have no follow-up dependencies at all - but
@@ -257,40 +264,6 @@ and
  latency, whereas variant (3) maximises occupation, and
 
 
- ## Backends
-
- ### OpenMP
-
- If you want to use the OpenMP backend, you have to embed your whole main loop
- within an
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-#pragma omp parallel
-#pragma omp single
-{
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
- environment. Furthermore, you will have to use
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-  export OMP_NESTED=true
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
- on some systems, as we rely heavily on nested parallelism.
-
-
- ## Statistics
-
- If the Peano statistics are enabled, the tasking backend will sample some quantities:
-
- - "tarch::multicore::bsp-concurrency-level" Typically corresponds to the
-   number of fork-join traversal tasks.
- - "tarch::multicore::global-pending-tasks" Global pending tasks.
- - "tarch::multicore::thread-local-pending-tasks" Pending tasks per thread
-   which are not yet committed to the global queue.
- - "tarch::multicore::fuse-tasks" Number of tasks which have been fused.
-
- Depending on the chosen backend, you might get additional counters on top.
 
  */
   namespace multicore {

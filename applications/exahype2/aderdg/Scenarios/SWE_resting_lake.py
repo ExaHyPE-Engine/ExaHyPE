@@ -59,10 +59,16 @@ class SWE_resting_lake(Scenario):
 
     def analytical_solution(self):
         return """
-  double Q[4];\n""" + self._init + """
+  double _Q[4];
+  initialCondition(
+      _Q,
+      x,
+      tarch::la::Vector<Dimensions, double>(),
+      true
+  );
 
-  sol[0] = Q[0];
-  sol[1] = Q[1];
-  sol[2] = Q[2];
-  sol[3] = Q[3];
+  solution[0] = _Q[0];
+  solution[1] = _Q[1];
+  solution[2] = _Q[2];
+  solution[3] = _Q[3];
   """

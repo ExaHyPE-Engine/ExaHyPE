@@ -1,0 +1,140 @@
+/**
+
+ @page documentation_tarch_visualisation_offline-conversion Offline (command-line) conversation into VTK file formats
+
+\tableofcontents 
+
+
+# Conversion with pvpython
+
+This is my favourite starting point for data if I'm interested in whole
+movies and not only particular snapshots. Yet, it might become inconvenient for large
+datasets, as it is too slow. 
+
+The command line, Python-based conversion of Peano works if and only if you
+have Paraview plus Python installed. First, ensure Peano's visulisation
+component is in your Python path:
+
+         export PYTHONPATH=Peano-dir/python
+
+and consult the remarks on @ref page_faq_home "third party software" for further 
+troubleshooting if there are further issues.
+
+
+After that, use the conversion script there to translate your
+`peano-patch-file`. It is important that you interpret this script
+through `pvpython`:
+
+         pvpython Peano-dir/python/peano4/visualisation/render.py --help
+
+You should see a usage message now. The API comes along with all kind of
+filters and stuff (you can for example filter out coarse grid data, which 
+is something I'd recommend, or you can rescale individual patches).
+
+
+@image html patch-file-structure.png
+
+Peano applications dump their data into ```peano-patch-file``` files. These
+files in turn can include other files. Usually, you have one top-level file,
+and then this file references multiple files per time step - typically one
+file per subpartition per time step. The convert tools fuses all snapshots
+per time step and glues them together into one huge vtu file. On top of this,
+it generates (unless told otherwise) a pvd file which is really only an 
+index over the vtu files and allows you to load all of them as one video
+within Paraview. 
+
+Please note that this variant to convert data requires you to install Paraview with Python.
+This is now the default if you install Paraview on your Linux distribution.
+We have however seen several cases where container images do not ship 
+Paraview with Python. In this case, you might have to install it manually
+(or leave the container for the conversion).
+
+
+# Command-line conversion with a C++ executable
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+This variant has not been maintained for a while and might require some debugging. On the other hand, 
+nothing has changed here for months, i.e. it might as well also work.
+</div>
+
+Installing Peano's VTK command line tools can be quite tricky - depending on
+your local VTK installation. At the same time, the command line
+conversion via executables, i.e. not via the Python terminal as
+discussed above, is by far the fastest route. It can even exploit
+multiple cores. I recommend to stick to the Python-based postprocessing
+route as long as possible and to switch to the offline postprocessing
+only for large-scale production data where Python is just too slow
+and/or all postprocessing has to happen on a remote supercomputer as you
+cannot transfer the (raw) Peano data files.
+
+If you configure  with VTK support, Peano builds a command-line tool
+`convert` which you can use to convert 's patch files into plain
+(binary) vtk.
+
+Installing VTK support can be challenging. Here's some things you might
+want to consider/check:
+
+-   To build the  conversion/visualisation tools, you have to translate
+    the code with `--with-vtk`. If you don't specify a path, then
+     assumes that all VTK is installed within `/usr/include`.
+
+-   We next have to know which VTK version you are using. VTK builds a
+    different set of libraries in each generation.  has to know which
+    version you want to use to link against the right set of libraries.
+    The installation script will automatically try to detect your
+    version, but the detection is not very robust. If it is the wrong
+    version, use the `–with-vtk-version=x` switch to set the version
+    manually. We currently support `x` 7,8,9, i.e. we are only
+    interested in the major version of your VTK installation. If you
+    have version 8.90, it is the 8 we are interested in.
+
+-   Next, the script will search for the right libraries. By default,
+    our script assumes that the libraries are have a suffix with the
+    major dot minor number. So we assume that the VTK version 8.90
+    yields a library `vtkIOCore-8.90`. This is the default. The script
+    will try to find this default library and give you some feedback (be
+    careful: if it doesn't find the library, it will still continue as
+    you might want to change the pathes later on). If your library
+    naming convention is different---we've seen systems dropping the
+    version numbers or Paraview installations which append something
+    alike `pv8.90` - then specify your suffix manually through
+    `–with-vtk-suffix`. If your installation does not have a version
+    suffix, as is the case in Fedora, you should pass an empty string to
+    this: `–with-vtk-suffix=”`
+
+-   If your compile passes through but fails in the linking state
+    (object not found), then you have to check if the VTK libraries are
+    in the search path. If they are not (very likely), then add them
+    prior to the compile call:
+
+              export LDFLAGS="-L/opt/vtk/lib64"
+
+Once you have managed to configure with VTK and the build process has
+terminated successfully, your directory `src/convert` holds the actual
+`convert` script. If you call `convert` without arguments, you get a
+usage message. `convert` allows you to extract data from a data dump,
+and store it within the patch files under a new identifier. It also
+allows you to extract a dataset from patch files into vtu. vtu is one of
+VTK's binary file formats.
+
+A standard postprocessing workflow on the command line reads as follows:
+
+1.  Use `convert` to extract certain data from the dumped data files.
+    You might want to extract only the finest grid level, e.g., or to
+    pick a particular unknown. `convert` is given a new identifier
+    (name) for the new tdata set, and it stores the extracted data
+    either within the existing patch files or a new, separate one.
+
+2.  Use `convert` to pick one particular dataset via its identifier and
+    to dump it into a vtu file.
+
+3.  Use Paraview or VisIt to display the vtu file.
+
+Unfortunately, our C++ conversion kernels do not offer all the
+functionality we now find within the Python-based tools. Things alike
+mesh distortion are missing here.
+
+
+
+ */
+ 

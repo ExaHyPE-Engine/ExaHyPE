@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-from SWE import SWE
+from swe import SWE
 
 if __name__ == "__main__":
     swe = SWE()
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     my_parser.set_defaults(
         solver="FWaveRiemannGlobalAdaptiveFV",
         end_time=5000.0,
-        width="[7e6, 4e6]",
+        width=[7e6, 4e6],
         min_depth=1,
         amr_levels=5,
         patch_size=4,
@@ -47,10 +47,6 @@ TopologyParser topologyParser = TopologyParser(
     )
 
     my_project.output.makefile.add_cpp_file("SWE.cpp")
-    my_project.output.makefile.add_cpp_file("../SWE.cpp")
-    my_project.output.makefile.add_cpp_file("../FWave.cpp")
-    my_project.output.makefile.add_cpp_file("../HLLEM.cpp")
-    my_project.output.makefile.add_cpp_file("../Rusanov.cpp")
     my_project.output.makefile.add_cpp_file("../NetCDFReader.cpp")
     my_project.output.makefile.add_cpp_file("../TopologyParser.cpp")
 

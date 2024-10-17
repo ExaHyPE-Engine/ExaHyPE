@@ -1,0 +1,121 @@
+/**
+
+\page page_tarch_multicore Multicore programming
+
+\tableofcontents
+
+ To compile with multicore support, you have to invoke the configure script with
+ the option 
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+--with-multithreading=value 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where value is
+
+ - cpp. This adds support through C++14 threads.
+ - tbb. This adds support through Intel's Threading Building Blocks. If you use
+   this option, you first have to ensure that your CXXFLAGS and LDFLAGS point to
+   the right include or library, respectively, directories. LDFLAGS also has to
+   compromise either -ltbb or -tbb_debug.
+ - openmp. This adds OpenMP support. We currently develop against OpenMP 4.x
+   though some of our routines use OpenMP target and thus are developed against
+   OpenMP 5.
+ - sycl. We have a SYCL support for the multithreading, through, within the Intel
+   toolchain, it might be more appropriate to combine sycl on the GPU with the
+   tbb backend for multithreading.
+
+
+ Our vision is that each code should be totally independent of the multithreading
+ implementation chosen. Indeed, Peano 4 itself does not contain any direct
+ multithreading library calls. It solely relies on the classes and functions from
+ tarch::multicore.
+
+
+# Administering the multithreaded environment
+
+ The central instance managing the threads on a system is tarch::multicore::Core.
+ This is a singleton and the name thus is slightly wrong. It does not really represent
+ one core but rather represents the landscape of cores. You can setup the
+ multithreading environment through Core's configure() routine, but this is optional.
+ Indeed, multithreading should work without calling configure() at all. Each
+ multitheading backend offers its own realisation of the
+ Core class.
+
+
+# Avoid race conditions
+
+ For multithreaded code, it is important that the code can lock (protect) code
+ regions and free them. For this, the multithreading layer offers different
+ semaphores. Each multithreading backend maps these logical concepts onto its
+ internal synchronisation mechanism. Usually, I use the semaphores through lock
+ objects. As they rely on the semaphore implementations, they are generic and work
+ for any backend.
+ 
+ So the standard use is that you have
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+static tarch::multicore::BooleanSemaphore myFancySemaphore;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ and then you use it by locking it:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{ // scope starts
+  tarch::multicore::Lock lock(myFancySemaphore);
+  
+  // [all of this is protected]
+  
+} // end of scope destroys lock object and therefore frees semaphore  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The class tarch::multicore::BooleanSemaphore should be studied for a more detailed
+ documentation of the thread locks.
+ 
+ 
+ The plain semaphore does not work recursively, i.e. if a thread locks a 
+ semaphore and then locks again, it deadlocks itself. You can avoid this
+ by switching to a recursive semaphore. They are more expensive yet allow
+ that a thread locks the same semaphore repeatedly.
+ 
+ Each semaphore also supports a try_lock() operation, so you can do busy
+ polling. try_lock's are not supported by the tarch::multicore::Lock object.
+ You have to access the semaphore directly and manually free it later, 
+ whereas the Lock object automatically frees the semaphore in its 
+ destructor (unless you do so before that manually).
+
+
+# Atomics
+
+At the moment, the tarch does ***not*** provide a backend-independent 
+abstraction of atomics. We hope that such a thing would be obsolete 
+anyway, as C++'s std::atomic works with all backends. If this is not the
+case and if you need atomics, you have to write backend-specific variants
+protected by preprocessor macros (see below).
+
+
+# Write bespoke multithreaded variants
+
+The namespace tarch::multicore provides a set of preprocessor macros and 
+further information how to write bespoke code for codes that have to 
+distinguish single-threaded realisation from bespoke variants.
+
+
+# Work with tasks
+
+All the tasking is modelled through the class tarch::multicore::Task.
+That is, Peano expects each task to be a subclass of this guy.
+The actually task submission, dependency tracking, and synchronisation
+then is all realised through functions within the namespace
+tarch::multicore.
+
+The namespace's documentation also explains how we are using the tasks in 
+codes such as ExaHyPE and what typical task execution patterns look like.
+It also provides an overview of different task characteristics.
+
+# Implementation
+
+Most implementation details can be found in the \ref tarch::multicore "namespace documentation".
+
+ */
+ 

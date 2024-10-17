@@ -1,25 +1,22 @@
 /** 
 
-@page page_exahype_solvers_finite_volumes Finite Volumes
+@page documentation_exahype2_solvers_finite_volumes Finite Volumes
 
 
 ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
 stand-alone solvers, but nothing stops you from using them as a posteriori
-limiters by @ref page_exahype_coupling "coupling them to higher order schemes".
+limiters by @ref tutorials_exahype2_coupling "coupling them to higher order schemes".
+Some hands-on descriptions of the numerics can be found in @ref page_tutorials_exahype2_numerics_finite_volumes "the tutorial section".
+
+
+@todo Das sollte viel mehr Projektionen enthalten, also wie die Realisiert sind
 
 
 ## Data structures
 
-All Finite Volume solvers work with blockstructured AMR: They embed @f$N \times N@f$ patches 
-into the octants (cells of the spacetree). To avoid confusion, I prefer to 
-use the term volume for the cells within the patch, as cell would be
-ambigous given that we construct the  host mesh from spacetree cells.
-
-@image html block-structured.png
-
-With one patch per cell, we could traverse the mesh and do something per
-cell. This however is of limited value. We have to couple the phenomena
-what is going on in neighbouring cells.  realises a strict element-wise
+Each Finite Volume solver embeds @f$N \times N@f$ patches 
+into the octants (cells of the spacetree). 
+ExaHyPE is built on top of Peano, and Peano realises a strict element-wise
 traversal, i.e. there's no way to access the neighbour cell of a cell
 directly. However, we can hijack the faces.
 

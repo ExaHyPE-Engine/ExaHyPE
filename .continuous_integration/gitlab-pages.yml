@@ -7,7 +7,8 @@ pages:
   allow_failure: false
   dependencies: []
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_IMAGEDIR/${IMAGE_TAG_BASE} doxygen documentation/Doxyfile
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_TAG_BASE} python3 documentation/convert-jupyter-notebooks.py
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_TAG_BASE} doxygen documentation/Doxyfile
     - rm -rf public
     - mkdir public
     - mv ./doxygen-html/html/* public/
@@ -17,4 +18,4 @@ pages:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
   when: always
-  retry: 0
+  retry: 1

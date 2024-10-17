@@ -257,13 +257,12 @@ AC_ARG_WITH(
   [
     AC_MSG_CHECKING(for gpu)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                    gpu=false ;;
-      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);  gpu=omp ;;
-      hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
-      cpp)   AC_MSG_RESULT(build with C++ GPU support);            gpu=cpp ;;
-      sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
-      cuda)  AC_MSG_RESULT(build with CUDA GPU suppport);          gpu=cuda ;;
-      *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
+      no)    AC_MSG_RESULT(no);                                                   gpu=false ;;
+      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);                 gpu=omp ;;
+      sycl)  AC_MSG_RESULT(build with SYCL GPU support);                          gpu=sycl ;;
+      cpp)   AC_MSG_RESULT(build with C++ GPU support);                           gpu=cpp ;;
+      hip)   AC_MSG_RESULT(build with HIP GPU support);                           gpu=hip ;;
+      *)     AC_MSG_FAILURE([use omp, sycl, cpp or hip to define target]);  gpu=false ;;
     esac
   ],
   [
@@ -274,9 +273,8 @@ AC_ARG_WITH(
 
 AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
 AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
-AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
-AM_CONDITIONAL([GPUOffloadingCUDA],   [test "$gpu" == cuda])
+AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 
 if test "$gpu" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
@@ -294,81 +292,6 @@ fi
 if test "$gpu" == cpp; then
   AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
 fi
-
-if test "$gpu" == cuda; then
-  AC_DEFINE([GPUOffloadingCUDA], [1], [GPUOffloadingCUDA])
-
-  AC_ARG_WITH([cuda],
-    [AS_HELP_STRING([--with-cuda=PATH], [specify CUDA installation path])],
-    [with_cuda="$withval"],
-    [with_cuda=""],
-  )
-
-  # We need to apply further checks on CUDA
-  if test -n "$with_cuda"
-  then
-    # Check the option has argument (empty argument results with a "yes")
-    if test "$with_cuda" = yes
-    then
-      AC_MSG_ERROR([The argument --with-cuda requires the path to CUDA: --with-cuda=<CUDA_PATH>])
-    fi
-
-    # Extract the path from the "--with-cuda" argument and check if the path is valid
-    cuda_path=$(echo "$with_cuda" | sed 's/--with-cuda=//')
-
-    # Check if the path is valid
-    if test ! -d "$cuda_path"; then
-      AC_MSG_ERROR([The input for --with-cuda=$cuda_path is not a valid directory])
-    fi
-
-    CUDA_INCLUDE_FLAGS="-I$with_cuda/include"
-    CUDA_LIBS="-L$with_cuda/lib64 -lcudart_static"
-    CUDA_PATH="$with_cuda"
-    # NVCC is read from the environment variable
-    NVCC="$NVCC"
-
-    AC_SUBST(CUDA_INCLUDE_FLAGS)
-    AC_SUBST(CUDA_LIBS)
-    AC_SUBST(NVCC)
-    AC_SUBST(CUDA_PATH)
-  else
-    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit])
-  fi
-
-  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG   $CUDA_INCLUDE_FLAGS"
-
-  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
-  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
-
-  # Necessary for executables and unittests to link to CUDA libraries as we will have compiled CUDA code.
-  LDADD_PEANO_2D_RELEASE=" $LDADD_PEANO_2D_RELEASE $CUDA_LIBS"
-  LDADD_PEANO_2D_STATS="   $LDADD_PEANO_2D_STATS   $CUDA_LIBS"
-  LDADD_PEANO_2D_ASSERTS=" $LDADD_PEANO_2D_ASSERTS $CUDA_LIBS"
-  LDADD_PEANO_2D_TRACE="   $LDADD_PEANO_2D_TRACE   $CUDA_LIBS"
-  LDADD_PEANO_2D_DEBUG="   $LDADD_PEANO_2D_DEBUG   $CUDA_LIBS"
-
-  LDADD_PEANO_3D_RELEASE=" $LDADD_PEANO_3D_RELEASE $CUDA_LIBS"
-  LDADD_PEANO_3D_STATS="   $LDADD_PEANO_3D_STATS   $CUDA_LIBS"
-  LDADD_PEANO_3D_ASSERTS=" $LDADD_PEANO_3D_ASSERTS $CUDA_LIBS"
-  LDADD_PEANO_3D_TRACE="   $LDADD_PEANO_3D_TRACE   $CUDA_LIBS"
-  LDADD_PEANO_3D_DEBUG="   $LDADD_PEANO_3D_DEBUG   $CUDA_LIBS"
-
-  NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
-
-  NVCC_FLAGS_RELEASE=" $NVCC_FLAGS "
-  NVCC_FLAGS_STATS="   $NVCC_FLAGS "
-  NVCC_FLAGS_ASSERTS=" $NVCC_FLAGS "
-  NVCC_FLAGS_TRACE="   $NVCC_FLAGS "
-  NVCC_FLAGS_DEBUG="   $NVCC_FLAGS -g -O0 "
-fi
-
 
 #
 # PETSc
@@ -1144,6 +1067,12 @@ if test "$use_openblas" != false; then
   AC_SUBST([OPENBLAS_LIBS])
   OPENBLAS_INCLUDE_DIR=$(dirname $OPENBLAS_LIBS)
   AC_SUBST([OPENBLAS_INCLUDE_DIR])
+
+  LDFLAGS_PEANO_RELEASE+=" -lopenblas "
+  LDFLAGS_PEANO_STATS+="   -lopenblas "
+  LDFLAGS_PEANO_ASSERTS+=" -lopenblas "
+  LDFLAGS_PEANO_TRACE+="   -lopenblas "
+  LDFLAGS_PEANO_DEBUG+="   -lopenblas "
 fi
 
 
@@ -1402,12 +1331,6 @@ AC_SUBST(CXXFLAGS_PEANO_3D_STATS)
 AC_SUBST(CXXFLAGS_PEANO_3D_ASSERTS)
 AC_SUBST(CXXFLAGS_PEANO_3D_TRACE)
 AC_SUBST(CXXFLAGS_PEANO_3D_DEBUG)
-
-AC_SUBST(NVCC_FLAGS_RELEASE)
-AC_SUBST(NVCC_FLAGS_STATS)
-AC_SUBST(NVCC_FLAGS_ASSERTS)
-AC_SUBST(NVCC_FLAGS_TRACE)
-AC_SUBST(NVCC_FLAGS_DEBUG)
 
 AC_SUBST(LDFLAGS_PEANO_RELEASE)
 AC_SUBST(LDFLAGS_PEANO_STATS)

@@ -96,8 +96,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
       is copied 1:1 into the implementation. If you pass in None, then the
       set value so far won't be overwritten.
 
-      Please note that not all options are supported by all solvers. You
-      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
+      Please note that not all options are supported by all solvers.
 
       This routine should be the very last invoked by the constructor.
     """
@@ -164,4 +163,13 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 """
 
   def add_entries_to_text_replacement_dictionary(self, d):
+    """!
+    
+    Invoce superclass and then add one more field:
+    
+    - RECONSTRUCTION_STAGES
+    
+    """
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
     d["RECONSTRUCTION_STAGES"]=self._reconstruction_stages
+    

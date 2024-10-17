@@ -8,7 +8,6 @@
 \li \subpage page_peano_domain_decomposition
 \li \subpage peano_action_sets
 \li \subpage page_peano_localisation
-\li \subpage page_peano_runtime_analysis
 \li \subpage page_peano_performance_optimisation
 \li \subpage tarch_accelerator_SYCL
 \li \subpage peano_python_api

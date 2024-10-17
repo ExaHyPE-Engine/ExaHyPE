@@ -1,569 +1,418 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
+import re
 import sys
 import argparse
 import subprocess
+
 import peano4
 import exahype2
 
-# Some reasonable default values
-dimensions = 2
-cell_size = 0.1
-amr_levels = 4
-patch_size = 4
-rk_order = 2
-dg_order = 1
-end_time = 3.001
-plot_interval = end_time / 100
-# plot_interval             = 0
-# Based on the assumption that the fluid is an ideal gas, gamma chosen for dry air.
-gamma = 1.4
 
-scenarios = [
-    "PointExplosion",
-    "GaussianExplosion",
-    "BreakingDam",
-]
-scenario = "PointExplosion"
+class Euler:
+    _available_solvers = {
+        "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
+        "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
 
-fv_rusanov_solvers = {
-    "FVRusanovGlobalFixed": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
-    "FVRusanovGlobalFixedEnclave": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
-    "FVRusanovGlobalAdaptive": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
-    "FVRusanovGlobalAdaptiveEnclave": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-}
+        "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
+        "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 
-rkfd_solvers = {
-    "FD4GlobalAdaptive": exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep,
-}
+        "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
+        "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
+    }
 
-rkdg_rusanov_solvers = {
-    "RKDGRusanovGlobalFixed": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
-    "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
-    "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-}
-
-aderdg_rusanov_solvers = {
-    "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
-    "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep,
-}
-
-solvers = {}
-solvers.update(fv_rusanov_solvers)
-solvers.update(rkdg_rusanov_solvers)
-solvers.update(aderdg_rusanov_solvers)
-solvers.update(rkfd_solvers)
-solver = "ADERDGRusanovGlobalAdaptive"
-
-build_modes = {
-    "Release": peano4.output.CompileMode.Release,
-    "Trace": peano4.output.CompileMode.Trace,
-    "Assert": peano4.output.CompileMode.Asserts,
-    "Stats": peano4.output.CompileMode.Stats,
-    "Debug": peano4.output.CompileMode.Debug,
-}
-build_mode = "Release"
-
-storage_types = {
-    "CallStack":     exahype2.solvers.Storage.CallStack,
-    "Heap":          exahype2.solvers.Storage.Heap,
-    "SmartPointers": exahype2.solvers.Storage.SmartPointers,
-}
-storage_type = "CallStack"
-
-parser = argparse.ArgumentParser(description="ExaHyPE 2 - Euler Application Script")
-
-parser.add_argument(
-    "-s",
-    "--solver",
-    dest="solver",
-    choices=solvers.keys(),
-    default=solver,
-    help="|".join(solvers.keys()),
-)
-parser.add_argument(
-    "-o",
-    "--output",
-    dest="output_path",
-    type=str,
-    default="solution",
-    help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.",
-)
-parser.add_argument(
-    "-m",
-    "--build-mode",
-    dest="build_mode",
-    choices=build_modes.keys(),
-    default=build_mode,
-    help="|".join(build_modes.keys()),
-)
-parser.add_argument(
-    "-d",
-    "--dim",
-    dest="dim",
-    type=int,
-    default=dimensions,
-    help="Number of space dimensions",
-)
-
-parser.add_argument(
-    "-st",
-    "--storage",
-    dest="storage",
-    choices=storage_types.keys(),
-    default=storage_type,
-    help="|".join(storage_types.keys()),
-)
-parser.add_argument(
-    "-sc",
-    "--scenario",
-    dest="scenario",
-    choices=scenarios,
-    default=scenario,
-    help="|".join(scenarios),
-)
-parser.add_argument(
-    "-et",
-    "--end-time",
-    dest="end_time",
-    type=float,
-    default=end_time,
-    help="End time of simulation",
-)
-parser.add_argument(
-    "-pi",
-    "--plot-interval",
-    dest="plot_interval",
-    type=float,
-    default=plot_interval,
-    help="Time between plots and also between database entries when probes are used.",
-)
-
-parser.add_argument(
-    "-amr",
-    "--amr-levels",
-    dest="amr_levels",
-    type=int,
-    default=amr_levels,
-    help="Number of AMR grid levels on top of max. size of a finite volume cell.",
-)
-parser.add_argument(
-    "-dynamic",
-    "--dynamic-amr",
-    dest="dynamic_amr",
-    action="store_true",
-    default=False,
-    help="Use dynamic AMR.",
-)
-parser.add_argument(
-    "-stateless",
-    "--stateless",
-    dest="use_stateless_pde_terms",
-    action="store_true",
-    default=True,
-    help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
-)
-parser.add_argument(
-    "-f",
-    "--fuse",
-    dest="fused_tasks",
-    type=int,
-    default=30000,
-    help="Number of enclave tasks to fuse into one meta task.",
-)
-parser.add_argument(
-    "-vis",
-    "--visualise",
-    dest="visualise",
-    action="store_true",
-    default=False,
-    help="Visualise the output data using the postprocessor.",
-)
-
-parser.add_argument(
-    "-pbc",
-    "--periodic-boundary-conditions",
-    dest="periodic_boundary_conditions",
-    action="store_true",
-    help="Use periodic boundary conditions",
-)
-
-parser.add_argument(
-    "-maxh",
-    "--max-cell-size",
-    dest="max_cell_size",
-    type=float,
-    default=cell_size,
-    help="Maximum size of a single finite volume cell on each axis.",
-)
-parser.add_argument(
-    "-ps",
-    "--patch-size",
-    dest="patch_size",
-    type=int,
-    default=patch_size,
-    help="Number of finite volumes per axis (dimension) per patch.",
-)
-
-parser.add_argument(
-    "-rk-order",
-    "--rk-order",
-    dest="rk_order",
-    type=int,
-    default=rk_order,
-    help="Order of time discretisation for Runge-Kutta scheme.",
-)
-parser.add_argument(
-    "-dg-order",
-    "--dg-order",
-    dest="dg_order",
-    type=int,
-    default=dg_order,
-    help="Order of space discretisation for Discontinuous Galerkin.",
-)
-
-parser.add_argument(
-    "--trees",
-    dest="trees",
-    type=int,
-    default=0,
-    help="Number of trees (subpartitions) per rank.",
-)
-parser.add_argument(
-    "--threads", dest="threads", type=int, default=0, help="Number of threads per rank."
-)
-parser.add_argument(
-    "--timeout", dest="timeout", type=int, default=3600, help="MPI timeout in seconds."
-)
-parser.add_argument(
-    "-fpe",
-    "--fp-exception",
-    dest="enable_fpe",
-    action="store_true",
-    help="Enable a floating-point exception handler",
-)
-
-parser.add_argument(
-    "--no-make",
-    dest="no_make",
-    action="store_true",
-    help="Do not compile the code after generation",
-)
-parser.add_argument(
-    "--executable",
-    dest="executable",
-    type=str,
-    help="Specify the executable name. If none is chosen, the name is automatically deduced by given parameters.",
-)
-args = parser.parse_args()
-
-if args.dim not in [2, 3]:
-    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
-    sys.exit(1)
-
-if args.build_mode not in build_modes:
-    print(
-        "Error, mode must be {} or {}, you supplied {}".format(
-            ", ".join(list(build_modes.keys())[:-1]),
-            list(build_modes.keys())[-1],
-            args.build_mode,
+    def setup_parser(self):
+        parser = argparse.ArgumentParser(
+            description="ExaHyPE 2 - Euler Application Script"
         )
-    )
-    sys.exit(1)
 
-if args.solver not in solvers:
-    print(
-        "Error, solver must be {} or {}, you supplied {}".format(
-            ", ".join(list(solvers.keys())[:-1]), list(solvers.keys())[-1], args.solver
+        parser.add_argument(
+            "-s",
+            "--solver",
+            choices=self._available_solvers.keys(),
+            help="|".join(self._available_solvers.keys()),
         )
-    )
-    sys.exit(1)
-
-if args.storage not in storage_type:
-    print(
-        "Error, storage type must be {} or {}, you supplied {}".format(
-            ", ".join(list(storage_type.keys())[:-1]),
-            list(storage_type.keys())[-1],
-            args.storage,
+        parser.add_argument(
+            "-d",
+            "--dimensions",
+            type=int,
+            help="Number of space dimensions.",
         )
-    )
-    sys.exit(1)
-
-if args.scenario not in scenarios:
-    print(
-        "Error, scenario must be {} or {}, you supplied {}".format(
-            ", ".join(scenarios[:-1]), scenarios[-1], args.scenario
+        parser.add_argument(
+            "-dt",
+            "--time-step-size",
+            type=float,
+            default=0.01,
+            help="Time step size for fixed time-stepping.",
         )
-    )
-    sys.exit(1)
-
-if args.executable:
-    executable_name = args.executable
-else:
-    executable_name = (
-        "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(args.solver)
-    )
-    if args.use_stateless_pde_terms:
-        executable_name += "-Stateless"
-    executable_name += "-" + str(args.build_mode)
-
-my_project = exahype2.Project(
-    namespace=["applications", "exahype2", "euler"],
-    project_name="Euler" + args.scenario,
-    directory=".",
-    executable=executable_name,
-)
-
-if args.solver in aderdg_rusanov_solvers:
-    solver_name = "Euler_ADERDG"
-elif args.solver in rkdg_rusanov_solvers:
-    solver_name = "Euler_RKDG"
-elif args.solver in fv_rusanov_solvers:
-    solver_name = "Euler_FV"
-elif args.solver in rkfd_solvers:
-    solver_name = "Euler_FD"
-
-unknowns = {"rho": 1, "v": args.dim, "e": 1}
-
-my_solver = None
-if args.solver in fv_rusanov_solvers and "Adaptive" in args.solver:
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        patch_size=args.patch_size,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_volume_h=args.max_cell_size,
-        min_volume_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
-        time_step_relaxation=0.5,
-        pde_terms_without_state=args.use_stateless_pde_terms
-    )
-    # self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
-    my_solver.switch_storage_scheme(
-        cell_data_storage=storage_types[args.storage],
-        face_data_storage=storage_types[args.storage],
-    )
-
-    # from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
-    # my_solver._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
-    #  my_solver._flux_implementation,
-    #  my_solver._ncp_implementation,
-    #  my_solver._source_term_implementation,
-    #  compute_max_eigenvalue_of_next_time_step=True,
-    #  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
-    #  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
-    # )
-elif args.solver in rkfd_solvers and "Adaptive" in args.solver:
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        patch_size=args.patch_size,
-        rk_order=args.rk_order,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_meshcell_h=args.max_cell_size,
-        min_meshcell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
-        time_step_relaxation=0.05,
-        KOSigma=8.0
-    )
-    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, "TP_linear_with_linear_extrap_normal_interp") 
-    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction( my_solver, "TP_average_normal_extrap" )
-elif args.solver in fv_rusanov_solvers and "Fixed" in args.solver:
-    min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
-    admissible_time_step_size = min_h / patch_size * 0.5
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        patch_size=args.patch_size,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_volume_h=args.max_cell_size,
-        min_volume_h=min_h,
-        normalised_time_step_size=admissible_time_step_size,
-        pde_terms_without_state=args.use_stateless_pde_terms
-    )
-elif args.solver in rkdg_rusanov_solvers and "Adaptive" in args.solver:
-    from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
-        FaceProjections,
-    )
-
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        rk_order=args.rk_order,
-        polynomials=exahype2.solvers.GaussLegendreBasis(args.dg_order),
-        face_projections=FaceProjections.Solution,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_cell_h=args.max_cell_size,
-        min_cell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
-        time_step_relaxation=0.5,
-        pde_terms_without_state=args.use_stateless_pde_terms
-    )
-elif args.solver in rkdg_rusanov_solvers and "Fixed" in args.solver:
-    from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
-        FaceProjections,
-    )
-
-    min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
-    admissible_time_step_size = min_h / patch_size * 0.5
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        rk_order=args.rk_order,
-        polynomials=exahype2.solvers.GaussLegendreBasis(args.dg_order),
-        face_projections=FaceProjections.Solution,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_cell_h=args.max_cell_size,
-        min_cell_h=min_h,
-        time_step_size=admissible_time_step_size,
-        pde_terms_without_state=args.use_stateless_pde_terms
-    )
-elif args.solver in aderdg_rusanov_solvers and "Fixed" in args.solver:
-    # stability condition: CFL for Ader-DG
-    # dt <= c*dx / (lambda_max*(2N+1)
-    # cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
-    # here lambda_max = 1
-    # dt <= 0.1 * 0.03 / 7 \approx  0.0004
-    # dt <= 0.1 * 0.03 / 11 \approx  0.00025
-    min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
-    admissible_time_step_size = 0.001
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        order=args.dg_order,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_cell_h=args.max_cell_size,
-        min_cell_h=min_h,
-        time_step_size=admissible_time_step_size,
-    )
-    my_solver.add_kernel_optimizations(
-        polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
-        use_kernel_generator=True,
-        architecture="noarch",
-    )
-elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
-    my_solver = solvers[args.solver](
-        name=solver_name,
-        order=args.dg_order,
-        unknowns=unknowns,
-        auxiliary_variables=0,
-        max_cell_h=args.max_cell_size,
-        min_cell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
-        time_step_relaxation=0.5,
-    )
-    my_solver.add_kernel_optimizations(
-        polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
-        use_kernel_generator=True,
-        architecture="noarch",
-    )
-
-my_solver.set_implementation(
-    initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux="::applications::exahype2::euler::flux(Q, normal, F);",
-    eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, normal);",
-    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    source_term=exahype2.solvers.PDETerms.None_Implementation,
-    ncp=exahype2.solvers.PDETerms.None_Implementation,
-)
-
-if args.dim == 2:
-    my_solver.plot_description = "rho, u, v, e"
-else:
-    my_solver.plot_description = "rho, u, v, w, e"
-
-my_solver.add_user_solver_includes(
-    """
-#include "EulerKernels.h"
-"""
-)
-
-my_project.add_solver(my_solver)
-
-if args.periodic_boundary_conditions:
-    periodic_BC = [True, True, True]
-else:
-    periodic_BC = [False, False, False]
-
-my_project.set_global_simulation_parameters(
-    dimensions=args.dim,
-    size=[1.0, 1.0, 1.0][0 : args.dim],
-    offset=[0.0, 0.0, 0.0][0 : args.dim],
-    min_end_time=args.end_time,
-    max_end_time=args.end_time,
-    first_plot_time_stamp=0.0,
-    time_in_between_plots=args.plot_interval,
-    periodic_BC=periodic_BC,
-)
-
-solution_dir = str(args.output_path) + "-" + str(executable_name)
-my_project.set_output_path(solution_dir)
-
-#my_project.set_output_path("./euler09")
-#probe_point = [-100, -100, 0.0]
-#my_project.add_plot_filter( probe_point, [200.0, 200.0, 0.01], 1 )
-
-if not os.path.exists(solution_dir):
-    os.makedirs(solution_dir)
-
-if args.visualise:
-    output_patch_file = (
-        solution_dir + "/solution-" + str(solver_name) + ".peano-patch-file"
-    )
-    if os.path.isfile(output_patch_file):
-        subprocess.call(
-            [
-                "python3",
-                "../../../python/peano4/visualisation/render.py",
-                str(output_patch_file),
-            ]
+        parser.add_argument(
+            "-cfl",
+            "--time-step-relaxation",
+            type=float,
+            default=0.5,
+            help="Time step relaxation safety factor for adaptive time-stepping.",
         )
-    sys.exit(0)
 
-if args.trees > 0:
-    my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOut",
-        "new ::exahype2::LoadBalancingConfiguration(0.98, 100, "
-        + str(args.trees)
-        + ")",
-    )
-else:
-    my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOut",
-        "new ::exahype2::LoadBalancingConfiguration(0.98)",
-    )
-if args.threads > 0:
-    my_project.set_number_of_threads(args.threads)
-else:
-    my_project.set_number_of_threads(
-        "tarch::multicore::Core::UseDefaultNumberOfThreads"
-    )
+        parser.add_argument(
+            "-width",
+            "--width",
+            type=str,
+            help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]).",
+        )
+        parser.add_argument(
+            "-offset",
+            "--offset",
+            type=str,
+            help="Specify offset of domain in meters as [x, y] as string (e.g. [-10, -10], [-7e6, -4e6]).",
+        )
 
-my_project.set_timeout(args.timeout)
+        parser.add_argument(
+            "-stateless",
+            "--stateless",
+            action="store_true",
+            default=False,
+            help="Use stateless PDE terms for GPU offloading (requires a GPU enabled Peano build and an enclave solver).",
+        )
 
-my_project.set_multicore_orchestration(
-    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::accelerator::Device::getInstance().getLocalDeviceId())"
-    % str(args.fused_tasks)
-)
+        parser.add_argument(
+            "-o",
+            "--output",
+            type=str,
+            default="solution",
+            help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.",
+        )
 
-my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
-my_project = my_project.generate_Peano4_project(verbose=True)
-if args.enable_fpe:
-    my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+        parser.add_argument(
+            "-pbc-x",
+            "--periodic-boundary-conditions-x",
+            action="store_true",
+            help="Use periodic boundary conditions in the x-axis.",
+        )
+        parser.add_argument(
+            "-pbc-y",
+            "--periodic-boundary-conditions-y",
+            action="store_true",
+            help="Use periodic boundary conditions in the y-axis.",
+        )
+        parser.add_argument(
+            "-pbc-z",
+            "--periodic-boundary-conditions-z",
+            action="store_true",
+            help="Use periodic boundary conditions in the z-axis.",
+        )
 
-my_project.constants.define_value("GAMMA", str(gamma))
-my_project.constants.define_value("SCENARIO", str(args.scenario))
-my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
+        available_build_modes = ["Release", "Trace", "Asserts", "Stats", "Debug"]
+        parser.add_argument(
+            "-m",
+            "--build-mode",
+            choices=available_build_modes,
+            default="Release",
+            help="|".join(available_build_modes),
+        )
 
-my_project.output.makefile.add_cpp_file(solver_name + ".cpp")
+        parser.add_argument(
+            "-et",
+            "--end-time",
+            type=float,
+            default=5.0,
+            help="End time of the simulation.",
+        )
+        parser.add_argument(
+            "-ns",
+            "--number-of-snapshots",
+            type=int,
+            default=10,
+            help="Number of snapshots (plots).",
+        )
 
-my_project.build(
-    make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
-)
+        parser.add_argument(
+            "-ps",
+            "--patch-size",
+            type=int,
+            help="Number of finite volumes per axis (dimension) per patch.",
+        )
+        parser.add_argument(
+            "-rk-order",
+            "--rk-order",
+            type=int,
+            help="Order of time discretisation for Runge-Kutta scheme.",
+        )
+        parser.add_argument(
+            "-dg-order",
+            "--dg-order",
+            type=int,
+            help="Order of space discretisation for Discontinuous Galerkin.",
+        )
 
-print("Executable is ", executable_name)
-print("Clean object files via 'make clean'")
-print("Recompile the generated code via 'make -j'")
-print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 euler.py' again")
-print(
-    "Generate (and convert) any postprocessing data by calling 'python3 euler.py --visualise'"
-)
+        parser.add_argument(
+            "-md",
+            "--min-depth",
+            type=float,
+            default=1,
+            help="Determines maximum size of a single cell on each axis.",
+        )
+        parser.add_argument(
+            "-amr",
+            "--amr-levels",
+            type=int,
+            default=0,
+            help="Number of AMR grid levels on top of max. size of a cell.",
+        )
+
+        parser.add_argument(
+            "-vis",
+            "--visualise",
+            action="store_true",
+            default=False,
+            help="Visualise the output data using the postprocessor.",
+        )
+
+        available_load_balancing_strategies = [
+            "None",
+            "SpreadOut",
+            "SpreadOutHierarchically",
+            "SpreadOutOnceGridStagnates",
+            "RecursiveBipartition",
+            "SplitOversizedTree",
+            "cascade::SpreadOut_RecursiveBipartition",
+            "cascade::SpreadOut_SplitOversizedTree",
+        ]
+        parser.add_argument(
+            "-lbs",
+            "--load-balancing-strategy",
+            choices=available_load_balancing_strategies,
+            default="SpreadOutOnceGridStagnates",
+            help="|".join(available_load_balancing_strategies),
+        )
+        parser.add_argument(
+            "-lbq",
+            "--load-balancing-quality",
+            type=float,
+            default=0.99,
+            help="The quality of the load balancing.",
+        )
+        parser.add_argument(
+            "-lb-min",
+            "--lb-min-size",
+            type=int,
+            default=0,
+            help="If a tree (partition) is smaller than the given number of cells, we do not split it up further.",
+        )
+        parser.add_argument(
+            "--lb-trees-init",
+            type=int,
+            default=-1,
+            help="Number of trees (partitions) per rank during initial decomposition.",
+        )
+        parser.add_argument(
+            "--lb-trees",
+            type=int,
+            default=-2,
+            help="Number of trees (partitions) per rank after initial decomposition.",
+        )
+        parser.add_argument(
+            "--threads",
+            type=int,
+            default=0,
+            help="Number of threads per rank.",
+        )
+        parser.add_argument(
+            "-f",
+            "--fuse-tasks",
+            type=int,
+            default=131072,
+            help="Number of enclave tasks to fuse into one meta task.",
+        )
+        parser.add_argument(
+            "-timeout",
+            "--timeout",
+            type=int,
+            default=3600,
+            help="MPI timeout in seconds.",
+        )
+        parser.add_argument(
+            "-fpe",
+            "--fpe",
+            action="store_true",
+            help="Enable a floating-point exception handler.",
+        )
+        parser.add_argument(
+            "-no-make",
+            "--no-make",
+            action="store_true",
+            help="Do not compile the code after generation.",
+        )
+
+        parser.add_argument(
+            "--peano-dir",
+            default="../../../",
+            help="Peano directory",
+        )
+
+        return parser
+
+    def setup_solver(self, args):
+        solver_params = {
+            "name": "Euler",
+            "unknowns": {"rho": 1, "u": 1, "v": 1, "w": 1, "e": 1}
+            if args.dimensions == 3
+            else {"rho": 1, "u": 1, "v": 1, "e": 1},
+            "auxiliary_variables": 0,
+        }
+
+        if args.stateless:
+            solver_params.update(
+                {
+                    "pde_terms_without_state": True,
+                }
+            )
+
+        if "Fixed" in args.solver:
+            solver_params.update(
+                {
+                    "normalised_time_step_size": args.time_step_size,
+                }
+            )
+        elif "Adaptive" in args.solver:
+            solver_params.update(
+                {
+                    "time_step_relaxation": args.time_step_relaxation,
+                }
+            )
+
+        max_h = (1.1 * min(args.width[0:args.dimensions]) / (3.0**args.min_depth))
+        min_h = max_h * 3.0 ** (-args.amr_levels)
+
+        if "FV" in args.solver:
+            solver_params.update(
+                {
+                    "patch_size": args.patch_size,
+                    "max_volume_h": max_h,
+                    "min_volume_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+            }
+        elif "RKDG" in args.solver:
+            solver_params.update(
+                {
+                    "rk_order": args.rk_order,
+                    "polynomials": exahype2.solvers.GaussLegendreBasis(args.dg_order),
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
+            }
+        elif "ADERDG" in args.solver:
+            solver_params.update(
+                {
+                    "order": args.dg_order,
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
+            implementation_params = {
+                "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
+                "flux": "applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
+            }
+
+        solver = self._available_solvers[args.solver](**solver_params)
+        solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
+        if solver_params["auxiliary_variables"] != 0:
+            solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
+        solver.set_implementation(**implementation_params)
+
+        if "ADERDG" in args.solver:
+            solver.add_kernel_optimisations(is_linear = False,)
+
+        return solver
+
+    def setup_project(self, args, solver):
+        project = exahype2.Project(
+            namespace=["applications", "exahype2", "euler"],
+            project_name="Euler",
+            directory=".",
+            executable=f"Euler.{args.build_mode}",
+        )
+
+        project.add_solver(solver)
+
+        if args.number_of_snapshots <= 0:
+            time_in_between_plots = 0.0
+        else:
+            time_in_between_plots = args.end_time / args.number_of_snapshots
+            project.set_output_path(args.output)
+
+        project.set_global_simulation_parameters(
+            dimensions=args.dimensions,
+            size=args.width[0:args.dimensions],
+            offset=args.offset[0:args.dimensions],
+            min_end_time=args.end_time,
+            max_end_time=args.end_time,
+            first_plot_time_stamp=0.0,
+            time_in_between_plots=time_in_between_plots,
+            periodic_BC=[
+                args.periodic_boundary_conditions_x,
+                args.periodic_boundary_conditions_y,
+                args.periodic_boundary_conditions_z,
+            ],
+        )
+
+        if args.visualise:
+            output_patch_file = f"{args.output}/solution-Euler.peano-patch-file"
+            if os.path.isfile(output_patch_file):
+                subprocess.call(
+                    [
+                        "python3",
+                        f"{args.peano_dir}/python/peano4/visualisation/render.py",
+                        str(output_patch_file),
+                    ]
+                )
+            sys.exit(0)
+
+        if args.load_balancing_strategy != "None":
+            project.set_load_balancing(
+                f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}",
+                f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, {args.lb_min_size}, {args.lb_trees_init}, {args.lb_trees})",
+            )
+
+        project.set_number_of_threads(args.threads)
+
+        project.set_multicore_orchestration(
+            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
+            % str(args.fuse_tasks)
+        )
+
+        project.set_timeout(args.timeout)
+
+        build_mode_class = getattr(getattr(peano4, "output"), "CompileMode")
+        build_mode = getattr(build_mode_class, args.build_mode)
+        project.set_Peano4_installation(args.peano_dir, mode=build_mode)
+        project = project.generate_Peano4_project(verbose=True)
+
+        if args.fpe:
+            project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+
+        return project
+
+    def build(self, args, project):
+        project.build(
+            make=not args.no_make,
+            make_clean_first=True,
+            throw_away_data_after_build=True,
+        )

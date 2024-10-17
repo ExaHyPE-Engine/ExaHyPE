@@ -85,12 +85,32 @@ class AbstractDGCGCoupling(ActionSet):
 
 
   __TemplateTouchVertexFirstTime="""
-  if ( {{PREDICATE_INJECT_AND_RESTRICT}} ) {
-    mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
-      fineGridVertex{{CG_SOLVER_NAME}},
-      true,        // restrictRhsAndInjectSolution
-      {{USE_FAS}}
-    );
+  if (
+    fineGridVertex{{CG_SOLVER_NAME}}.getType() != vertexdata::{{CG_SOLVER_NAME}}::Type::Coarse
+  ) {
+    
+    if ({{PREDICATE_INJECT_AND_RESTRICT}}) {
+      mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
+        fineGridVertex{{CG_SOLVER_NAME}},
+        true,        // restrictRhsAndInjectSolution
+        {{USE_FAS}}
+      );
+    }
+
+
+    /*
+    We aim to visit this section just before we prolongate. Passing false to
+    restrictRhsAndInjectSolution has the effect of setting delta to the "value"
+    parameter, ie we pick up the final solution to be interpolated during
+    touchCellFirstTime.
+    */
+    else if ( {{PREDICATE_PROLONGATE}} ) {
+      mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex( 
+        fineGridVertex{{CG_SOLVER_NAME}},
+        false,        // restrictRhsAndInjectSolution
+        {{USE_FAS}}
+      );
+    }
   }
   """
 
@@ -104,7 +124,8 @@ class AbstractDGCGCoupling(ActionSet):
     fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
     and
     {{PREDICATE_PROLONGATE}}
-  ) {    
+  ) {
+    logTraceInWith2Arguments("Prolongate()", (bool)({{PREDICATE_PROLONGATE}}), fineGridCell{{DG_SOLVER_NAME}}.toString());
     constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
     constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
@@ -138,6 +159,7 @@ class AbstractDGCGCoupling(ActionSet):
         fineGridVertices{{CG_SOLVER_NAME}}
       )
     );
+  logTraceOutWith1Argument("Prolongate()", fineGridCell{{DG_SOLVER_NAME}}.toString());
   }
 """
 
@@ -264,7 +286,8 @@ class AbstractDGCGCoupling(ActionSet):
     fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse
     and
     {{PREDICATE_EVALUATE_RHS}}
-  ) {    
+  ) {
+    logTraceIn("ComputeAndRestrictResidual");
     assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
 
     // =============================
@@ -294,12 +317,51 @@ class AbstractDGCGCoupling(ActionSet):
   
       tarch::la::Matrix< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode, double > composedRestrictionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( restrictionMatrices, restrictionMatricesScaleFactors, marker.h() );
 
+      // ============================
+      // update the solutions on all 4 adjacent faces so that we 
+      // can correctly restrict the residual. by now, all 
+      // projections have been set correctly, but we might 
+      // redundantly set solutions...
+      // ============================
+      
+      // vector to hold "updated" solutions
+      tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSolutions;
+
+      for (int f=0; f<TwoPowerD; f++) {
+        tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > solutionOnFace;
+        if ( fineGridFaces{{DG_SOLVER_NAME}}(f).getType() == facedata::{{DG_SOLVER_NAME}}::Type::Interior ) {
+          solutionOnFace = repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFaces{{DG_SOLVER_NAME}}(f).getProjection();
+        }
+
+        else if ( fineGridFaces{{DG_SOLVER_NAME}}(f).getType() == facedata::{{DG_SOLVER_NAME}}::Type::Boundary ) {
+          int startIndex = f < Dimensions ? 
+                           repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+                           0;
+          const auto boundaryMatrix = repositories::{{DG_SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+          for (int row=0; row<boundaryMatrix.rows(); row++)
+          {
+            double rowSolution = 0;
+            for (int col=0; col<boundaryMatrix.cols(); col++)
+            {
+              rowSolution += boundaryMatrix( row, col ) * fineGridFaces{{DG_SOLVER_NAME}}(f).getProjection( col + startIndex );
+            }
+            // place this solution into the face
+            solutionOnFace(row) = rowSolution;
+          }
+        }
+
+        // place this into the faceSolutions vector
+        for (int s=0; s<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+          faceSolutions( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = solutionOnFace(s);
+      }
+
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedRestrictionMatrix,
         repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
         repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridCell{{DG_SOLVER_NAME}}.getRhs(),
+        repositories::{{DG_SOLVER_INSTANCE}}.getCellFromFaceMatrix( marker.x(), marker.h() ) * faceSolutions,
         fineGridVertices{{CG_SOLVER_NAME}}
       );    
     }
@@ -333,12 +395,12 @@ class AbstractDGCGCoupling(ActionSet):
       };
 
       tarch::la::Matrix< Rows, Cols, double > composedInjectionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( injectionMatrices, injectionMatricesScaleFactors, marker.h() );
-
+      
       mghype::matrixfree::solvers::dgcgcoupling::injectSolution<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedInjectionMatrix,
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridVertices{{CG_SOLVER_NAME}}
-      );    
+      );
     }
     
     // ==============
@@ -347,6 +409,7 @@ class AbstractDGCGCoupling(ActionSet):
     mghype::matrixfree::solvers::dgcgcoupling::updateRestrictionCounters( 
       fineGridVertices{{CG_SOLVER_NAME}}
     );    
+  logTraceOut("ComputeAndRestrictResidual");
   }
 """
 
@@ -475,7 +538,7 @@ class AbstractDGCGCoupling(ActionSet):
          
     """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 #include "mghype/mghype.h"
 #include "mghype/matrixfree/solvers/DGCGCoupling.h"
@@ -585,4 +648,197 @@ class AdditiveDGCGCoupling(AbstractDGCGCoupling):
   else {
     logInfo( "prepareTraversal(...)", "normal smoothing step" );
   }
+""").render( **self.d )
+
+  
+  
+class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
+    """!
+          
+      Introduce multiplicative CC Coupling
+      
+      The control logic here is simplistic and prescripted. We follow the 
+      following steps for the additive solver with one iteration:
+      
+      1. Pre First smoothing step
+         - When we touchVertexFirstTime, we pass over rollOverAndPrepareCGVertex,
+           which has the effect of taking whatever is in the CG solution
+            and writing it into the Delta. This is then interpolated during 
+            touchCellFirstTime.
+         - Interpolate correction, i.e. sum all the hierarchies up.
+           This happens in touchCellFirstTime().
+         - Suspend CG solver
+         - Suspend DG solver
+         - Let DG solver project data onto faces
+      2. DG smoothing step
+         - Suspend CG solver
+         - Run DG solver
+      3. Nth DG smoothing step
+         - Still run DG solver (finish smoothing)
+        During touchCellLastTime, we:
+         - Compute hierarchical residual
+         - Restrict
+         - Suspend CG solver
+        These steps will set newRestrictedRhs correctly
+      4. Any CG solver
+        On the first CG smoothing step, we should, during
+        touchVertexFirstTime, pass over rollOverAndPrepareCGVertex
+        which takes newRestrictedRhs and writes it into rhs, and
+        we reset value to 0.
+         - Suspend DG solver
+
+      ## Realisation
+      
+      This action set will map onto a class of its own. We give the class a 
+      class attribute which we increment by one in each step. We then make the 
+      actual logic depend upon this counter, as we inject the predicates into
+      the superclass: That is, the superclass has some boolean expressions which 
+      allow us to switch its features on and off. We make those guys depends upon
+      the new counter.
+          
+    """
+    def __init__(self,
+                 dg_solver,
+                 cg_solver,
+                 prolongation_matrix,
+                 prolongation_matrix_scaling,
+                 restriction_matrix,
+                 restriction_matrix_scaling,
+                 injection_matrix,
+                 injection_matrix_scaling,
+                 use_fas,
+                 smoothing_steps_DG = 4,
+                 smoothing_steps_CG = -1,
+                 ):        
+        """!
+
+        Construct the solver
+        
+        @param smoothing_steps_DG: positive integer
+        
+        @param smoothing_steps_CG: positive integer or -1
+          The -1 indicates that we wait for full convergence on the coarse 
+          mesh.
+                 
+        """
+        super( MultiplicativeDGCGCoupling, self ).__init__(
+              dg_solver,
+              cg_solver,
+              prolongation_matrix,
+              prolongation_matrix_scaling,
+              restriction_matrix,
+              restriction_matrix_scaling,
+              injection_matrix,
+              injection_matrix_scaling,
+              use_fas
+
+              )
+        
+        # f-string isn't happy unless i do it like this
+        cg_solver_name = self.d["CG_SOLVER_NAME"]
+        dg_solver_name = self.d["DG_SOLVER_NAME"]
+
+        # We have finished DG smoothing, and are on first stage of CG Smoothing. Everything important
+        # happens during touchVertexFirstTime, so we can combine. In particular, touchVertexFirstTime
+        # on the DGCGCoupling action set is where we bring the restrictedRhs to the acutal rhs, ie 
+        # prepare us to solve the CG problem again.
+        # We incremented CGCycleCounter after we disabled the DG solver, hence the comparison with 1.
+        self.d["PREDICATE_INJECT_AND_RESTRICT"]  = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==1"
+
+        # We've just reset everything, so it's time to interpolate.
+        self.d["PREDICATE_PROLONGATE"]           = f"DGCycleCounter==1 and CGCycleCounter==0"
+        
+        # final DG stage. This is where we compute the residual for the CG vertices.
+        # we compare with > because the final time we enter prepareTraversal, DGCycleCounter==DGSmoothingSteps.
+        # Then we increment and continue on the DG solver anyway. Here we compute and restrict the residual
+        # during touchCellLastTime.
+        self.d["PREDICATE_EVALUATE_RHS"]         = f"DGCycleCounter>DGSmoothingSteps and CGCycleCounter==0"
+          
+        assert smoothing_steps_DG>=1, "at least one smoothing step required"
+        assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
+        
+        self.smoothing_steps_DG = smoothing_steps_DG
+        self.smoothing_steps_CG = smoothing_steps_CG
+
+        self.cg_solver = cg_solver
+          
+
+    def get_attributes(self):
+        """!
+      
+          Add a new static attribute to the class.
+      
+        """
+
+        if self.smoothing_steps_CG==-1:
+          smoothing_steps_CG_string = "std::numeric_limits<int>::max()"
+        else:
+          smoothing_steps_CG_string = self.smoothing_steps_CG
+
+        CG_solver_tolerance = self.cg_solver._solver_tolerance
+
+        return """
+    static constexpr int DGSmoothingSteps = {};
+    static constexpr int CGSmoothingSteps = {};
+    static constexpr double CGSolverTolerance = {};
+    static int DGCycleCounter;
+    static int CGCycleCounter;
+""".format(self.smoothing_steps_DG, smoothing_steps_CG_string, CG_solver_tolerance)
+
+      
+    def get_static_initialisations(self, full_qualified_classname):
+        """!
+          
+          Initialise the new counter.
+          
+        """
+        return """
+int """ + full_qualified_classname + """::DGCycleCounter = 0;
+int """ + full_qualified_classname + """::CGCycleCounter = 0;
+"""    
+
+    def get_body_of_prepareTraversal(self):
+        return jinja2.Template( """
+    logTraceInWith3Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
+    if (DGCycleCounter>0 and DGCycleCounter<DGSmoothingSteps) {
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      DGCycleCounter++;
+      logInfo( "prepareTraversal(...)", "run DG smoother step, disable CG solver" );
+    }
+    else if (
+      DGCycleCounter>0 and DGCycleCounter==DGSmoothingSteps
+    ) {
+      // same as above, but we need to make sure final update residual is halted
+      logInfo( "prepareTraversal(...)", "run final DG smoother step, disable CG solver" );
+      DGCycleCounter++;
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false, true);
+    }
+
+    else if (
+      DGCycleCounter>DGSmoothingSteps 
+      and 
+      CGCycleCounter<CGSmoothingSteps
+      and not
+      (
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() > 0.0
+        and
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() <= CGSolverTolerance
+      ) 
+    ) {
+      /*
+      We haven't reached our termination condition for CG solver yet
+      */
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false, false);
+      CGCycleCounter++;
+      logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver. CG residual="<< repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
+    }
+    else {
+      DGCycleCounter = 1;
+      CGCycleCounter = 0;
+      repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(true, false);
+      repositories::instanceOf{{CG_SOLVER_NAME}}.suspend();
+      logInfo( "prepareTraversal(...)", "suspend all solvers, interpolate CG->DG and project new solution onto faces" );
+    }
+    logTraceOutWith5Arguments("PrepareTraversal", DGCycleCounter, CGCycleCounter, repositories::instanceOf{{DG_SOLVER_NAME}}.isSuspended(), repositories::instanceOf{{DG_SOLVER_NAME}}.projectOntoFaces(), repositories::instanceOf{{CG_SOLVER_NAME}}.isSuspended());
 """).render( **self.d )

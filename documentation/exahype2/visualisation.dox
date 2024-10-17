@@ -2,24 +2,31 @@
 
 @page page_exahype_visualisation Visualisation and output
 
+\tableofcontents
+
+
 ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
 and it employs Peano's standard terminal routines to dump runtime information.
 Further to that, you can enable @ref tarch_logging "Peano's statistics" if you require more in-depth 
 (profile) information.
 
 
-## Solution output
+# Visualise the patch files
+
+Consult @ref documentation_tarch_visualisation "Peano's generic discussion" of various
+visualisation pathways as well as the patch file format.
+
+
+# Solution output
 
 As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
-As we rely on Peano's infrastructure, you can use the script
-python/peano4/visualisation/render.py to convert the output files into vtu files.
+As we rely on Peano's infrastructure, you can use the scripts from 
+@ref documentation_tarch_visualisation to convert the output files into vtu files.
 
 
-Consult @ref tarch_patch_files "Peano's generic discussion" of various
-visualisation pathways as well as the patch file format.
 By default, ExaHyPE dumps all data as one large vector Q per Finite
 Volume/integration point, i.e. you get a set of scalars.
 It also dumps all the resolution levels of the grid simultaneously.
@@ -27,7 +34,7 @@ Therefore, one of the first postprocessing steps usually is to remove all data
 from the output data set besides the fine grid level.
 
 
-### Plot descriptive variable names
+## Plot descriptive variable names
 
 You can add a plot description to each solver which allows us to render
 more descriptive variable names:
@@ -36,7 +43,7 @@ my_solver.plot_description = "density, velocity_x, velocity_y, energy"
 ~~~~~~~~~~~~~~~~~
 
 
-### Output filters
+## Output filters
 
 By default, ExaHyPE maps each Finite Volume and each DG quadrature point onto
 a vertex in the output file, i.e., it maps the compute mesh onto an unstructured
@@ -77,7 +84,7 @@ my_solver.select_dofs_to_print = [4,5,8]
 ~~~~~~~~~~~~~~~~~
 
 
-### Output directory
+## Output directory
 
 The command
 
@@ -91,7 +98,7 @@ data is written to the working path.
 
 
 
-### Multiscale data
+## Multiscale data
 
 All Peano 4 output files dump various resolutions of the data. 
 ExaHyPE 2  atm however does only use the finest mesh resolution to compute
@@ -102,7 +109,9 @@ option ```-filter-fine-grid```.
 This makes the script throw away all coarser resolutions.
 
 
-### Finite Volumes
+# Solver-specific rendering recommendations
+
+## Finite Volumes
 
 If you dump Finite Volume data, it becomes difficult to spot how the resulting
 Finite Volumes are organised in patches:
@@ -113,7 +122,7 @@ If you are interested in seeing the patch boundaries, use the
 You then will see gaps (voids) between the individual patches.
 
 
-### Discontinuous Galerkin
+## Discontinuous Galerkin
 
 If you use ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
 the file dumps will look pretty ragged.
@@ -135,7 +144,7 @@ you can averaging over cells and display only the average.
 Consult the script's help.
 
 
-## Logging output
+# Logging 
 
 ExaHyPE searches for a text file exahype.log-filter in the working
 directory.

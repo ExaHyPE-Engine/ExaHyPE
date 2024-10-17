@@ -5,7 +5,7 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/swe"))
 
-from SWE import SWE
+from swe import SWE
 
 if __name__ == "__main__":
     swe = SWE()
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     )
     my_parser.set_defaults(
         solver="RusanovGlobalAdaptiveEnclaveFV",
-        width="[1.0, 1.0]",
+        width=[1.0, 1.0],
         patch_size=16,
         stateless=True,
         number_of_snapshots=0,
@@ -137,9 +137,6 @@ if __name__ == "__main__":
     )  # Reduction
 
     my_project.output.makefile.add_cpp_file("SWE-main.cpp")
-    my_project.output.makefile.add_cpp_file(
-        "../../../../applications/exahype2/swe/SWE.cpp"
-    )
 
     swe.build(my_args, my_project)
 

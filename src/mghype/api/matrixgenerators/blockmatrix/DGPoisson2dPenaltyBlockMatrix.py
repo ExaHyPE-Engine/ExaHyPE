@@ -101,7 +101,6 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         # Remake this according to the note; now only works for the mass matrix for the Poisson equation with interior penalty method
         self._RHS_CC = self._assemble_RHS_CC()
         
-        #MG = MatrixGenerator(r_)
 
     ###################################
     ### Assemble weak form for A_CC ###
@@ -516,7 +515,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                 for q, w in zip(quad2d.points, quad2d.weights):
                     MassMatrix[i, j] += factor * w * self._fe_C[k].evaluate(i, q) * self._fe_C[ell].evaluate(j, q)
 
-        return {gamma: MassMatrix}    
+        return {gamma: MassMatrix}
 
 
 # r_press = 1

@@ -5,6 +5,7 @@
 
 #include <fstream>
 
+#include <algorithm>
 
 tarch::logging::Log toolbox::blockstructured::GlobalDatabase::_log( "toolbox::blockstructured::GlobalDatabase" );
 

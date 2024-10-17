@@ -153,6 +153,12 @@ export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
 
 # Linking
 
+- ***The linking fails for the tutorials even though I've followed all instructions***
+  Almost always, this is due to missing packages. You have to configure your build
+  system with ExaHyPE for example to run through ExaHyPE tutorials. Return to your
+  root directory (autotools) or build directory (CMake), and rerun configure (autotools)
+  or ccmake (CMake) picking all packages required.
+
 - ***My linker complains about a missing tbb, even though I do not use Intel's TBB***
   Intel has donated TBB to the open source community and Clang, for example, uses
   it internally to realise its OpenMP scheduler. Unfortunately, the integration
@@ -275,7 +281,21 @@ LDFLAGS="... --Lyour-path/otter/build/lib -L/opt/otf2/lib"
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib
 ~~~~~~~~~~~~~~~~~~~~~
     as the checks otherwise will fail.
-
+- ***pvpython does not find jinja2 and other Python packages***
+  On some systems, pvpython seems to overwrite/redefine the Python package 
+  paths. That means, you manually have to add them to the PYTHONPATH 
+  before you invoke pvpython. I do so through
+~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../Peano/python:/usr/lib/python3/dist-packages
+~~~~~~~~~~~~~~~~~~~~~
+- ***paraview/pyvista is not there in my Jupyter notebook even though I have installed it***
+  Some Jupyter notebooks seem to fire up their own Python environment. You 
+  can always type in
+~~~~~~~~~~~~~~~~~~~~~~  
+import sys
+!{sys.executable} -m pip install --break-system-packages pyvista
+~~~~~~~~~~~~~~~~~~~~~~  
+  and then you should have it within your notebook.
 
 # Debugging
 

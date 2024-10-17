@@ -6,7 +6,7 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state( State::ProjectOnly )
+  _state( State::ProjectOntoFacesOnly )
 {}
 
 
@@ -268,7 +268,10 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  if (_state==State::UpdateAndProjectImmediately) {
+  if (_state==State::Solve
+      or
+      _state==State::UpdateAndRestrictResidual
+  ) {
     clearGlobalResidual();
   }
 }
@@ -276,14 +279,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   switch (_state) {
-    case State::UpdateAndProjectImmediately:
+    case State::Solve:
       {
         logInfo( "endMeshSweep()", toString() );
       }
       break;
-    case State::ProjectOnly:
+    
+    /*
+    This means we just prolongated from CG -> DG and projected
+    the new solution back to the faces. So let's continue to solve
+    as normal, remembering that the Riemann problem will be solved first.
+    */
+    case State::ProjectOntoFacesOnly:
       {
-        _state = State::UpdateAndProjectImmediately;
+        _state = State::Solve;
       }
       break;
       /*
@@ -296,34 +305,56 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
 */
     case State::Suspend:
       {
-        _state = State::UpdateAndProjectImmediately;
+        _state = State::ProjectOntoFacesOnly;
+      }
+      break;
+
+    case State::UpdateAndRestrictResidual:
+      {
+        logInfo( "endMeshSweep()", toString() );
+        _state = State::Suspend; 
       }
       break;
   }
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
-  return _state == State::UpdateAndProjectImmediately;
+  return _state == State::Solve
+      or _state == State::ProjectOntoFacesOnly;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
-  return _state == State::UpdateAndProjectImmediately;
+  return _state == State::Solve
+      or _state == State::UpdateAndRestrictResidual;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
-  return _state == State::UpdateAndProjectImmediately
-      or _state == State::ProjectOnly;
+  return _state == State::Solve
+      or _state == State::ProjectOntoFacesOnly
+      or _state == State::UpdateAndRestrictResidual;
 }
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoCells() const {
+  return _state == State::Solve
+      or _state == State::UpdateAndRestrictResidual;
+}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const{
+  return _state == State::Suspend;
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, bool updateAndRestrictResidual) {
   if (projectOntoFaces) {
-    _state = State::ProjectOnly;
+    _state = State::ProjectOntoFacesOnly;
+  }
+  else if (updateAndRestrictResidual) {
+    _state = State::UpdateAndRestrictResidual;
   }
   else {
     _state = State::Suspend;
   }
 }
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const { return _state; }

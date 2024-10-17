@@ -22,7 +22,7 @@ namespace exahype2::fv::riemann {
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void
     timeStepWithRiemannPatchwiseHeapFunctors(
-      CellData&                            patchData,
+      CellData<double, double>&            patchData,
       const FluxFunctor&                   fluxFunctor,
       const NonconservativeProductFunctor& nonconservativeProductFunctor,
       const SourceFunctor&                 sourceFunctor,
@@ -47,7 +47,7 @@ namespace exahype2::fv::riemann {
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void
     timeStepWithRiemannPatchwiseHeapStateless(
-      CellData&                    patchData,
+      CellData<double, double>&                    patchData,
       peano4::utils::LoopPlacement loopPlacement = peano4::utils::
         LoopPlacement::Serial
     ) InlineMethod;

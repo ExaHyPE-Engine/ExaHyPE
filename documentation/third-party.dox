@@ -2,10 +2,8 @@
 
 \page page_third_party_home Optional Third-party Tools and Libraries
 
-
 \li \subpage tarch_multicore_otter
-\li \subpage tbb_dynamic_task_graph_design
-
+\li \subpage tbb_extension
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
@@ -14,17 +12,17 @@
 
 OpenBLAS is an implementation of BLAS, which provide some basic linear algebra subroutines.
 libxsmmJIT (available as submodule) and lapack (more complicated linear algebra routines,
-used for matrix inversion etc) depend on this. 
+used for matrix inversion etc) depend on this.
 
 We provide a few configure options to make sure all the headers and libraries are available.
 When running configure script (see \ref page_installation_home) you should include
-```with-openblas``` to enable OpenBLAS. Further, you should use ```with-lapack``` to enable 
+```with-openblas``` to enable OpenBLAS. Further, you should use ```with-lapack``` to enable
 lapack and similarly ```with-libxsmmjit```. Configuration for these two options will fail
 without OpenBLAS enabled.
 
 We leave it up to the user to modify the CXXFLAGS, LDFLAGS and LD_LIBRARY_PATH correctly.
 These options were tested on COSMA (see \ref page_machines), where installations of openblas
-were already available. 
+were already available.
 
 When configuring, be sure to add:
   - A link to the include directory for the version of openblas for your compiler to CXXFLAGS
@@ -39,39 +37,66 @@ The call to configure should look something like this (for example, on COSMA):
 
 Make sure to export your LD_LIBRARY_PATH first.
 
-# HDF5 
+# HDF5
 
 Peano does not need hdf5. There's no generic input file format, and it can write
 its own mesh files without hdf5. Things are different if you want to dump hdf5,
-or if you use an extension/toolbox which requires hdf5. In this case, you have 
-to enable hdf5 in the configuration (pass in --with-hdf5) and ensure that your 
-CXXFLAGS and LDFLAGS include all libraries. 
+or if you use an extension/toolbox which requires hdf5. In this case, you have
+to enable hdf5 in the configuration (pass in --with-hdf5) and ensure that your
+CXXFLAGS and LDFLAGS include all libraries.
 
-For the latter, different systems have other paths. On local Ubuntu 
+For the latter, different systems have other paths. On local Ubuntu
 workstations, we typically use something similar to
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lhdf5_cpp
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Please note that two hdf5 libraries are required: the hdf5 library which is 
+Please note that two hdf5 libraries are required: the hdf5 library which is
 written in C and the C++ counterpart.
 
 
+# NetCDF
+
+NetCDF might be required by some applications.
+
+If you are unsure where the NetCDF headers and libraries are located on your system,
+you can use pkg-config:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export NETCDF_INCLUDE_DIR=$(pkg-config --cflags-only-I netcdf)
+export NETCDF_LIBRARY_DIR=$(pkg-config --libs-only-L --libs-only-l netcdf)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Then use these variables to configure Peano:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CC=gcc CXX=g++ ./configure --with-netcdf CXXFLAGS="-std=c++20 -O3 $NETCDF_INCLUDE_DIR" LDFLAGS="$NETCDF_LIBRARY_DIR"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If all works, then in the configuration output log you should see
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+checking for netcdf... yes
+...
+checking for netcdf.h... yes
+checking for nc_open in -lnetcdf... yes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # The Visualization Toolkit (VTK)
 
-Peano usually dumps data @ref tarch_patch_files "data in its own native file format".
+Peano usually dumps data @ref documentation_tarch_visualisation "data in its own native file format".
 However, there are several extensions where it directly writes into VTK files
-or cousins of it, such that you can directly visualise the outcome with 
+or cousins of it, such that you can directly visualise the outcome with
 Paraview of VisIt, e.g. Most users do not need to build Peano directly against
 any third-party visualisation libraries.
 
 
-However, ...
+# Score-P
 
+Use 'SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS="--user --nocompiler --thread=omp:ompt"'
 
+TODO: Yet to be written.
 
- */
- 
+*/

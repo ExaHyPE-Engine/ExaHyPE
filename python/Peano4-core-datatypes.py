@@ -205,10 +205,10 @@ automaton_state.add_attribute(
     dastgen2.attributes.Integer("level", min_value=0, max_value=63)
 )
 automaton_state.add_attribute(
-    peano4.dastgen2.Peano4DoubleArray("x", "Dimensions", valid_mantissa_bits=23)
+    peano4.dastgen2.Peano4DoubleArray("x", "Dimensions", valid_mantissa_bits=48)
 )
 automaton_state.add_attribute(
-    peano4.dastgen2.Peano4DoubleArray("h", "Dimensions", valid_mantissa_bits=23)
+    peano4.dastgen2.Peano4DoubleArray("h", "Dimensions", valid_mantissa_bits=48)
 )
 
 automaton_state.add_attribute(dastgen2.attributes.Boolean("inverted"))
@@ -238,10 +238,10 @@ automaton_state.write_implementation_file("../src/peano4/grid/AutomatonState.cpp
 grid_traversal_event = dastgen2.DataModel("peano4::grid::GridTraversalEvent")
 
 grid_traversal_event.add_attribute(
-    peano4.dastgen2.Peano4DoubleArray("x", "Dimensions", valid_mantissa_bits=23)
+    peano4.dastgen2.Peano4DoubleArray("x", "Dimensions", valid_mantissa_bits=48)
 )
 grid_traversal_event.add_attribute(
-    peano4.dastgen2.Peano4DoubleArray("h", "Dimensions", valid_mantissa_bits=23)
+    peano4.dastgen2.Peano4DoubleArray("h", "Dimensions", valid_mantissa_bits=48)
 )
 grid_traversal_event.add_attribute(
     dastgen2.attributes.BooleanArray("hasBeenRefined", "TwoPowerD", compress=True)
@@ -387,7 +387,7 @@ grid_vertex.add_attribute(
 # Brauch ich nur im Debug mode. Das wird bisher net unterstuetzt
 grid_vertex.add_attribute(
     peano4.dastgen2.Peano4DoubleArray(
-        "x", "Dimensions", valid_mantissa_bits=23, ifdefs=["PeanoDebug>0"]
+        "x", "Dimensions", valid_mantissa_bits=48, ifdefs=["PeanoDebug>0"]
     )
 )
 grid_vertex.add_attribute(dastgen2.attributes.Integer("level"))
