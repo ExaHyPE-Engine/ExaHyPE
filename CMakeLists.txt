@@ -7,12 +7,6 @@ set(PEANO_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on 
 set(PEANO_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
 set(PEANO_AUTHOR_DOMAIN "www.peano-framework.org")
 
-project(${PEANO_PROJECT_NAME}
-  DESCRIPTION ${PEANO_PROJECT_DESCRIPTION}
-  HOMEPAGE_URL ${PEANO_AUTHOR_DOMAIN}
-  LANGUAGES C CXX
-)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(GetGitRevisionDescription)
@@ -26,6 +20,12 @@ set(PEANO_GIT_HASH "${GIT_COMMIT_HASH}")
 set(PEANO_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
 set(PEANO_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
 message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
+
+project(${PEANO_PROJECT_NAME}
+  DESCRIPTION ${PEANO_PROJECT_DESCRIPTION}
+  HOMEPAGE_URL ${PEANO_AUTHOR_DOMAIN}
+  LANGUAGES C CXX
+)
 
 set(CMAKE_C_STANDARD 17 CACHE STRING "")
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -51,14 +51,16 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include(Ccache)
+
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
+
 include(ProcessorCount)
 ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
-find_package(Threads REQUIRED)
+
 include(CTest)
 enable_testing()
-include(CMakeDependentOption)
+
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -72,7 +74,6 @@ endif()
 
 add_library(PeanoInterface INTERFACE)
 target_compile_features(PeanoInterface INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
-# TODO: Set C++ standard as project options
 install(TARGETS PeanoInterface EXPORT PeanoTargets)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
@@ -117,18 +118,6 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
     $<$<CONFIG:Release>:/LTCG>
   )
 endif()
-
-include(CheckIncludeFiles)
-check_include_files(dlfcn.h HAVE_DLFCN_H)
-check_include_files(inttypes.h HAVE_INTTYPES_H)
-check_include_files(stdint.h HAVE_STDINT_H)
-check_include_files(stdio.h HAVE_STDIO_H)
-check_include_files(stdlib.h HAVE_STDLIB_H)
-check_include_files(strings.h HAVE_STRINGS_H)
-check_include_files(string.h HAVE_STRING_H)
-check_include_files(sys/stat.h HAVE_SYS_STAT_H)
-check_include_files(sys/types.h HAVE_SYS_TYPES_H)
-check_include_files(unistd.h HAVE_UNISTD_H)
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
 option(WITH_TARGETDART "Build with targetDART support" OFF)
@@ -290,15 +279,9 @@ set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
-  #message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
   target_compile_definitions(PeanoInterface INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(PeanoInterface INTERFACE Parallel)
   target_link_libraries(PeanoInterface INTERFACE MPI::MPI_CXX)
-  #target_compile_options(PeanoInterface INTERFACE ${MPI_CXX_FLAGS})
-  #target_link_libraries(PeanoInterface INTERFACE ${MPI_CXX_LIBRARIES})
-  #target_compile_definitions(PeanoInterface INTERFACE ${MPI_CXX_COMPILE_DEFINITIONS})
-  #target_include_directories(PeanoInterface INTERFACE ${MPI_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
-  #target_link_options(PeanoInterface INTERFACE ${MPI_CXX_LINK_FLAGS})
 endif()
 
 if(WITH_OTTER)
