@@ -21,9 +21,9 @@ namespace swift2 {
    *
    * Different algorithmic steps might have different access policies. There
    * are three different flags in swift2.particle.AlgorithmStep. By default,
-   * they are set to None. swift2.particle.Particle._dependency_checks_modify_steps()
-   * will then insert default policies/invariants. But you might want to alter
-   * these.
+   * they are set to None.
+   * swift2.particle.Particle._dependency_checks_modify_steps() will then insert
+   * default policies/invariants. But you might want to alter these.
    */
   namespace dependencychecks {
     /**
@@ -40,6 +40,29 @@ namespace swift2 {
     };
 
     std::string toString(Invariant policy);
+
+    // some templates for convenience and code readability.
+    template <typename ParticleContainer>
+    using PCParticle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+    template <typename ParticleContainer>
+    using PCAlgorithmStepEnum = PCParticle<ParticleContainer>::DependencyChecksAlgorithmStepLastUpdated;
+
+    template <typename ParticleContainer>
+    using PCInitStepEnum = PCParticle<ParticleContainer>::DependencyChecksInitStepLastUpdated;
+
+    template <typename ParticleContainer>
+    using PCSweepStageEnum = PCParticle<ParticleContainer>::DependencyChecksPeanoEventUsedBySwift;
+
+    template <typename Particle>
+    using PAlgorithmStepEnum = typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated;
+
+    template <typename Particle>
+    using PInitStepEnum = typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated;
+
+    template <typename Particle>
+    using PSweepStageEnum = typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift;
+
 
     namespace internal {
       /**
@@ -75,16 +98,19 @@ namespace swift2 {
        * cleared. If you return numberOfSteps, we don't check any
        * future step.
        */
-      int firstFutureStepThatHasToBeCleared(Invariant policy, int numberOfSteps);
+      int firstFutureStepThatHasToBeCleared(
+        Invariant policy,
+        int       numberOfSteps
+      );
 
       /**
-       * @brief This function is meant to be called on a particle on which dependency issues
-       * in the main algorithm steps have been detected.
+       * @brief This function is meant to be called on a particle on which
+       * dependency issues in the main algorithm steps have been detected.
        *
        *
-       * If the consistency checks fail, this routine should be used to write the
-       * full current state of a problematic particle to screen. After that, the
-       * routine aborts.
+       * If the consistency checks fail, this routine should be used to write
+       * the full current state of a problematic particle to screen. After that,
+       * the routine aborts.
        *
        * It is important that we use the log functionality of tarch::logging, as
        * it allows us to distinguish from which rank messages come from. It also
@@ -101,7 +127,9 @@ namespace swift2 {
        * I originally inserted some assertions of the type
        *
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       * assertion3(particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0, particle->getDependencyChecksAlgorithmStepUpdates(i), i, particle->toString() );
+       * assertion3(particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0,
+       * particle->getDependencyChecksAlgorithmStepUpdates(i), i,
+       * particle->toString() );
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
        * into the source code. While this seems to be convenient (check that
@@ -116,27 +144,30 @@ namespace swift2 {
        *
        *
        * @param particle: the problematic particle
-       * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
-       * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-       * @param errors: Number of errors that have been detected. If errors == 0, this function can
-       *                be used to just print out the current state, and won't abort when finished.
-       * @param call_identifier: Additional information on which dependency check failed to be printed
-       *                         to screen before exiting.
+       * @param algorithmStepMarkerEnum: Enum representing algorithm step
+       * particle is currently in
+       * @param sweepStageMarkerEnum: Enum representing traversal sweep stage
+       * particle is currently in
+       * @param errors: Number of errors that have been detected. If errors ==
+       * 0, this function can be used to just print out the current state, and
+       * won't abort when finished.
+       * @param call_identifier: Additional information on which dependency
+       * check failed to be printed to screen before exiting.
        */
       template <typename Particle>
       static std::string outputParticle(
-        const Particle*                                                                        particle,
-        typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
-        typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-        const int                                                                              errors
+        const Particle*              particle,
+        PAlgorithmStepEnum<Particle> algorithmStep,
+        PSweepStageEnum<Particle>    sweepStageMarkerEnum,
+        const int                    errors
       );
 
       template <typename Particle>
       static std::string outputParticle(
-        const Particle*                                                                     particle,
-        typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated   initStep,
-        typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
-        const int                                                                           errors
+        const Particle*           particle,
+        PInitStepEnum<Particle>   algorithmStep,
+        PSweepStageEnum<Particle> sweepStageMarkerEnum,
+        const int                 errors
       );
 
       /**
@@ -153,8 +184,8 @@ namespace swift2 {
        * @param currentStage: integer value of the current sweep stage
        * @param nsteps: Total number of algorithm steps
        * @param nstages: Total number of sweep stages
-       * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
-       *                               stages and algorithm steps of a particle
+       * @param sweepStateProgression: integer array carrying flags/counters of
+       * completed sweep stages and algorithm steps of a particle
        *
        * @return errors: Number of dependency errors detected
        */
@@ -170,14 +201,15 @@ namespace swift2 {
 
 
       /**
-       * @brief Check that all steps and stages after the current one have not been done yet.
+       * @brief Check that all steps and stages after the current one have not
+       * been done yet.
        *
        * @param currentStep: integer value of the current algorithm step
        * @param currentStage: integer value of the current sweep stage
        * @param nsteps: Total number of algorithm steps
        * @param nstages: Total number of sweep stages
-       * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
-       *                               stages and algorithm steps of a particle
+       * @param sweepStateProgression: integer array carrying flags/counters of
+       * completed sweep stages and algorithm steps of a particle
        *
        * @return errors: Number of dependency errors detected
        */
@@ -191,8 +223,10 @@ namespace swift2 {
       );
     } // namespace internal
 
+
     /**
-     * @brief Mark a localParticle having entered a sweep stage in a main algorithm step.
+     * @brief Mark a localParticle having entered a sweep stage in a main
+     * algorithm step.
      *
      * This routine is used both by touchVertexFirstTime and
      * touchVertexLastTime to keep track of state transitions. We run over the
@@ -205,157 +239,172 @@ namespace swift2 {
      * position, we might update the particle at one point, alter its position,
      * then re-assign it to a new particle and there mask it out.
      *
-     * @param assignedParticles: the particles around a vertex that will be subject to the validation
-     * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
-     * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
-     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-     * @param stepMovedParticle whether the particle has been moved in this (or in the previous)
-     *                          algorithm step. This may corrupt the set of localParticles. See
+     * @param assignedParticles: the particles around a vertex that will be
+     * subject to the validation
+     * @param marker: a peano4::datamanagement::VertexMarker or
+     * peano4::datamanagement::CellMarker
+     * @param algorithmStepMarkerEnum: Enum representing algorithm step particle
+     * is currently in
+     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage
+     * particle is currently in
+     * @param stepMovedParticle whether the particle has been moved in this (or
+     * in the previous) algorithm step. This may corrupt the set of
+     * localParticles. See
      *                          @page_toolbox_particles_mesh_traversal.
-     * @param workOnParticle A function used to determine whether the particle is being worked on in
-     *                       the specific sweep stage of the algorithm step. As arguments, it takes
-     *                       the particle itself and the marker. This should be the same function used
-     *                       in the actual stage of the algorithm step as your code, and should be one
-     *                       of the functions defined in src/swift2/kernels/ParticleState.h
+     * @param workOnParticle A function used to determine whether the particle
+     * is being worked on in the specific sweep stage of the algorithm step. As
+     * arguments, it takes the particle itself and the marker. This should be
+     * the same function used in the actual stage of the algorithm step as your
+     * code, and should be one of the functions defined in
+     * src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer>
     static void markAlgorithmStep(
       const ParticleContainer&                    particles,
       const peano4::datamanagement::VertexMarker& marker,
-      typename std::remove_pointer<
-        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-                sweepStageMarkerEnum,
+      PCAlgorithmStepEnum<ParticleContainer>      algorithmStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>         sweepStageMarkerEnum,
       Invariant                                   policy,
-      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
-                workOnParticle,
-      int spacetreeId
+      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
 
     /**
-     * A particle is marked if there is at least one active interaction in this cell.
+     * A particle is marked if there is at least one active interaction in this
+     * cell.
      *
      *
      */
     template <typename ParticleContainer>
     static void markAlgorithmStep(
-      const ParticleContainer&                    localParticles,
-      const ParticleContainer&                    activeParticles,
-      const peano4::datamanagement::CellMarker&   marker,
-      typename std::remove_pointer<
-        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-                sweepStageMarkerEnum,
-      Invariant                                   policy,
-      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles,
+      const peano4::datamanagement::CellMarker& marker,
+      PCAlgorithmStepEnum<ParticleContainer>    algorithmStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>       sweepStageMarkerEnum,
+      Invariant                                 policy,
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<
+        typename std::remove_pointer<
+          typename ParticleContainer::value_type>::type> workOnParticle,
+      int                                                spacetreeId
     );
 
 
     /**
-     * @brief Mark a localParticle having entered a sweep stage in a initialisation algorithm step.
+     * @brief Mark a localParticle having entered a sweep stage in a
+     * initialisation algorithm step.
      *
      * @param localParticle: the problematic particle
-     * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
-     * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
-     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-     * @param stepMovedParticle whether the particle has been moved in this (or in the previous)
-     *                          algorithm step. This may corrupt the set of localParticles. See
+     * @param marker: a peano4::datamanagement::VertexMarker or
+     * peano4::datamanagement::CellMarker
+     * @param algorithmStepMarkerEnum: Enum representing algorithm step particle
+     * is currently in
+     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage
+     * particle is currently in
+     * @param stepMovedParticle whether the particle has been moved in this (or
+     * in the previous) algorithm step. This may corrupt the set of
+     * localParticles. See
      *                          @page_toolbox_particles_mesh_traversal.
-     * @param workOnParticle A function used to determine whether the particle is being worked on in
-     *                       the specific sweep stage of the algorithm step. As arguments, it takes
-     *                       the particle itself and the marker. This should be the same function used
-     *                       in the actual stage of the algorithm step as your code, and should be one
-     *                       of the functions defined in src/swift2/kernels/ParticleState.h
+     * @param workOnParticle A function used to determine whether the particle
+     * is being worked on in the specific sweep stage of the algorithm step. As
+     * arguments, it takes the particle itself and the marker. This should be
+     * the same function used in the actual stage of the algorithm step as your
+     * code, and should be one of the functions defined in
+     * src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer>
     static void markInitStep(
-      const ParticleContainer& localParticles,
-      const peano4::datamanagement::VertexMarker&            marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-        initStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-                sweepStageMarkerEnum,
-      Invariant policy,
-      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      const ParticleContainer&                    localParticles,
+      const peano4::datamanagement::VertexMarker& marker,
+      PCInitStepEnum<ParticleContainer>           initStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>         sweepStageMarkerEnum,
+      Invariant                                   policy,
+      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
 
     /**
-     * A particle is marked if there is at least one active interaction in this cell.
+     * A particle is marked if there is at least one active interaction in this
+     * cell.
      *
      *
      */
     template <typename ParticleContainer>
     static void markInitStep(
-      const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles,
-      const peano4::datamanagement::CellMarker&            marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-        initStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-                sweepStageMarkerEnum,
-      Invariant policy,
-      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles,
+      const peano4::datamanagement::CellMarker& marker,
+      PCInitStepEnum<ParticleContainer>         initStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>       sweepStageMarkerEnum,
+      Invariant                                 policy,
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
 
     /**
-     * @brief Dependency Check: Verify that particles have completed all the algorithm steps and stages of the
-     * main algorithm steps before the current one. Also ensure none of the steps nor stages after the current
-     * one have been performed yet. If an error is found, debug information is printed to stdout
-     * and the program is aborted.
+     * @brief Dependency Check: Verify that particles have completed all the
+     * algorithm steps and stages of the main algorithm steps before the current
+     * one. Also ensure none of the steps nor stages after the current one have
+     * been performed yet. If an error is found, debug information is printed to
+     * stdout and the program is aborted.
      *
-     * This routine is typically inserted after each sweep stage (touchVertexFirstTime, CellKernel,
-     * touchVertesLastTime) of any AlgorithmStep. It ensures that all data piped into an algorithm step are valid
-     * and consistent.
+     * This routine is typically inserted after each sweep stage
+     * (touchVertexFirstTime, CellKernel, touchVertesLastTime) of any
+     * AlgorithmStep. It ensures that all data piped into an algorithm step are
+     * valid and consistent.
      *
      * @param localParticles: set of local Particles to perform checks on
-     * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
-     * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
-     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-     * @param workOnParticle A function used to determine whether the particle is being worked on in
-     *                       the specific sweep stage of the algorithm step. As arguments, it takes
-     *                       the particle itself and the marker. This should be the same function used
-     *                       in the actual stage of the algorithm step as your code, and should be one
-     *                       of the functions defined in src/swift2/kernels/ParticleState.h
+     * @param marker: a peano4::datamanagement::VertexMarker or
+     * peano4::datamanagement::CellMarker
+     * @param algorithmStepMarkerEnum: Enum representing current main algorithm
+     * step
+     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage
+     * particle is currently in
+     * @param workOnParticle A function used to determine whether the particle
+     * is being worked on in the specific sweep stage of the algorithm step. As
+     * arguments, it takes the particle itself and the marker. This should be
+     * the same function used in the actual stage of the algorithm step as your
+     * code, and should be one of the functions defined in
+     * src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer>
     static void checkAlgorithmStep(
-      Invariant                policy,
-      const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles,
-      const peano4::datamanagement::CellMarker&            marker,
-      typename std::remove_pointer<
-        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-        sweepStageMarkerEnum,
-        ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      Invariant                                 policy,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles,
+      const peano4::datamanagement::CellMarker& marker,
+      PCAlgorithmStepEnum<ParticleContainer>    algorithmStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>       sweepStageMarkerEnum,
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
 
     template <typename ParticleContainer>
     static void checkAlgorithmStep(
-      Invariant                policy,
-      const ParticleContainer& localParticles,
-      const peano4::datamanagement::VertexMarker&            marker,
-      typename std::remove_pointer<
-        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-        sweepStageMarkerEnum,
-      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      Invariant                                   policy,
+      const ParticleContainer&                    localParticles,
+      const peano4::datamanagement::VertexMarker& marker,
+      PCAlgorithmStepEnum<ParticleContainer>      algorithmStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>         sweepStageMarkerEnum,
+      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
 
     /**
-     * @brief Dependency Check: At the final stage of a sweep, i.e. touchVertexLastTime(), check that all
-     * particles hosted by this vertex have completed all their dependencies, i.e. have been localParticles at least
-     * once.
+     * @brief Dependency Check: At the final stage of a sweep, i.e.
+     * touchVertexLastTime(), check that all particles hosted by this vertex
+     * have completed all their dependencies, i.e. have been localParticles at
+     * least once.
      *
      * Within the vertex events touchVertexFirstTime() and
      * touchVertexLastTime(), we have no active and local particles anymore.
@@ -363,111 +412,122 @@ namespace swift2 {
      * called assignedParticles.
      *
      * Throughout the traversal, there are no global active and local
-     * particles: Both sets are views onto the global particle set and they adopt
-     * per cell. These views are not even exclusive, i.e. local particles are
-     * always a subset of active ones. We know that cells update only local
+     * particles: Both sets are views onto the global particle set and they
+     * adopt per cell. These views are not even exclusive, i.e. local particles
+     * are always a subset of active ones. We know that cells update only local
      * particles. Within a subsequent touchVertexLastTime(), every particles has
      * have to be updated, i.e. every particle has been local at least once.
      * Therefore, we write that all particles have to have been local at least
      * once.
      *
-     * @param assignedParticles: set of particles hosted by a vertex to perform checks on
-     * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
+     * @param assignedParticles: set of particles hosted by a vertex to perform
+     * checks on
+     * @param algorithmStepMarkerEnum: Enum representing current main algorithm
+     * step
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
-      Invariant                policy,
-      const ParticleContainer& assignedParticles,
-      typename std::remove_pointer<
-        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-        int spacetreeId
+      Invariant                              policy,
+      const ParticleContainer&               assignedParticles,
+      PCAlgorithmStepEnum<ParticleContainer> algorithmStepMarkerEnum,
+      int                                    spacetreeId
     );
 
 
     /**
-     * @brief Dependency Check: Verify that particles have completed all the algorithm steps and stages of the
-     * initialisation algorithm steps before the current one. Also ensure none of the steps nor stages after the current
-     * one have been performed yet. If an error is found, debug information is printed to stdout
-     * and the program is aborted.
+     * @brief Dependency Check: Verify that particles have completed all the
+     * algorithm steps and stages of the initialisation algorithm steps before
+     * the current one. Also ensure none of the steps nor stages after the
+     * current one have been performed yet. If an error is found, debug
+     * information is printed to stdout and the program is aborted.
      *
-     * This routine is typically inserted after each sweep stage (touchVertexFirstTime, CellKernel,
-     * touchVertesLastTime) of any AlgorithmStep during the initialisation. It ensures that all data
-     * piped into an algorithm step are valid and consistent.
+     * This routine is typically inserted after each sweep stage
+     * (touchVertexFirstTime, CellKernel, touchVertesLastTime) of any
+     * AlgorithmStep during the initialisation. It ensures that all data piped
+     * into an algorithm step are valid and consistent.
      *
      * @param localParticles: set of local Particles to perform checks on
-     * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
-     * @param initStepMarkerEnum: Enum representing current initialisation algorithm step
-     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-     * @param workOnParticle A function used to determine whether the particle is being worked on in
-     *                       the specific sweep stage of the algorithm step. As arguments, it takes
-     *                       the particle itself and the marker. This should be the same function used
-     *                       in the actual stage of the algorithm step as your code, and should be one
-     *                       of the functions defined in src/swift2/kernels/ParticleState.h
+     * @param marker: a peano4::datamanagement::VertexMarker or
+     * peano4::datamanagement::CellMarker
+     * @param initStepMarkerEnum: Enum representing current initialisation
+     * algorithm step
+     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage
+     * particle is currently in
+     * @param workOnParticle A function used to determine whether the particle
+     * is being worked on in the specific sweep stage of the algorithm step. As
+     * arguments, it takes the particle itself and the marker. This should be
+     * the same function used in the actual stage of the algorithm step as your
+     * code, and should be one of the functions defined in
+     * src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer>
     static void checkInitStep(
-      Invariant                policy,
-      const ParticleContainer& localParticles,
-      const peano4::datamanagement::VertexMarker&            marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-        initStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-        sweepStageMarkerEnum,
-      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      Invariant                                   policy,
+      const ParticleContainer&                    localParticles,
+      const peano4::datamanagement::VertexMarker& marker,
+      PCInitStepEnum<ParticleContainer>           initStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>         sweepStageMarkerEnum,
+      ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
 
     template <typename ParticleContainer>
     static void checkInitStep(
-      Invariant                policy,
-      const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles,
-      const peano4::datamanagement::CellMarker&            marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-        initStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-        sweepStageMarkerEnum,
-      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
-      int spacetreeId
+      Invariant                                 policy,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles,
+      const peano4::datamanagement::CellMarker& marker,
+      PCInitStepEnum<ParticleContainer>         initStepMarkerEnum,
+      PCSweepStageEnum<ParticleContainer>       sweepStageMarkerEnum,
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<
+        PCParticle<ParticleContainer>> workOnParticle,
+      int                              spacetreeId
     );
 
     /**
-     * @brief Dependency Check: At the final stage of a sweep (TouchVertexLastTime), check that all
-     * ActiveParticles have completed all their dependencies, i.e. have been localParticles at least
-     * once. This
+     * @brief Dependency Check: At the final stage of a sweep
+     * (TouchVertexLastTime), check that all ActiveParticles have completed all
+     * their dependencies, i.e. have been localParticles at least once. This
      *
      * @param activeParticles: set of active Particles to perform checks on
-     * @param initStepMarkerEnum: Enum representing current initialisation algorithm step
+     * @param initStepMarkerEnum: Enum representing current initialisation
+     * algorithm step
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeInitStep(
-      Invariant                policy,
-      const ParticleContainer& activeParticles,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-        initStepMarkerEnum,
-      int spacetreeId
+      Invariant                         policy,
+      const ParticleContainer&          activeParticles,
+      PCInitStepEnum<ParticleContainer> initStepMarkerEnum,
+      int                               spacetreeId
     );
 
 
     /**
-     * @brief Clear the dependency check counters of the main algorithm step dependency checks. Intended to be called
-     * first thing every new simulation step.
+     * @brief Clear the dependency check counters of the main algorithm step
+     * dependency checks. Intended to be called first thing every new simulation
+     * step.
      *
      * @param localParticles: Set of particles to work on.
      */
     template <typename ParticleContainer>
-    static void clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles);
+    static void clearDependencyChecksAlgorithmStep(
+      const ParticleContainer& localParticles
+    );
 
 
     /**
-     * @brief Clear the dependency check counters of the initialisation step dependency checks. Intended to be called
-     * first thing during initialisation.
+     * @brief Clear the dependency check counters of the initialisation step
+     * dependency checks. Intended to be called first thing during
+     * initialisation.
      *
      * @param localParticles: Set of particles to work on.
      */
     template <typename ParticleContainer>
-    static void clearDependencyChecksInitStep(const ParticleContainer& localParticles);
+    static void clearDependencyChecksInitStep(
+      const ParticleContainer& localParticles
+    );
 
 
   } // namespace dependencychecks
