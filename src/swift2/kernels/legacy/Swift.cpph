@@ -42,11 +42,12 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle) {
   // user provided min and max. If that doesn't fit within
   // the search radius, then the search radius is chosen poorly
   // and needs to be adapted.
+
   if (h * kernel_gamma > particle->getSearchRadius()) {
     particle->setSearchRadius(h * kernel_gamma);
   }
 
-  // particle->setSmoothingLength(h);
+  particle->setSmoothingLength(h);
 
   // Reset left-right bounds outside of the density sweep.
   particle->setSmlIterLeftBound(Particle::getSmlMin());

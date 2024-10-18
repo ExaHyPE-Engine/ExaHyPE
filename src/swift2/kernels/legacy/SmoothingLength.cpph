@@ -45,16 +45,6 @@ void swift2::kernels::legacy::
   const int iteration = localParticle->getSmoothingLengthIterCount();
   localParticle->setSmoothingLengthIterCount(iteration + 1);
 
-
-#if PeanoDebug > 0
-  std::cout << "ParticleID=" << localParticle->getPartid() <<
-    " iter="<< localParticle->getSmoothingLengthIterCount() <<
-    " h=" << localParticle->getSmoothingLength() <<
-    " left=" << left <<
-    " right=" << right <<
-    std::endl;
-#endif
-
   // Condition changes here compared to swift1 because we've done
   // hydro_end_density already
   if (std::abs(localParticle->getWcount() - kernel_root) < 1.e-5 * h_old_dim * kernel_root) {

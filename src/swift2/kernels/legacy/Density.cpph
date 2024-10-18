@@ -108,10 +108,7 @@ void swift2::kernels::legacy::density_kernel(
   // the loop.
   if (
     tarch::la::smallerEquals(r, iactR)
-    and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere
-                                    */
-    // and
-    // not localParticle->getIsBoundaryParticle()
+    and tarch::la::greater(r, 0.0) // Self-contribution is calculated elsewhere
   ) {
 
     const double mj     = activeParticle->getMass();
