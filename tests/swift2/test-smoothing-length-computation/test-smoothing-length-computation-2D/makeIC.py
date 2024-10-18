@@ -26,6 +26,14 @@ parser.add_argument(
     type=int,
     help="Seed for RNG",
 )
+parser.add_argument(
+    "-p",
+    "--plot",
+    dest="plot",
+    action="store_true",
+    default=False,
+    help="Plot historgram of particle positions",
+)
 
 args = parser.parse_args()
 npart = args.particle_number
@@ -40,7 +48,7 @@ v = np.zeros((npart**2, 3))
 ids = np.linspace(1, npart**2, npart**2)
 m = np.ones(npart**2)
 dx = boxSize / npart
-h = np.ones(npart**2) * 1.2 * dx
+h = np.ones(npart**2) * 1.3 * dx
 u = np.ones(npart**2)
 
 # Get uniform coordinates.
@@ -79,12 +87,12 @@ h *= scale
 # and shift them into the center
 coords += 0.4
 
+if args.plot:
+    from matplotlib import pyplot as plt
 
-from matplotlib import pyplot as plt
-
-plt.figure()
-plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
-plt.show()
+    plt.figure()
+    plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
+    plt.show()
 
 
 # File

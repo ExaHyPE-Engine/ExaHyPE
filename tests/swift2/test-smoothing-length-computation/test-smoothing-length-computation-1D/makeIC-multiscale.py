@@ -34,6 +34,7 @@ parser.add_argument(
     default=False,
     help="Plot historgram of particle positions",
 )
+
 args = parser.parse_args()
 npart = args.particle_number
 seed = args.random_seed
@@ -73,7 +74,7 @@ def get_coords(box_min, box_max, npart):
     # uniform particle distribution.
 
     # rng.random returns random numbers in [0, 1). Scale that.
-    displacement = (2.0 * rng.random((npart, 1)) - 1.0) * 0.499 * dx
+    displacement = (2.0 * rng.random((npart, 1)) - 1.0) * 0.2499 * dx
     new_coords[:, 0] += displacement[:, 0]
 
     return new_coords

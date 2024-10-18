@@ -58,6 +58,14 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
+    "-debug",
+    "--debug",
+    dest="debug",
+    action="store_true",
+    default=False,
+    help="Switch on assertions",
+)
+parser.add_argument(
     "-ic",
     "--ic-file",
     dest="ic_filename",
@@ -105,8 +113,8 @@ project = swift2.Project(
     namespace=project_namespace, project_name="TestSML3D", executable="testSML"
 )
 
-cfl_factor = 1e-6
-init_dt = 1.0e-6
+cfl_factor = 0.2
+init_dt = 1.0e-16
 
 offset = [0, 0, 0]
 domain_size = [1, 1, 1]
@@ -117,7 +125,7 @@ periodic_boundary_conditions = [False, False, False]
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
-name = "hydroPart"
+name = "HydroPart"
 
 dimensions = 3  # peano needs this for whatever reason...
 hydro_dimensions = 3  # dimensions for the hydro
@@ -174,11 +182,10 @@ KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
 
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / npart_base
-hydro_H_max = 2 * dx
+hydro_H_max = 8 * dx
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
-print("HYDRO H MAX", hydro_H_max, hydro_h_max)
 particle.h_hydro_max = hydro_h_max
 
 # Modify the eta factor to look for a precise number of neighbours.
@@ -207,7 +214,9 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if args.asserts:
+if  args.debug:
+    build_mode = peano4.output.CompileMode.Debug
+elif args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
 else:
     build_mode = peano4.output.CompileMode.Release
@@ -272,7 +281,6 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     particle_set,
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
-particle_plotter.add_attribute_to_plot(particle.part_id, 1)
 # for some reason, using hydro_dimensions here writes wrong output.
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
@@ -281,7 +289,8 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
+if args.asserts or args.debug:
+    particle_plotter.add_attribute_to_plot(particle.partid, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
 

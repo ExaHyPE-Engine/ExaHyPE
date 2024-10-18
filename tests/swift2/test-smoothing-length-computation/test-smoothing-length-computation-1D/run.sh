@@ -15,9 +15,9 @@ CELL_SIZE=0.1
 H_TOLERANCE=1e-6
 
 
-# rand=$RANDOM
-# echo 'Generating initial conditions with seed' $rand
-# python3 makeIC.py -np $N_PART -s $rand
+rand=$RANDOM
+echo 'Generating initial conditions with seed' $rand
+python3 makeIC.py -np $N_PART -s $rand
 
 for neighbors in 3 5 10; do
     echo running for $neighbors neighbors

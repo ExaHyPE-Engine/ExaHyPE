@@ -26,6 +26,14 @@ parser.add_argument(
     type=int,
     help="Seed for RNG",
 )
+parser.add_argument(
+    "-p",
+    "--plot",
+    dest="plot",
+    action="store_true",
+    default=False,
+    help="Plot historgram of particle positions",
+)
 
 args = parser.parse_args()
 npart = args.particle_number
@@ -66,7 +74,7 @@ for i in range(npart):
 
 rng = np.random.RandomState(seed=seed)
 # rng.random returns random numbers in [0, 1). Scale that.
-displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.299 * dx
+displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.199 * dx
 #  displacement = np.zeros(coords.shape)
 coords[:, 0] += displacement[:, 0]
 coords[:, 1] += displacement[:, 1]
@@ -84,12 +92,12 @@ h *= scale
 # and shift them into the center
 coords += 0.4
 
+if args.plot:
+    from matplotlib import pyplot as plt
 
-from matplotlib import pyplot as plt
-
-plt.figure()
-plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
-plt.show()
+    plt.figure()
+    plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
+    plt.show()
 
 
 # File

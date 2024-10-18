@@ -30,6 +30,14 @@ parser.add_argument(
     type=int,
     help="Seed for RNG",
 )
+parser.add_argument(
+    "-p",
+    "--plot",
+    dest="plot",
+    action="store_true",
+    default=False,
+    help="Plot historgram of particle positions",
+)
 
 args = parser.parse_args()
 npart = args.particle_number
@@ -118,11 +126,12 @@ h *= scale
 coords += 0.4
 
 
-from matplotlib import pyplot as plt
+if args.plot:
+    from matplotlib import pyplot as plt
 
-plt.figure()
-plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
-plt.show()
+    plt.figure()
+    plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
+    plt.show()
 
 
 # File
