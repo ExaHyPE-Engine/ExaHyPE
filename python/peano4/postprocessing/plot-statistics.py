@@ -19,7 +19,9 @@ if __name__ == "__main__":
 Peano 4 statistics postprocessing
 
 Plotter for statistics over time. The plotter works only for numerical
-data dumped as four tuple over time.
+data dumped as four tuple over time. Use inspect-statistics.py first
+to see what the indices of the individual column are and what semantics
+they have.
 
 """)
   parser.add_argument("file", help="filename of examine")
@@ -48,12 +50,21 @@ data dumped as four tuple over time.
   if args.output=="pdf" or args.output=="png":    
     plt.clf()
 
+  #
+  # Every entry of interest is characterised through a time stamp and a 
+  # measurement output from Peano. Measureemnt outputs always tell you 
+  # the (average) value, the min value, the max value and the number of 
+  # samples.
+  #
   timestamps = []
   values     = []
   min_values = []
   max_values = []
   samples    = []
   for column in columns:
+    #
+    # Read input file
+    #
     input_file = open( args.file, "r" )
     metric = None
     for line in input_file:
@@ -65,12 +76,17 @@ data dumped as four tuple over time.
         token      = line.split( "," )[column].strip()
         if token!="":
           timestamps.append(time_stamp )
-          values.append( float( token.split("(")[1].split("/")[0])  )
+          value = float( token.split("(")[1].split("/")[0])
+          values.append( value )
           min_values.append( float( token.split("/")[1])  )
           max_values.append( float( token.split("/")[2])  )
           samples.append( float( token.split("/#")[1].split(")")[0])  )
+    #
+    # Dump csv
+    #
     if args.output=="csv":
       output_file = open( args.file + "-column-" + str(column) + ".csv", "w" )
+      output_file.write( "time, value, min, max, count\n" )
       for data in zip(timestamps,values,min_values,max_values,samples):
         entries_per_row = 5
         for i in range(0,entries_per_row-1):

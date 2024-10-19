@@ -40,6 +40,7 @@ namespace {
   tarch::logging::Log _log("tarch::multicore");
 
   const std::string BSPConcurrencyLevelStatisticsIdentifier("tarch::multicore::bsp-concurrency-level");
+  const std::string SpawnedTasksStatisticsIdentifier("tarch::multicore::spawned-tasks");
   const std::string GlobalPendingTasksStatisticsIdentifier("tarch::multicore::global-pending-tasks");
   const std::string ThreadLocalPendingTasksStatisticsIdentifier("tarch::multicore::thread-local-pending-tasks");
   const std::string FuseTasksStatisticsIdentifier("tarch::multicore::fuse-tasks");
@@ -253,6 +254,8 @@ void tarch::multicore::spawnTask(
 ) {
   assertion(task != nullptr);
 
+  ::tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1.0, false, true);
+
   if (taskNumber == NoOutDependencies and inDependencies.empty()) {
     int threadNumber = Core::getInstance().getThreadNumber();
     assertion1(threadNumber >= 0, threadNumber);
@@ -260,19 +263,21 @@ void tarch::multicore::spawnTask(
 
 #ifdef UseSmartMPI
     if (task->isSmartMPITask() and smartmpi::spawn(dynamic_cast<smartmpi::Task*>(task))) {
-    } else
+    }
+    else
 #endif
       if (localNonblockingTasks[threadNumber]->tasks.size() >= orchestrationStrategy->getNumberOfTasksToHoldBack(task->getTaskType())) {
-      logDebug("spawnTasks(int)", "spawn native task of type " << task->getTaskType());
+      logInfo("spawnTasks(int)", "spawn native task of type " << task->getTaskType());
       native::spawnTask(task, std::set<TaskNumber>(), NoOutDependencies);
-    } else {
+    }
+    else {
       tarch::multicore::Lock lock(localNonblockingTasks[threadNumber]->semaphore);
       localNonblockingTasks[threadNumber]->tasks.push_back(task);
       lock.free();
 
       ::tarch::logging::Statistics::getInstance().log(ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber]->tasks.size());
 
-      logDebug("spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber]->tasks.size() << ")");
+      logInfo("spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber]->tasks.size() << ")");
 
       auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice(task->getTaskType());
       if (localNonblockingTasks[threadNumber]->tasks.size() >= fusionCommand.minTasks and orchestrationStrategy->fuseTasksImmediatelyWhenSpawned(task->getTaskType())) {
@@ -280,7 +285,8 @@ void tarch::multicore::spawnTask(
         internal::fusePendingTasks(fusionCommand);
       }
     }
-  } else {
+  }
+  else {
     tarch::multicore::native::spawnTask(task, inDependencies, taskNumber);
   }
 }
