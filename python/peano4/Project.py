@@ -80,9 +80,8 @@ class Project (object):
 
     if executable:
       self.output.makefile.set_executable_name(executable)
-    
-    self.is_extended = False
 
+    self.is_extended = False
 
 
   def __str__(self):
@@ -185,8 +184,7 @@ class Project (object):
     if not self.is_generated:
       self.generate()
 
-    from peano4.output.Helper import find_CMake_build_dir
-    if make and find_CMake_build_dir() == "":
+    if make:
       if make_clean_first:
         print("clean up project ... in {}".format(self.directory))
         try:

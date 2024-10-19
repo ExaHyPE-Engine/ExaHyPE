@@ -21,6 +21,7 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
     endif()
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
+      EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime
       LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}

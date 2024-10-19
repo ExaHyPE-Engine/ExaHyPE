@@ -31,13 +31,6 @@
 AC_INIT([Peano], [4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
-# Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers).
-# These flags are appended to every target (Debug, Release, Trace, Asserts, Stats).
-# To override these defaults, they need to be set between AC_INIT and AC_PROG_CXX for C++
-# and AC_PROG_CC for C.
-# If the flags are empty at this stage (user has not given flags), then we set the flags to none
-# (empty string), so that "-g -O2" is not appended to every target.
-# See Automake documentation and the Stack Overflow post:
 # https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
 if test -z "$CXXFLAGS"; then
   CXXFLAGS=' '
@@ -148,16 +141,16 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading,
-  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb,sycl]]),
+  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,omp,tbb,sycl,cpp]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
-      cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
+      omp)    AC_MSG_RESULT([build with OpenMP]);                    multithreading=omp ;;
       tbb)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb ;;
-      omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
       sycl)   AC_MSG_RESULT([build with SYCL tasking on host]);      multithreading=sycl ;;
-      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
+      cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
+      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, tbb, sycl, or cpp to define target]); multithreading=false ;;
     esac
   ],
   [
@@ -173,7 +166,7 @@ fi
 
 if test "$multithreading" == tbb; then
   AC_DEFINE([SharedTBB], [1], [SharedTBB])
-  
+
   CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   -Isrc/tbb"
   CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE -Isrc/tbb"
   CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS -DTBB_USE_ASSERT -Isrc/tbb"
@@ -185,7 +178,7 @@ if test "$multithreading" == tbb; then
   CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS -DTBB_USE_ASSERT -Isrc/tbb"
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   -DTBB_USE_ASSERT -Isrc/tbb"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   -DTBB_USE_ASSERT -Isrc/tbb"
-  
+
   LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/tbb "
   LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/tbb "
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/tbb "
@@ -257,11 +250,11 @@ AC_ARG_WITH(
   [
     AC_MSG_CHECKING(for gpu)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                                   gpu=false ;;
-      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);                 gpu=omp ;;
-      sycl)  AC_MSG_RESULT(build with SYCL GPU support);                          gpu=sycl ;;
-      cpp)   AC_MSG_RESULT(build with C++ GPU support);                           gpu=cpp ;;
-      hip)   AC_MSG_RESULT(build with HIP GPU support);                           gpu=hip ;;
+      no)    AC_MSG_RESULT(no);                                             gpu=false ;;
+      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);           gpu=omp ;;
+      sycl)  AC_MSG_RESULT(build with SYCL GPU support);                    gpu=sycl ;;
+      cpp)   AC_MSG_RESULT(build with C++ GPU support);                     gpu=cpp ;;
+      hip)   AC_MSG_RESULT(build with HIP GPU support);                     gpu=hip ;;
       *)     AC_MSG_FAILURE([use omp, sycl, cpp or hip to define target]);  gpu=false ;;
     esac
   ],

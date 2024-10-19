@@ -23,15 +23,3 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
   else:
     print("Error: undefined overwrite strategy")
     return True
-
-def find_CMake_build_dir():
-  """
-  :return: The path to the CMake build directory if found, or an empty string otherwise.
-  :rtype: str
-  """
-  if 'PEANO_ROOT' in os.environ:
-    return os.environ['PEANO_ROOT']
-  elif 'PEANO_BUILD_DIR' in os.environ:
-    return os.environ['PEANO_BUILD_DIR']
-  else:
-    return ""

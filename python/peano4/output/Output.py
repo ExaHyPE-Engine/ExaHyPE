@@ -32,6 +32,7 @@ class Output(object):
     else:
       self.artefacts = [artefact] + self.artefacts
 
+
   def generate(self,overwrite,directory,subdirectories=[]):
     """
     Iterates over all stored artefacts and, hence, finally generates all the

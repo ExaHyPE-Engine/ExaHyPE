@@ -77,46 +77,24 @@ add_library(PeanoInterface INTERFACE)
 target_compile_features(PeanoInterface INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 install(TARGETS PeanoInterface EXPORT PeanoTargets)
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang|GNU|Intel|IntelLLVM")
-  target_compile_options(PeanoInterface INTERFACE
-    -w
-    -W
-    -Wall
-    -Wextra
-    -pedantic
-    -Wpedantic
-    -Wshadow
-    -Wunused
-    -Wno-attributes
-    #-Wno-unknown-attributes
-    -Wnon-virtual-dtor
-    -Wreturn-type
-    -Wno-system-headers
-    #-flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
-    #-ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
-    #-fno-elide-constructors # Disables RVO. For testing purposes only, should be disabled in production code. https://shaharmike.com/cpp/rvo/
-    $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
-  )
-elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   target_compile_options(PeanoInterface INTERFACE
     -W
     -Wall
     --diag_suppress=unrecognized_attribute
   )
-elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
+else()
   target_compile_options(PeanoInterface INTERFACE
-    $<$<COMPILE_LANGUAGE:CXX>:/MP> # Use as many cores as available for compilation. https://blog.kitware.com/cmake-building-with-all-your-cores/
-    $<$<COMPILE_LANGUAGE:CXX>:/W4> #/Wall # Baseline reasonable warnings.
-    $<$<COMPILE_LANGUAGE:CXX>:/permissive-> # Standards conformance mode for MSVC compiler. https://docs.microsoft.com/de-de/cpp/build/reference/permissive-standards-conformance?view=vs-2019
-    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/Oi>>
-    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/O2>>
-    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/Ot>>
-    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GL>>
-    $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GF>>
-  )
-  target_link_options(PeanoInterface INTERFACE
-    $<$<CONFIG:Release>:/OPT:REF>
-    $<$<CONFIG:Release>:/LTCG>
+    -w
+    -W
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wno-attributes
+    -Wnon-virtual-dtor
+    -Wreturn-type
+    -Wno-system-headers
+    $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
   )
 endif()
 
@@ -179,8 +157,9 @@ set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${AVAILABLE_MULTITHREADI
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-  target_link_libraries(PeanoInterface INTERFACE OpenMP::OpenMP_CXX)
+  target_compile_options(PeanoInterface INTERFACE ${OpenMP_CXX_FLAGS})
   target_link_options(PeanoInterface INTERFACE ${OpenMP_CXX_FLAGS})
+  target_include_directories(PeanoInterface INTERFACE ${OpenMP_CXX_INCLUDE_DIRS})
   target_compile_definitions(PeanoInterface INTERFACE SharedOMP)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
@@ -280,15 +259,15 @@ set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
-  target_compile_definitions(PeanoInterface INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
-  target_compile_definitions(PeanoInterface INTERFACE Parallel)
   target_link_libraries(PeanoInterface INTERFACE MPI::MPI_CXX)
+  target_compile_definitions(PeanoInterface INTERFACE Parallel)
+  #target_compile_definitions(PeanoInterface INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
 endif()
 
 if(WITH_OTTER)
   find_package(Otter CONFIG)
-  target_compile_definitions(PeanoInterface INTERFACE UseOtter)
   target_link_libraries(PeanoInterface INTERFACE Otter::Otter)
+  target_compile_definitions(PeanoInterface INTERFACE UseOtter)
 endif()
 
 if(WITH_PETSC)
@@ -304,27 +283,27 @@ endif()
 
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
-  target_compile_definitions(PeanoInterface INTERFACE UseLibXSMM)
   target_link_libraries(PeanoInterface INTERFACE LIBXSMM::LIBXSMM)
+  target_compile_definitions(PeanoInterface INTERFACE UseLibXSMM)
 endif()
 
 if(WITH_VTK)
   find_package(VTK REQUIRED)
-  target_compile_definitions(PeanoInterface INTERFACE UseVTK)
   target_link_libraries(PeanoInterface INTERFACE VTK::CommonCore)
+  target_compile_definitions(PeanoInterface INTERFACE UseVTK)
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
-  target_compile_definitions(PeanoInterface INTERFACE UseHDF5)
   target_link_libraries(PeanoInterface INTERFACE HDF5::HDF5)
+  target_compile_definitions(PeanoInterface INTERFACE UseHDF5)
 endif()
 
 if(WITH_NETCDF)
   find_package(NetCDF REQUIRED)
-  target_compile_definitions(PeanoInterface INTERFACE UseNetCDF)
   target_link_libraries(PeanoInterface INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
   target_include_directories(PeanoInterface INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
+  target_compile_definitions(PeanoInterface INTERFACE UseNetCDF)
 endif()
 
 if(ENABLE_LOADBALANCING)
@@ -362,11 +341,6 @@ target_include_directories(PeanoInterface INTERFACE
 
 add_subdirectory(src)
 
-export(EXPORT PeanoTargets
-  FILE ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
-  NAMESPACE ${PEANO_PROJECT_NAME}::
-)
-
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
@@ -388,8 +362,16 @@ install(DIRECTORY
 
 install(FILES
   ${CMAKE_SOURCE_DIR}/LICENSE
-  ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
-  ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+
+export(EXPORT ${PEANO_PROJECT_NAME}Targets
+  FILE ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
+  NAMESPACE ${PEANO_PROJECT_NAME}::
+)
+
+install(FILES
+  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}CMakeCache.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}ConfigVersion.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake

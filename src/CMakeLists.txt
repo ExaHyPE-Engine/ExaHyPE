@@ -13,18 +13,16 @@ set(SOURCE_EXTENSIONS_TO_GLOB
   "*.c++"
   "*.cpp"
   "*.cu"
-  "*.csnippet"
 )
 set(HEADER_EXTENSIONS_TO_GLOB
   "*.h"
   "*.hxx"
   "*.h++"
   "*.hpp"
-  "*.cuh"
   "*.cpph"
+  "*.cuh"
   "*.inc"
   "*.inl"
-  "*.hsnippet"
 )
 
 add_subdirectory(tarch)

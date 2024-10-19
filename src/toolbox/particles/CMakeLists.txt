@@ -17,6 +17,7 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
     target_compile_options(ToolboxParticles${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
     install(TARGETS ToolboxParticles${dimension}d_${mode_lower}
+      EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime
       LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}

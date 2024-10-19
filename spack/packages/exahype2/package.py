@@ -109,7 +109,7 @@ class Exahype2(CMakePackage, CudaPackage):
             "-DENABLE_LOADBALANCING=ON",
             "-DENABLE_BLOCKSTRUCTURED=ON",
             "-DENABLE_EXAHYPE=ON",
-            "-DWITH_LIBXSMM=ON",
+            "-DWITH_LIBXSMM=OFF",
             self.define_from_variant("WITH_DIMENSIONS", "dimensions"),
             self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
             self.define_from_variant("WITH_MPI", "mpi"),
@@ -136,9 +136,4 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def setup_run_environment(self, env):
         env.prepend_path("PEANO_ROOT", self.spec.prefix)
-        env.prepend_path("PEANO_BUILD_DIR", self.spec.prefix)
-        env.prepend_path("EXAHYPE_ROOT", self.spec.prefix)
-        env.prepend_path("EXAHYPE_BUILD_DIR", self.spec.prefix)
-        env.prepend_path("EXAHYPE2_ROOT", self.spec.prefix)
-        env.prepend_path("EXAHYPE2_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")

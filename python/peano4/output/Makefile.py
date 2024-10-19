@@ -3,14 +3,10 @@
 import os
 import re
 import sys
-import shutil
 import subprocess
 import jinja2
 
 from .Helper import write_file
-from .Helper import find_CMake_build_dir
-
-from .Overwrite import Overwrite
 
 from .CompileMode import CompileMode
 
@@ -145,6 +141,7 @@ the SISC paper
         self.d["DIM"] = "2"
         self.d["CONFIGUREPATH"] = "."
         self.d["EXECUTABLENAME"] = ""
+        self.d["CMAKE_BUILD_DIR"] = "."
         self.d["FORTRAN_MODULES"] = []
         self.d["GENERATED_INCLUDE_DIRS"] = set()
         self.d["APP_SUBDIRECTORIES"] = []
@@ -268,13 +265,25 @@ the SISC paper
         """
         directory should point to the directory which holds the ./configure script.
         It furthermore has to be invoked after configure has passed successfully.
-        This script does not accept relative paths. We then search for the subdirector
+        This script does not accept relative paths. We then search for the subdirectory
         src and parse the Makefile there.
         """
+        if 'PEANO_ROOT' in os.environ:
+          directory = os.environ['PEANO_ROOT']
+
         self.d["CONFIGUREPATH"] = directory
-        if find_CMake_build_dir() != "":
+
+        if 'PEANO_CMAKE_BUILD_DIR' in os.environ:
+            self.d["CMAKE_BUILD_DIR"] = os.environ['PEANO_CMAKE_BUILD_DIR']
+        else:
+            for root, _, files in os.walk(directory):
+                if "PeanoTargets.cmake" in files:  # Take first occurrence
+                    self.d["CMAKE_BUILD_DIR"] = root
+
+        if self.d["CMAKE_BUILD_DIR"] != "":
             return
 
+        # Continue with Automake-only stuff
         MakefileDefined = [
             "Parallel",
             "SharedOMP",
@@ -352,19 +361,6 @@ did search for a file """
                             self.d[constant] = flags
                         except:
                             print("Error in " + line + " for token " + constant)
-
-            # A posteriori fix for openmp flag propagation
-            if "-fopenmp-targets" in self.d["CXXFLAGS"]:
-                val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
-                new_entry = " -fopenmp -fopenmp-targets={} ".format(val)
-                print("used OpenMP GPU offloading. Augment linker with " + new_entry)
-                self.d["LDFLAGS"] += new_entry
-            elif "-fopenmp" in self.d["CXXFLAGS"]:
-                # val = self.d["CXXFLAGS"].split("-fopenmp")[-1].split()[0]
-                new_entry = " -fopenmp "
-                print("used OpenMP tasking backend. Augment linker with " + new_entry)
-                self.d["LDFLAGS"] += " -fopenmp "
-                # self.d["LDFLAGS"] += " -fopenmp ".format(val)
 
         except IOError:
             print(
@@ -542,14 +538,12 @@ then this message can typically be ignored.
         :param directory: The directory where the generated files will be placed.
         :type directory: str
         """
-        self.d["CMAKE_BUILD_DIR"] = find_CMake_build_dir()
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
         self.d["FORTRAN_SOURCES"] = self.fortranfiles
         self.d["GENERATED_H_HEADERS"] = self.generated_hfiles
         self.d["GENERATED_CXX_SOURCES"] = self.generated_cppfiles
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
-        self.d["GENERATOR"] = sys.argv[0]
         if subdirectories:
             for subdirectory in subdirectories:
                 self.d["APP_SUBDIRECTORIES"].append(subdirectory)
@@ -568,7 +562,9 @@ then this message can typically be ignored.
 
         generate_output_file(os.path.join(file_dir, "Gitignore.template"), os.path.join(directory, ".gitignore"))
 
-        if find_CMake_build_dir() != "":
+        if self.d["CMAKE_BUILD_DIR"] != "":
             generate_output_file(os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
+            # Shortcut to the CMake build. Used to mirror Autotools.
+            generate_output_file(os.path.join(file_dir, "Makefile.cmake.template"), os.path.join(directory, "Makefile"))
         else:
             generate_output_file(os.path.join(file_dir, "Makefile.template"), os.path.join(directory, "Makefile"))
