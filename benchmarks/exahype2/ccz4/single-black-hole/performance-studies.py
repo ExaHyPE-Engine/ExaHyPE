@@ -31,6 +31,7 @@ from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - CCZ4-Performance studies benchmarking script"
@@ -88,14 +89,7 @@ if __name__ == "__main__":
         default=1.8,
         help="Minimal cell size (AMR) or regular mesh cell size (without AMR), default=1.8",
     )
-    parser.add_argument(
-        "-asserts",
-        "--asserts",
-        dest="asserts",
-        action="store_true",
-        default=False,
-        help="Switch on assertions",
-    )
+    parser.add_argument("-m",   "--mode",               dest="mode",           choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes) )
     parser.add_argument(
         "-amr",
         "--amr",
@@ -261,11 +255,6 @@ if __name__ == "__main__":
     # Build the project
     ########################################################################################
 
-    if args.asserts:
-        build_mode = peano4.output.CompileMode.Asserts
-    else:
-        build_mode = peano4.output.CompileMode.Release
-
     if args.plot:
       plot_interval = args.end_time
     else:
@@ -287,7 +276,7 @@ if __name__ == "__main__":
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    project.set_Peano4_installation(args.peanodir, build_mode)
+    project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
 
     if args.load_balancing_metric=="generic":
       project.set_load_balancing(
