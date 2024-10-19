@@ -36,22 +36,21 @@ list(APPEND SOURCES
 
 string(TOLOWER "{{MODE}}" mode_lower)
 
-# Create executable and link against all required core stuff
 add_executable({{EXECUTABLENAME}})
 target_sources({{EXECUTABLENAME}} PRIVATE ${SOURCES})
-target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoInterface Peano::Tarch_${mode_lower} Peano::Peano4Core{{DIM}}d_${mode_lower})
+target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoInterface)
 target_include_directories({{EXECUTABLENAME}} PRIVATE ${CMAKE_SOURCE_DIR} ${GENERATED_INCLUDE_DIRS})
 target_link_options({{EXECUTABLENAME}} PRIVATE ${GENERATED_LDFLAGS})
 target_compile_definitions({{EXECUTABLENAME}} PRIVATE Dimensions={{DIM}} ${GENERATED_COMPILE_DEFINITIONS})
 
-# (Optional): Link against additional extension targets, if they exist
+# Link against additional extension targets, if they exist
 
 if(TARGET Peano::ToolboxLoadBalancing{{DIM}}d_${mode_lower})
   target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxLoadBalancing{{DIM}}d_${mode_lower})
 endif()
 
-if(TARGET Peano::ToolboxBlockstructured{{DIM}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxBlockstructured{{DIM}}d_${mode_lower})
+if(TARGET Peano::ToolboxBlockStructured{{DIM}}d_${mode_lower})
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxBlockStructured{{DIM}}d_${mode_lower})
 endif()
 
 if(TARGET Peano::ToolboxParticles{{DIM}}d_${mode_lower})
