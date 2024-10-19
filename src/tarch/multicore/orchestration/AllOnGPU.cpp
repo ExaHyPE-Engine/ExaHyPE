@@ -1,9 +1,12 @@
 #include "AllOnGPU.h"
 
+#include "tarch/accelerator/Device.h"
 #include <limits>
+#include "../Task.h"
 
 tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
   _device(device),
+  _deviceToUse(device==RoundRobin ? 0 : _device),
   _isInBspSection(false) {}
 
 void tarch::multicore::orchestration::AllOnGPU::startBSPSection(int nestedParallelismLevel) {
@@ -18,24 +21,30 @@ void tarch::multicore::orchestration::AllOnGPU::endBSPSection(int nestedParallel
   }
 }
 
-int tarch::multicore::orchestration::AllOnGPU::getNumberOfTasksToHoldBack(int taskType) {
-  return _isInBspSection ? std::numeric_limits<int>::max() : 0;
+tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orchestration::AllOnGPU::fuse(int taskType) {
+  if (_device==RoundRobin) toggleDevice();
+  return FuseInstruction(_deviceToUse, 1, std::numeric_limits<int>::max());
 }
 
-tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orchestration::AllOnGPU::
-  getNumberOfTasksToFuseAndTargetDevice(int taskType) {
-  return _isInBspSection
-           ? FuseInstruction(-1, std::numeric_limits<int>::max(), 0)
-           : FuseInstruction(_device, 1, std::numeric_limits<int>::max());
-}
 
-bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned(int taskType) { return false; }
-
-tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::
-  paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::paralleliseForkJoinSection(
+  int nestedParallelismLevel,
+  int numberOfTasks,
+  int codeLocationIdentifier
+) {
   if (nestedParallelismLevel <= 1) {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndFuseTasksManuallyAfterwards;
   } else {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
+  }
+}
+
+
+void tarch::multicore::orchestration::AllOnGPU::toggleDevice() {
+  if (tarch::accelerator::Device::getInstance().getNumberOfDevices() == 0) {
+    _deviceToUse = Task::Host;
+  } else {
+    _deviceToUse++;
+    _deviceToUse = _deviceToUse % tarch::accelerator::Device::getInstance().getNumberOfDevices();
   }
 }

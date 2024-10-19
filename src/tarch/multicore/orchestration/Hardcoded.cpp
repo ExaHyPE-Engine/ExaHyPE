@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "tarch/multicore/Tasks.h"
+#include "../Task.h"
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBSP() {
   return new Hardcoded(
@@ -69,18 +69,12 @@ void tarch::multicore::orchestration::Hardcoded::startBSPSection(int nestedParal
 
 void tarch::multicore::orchestration::Hardcoded::endBSPSection(int nestedParallelismLevel) {}
 
-int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack(int taskType) { return _numberOfTasksToHoldBack; }
-
-tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::
-  getNumberOfTasksToFuseAndTargetDevice(int taskType) {
+tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::fuse(int taskType) {
   return tarch::multicore::orchestration::Hardcoded::FuseInstruction(
     _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse
   );
 }
 
-bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned(int taskType) {
-  return _fuseTasksImmediatelyWhenSpawned;
-}
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::
   paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
@@ -89,6 +83,6 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
   } else if (nestedParallelismLevel <= 1) {
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   } else {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndFuseTasksManuallyAfterwards;
   }
 }

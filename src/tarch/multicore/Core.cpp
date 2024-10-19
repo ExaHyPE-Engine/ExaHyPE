@@ -2,7 +2,7 @@
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/Tasks.h"
+#include "Task.h"
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>

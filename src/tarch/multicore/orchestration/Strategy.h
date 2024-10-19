@@ -6,6 +6,8 @@ namespace tarch {
   namespace multicore {
     namespace orchestration {
       class Strategy;
+
+      Strategy* createDefaultStrategy();
     } // namespace orchestration
   }   // namespace multicore
 } // namespace tarch
@@ -33,7 +35,12 @@ public:
    *   feature does not exist in OpenMP, e.g., and therefore we do not
    *   use such a flag.
    */
-  enum class ExecutionPolicy { RunSerially, RunParallel, RunParallelAndIgnoreWithholdSubtasks };
+  enum class ExecutionPolicy {
+    RunSerially,
+    RunParallel,
+    RunParallelAndFuseTasksManuallyAfterwards,
+    RunParallelAndMapAllPendingFuseTasksOntoNativeTasksAfterwards
+  };
 
   struct FuseInstruction {
     int device;
@@ -58,7 +65,7 @@ public:
   virtual void startBSPSection(int nestedParallelismLevel) = 0;
 
   /**
-   *
+   * Notifies the strategy that we leave a BSP (fork-join) section
    */
   virtual void endBSPSection(int nestedParallelismLevel) = 0;
 
@@ -66,6 +73,9 @@ public:
 
   /**
    * How many tasks shall system hold back from tasking runtime in user-defined queues
+   *
+   *
+   * @todo Docu
    *
    * Tell the runtime system how many tasks to hold back: If there
    * are more tasks than the result, the tasking system will map them
@@ -123,7 +133,7 @@ public:
    *   EndOfBSPSection if it is not asked for a particular task
    *   type or, well, at the end of a fork-join part.
    */
-  virtual int getNumberOfTasksToHoldBack(int taskType) = 0;
+
 
   /**
    * How many tasks to fuse and to which device to deploy
@@ -144,13 +154,7 @@ public:
    *   EndOfBSPSection if it is not asked for a particular task
    *   type or, well, at the end of a fork-join part.
    */
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) = 0;
-
-  /**
-   * If you set this flag, tasks are immediately fused. You can ensure
-   * that only idling threads fuse tasks. In this case, return false.
-   */
-  virtual bool fuseTasksImmediatelyWhenSpawned(int taskType) = 0;
+  virtual FuseInstruction fuse(int taskType) = 0;
 
   /**
    * Determine how to handle/realise parallelisation within fork/join region
@@ -172,8 +176,10 @@ public:
    *   0 would mean that no fork/join region has been opened. For such a
    *   parameter, the code would not query this function.
    *
-   * @param taskType We assume that all numberOfTasks tasks are of the same
-   *   type.
+   * @param taskType If we enter a fork-join section, this section logically
+   *   spawns a set of tasks, which are all of the same type. So the task type
+   *   here is given implicitly by the code location. But each BSP section has
+   *   a unique identifier.
    */
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) = 0;
 };
