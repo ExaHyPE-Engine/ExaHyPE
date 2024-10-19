@@ -180,7 +180,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         return (
             ReconstructPatchAndApplyFunctor.get_includes(self)
             + """
-#include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/Task.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/"""
             + self._solver._name
