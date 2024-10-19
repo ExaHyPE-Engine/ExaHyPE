@@ -6,7 +6,7 @@
 #include "config.h"
 
 
-#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW) and defined(SharedTBB)
 
 
 #include <functional>
