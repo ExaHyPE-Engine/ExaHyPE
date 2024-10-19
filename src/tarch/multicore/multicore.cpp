@@ -13,33 +13,19 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/Task.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 
 #include "tarch/logging/Statistics.h"
 
 
 namespace {
-  /**
-   * Task queue of tasks which we hold back
-   */
-  struct NonblockingTasks {
-    NonblockingTasks()                        = default;
-    ~NonblockingTasks()                       = default;
-    NonblockingTasks(const NonblockingTasks&) = delete;
-
-    typedef std::list<tarch::multicore::Task*> Tasks;
-    Tasks                                      tasks;
-    tarch::multicore::BooleanSemaphore         semaphore;
-  };
-
-  NonblockingTasks               pendingTasksThatCanBeFused;
-
   tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
 
   tarch::logging::Log _log("tarch::multicore");
 
   const std::string BSPConcurrencyLevelStatisticsIdentifier("tarch::multicore::bsp-concurrency-level");
   const std::string SpawnedTasksStatisticsIdentifier("tarch::multicore::spawned-tasks");
-} // namespace
+}
 
 
 void tarch::multicore::initSmartMPI() {
@@ -128,13 +114,13 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
         ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true);
         native::spawnAndWaitAsTaskLoop(tasks);
         ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
-        internal::fusePendingTasks();
+        taskfusion::fusePendingTasks();
         break;
       case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndMapAllPendingFuseTasksOntoNativeTasksAfterwards:
         ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true);
         native::spawnAndWaitAsTaskLoop(tasks);
         ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
-        internal::mapPendingTasksOntoNativeTasks();
+        taskfusion::mapPendingTasksOntoNativeTasks();
         break;
     }
 
@@ -147,6 +133,12 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
 }
 
 
+void tarch::multicore::waitForAllTasks() {
+  tarch::multicore::taskfusion::processPendingTasksOnHost();
+  native::waitForAllTasks();
+}
+
+
 void tarch::multicore::spawnTask(
   Task*                        task,
   const std::set<TaskNumber>&  inDependencies,
@@ -154,7 +146,7 @@ void tarch::multicore::spawnTask(
 ) {
   assertion(task != nullptr);
 
-  ::tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, static_cast<int>(tasks.size()), false, true);
+  ::tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
   }
