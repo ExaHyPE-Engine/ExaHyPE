@@ -57,9 +57,11 @@ namespace tarch {
        *
        *
        * @param taskType Unique task (type) number for this task.
+       *   Pass in DontFuse if you don't want this task to be fused.
        *
        * @param priority Integer value that indicates what priority you want to
-       *        assign a task. Value has to be non-negative.
+       *        assign a task. Value has to be non-negative. Use
+       *        DefaultPriority if there is no bespoke priority.
        */
       Task(int taskType, int priority);
 
