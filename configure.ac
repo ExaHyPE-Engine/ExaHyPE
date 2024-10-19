@@ -141,13 +141,14 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading,
-  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,omp,tbb,sycl,cpp]]),
+  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,omp,tbb,tbb_extension,sycl,cpp]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
       omp)    AC_MSG_RESULT([build with OpenMP]);                    multithreading=omp ;;
       tbb)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb ;;
+      tbb_extension)    AC_MSG_RESULT([build with TBB]);             multithreading=tbb_extension ;;
       sycl)   AC_MSG_RESULT([build with SYCL tasking on host]);      multithreading=sycl ;;
       cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, tbb, sycl, or cpp to define target]); multithreading=false ;;
@@ -166,6 +167,13 @@ fi
 
 if test "$multithreading" == tbb; then
   AC_DEFINE([SharedTBB], [1], [SharedTBB])
+  AC_DEFINE([SharedTBB], [1], [SharedTBB])
+  AC_DEFINE([SharedTBB], [1], [SharedTBB])
+fi
+
+if test "$multithreading" == tbb_extension; then
+  AC_DEFINE([SharedTBB], [1], [SharedTBB])
+  AC_DEFINE([SharedTBBExtension], [1], [SharedTBBExtension])
 
   CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   -Isrc/tbb"
   CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE -Isrc/tbb"
@@ -196,10 +204,8 @@ if test "$multithreading" == tbb; then
   LDADD_PEANO_3D_ASSERTS+=" -ltbb_extension_debug"
   LDADD_PEANO_3D_TRACE+="   -ltbb_extension_trace"
   LDADD_PEANO_3D_DEBUG+="   -ltbb_extension_debug"
-
 fi
-AM_CONDITIONAL([UseTBB], [test "x$multithreading" = xtbb])
-
+AM_CONDITIONAL([UseTBBExtension], [test "x$multithreading" = xtbb_extension])
 
 if test "$multithreading" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])

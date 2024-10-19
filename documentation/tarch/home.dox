@@ -12,6 +12,5 @@
 \li \subpage page_tarch_multicore 
 \li \subpage tarch_accelerator_SYCL
 \li \subpage tarch_NoncriticalAssertions
-\li \ref tarch::multicore Multicore layer
 
 */
