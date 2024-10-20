@@ -33,7 +33,7 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
   int codeLocationIdentifier
 ) {
   if (nestedParallelismLevel <= 1) {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndFuseTasksManuallyAfterwards;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   } else {
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
   }

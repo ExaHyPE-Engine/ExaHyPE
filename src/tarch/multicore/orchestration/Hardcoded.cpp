@@ -80,9 +80,7 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
   paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
   if (nestedParallelismLevel > _maxNestedConcurrency) {
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
-  } else if (nestedParallelismLevel <= 1) {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   } else {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndFuseTasksManuallyAfterwards;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   }
 }

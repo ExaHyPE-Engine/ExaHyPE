@@ -1,40 +1,77 @@
- // This file is part of the Peano project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
 
+#include <set>
+
+#include "tarch/multicore/multicore.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+
+
 namespace tarch {
   namespace multicore {
-    namespace internal {
+    /**
+     * Forward declaration
+     */
+    class Task;
+
+    /**
+     * @namespace tarch::multicore::taskfusion Task fusion
+     *
+     * Task fusion is now relatively easy and all mapped onto plain old tasks:
+     * Whenever we get a task (in the example below we get three yellow tasks)
+     * with dependencies, we split each task up into two tasks each:
+     *
+     * @image html multicore_task_flow-00.png
+     *
+     * One task is a preparation task, and the other one is the actual
+     * processing. The prep task has all the complex incoming dependencies. The
+     * processing task is part of a straight task sequence. Both the prep task
+     * and the processing task know the actual task, which is not part of the
+     * actual task graph anymore. It is associated with these two wrapper
+     * classes.
+     *
+     * @image html multicore_task_flow-01.png
+     *
+     * If the prep task becomes active, we do not evaluate the task. Instead,
+     * we dump the task into the queue of ready tasks.
+     *
+     * @image html multicore_task_flow-02.png
+     * @image html multicore_task_flow-03.png
+     *
+     */
+    namespace taskfusion {
       /**
-       * Take up to maxTasks tasks that are internally buffered and throw them
-       * into the native runtime
-       *
-       * This routine should submit the tasks LIFO, as we assume that Peano's
-       * traversals produce tasks and the follow-up traversal
-       * then consumes the outcome. In the Peano world, two subsequent mesh
-       * traversals run through the grid in inverted order, so submitting tasks
-       * LIFO makes sense once we assume that most runtimes will kind of stick
-       * to the task submission order unless there are dependencies between the
-       * tasks.
+       * Task queue of tasks which we hold back
        */
-      int mapPendingTasksOntoNativeTasks();
+      struct ReadyFusableTasks {
+        ~ReadyFusableTasks()                       = default;
+        ReadyFusableTasks(const ReadyFusableTasks&) = delete;
+
+        using Tasks = std::list<tarch::multicore::Task*>;
+        Tasks                                      tasks;
+        tarch::multicore::BooleanSemaphore         semaphore;
+        int                                        type;
+
+        ReadyFusableTasks(int type_):
+          type(type_) {}
+      };
 
       /**
+       * Translate a single task into a sequence of (fusable tasks)
        *
-       * The routine searches through the global task queue and tries to
-       * fuse tasks. Therefore, calling the routine is kind of pointless
-       * if you haven't committed the tasks to the global queue yet. In
-       * all places where you invoke the routine, it is thus important
-       * that you've committed any thread-local tasks to the global queue
-       * if you think that fusion should be successful.
+       * First ensure that there's a queue for this task type, and then
+       * create the two helper tasks that will actually handle the queue
+       * insertion and the task progression.
        *
-       * # Thread safety
-       *
-       * The method locks and unlocks the queue. So don't lock it yourself.
-       *
+       * @return New task that is to be submitted instead.
        */
-      bool fusePendingTasks();
+      void translateFusableTaskIntoTaskSequence(
+        Task*                        task,
+        const std::set<TaskNumber>&  inDependencies,
+        const TaskNumber&            taskNumber
+      );
     } // namespace internal
   }
 }

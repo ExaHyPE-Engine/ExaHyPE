@@ -70,6 +70,11 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(t
 }
 
 
+tarch::multicore::orchestration::Strategy& tarch::multicore::getOrchestration() {
+  return *orchestrationStrategy;
+}
+
+
 void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   tarch::multicore::native::waitForTasks(inDependencies);
 }
@@ -110,18 +115,6 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
         native::spawnAndWaitAsTaskLoop(tasks);
         ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
         break;
-      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndFuseTasksManuallyAfterwards:
-        ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true);
-        native::spawnAndWaitAsTaskLoop(tasks);
-        ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
-        taskfusion::fusePendingTasks();
-        break;
-      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndMapAllPendingFuseTasksOntoNativeTasksAfterwards:
-        ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true);
-        native::spawnAndWaitAsTaskLoop(tasks);
-        ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
-        taskfusion::mapPendingTasksOntoNativeTasks();
-        break;
     }
 
     orchestrationStrategy->endBSPSection(localNestedSpawnAndWaits);
@@ -134,7 +127,6 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
 
 
 void tarch::multicore::waitForAllTasks() {
-  tarch::multicore::taskfusion::processPendingTasksOnHost();
   native::waitForAllTasks();
 }
 
@@ -149,7 +141,9 @@ void tarch::multicore::spawnTask(
   ::tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
+    taskfusion::translateFusableTaskIntoTaskSequence( task, inDependencies, taskNumber );
   }
-
-  tarch::multicore::native::spawnTask(task, inDependencies, taskNumber);
+  else {
+    tarch::multicore::native::spawnTask(task, inDependencies, taskNumber);
+  }
 }

@@ -181,6 +181,8 @@ namespace tarch {
      */
     tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
+    tarch::multicore::orchestration::Strategy& getOrchestration();
+
     /**
      * Spawns a single task in a non-blocking fashion
      *
@@ -418,7 +420,7 @@ namespace tarch {
        * @param device Target device on which the fused tasks should be executed. Can
        *   be host if the tasks should end up on the host.
        */
-      void processFusedTask(Task* firstTask, const std::list<tarch::multicore::Task*>& otherTasks, int device);
+      void processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device);
 
       /**
        * Spawn a new task into the tasking backend
@@ -582,21 +584,6 @@ namespace tarch {
        */
       void waitForAllTasks();
     } // namespace native
-
-    /**
-     * Process a few tasks from my backlog of tasks that could be fused
-     *
-     * Peano buffers tasks that can be fused in a separate buffer. With this
-     * routine, you can ensure that this buffer is emptied.
-     *
-     * This routine is rarely used directly. If you want the runtime to fuse
-     * the tasks at specific points, it is usually better to implement your
-     * own orchestration strategy and to let Strategy::fuse() return an
-     * instruction that tells Peano to fuse once a certain fork-join region
-     * has closed.
-     *
-     * Delegates to tarch::multicore::taskfusion::processPendingTasksOnHost()
-     */
     void waitForAllTasks();
   } // namespace multicore
 } // namespace tarch

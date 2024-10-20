@@ -42,7 +42,7 @@ int tarch::Enumerator::getNumber() {
 
 
 void tarch::Enumerator::releaseNumber( int number ) {
-  assertion(number >= 0);
+  assertion1(number >= 0, number);
   tarch::multicore::Lock lock( _semaphore );
   assertionEquals(_activeNumbers.count(number), 1);
   _activeNumbers.erase(number);

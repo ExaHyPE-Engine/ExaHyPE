@@ -37,9 +37,7 @@ public:
    */
   enum class ExecutionPolicy {
     RunSerially,
-    RunParallel,
-    RunParallelAndFuseTasksManuallyAfterwards,
-    RunParallelAndMapAllPendingFuseTasksOntoNativeTasksAfterwards
+    RunParallel
   };
 
   struct FuseInstruction {

@@ -80,6 +80,8 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/omp/RecursiveSemaphore.cpp \
 	tarch/multicore/omp/Tasks.cpp \
 	tarch/multicore/taskfusion/taskfusion.cpp \
+	tarch/multicore/taskfusion/LogReadyTask.cpp \
+	tarch/multicore/taskfusion/ProcessReadyTask.cpp \
 	tarch/multicore/tbb/multicore.cpp \
 	tarch/multicore/tbb/BooleanSemaphore.cpp \
 	tarch/multicore/tbb/Core.cpp \
