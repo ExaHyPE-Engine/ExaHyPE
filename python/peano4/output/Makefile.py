@@ -141,7 +141,7 @@ the SISC paper
         self.d["DIM"] = "2"
         self.d["CONFIGUREPATH"] = "."
         self.d["EXECUTABLENAME"] = ""
-        self.d["CMAKE_BUILD_DIR"] = "."
+        self.d["CMAKE_BUILD_DIR"] = ""
         self.d["FORTRAN_MODULES"] = []
         self.d["GENERATED_INCLUDE_DIRS"] = set()
         self.d["APP_SUBDIRECTORIES"] = []
@@ -304,7 +304,7 @@ the SISC paper
                     if re.search("#define " + define, line):
                         self.d[define] = "1"
         except IOError:
-            print(
+            raise Exception(
                 """
 Error: if you call parse_configure_script_outcome(), please hand over directory where
 ./configure had been called. You passed """
@@ -363,7 +363,7 @@ did search for a file """
                             print("Error in " + line + " for token " + constant)
 
         except IOError:
-            print(
+            raise Exception(
                 """
 Error: if you call parse_configure_script_outcome(), please hand over directory where
 ./configure had been called. You passed """
