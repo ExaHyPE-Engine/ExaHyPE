@@ -3,6 +3,10 @@
 # **********************************************************************************************
 cmake_minimum_required(VERSION 3.21)
 
+{% if CXX is defined and CXX != "" -%}
+set(CMAKE_CXX_COMPILER {{CXX}})
+{% endif -%}
+
 project({{EXECUTABLENAME}})
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 

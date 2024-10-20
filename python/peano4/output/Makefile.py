@@ -281,6 +281,17 @@ the SISC paper
                     self.d["CMAKE_BUILD_DIR"] = root
 
         if self.d["CMAKE_BUILD_DIR"] != "":
+            cmake_cache_file = self.d["CMAKE_BUILD_DIR"] + "/CMakeCache.txt"
+            if os.path.isfile(cmake_cache_file):
+                with open(cmake_cache_file, 'r') as input:
+                     for line in input:
+                          key_value = line.split("=", 1)
+                          if len(key_value) == 2:
+                              key, value = key_value
+                              key = key.split(":")[0].strip()
+                              if key == "CMAKE_CXX_COMPILER":
+                                  self.d["CXX"] = value.strip()
+                                  break
             return
 
         # Continue with Automake-only stuff
