@@ -11,9 +11,9 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
 
   add_library(PETSc_${mode_lower} STATIC)
   target_sources(PETSc_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-  target_link_libraries(PETSc_${mode_lower} PRIVATE PeanoInterface)
+  target_link_libraries(PETSc_${mode_lower} PRIVATE PeanoOptions)
   target_compile_definitions(PETSc_${mode_lower} PRIVATE ${PEANO_${mode_upper}_DEFINITIONS})
-  target_compile_options(PETSc_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  target_compile_options(PETSc_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
   install(TARGETS PETSc_${mode_lower}
     EXPORT                      ${PROJECT_NAME}Targets

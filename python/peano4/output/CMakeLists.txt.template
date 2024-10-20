@@ -38,10 +38,10 @@ string(TOLOWER "{{MODE}}" mode_lower)
 
 add_executable({{EXECUTABLENAME}})
 target_sources({{EXECUTABLENAME}} PRIVATE ${SOURCES})
-target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoInterface)
+target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoOptions)
 target_include_directories({{EXECUTABLENAME}} PRIVATE ${CMAKE_SOURCE_DIR} ${GENERATED_INCLUDE_DIRS})
 target_link_options({{EXECUTABLENAME}} PRIVATE ${GENERATED_LDFLAGS})
-target_compile_definitions({{EXECUTABLENAME}} PRIVATE Dimensions={{DIM}} ${GENERATED_COMPILE_DEFINITIONS})
+target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_COMPILE_DEFINITIONS})
 
 # Link against additional extension targets, if they exist
 

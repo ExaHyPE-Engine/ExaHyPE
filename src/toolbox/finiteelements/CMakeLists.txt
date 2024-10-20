@@ -12,9 +12,9 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_library(ToolboxFiniteElements${dimension}d_${mode_lower} STATIC)
     target_sources(ToolboxFiniteElements${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(ToolboxFiniteElements${dimension}d_${mode_lower} PRIVATE PeanoInterface Peano4Core${dimension}d_${mode_lower})
-    target_compile_definitions(ToolboxFiniteElements${dimension}d_${mode_lower} PRIVATE ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_compile_options(ToolboxFiniteElements${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+    target_link_libraries(ToolboxFiniteElements${dimension}d_${mode_lower} PRIVATE PeanoOptions Peano4Core${dimension}d_${mode_lower})
+    target_compile_definitions(ToolboxFiniteElements${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_compile_options(ToolboxFiniteElements${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
     install(TARGETS ToolboxFiniteElements${dimension}d_${mode_lower}
       EXPORT                      ${PROJECT_NAME}Targets

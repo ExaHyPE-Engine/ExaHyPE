@@ -9,7 +9,7 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
     add_test(NAME UnitTests${dimension}d_${mode_lower} COMMAND UnitTests${dimension}d_${mode_lower})
 
     target_sources(UnitTests${dimension}d_${mode_lower} PRIVATE main.cpp)
-    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE PeanoInterface Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE PeanoOptions Peano4Core${dimension}d_${mode_lower})
     target_compile_definitions(UnitTests${dimension}d_${mode_lower} PRIVATE Dimensions=${dimension} ${PEANO_${mode_upper}_DEFINITIONS})
     target_compile_options(UnitTests${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
