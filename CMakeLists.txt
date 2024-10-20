@@ -259,8 +259,11 @@ set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
-  target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
-  target_compile_definitions(PeanoOptions INTERFACE Parallel)
+  #target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
+  target_compile_options(PeanoOptions INTERFACE ${MPI_CXX_FLAGS})
+  target_link_libraries(PeanoOptions INTERFACE ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+  target_include_directories(PeanoOptions INTERFACE ${MPI_CXX_INCLUDE_DIRS})
+  target_compile_definitions(PeanoOptions INTERFACE Parallel ${MPI_CXX_COMPILE_DEFINITIONS})
   #target_compile_definitions(PeanoOptions INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
 endif()
 
@@ -302,7 +305,7 @@ endif()
 if(WITH_NETCDF)
   find_package(NetCDF REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
-  target_include_directories(PeanoOptions INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
+  target_include_directories(PeanoOptions INTERFACE ${NETCDF_INCLUDES})
   target_compile_definitions(PeanoOptions INTERFACE UseNetCDF)
 endif()
 
@@ -371,7 +374,6 @@ export(EXPORT ${PEANO_PROJECT_NAME}Targets
 )
 
 install(FILES
-  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}CMakeCache.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}ConfigVersion.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
