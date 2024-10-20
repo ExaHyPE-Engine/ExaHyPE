@@ -40,29 +40,29 @@ bool tarch::multicore::taskfusion::ProcessReadyTask::run() {
     ReadyFusableTasks::Tasks extractedTasks;
     extractedTasks.splice(extractedTasks.end(), _taskQueue->tasks, _taskQueue->tasks.begin(), cutIterator);
 
-    logInfo( "run(...)", "max tasks on top of first task=" << maxTasks );
+    logDebug( "run(...)", "max tasks on top of first task=" << maxTasks );
 
     lock.free();
 
     ::tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
     processedTasks += extractedTasks.size()+1;
 
-    if ( instruction.minTasks>_taskQueue->tasks.size() ) {
-      logInfo( "run(...)", "here we go with " << extractedTasks.size() << " task(s)" );
+    if ( instruction.minTasks>_taskQueue->tasks.size()+1 ) {
+      logDebug( "run(...)", "here we go with " << extractedTasks.size() << " task(s) as we have to fuse at least " << instruction.minTasks << " task(s)" );
       for (auto& task: extractedTasks) {
         while (task->run()) {
           tarch::multicore::Core::getInstance().yield();
         }
         delete task;
       }
-      logInfo( "run(...)", "now run first task manually" );
+      logDebug( "run(...)", "now run first task manually" );
       while (firstTask->run()) {
         tarch::multicore::Core::getInstance().yield();
       }
       delete firstTask;
     }
     else {
-      logInfo( "run(...)", "fuse them" );
+      logDebug( "run(...)", "fuse them" );
       native::processFusedTask(firstTask, extractedTasks, instruction.device);
     }
 
