@@ -3,6 +3,9 @@ include:
 
 stages:
   - Compiler
+  - Build
+  - Test
+  - Tutorials
 
 GCC_OpenMP:
   extends: .Variables
@@ -23,6 +26,7 @@ GCC_OpenMP:
   trigger:
     include:
       - .continuous_integration/gitlab-automake-build-and-test.yml
+      - .continuous_integration/gitlab-exahype2-tutorials.yml
     strategy: depend
 
 Intel_OpenMP:
