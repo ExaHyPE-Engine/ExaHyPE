@@ -41,8 +41,20 @@ tarch::logging::Statistics::DataSet::DataSet(double time):
 }
 
 
-void tarch::logging::Statistics::DataSet::createNewSnapshot(double time) {
-  double lastValueFromPreviousSnapshot = std::get<1>( _data.back() );
+std::string tarch::logging::Statistics::DataSet::toString() const {
+  std::ostringstream msg;
+  msg << "(#" << _data.size() << ", ("
+      << std::get<0>( _data.back() ) << ", "
+      << std::get<1>( _data.back() ) << ", "
+      << std::get<2>( _data.back() ) << ", "
+      << std::get<3>( _data.back() ) << ", "
+      << std::get<4>( _data.back() ) << "))";
+  return msg.str();
+}
+
+
+void tarch::logging::Statistics::DataSet::createNewSnapshot(double time, bool clearAfterDatabaseDump) {
+  double lastValueFromPreviousSnapshot = clearAfterDatabaseDump ? 0.0 : std::get<1>( _data.back() );
   _data.push_back( std::make_tuple(
     time,
     lastValueFromPreviousSnapshot,
@@ -134,12 +146,12 @@ void tarch::logging::Statistics::log( const std::string& identifier, double valu
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
     logDebug( "log(string,double)", identifier << "=" << value );
-    _dataSetMap[identifier].createNewSnapshot(t);
+    _dataSetMap[identifier].createNewSnapshot(t, false);
   }
 }
 
 
-void tarch::logging::Statistics::inc( const std::string& identifier, double value, bool disableSampling ) {
+void tarch::logging::Statistics::inc( const std::string& identifier, double value, bool disableSampling, bool clearAfterDatabaseDump ) {
   tarch::multicore::Lock lock(_semaphore);
   initData( identifier );
 
@@ -149,7 +161,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
   if ( acceptNewData(identifier, disableSampling) ) {
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
-    _dataSetMap[identifier].createNewSnapshot(t);
+    _dataSetMap[identifier].createNewSnapshot(t, clearAfterDatabaseDump);
   }
 }
 #endif
