@@ -3,9 +3,6 @@ include:
 
 stages:
   - Compiler
-  - Build
-  - Test
-  - Tutorials
 
 GCC_OpenMP:
   extends: .Variables
