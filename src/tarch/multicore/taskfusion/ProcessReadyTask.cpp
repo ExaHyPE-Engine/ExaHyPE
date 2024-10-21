@@ -20,7 +20,7 @@ bool tarch::multicore::taskfusion::ProcessReadyTask::run() {
   const int initialQueueSize = _taskQueue->tasks.size();
   int processedTasks = 0;
 
-  logInfo( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << initialQueueSize << ")" );
+  logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << initialQueueSize << ")" );
 
   while (
     not _taskQueue->tasks.empty()
@@ -68,4 +68,6 @@ bool tarch::multicore::taskfusion::ProcessReadyTask::run() {
 
     lock.lock();
   }
+
+  return false;
 }

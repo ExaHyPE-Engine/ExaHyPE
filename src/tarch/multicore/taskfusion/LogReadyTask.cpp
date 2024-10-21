@@ -23,4 +23,6 @@ bool tarch::multicore::taskfusion::LogReadyTask::run() {
 
   tarch::multicore::Lock lock(_taskQueue->semaphore);
   _taskQueue->tasks.push_back( _task );
+
+  return false;
 }

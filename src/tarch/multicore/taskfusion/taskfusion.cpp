@@ -51,7 +51,14 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
   logDebug( "translateFusableTaskIntoTaskSequence(...)", "spawn two tasks around " << taskNumber );
 
   std::set<TaskNumber>  wrappedTaskNumber = {taskNumber};
-  tarch::multicore::native::spawnTask( new LogReadyTask(task,taskQueue), inDependencies, taskNumber);
-  tarch::multicore::native::spawnTask( new ProcessReadyTask(taskQueue), wrappedTaskNumber, taskNumber);
+
+  Task* readyTask   = new LogReadyTask(task,taskQueue);
+  Task* processTask = new ProcessReadyTask(taskQueue);
+
+  readyTask->setPriority(task->getPriority());
+  processTask->setPriority(task->getPriority()/2);
+
+  tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
+  tarch::multicore::native::spawnTask( processTask, wrappedTaskNumber, taskNumber);
 }
 
