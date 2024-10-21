@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "../../tarch/multicore/Task.h"
 #include "stacks.h"
 #include "STDVectorStack.h"
 #include "tarch/Assertions.h"
@@ -14,7 +15,6 @@
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Tasks.h"
 
 namespace peano4 {
   namespace stacks {

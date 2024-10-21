@@ -158,7 +158,7 @@ AC_ARG_WITH(
       tbb_extension)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb_extension ;;
       omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
       sycl)   AC_MSG_RESULT([build with SYCL tasking on host]);      multithreading=sycl ;;
-      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
+      *)      AC_MSG_FAILURE([default=no (no multithreading). Use one of the available targets]);            multithreading=false ;;
     esac
   ],
   [

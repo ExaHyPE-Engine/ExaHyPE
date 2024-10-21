@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
+#include "../tarch/multicore/Task.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "peano4/datamanagement/VertexMarker.h"
-#include "tarch/multicore/Tasks.h"
 
 
 namespace swift2 {

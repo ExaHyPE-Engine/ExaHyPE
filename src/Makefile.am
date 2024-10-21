@@ -68,7 +68,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/RecursiveLock.cpp \
 	tarch/multicore/RecursiveSemaphore.cpp \
 	tarch/multicore/smartScheduling.cpp \
-	tarch/multicore/Tasks.cpp \
+	tarch/multicore/Task.cpp \
 	tarch/multicore/cpp/multicore.cpp \
 	tarch/multicore/cpp/BooleanSemaphore.cpp \
 	tarch/multicore/cpp/Core.cpp \
@@ -79,6 +79,9 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/omp/Core.cpp \
 	tarch/multicore/omp/RecursiveSemaphore.cpp \
 	tarch/multicore/omp/Tasks.cpp \
+	tarch/multicore/taskfusion/taskfusion.cpp \
+	tarch/multicore/taskfusion/LogReadyTask.cpp \
+	tarch/multicore/taskfusion/ProcessReadyTask.cpp \
 	tarch/multicore/tbb/multicore.cpp \
 	tarch/multicore/tbb/BooleanSemaphore.cpp \
 	tarch/multicore/tbb/Core.cpp \
@@ -91,9 +94,8 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/sycl/RecursiveSemaphore.cpp \
 	tarch/multicore/sycl/Tasks.cpp \
 	tarch/multicore/orchestration/AllOnGPU.cpp \
-	tarch/multicore/orchestration/BackfillAndDeployRoundRobin.cpp \
 	tarch/multicore/orchestration/Hardcoded.cpp \
-	tarch/multicore/orchestration/StrategyFactory.cpp \
+	tarch/multicore/orchestration/Strategy.cpp \
 	tarch/tests/TestCaseCollection.cpp \
 	tarch/tests/TreeTestCaseCollection.cpp \
 	tarch/tests/TestCase.cpp \

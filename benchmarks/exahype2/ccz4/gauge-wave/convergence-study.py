@@ -286,7 +286,7 @@ project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
-    "(new ::exahype2::LoadBalancingConfiguration(0.98,27,true))",
+    "(new ::exahype2::LoadBalancingConfiguration(0.98,27,true,2,2))",
 )
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)

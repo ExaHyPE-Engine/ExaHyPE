@@ -24,6 +24,9 @@ index can then be used with plot-statistics.py.
 """)
   parser.add_argument("file", help="filename of examine")
   args = parser.parse_args()
+
+  print( "Column \t| Counter" )
+  print( "--------|----------------" )
   input_file = open( args.file, "r" )
   for line in input_file:
       if line.startswith( "#" ):
@@ -31,7 +34,10 @@ index can then be used with plot-statistics.py.
       else:  
           column_index = 0
           for token in line.split(","):
-              print( "{}: \t{}".format( column_index, token ) )
+              if token=="t":
+                  print( "{}\t|  time (always used to plot)".format( column_index ) )
+              else:
+                  print( "{}\t| {}".format( column_index, token ) )
               column_index += 1
           exit(0)
   exit(1)
