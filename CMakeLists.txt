@@ -300,8 +300,9 @@ endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
-  target_link_libraries(PeanoOptions INTERFACE HDF5::HDF5)
-  target_compile_definitions(PeanoOptions INTERFACE UseHDF5)
+  target_link_libraries(PeanoOptions INTERFACE ${HDF5_LIBRARIES} ${HDF5_CXX_LIBRARIES})
+  target_include_directories(PeanoOptions INTERFACE ${HDF5_INCLUDE_DIRS} ${HDF5_CXX_INCLUDE_DIRS})
+  target_compile_definitions(PeanoOptions INTERFACE UseHDF5 ${HDF5_DEFINITIONS} ${HDF5_CXX_DEFINITIONS})
 endif()
 
 if(WITH_NETCDF)
