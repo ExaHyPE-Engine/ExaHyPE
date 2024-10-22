@@ -52,7 +52,6 @@ class Project(object):
         self._timeout                 = 3600
         self._gpus                    = []
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
-                                          "tarch/multicore/orchestration/StrategyFactory.h",
                                           "tarch/accelerator/Device.h"
                                         ]
         self._Peano_src_directory     = "."

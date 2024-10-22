@@ -1,5 +1,4 @@
-#include "tarch/multicore/Tasks.h"
-
+#include "../Task.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/BooleanSemaphore.h"
