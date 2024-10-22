@@ -18,15 +18,12 @@ void* tarch::internal::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-    assertion1(device == accelerator::Device::HostDevice, device);
     data = std::aligned_alloc(
       AlignmentOnHeap,
       tarch::padSizeToAlignment(size, AlignmentOnHeap)
     );
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    assertion1(device >= 0, device);
-    // data = omp_target_alloc(size, device);
     data = std::aligned_alloc(
       AlignmentOnHeap,
       padSizeToAlignment(size, AlignmentOnHeap)
@@ -41,16 +38,14 @@ void* tarch::internal::allocateRawData(
 void tarch::freeMemory(void* data, MemoryLocation location, int device) {
   switch (location) {
   case MemoryLocation::Heap:
-    assertion1(device == accelerator::Device::HostDevice, device);
-    if (data!=nullptr) {
+    if (data != nullptr) {
       std::free(data);
     }
     break;
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    assertion1(device >= 0, device);
-    assertion(data!=nullptr);
-    // omp_target_free(data, device);
-    std::free(data);
+    if (data != nullptr) {
+      std::free(data);
+    }
     break;
   }
 }
