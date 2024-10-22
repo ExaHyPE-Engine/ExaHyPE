@@ -5,9 +5,9 @@
 
 #include <functional>
 
+#include "../tarch/multicore/Task.h"
 #include "config.h"
 #include "peano4/datamanagement/CellMarker.h"
-#include "tarch/multicore/Tasks.h"
 #include "tarch/Enumerator.h"
 
 

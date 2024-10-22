@@ -67,6 +67,11 @@ public:
     int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice
   );
 
+  /**
+   * Construct hardcoded scheme
+   *
+   * @todo Docu
+   */
   Hardcoded(
     int  numberOfTasksToHoldBack,
     int  minTasksToFuse,
@@ -79,9 +84,7 @@ public:
 
   virtual void            startBSPSection(int nestedParallelismLevel) override;
   virtual void            endBSPSection(int nestedParallelismLevel) override;
-  virtual int             getNumberOfTasksToHoldBack(int taskType) override;
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
-  virtual bool            fuseTasksImmediatelyWhenSpawned(int taskType) override;
+  virtual FuseInstruction fuse(int taskType) override;
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
     override;
 };
