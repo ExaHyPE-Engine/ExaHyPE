@@ -2,7 +2,7 @@
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/multicore/Tasks.h"
+#include "Task.h"
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>
@@ -48,7 +48,8 @@ int tarch::multicore::getNumberOfUnmaskedThreads() {
 }
 
 #ifndef SharedMemoryParallelisation
-tarch::multicore::Core::Core() { internal::configureInternalTaskQueues(std::thread::hardware_concurrency()); }
+tarch::multicore::Core::Core() {
+}
 
 tarch::multicore::Core::~Core() {}
 
@@ -57,7 +58,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   return instance;
 }
 
-void tarch::multicore::Core::configure(int numberOfThreads) { internal::configureInternalTaskQueues(numberOfThreads); }
+void tarch::multicore::Core::configure(int numberOfThreads) {}
 
 void tarch::multicore::Core::shutdown() {}
 

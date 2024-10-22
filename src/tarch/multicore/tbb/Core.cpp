@@ -1,6 +1,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/multicore/Tasks.h"
+
+#include "../Task.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -30,7 +31,6 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 tarch::multicore::Core::Core():
   _numberOfThreads( ::tbb::info::default_concurrency() ) {
-  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
@@ -58,8 +58,6 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
     logWarning( "configure(int)", "number of configured threads (" << numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
     logWarning( "configure(int)", "unmasked threads: " << printUnmaskedThreads() );
   }
-
-  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 

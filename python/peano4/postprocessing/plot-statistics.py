@@ -36,6 +36,12 @@ they have.
                       help="Pick plot variant", 
                       choices=[ "pdf", "png", "csv" ], 
                       required=True)
+  parser.add_argument("-pt", 
+                      "--plot-type",  
+                      dest="plot_type",    
+                      help="Pick plot variant (ignored for csv)", 
+                      choices=[ "scatter", "step" ], 
+                      required=True)
   parser.add_argument("-minmax", 
                       "--min-max",  
                       dest="minmax",
@@ -81,6 +87,13 @@ they have.
           min_values.append( float( token.split("/")[1])  )
           max_values.append( float( token.split("/")[2])  )
           samples.append( float( token.split("/#")[1].split(")")[0])  )
+        elif args.plot_type=="step" and len(timestamps)>0:
+          timestamps.append(time_stamp )
+          values.append( values[-1] )
+          min_values.append( min_values[-1] )
+          max_values.append( max_values[-1] )
+          samples.append( samples[-1] )
+          
     #
     # Dump csv
     #
@@ -94,7 +107,14 @@ they have.
           output_file.write( "," )
         output_file.write( str(data[entries_per_row-1]) )
         output_file.write( "\n" )
-    if args.output=="pdf" or args.output=="png":
+    if (args.output=="pdf" or args.output=="png") and args.plot_type=="step":
+      assert len(timestamps)==len(values)
+      colour = columns.index(column) % len(Colours)
+      if args.minmax:
+        for i in zip(timestamps,min_values,max_values):
+          plt.plot( [i[0],i[0]], [i[1],i[2]], color=Colours[colour] )
+      plt.plot( timestamps, values, color=Colours[colour], alpha=0.5, label=metric )
+    if (args.output=="pdf" or args.output=="png") and args.plot_type=="scatter":
       assert len(timestamps)==len(values)
       colour = columns.index(column) % len(Colours)
       if args.minmax:
