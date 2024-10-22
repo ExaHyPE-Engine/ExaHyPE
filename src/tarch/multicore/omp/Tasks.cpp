@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/multicore/Tasks.h"
-
+#include "../Task.h"
 #include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
@@ -217,9 +216,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 #endif
 
 
-int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
-
-
 void tarch::multicore::native::spawnTask(
   Task*                        job,
   const std::set<TaskNumber>&  inDependencies,
@@ -338,12 +334,11 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
     #if !defined(__NVCOMPILER)
     OTTER_TASK_START(task);
     #endif
-    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
-    if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
-    } else {
-      delete myTask;
+    const bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
+    while (stillExecuteLocally and myTask->run() ) {
+      tarch::multicore::Core::getInstance().yield();
     }
+    delete myTask;
     #if !defined(__NVCOMPILER)
     OTTER_TASK_END();
     #endif

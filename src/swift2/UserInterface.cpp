@@ -1,14 +1,12 @@
 #include "UserInterface.h"
 
+#include "../tarch/multicore/Task.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/mpi/Rank.h"
 
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
-
-#include "tarch/multicore/Tasks.h"
-#include "tarch/multicore/orchestration/StrategyFactory.h"
 
 #include "peano4/peano.h"
 
@@ -163,7 +161,7 @@ Options: \n\
   --dynamic-load-balancing [on|off] Disable or enable dynamic load balancing. Pass \n\
                             either on or off. The default is on. \n\
 \n\n\n\
-Supported threading models: " << tarch::multicore::orchestration::getListOfRealisations() << std::endl;
+" << std::endl;
 }
 
 
@@ -221,16 +219,6 @@ bool swift2::parseCommandLineArguments(int argc, char** argv) {
       int timeout = std::atoi(argv[argument+1]);
       tarch::mpi::Rank::getInstance().setDeadlockTimeOut( timeout );
       logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
-    }
-    else if ( select.compare( "--threading-model" ) == 0 ) {
-      auto* realisation = tarch::multicore::orchestration::parseRealisation( argv[argument+1] );
-      if (realisation!=nullptr) {
-        tarch::multicore::setOrchestration(realisation);
-      }
-      else {
-        logError( "parseCommandLineArguments(...)", "was not able to set threading strategy " << argv[argument+1] );
-        return false;
-      }
     }
     else if ( select.compare( "--dynamic-load-balancing" ) == 0 ) {
       std::string value = argv[argument+1];

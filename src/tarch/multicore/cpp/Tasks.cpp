@@ -1,5 +1,4 @@
-#include "tarch/multicore/Tasks.h"
-
+#include "../Task.h"
 #include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"

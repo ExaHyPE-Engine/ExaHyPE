@@ -37,27 +37,28 @@ namespace tbb {
  * these attempts will be successful.
  *
  * Therefore, this extension is always shipped with Peano, and it is
- * automatically built and added once you translate Peano with --with-tbb.
+ * automatically built and added once you translate Peano with --with-tbb_extension.
  * The outcome will end
  * up in a library called tbb_extension.a, tbb_extension_debug.a or
  * tbb_extension_trace.a. This means that you have to add
- *
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * --with-tbb LDFLAGS=-Lsrc/tb LIBS=-ltbb_extension
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * to your build. Peano's autotools configuration will do this for you. Further
- * to that, you have to tell the tools that you require the features. That happens
- * by adding
+ * to your build. Peano's autotools configuration will do this for you.
  *
- * - -DTBBExtensionAddRanges if your TBB version does not yet have n-dimensional
- *   ranges. Note that every very early versions of TBB did ship n-dimensional
- *   ranges as optional extension. However, that default version might not be
- *   compatible with the way Peano needs the ranges to work.
- * - -DTBBExtensionAddTaskGraph if your TBB version does not yet support
- *   dynamic task graphs.
  *
+ * ## Compatibility
+ *
+ * You can also gradually enable certain features. To do so, you have to compile
+ * with tbb_exension, but then you can manually (via -D flags) define
+ *
+ * - TBB_USE_TASK_GROUP_PREVIEW
+ *
+ * The n-dimensional range in return is the same as submitted to the TBB
+ * standard, i.e. it does not matter which one you use. It is also only
+ * a header, so there cannot be any linker issues.
  *
  *
  * ## Code usage
