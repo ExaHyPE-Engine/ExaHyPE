@@ -27,23 +27,7 @@ class Exahype2(CMakePackage, CudaPackage):
 
     maintainers("hpcsoftware")
 
-    version("p4", branch="p4")
-
-    # Config options
-    variant(
-        "dimensions",
-        default="2,3",
-        values=("2", "3"),
-        multi=True,
-        description="Dimensionality",
-    )
-    variant(
-        "build_type",
-        default="Release",
-        values=("Debug", "Release", "Asserts", "Trace", "Stats"),
-        multi=False,
-        description="Build type",
-    )
+    version("infrastructure-cmake", branch="infrastructure-cmake")
 
     variant("mpi", default=False, description="Build with MPI support")
     variant("tracer", default=False, description="Build with particle tracer support")
@@ -110,8 +94,6 @@ class Exahype2(CMakePackage, CudaPackage):
             "-DENABLE_BLOCKSTRUCTURED=ON",
             "-DENABLE_EXAHYPE=ON",
             "-DWITH_LIBXSMM=OFF",
-            self.define_from_variant("WITH_DIMENSIONS", "dimensions"),
-            self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
             self.define_from_variant("WITH_MPI", "mpi"),
             self.define_from_variant("ENABLE_PARTICLES", "tracer"),
         ]
@@ -136,4 +118,5 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def setup_run_environment(self, env):
         env.prepend_path("PEANO_ROOT", self.spec.prefix)
+        env.prepend_path("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")
