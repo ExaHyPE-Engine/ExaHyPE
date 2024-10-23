@@ -112,6 +112,7 @@ option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
+option(ENABLE_MGHYPE "Enable MGHyPE" OFF)
 option(ENABLE_SWIFT "Enable Swift 2" OFF)
 
 list(APPEND AVAILABLE_TOOLCHAINS

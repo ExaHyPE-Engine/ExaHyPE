@@ -61,8 +61,16 @@ if(TARGET Peano::ToolboxParticles{{DIM}}d_${mode_lower})
   target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxParticles{{DIM}}d_${mode_lower})
 endif()
 
+if(TARGET Peano::ToolboxFiniteElements{{DIM}}d_${mode_lower})
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxFiniteElements{{DIM}}d_${mode_lower})
+endif()
+
 if(TARGET Peano::ExaHyPE2Core{{DIM}}d_${mode_lower})
   target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ExaHyPE2Core{{DIM}}d_${mode_lower})
+endif()
+
+if(TARGET Peano::Multigrid{{DIM}}d_${mode_lower})
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Multigrid{{DIM}}d_${mode_lower})
 endif()
 
 if(TARGET Peano::Swift2Core{{DIM}}d_${mode_lower})
