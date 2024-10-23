@@ -2,6 +2,9 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if defined(GPUOffloadingCPP)
+GPUCallableMethod void tarch::gpuAbort(){
+  std::abort();
+};
 
 tarch::accelerator::Device::Device() {}
 

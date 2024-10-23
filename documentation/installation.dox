@@ -374,7 +374,6 @@ OpenMP for the multithreading support. All required flags are automatically adde
 
 # Standard operations
 mkdir build && cd build
-export PEANO_BUILD_DIR=build
 
 # Configure Peano with whatever we need
 CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp

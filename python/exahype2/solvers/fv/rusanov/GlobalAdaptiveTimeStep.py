@@ -124,5 +124,5 @@ class GlobalAdaptiveTimeStep(SingleSweep):
   @property
   def user_action_set_includes(self):
     return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
-#include "exahype2/fv/rusanov/Rusanov.h"
+#include "exahype2/fv/rusanov/rusanov.h"
 """

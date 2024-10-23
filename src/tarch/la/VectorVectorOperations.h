@@ -2,22 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Vector.h"
-
-#include "tarch/Assertions.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/la/Vector.h"
 
 namespace tarch {
   namespace la {
+
     /**
      * Adds rVector to lVector and assigns the result to lVector.
      *
      * No temporary vector is created.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Vector<Size, Scalar>& operator+=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Vector<Size, Scalar>& operator+=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Subtracts rVector from lVector and assigns the result to lVector.
@@ -25,8 +21,7 @@ namespace tarch {
      * No temporary vector is created.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Vector<Size, Scalar>& operator-=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Vector<Size, Scalar>& operator-=(Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Adds rVector to lVector.
@@ -34,8 +29,7 @@ namespace tarch {
      * A temporary vector is created and copied to store return back the result.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Vector<Size, Scalar> operator+(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Vector<Size, Scalar> operator+(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Subtracts rVector from lVector.
@@ -43,16 +37,14 @@ namespace tarch {
      * A temporary vector is created and copied to store return back the result.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Vector<Size, Scalar> operator-(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Multiplies every component of the vectors with each other and writes the
      * results into result.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Vector<Size, Scalar> multiplyComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Vector<Size, Scalar> multiplyComponents(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Performs the dot (=inner) product of two vectors.
@@ -60,8 +52,7 @@ namespace tarch {
      * For the outer dot product consult the file MatrixVectorOperations.h.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Scalar operator*(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Scalar operator*(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Performs the dot (=inner) product of two vectors.
@@ -69,8 +60,7 @@ namespace tarch {
      * For the outer dot product consult the file MatrixVectorOperations.h.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Scalar dot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Scalar dot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Performs the dot (=inner) product of two vectors.
@@ -78,15 +68,13 @@ namespace tarch {
      * For the outer dot product consult the file MatrixVectorOperations.h.
      */
     template <int Size, typename Scalar>
-    inline GPUCallableMethod
-    Scalar innerDot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs) InlineMethod;
+    Scalar innerDot(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
     /**
      * Performs the cross product of two 3D vectors into result.
      */
     template <typename Scalar>
-    inline GPUCallableMethod
-    Vector<3, Scalar> cross(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs) InlineMethod;
+    Vector<3, Scalar> cross(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
 
     /**
      * Compares to vectors on equality by means of a numerical accuracy.
@@ -227,6 +215,7 @@ namespace tarch {
 
     /**
      * Return Index of element which is not equals.
+     *
      */
     template <int Size, typename Scalar>
     int equalsReturnIndex(
@@ -253,4 +242,4 @@ namespace tarch {
   } // namespace la
 } // namespace tarch
 
-#include "VectorVectorOperations.cpph"
+#include "tarch/la/VectorVectorOperations.cpph"

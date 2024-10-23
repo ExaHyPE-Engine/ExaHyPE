@@ -2,86 +2,85 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Scalar.h"
 
 #include "tarch/tarch.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/la/Scalar.h"
 
-#include <cmath>
+#pragma once
+
+#pragma once
+
+
 #include <complex>
+
 
 namespace tarch {
   namespace la {
+
     /**
      * Returns the absolute value of a type by redirecting to std::abs.
      */
-    inline GPUCallableMethod
-    double abs(double value) InlineMethod;
+    double abs( double value);
 
     /**
      * Returns the absolute value of the given int.
      */
-    inline GPUCallableMethod
-    int abs(int value) InlineMethod;
+    int abs (int value);
 
-    inline GPUCallableMethod
-    double abs(const std::complex<double>& value) InlineMethod;
+    double abs( const std::complex<double>& value );
 
     /**
      * Computes the i-th power of a in integer arithmetic.
      */
-    inline GPUCallableMethod
-    int aPowI(int i, int a) InlineMethod;
+    int aPowI(int i,int a);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool greater(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool greaterEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    bool greaterEquals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool equals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    bool equals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * Smaller operator for floating point values
+     *
+     * This operation is a header-only operation on purpose, as we use it in
+     * some SPH compute kernels which we want to vectorise aggressively.
+     *
+     * The static here is required to avoid multiple definition errors.
+     *
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
+    static bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod {
+      return lhs - rhs < -tolerance;
+    }
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool smaller(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    bool smallerEquals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    inline GPUCallableMethod
-    bool smallerEquals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
-
-    /**
-     * @param tolerance Absolute tolerance when we compare two values.
-     */
-    inline GPUCallableMethod
-    bool equals(const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    bool equals( const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
      * @return -10, or 1 depending on the sign of value
      */
-    inline GPUCallableMethod
-    int sign(double value, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod;
+    int sign(double value, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
-    inline GPUCallableMethod
-    int round(double value) InlineMethod;
-
-    inline GPUCallableMethod
-    int round(float value) InlineMethod;
+    int round(double value);
+    int round(float value);
   }
 }
 
-#include "ScalarOperations.cpph"
+

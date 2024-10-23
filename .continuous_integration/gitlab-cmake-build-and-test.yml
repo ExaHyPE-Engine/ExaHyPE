@@ -14,14 +14,12 @@ Build:
   allow_failure: false
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=$PWD/Peano"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} make -j $(nproc --all); make install"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} make -j $(nproc --all)"
     - mv build/src/unittests/CTestTestfile.cmake build/CTestTestfile.cmake
   artifacts:
     paths:
-      - ./build/UnitTests*
-      - ./build/CTestTestfile.cmake
-      - ./build/Peano
+      - ./build/*
     expire_in: 2 hours
   retry: 1
 

@@ -42,6 +42,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/tests/GramSchmidtTest.cpp \
 	tarch/la/tests/LUDecompositionTest.cpp \
 	tarch/la/tests/VectorTest.cpp \
+	tarch/la/ScalarOperations.cpp \
 	tarch/la/Scalar.cpp \
 	tarch/la/DynamicMatrix.cpp \
 	tarch/la/DynamicMatrixOperations.cpp \
@@ -192,6 +193,7 @@ Peano4Core_SOURCES = \
 	peano4/stacks/STDVectorStack.cpp \
 	peano4/utils/Loop.cpp \
 	peano4/utils/tests/ParallelDForTest.cpp
+	
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)

@@ -21,7 +21,7 @@ namespace tarch {
     #define GPUCallableMethod __host__ __device__
   #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
     #define GPUCallableMethod SYCL_EXTERNAL
-  #elif defined(GPUOffloadingCPP) /*&& defined(_NVHPC_STDPAR_GPU)*/
+  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
     #define GPUCallableMethod __host__ __device__
   #else
     #define GPUCallableMethod
@@ -31,7 +31,7 @@ namespace tarch {
     #define GPUCallableInlineMethod __host__ __device__ __forceinline__
   #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
     #define GPUCallableInlineMethod inline
-  #elif defined(GPUOffloadingCPP) /*&& defined(_NVHPC_STDPAR_GPU)*/
+  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
     #define GPUCallableInlineMethod __host__ __device__ __forceinline__
   #else
     #define GPUCallableInlineMethod //inline
@@ -49,7 +49,7 @@ namespace tarch {
 #pragma omp end declare target
 #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
   GPUCallableMethod void gpuAbort();
-#elif defined(GPUOffloadingCPP) /*&& defined(_NVHPC_STDPAR_GPU)*/
+#elif defined(GPUOffloadingCPP)
   GPUCallableMethod void gpuAbort();
 #else
   void gpuAbort();

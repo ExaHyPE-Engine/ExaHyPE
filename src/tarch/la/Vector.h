@@ -18,7 +18,7 @@ namespace tarch {
     struct Vector;
 
     template <typename NewScalarType, int Size, typename Scalar>
-    tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>& vector);
+    tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>&  vector);
   }
 }
 
@@ -27,8 +27,8 @@ namespace tarch {
  *
  * Not a member of the class as I otherwise can't translate it for GPUs.
  */
-template <int Size, typename Scalar>
-std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
+template<int Size, typename Scalar>
+std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
 
 /**
  * Simple vector class
@@ -76,7 +76,7 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * anyway. Therefore, the compiler implicitly should have the definition at
  * hand and should be able to identify that code for the GPU has to be
  * generated, too. We only have to be sure that no explicit instantiation of
- * a vector ignores this context, i.e. do not use explicit instantiation if you
+ * a vector ignores this context, i.e. do not use explicit instantation if you
  * employ GPUs (through OpenMP).
  *
  * With GCC, I struggled using the Vector's copy constructors. That is,
@@ -86,53 +86,50 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * the vector components manually, thus avoid all copy constructor
  * invocations explicitly, and finally repuzzle the vector together on the
  * GPU. This implies that GPU routines may never return
- * a Vector instance. See the Rusanov kernels for examples where this
+ * a Vector instance. See the Rusanov.cpph kernels for examples where this
  * leads to uglier code than necessary. But it works.
  *
  *
  * ## SYCL
- *
+ * 
  * Our SYCL kernels seem to be fine without explicit support of the vector,
- * but this is mainly due to the fact that SYCL offers its own range class,
- * and we construct our vectors typically from this range class. The other
- * application domain is the double vectors within the cell descriptors,
- * but we map those onto specialised variants before we offload anyway, so
+ * but this is mainly due to the fact that SYCL offers its own range class, 
+ * and we construct our vectors typically from this range class. The other 
+ * application domain is the double vectors within the cell descriptors, 
+ * but we map those onto specialsed variants before we offload anyway, so 
  * they are on the GPU prior to the kernel launch. In the future, it might
  * be appropriate to add explicit copyable traits to to the class such that
  * they can directly go to the GPU:
- *
+ * 
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * #include "tarch/accelerator/sycl/Device.h"
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<2,double> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<3,double> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<4,double> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<5,double> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<2,int> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<3,int> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<4,int> >: std::true_type {};
- *
+ * 
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<5,int> >: std::true_type {};
- *
+ * 
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
+ * 
  */
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
   private:
@@ -144,8 +141,7 @@ struct tarch::la::Vector {
      */
     Vector() InlineMethod = default;
 
-    inline GPUCallableMethod
-    Vector(const Scalar* values) InlineMethod;
+    Vector( const Scalar* values ) InlineMethod;
 
     /**
      * Initialisation via initialisation list.
@@ -154,17 +150,14 @@ struct tarch::la::Vector {
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
      */
-    inline GPUCallableMethod
-    Vector(std::initializer_list<Scalar> values) InlineMethod;
+    Vector( std::initializer_list<Scalar> values );
 
-    inline GPUCallableMethod
-    Vector(const std::bitset<Size>& values) InlineMethod;
+    Vector( const std::bitset<Size>& values ) InlineMethod;
 
     /**
-     * Construct new vector and initialise all components with initialValue.
+     * Construct new vector and initialize all components with initialValue.
      */
-    inline GPUCallableMethod
-    Vector(const Scalar& initialValue) InlineMethod;
+    Vector(const Scalar& initialValue);
 
     /**
      * Assignment operator for any vector type.
@@ -174,8 +167,7 @@ struct tarch::la::Vector {
      * We do not allow assignment of a vector this itself. Consequently, we can
      * insert an ivdep statement and thus allow the compiler to optimise.
      */
-    inline GPUCallableMethod
-    Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
+    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
 
     /**
      * Copy constructor to copy from any vector type.
@@ -185,14 +177,12 @@ struct tarch::la::Vector {
      *
      * @see operator= for a discussion of SSE optimisation.
      */
-    inline GPUCallableMethod
-    Vector(const Vector<Size,Scalar>& toCopy) InlineMethod;
+    Vector(const Vector<Size,Scalar>&  toCopy);
 
     /**
      * Returns the number of components of the vector.
      */
-    inline GPUCallableMethod
-    int size() const InlineMethod;
+    int size() const;
 
     /**
      * Returns read-only ref. to component of given index.
@@ -203,13 +193,12 @@ struct tarch::la::Vector {
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
-    inline GPUCallableMethod
-    const Scalar& operator[] (int index) const InlineMethod {
-      #if defined(GPUOffloadingOff)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
+    inline const Scalar& operator[] (int index) const InlineMethod {
+#if defined(GPUOffloadingOff)
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
+#endif
+        return _values[index];
     }
 
     /**
@@ -217,13 +206,12 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPUCallableMethod
-    Scalar& operator[] (int index) InlineMethod {
-      #if defined(GPUOffloadingOff)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
+    inline Scalar& operator[] (int index) InlineMethod {
+#if defined(GPUOffloadingOff)
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion3 ( index < Size, index, Size, ::toString(*this) );
+#endif
+        return _values[index];
     }
 
     /**
@@ -237,13 +225,12 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPUCallableMethod
-    const Scalar& operator() (int index) const InlineMethod {
-      #if defined(GPUOffloadingOff)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
+    inline const Scalar& operator() (int index) const InlineMethod {
+#if defined(GPUOffloadingOff)
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion3 ( index < Size, index, Size, ::toString(*this) );
+#endif
+        return _values[index];
     }
 
     /**
@@ -251,36 +238,31 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline GPUCallableMethod
-    Scalar& operator() (int index) InlineMethod {
-      #if defined(GPUOffloadingOff)
-      assertion3(index >= 0, index, Size, ::toString(*this));
-      assertion3(index < Size, index, Size, ::toString(*this));
-      #endif
-      return _values[index];
-    }
+    inline Scalar& operator() (int index) InlineMethod {
+#if defined(GPUOffloadingOff)
+        assertion3 ( index >= 0, index, Size, ::toString(*this) );
+        assertion3 ( index < Size, index, Size, ::toString(*this) );
+#endif
+       return _values[index];
+     }
 
     /**
      * This routine returns a pointer to the first data element. Not a
      * beautiful one as it harms the OO idea, but in many cases it is
      * convenient to have this operation.
      */
-    inline GPUCallableMethod
-    Scalar* data() InlineMethod {
+    Scalar* data() {
       return _values;
     }
 
-    inline GPUCallableMethod
-    const Scalar* data() const InlineMethod {
+    const Scalar * data() const {
       return _values;
     }
 };
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
 
 #include "tarch/la/Vector.cpph"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "tarch/la/VectorSlice.h"
+

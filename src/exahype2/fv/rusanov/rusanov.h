@@ -754,13 +754,13 @@ namespace exahype2::fv::rusanov {
 #include "VolumewiseStateless.cpph"
 
 #if defined(GPUOffloadingOMP)
-#include "exahype2/fv/rusanov/omp/Rusanov.h"
+#include "exahype2/fv/rusanov/omp/rusanov.h"
 #endif
 
 #if defined(GPUOffloadingCPP)
-#include "exahype2/fv/rusanov/cpp/Rusanov.h"
+#include "exahype2/fv/rusanov/cpp/rusanov.h"
 #endif
 
 #if defined(GPUOffloadingSYCL)
-#include "exahype2/fv/rusanov/sycl/Rusanov.h"
+#include "exahype2/fv/rusanov/sycl/rusanov.h"
 #endif

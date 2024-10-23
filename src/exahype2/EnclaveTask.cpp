@@ -73,8 +73,8 @@ void exahype2::EnclaveTask::computeTask() {
     logDebug( "computeTask()", "enclave task " << _taskNumber << " writes directly into mesh data structure at " << _outputValues << " (uses data from " << _inputValues << ")" );
   }
 
-  _functor();
   logDebug("computeTask()", "lambda=" << _maxEigenvalue);
+  _functor();
 }
 
 

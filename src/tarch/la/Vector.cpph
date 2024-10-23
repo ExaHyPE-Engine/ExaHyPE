@@ -31,7 +31,7 @@ template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
   const Vector<Size,Scalar>&  toAssign
 ) {
-  #if defined(GPUOffloadingOff)
+  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
   assertion(this != &toAssign);
   #endif
 
@@ -49,10 +49,10 @@ tarch::la::Vector<Size,Scalar>::Vector (
   const Vector<Size,Scalar>& toCopy
 ):
   _values() {
-  #if defined(GPUOffloadingOff)
+  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
   assertion(this != &toCopy);
   #endif
-
+ 
   #ifdef CompilerICC
   #pragma ivdep
   #endif
@@ -91,7 +91,7 @@ std::string toString( const tarch::la::Vector<Size,Scalar>& vector ) {
 }
 
 template <typename NewScalarType, int Size, typename Scalar>
-tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>& vector) {
+tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>&  vector) {
   tarch::la::Vector<Size,NewScalarType> result;
   for ( int i=0; i < Size; i++ ) {
     result(i) = vector(i);

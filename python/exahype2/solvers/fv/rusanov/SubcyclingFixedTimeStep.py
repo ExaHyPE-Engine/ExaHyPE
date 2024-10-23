@@ -128,7 +128,7 @@ class SubcyclingFixedTimeStep(SingleSweep):
 
     self._user_action_set_includes += """
 #include "exahype2/TimeStepping.h"
-#include "exahype2/fv/rusanov/Rusanov.h"
+#include "exahype2/fv/rusanov/rusanov.h"
 """
 
     super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
