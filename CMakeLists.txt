@@ -52,6 +52,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include(Ccache)
 include(CheckIncludeFiles)
+include(GNUInstallDirs)
 
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
@@ -342,8 +343,9 @@ if(ENABLE_SWIFT)
 endif()
 
 target_include_directories(PeanoOptions INTERFACE
-  ${CMAKE_SOURCE_DIR}/src
-  ${CMAKE_BINARY_DIR}/src
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/src>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 add_subdirectory(src)
@@ -377,9 +379,13 @@ export(EXPORT ${PEANO_PROJECT_NAME}Targets
   NAMESPACE ${PEANO_PROJECT_NAME}::
 )
 
+install(EXPORT ${PEANO_PROJECT_NAME}Targets
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+  NAMESPACE ${PEANO_PROJECT_NAME}::
+)
+
 install(FILES
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Config.cmake
   ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}ConfigVersion.cmake
-  ${CMAKE_BINARY_DIR}/${PEANO_PROJECT_NAME}Targets.cmake
   DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
