@@ -17,7 +17,7 @@ GCC_OpenMP:
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
@@ -37,7 +37,7 @@ Intel_OpenMP:
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
@@ -57,7 +57,7 @@ LLVM_OpenMP:
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
@@ -76,7 +76,7 @@ NVIDIA:
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DENABLE_PARTICLES=ON"
   trigger:
     include:
