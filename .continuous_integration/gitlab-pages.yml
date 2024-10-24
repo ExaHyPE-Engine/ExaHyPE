@@ -3,7 +3,7 @@ include:
 
 pages:
   extends: .BeforeScript
-  stage: Publish
+  stage: Pages
   allow_failure: false
   dependencies: []
   script:
