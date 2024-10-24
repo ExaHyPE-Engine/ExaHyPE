@@ -364,7 +364,7 @@ class SWE:
             "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
             % str(args.fuse_tasks)
         )
-        project._additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")
+        project.additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")
 
         project.set_timeout(args.timeout)
 
