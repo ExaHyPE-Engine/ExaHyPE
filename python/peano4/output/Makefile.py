@@ -276,9 +276,7 @@ the SISC paper
         if 'PEANO_CMAKE_BUILD_DIR' in os.environ:
             self.d["CMAKE_BUILD_DIR"] = os.environ['PEANO_CMAKE_BUILD_DIR']
         else:
-            for root, _, files in os.walk(directory):
-                if "PeanoTargets.cmake" in files:  # Take first occurrence
-                    self.d["CMAKE_BUILD_DIR"] = root
+            self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
 
         if self.d["CMAKE_BUILD_DIR"] != "":
             cmake_cache_file = self.d["CMAKE_BUILD_DIR"] + "/CMakeCache.txt"
