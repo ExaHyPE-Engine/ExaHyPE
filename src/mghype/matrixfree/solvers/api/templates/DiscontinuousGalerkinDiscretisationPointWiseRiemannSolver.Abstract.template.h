@@ -136,7 +136,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      */
     virtual void endMeshSweep() override;
 
-    bool updateCell() const;
+    bool updateResidual() const;
     bool updateFace() const;
     bool projectOntoFaces() const;
     bool projectOntoCells() const;

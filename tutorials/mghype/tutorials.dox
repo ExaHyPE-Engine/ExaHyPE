@@ -29,7 +29,8 @@ instructions!
   - \subpage tutorials_mghype_numerics_mixed_dg_poisson
 - Examples 
   - \subpage tutorials_mghype_examples_01_matrix-free-cg
-  - \subpage tutorials_mghype_examples_02_matrix-free-dg
+  - \subpage tutorials_mghype_examples_02_higher-order-cg
+  - \subpage tutorials_mghype_examples_03_matrix-free-dg
   - \subpage tutorials_mghype_examples_11_petsc-cg
 - Not yet worked in:
   - \subpage tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson

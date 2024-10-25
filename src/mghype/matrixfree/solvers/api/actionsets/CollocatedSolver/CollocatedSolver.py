@@ -5,6 +5,19 @@ import jinja2
 
 
 class CollocatedSolver(ActionSet):
+  """!
+
+  Action set implementing the core of the collocated solver
+  
+  The implementation is relatively straightforward:
+  
+  - We clear diag and the residual when we hit a vertex for the first time.
+  - In each cell, we accumulate the residual. This is the contribution from
+    @f$ Ax = Mb @f$ as it stems from the current cell.
+  - In touchVertexFirstTime(), we can update the unknown.
+  - Eventually, we dump the total residual and the updates.
+
+  """
   templateTouchVertexFirstTime = """ 
   if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
@@ -53,18 +66,20 @@ class CollocatedSolver(ActionSet):
       assertion( fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) > 0 );
       
       double r   = fineGridVertex{{SOLVER_NAME}}.getResidual(unknown);
-      double val = fineGridVertex{{SOLVER_NAME}}.getValue(unknown) 
-                 + repositories::{{SOLVER_INSTANCE}}.Omega 
+      double du  = repositories::{{SOLVER_INSTANCE}}.Omega 
                  * 1.0 / fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) * r;
 
       repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
-        tarch::la::abs(r),        
-        r * r,
-        tarch::la::volume(marker.h()) * r * r,
-        marker.h()(0)
+        r, marker.h()
       );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(
+        du, marker.h()(0)
+      );
+      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
 
-      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, val);
+      
+
+      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, fineGridVertex{{SOLVER_NAME}}.getValue(unknown) + du );
       logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown));
     }
     logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
@@ -86,6 +101,10 @@ class CollocatedSolver(ActionSet):
   ) {
     logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
+    repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize(
+      marker.h()
+    );
+    
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
       // Mass and assembly matrix should be block diagonal, 
@@ -148,7 +167,7 @@ class CollocatedSolver(ActionSet):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
+    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex_node
 
   def get_body_of_operation(self,operation_name):
     result = ""

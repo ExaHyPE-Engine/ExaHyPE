@@ -6,8 +6,11 @@ import dastgen2
 import os
 
 from .Solver import Solver
-from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateResidual, ProjectOntoFaces, UpdateFaceSolution, ProjectIntoCellAndUpdateCellSolution
+from .actionsets.DGSolver.InitDofs                             import InitDofsDG
+from .actionsets.DGSolver.UpdateResidual                       import UpdateResidual
+from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
+from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution
+from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution import ProjectIntoCellAndUpdateCellSolution
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):

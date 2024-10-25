@@ -272,7 +272,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
       or
       _state==State::UpdateAndRestrictResidual
   ) {
-    clearGlobalResidual();
+    clearGlobalResidualAndSolutionUpdate();
   }
 }
 
@@ -318,7 +318,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   }
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateCell() const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateResidual() const {
   return _state == State::Solve
       or _state == State::ProjectOntoFacesOnly;
 }

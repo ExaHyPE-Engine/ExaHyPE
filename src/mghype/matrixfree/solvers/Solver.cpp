@@ -2,6 +2,7 @@
 
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/mpi/Rank.h"
 #include <cmath>
 
 
@@ -19,7 +20,10 @@ mghype::matrixfree::solvers::Solver::Solver(
   _initialGlobalResidualHNormSquared(0.0),
   _previousGlobalResidualMaxNorm(0.0),
   _previousGlobalResidualEukledianNormSquared(0.0),
-  _previousGlobalResidualHNormSquared(0.0) {
+  _previousGlobalResidualHNormSquared(0.0),
+  _globalDeltaUMaxNorm(0.0),
+  _globalDeltaUEukledianNormSquared(0.0),
+  _globalDeltaUHNormSquared(0.0) {
   const std::string      prefix = "Abstract";
   std::string::size_type index  = _name.find( prefix );
   if (index!=std::string::npos) {
@@ -51,31 +55,6 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
     residualReducedUnderThreshold++;
   }
 
-  // Comment out l2- and h-norm of the residual checks. Check only max-norm for now
-  /*
-  if ( tarch::la::equals(_initialGlobalResidualEukledianNormSquared,0.0) ) {
-    _initialGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
-  }
-  else if (_previousGlobalResidualEukledianNormSquared * 1.2 < _globalResidualEukledianNormSquared ) {
-    logWarning( "terminationCriterionHolds()", "Eukledian residual squared grows from " << _previousGlobalResidualEukledianNormSquared << " to " << _globalResidualEukledianNormSquared );
-    residualGrows++;
-  }
-  else if (_globalResidualEukledianNormSquared / _initialGlobalResidualEukledianNormSquared < _tolerance) {
-    residualReducedUnderThreshold++;
-  }
-
-  if ( tarch::la::equals(_initialGlobalResidualHNormSquared,0.0) ) {
-    _initialGlobalResidualHNormSquared = _globalResidualHNormSquared;
-  }
-  else if (_previousGlobalResidualHNormSquared * 1.2 < _globalResidualHNormSquared ) {
-    logWarning( "terminationCriterionHolds()", "residual in h-norm squared grows from " << _previousGlobalResidualHNormSquared << " to " << _globalResidualHNormSquared );
-    residualGrows++;
-  }
-  else if (_globalResidualHNormSquared / _initialGlobalResidualHNormSquared < _tolerance ) {
-    residualReducedUnderThreshold++;
-  }
-  */
-
   _previousGlobalResidualMaxNorm              = _globalResidualMaxNorm;
   _previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   _previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
@@ -99,12 +78,16 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
 }
 
 
-void mghype::matrixfree::solvers::Solver::clearGlobalResidual() {
+void mghype::matrixfree::solvers::Solver::clearGlobalResidualAndSolutionUpdate() {
   tarch::multicore::Lock lock( _semaphore );
 
   _globalResidualMaxNorm              = 0.0;
   _globalResidualEukledianNormSquared = 0.0;
   _globalResidualHNormSquared         = 0.0;
+
+  _globalDeltaUMaxNorm              = 0.0;
+  _globalDeltaUEukledianNormSquared = 0.0;
+  _globalDeltaUHNormSquared         = 0.0;
 
   _minH = std::numeric_limits<double>::max();
   _maxH = 0;
@@ -112,19 +95,34 @@ void mghype::matrixfree::solvers::Solver::clearGlobalResidual() {
 
 
 void mghype::matrixfree::solvers::Solver::updateGlobalResidual(
-  double residualMaxNorm,
-  double residualEukledianNormSquared,
-  double residualHNormSquared,
-  double h
+  double residual,
+  const tarch::la::Vector<Dimensions,double>&  h
 ) {
   tarch::multicore::Lock lock( _semaphore );
 
-  _globalResidualMaxNorm        = std::max(_globalResidualMaxNorm, residualMaxNorm);
-  _globalResidualEukledianNormSquared += residualEukledianNormSquared;
-  _globalResidualHNormSquared         += residualHNormSquared;
+  _globalResidualMaxNorm               = std::max( _globalResidualMaxNorm, std::abs(residual) );
+  _globalResidualEukledianNormSquared += residual * residual;
+  _globalResidualHNormSquared         += residual * residual * tarch::la::volume(h);
+}
 
-  _minH = std::min( _minH, h );
-  _maxH = std::max( _maxH, h );
+
+void mghype::matrixfree::solvers::Solver::updateGlobalSolutionUpdates(
+  double du,
+  const tarch::la::Vector<Dimensions,double>&  h
+) {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalDeltaUMaxNorm               = std::max( _globalDeltaUMaxNorm, std::abs(du) );
+  _globalDeltaUEukledianNormSquared += du * du;
+  _globalDeltaUHNormSquared         += du * du * tarch::la::volume(h);
+}
+
+
+void mghype::matrixfree::solvers::Solver::updateMinMaxMeshSize(
+  const tarch::la::Vector<Dimensions,double>&  h
+) {
+  _minH = std::min( _minH, tarch::la::min(h) );
+  _maxH = std::max( _maxH, tarch::la::max(h) );
 }
 
 
@@ -134,7 +132,35 @@ std::string mghype::matrixfree::solvers::Solver::toString() const {
       << ": |r|_max=" << _globalResidualMaxNorm
       << ", |r|_2=" << std::sqrt( _globalResidualEukledianNormSquared )
       << ", |r|_h=" << std::sqrt( _globalResidualHNormSquared )
+      << ", |du|_max=" << _globalDeltaUMaxNorm
+      << ", |du|_2=" << std::sqrt( _globalDeltaUEukledianNormSquared )
+      << ", |du|_h=" << std::sqrt( _globalDeltaUHNormSquared )
       << ", h_min=" << _minH
       << ", h_max=" << _maxH;
   return msg.str();
+}
+
+
+void mghype::matrixfree::solvers::Solver::synchroniseGlobalResidualAndSolutionUpdate() {
+  #if defined(Parallel)
+  double residualMax = _globalResidualMaxNorm;
+  double residual2   = _globalResidualEukledianNormSquared;
+  double residualH   = _globalResidualHNormSquared;
+  double duMax       = _globalDeltaUMaxNorm;
+  double du2         = _globalDeltaUEukledianNormSquared;
+  double duH         = _globalDeltaUHNormSquared;
+  double hMin        = _minH;
+  double hMax        = _maxH;
+
+  MPI_Reduce( &residualMax, &_globalResidualMaxNorm,             1, MPI_DOUBLE, MPI_MAX, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+  MPI_Reduce( &residual2,   &_globalResidualEukledianNormSquared, 1, MPI_DOUBLE, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+  MPI_Reduce( &residualH,   &_globalResidualHNormSquared,        1, MPI_DOUBLE, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+
+  MPI_Reduce( &duMax, &_globalDeltaUMaxNorm,             1, MPI_DOUBLE, MPI_MAX, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+  MPI_Reduce( &du2,   &_globalDeltaUEukledianNormSquared, 1, MPI_DOUBLE, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+  MPI_Reduce( &duH,   &_globalDeltaUHNormSquared,        1, MPI_DOUBLE, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+
+  MPI_Reduce( &hMin, &_minH,             1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+  MPI_Reduce( &hMax, &_maxH,             1, MPI_DOUBLE, MPI_MAX, tarch::mpi::Rank::getGlobalMasterRank(), tarch::mpi::Rank::getInstance().getCommunicator() );
+  #endif
 }

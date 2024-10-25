@@ -116,6 +116,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      */
     void suspend();
 
+    State getState() const;
     bool update(int level) const;
 
     int  getActiveLevel() const;
