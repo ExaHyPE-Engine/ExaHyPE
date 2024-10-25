@@ -175,7 +175,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
   if ( _activeLevel == getFinestLevel() )
-    clearGlobalResidual();
+    clearGlobalResidualAndSolutionUpdate();
   logInfo("beginMeshSweep()", "running phase " << toString(_smoothingState) << " at level " << _activeLevel);
 
 }
@@ -313,6 +313,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SmoothingState s
   }
 
   return output.str();
+}
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
+  return _state;
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SmoothingState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSmoothingState() {

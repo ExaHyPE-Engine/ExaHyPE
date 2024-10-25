@@ -93,7 +93,7 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
 
   __Template_TouchCellFirstTime = """ 
   if (
-    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse
+    fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior
     and
     {{CELL_PREDICATE}}
     and

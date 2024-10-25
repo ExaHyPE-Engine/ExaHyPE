@@ -58,9 +58,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
       else
       {
         // we have boundary vertex
-        if ( isCorner( marker.x() ) )
-          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Corner );
-        else
+        if ( isOnBoundary( marker.x() ) )
           fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
 
         // store 
@@ -181,7 +179,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
+    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex_node
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -289,9 +287,7 @@ class InitDofsCollocatedRandomTest2(InitDofsCollocatedRandomRhs):
       else
       {
         // we have boundary vertex
-        if ( isCorner( marker.x() ) )
-          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Corner );
-        else
+        if ( isOnBoundary( marker.x() ) )
           fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
 
         // store 
@@ -394,9 +390,7 @@ class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
       else
       {
         // we have boundary vertex
-        if ( isCorner( marker.x() ) )
-          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Corner );
-        else
+        if ( isOnBoundary( marker.x() ) )
           fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
 
         // store 
@@ -493,7 +487,7 @@ class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
+    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex_node
 
 class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
   templateTouchVertexFirstTime="""
@@ -537,9 +531,7 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
       else
       {
         // we have boundary vertex
-        if ( isCorner( marker.x() ) )
-          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Corner );
-        else
+        if ( isOnBoundary( marker.x() ) )
           fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
 
         // store 
@@ -645,7 +637,7 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
+    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex_node
 
 class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
   """!
@@ -696,9 +688,7 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
       else
       {
         // we have boundary vertex
-        if ( isCorner( marker.x() ) )
-          fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Corner );
-        else
+        if ( isOnBoundary( marker.x() ) )
           fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
 
         // store 

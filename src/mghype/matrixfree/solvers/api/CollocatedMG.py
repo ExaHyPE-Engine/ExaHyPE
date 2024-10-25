@@ -6,8 +6,10 @@ import dastgen2
 import os
 
 from .Solver                        import Solver
-from .actionsets.InitDofsMG         import InitDofsCollocatedMG
-from .actionsets.CollocatedMGSolver import CollocatedMGSolver, Restriction, Prolongation
+from .actionsets.CollocatedMGSolver.InitDofs           import InitDofsCollocatedMG
+from .actionsets.CollocatedMGSolver.CollocatedMGSolver import CollocatedMGSolver
+from .actionsets.CollocatedMGSolver.Restriction        import Restriction
+from .actionsets.CollocatedMGSolver.Prolongation       import Prolongation
 from .actionsets.PlotVertexDataInPeanoBlockFormat import PlotVertexDataInPeanoBlockFormat
 
 from abc import abstractmethod
@@ -77,8 +79,8 @@ class CollocatedMG(Solver):
                plot_predicate="true"
                ):
     super( CollocatedMG, self ).__init__( name,
-                                          min_h,
-                                          max_h
+                                          min_h=min_h,
+                                          max_h=max_h
                                           )
     
     assert pre_smoothing_steps  >= 1
@@ -93,8 +95,6 @@ class CollocatedMG(Solver):
     self._vertex_data.data.add_attribute( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
     self._cell_data.data.add_attribute  ( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
 
-    matrix_dims = (2**dimensions) * unknowns_per_vertex
-    
     self._unknowns_per_vertex = unknowns_per_vertex
 
     # already initialised this in superclass!

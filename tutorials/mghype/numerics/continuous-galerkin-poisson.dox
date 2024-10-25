@@ -144,5 +144,80 @@ If we store the weights of the shape functions within the vertices and faces, we
 The weight of a function on a face determines the height of this function at this point both from the left cell's and the right cell's point of view.
 
 
+## Block decomposition
+
+The block structure yields a global equation system that resembles
+
+@f$
+\left(
+  \begin{array}{ccccc}
+  A_{11} & A_{12} & A_{13} & A_{14} & \cdots \\
+  A_{21} & A_{22} & A_{23} & A_{24} & \cdots \\
+  A_{31} & A_{32} & A_{33} & A_{34} & \cdots \\
+  A_{41} & A_{42} & A_{43} & A_{44} & \cdots \\
+  \cdots
+  \end{array}
+\right)
+\left(
+  \begin{array}{c}
+    u_1 \\ u_2 \\ u_3 \\ ...
+  \end{array}
+\right)
+= 
+  M
+\left(
+  \begin{array}{c}
+    b_1 \\ b_2 \\ b_3 \\ ...
+  \end{array}
+\right)
+@f$ 
+
+where each entry @f$ u_i @f$ is a small vector in itself that hosts all weights from its 
+respective cell i. 
+Once we stick to Gauss-Lobatto, only the shape functions directly on the facets span 
+multiple cells.
+All other shape functions have cell-local support.
+Therefore, the matrix entries @f$ A_{ii} @f$ are dense, but only those @f$ A_{ij} @f$ hold
+entries where cell i and cell j are connected through a facet.
+All arguments holds for the right-hand matrix M, too.
+
+
+We can evaluate @f$ Au @f$ matrix-freely, and for all nodal points within the cell, we can 
+do this within touchCellFirstTime(). 
+The points on the face are a little bit more difficult.
+Here, we need to accumulate the residual as well as the diagonal and issue a Jacobi solver.
+A direct evaluation in one rush does not work.
+We can, obviously, also use Jacobi everywhere.
+
+
+Per cell, we define a matrix @f$ \chi @f$ which gives us only the interior points of a cell.
+That is, we have @f$ \chi \in \mathbb{R}^{(p-2)^d \times p^d} @f$.
+Here, p is the number of nodes per axis.
+d is the spatial dimension.
+For @f$ p = 3 @f$, we obtain
+
+@f$
+\left(
+  \begin{array}{cccccccccccccccc}
+   0 & 0 & 0 & 0 &    0 & 1 & 0 & 0 &     0 & 0 & 0 & 0 &    & 0 & 0 & 0 & 0 \\ 
+   0 & 0 & 0 & 0 &    0 & 0 & 1 & 0 &     0 & 0 & 0 & 0 &    & 0 & 0 & 0 & 0 \\ 
+   0 & 0 & 0 & 0 &    0 & 0 & 0 & 0 &     0 & 1 & 0 & 0 &    & 0 & 0 & 0 & 0 \\ 
+   0 & 0 & 0 & 0 &    0 & 0 & 0 & 0 &     0 & 0 & 1 & 0 &    & 0 & 0 & 0 & 0 
+  \end{array}
+\right)
+@f$
+
+@image html chi.png
+
+
+When we enter the cell, we evaluate 
+
+@f$
+u_i^{(n+0.5)} = u_i^{(n)} + \chi ^T \left( \chi A_i \chi^T \right) ^{-1} \chi (b - Au^{(n)})
+@f$
+
+which updates all the interior points of a patch. After that, we can update the outer points
+subject to a standard Jacobi iteration to obtain a @f$ u_i^{(n+1)} @f$.
+
  */
  
