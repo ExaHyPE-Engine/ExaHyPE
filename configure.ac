@@ -1059,8 +1059,8 @@ if test "$use_openblas" != false; then
     AC_MSG_ERROR([OpenBLAS headers not found])
   ])
   # Check for libraries
-  AC_CHECK_LIB([openblas], [cblas_daxpby], [
-    OPENBLAS_LIBS="ac_cv_search_cblas_daxpby"
+  AC_CHECK_LIB([openblas], [cblas_daxpy], [
+    OPENBLAS_LIBS="ac_cv_search_cblas_daxpy"
   ], [
     AC_MSG_ERROR([OpenBLAS library not found. Did you forget to include -lopenblas to LDFLAGS?])
   ])
