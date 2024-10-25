@@ -1,177 +1,172 @@
-template<int Rows, typename Scalar>
-tarch::la::Vector<Rows,Scalar>  tarch::la::backSubstitution(
-  const Matrix<Rows,Rows,Scalar>&  R,
-  const Vector<Rows,Scalar>&       f
+template <int Rows, typename Scalar>
+tarch::la::Vector<Rows, Scalar> tarch::la::backSubstitution(
+  const Matrix<Rows, Rows, Scalar>& R,
+  const Vector<Rows, Scalar>&       f
 ) {
-  tarch::la::Vector<Rows,Scalar> x;
+  tarch::la::Vector<Rows, Scalar> x;
 
-  for(int k = Rows-1; k >= 0; k--){
+  for (int k = Rows - 1; k >= 0; k--) {
     x(k) = f(k);
-    for(int i = k+1; i < Rows; i++){
-      x(k) -= R(k, i)*x(i);
+    for (int i = k + 1; i < Rows; i++) {
+      x(k) -= R(k, i) * x(i);
     }
-    x(k) = x(k)/R(k, k);
+    x(k) = x(k) / R(k, k);
   }
 
   return x;
 }
 
 
-template<int Rows, typename Scalar>
-void tarch::la::lu (
-  Matrix<Rows,Rows,Scalar>&  A,
-  Vector<Rows,int>&          pivots
-) {
-  for (int k=0; k < Rows; k++){
-    int maxIndex = k;
-    Scalar max = std::abs(A(k,k));
-    for (int i=k+1; i < Rows; i++){
-      Scalar current = std::abs(A(i,k));
-      if (current > max){
+template <int Rows, typename Scalar>
+void tarch::la::lu(Matrix<Rows, Rows, Scalar>& A, Vector<Rows, int>& pivots) {
+  for (int k = 0; k < Rows; k++) {
+    int    maxIndex = k;
+    Scalar max      = std::abs(A(k, k));
+    for (int i = k + 1; i < Rows; i++) {
+      Scalar current = std::abs(A(i, k));
+      if (current > max) {
         maxIndex = i;
-        max = current;
+        max      = current;
       }
     }
     pivots(k) = maxIndex;
 
     // Exchange lines
-    for (int j=0; j < Rows; j++){
-      Scalar temp   = A(k,j);
-      A(k,j)        = A(maxIndex,j);
-      A(maxIndex,j) = temp;
+    for (int j = 0; j < Rows; j++) {
+      Scalar temp    = A(k, j);
+      A(k, j)        = A(maxIndex, j);
+      A(maxIndex, j) = temp;
     }
 
     // Compute scaling elements
-    for (int i=k+1; i < Rows; i++){
-      A(i,k) /= A(k,k);
+    for (int i = k + 1; i < Rows; i++) {
+      A(i, k) /= A(k, k);
     }
 
     // Subtract contributions from each line
-    for (int i=k+1; i < Rows; i++){
-      for (int j=k+1; j < Rows; j++){
-        A(i,j) -= A(i,k) * A(k,j);
+    for (int i = k + 1; i < Rows; i++) {
+      for (int j = k + 1; j < Rows; j++) {
+        A(i, j) -= A(i, k) * A(k, j);
       }
     }
   }
 }
 
 
-template<int Rows, typename Scalar>
-void tarch::la::lu (
-  Matrix<Rows,Rows,Scalar>&  A
-) {
-  for (int k=0; k < Rows; k++){
+template <int Rows, typename Scalar>
+void tarch::la::lu(Matrix<Rows, Rows, Scalar>& A) {
+  for (int k = 0; k < Rows; k++) {
     // Compute scaling elements
-    for (int i=k+1; i < Rows; i++){
-      A(i,k) /= A(k,k);
+    for (int i = k + 1; i < Rows; i++) {
+      A(i, k) /= A(k, k);
     }
 
     // Subtract contributions from each line
-    for (int i=k+1; i < Rows; i++){
-      for (int j=k+1; j < Rows; j++){
-        A(i,j) -= A(i,k) * A(k,j);
+    for (int i = k + 1; i < Rows; i++) {
+      for (int j = k + 1; j < Rows; j++) {
+        A(i, j) -= A(i, k) * A(k, j);
       }
     }
   }
 }
 
 
-template<typename Scalar>
-double tarch::la::det(
-  const Matrix<2,2,Scalar>&  R
+template <typename Scalar>
+double tarch::la::det(const Matrix<2, 2, Scalar>& R) {
+  return R(0, 0) * R(1, 1) - R(0, 1) * R(1, 0);
+}
+
+
+template <int Rows, typename Scalar>
+tarch::la::Matrix<Rows, Rows, Scalar> tarch::la::invert(
+  const tarch::la::Matrix<Rows, Rows, Scalar>& M
 ) {
-  return R(0,0)*R(1,1)-R(0,1)*R(1,0);
+  tarch::la::Matrix<Rows, Rows, Scalar> result;
+  tarch::la::Matrix<Rows, Rows, Scalar> LU = M;
+  lu(LU);
+  for (int j = 0; j < Rows; j++) {
+    for (int i = 0; i < Rows; i++) {
+      result(i, j) = (i == j) ? 1.0 : 0.0;
+      for (int k = 0; k < i; k++) {
+        result(i, j) -= LU(i, k) * result(k, j);
+      }
+    }
+
+    for (int i = Rows - 1; i >= 0; i--) {
+      for (int k = i + 1; k < Rows; k++) {
+        result(i, j) -= LU(i, k) * result(k, j);
+      }
+      result(i, j) /= LU(i, i);
+    }
+  }
+  return result;
 }
 
 #ifdef UseLapack
-template<int Rows, typename Scalar>
-tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
-  const tarch::la::Matrix<Rows,Rows,Scalar>&  R
-){
+template <int Rows>
+tarch::la::Matrix<Rows, Rows, double> tarch::la::invert(
+  const tarch::la::Matrix<Rows, Rows, double>& R
+) {
   // make a copy
-  [[maybe_unused]] tarch::la::Matrix<Rows,Rows,Scalar> M = R;
+  [[maybe_unused]] tarch::la::Matrix<Rows, Rows, double> M = R;
 
   // aux variables
   int returnCode;
   int ipiv[Rows];
 
   // step 1 - compute LU factorisation. Modify M in-place.
-  returnCode = LAPACKE_dgetrf( LAPACK_ROW_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
-  // check return code. 
-  assertion(returnCode==0);
+  returnCode = LAPACKE_dgetrf(
+    LAPACK_ROW_MAJOR,
+    Rows,
+    Rows,
+    M.data(),
+    Rows,
+    ipiv
+  );
+  // check return code.
+  assertion(returnCode == 0);
 
-  // step 2 - use the result of the above to compute the inverse. Modify M in-place.
-  returnCode = LAPACKE_dgetri( LAPACK_ROW_MAJOR, Rows, M.data(), Rows, ipiv );
- // check return code
-  assertion(returnCode==0);
+  // step 2 - use the result of the above to compute the inverse. Modify M
+  // in-place.
+  returnCode = LAPACKE_dgetri(LAPACK_ROW_MAJOR, Rows, M.data(), Rows, ipiv);
+  // check return code
+  assertion(returnCode == 0);
 
   return M;
 }
-
-#else
-template<int Rows, typename Scalar>
-tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
-  const tarch::la::Matrix<Rows,Rows,Scalar>&  M
-){
-  tarch::la::Matrix<Rows,Rows,Scalar> result;
-  tarch::la::Matrix<Rows,Rows,Scalar> LU = M;
-  lu(LU);
-  for (int j = 0; j < Rows; j++) {
-    for (int i = 0; i < Rows; i++) {
-      result(i,j) = (i==j) ? 1.0 : 0.0;
-      for (int k = 0; k < i; k++) {
-        result(i,j) -= LU(i,k) * result(k,j);
-      }
-    }
-
-    for (int i = Rows - 1; i >= 0; i--) {
-      for (int k = i + 1; k < Rows; k++) {
-        result(i,j) -= LU(i,k) * result(k,j);
-      }
-      result(i,j) /= LU(i,i);
-    }
-  }
-  return result;
-}
 #endif
 
-
-template<typename Scalar>
-tarch::la::Matrix<2,2,Scalar> tarch::la::invert(
-  const Matrix<2,2,Scalar>&  R
+template <typename Scalar>
+tarch::la::Matrix<2, 2, Scalar> tarch::la::invert(const Matrix<2, 2, Scalar>& R
 ) {
-  Matrix<2,2,Scalar> result;
-  
-  assertion(det(R)!=0.0);
-  const double scaling = 1.0/det(R);
-  
-  result(0,0) =  R(1,1) * scaling;
-  result(0,1) = -R(0,1) * scaling;
-  result(1,0) = -R(1,0) * scaling;
-  result(1,1) =  R(0,0) * scaling;
-  
+  Matrix<2, 2, Scalar> result;
+
+  assertion(det(R) != 0.0);
+  const double scaling = 1.0 / det(R);
+
+  result(0, 0) = R(1, 1) * scaling;
+  result(0, 1) = -R(0, 1) * scaling;
+  result(1, 0) = -R(1, 0) * scaling;
+  result(1, 1) = R(0, 0) * scaling;
+
   return result;
 }
 
 
-
-template<typename Scalar>
-double tarch::la::det(
-  const Matrix<3,3,Scalar>&  R
-) {
-  return R(0, 0) * (R(1, 1) * R(2, 2) - R(2, 1) * R(1, 2)) -
-         R(0, 1) * (R(1, 0) * R(2, 2) - R(1, 2) * R(2, 0)) +
-         R(0, 2) * (R(1, 0) * R(2, 1) - R(1, 1) * R(2, 0));
+template <typename Scalar>
+double tarch::la::det(const Matrix<3, 3, Scalar>& R) {
+  return R(0, 0) * (R(1, 1) * R(2, 2) - R(2, 1) * R(1, 2))
+         - R(0, 1) * (R(1, 0) * R(2, 2) - R(1, 2) * R(2, 0))
+         + R(0, 2) * (R(1, 0) * R(2, 1) - R(1, 1) * R(2, 0));
 }
 
 
-template<typename Scalar>
-tarch::la::Matrix<3,3,Scalar> tarch::la::invert(
-  const Matrix<3,3,Scalar>&  R
+template <typename Scalar>
+tarch::la::Matrix<3, 3, Scalar> tarch::la::invert(const Matrix<3, 3, Scalar>& R
 ) {
-  Matrix<3,3,Scalar> result;
+  Matrix<3, 3, Scalar> result;
 
-  assertion(det(R)!=0.0);
+  assertion(det(R) != 0.0);
   double invdet = 1 / det(R);
 
   result(0, 0) = (R(1, 1) * R(2, 2) - R(2, 1) * R(1, 2)) * invdet;
@@ -183,6 +178,6 @@ tarch::la::Matrix<3,3,Scalar> tarch::la::invert(
   result(2, 0) = (R(1, 0) * R(2, 1) - R(2, 0) * R(1, 1)) * invdet;
   result(2, 1) = (R(2, 0) * R(0, 1) - R(0, 0) * R(2, 1)) * invdet;
   result(2, 2) = (R(0, 0) * R(1, 1) - R(1, 0) * R(0, 1)) * invdet;
-  
+
   return result;
 }
