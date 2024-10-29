@@ -14,7 +14,7 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_library(SWIFT2Core${dimension}d_${mode_lower} STATIC)
     target_sources(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES} ${HEADERS})
-    target_link_libraries(SWIFT2Core${dimension}d_${mode_lower} PRIVATE PeanoOptions ToolboxParticles${dimension}d_${mode_lower})
+    target_link_libraries(SWIFT2Core${dimension}d_${mode_lower} PRIVATE PeanoOptions)
     target_compile_definitions(SWIFT2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_compile_options(SWIFT2Core${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 

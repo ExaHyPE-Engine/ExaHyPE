@@ -52,7 +52,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include(Ccache)
 include(CheckIncludeFiles)
-include(GNUInstallDirs)
 
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
