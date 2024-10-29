@@ -23,7 +23,9 @@ mghype::matrixfree::solvers::Solver::Solver(
   _previousGlobalResidualHNormSquared(0.0),
   _globalDeltaUMaxNorm(0.0),
   _globalDeltaUEukledianNormSquared(0.0),
-  _globalDeltaUHNormSquared(0.0) {
+  _globalDeltaUHNormSquared(0.0),
+  _minH(std::numeric_limits<double>::max()),
+  _maxH(0.0) {
   const std::string      prefix = "Abstract";
   std::string::size_type index  = _name.find( prefix );
   if (index!=std::string::npos) {
@@ -89,8 +91,9 @@ void mghype::matrixfree::solvers::Solver::clearGlobalResidualAndSolutionUpdate()
   _globalDeltaUEukledianNormSquared = 0.0;
   _globalDeltaUHNormSquared         = 0.0;
 
-  _minH = std::numeric_limits<double>::max();
-  _maxH = 0;
+  // Commenting out as we will set this during init and leave it alone...
+  // _minH = std::numeric_limits<double>::max();
+  // _maxH = 0;
 }
 
 

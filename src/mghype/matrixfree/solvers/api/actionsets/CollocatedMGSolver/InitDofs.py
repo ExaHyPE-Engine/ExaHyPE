@@ -48,6 +48,7 @@ class InitDofsCollocatedMG(ActionSet):
     case celldata::{{SOLVER_NAME}}::Type::Interior:
     {
       fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
     }
     break;
   }

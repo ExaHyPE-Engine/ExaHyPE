@@ -64,7 +64,6 @@ class CollocatedMGSolver(ActionSet):
       ) {
         repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(r, marker.h());
         repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
-        repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
       }
       
       fineGridVertex{{SOLVER_NAME}}.setU(unknown, fineGridVertex{{SOLVER_NAME}}.getU(unknown) + du);

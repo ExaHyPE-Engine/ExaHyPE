@@ -10,7 +10,7 @@ class Restriction(ActionSet):
   """
   templateTouchVertexFirstTime="""
   if (
-    repositories::{{SOLVER_INSTANCE}}.restrict()
+    repositories::{{SOLVER_INSTANCE}}.restrictToNextLevel()
     and
     fineGridVertex{{SOLVER_NAME}}.getLevel() == repositories::{{SOLVER_INSTANCE}}.getActiveLevel() - 1
   ) {
@@ -26,11 +26,11 @@ class Restriction(ActionSet):
   templateTouchVertexLastTime="""
   // Perform some actual restriction.
   if (
-    repositories::{{SOLVER_INSTANCE}}.restrict()
+    repositories::{{SOLVER_INSTANCE}}.restrictToNextLevel()
     and
     fineGridVertex{{SOLVER_NAME}}.getLevel() == repositories::{{SOLVER_INSTANCE}}.getActiveLevel()
   ) {
-    mghype::matrixfree::solvers::cgmultigrid::restrict<{{SOLVER_NAME}}>(
+    mghype::matrixfree::solvers::cgmultigrid::restrictToNextLevel<{{SOLVER_NAME}}>(
       repositories::{{SOLVER_INSTANCE}}.getRestrictionMatrix(marker.x(), marker.h()),
       coarseGridVertices{{SOLVER_NAME}},
       fineGridVertex{{SOLVER_NAME}},
