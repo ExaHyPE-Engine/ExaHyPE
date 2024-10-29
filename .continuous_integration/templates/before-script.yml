@@ -1,0 +1,21 @@
+.BeforeScript:
+  before_script:
+    - echo "Running CI with $(nproc) cores"
+    - ls
+    - pwd
+    - whoami
+    - hostname
+    - git --version
+    - echo $CI_BUILDS_DIR
+    - echo $CI_PROJECT_DIR
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo $APPTAINER_BINDDIR
+    - echo $APPTAINER_IMAGEDIR
+    - echo $CCACHE_DIR
+    - echo $CC
+    - echo $CXX
+    - echo $CFLAGS
+    - echo $CXXFLAGS
+    - echo $LDFLAGS
+    - echo $CONFIGURATION_OPTIONS

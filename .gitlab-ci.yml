@@ -9,12 +9,5 @@ Automake:
       - .continuous_integration/gitlab-automake.yml
     strategy: depend
 
-CMake:
-  stage: BuildSystem
-  trigger:
-    include:
-      - .continuous_integration/gitlab-cmake.yml
-    strategy: depend
-
 include:
   - .continuous_integration/gitlab-pages.yml

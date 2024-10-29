@@ -1,7 +1,10 @@
 include:
-  - .continuous_integration/gitlab-templates.yml
-  - .continuous_integration/gitlab-templates-mghype.yml
-  - .continuous_integration/gitlab-templates-exahype2.yml
+  - .continuous_integration/templates/tags.yml
+  - .continuous_integration/templates/variables.yml
+  - .continuous_integration/templates/before-script.yml
+  - .continuous_integration/templates/run-only-on.yml
+  - .continuous_integration/templates/mghype.yml
+  - .continuous_integration/templates/exahype2.yml
 
 stages:
   - Build
@@ -9,6 +12,11 @@ stages:
   - Tutorials
   - Applications
   - Benchmarks
+
+.BeforeScriptWithCMakeSanitiser:
+  extends: .BeforeScript
+  before_script:
+    - python3 .continuous_integration/sanitise_path.py build/CTestTestfile.cmake build/CMakeCache.txt
 
 .Build:
   script:
@@ -29,6 +37,8 @@ Build:
   stage: Build
   allow_failure: false
   extends:
+    - .Tags
+    - .Variables
     - .BeforeScript
     - .Build
   retry: 0
@@ -37,8 +47,9 @@ UnitTests:
   stage: Test
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
+    - .Tags
+    - .Variables
+    - .BeforeScriptWithCMakeSanitiser
     - .UnitTests
   needs:
     - job: Build
@@ -50,8 +61,10 @@ MGHyPE_Tests:
   stage: Test
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .MGHyPE_Tests
   needs:
     - job: Build
@@ -63,9 +76,10 @@ ExaHyPE2_Tutorials:
   stage: Tutorials
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Tutorials
   needs:
     - job: Build
@@ -77,9 +91,10 @@ ExaHyPE2_Euler:
   stage: Applications
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Euler
   needs:
     - job: Build
@@ -91,9 +106,10 @@ ExaHyPE2_Advection:
   stage: Applications
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Advection
   needs:
     - job: Build
@@ -105,9 +121,10 @@ ExaHyPE2_Acoustic:
   stage: Applications
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Acoustic
   needs:
     - job: Build
@@ -119,9 +136,10 @@ ExaHyPE2_Elastic:
   stage: Applications
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Elastic
   needs:
     - job: Build
@@ -133,9 +151,10 @@ ExaHyPE2_Kernels:
   stage: Benchmarks
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Kernels
   needs:
     - job: Build
@@ -147,9 +166,10 @@ ExaHyPE2_SBH:
   stage: Benchmarks
   allow_failure: false
   extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_SBH
   needs:
     - job: Build
@@ -157,16 +177,17 @@ ExaHyPE2_SBH:
     - Build
   retry: 0
 
-ExaHyPE2_SBH_Coupled:
-  stage: Benchmarks
-  allow_failure: false
-  extends:
-    - .BeforeScript
-    - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
-    - .ExaHyPE2_SBH_Coupled
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+#ExaHyPE2_SBH_Coupled:
+#  stage: Benchmarks
+#  allow_failure: false
+#  extends:
+#    - .Tags
+#    - .Variables
+#    - .RunOnlyOn
+#    - .BeforeScriptWithCMakeSanitiser
+#    - .ExaHyPE2_SBH_Coupled
+#  needs:
+#    - job: Build
+#  dependencies:
+#    - Build
+#  retry: 0

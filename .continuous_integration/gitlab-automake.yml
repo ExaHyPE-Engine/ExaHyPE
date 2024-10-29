@@ -1,5 +1,5 @@
 include:
-  - .continuous_integration/gitlab-templates.yml
+  - .continuous_integration/templates/variables.yml
 
 stages:
   - Compiler
@@ -24,7 +24,7 @@ GCC_OpenMP:
                             --with-multithreading=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-pipeline.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
 Intel_OpenMP:
@@ -47,7 +47,7 @@ Intel_OpenMP:
                             --with-multithreading=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-pipeline.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
 LLVM_OpenMP:
@@ -70,7 +70,7 @@ LLVM_OpenMP:
                             --with-multithreading=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-pipeline.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
 NVIDIA:
@@ -92,5 +92,5 @@ NVIDIA:
                             --enable-finiteelements"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-pipeline.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend

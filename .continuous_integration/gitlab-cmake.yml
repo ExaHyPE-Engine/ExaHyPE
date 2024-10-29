@@ -1,5 +1,5 @@
 include:
-  - .continuous_integration/gitlab-templates.yml
+  - .continuous_integration/templates/variables.yml
 
 stages:
   - Compiler
@@ -21,7 +21,7 @@ GCC_OpenMP:
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-pipeline.yml
+      - .continuous_integration/pipelines/gitlab-cmake.yml
     strategy: depend
 
 Intel_OpenMP:
@@ -41,7 +41,7 @@ Intel_OpenMP:
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-pipeline.yml
+      - .continuous_integration/pipelines/gitlab-cmake.yml
     strategy: depend
 
 LLVM_OpenMP:
@@ -61,7 +61,7 @@ LLVM_OpenMP:
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-pipeline.yml
+      - .continuous_integration/pipelines/gitlab-cmake.yml
     strategy: depend
 
 NVIDIA:
@@ -80,5 +80,5 @@ NVIDIA:
                             -DENABLE_PARTICLES=ON"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-pipeline.yml
+      - .continuous_integration/pipelines/gitlab-cmake.yml
     strategy: depend
