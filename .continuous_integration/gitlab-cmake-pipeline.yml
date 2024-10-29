@@ -31,7 +31,7 @@ Build:
   extends:
     - .BeforeScript
     - .Build
-  retry: 1
+  retry: 0
 
 UnitTests:
   stage: Test
@@ -44,7 +44,7 @@ UnitTests:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 MGHyPE_Tests:
   stage: Test
@@ -52,13 +52,12 @@ MGHyPE_Tests:
   extends:
     - .BeforeScript
     - .SanitiseCMake
-    - .RunOnlyOnDevelopmentBranches
     - .MGHyPE_Tests
   needs:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Tutorials:
   stage: Tutorials
@@ -72,7 +71,7 @@ ExaHyPE2_Tutorials:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Euler:
   stage: Applications
@@ -86,7 +85,7 @@ ExaHyPE2_Euler:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Advection:
   stage: Applications
@@ -100,7 +99,7 @@ ExaHyPE2_Advection:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Acoustic:
   stage: Applications
@@ -114,7 +113,7 @@ ExaHyPE2_Acoustic:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Elastic:
   stage: Applications
@@ -128,7 +127,7 @@ ExaHyPE2_Elastic:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Kernels:
   stage: Benchmarks
@@ -142,7 +141,7 @@ ExaHyPE2_Kernels:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_SBH:
   stage: Benchmarks
@@ -156,7 +155,7 @@ ExaHyPE2_SBH:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_SBH_Coupled:
   stage: Benchmarks
@@ -170,4 +169,4 @@ ExaHyPE2_SBH_Coupled:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0

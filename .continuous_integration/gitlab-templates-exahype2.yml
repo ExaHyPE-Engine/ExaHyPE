@@ -12,8 +12,7 @@
       build_type: [Debug, Release]
       solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Advection:
   parallel:
@@ -22,8 +21,7 @@
       build_type: [Debug, Release]
       solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Acoustic:
   parallel:
@@ -32,8 +30,7 @@
       build_type: [Debug, Release]
       solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Elastic:
   parallel:
@@ -42,26 +39,22 @@
       build_type: [Debug, Release]
       solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Kernels:
   parallel:
     matrix:
     - kernel: [euler, acoustic, elastic, advection]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks.py -e -fpe -m Release"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks.py -e -fpe -m Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
 
 .ExaHyPE2_SBH:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance_testbed.py -et 0.01"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance_testbed.py -et 0.01"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
 
 .ExaHyPE2_SBH_Coupled:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/ccz4/single-black-hole; OMP_NUM_THREADS=1 ./peano_sbh"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; OMP_NUM_THREADS=1 ./peano_sbh"
