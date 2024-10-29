@@ -29,7 +29,7 @@ stages:
       - ./build/*
     expire_in: 2 hours
 
-.UnitTests:
+.Unit_Tests:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
 
@@ -43,14 +43,14 @@ Build:
     - .Build
   retry: 0
 
-UnitTests:
+Unit_Tests:
   stage: Test
   allow_failure: false
   extends:
     - .Tags
     - .Variables
     - .BeforeScriptWithCMakeSanitiser
-    - .UnitTests
+    - .Unit_Tests
   needs:
     - job: Build
   dependencies:
