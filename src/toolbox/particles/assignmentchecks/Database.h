@@ -26,7 +26,9 @@ namespace toolbox {
         using ParticleEvents = std::vector<Event>;
 
         /**
-         * @class The Database class stores the actual particle histories.
+         * @class Database
+         * @brief stores the actual particle histories.
+         *
          * Particles are traced via a map, where the keys are
          * instances of the ParticleIdentifier class. The database itself
          * is implemented as a singleton. To access it, use the getInstance()

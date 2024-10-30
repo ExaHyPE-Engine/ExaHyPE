@@ -19,6 +19,7 @@
 \li \subpage swift_parallelisation
 \li \subpage swift_graph_compiler
 \li \subpage swift_runtime_analysis
+\li \subpage swift_debugging
 \li \subpage page_swift_performance_optimisation
 
 
