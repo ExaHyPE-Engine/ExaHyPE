@@ -33,15 +33,13 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-
 BlackHoleRegion = 0.1
 
 
 class KernelParallelisation(Enum):
-    NONE         = "::peano4::utils::LoopPlacement::Serial"
+    NONE = "::peano4::utils::LoopPlacement::Serial"
     PARALLEL_FOR = "::peano4::utils::LoopPlacement::Nested"
-    SUBTASKS     = "::peano4::utils::LoopPlacement::SpreadOut"
-
+    SUBTASKS = "::peano4::utils::LoopPlacement::SpreadOut"
 
 
 class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -56,22 +54,24 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
     It is interesting to see that the limiter does not really have a min
     and max mesh size. The point is that the higher order solver dictates
-    the mesh structure, and we then follow this structure with the 
+    the mesh structure, and we then follow this structure with the
     Finite Volume scheme.
 
     """
-    def __init__(self,
-                 name,
-                 patch_size,
-                 amend_priorities: bool,
-                 parallelisation_of_kernels:       KernelParallelisation,
-                 ):
+
+    def __init__(
+        self,
+        name,
+        patch_size,
+        amend_priorities: bool,
+        parallelisation_of_kernels: KernelParallelisation,
+    ):
         """!
 
         Construct the limiter
-        
+
         patch_size: Integer
-          Pass in the patch size of the FD4 scheme or, if you are using RKDG, 
+          Pass in the patch size of the FD4 scheme or, if you are using RKDG,
           hand in the number 1. The Finite Volume patch then will be 16 times
           finer.
 
@@ -81,7 +81,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         super(Limiter, self).__init__(
             name=name + "_FV",
             patch_size=SubPatchSize,
-            min_volume_h=1.0/65536,
+            min_volume_h=1.0 / 65536,
             max_volume_h=65536,
             pde_terms_without_state=True,
         )
@@ -93,14 +93,14 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 """
 
         if amend_priorities:
-          self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
+            self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
 
-          #self._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
-          #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-          #  compute_max_eigenvalue_of_next_time_step=True, 
-          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
-          #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
-          #  )
+            # self._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+            #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation,
+            #  compute_max_eigenvalue_of_next_time_step=True,
+            #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
+            #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
+            #  )
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -109,23 +109,24 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         )
 
         if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
-          #self._compute_kernel_call            = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
-          #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-          #  compute_max_eigenvalue_of_next_time_step=True, 
-          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.WithVirtualFunctions,
-          #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap
-          #  )
-    
-            self._fused_compute_kernel_call_cpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
-              self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-              compute_max_eigenvalue_of_next_time_step=True, 
-              solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Multicore,
-              kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap
-              )
-        
+            # self._compute_kernel_call            = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+            #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation,
+            #  compute_max_eigenvalue_of_next_time_step=True,
+            #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.WithVirtualFunctions,
+            #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap
+            #  )
+
+            self._fused_compute_kernel_call_cpu = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+                self._flux_implementation,
+                self._ncp_implementation,
+                self._source_term_implementation,
+                compute_max_eigenvalue_of_next_time_step=True,
+                solver_variant=exahype2.solvers.fv.rusanov.kernels.SolverVariant.Multicore,
+                kernel_variant=exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap,
+            )
+
         self.add_all_solver_constants()
         update_solver_parameters_for_single_black_hole(self)
-        
 
     def _store_cell_data_default_guard(self):
         """!
@@ -149,33 +150,31 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
-           
+
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         return (
             """("""
-            + super(Limiter,self)._provide_cell_data_to_compute_kernels_default_guard()
+            + super(Limiter, self)._provide_cell_data_to_compute_kernels_default_guard()
             + " and repositories::instanceOf"
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
-      
+
     def _provide_face_data_to_compute_kernels_default_guard(self):
-        return "{} and repositories::instanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
-                super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard(),
-                self._name
-            )
-        
+        return "{} and repositories::instanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)".format(
+            super(Limiter, self)._provide_face_data_to_compute_kernels_default_guard(),
+            self._name,
+        )
+
     def _store_face_data_default_guard(self):
         return "({} and repositories::instanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
-                super(Limiter, self)._store_face_data_default_guard(),
-                self._name
-            )
+            super(Limiter, self)._store_face_data_default_guard(), self._name
+        )
 
     def _load_face_data_default_guard(self):
         return "({} and repositories::instanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
-                super(Limiter, self)._load_face_data_default_guard(),
-                self._name
-            )
+            super(Limiter, self)._load_face_data_default_guard(), self._name
+        )
 
     def create_action_sets(self):
         """!
@@ -225,25 +224,29 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
        whenever we encounter a coupling.
 
     """
-    def __init__(self, 
-                 name, 
-                 patch_size,
-                 min_cell_size, 
-                 max_cell_size,
-                 parallelisation_of_interpolation: KernelParallelisation,
-                 parallelisation_of_kernels:       KernelParallelisation,
-                 ):
-        self._name_without_FD4_extension       = name
+
+    def __init__(
+        self,
+        name,
+        patch_size,
+        min_cell_size,
+        max_cell_size,
+        parallelisation_of_interpolation: KernelParallelisation,
+        parallelisation_of_kernels: KernelParallelisation,
+        interpolation_method,
+    ):
+        self._name_without_FD4_extension = name
         self._parallelisation_of_interpolation = parallelisation_of_interpolation
+        self.interpolation_method = interpolation_method
 
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
-              self,
-              name=name + "_FD4",
-              patch_size=patch_size,
-              rk_order=1,
-              min_meshcell_h=min_cell_size / patch_size,
-              max_meshcell_h=max_cell_size / patch_size,
-              pde_terms_without_state=False
+            self,
+            name=name + "_FD4",
+            patch_size=patch_size,
+            rk_order=1,
+            min_meshcell_h=min_cell_size / patch_size,
+            max_meshcell_h=max_cell_size / patch_size,
+            pde_terms_without_state=False,
         )
 
         self._user_action_set_includes += """
@@ -252,23 +255,39 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
-
+        if self.interpolation_method == "matrix":
+            self._user_action_set_includes += (
+                """
+#include "matrixdata/Interpolator_"""
+                + str(patch_size)
+                + """_"""
+                + str(patch_size * 16)
+                + """.h"
+"""
+            )
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
-          
+
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
             refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
             boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
         self.add_all_solver_constants()
-                
+
         if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
-            print( "WARNING: Unfortunately, we have not yet written parallelised kernels for FD4")
+            print(
+                "WARNING: Unfortunately, we have not yet written parallelised kernels for FD4"
+            )
             pass
-        
+
         update_solver_parameters_for_single_black_hole(self)
-  
-  
+
+        if self.interpolation_method == "matrix":
+            solver_matrix_interpolator = exahype2.solvers.SolverMatrixInterpolator(
+                patch_size, patch_size * 16, 3, 1
+            )
+            solver_matrix_interpolator.generateData()
+
     def create_action_sets(self):
         """!
 
@@ -348,9 +367,11 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         )
 
         self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(
-            solver = self,
-            enclave_task_cell_label = "fineGridCell" + self._name_without_FD4_extension + "_FVCellLabel",
-            compute_kernel_implementation = """
+            solver=self,
+            enclave_task_cell_label="fineGridCell"
+            + self._name_without_FD4_extension
+            + "_FVCellLabel",
+            compute_kernel_implementation="""
 const int sizeOfPatch = (repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
@@ -399,12 +420,24 @@ bool faceIsReal5 = repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5);
             
-double* realFace0 = faceIsReal0 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(0).value : nullptr;
-double* realFace1 = faceIsReal1 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(1).value : nullptr;
-double* realFace2 = faceIsReal2 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value : nullptr;
-double* realFace3 = faceIsReal3 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value : nullptr;
-double* realFace4 = faceIsReal4 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value : nullptr;
-double* realFace5 = faceIsReal5 ? fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value : nullptr;
+double* realFace0 = faceIsReal0 ? fineGridFaces"""
+            + self._name_without_FD4_extension
+            + """_FVQNew(0).value : nullptr;
+double* realFace1 = faceIsReal1 ? fineGridFaces"""
+            + self._name_without_FD4_extension
+            + """_FVQNew(1).value : nullptr;
+double* realFace2 = faceIsReal2 ? fineGridFaces"""
+            + self._name_without_FD4_extension
+            + """_FVQNew(2).value : nullptr;
+double* realFace3 = faceIsReal3 ? fineGridFaces"""
+            + self._name_without_FD4_extension
+            + """_FVQNew(3).value : nullptr;
+double* realFace4 = faceIsReal4 ? fineGridFaces"""
+            + self._name_without_FD4_extension
+            + """_FVQNew(4).value : nullptr;
+double* realFace5 = faceIsReal5 ? fineGridFaces"""
+            + self._name_without_FD4_extension
+            + """_FVQNew(5).value : nullptr;
 
 double* dummyFace0 = faceIsReal0 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 double* dummyFace1 = faceIsReal1 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
@@ -413,7 +446,9 @@ double* dummyFace3 = faceIsReal3 ? nullptr : ::tarch::allocateMemory<double>(siz
 double* dummyFace4 = faceIsReal4 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 double* dummyFace5 = faceIsReal5 ? nullptr : ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 
-::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_"""
+            + self.interpolation_method
+            + """(
   repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FD4.NumberOfGridCellsPerPatchPerAxis,
@@ -427,9 +462,20 @@ double* dummyFace5 = faceIsReal5 ? nullptr : ::tarch::allocateMemory<double>(siz
             + """_FV.NumberOfUnknowns + repositories::instanceOf"""
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
+  """
+            + (
+                """InterpolationMatrixData::Data,
+  InterpolationMatrixData::Indices,
+  InterpolationMatrixData::Indptr,"""
+                if self.interpolation_method == "matrix"
+                else """"""
+            )
+            + """
   oldQWithHalo, 
   interpolatedFVDataWithHalo,
-  """ + str(self._parallelisation_of_interpolation.value) + """
+  """
+            + str(self._parallelisation_of_interpolation.value)
+            + """
 );
 
 ::toolbox::blockstructured::projectPatchHaloOntoFaces(
@@ -468,7 +514,8 @@ if (dummyFace5!=nullptr) ::tarch::freeMemory(dummyFace5, tarch::MemoryLocation::
             + """
                                                   and 
                                                   repositories::instanceOf"""
-            + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+            + self._name_without_FD4_extension
+            + """_FV.isCellOverlappingWithBHImpactArea(marker) 
                                                   and
                                                   not repositories::instanceOf"""
             + self._name_without_FD4_extension
@@ -511,9 +558,10 @@ if (
 
   logTraceOut( "touchCellFirstTime(...)-inject" );
 }}
-""".format(self._name_without_FD4_extension))
-
-
+""".format(
+                self._name_without_FD4_extension
+            ),
+        )
 
 
 class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -523,12 +571,13 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
     """
 
-    def __init__(self, 
-                 name, 
-                 patch_size,
-                 min_cell_size, 
-                 max_cell_size, 
-                 ):
+    def __init__(
+        self,
+        name,
+        patch_size,
+        min_cell_size,
+        max_cell_size,
+    ):
         self._name_without_FD4_extension = name
 
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
@@ -538,7 +587,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
             rk_order=1,
             min_meshcell_h=min_cell_size / patch_size,
             max_meshcell_h=max_cell_size / patch_size,
-            pde_terms_without_state=False
+            pde_terms_without_state=False,
         )
 
         self._user_action_set_includes += """
@@ -559,7 +608,6 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
         self.add_all_solver_constants()
         update_solver_parameters_for_single_black_hole(self)
-        
 
     def create_action_sets(self):
         """!
@@ -644,34 +692,35 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
     """!
 
     A finite volume solver
-    
-    This solver is not appropriate to simulate black holes as a stand-alone 
-    solver, as it is way too diffusive. If you use it without another scheme, 
-    you typically see the black hole disappear after a brief period. So we 
+
+    This solver is not appropriate to simulate black holes as a stand-alone
+    solver, as it is way too diffusive. If you use it without another scheme,
+    you typically see the black hole disappear after a brief period. So we
     have it in here merely for performance tests.
-    
+
     """
 
-    def __init__(self, 
-                 name, 
-                 patch_size,
-                 min_cell_size, 
-                 max_cell_size, 
-                 ):
+    def __init__(
+        self,
+        name,
+        patch_size,
+        min_cell_size,
+        max_cell_size,
+    ):
         """!
-        
+
         Construct the Finite Volume solver
-        
+
         @param patch_size: Integer
            Defines how big the individual patches are. If you pass in 10, each
            Finite Volume patch will have the dimensions 10x10x10.
         @param min_cell_size: Float
-           This parameter refers to the cell size, i.e. the size of a whole 
-           patch. We use this one here, to make the signature the same as for 
-           the FD and DG solver variants. The superclass constructor argues 
-           over finite volume sizes, and we hence have to recalibrate this 
+           This parameter refers to the cell size, i.e. the size of a whole
+           patch. We use this one here, to make the signature the same as for
+           the FD and DG solver variants. The superclass constructor argues
+           over finite volume sizes, and we hence have to recalibrate this
            parameter with patch_size.
-        
+
         """
 
         super(FVSolver, self).__init__(
@@ -679,7 +728,7 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             patch_size=patch_size,
             min_volume_h=min_cell_size / patch_size,
             max_volume_h=max_cell_size / patch_size,
-            pde_terms_without_state=True
+            pde_terms_without_state=True,
         )
 
         self._user_action_set_includes += """
@@ -691,7 +740,7 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         ## For compatibility. Name makes no sense. But the value
         ## guides the AMR pattern
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
-        
+
         self.set_implementation(
             initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
             refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
@@ -728,7 +777,6 @@ class FVSolver(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         super(FVSolver, self).create_action_sets()
 
 
-
 def update_solver_parameters_for_single_black_hole(solver):
     """!
 
@@ -741,5 +789,3 @@ def update_solver_parameters_for_single_black_hole(solver):
     """
     solver.double_constants["CCZ4bs"] = 1.0
     solver.double_constants["CCZ4sk"] = 1.0
-
-
