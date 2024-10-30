@@ -97,7 +97,7 @@ os.system( "make clean" )
 if args.j>0:
   os.system( "make -j{}".format(args.j) )
 else:
-  os.system( "make -j" )
+  os.system( "make -j$(nproc --all)" )
   
 print("Done")
 

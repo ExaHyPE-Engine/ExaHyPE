@@ -460,16 +460,16 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     own ordering starting from _basic_descend_order.
     
     """
-    descend_order = observer.highest_descend_invocation_order() + self._basic_descend_order
+    descend_order = observer.highest_descend_invocation_order()
     if self.preprocessing_action_set != None:
-      self.preprocessing_action_set.descend_invocation_order = descend_order + 0
+      self.preprocessing_action_set.descend_invocation_order = 0
       observer.add_action_set( self.preprocessing_action_set )
     observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
     observer.add_action_set( ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) )
     observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
     observer.add_action_set( UpdateResidual(self, descend_order+4, False) )
     if self.postprocessing_action_set != None:
-      self.postprocessing_action_set.descend_invocation_order = descend_order + 4
+      self.postprocessing_action_set.descend_invocation_order = descend_order + 5
       observer.add_action_set( self.postprocessing_action_set )
 
   

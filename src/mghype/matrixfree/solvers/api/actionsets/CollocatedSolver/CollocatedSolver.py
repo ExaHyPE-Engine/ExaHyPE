@@ -17,6 +17,9 @@ class CollocatedSolver(ActionSet):
   - In touchVertexFirstTime(), we can update the unknown.
   - Eventually, we dump the total residual and the updates.
 
+  @TODO The boundary conditions are manually pinned to 0 during touchVertexLastTime.
+    This isn't good, and should be moved to implementation files.
+
   """
   templateTouchVertexFirstTime = """ 
   if (
@@ -24,13 +27,15 @@ class CollocatedSolver(ActionSet):
     and
     repositories::{{SOLVER_INSTANCE}}.update()
   ) {
-    auto value = fineGridVertex{{SOLVER_NAME}}.getValue();
+    logTraceInWith2Arguments("TouchVertexFirstTime", marker.x(), fineGridVertex{{SOLVER_NAME}}.toString());
+    auto value = fineGridVertex{{SOLVER_NAME}}.getU();
     repositories::{{SOLVER_INSTANCE}}.setBoundaryConditions(
       marker.x(),
       marker.h(),
       value
     );
-    fineGridVertex{{SOLVER_NAME}}.setValue(value);
+    fineGridVertex{{SOLVER_NAME}}.setU(value);
+    logTraceOutWith2Arguments("TouchVertexFirstTime", marker.x(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   else if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
@@ -62,7 +67,7 @@ class CollocatedSolver(ActionSet):
 
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
-      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown), fineGridVertex{{SOLVER_NAME}}.getDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
+      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown), fineGridVertex{{SOLVER_NAME}}.getDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
       assertion( fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) > 0 );
       
       double r   = fineGridVertex{{SOLVER_NAME}}.getResidual(unknown);
@@ -77,10 +82,8 @@ class CollocatedSolver(ActionSet):
       );
       repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
 
-      
-
-      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, fineGridVertex{{SOLVER_NAME}}.getValue(unknown) + du );
-      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown));
+      fineGridVertex{{SOLVER_NAME}}.setU(unknown, fineGridVertex{{SOLVER_NAME}}.getU(unknown) + du );
+      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown));
     }
     logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
@@ -88,7 +91,7 @@ class CollocatedSolver(ActionSet):
   if ( fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary ) {
     auto value = 0.0;
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
-      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, value);
+      fineGridVertex{{SOLVER_NAME}}.setU(unknown, value);
     }
   }
   """
@@ -126,12 +129,12 @@ class CollocatedSolver(ActionSet):
         double solColSum = 0;
         double rhsColSum = 0;
         for (int j=0; j<TwoPowerD; j++){
-          solColSum += A(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getValue(unknown);
+          solColSum += A(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getU(unknown);
           rhsColSum += M(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getRhs(unknown);
         }
       
         vertexValues(i)   = solColSum;        
-        rhsValues(i) = rhsColSum;
+        rhsValues(i)      = rhsColSum;
         residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
       }
 

@@ -3,95 +3,140 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-
 class InitDofsCollocated(ActionSet):
   """!
-      
-  Initialise degrees of freedom 
-  
   In touchVertexFirstTime, we set the type of vertex we see (either Interior, Boundary or Coarse),
   as well as sending some values to the solver implementation file to be placed into the mesh.
-  
+
+  In touchCellFirstTime, we just determine the type, as we don't store anything on cells in 
+  this solver.
   """
 
   templateTouchVertexFirstTime = """
-  logTraceInWith2Arguments("InitDofs::touchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
+  // this is done inside getDofType. included here for sanity check
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+    bool isOnBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isOnBoundary;
+  };
+
+  logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
   vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
-  if (marker.willBeRefined() and dofType==vertexdata::{{SOLVER_NAME}}::Type::Interior) {
-    dofType = vertexdata::{{SOLVER_NAME}}::Type::Coarse;
-  }
-  else {
-    dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
-  }
 
-  switch(dofType) {
+  switch(dofType)
+  {
     case vertexdata::{{SOLVER_NAME}}::Type::Boundary:
+    {
+      if ( marker.willBeRefined() )
       {
-        if (not marker.willBeRefined()) {
-          tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
-          tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
-          
-          repositories::{{SOLVER_INSTANCE}}.initVertex( marker.x(), marker.h(), value, rhs );
+        // Coarse grid vertex. Mark it as such for later
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        // we have boundary vertex
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
+        // init its value too
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
 
-          for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++) {
-            fineGridVertex{{SOLVER_NAME}}.setValue(dof, value(dof));
-            fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
-          }
+        // send these into init
+        repositories::{{SOLVER_INSTANCE}}.initVertex( marker.x(), marker.h(), value, rhs );
+
+        // store 
+        for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        {
+          fineGridVertex{{SOLVER_NAME}}.setU(    dof, value(dof));
+          fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
         }
       }
-      break;
+    }
+    break;
+
     case vertexdata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if (isOnBoundary(marker.x())) 
       {
-        if ( marker.willBeRefined() ) {
-          dofType = vertexdata::{{SOLVER_NAME}}::Type::Coarse;
-        }
-        else {
-          tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
-          tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
+        logWarning( "touchVertexFirstTime(...)", "vertex at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
+      }
 
-          repositories::{{SOLVER_INSTANCE}}.initVertex( marker.x(), marker.h(), value, rhs );
+      if ( marker.willBeRefined() )
+      {
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
+      }
 
-          for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++) {
-            fineGridVertex{{SOLVER_NAME}}.setValue(dof, value(dof));
-            fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
-          }
+      else
+      {
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Interior );
+
+        // init its value too
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
+
+        // send these into init
+        repositories::{{SOLVER_INSTANCE}}.initVertex( marker.x(), marker.h(), value, rhs );
+
+        // store 
+        for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        {
+          fineGridVertex{{SOLVER_NAME}}.setU(    dof, value(dof));
+          fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
         }
       }
-      break;
+    }
+    break;
+
     case vertexdata::{{SOLVER_NAME}}::Type::Coarse:
-    case vertexdata::{{SOLVER_NAME}}::Type::Outside:
+      assertionMsg(false, "should not be returned by user" );
       break;
+
     case vertexdata::{{SOLVER_NAME}}::Type::Undefined:
       assertionMsg(false, "should not be returned by user" );
       break;
   }
-  fineGridVertex{{SOLVER_NAME}}.setType( dofType );
 
-  logTraceOutWith2Arguments("InitDofs::touchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
+
+  logTraceOutWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());;
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
 
-  switch(dofType) {
-    case celldata::{{SOLVER_NAME}}::Type::Coarse:
+  switch(dofType)
+  {
     case celldata::{{SOLVER_NAME}}::Type::Outside:
-      break;
-    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
       {
-        if ( marker.willBeRefined() ) {
-          dofType = celldata::{{SOLVER_NAME}}::Type::Coarse;
-        }
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
       }
-      break;
-    case celldata::{{SOLVER_NAME}}::Type::Undefined:
-      assertionMsg( false, "should not be called" );
-      break;
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+      }
+    }
+    break;
+
   }
-  fineGridCell{{SOLVER_NAME}}.setType( dofType );
   
   logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
@@ -149,4 +194,3 @@ class InitDofsCollocated(ActionSet):
 #include "../repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 """
-

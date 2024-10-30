@@ -26,7 +26,7 @@ parser.add_argument("-m",   "--mode",               dest="mode",           choic
 args = parser.parse_args()
 
 
-project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
+project = mghype.matrixfree.api.Project( project_name = "DGTwoGrid", 
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 
@@ -73,7 +73,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 1.0e-6,
+  solver_tolerance = 1.0e-14,
 )
 #! [Instantiate solver]
 
@@ -160,19 +160,16 @@ project.set_global_simulation_parameters(
   max_iterations = 2000
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+# project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file( "Scenario.cpp" )
 peano4_project.generate()
 
-# for vis files to go into
-os.system( "mkdir visualisation" )
-
 os.system( "make clean" )
 if args.j>0:
   os.system( "make -j{}".format(args.j) )
 else:
-  os.system( "make -j" )
+  os.system( "make -j$(nproc --all)" )
   

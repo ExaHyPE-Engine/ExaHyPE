@@ -121,7 +121,8 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
                custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
                custom_init_vertex = "",
                custom_boundary_conditions = "",
-               enable_plotting = True # sometimes we want to disable standard plotting...
+               enable_plotting = True, # sometimes we want to disable standard plotting...
+               plot_predicate = "true" # enable custom plotting behaviour
                ):
     """!
    
@@ -136,7 +137,7 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
     matrix_dims = (2**dimensions) * unknowns_per_vertex
   
     # already initialised this in superclass!
-    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "u",      str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "diag",       str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
@@ -160,7 +161,13 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
     self._custom_boundary_conditions    = custom_boundary_conditions
 
     self._enable_plotting               = enable_plotting
-        
+    self._plot_predicate                = plot_predicate
+
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    super( CollocatedDLinearDiscretisationWithPointJacobi, self ).add_to_Peano4_datamodel(datamodel,verbose)
+
+  def add_use_statements(self, observer):
+    super( CollocatedDLinearDiscretisationWithPointJacobi, self ).add_use_statements(observer)
 
   def add_to_plot(self, observer):
     """!
@@ -172,12 +179,12 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
     
     """
     if self._enable_plotting: # true by default
-      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "value", "getValue") )
-      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs") )
+      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "u",   "getU", plot_predicate=self._plot_predicate) )
+      observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate) )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:
-        observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, name, getter) )
+        observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, name, getter, plot_predicate=self._plot_predicate) )
 
     pass
 

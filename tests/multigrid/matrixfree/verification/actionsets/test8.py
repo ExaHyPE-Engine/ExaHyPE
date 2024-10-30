@@ -65,7 +65,7 @@ class InitDofsTest8(ActionSet):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue( dof, sinValue);
+          fineGridVertex{{SOLVER_NAME}}.setU( dof, sinValue);
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, sinRhs);
         }
       }
@@ -91,7 +91,7 @@ class InitDofsTest8(ActionSet):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, sinValue);
+          fineGridVertex{{SOLVER_NAME}}.setU(dof, sinValue);
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, sinRhs);
         }
       }
@@ -148,7 +148,7 @@ class InitDofsTest8(ActionSet):
 
         // collect
         for (int i=0; i<TwoPowerD; i++){
-          vu_values[i] = fineGridVertices{{SOLVER_NAME}}(i).getValue(0);
+          vu_values[i] = fineGridVertices{{SOLVER_NAME}}(i).getU(0);
           vb_values[i] = fineGridVertices{{SOLVER_NAME}}(i).getRhs(0);
         }
 
