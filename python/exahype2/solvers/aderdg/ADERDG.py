@@ -517,7 +517,7 @@ Material parameters:    """
             guard=self._store_cell_data_default_guard()
             + " and (repositories::"
             + self.get_name_of_global_instance()
-            + ".isLastGridSweepOfTimeStep() or repositories::"
+            + ".isFirstGridSweepOfTimeStep() or repositories::"
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
@@ -772,6 +772,8 @@ Material parameters:    """
                 dataType=self._solution_persistent_storage_precision,
             )
         )
+
+        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 
         if self._plot_grid_properties:
             step.add_action_set(

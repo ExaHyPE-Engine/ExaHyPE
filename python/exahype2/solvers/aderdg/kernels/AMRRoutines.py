@@ -58,7 +58,7 @@ class AMRRoutines(object):
             "face_Q_x",
             "nopf",
             "gemm",
-            self.d["SOLUTION_STORAGE_PRECISION"],
+            self.d["SOLUTION_STORAGE_PRECISION"]
         )
         self.d["GEMMS"]["face_F_x"] = Gemms(
             nUnknownsPad,
@@ -74,7 +74,7 @@ class AMRRoutines(object):
             "face_F_x",
             "nopf",
             "gemm",
-            self.d["SOLUTION_STORAGE_PRECISION"],
+            self.d["SOLUTION_STORAGE_PRECISION"]
         )
         self.d["GEMMS"]["face_F_x_add"] = Gemms(
             nUnknownsPad,
@@ -90,7 +90,7 @@ class AMRRoutines(object):
             "face_F_x_add",
             "nopf",
             "gemm",
-            self.d["SOLUTION_STORAGE_PRECISION"],
+            self.d["SOLUTION_STORAGE_PRECISION"]
         )
         if nDim == 3:
             self.d["GEMMS"]["face_Q_y"] = Gemms(
@@ -107,7 +107,7 @@ class AMRRoutines(object):
                 "face_Q_y",
                 "nopf",
                 "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
+                self.d["SOLUTION_STORAGE_PRECISION"]
             )
             self.d["GEMMS"]["face_F_y"] = Gemms(
                 nUnknownsPad,
@@ -123,7 +123,7 @@ class AMRRoutines(object):
                 "face_F_y",
                 "nopf",
                 "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
+                self.d["SOLUTION_STORAGE_PRECISION"]
             )
             self.d["GEMMS"]["face_F_y_add"] = Gemms(
                 nUnknownsPad,
@@ -139,8 +139,59 @@ class AMRRoutines(object):
                 "face_F_y_add",
                 "nopf",
                 "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
+                self.d["SOLUTION_STORAGE_PRECISION"]
             )
+
+        self.d["GEMMS"]["volume_x"] = Gemms(
+            nData,
+            nDof,
+            nDof,
+            nData,
+            nDofPad,
+            nDataPad,
+            1,
+            0,
+            0,
+            # 1,
+            1,
+            "volume_x",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"]
+          )
+
+        if nDim == 3:
+            self.d["GEMMS"]["volume_y"] = Gemms(nDataPad, nDof, nDof, nDataPad*nDof , nDofPad, nDataPad*nDof, 1, 0, 1, 
+            # 1, 
+            1, "volume_y",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"])
+            self.d["GEMMS"]["volume_z"] = Gemms(nData   , nDof, nDof, nDataPad*nDof2, nDofPad, nData*nDof2  , 1, 0, 1, 
+            # 1, 
+            0, "volume_z",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"])
+            self.d["GEMMS"]["volume_z_add"] = Gemms(nData, nDof, nDof, nDataPad*nDof2, nDofPad, nData*nDof2  , 1, 1, 1, 
+            # 1, 
+            0, "volume_z_add",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"])
+        else:
+            self.d["GEMMS"]["volume_y"] = Gemms(nData   , nDof, nDof, nDataPad*nDof , nDofPad, nData*nDof   , 1, 0, 1, 
+            # 1, 
+            0, "volume_y",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"])
+            self.d["GEMMS"]["volume_y_add"] = Gemms(nData, nDof, nDof, nDataPad*nDof , nDofPad, nData*nDof   , 1, 1, 1, 
+            # 1, 
+            0, "volume_y_add",
+            "nopf",
+            "gemm",
+            self.d["SOLUTION_STORAGE_PRECISION"])
 
         if self.d["USE_LIBXSMM"]:
             generate_gemms(

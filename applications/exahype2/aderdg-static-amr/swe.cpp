@@ -12,9 +12,19 @@ tarch::logging::Log   applications::exahype2::aderdg::swe::_log( "applications::
 ){
 
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+ 
+  // result = ::exahype2::RefinementCommand::Refine;
+  // if(t>0.02){// && h[0]<0.03 && x[0]>0.3){
+  //   result = ::exahype2::RefinementCommand::Erase;
+  // }
+
+  // if(x[0]<0.3 && t>0.02){
+  //   // std::cout << "Call refine\n";
+  //    result = ::exahype2::RefinementCommand::Refine;
+  // }
 
   if(x[0]<0.3){
-    result = ::exahype2::RefinementCommand::Refine;
+      result = ::exahype2::RefinementCommand::Refine;
   }
 
   return result;
@@ -24,18 +34,16 @@ void applications::exahype2::aderdg::swe::initialCondition(
   double * __restrict__ Q, //Q[3+1]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     point,
+  // const tarch::la::Vector<Dimensions,int>&     point,
 	bool                                         gridIsConstructed
 ) {
 
   double r = std::sqrt((x[0]-0.5)*(x[0]-0.5)+(x[1]-0.5)*(x[1]-0.5));
 
-  // Q[0] = 1. + r;
   Q[0] = 1.;
 
   Q[1] = 0.;
   Q[2] = 0.;
-  // Q[3] = 0.;
 
   Q[3] = r < 0.1 ? 0.0 : 0.05;
 
@@ -57,7 +65,7 @@ void applications::exahype2::aderdg::swe::boundaryConditions(
   // Qoutside[2] = 0.;
   // Qoutside[3] = 0.;
 
-  initialCondition(Qoutside, x, volumeH, {0, 0}, true);
+  initialCondition(Qoutside, x, volumeH, true);
 
 }
 
@@ -89,22 +97,19 @@ void applications::exahype2::aderdg::swe::flux(
   int                                          normal,
   double* __restrict__ F // F[3]
 ) {
-    double ih = 1.0 / Q[0];
 
-    F[0] = Q[1 + normal];
-    F[1] = Q[1 + normal] * Q[1] * ih;
-    F[2] = Q[1 + normal] * Q[2] * ih;
-    F[3] = 0.0;
+  double ih = 1.0 / Q[0];
 
-  // constexpr double K0     = 4.;
-  // constexpr double inv_rho = 1.0;
+  F[0] = Q[1 + normal];
+  F[1] = Q[1 + normal] * Q[1] * ih;
+  F[2] = Q[1 + normal] * Q[2] * ih;
+  F[3] = 0.0;
 
-  // F[0] = K0 * Q[normal+1];
-  // F[1] = 0.0;
-  // F[2] = 0.0;
-  // F[3] = 0.0;
+  // F[0] = 0.;
+  // F[1] = 0.;
+  // F[2] = 0.;
+  // F[3] = 0.;
 
-  // F[normal+1] = inv_rho * Q[0];
 }
 
 void applications::exahype2::aderdg::swe::nonconservativeProduct(
