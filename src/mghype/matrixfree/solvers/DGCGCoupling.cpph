@@ -23,24 +23,24 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
   We can also reset delta and newRestrictedRhs.
   */
   if ( restrictRhsAndInjectSolution ) {
-    vertex.setValue(0.0);
-    vertex.setOldValue( 0.0 );
+    vertex.setU(0.0);
+    vertex.setOldU( 0.0 );
     vertex.setDelta(0.0);
     vertex.setRhs( vertex.getNewRestrictedRhs() );
   }
 
   // Ditto but for FAS
   else if ( restrictRhsAndInjectSolution and fas ) {
-    auto rescaledNewValue =
+    auto rescaledNewSolution =
       1.0 / vertex.getNumberOfRestrictions()
       *
       vertex.getSumOfInjectedValues();
 
-    vertex.setValue(
-      rescaledNewValue
+    vertex.setU(
+      rescaledNewSolution
     );
-    vertex.setOldValue(
-      rescaledNewValue
+    vertex.setOldU(
+      rescaledNewSolution
     );
     vertex.setRhs(
       vertex.getNewRestrictedRhs()
@@ -56,16 +56,16 @@ void mghype::matrixfree::solvers::dgcgcoupling::rollOverAndPrepareCGVertex(
   */
   else {
     vertex.setDelta(
-      vertex.getValue() - vertex.getOldValue()
+      vertex.getU() - vertex.getOldU()
     );
-    vertex.setValue(0.0);
+    vertex.setU(0.0);
     vertex.setRhs( 0.0 );
   }
 
   vertex.setSumOfInjectedValues( 0.0 );
   vertex.setNumberOfRestrictions( 0 );
   vertex.setNewRestrictedRhs( 0.0 );
-  logTraceOutWith5Arguments("rollOver", vertex.getValue(), vertex.getRhs(), vertex.getNumberOfRestrictions(), vertex.getNewRestrictedRhs(), vertex.getDelta());
+  logTraceOutWith5Arguments("rollOver", vertex.getU(), vertex.getRhs(), vertex.getNumberOfRestrictions(), vertex.getNewRestrictedRhs(), vertex.getDelta());
 }
 
 
@@ -115,7 +115,7 @@ void mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictHierarchicalRe
     auto&           cgVertices
 ) {
   tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > prolongatedValues =
-      prolongationMatrix *getCoarseGridSolution<CGSolver>(cgVertices);
+      prolongationMatrix * getCoarseGridSolution<CGSolver>(cgVertices);
 
   tarch::la::Vector< DGSolver::NodesPerCell * DGSolver::UnknownsPerCellNode, double > hierarchicalResidual =
       massMatrix * dgRhs

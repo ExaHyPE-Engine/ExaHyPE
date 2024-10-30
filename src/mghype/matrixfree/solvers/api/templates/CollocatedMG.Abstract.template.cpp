@@ -169,15 +169,24 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*FourPowerD, {{VERTEX_CARDINALITY}}*Two
   return celldata::{{SOLVER_NAME}}::Type::Interior;
 }
 
+/**
+ * If we suspend, we want to make sure that the program phase
+ * is in its initial state for the next time we revisit.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
   _state = State::Suspend;
+
+  _smoothingState            = SmoothingState::PreSmoothing;
+  _preSmoothingStepsCounter  = 0;
+  _postSmoothingStepsCounter = 0;
+  _activeLevel               = getFinestLevel();
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
   if ( _activeLevel == getFinestLevel() )
     clearGlobalResidualAndSolutionUpdate();
-  logInfo("beginMeshSweep()", "running phase " << toString(_smoothingState) << " at level " << _activeLevel);
-
+  if (_state == State::Solve)
+    logInfo("beginMeshSweep()", "running phase " << toString(_smoothingState) << " at level " << _activeLevel);
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {

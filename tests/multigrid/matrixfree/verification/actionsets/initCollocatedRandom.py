@@ -64,7 +64,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue( dof, 0.0);
+          fineGridVertex{{SOLVER_NAME}}.setU( dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRand(  dof, 0.0); // vector v_random is set to 0 on the boundary
         }
@@ -91,7 +91,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, 0.0);
+          fineGridVertex{{SOLVER_NAME}}.setU(dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRand( dof, dis(rng)); // vector v_random receives random values in the interior vertices
 
@@ -293,7 +293,7 @@ class InitDofsCollocatedRandomTest2(InitDofsCollocatedRandomRhs):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue( dof, 0.0); // vector v_random is set to 0 on the boundary as the initial guess
+          fineGridVertex{{SOLVER_NAME}}.setU( dof, 0.0); // vector v_random is set to 0 on the boundary as the initial guess
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRand(  dof, 0.0); // vector v_random is set to 0 on the boundary
         }
@@ -321,7 +321,7 @@ class InitDofsCollocatedRandomTest2(InitDofsCollocatedRandomRhs):
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
           double randVal = dis(rng);
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, randVal); // vector v_random receives random values in the interior vertices 
+          fineGridVertex{{SOLVER_NAME}}.setU(dof, randVal); // vector v_random receives random values in the interior vertices 
                                                                 // and used as the initial guess for the CG solver
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRand( dof, randVal); // the same vector v_random will be used to compute rhs = A_CG * v_random, 
@@ -396,7 +396,7 @@ class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue( dof, dis(rng)); // vector v_random is set to 0 on the boundary as the initial guess
+          fineGridVertex{{SOLVER_NAME}}.setU( dof, dis(rng)); // vector v_random is set to 0 on the boundary as the initial guess
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setVector2(  dof, 0.0); // vector v_random is set to 0 on the boundary
         }
@@ -424,7 +424,7 @@ class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
           // give it a random number
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, dis(rng)); // vector v_random receives random values in the interior vertices 
+          fineGridVertex{{SOLVER_NAME}}.setU(dof, dis(rng)); // vector v_random receives random values in the interior vertices 
                                                                 // and used as the initial guess for the CG solver
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setVector2( dof, 0.0); 
@@ -694,7 +694,7 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue( dof, 0.0);
+          fineGridVertex{{SOLVER_NAME}}.setU( dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(   dof, 0.0);
 
           fineGridVertex{{SOLVER_NAME}}.setRand( dof,  0.0); // vector v_random is set to 0 on the boundary
@@ -722,7 +722,7 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
         // store 
         for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
         {
-          fineGridVertex{{SOLVER_NAME}}.setValue(dof, 0.0);
+          fineGridVertex{{SOLVER_NAME}}.setU(dof, 0.0);
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof, 0.0);
 
           // set random values

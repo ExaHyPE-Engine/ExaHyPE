@@ -269,14 +269,25 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
   if (_state==State::Solve
-      or
-      _state==State::UpdateAndRestrictResidual
   ) {
     clearGlobalResidualAndSolutionUpdate();
   }
 }
 
-
+/**
+ * The idea behind the control flow being in the endMeshSweep()
+ * method is that we have some default behaviour that ensures
+ * we end up back in the "Solve" state in case of some other
+ * logical error. When this solver is coupled with some
+ * corrector (e.g the Collocated solver), then we leave control
+ * flow up to the class that performs the interplay - i.e. we
+ * have an action set which runs first, and we modify the solver
+ * states during prepareTraversal. Note that by default, if this
+ * solver is suspended, it will un-suspend itself during this 
+ * method. But then the DGCGCoupling solver will put both
+ * solvers into the correct state right afterwards, just as the
+ * next mesh traversal is being prepared.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   switch (_state) {
     case State::Solve:
@@ -295,23 +306,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
         _state = State::Solve;
       }
       break;
-      /*
-    case State::RiemannSolverAndUpdate:
-      {
-        logInfo( "endMeshSweep()", toString() );
-        _state = State::TriggerVolumetricKernelsAndProject;
-      }
-      break;
-*/
+    
+    /*
+    In general, if we are suspended we should remain suspended until
+    the DGCGCoupling takes us out of it, ie the control flow doesn't
+    belong to this class. However, we should put in a failsafe so
+    that this solver ends up back in the "Solve" state in case of an
+    error. 
+    */
     case State::Suspend:
       {
         _state = State::ProjectOntoFacesOnly;
       }
       break;
 
-    case State::UpdateAndRestrictResidual:
+    case State::computeAndRestrictResidual:
       {
-        logInfo( "endMeshSweep()", toString() );
         _state = State::Suspend; 
       }
       break;
@@ -326,31 +336,29 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateResidual() const {
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateFace() const {
   return _state == State::Solve
-      or _state == State::UpdateAndRestrictResidual;
+      or _state == State::computeAndRestrictResidual;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoFaces() const {
   return _state == State::Solve
-      or _state == State::ProjectOntoFacesOnly
-      or _state == State::UpdateAndRestrictResidual;
+      or _state == State::ProjectOntoFacesOnly;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::projectOntoCells() const {
-  return _state == State::Solve
-      or _state == State::UpdateAndRestrictResidual;
+  return _state == State::Solve;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const{
   return _state == State::Suspend;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, bool updateAndRestrictResidual) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, bool computeAndRestrictResidual) {
   if (projectOntoFaces) {
     _state = State::ProjectOntoFacesOnly;
   }
-  else if (updateAndRestrictResidual) {
-    _state = State::UpdateAndRestrictResidual;
+  else if (computeAndRestrictResidual) {
+    _state = State::computeAndRestrictResidual;
   }
   else {
     _state = State::Suspend;

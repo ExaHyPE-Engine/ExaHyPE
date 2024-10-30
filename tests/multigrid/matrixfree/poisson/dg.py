@@ -112,11 +112,9 @@ peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file( "Scenario.cpp" )
 peano4_project.generate()
 
-os.system( "mkdir visualisation" )
-
 os.system( "make clean" )
 if args.j>0:
   os.system( "make -j{}".format(args.j) )
 else:
-  os.system( "make -j" )
+  os.system( "make -j$(nproc --all)" )
   

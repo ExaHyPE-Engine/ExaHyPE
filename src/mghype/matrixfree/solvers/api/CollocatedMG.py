@@ -95,7 +95,7 @@ class CollocatedMG(Solver):
     self._vertex_data.data.add_attribute( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
     self._cell_data.data.add_attribute  ( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
 
-    self._unknowns_per_vertex = unknowns_per_vertex
+    self._unknowns_per_vertex_node = unknowns_per_vertex
 
     # already initialised this in superclass!
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "u",          str(unknowns_per_vertex) ) )
@@ -138,9 +138,10 @@ class CollocatedMG(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( Prolongation(self,descend_invocation_order=0) )
-    observer.add_action_set( CollocatedMGSolver(self,descend_invocation_order=1) )
-    observer.add_action_set( Restriction(self,descend_invocation_order=2) )
+    invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
+    observer.add_action_set( Prolongation(self,descend_invocation_order=invocation_order+0) )
+    observer.add_action_set( CollocatedMGSolver(self,descend_invocation_order=invocation_order+1) )
+    observer.add_action_set( Restriction(self,descend_invocation_order=invocation_order+2) )
     pass
   
   def add_to_plot(self, observer):
@@ -172,7 +173,7 @@ class CollocatedMG(Solver):
         "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling,
         "MASS_MATRIX"         : self._mass_matrix,
         "MASS_MATRIX_SCALING" : self._mass_matrix_scaling,
-        "VERTEX_CARDINALITY":            self._unknowns_per_vertex,
+        "VERTEX_CARDINALITY":            self._unknowns_per_vertex_node,
         "SOLVER_NAME":                   self.typename(),
         "SOLVER_TOLERANCE"            :  self._solver_tolerance,
         "SMOOTHER_RELAXATION":           self._smoother_relaxation,
