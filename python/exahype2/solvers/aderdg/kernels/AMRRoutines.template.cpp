@@ -110,3 +110,115 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   _mm_free(tmpX);
 {% endif %}
 }
+
+
+void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
+  {{SOLUTION_STORAGE_PRECISION}}* __restrict__             luhFine,
+  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__ luhCoarse,
+  const tarch::la::Vector<Dimensions, int>&                subcellIndex
+){
+
+  {{SOLUTION_STORAGE_PRECISION}}** projector = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d;
+
+  double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+{% if DIMENSIONS==3 %}
+  double* tmpY = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+{% endif %}
+
+  // will overwrite tmpX, no need to set to 0
+  for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
+    {{ m.gemm('volume_x', 'luhCoarse', 'projector[subcellIndex[0]]', 'tmpX',
+      'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA,
+      '0',
+      'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED) | indent(4) }}{##}
+  }
+  
+{% if DIMENSIONS==2 %}
+  for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+    {{ m.gemm('volume_y', 'tmpX', 'projector[subcellIndex[1]]', 'luhFine',
+      'x*'~NUMBER_OF_DATA_PADDED,
+      '0',
+      'x*'~NUMBER_OF_DATA) | indent(4) }}{##}
+  }
+{% else %}
+  // will overwrite tmpY, no need to set to 0
+  for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
+    for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+      {{ m.gemm('volume_y', 'tmpX', 'projector[subcellIndex[1]]', 'tmpY',
+        '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
+        '0',
+        '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
+    }
+  }
+  
+  for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
+    {{ m.gemm('volume_z', 'tmpY', 'projector[subcellIndex[2]]', 'luhFine',
+      'yx*'~NUMBER_OF_DATA_PADDED,
+      '0',
+      'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
+  }
+{% endif %}
+
+  _mm_free(tmpX);
+{% if DIMENSIONS==3 %}
+  _mm_free(tmpY);
+{% endif %}
+
+}
+
+
+void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsRestriction(
+  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__ luhFine,
+  {{SOLUTION_STORAGE_PRECISION}}* __restrict__             luhCoarse,
+  const tarch::la::Vector<Dimensions, int>&                subcellIndex
+){
+
+  double* tmpX = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+{% if DIMENSIONS==3 %}
+  double* tmpY = static_cast<double *>(_mm_malloc(sizeof(double) * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA_PADDED}}, {{ALIGNMENT}}));
+{% endif %}
+
+  {{SOLUTION_STORAGE_PRECISION}}** restrictor = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d_T_weighted;
+
+  // will overwrite tmpX, no need to set to 0
+  for (int zy = 0; zy < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; zy++) {
+    {{ m.gemm('volume_x', 'luhFine', 'restrictor[subcellIndex[0]]', 'tmpX',
+      'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA,
+      '0',
+      'zy*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED) | indent(4) }}{##}
+  }
+  
+{% if DIMENSIONS==2 %}
+  // Add to the coarse output
+  for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+    {{ m.gemm('volume_y_add', 'tmpX', 'restrictor[subcellIndex[1]]', 'luhCoarse',
+       'x*'~NUMBER_OF_DATA_PADDED,
+       '0',
+       'x*'~NUMBER_OF_DATA) | indent(4) }}{##}
+  }
+{% else %}
+  // will overwrite tmpY, no need to set to 0
+  for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
+    for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
+      {{ m.gemm('volume_y', 'tmpX', 'restrictor[subcellIndex[1]]', 'tmpY',
+        '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
+        '0',
+        '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED) | indent(6) }}{##}
+    }
+  }
+  
+  // Add to the coarse output
+  for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
+    {{ m.gemm('volume_z_add', 'tmpY', 'restrictor[subcellIndex[2]]', 'luhCoarse',
+      'yx*'~NUMBER_OF_DATA_PADDED,
+      '0',
+      'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
+  }
+{% endif %}
+
+  _mm_free(tmpX);
+{% if DIMENSIONS==3%}
+  _mm_free(tmpY);
+{% endif %}
+
+}

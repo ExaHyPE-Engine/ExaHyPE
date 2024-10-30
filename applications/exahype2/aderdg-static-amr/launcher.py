@@ -5,7 +5,7 @@ import argparse, string
 order = 3
 
 max_h = 1.0/9.0
-min_h = 1.0/27.0
+min_h = 0.9/81.0
 
 polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
@@ -21,6 +21,8 @@ theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   flux        = exahype2.solvers.PDETerms.User_Defined_Implementation,
   ncp         = exahype2.solvers.PDETerms.User_Defined_Implementation
 )
+
+# theSolver._split_sweeps = True
 
 project.set_output_path("solutions")
 
