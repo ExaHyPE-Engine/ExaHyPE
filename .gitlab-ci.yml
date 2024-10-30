@@ -2,11 +2,11 @@ stages:
   - BuildSystem
   - Publish
 
-Automake:
+CMake:
   stage: BuildSystem
   trigger:
     include:
-      - .continuous_integration/gitlab-automake.yml
+      - .continuous_integration/gitlab-cmake.yml
     strategy: depend
 
 include:

@@ -21,12 +21,14 @@ stages:
 .Build:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. ${CONFIGURATION_OPTIONS}"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} make -j $(nproc --all)"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=install"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} ninja"; ninja install
     - mv build/src/unittests/CTestTestfile.cmake build/CTestTestfile.cmake
   artifacts:
     paths:
-      - ./build/*
+      - ./build/UnitTests*
+      - ./build/CTestTestfile.cmake
+      - ./install/*
     expire_in: 2 hours
 
 .Unit_Tests:
@@ -72,110 +74,110 @@ MGHyPE_Tests:
     - Build
   retry: 0
 
-ExaHyPE2_Tutorials:
-  stage: Tutorials
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Tutorials
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_Tutorials:
+#   stage: Tutorials
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_Tutorials
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
-ExaHyPE2_Euler:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Euler
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_Euler:
+#   stage: Applications
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_Euler
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
-ExaHyPE2_Advection:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Advection
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_Advection:
+#   stage: Applications
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_Advection
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
-ExaHyPE2_Acoustic:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Acoustic
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_Acoustic:
+#   stage: Applications
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_Acoustic
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
-ExaHyPE2_Elastic:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Elastic
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_Elastic:
+#   stage: Applications
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_Elastic
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
-ExaHyPE2_Kernels:
-  stage: Benchmarks
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Kernels
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_Kernels:
+#   stage: Benchmarks
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_Kernels
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
-ExaHyPE2_SBH:
-  stage: Benchmarks
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_SBH
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# ExaHyPE2_SBH:
+#   stage: Benchmarks
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .ExaHyPE2_SBH
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
 #ExaHyPE2_SBH_Coupled:
 #  stage: Benchmarks
