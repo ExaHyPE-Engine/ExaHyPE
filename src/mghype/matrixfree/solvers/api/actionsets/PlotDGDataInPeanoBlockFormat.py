@@ -141,6 +141,8 @@ if (
       "Solution",
       "Solution as delivered through MF Solver"
     );
+
+    _dataWriter->setPrecision(16);
   }
 """
 

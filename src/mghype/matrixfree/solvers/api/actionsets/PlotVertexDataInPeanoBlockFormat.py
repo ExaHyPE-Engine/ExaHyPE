@@ -139,6 +139,7 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
       "Solution",
       "Solution as delivered through MF Solver"
     );
+    _dataWriter->setPrecision(16);
   }
 """
 
