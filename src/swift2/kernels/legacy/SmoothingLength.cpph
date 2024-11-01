@@ -42,6 +42,12 @@ void swift2::kernels::legacy::
 
   bool hasNoNeighbours = false;
 
+#if (PeanoDebug > 0)
+  int partID = localParticle->getPartid() ;
+#else
+  int partID = -1;
+#endif
+
   const int iteration = localParticle->getSmoothingLengthIterCount();
   localParticle->setSmoothingLengthIterCount(iteration + 1);
 
@@ -111,13 +117,11 @@ void swift2::kernels::legacy::
         "hydro_update_smoothing_length_and_rerun_if_required",
         "particle wants a smaller or bigger SML than it's allowed to have." <<
         " particle x=" << localParticle->getX() <<
-#if PeanoDebug > 0
-          ", partID=" << localParticle->getPartid() <<
-#endif
-          ", h_old=" << h_old <<
-          ", h_min=" << hydro_h_min <<
-          ", h_max=" << hydro_h_max <<
-          ", f=" << f
+        ", partID=" << partID <<
+        ", h_old=" << h_old <<
+        ", h_min=" << hydro_h_min <<
+        ", h_max=" << hydro_h_max <<
+        ", f=" << f
       );
 
       // We have a particle whose smoothing length is already set (wants
@@ -139,12 +143,11 @@ void swift2::kernels::legacy::
     // via the python project generation.
 
     if (iteration > max_iterations - 10) {
+
       logWarning(
         "hydro_update_smoothing_length_and_rerun_if_required",
         "Smoothing length convergence problem: iteration=" << iteration <<
-#if PeanoDebug > 0
-          ", partID=" << localParticle->getPartid() <<
-#endif
+          ", partID=" << partID <<
           ", h_old=" << h_old <<
           ", h_new=" << h_new <<
           ", f=" << f <<
@@ -226,9 +229,7 @@ void swift2::kernels::legacy::
       "hydro_update_smoothing_length_and_rerun_if_required",
       "Got a particle that is lost cause. Setting h = h_max" <<
       "particle x=" << localParticle->getX()
-#if PeanoDebug > 0
-      << ", id=" << localParticle->getPartid()
-#endif
+      << ", partID=" << partID
     );
     // Do some damage control if no neighbours at all were found
     if (hasNoNeighbours) {
@@ -245,9 +246,7 @@ void swift2::kernels::legacy::
       "hydro_update_smoothing_length_and_rerun_if_required",
       "Got a particle that is lost cause. Setting h = h_min. " <<
       "particle x=" << localParticle->getX()
-#if PeanoDebug > 0
-      << ", id=" << localParticle->getPartid()
-#endif
+      << ", partID=" << partID
     );
     localParticle->setSmoothingLengthConverged(true);
     if (hasNoNeighbours){
