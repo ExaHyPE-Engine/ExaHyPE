@@ -4,10 +4,10 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
-from .Solver                      import Solver
-from .actionsets.InitDofs         import InitDofsCollocated
-from .actionsets.CollocatedSolver import CollocatedSolver
-from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
+from .Solver                                       import Solver
+from .actionsets.CollocatedSolver.InitDofs         import InitDofsCollocated
+from .actionsets.CollocatedSolver.CollocatedSolver import CollocatedSolver
+from .actionsets.PlotVertexDataInPeanoBlockFormat  import PlotVertexDataInPeanoBlockFormat
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
