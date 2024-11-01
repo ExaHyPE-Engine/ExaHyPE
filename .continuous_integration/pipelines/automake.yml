@@ -44,7 +44,7 @@ Build:
     - .Variables
     - .BeforeScript
     - .Build
-  retry: 0
+  retry: 1
 
 Unit_Tests:
   stage: Test
@@ -58,7 +58,7 @@ Unit_Tests:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 MGHyPE_Tests:
   stage: Test
@@ -73,7 +73,7 @@ MGHyPE_Tests:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_Tutorials:
   stage: Tutorials
@@ -88,7 +88,7 @@ ExaHyPE2_Tutorials:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_Euler:
   stage: Applications
@@ -103,7 +103,7 @@ ExaHyPE2_Euler:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_Advection:
   stage: Applications
@@ -118,7 +118,7 @@ ExaHyPE2_Advection:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_Acoustic:
   stage: Applications
@@ -133,7 +133,7 @@ ExaHyPE2_Acoustic:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_Elastic:
   stage: Applications
@@ -148,7 +148,7 @@ ExaHyPE2_Elastic:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_Kernels:
   stage: Benchmarks
@@ -163,7 +163,7 @@ ExaHyPE2_Kernels:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 ExaHyPE2_SBH:
   stage: Benchmarks
@@ -178,7 +178,7 @@ ExaHyPE2_SBH:
     - job: Build
   dependencies:
     - Build
-  retry: 0
+  retry: 1
 
 #ExaHyPE2_SBH_Coupled:
 #  stage: Benchmarks
@@ -193,4 +193,4 @@ ExaHyPE2_SBH:
 #   - job: Build
 #  dependencies:
 #    - Build
-#  retry: 0
+#  retry: 1
