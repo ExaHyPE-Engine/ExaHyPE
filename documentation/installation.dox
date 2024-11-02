@@ -340,7 +340,7 @@ OpenMP for the multithreading support. We also include some flags to suppress wa
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
 
 # Configure Peano with whatever we need
-CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-g -funroll-loops -Ofast -march=native -mtune=native -fopenmp -Wno-attributes" LDFLAGS="-fopenmp"
+CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -O3 -fopenmp -Wno-attributes" LDFLAGS="-fopenmp"
 
 # Compile and check build. You might want to add -jX to build on X cores in parallel
 echo "Starting compilation"
