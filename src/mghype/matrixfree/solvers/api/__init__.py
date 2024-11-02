@@ -3,8 +3,8 @@
 """
 import mghype.matrixfree.solvers.api.actionsets
 
-from .CollocatedDLinearDiscretisationWithPointJacobi    import CollocatedDLinearDiscretisationWithPointJacobi
-from .CollocatedGaussLobattoWithBlockJacobi             import CollocatedGaussLobattoWithBlockJacobi
+from .CollocatedDLinearDiscretisationWithPointJacobi                import CollocatedDLinearDiscretisationWithPointJacobi
+from .ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi   import ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi
 
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .CollocatedMG import CollocatedMG

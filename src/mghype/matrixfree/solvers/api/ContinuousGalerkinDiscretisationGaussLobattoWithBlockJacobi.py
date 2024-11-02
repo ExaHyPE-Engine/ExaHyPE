@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# use, please see the copyright notice at www.peano-framework.org
 import peano4
 import jinja2
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
@@ -5,15 +7,12 @@ import dastgen2
 import os
 
 from .Solver                                       import Solver
-from .actionsets.CollocatedSolver.InitDofs         import InitDofsCollocated
+from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.InitDofs         import InitDofs
 from .actionsets.CollocatedSolver.CollocatedSolver import CollocatedSolver
-from .actionsets.PlotVertexDataInPeanoBlockFormat  import PlotVertexDataInPeanoBlockFormat
-
-from abc import abstractmethod
-from peano4.solversteps.ActionSet import ActionSet
+from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 
-class CollocatedGaussLobattoWithBlockJacobi(Solver):
+class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
   """!
 
   Matrix-free Collocated Solver for higher order polynomials.
@@ -37,8 +36,6 @@ class CollocatedGaussLobattoWithBlockJacobi(Solver):
                projection_matrix,
                projection_matrix_scaling,
                solver_tolerance,
-               approximate_system_matrix,
-               approximate_system_matrix_scaling,
                cell_relaxation,
                face_relaxation   = 0.6,
                custom_init_actionset = None,
@@ -56,10 +53,7 @@ class CollocatedGaussLobattoWithBlockJacobi(Solver):
       
        
     """
-    super( CollocatedGaussLobattoWithBlockJacobi, self ).__init__( name,
-                                                                   unknowns_per_vertex_node = -1, # remove
-                                                                   unknowns_per_face_node = -1, # remove
-                                                                   unknowns_per_cell_node = unknowns_per_node, # remove
+    super( ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi, self ).__init__( name,
                                                              min_h = min_h,
                                                              max_h = max_h,
                                                              )
@@ -75,8 +69,6 @@ class CollocatedGaussLobattoWithBlockJacobi(Solver):
     self._mass_matrix_scaling       = mass_matrix_scaling
     self._projection_matrix         = projection_matrix
     self._projection_matrix_scaling = projection_matrix_scaling
-    self._approximate_system_matrix = approximate_system_matrix
-    self._approximate_system_matrix_scaling = approximate_system_matrix_scaling
 
     self._cell_relaxation           = cell_relaxation
     self._face_relaxation           = face_relaxation
@@ -120,12 +112,12 @@ class CollocatedGaussLobattoWithBlockJacobi(Solver):
     
     """
     if self._enable_plotting: # true by default
-        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", plot_predicate=self._plot_predicate) )
-        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", plot_predicate=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate) )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:
-        observer.add_action_set( PlotVertexDataInPeanoBlockFormat(self, name, getter) )
+        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, plot_predicate=self._plot_predicate) )
 
     pass
 
@@ -143,15 +135,15 @@ class CollocatedGaussLobattoWithBlockJacobi(Solver):
     
     """
     if self._custom_init_actionset is None:
-      observer.add_action_set( InitDofsCollocated(self) )
+      observer.add_action_set( InitDofs(self) )
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
     pass
 
   def add_to_solve(self, observer):
-    new_action_set = CollocatedSolver(self)
-    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
-    observer.add_action_set( new_action_set )
+#    new_action_set = CollocatedSolver(self)
+#    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
+#    observer.add_action_set( new_action_set )
     pass
   
   def add_implementation_files_to_project(self, namespace, output, subdirectory="", abstract_overwrite=True):
@@ -184,8 +176,6 @@ class CollocatedGaussLobattoWithBlockJacobi(Solver):
         "RHS_MATRIX"                  : self._mass_matrix,
         "RHS_MATRIX_SCALING"          : self._mass_matrix_scaling,
         "SOLVER_TOLERANCE"            :  self._solver_tolerance,
-        "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
-        "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
         "CELL_RELAXATION"                      : self._cell_relaxation,
         "FACE_RELAXATION"                      : self._face_relaxation,
         "ABSTRACT_SOLVER_HEADER_EXTRAS"        : self._abstract_solver_header_extras,
