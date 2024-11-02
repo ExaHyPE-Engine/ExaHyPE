@@ -143,9 +143,7 @@ the SISC paper
         self.d["EXECUTABLENAME"] = ""
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["FORTRAN_MODULES"] = []
-        self.d["GENERATED_INCLUDE_DIRS"] = set()
         self.d["APP_SUBDIRECTORIES"] = []
-        self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
         self.set_mode(CompileMode.Debug)
         self.clear_files()
 
@@ -182,7 +180,6 @@ the SISC paper
         """
         self.d["CXXFLAGS"] += " -I" + path
         self.d["FCFLAGS"] += " -I" + path
-        self.d["GENERATED_INCLUDE_DIRS"].add(path)
 
 
     def add_library(self, library_name, library_path=""):
