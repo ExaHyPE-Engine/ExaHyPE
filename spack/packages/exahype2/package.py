@@ -27,7 +27,7 @@ class Exahype2(CMakePackage, CudaPackage):
 
     maintainers("hpcsoftware")
 
-    version("p4", branch="infrastructure-cmake")
+    version("p4", branch="p4")
 
     variant("mpi", default=False, description="Build with MPI support")
     variant("tracer", default=False, description="Build with particle tracer support")

@@ -18,6 +18,10 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
     target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
+    if(ENABLE_LOADBALANCING)
+      target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ToolboxLoadBalancing${dimension}d_${mode_lower})
+    endif()
+
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
       EXPORT                      ${PROJECT_NAME}Targets
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

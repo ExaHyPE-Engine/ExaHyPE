@@ -14,8 +14,8 @@ stages:
   - Benchmarks
 
 .BeforeScriptWithAutomakeSanitiser:
-  extends: .BeforeScript
   before_script:
+    - !reference [".BeforeScript", "before_script"]
     - python3 .continuous_integration/sanitise_path.py Makefile src/Makefile config.log
 
 .Build:

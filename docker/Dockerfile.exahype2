@@ -2,13 +2,13 @@ FROM peanoframework/spack:latest
 
 WORKDIR /exahype2
 
-RUN wget --progress=bar:force:noscroll https://gitlab.lrz.de/hpcsoftware/Peano/-/archive/infrastructure-cmake/Peano-infrastructure-cmake.tar.gz && \
-tar -xvf Peano-infrastructure-cmake.tar.gz && \
-mv Peano-infrastructure-cmake/tutorials/exahype2* tutorials && \
-mv Peano-infrastructure-cmake/applications/exahype2* applications && \
-mv Peano-infrastructure-cmake/benchmarks/exahype2* benchmarks && \
-mv Peano-infrastructure-cmake/spack /opt/spack-peano && \
-rm -rf Peano-infrastructure-cmake* && \
+RUN wget --progress=bar:force:noscroll https://gitlab.lrz.de/hpcsoftware/Peano/-/archive/infrastructure-cmake/Peano-p4.tar.gz && \
+tar -xvf Peano-p4.tar.gz && \
+mv Peano-p4/tutorials/exahype2* tutorials && \
+mv Peano-p4/applications/exahype2* applications && \
+mv Peano-p4/benchmarks/exahype2* benchmarks && \
+mv Peano-p4/spack /opt/spack-peano && \
+rm -rf Peano-p4* && \
 spack repo add /opt/spack-peano
 
 RUN mkdir /opt/spack-environment \
