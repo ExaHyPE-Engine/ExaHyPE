@@ -166,7 +166,7 @@ class Project (object):
             throw_away_data_after_build=False,
             number_of_parallel_builds=-1):
     """!
-      Invokes the underlying automake make/C build mechanism on the project.
+      Invokes the underlying make build mechanism on the project.
 
       number_of_parallel_builds: int
         This is mapped onto make -jnumber_of_parallel_builds, i.e., it
