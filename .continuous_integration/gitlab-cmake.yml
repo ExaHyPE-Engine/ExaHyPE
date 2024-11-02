@@ -75,7 +75,7 @@ NVIDIA:
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
-                            -DENABLE_MGHYPE=OFF \
+                            -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
                             -DENABLE_PARTICLES=ON"
   trigger:
