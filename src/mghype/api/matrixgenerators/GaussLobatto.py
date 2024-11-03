@@ -51,10 +51,17 @@ class GaussLobatto(MatrixGenerator):
 
   def get_points1d(self):
     """!
+    
+    Get spacing of integration points over unit interval
+    
     Overwriting the method in base class. Let's produce Gauss-Lobatto
     points. Standard behaviour is Legendre points using built-in stuff
     from scipy.
-    We borrow the method from the wikipedia page
+    
+    We borrow the method from the wikipedia page.
+    
+    This routine returns the points in the interval [-1,1]. If you 
+    have to rescale them, use the 
     """
     # let p be the poly degree. Then p+1 is the number of points we aim for
     # So we gather the n'th polynomial Pn, then return [-1,1], as well as the roots
