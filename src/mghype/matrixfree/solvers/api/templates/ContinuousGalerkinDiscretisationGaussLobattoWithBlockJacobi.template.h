@@ -37,15 +37,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     /**
      * Initialise cell
      *
-     * Set the initial value of a cell as well as its right-hand side. The
-     * choice of an initial guess should not have an impact on the final
-     * result, but obviously determines the number of iterations.
+     * @see Documentation in superclass
      */
-    virtual void initCell(
+    virtual void initCellDoF(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< UnknownsPerCellNode, double >&  value,
-      tarch::la::Vector< UnknownsPerCellNode, double >&  rhs
+      tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
+      tarch::la::Vector< Dimensions, int >&              node
     ) override;
 
     /**

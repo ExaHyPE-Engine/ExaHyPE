@@ -57,18 +57,39 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     static constexpr int        NodesPerFace           = {{NODES_PER_FACE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
+
+    /**
+     * Spacing of integration nodes along unit interval in one dimension
+     *
+     * The position of any point within the reference element can be
+     * constructed through a tensor product approach.
+     */
+    static const tarch::la::Vector< PolyDegree+1, double >   IntegrationPoints;
+
+    static tarch::la::Vector< Dimensions, double > getIntegrationPoint(
+      const tarch::la::Vector< Dimensions, int >& pos
+    );
+
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 
     /**
      * Initialise a cell degree of freedom
+     *
+     * This routine sets the degrees of freedom point-wisely, i.e. a code
+     * behind the scenes runs over all nodes per cell and calls this
+     * operation per node.
+     *
+     * @param x Position of current node
+     * @param h Size of cell hosting this node
      */
-    virtual void initCell(
+    virtual void initCellDoF(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< UnknownsPerCellNode, double >&  value,
-      tarch::la::Vector< UnknownsPerCellNode, double >&  rhs
+      tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
+      tarch::la::Vector< Dimensions, int >&              node
     ) = 0;
 
     /**
@@ -98,24 +119,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    ) {% if MASS_MATRIX is not defined %} = 0 {% endif %};
-
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedApproxSystemMatrix(
-      const tarch::la::Vector<Dimensions, double>&  cellCentre,
-      const tarch::la::Vector<Dimensions, double>&  cellSize
-    ) {% if APPROX_SYSTEM_MATRIX is not defined %} = 0 {% endif %};
-
-    // no arguments needed
-    virtual tarch::la::Matrix< CellUnknowns, FaceUnknowns * TwoTimesD, double > getCellFromFaceMatrix(
-      const tarch::la::Vector<Dimensions, double>&  cellCentre,
-      const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
-
-    // no arguments needed
-    virtual tarch::la::Matrix< FaceUnknowns * TwoTimesD, CellUnknowns, double > getFaceFromCellMatrix(
-      const tarch::la::Vector<Dimensions, double>&  cellCentre,
-      const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if RHS_MATRIX is not defined %} = 0 {% endif %};
 
     virtual void beginMeshSweep() override;
 

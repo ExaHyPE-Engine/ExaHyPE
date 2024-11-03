@@ -35,12 +35,13 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
                mass_matrix_scaling,
                projection_matrix,
                projection_matrix_scaling,
+               integration_points,
                solver_tolerance,
                cell_relaxation,
                face_relaxation   = 0.6,
                custom_init_actionset = None,
                custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
-               custom_init_cell = "",
+               custom_init_cell      = "",
                custom_boundary_conditions = "",
                enable_plotting = True, # sometimes we want to disable standard plotting...
                plot_predicate = "true" # enable custom plotting behaviour
@@ -51,6 +52,9 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     
     @param projection_matrix: Matrix
       
+    @param integration_points: [Float]
+      Sequence of polynomial_degree+1 entries which identify the position of 
+      the integration points along the unit interval.
        
     """
     super( ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi, self ).__init__( name,
@@ -78,11 +82,13 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     self._custom_init_actionset         = custom_init_actionset
     self._custom_plot_actionset         = custom_plot_actionset
 
-    self._custom_init_cell            = custom_init_cell
+    self._custom_init_cell              = custom_init_cell
     self._custom_boundary_conditions    = custom_boundary_conditions
 
     self._enable_plotting               = enable_plotting
     self._plot_predicate                = plot_predicate
+    
+    self._integration_points            = integration_points
 
     # K^c * (p+1)^d
     self._degrees_of_freedom_per_cell            = unknowns_per_node * ( polynomial_degree + 1) ** dimensions
@@ -183,7 +189,8 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
         "POLY_DEGREE"                 : self._polynomial_degree,
         "SOLVER_TOLERANCE"            : self._solver_tolerance,
         "CUSTOM_INIT_CELL"            : self._custom_init_cell,
-        "CUSTOM_BOUNDARY_CONDITIONS"           : self._custom_boundary_conditions,
+        "CUSTOM_BOUNDARY_CONDITIONS"  : self._custom_boundary_conditions,
+        "INTEGRATION_POINTS"          : self._integration_points
     }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
