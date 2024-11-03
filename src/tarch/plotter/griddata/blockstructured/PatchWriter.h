@@ -126,22 +126,23 @@ public:
   virtual int plotPatch(const tarch::la::Vector<3, double>& offset, const tarch::la::Vector<3, double>& size) = 0;
 
   /**
-   * Caller has to destroy this instance manually., const std::string& description
+   * Create cell data writer.
    *
-   * @param identifier  Name of your data. I recommend to stick to C++ identifier rules for
-   *   this one, i.e. no fancy chars and no spaces
-   * @param unknownsPerAxis   We plot a (logically) Cartesian piece of data. This is the number of
-   *   unknowns per axis
-   * @param recordsPerCell    Number of entries stores per unknown. Data is, by default, written
-   *   as AoS
-   * @param description       This is meta data, i.e. has no prescribed semanatics
-   * @param mapping           Array of positions within a unit cube/square. Is it an AoS of vectors
-   *   within the unit square which distorts all the vertices within the mesh. Logically, all data
-   *   are Cartesian, but you might prefer Gauss Lobatto nodes, e.g.
+   * Wrapper around createCellDataWriter(std::string, int, int, std::string, std::string, double*)
+   * with default values. Please consult description of the more elaborate
+   * routine for details.
    */
   virtual CellDataWriter* createCellDataWriter(
     const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description
   ) = 0;
+
+  /**
+   * Create cell data writer.
+   *
+   * Wrapper around createCellDataWriter(std::string, int, int, std::string, std::string, double*)
+   * with default values. Please consult description of the more elaborate
+   * routine for details.
+   */
   virtual CellDataWriter* createCellDataWriter(
     const std::string& identifier,
     int                unknownsPerAxis,
@@ -149,6 +150,30 @@ public:
     const std::string& description,
     const std::string& metaData
   ) = 0;
+
+  /**
+   * Create writer.
+   *
+   * Caller has to destroy this instance manually.
+   *
+   * @param identifier  Name of your data. I recommend to stick to C++ identifier rules for
+   *   this one, i.e. no fancy chars and no spaces
+   * @param unknownsPerAxis   We plot a (logically) Cartesian piece of data. This is the number of
+   *   unknowns per axis
+   * @param recordsPerVertex  Number of entries stores per unknown. Data is, by default, written
+   *   as AoS
+   * @param description       This is a description of the data. Should be a one-liner.
+   * @param metaData          Further meta data without prescribed semantics.
+   *   Can be a longer text block.
+   * @param mapping           Array of positions within a unit cube/square. It
+   *   is an AoS of vectors within the unit square which distorts all the
+   *   plotting points within the logical Cartesian mesh imposed over the unit
+   *   cube. By default, all data are Cartesian and spaced out equidistantly,
+   *   i.e. if you have 4x4 data points per cell, then you get a chess board
+   *   pattern of 16 smaller cubes over the cell in 2d. However, you might
+   *   prefer something like Gauss Lobatto nodes, and then the data are not
+   *   spaced out uniformly anymore.
+   */
   virtual CellDataWriter* createCellDataWriter(
     const std::string& identifier,
     int                unknownsPerAxis,
@@ -159,11 +184,23 @@ public:
   ) = 0;
 
   /**
-   * Caller has to destroy this instance manually.
+   * Create vertex data writer.
+   *
+   * Wrapper around createVertexDataWriter(std::string, int, int, std::string, std::string, double*)
+   * with default values. Please consult description of the more elaborate
+   * routine for details.
    */
   virtual VertexDataWriter* createVertexDataWriter(
     const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description
   ) = 0;
+
+  /**
+   * Create vertex data writer.
+   *
+   * Wrapper around createVertexDataWriter(std::string, int, int, std::string, std::string, double*)
+   * with default values. Please consult description of the more elaborate
+   * routine for details.
+   */
   virtual VertexDataWriter* createVertexDataWriter(
     const std::string& identifier,
     int                unknownsPerAxis,
@@ -171,6 +208,30 @@ public:
     const std::string& description,
     const std::string& metaData
   ) = 0;
+
+  /**
+   * Create writer.
+   *
+   * Caller has to destroy this instance manually.
+   *
+   * @param identifier  Name of your data. I recommend to stick to C++ identifier rules for
+   *   this one, i.e. no fancy chars and no spaces
+   * @param unknownsPerAxis   We plot a (logically) Cartesian piece of data. This is the number of
+   *   unknowns per axis
+   * @param recordsPerVertex  Number of entries stores per unknown. Data is, by default, written
+   *   as AoS
+   * @param description       This is a description of the data. Should be a one-liner.
+   * @param metaData          Further meta data without prescribed semantics.
+   *   Can be a longer text block.
+   * @param mapping           Array of positions within a unit cube/square. It
+   *   is an AoS of vectors within the unit square which distorts all the
+   *   plotting points within the logical Cartesian mesh imposed over the unit
+   *   cube. By default, all data are Cartesian and spaced out equidistantly,
+   *   i.e. if you have 4x4 data points per cell, then you get a chess board
+   *   pattern of 16 smaller cubes over the cell in 2d. However, you might
+   *   prefer something like Gauss Lobatto nodes, and then the data are not
+   *   spaced out uniformly anymore.
+   */
   virtual VertexDataWriter* createVertexDataWriter(
     const std::string& identifier,
     int                unknownsPerAxis,
