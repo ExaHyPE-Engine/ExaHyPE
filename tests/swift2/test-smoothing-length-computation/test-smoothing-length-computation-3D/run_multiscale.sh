@@ -18,7 +18,8 @@ CELL_SIZE=0.3
 H_TOLERANCE=1e-6
 
 
-rand=$RANDOM
+# rand=$RANDOM
+rand=22221
 echo 'Generating initial conditions with seed' $rand
 python3 makeIC-multiscale.py -np $N_PART -s $rand
 
@@ -29,6 +30,6 @@ for neighbors in 30 48 64; do
     echo 'running test ...'
     ./testSML | tee output-$neighbors.log
     echo 'comparing results ...'
-    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 2 | tee results-$neighbors.txt
+    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 3 | tee results-$neighbors.txt
     echo '---------------------'
 done
