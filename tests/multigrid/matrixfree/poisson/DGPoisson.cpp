@@ -21,6 +21,10 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
 ) {
   logTraceInWith4Arguments("initCell", x, h, value, rhs);
 
+// @todo I think this should move into the initialisation script, and we should
+//       scan the points one by one. This way, the routine becomes consistent
+//       1:1 with the collocated scheme.
+
   auto bottomLeft = x - 0.5 * h;
 
   // we only have one cell unknown, so we can reuse this macro
@@ -29,6 +33,9 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
   {
     // convert k to double
     tarch::la::Vector<Dimensions, double> kDouble = tarch::la::convertScalar<double, Dimensions, int>(k);
+
+// @todo This is a bug. The integration points are not(!) spaced out equally.
+// I've fixed it in the continuous DG sense
     auto dofPosition = bottomLeft + h(0)*kDouble / (double)repositories::instanceOfDGPoisson.PolyDegree;
     rhs[counter]   = getPointWiseRhs(dofPosition);
     value[counter] = 0;
