@@ -25,9 +25,8 @@ template <typename ParticleContainer>
 void swift2::kernels::forAllLocalParticles(
   const peano4::datamanagement::CellMarker&                    marker,
   ParticleContainer&                                           localParticles,
-  ParticleUnaryOperatorOnCell<typename std::remove_pointer<typename ParticleContainer::value_type>::type > auto f,
-  UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
-      predicate
+  ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>>   auto f,
+  UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>> predicate
 ) {
   for (auto& particle : localParticles) {
     if (predicate(marker,*particle)) {
@@ -151,11 +150,9 @@ void swift2::kernels::forAllParticlePairs(
   const peano4::datamanagement::CellMarker&  marker,
   LocalParticleContainer&                    localParticles,
   ActiveParticleContainer&                   activeParticles,
-  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type> auto f,
-  UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
-      localParticlePredicate,
-  UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
-      particlePairPredicate
+  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+  UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>> localParticlePredicate,
+  UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>> particlePairPredicate
 ) {
   for (auto& localParticle : localParticles) {
     if ( localParticlePredicate(marker, *localParticle) ) {
@@ -180,8 +177,7 @@ void swift2::kernels::forAllParticlePairsVectorised(
   ActiveParticleContainer&                   activeParticles,
   const std::vector<int>&                    numberOfLocalParticlesPerVertex,
   const std::vector<int>&                    numberOfActiveParticlesPerVertex,
-  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
-     auto f
+  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
 ) {
   assertionEquals( numberOfLocalParticlesPerVertex.size(), TwoPowerD );
 
@@ -216,8 +212,7 @@ void swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble(
   ActiveParticleContainer&                   activeParticles,
   const std::vector<int>&                    numberOfLocalParticlesPerVertex,
   const std::vector<int>&                    numberOfActiveParticlesPerVertex,
-  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
-     auto f
+  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
 ) {
   swift2::kernels::forAllParticlePairsVectorised(marker, localParticles, activeParticles, numberOfLocalParticlesPerVertex, numberOfActiveParticlesPerVertex, f);
 }
