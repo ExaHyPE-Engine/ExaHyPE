@@ -104,6 +104,7 @@ particle = swift2.particle.LeapfrogFixedSearchRadius(
     particles_per_cell=0,
     min_h=args.cell_size,
     max_h=0.3,
+    add_partid = (not args.asserts)
 )
 particle_set = project.add_particle_species(particle)
 
@@ -236,7 +237,7 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
-particle_plotter.add_attribute_to_plot(particle.part_id, 1)
+particle_plotter.add_attribute_to_plot(particle.partid, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
 

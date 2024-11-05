@@ -125,8 +125,6 @@ for i in range(ids_0.shape[0]):
             print("    Coords expect: ", coords_expect[i])
             print("----------------------------")
             errors += 1
-        else:
-            print(diff)
 
 print("Finished with", errors, "errors.")
 
