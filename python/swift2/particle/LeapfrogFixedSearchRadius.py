@@ -55,7 +55,7 @@ class LeapfrogFixedSearchRadius(Particle):
         particles_per_cell=0,
         min_h=0.005,
         max_h=0.3,
-        add_partid=False
+        add_partid=False,
     ):
         super(LeapfrogFixedSearchRadius, self).__init__(
             name,

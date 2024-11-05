@@ -103,7 +103,7 @@ particle = swift2.particle.LeapfrogFixedSearchRadius(
     particles_per_cell=0,
     min_h=args.cell_size,
     max_h=0.3,
-    add_partid = (not args.asserts)
+    add_partid=(not args.asserts),
 )
 particle_set = project.add_particle_species(particle)
 
