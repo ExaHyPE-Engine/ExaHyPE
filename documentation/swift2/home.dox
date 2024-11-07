@@ -113,7 +113,7 @@ and then you can configure with
 
 
          ./configure --enable-particles --enable-swift --enable-loadbalancing \
-             --enable-blockstructured --enable-exahype2 --with-hdf5 \
+             --enable-blockstructured --enable-exahype --with-hdf5 \
              CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" \
              LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
              LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" \
