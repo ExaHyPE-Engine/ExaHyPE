@@ -8,6 +8,7 @@ import os
 
 from .Solver                                       import Solver
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.InitDofs         import InitDofs
+from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateCell       import UpdateCell
 from .actionsets.CollocatedSolver.CollocatedSolver import CollocatedSolver
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
@@ -186,15 +187,15 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
                       else:
                         result[-1].append( 0.0 )
     return result
-  
-  
-  
+
+
   def add_to_solve(self, observer):
-#    new_action_set = CollocatedSolver(self)
-#    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
-#    observer.add_action_set( new_action_set )
+    new_action_set = UpdateCell(self)
+    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
+    observer.add_action_set( new_action_set )
     pass
-  
+
+    
   def add_implementation_files_to_project(self, namespace, output, subdirectory="", abstract_overwrite=True):
     """
     
