@@ -93,6 +93,7 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     # K^c * (p+1)^d
     self._degrees_of_freedom_per_cell            = unknowns_per_node * ( polynomial_degree + 1) ** dimensions
     self._degrees_of_freedom_per_face            = unknowns_per_node * ( polynomial_degree + 1) ** (dimensions-1)
+    self._inner_degrees_of_freedom_per_cell      = unknowns_per_node * ( polynomial_degree - 1) ** dimensions
 
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._degrees_of_freedom_per_cell) ))
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._degrees_of_freedom_per_cell) ))
@@ -145,7 +146,49 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
     pass
+    
+  def _construct_narrow_to_interior_matrix(self):
+    """!
 
+    Construct the matrix which basically picks out the interior points.
+  
+    """
+    result = []
+    if self._dimensions==2:
+      for image_x in range(0,self._polynomial_degree - 1):
+        for image_y in range(0,self._polynomial_degree - 1):
+          for image_unknown in range(0,self._unknowns_per_cell_node):
+            result.append([])
+            for preimage_x in range(0,self._polynomial_degree + 1):
+              for preimage_y in range(0,self._polynomial_degree + 1):
+                for preimage_unknown in range(0,self._unknowns_per_cell_node):
+                  if (preimage_x-1==image_x and
+                     preimage_y-1==image_y and
+                     preimage_unknown==image_unknown):
+                    result[-1].append( 1.0 )
+                  else:
+                    result[-1].append( 0.0 )
+    else:
+      for image_x in range(0,self._polynomial_degree - 1):
+        for image_y in range(0,self._polynomial_degree - 1):
+          for image_z in range(0,self._polynomial_degree - 1):
+            for preimage_unknown in range(0,self._unknowns_per_cell_node):
+              result.append([])
+              for preimage_x in range(0,self._polynomial_degree + 1):
+                for preimage_y in range(0,self._polynomial_degree + 1):
+                  for preimage_z in range(0,self._polynomial_degree + 1):
+                    for preimage_unknown in range(0,self._unknowns_per_cell_node):
+                      if (preimage_x-1==image_x and
+                         preimage_y-1==image_y and
+                         preimage_z-1==image_z and
+                         preimage_unknown==image_unknown):
+                        result[-1].append( 1.0 )
+                      else:
+                        result[-1].append( 0.0 )
+    return result
+  
+  
+  
   def add_to_solve(self, observer):
 #    new_action_set = CollocatedSolver(self)
 #    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
@@ -173,6 +216,7 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
         "MAX_H"                       : self.max_h,
         "SOLVER_NAME"                 : self.typename(),
         "CELL_CARDINALITY"            : self._degrees_of_freedom_per_cell,
+        "INNER_CELL_CARDINALITY"      : self._inner_degrees_of_freedom_per_cell,
         "FACE_CARDINALITY"            : self._degrees_of_freedom_per_face,
         "NODES_PER_CELL"              : (self._polynomial_degree + 1) **  self._dimensions,
         "NODES_PER_FACE"              : (self._polynomial_degree + 1) ** (self._dimensions-1),
@@ -190,7 +234,8 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
         "SOLVER_TOLERANCE"            : self._solver_tolerance,
         "CUSTOM_INIT_CELL"            : self._custom_init_cell,
         "CUSTOM_BOUNDARY_CONDITIONS"  : self._custom_boundary_conditions,
-        "INTEGRATION_POINTS"          : self._integration_points
+        "INTEGRATION_POINTS"          : self._integration_points,
+        "NARROW_TO_INTERIOR_MATRIX"   : self._construct_narrow_to_interior_matrix(),
     }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

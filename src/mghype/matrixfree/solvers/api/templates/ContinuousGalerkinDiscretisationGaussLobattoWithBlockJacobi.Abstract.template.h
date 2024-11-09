@@ -47,6 +47,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
      */
     static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
     static constexpr int        FaceUnknowns           = {{FACE_CARDINALITY}};
+    static constexpr int        InnerCellUnknowns      = {{INNER_CELL_CARDINALITY}};
 
     /**
      * Unknowns per cell node.
@@ -69,6 +70,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     static tarch::la::Vector< Dimensions, double > getIntegrationPoint(
       const tarch::la::Vector< Dimensions, int >& pos
     );
+
+
+    static const tarch::la::Matrix<InnerCellUnknowns, CellUnknowns, double>  NarrowToInteriorMatrix;
+
 
   public:
     {{CLASSNAME}}();

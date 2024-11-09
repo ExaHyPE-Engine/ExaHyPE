@@ -8,6 +8,14 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 const tarch::la::Vector< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PolyDegree+1, double >   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::IntegrationPoints = { {{INTEGRATION_POINTS | join(", ")}} };
 
 
+const tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::InnerCellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double>  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NarrowToInteriorMatrix = {
+  {{NARROW_TO_INTERIOR_MATRIX[0]| join(", ")}}
+  {% for ROW in NARROW_TO_INTERIOR_MATRIX[1:] %}
+    ,{{ROW | join(", ")}}
+  {% endfor %}
+};
+
+
 tarch::la::Vector< Dimensions, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getIntegrationPoint(
   const tarch::la::Vector< Dimensions, int >& pos
 ) {
