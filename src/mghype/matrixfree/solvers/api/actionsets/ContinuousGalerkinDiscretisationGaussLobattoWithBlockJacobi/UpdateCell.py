@@ -10,6 +10,16 @@ class UpdateCell(ActionSet):
   """!
 
   Action set implementing the cell update of the continuous Galerkin solver
+
+  If you apply only this action set (and it makes sense to try this out to get
+  a better grip on what's going on), then you will obtain a result similar to 
+  the one below:
+  
+  @image html UpdateCellWithoutBoundaryUpdates.png
+  
+  The individual cells are all nicely updated, but the boundaries in-between
+  the cells are not updated at all. Effectively, we solve a set of tiny 
+  boundary value problems that are decoupled from each other.
   
   """
   templateTouchCellFirstTime="""
@@ -30,7 +40,11 @@ class UpdateCell(ActionSet):
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
       repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
     r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
-          
+
+    // @todo This is not nice. As we already book the memory anyway, we should not 
+    // allocate r and instead work directly against r. Alternatively, kick out the
+    // residual (as long as we are not in debug mode). That would actually be the
+    // prime version. Or at least make it not persistent.
     fineGridCell{{SOLVER_NAME}}.setResidual( r );
     
     tarch::la::Matrix<repositories::{{SOLVER_INSTANCE}}.InnerCellUnknowns, repositories::{{SOLVER_INSTANCE}}.InnerCellUnknowns, double>  
@@ -38,20 +52,25 @@ class UpdateCell(ActionSet):
                   * repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h())
                   * tarch::la::transpose(repositories::{{SOLVER_INSTANCE}}.NarrowToInteriorMatrix);
 
-//    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > du =
-//      repositories::{{SOLVER_INSTANCE}}.NarrowToInteriorMatrix * r;
-
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > du = 
+          repositories::{{SOLVER_INSTANCE}}.OmegaCell
+        * tarch::la::transpose(repositories::{{SOLVER_INSTANCE}}.NarrowToInteriorMatrix)
+        * tarch::la::invert(innerMatrix)
+        * repositories::{{SOLVER_INSTANCE}}.NarrowToInteriorMatrix
+        * r;
     
     fineGridCell{{SOLVER_NAME}}.setSolution(
       fineGridCell{{SOLVER_NAME}}.getSolution()
       + 
-      repositories::{{SOLVER_INSTANCE}}.OmegaCell
-        * tarch::la::transpose(repositories::{{SOLVER_INSTANCE}}.NarrowToInteriorMatrix)
-        * tarch::la::invert(innerMatrix)
-        * repositories::{{SOLVER_INSTANCE}}.NarrowToInteriorMatrix
-        * r
+      du
     );
     
+    repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
+    dfor( k, repositories::{{SOLVER_INSTANCE}}.PolyDegree-1 ) {
+      int i = peano4::utils::dLinearised( k + tarch::la::Vector< Dimensions, int >(1), repositories::{{SOLVER_INSTANCE}}.PolyDegree+1 );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual( r(i), marker.h() );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates( du(i), marker.h() );    
+    }
 
     logTraceOut("updateResidual");
   }
