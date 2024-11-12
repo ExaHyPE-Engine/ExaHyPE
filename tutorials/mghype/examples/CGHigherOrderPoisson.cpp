@@ -17,7 +17,7 @@ void tutorials::mghype::examples::CGHigherOrderPoisson::initCellDoF(
   tarch::la::Vector< Dimensions, int >&              node
 ) {
   value(0) = 0.0;
-  rhs(0)   = 1.0;
+  rhs(0)   = Dimensions * tarch::la::PI * tarch::la::PI;
   for (int d=0; d<Dimensions; d++) {
     rhs(0) *= std::sin( tarch::la::PI * x(d) );
   }

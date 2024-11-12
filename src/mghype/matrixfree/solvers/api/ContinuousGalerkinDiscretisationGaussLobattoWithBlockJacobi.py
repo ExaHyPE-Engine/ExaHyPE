@@ -35,8 +35,6 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
                assembly_matrix_scaling,
                mass_matrix,
                mass_matrix_scaling,
-               projection_matrix,
-               projection_matrix_scaling,
                integration_points,
                solver_tolerance,
                cell_relaxation,
@@ -51,9 +49,7 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     """!
    
     Construct solver
-    
-    @param projection_matrix: Matrix
-      
+          
     @param integration_points: [Float]
       Sequence of polynomial_degree+1 entries which identify the position of 
       the integration points along the unit interval.
@@ -73,8 +69,6 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     self._assembly_matrix_scaling   = assembly_matrix_scaling
     self._mass_matrix               = mass_matrix
     self._mass_matrix_scaling       = mass_matrix_scaling
-    self._projection_matrix         = projection_matrix
-    self._projection_matrix_scaling = projection_matrix_scaling
 
     self._cell_relaxation           = cell_relaxation
     self._face_relaxation           = face_relaxation

@@ -53,96 +53,139 @@ self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "deltaU", 
     logTraceInWith3Arguments( "touchFaceFirstTime", fineGridFace{{SOLVER_NAME}}.getResidual(), fineGridFace{{SOLVER_NAME}}.getDiagonal(), marker.toString() );
     
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; i++) {
-      // first step diagonal is zero
+      // in the first step, diagonal is zero
       if ( tarch::la::equals(fineGridFace{{SOLVER_NAME}}.getDiagonal(i),0.0) ) {
+        fineGridFace{{SOLVER_NAME}}.setDeltaU( i, 0.0 );
+      }
+      else {
         double du = repositories::{{SOLVER_INSTANCE}}.OmegaFace / fineGridFace{{SOLVER_NAME}}.getDiagonal(i) * fineGridFace{{SOLVER_NAME}}.getResidual(i);
-        fineGridFace{{SOLVER_NAME}}.setDeltaU( du );
+        assertion( du==du );
+        assertion( not std::isnan(du) );
+        fineGridFace{{SOLVER_NAME}}.setDeltaU( i, du );
       }
-      else {  
-        fineGridFace{{SOLVER_NAME}}.setDeltaU( 0.0 );
-      }
-      fineGridFace{{SOLVER_NAME}}.setResidual( 0.0 );
-      fineGridFace{{SOLVER_NAME}}.setDiagonal( 0.0 );
+      fineGridFace{{SOLVER_NAME}}.setResidual( i, 0.0 );
+      fineGridFace{{SOLVER_NAME}}.setDiagonal( i, 0.0 );
     }
     
     logTraceOutWith1Argument( "touchFaceFirstTime", fineGridFace{{SOLVER_NAME}}.getDeltaU() );
   }
   else {
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; i++) {
-      fineGridFace{{SOLVER_NAME}}.setDeltaU( 0.0 );
-      fineGridFace{{SOLVER_NAME}}.setResidual( 0.0 );
-      fineGridFace{{SOLVER_NAME}}.setDiagonal( 0.0 );
+      fineGridFace{{SOLVER_NAME}}.setDeltaU( i, 0.0 );
+      fineGridFace{{SOLVER_NAME}}.setResidual( i, 0.0 );
+      fineGridFace{{SOLVER_NAME}}.setDiagonal( i, 0.0 );
     }
   }
-
-
 """
 
   templateTouchCellFirstTime = """ 
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior 
     and
-    repositories::{{SOLVER_INSTANCE}}.update()
+    repositories::{{SOLVER_INSTANCE}}.updateCell()
   ) {
-    logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    logTraceInWith2Arguments("touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-    repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize(
-      marker.h()
-    );
-    
-    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
-    {
-      // Mass and assembly matrix should be block diagonal, 
-      // depending on which unknown we are currently dealing with.
-      // We will collect the rhs & solution values from the 
-      // vertices, and apply the correct matrix as we go.
-      // Define the offset:
-      int startIndex = TwoPowerD * unknown;
-      
-      auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
-      auto M       = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h());
+    // ==============================
+    // project updates into the cells
+    // ==============================
+    // @todo Very similar to Alex's matrix calibration discussion on Slack, 
+    //       there is some scaling missing here.
+    for (int d=0; d<Dimensions; d++) {
+      int unknownInPreimage = 0;
+      dfore(node,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,d,0) {
+        tarch::la::Vector< Dimensions, int > nodeOnLeftSideOfImage  = node;
+        tarch::la::Vector< Dimensions, int > nodeOnRightSideOfImage = node;
+        nodeOnLeftSideOfImage(d)  = 0;
+        nodeOnRightSideOfImage(d) = repositories::{{SOLVER_INSTANCE}}.PolyDegree;
 
-      // collect all of the vertex values into one vector - apply the appropriate
-      // part of the matrix as we go.
-      tarch::la::Vector<TwoPowerD, double> vertexValues;
-      tarch::la::Vector<TwoPowerD, double> rhsValues;
-      tarch::la::Vector<TwoPowerD, double> residualValues;
-      for (int i=0; i<TwoPowerD; i++){
-        double solColSum = 0;
-        double rhsColSum = 0;
-        for (int j=0; j<TwoPowerD; j++){
-          solColSum += A(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getU(unknown);
-          rhsColSum += M(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getRhs(unknown);
+        for (int unknown=0; unknown<repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode; unknown++) {
+          int unknownInLeftImage  = peano4::utils::dLinearised( nodeOnLeftSideOfImage,  repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) * repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode + unknown;
+          int unknownInRightImage = peano4::utils::dLinearised( nodeOnRightSideOfImage, repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) * repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode + unknown;
+
+          double update;
+          update = fineGridFaces{{SOLVER_NAME}}( d ).getDeltaU(unknownInPreimage);
+          assertion( update==update );
+          assertion( not std::isnan(update) );
+          fineGridCell{{SOLVER_NAME}}.setSolution( 
+            unknownInLeftImage,      
+            fineGridCell{{SOLVER_NAME}}.getSolution(unknownInLeftImage) + 
+            update
+          );
+          update = fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).getDeltaU(unknownInPreimage);
+          assertion( not std::isnan(update) );
+          fineGridCell{{SOLVER_NAME}}.setSolution( 
+            unknownInRightImage,      
+            fineGridCell{{SOLVER_NAME}}.getSolution(unknownInRightImage) + 
+            update
+          );
+          
+          unknownInPreimage++;
         }
-      
-        vertexValues(i)   = solColSum;        
-        rhsValues(i)      = rhsColSum;
-        residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
       }
-
-      // residual = rhs - Ax
-      residualValues += rhsValues;
-      residualValues -= vertexValues;
-
-      for (int i=0; i<TwoPowerD; i++)
-      {
-        logTraceInWith1Argument("puttingValuesBack", fineGridVertices{{SOLVER_NAME}}(i).toString());
-
-        // increment fieldDiag
-        // get current val
-        double diagVal = fineGridVertices{{SOLVER_NAME}}(i).getDiag(unknown);
-        // increment it
-        diagVal += A(i,i);
-        fineGridVertices{{SOLVER_NAME}}(i).setDiag(unknown, diagVal);
-
-        // put new residual values back
-        fineGridVertices{{SOLVER_NAME}}(i).setResidual(unknown, residualValues(i));
-        
-        logTraceOutWith1Argument("puttingValuesBack", fineGridVertices{{SOLVER_NAME}}(i).toString());
-      }
-
     }
-    logTraceOutWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
+      repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
+    r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
+
+    for (int d=0; d<Dimensions; d++) {
+      // names are inverted here, i.e. code works, but variable names are wrong
+      int unknownInPreimage = 0;
+      dfore(node,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,d,0) {
+        tarch::la::Vector< Dimensions, int > nodeOnLeftSideOfImage  = node;
+        tarch::la::Vector< Dimensions, int > nodeOnRightSideOfImage = node;
+        nodeOnLeftSideOfImage(d)  = 0;
+        nodeOnRightSideOfImage(d) = repositories::{{SOLVER_INSTANCE}}.PolyDegree;
+
+        for (int unknown=0; unknown<repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode; unknown++) {
+          int unknownInLeftImage  = peano4::utils::dLinearised( nodeOnLeftSideOfImage,  repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) * repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode + unknown;
+          int unknownInRightImage = peano4::utils::dLinearised( nodeOnRightSideOfImage, repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) * repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode + unknown;
+  
+          double diagonalUpdate;
+          diagonalUpdate = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h())(unknownInLeftImage,unknownInLeftImage);
+          assertion( diagonalUpdate==diagonalUpdate );
+          assertion2(diagonalUpdate>0.0,repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),unknownInLeftImage);
+          fineGridFaces{{SOLVER_NAME}}( d ).setDiagonal( 
+            unknownInPreimage,
+            fineGridFaces{{SOLVER_NAME}}( d ).getDiagonal( unknownInPreimage ) 
+            + 
+            diagonalUpdate
+          );
+          diagonalUpdate = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h())(unknownInRightImage,unknownInRightImage);
+          assertion( diagonalUpdate==diagonalUpdate );
+          assertion2(diagonalUpdate>0.0,repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),unknownInLeftImage);
+          fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).setDiagonal( 
+            unknownInPreimage,
+            fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).getDiagonal( unknownInPreimage ) 
+            + 
+            diagonalUpdate
+          );
+          
+          assertion(r(unknownInLeftImage)==r(unknownInLeftImage));
+          assertion( not std::isnan(r(unknownInLeftImage)) );
+          fineGridFaces{{SOLVER_NAME}}( d ).setResidual( 
+            unknownInPreimage,
+            fineGridFaces{{SOLVER_NAME}}( d ).getResidual( unknownInPreimage ) 
+            + 
+            r(unknownInLeftImage)
+          );
+          assertion(r(unknownInRightImage)==r(unknownInRightImage));
+          assertion( not std::isnan(r(unknownInRightImage)) );
+          assertion2( r(unknownInRightImage)>-1.0, r(unknownInRightImage), unknownInRightImage );
+          fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).setResidual( 
+            unknownInPreimage,
+            fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).getResidual( unknownInPreimage ) 
+            + 
+            r(unknownInRightImage)
+          );
+          
+          unknownInPreimage++;
+        }
+      }
+    }
+
+    logTraceOutWith2Arguments("touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
   }
   """
   
@@ -155,9 +198,9 @@ self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "deltaU", 
 
   def get_body_of_operation(self,operation_name):
     result = ""
-#if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-#      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
-#      pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
       pass
