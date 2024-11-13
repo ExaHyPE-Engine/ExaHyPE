@@ -255,13 +255,14 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               face_relaxation,
               approximate_system_matrix,
               approximate_system_matrix_scaling,
+              integration_points,
               solver_tolerance,
               custom_init_actionset = None,
               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
               custom_init_cell = "",
-              custom_init_face = "",
               enable_plotting = True, # sometimes we want to disable standard plotting...,
-              plot_predicate = "true" # enable custom plotting behaviour
+              plot_predicate = "true", # enable custom plotting behaviour
+              solver_includes = ""
               ):
     """!
     
@@ -347,6 +348,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     @param approximate_system_matrix_scaling: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       
+    @param integration_points: [Float]
+      Sequence of polynomial_degree+1 entries which identify the position of 
+      the integration points along the unit interval.
+      
     """  
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
 
@@ -402,11 +407,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._custom_init_actionset         = custom_init_actionset
     self._custom_plot_actionset         = custom_plot_actionset
 
-    self._custom_init_cell            = custom_init_cell
-    self._custom_init_face            = custom_init_face
+    self._custom_init_cell              = custom_init_cell
 
     self._enable_plotting               = enable_plotting
     self._plot_predicate                = plot_predicate
+
+    self._integration_points            = integration_points
 
     # assertions for matrix shapes
     # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
@@ -414,6 +420,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
     # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
+    
+    self._solver_includes = solver_includes
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -489,7 +497,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         subdirectory += "/"
 
     dictionary = {
-        "SOLVER_INCLUDES": "",
+        "SOLVER_INCLUDES"             : self._solver_includes,
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
         "SOLVER_NAME":             self.typename(),
@@ -502,8 +510,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
         "SOLUTIONS_PER_FACE_NODE"     : self._solutions_per_face_node,
         "PROJECTIONS_PER_FACE_NODE"   : self._projections_per_face_node,
-        "MASS_MATRIX"                 : self._mass_matrix,
-        "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
+        "RHS_MATRIX"                  : self._mass_matrix,
+        "RHS_MATRIX_SCALING"          : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
         "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
@@ -519,8 +527,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "POLY_DEGREE"                 : self._poly_degree,
         "SOLVER_TOLERANCE"            : self._solver_tolerance,
         "CUSTOM_INIT_CELL"            : self._custom_init_cell,
-        "CUSTOM_INIT_FACE"            : self._custom_init_face,
-
+        "INTEGRATION_POINTS"          : self._integration_points,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

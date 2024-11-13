@@ -4,6 +4,20 @@
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
+const tarch::la::Vector< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PolyDegree+1, double >   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::IntegrationPoints = { {{INTEGRATION_POINTS | join(", ")}} };
+
+
+tarch::la::Vector< Dimensions, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getIntegrationPoint(
+  const tarch::la::Vector< Dimensions, int >& pos
+) {
+  tarch::la::Vector< Dimensions, double > result;
+  for (int d=0; d<Dimensions; d++) {
+    result(d) = IntegrationPoints( pos(d) );
+  }
+  return result;
+}
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
   _state( State::ProjectOntoFacesOnly )
@@ -24,21 +38,7 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
-{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h
-) {
-  return vertexdata::{{SOLVER_NAME}}::Type::Interior;
-}
-
-{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h
-) {
-  return celldata::{{SOLVER_NAME}}::Type::Interior;
-}
-
-{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceDoFType(
+{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -48,15 +48,36 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
-{% if MASS_MATRIX is defined %}
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  return celldata::{{SOLVER_NAME}}::Type::Interior;
+}
+
+
+{% if CUSTOM_INIT_CELL!="" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCellDoF(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  tarch::la::Vector< UnknownsPerCellNode, double >&  value,
+  tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
+  tarch::la::Vector< Dimensions, int >&              node
+) {
+{{CUSTOM_INIT_CELL}}
+}
+{% endif %}
+
+
+{% if RHS_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  logTraceInWith2Arguments("getMassMatrix", cellCentre, cellSize);
+  logTraceInWith2Arguments("getRhsMatrix", cellCentre, cellSize);
   static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
-    {% for MATRIX in MASS_MATRIX %}
-    // {# MASS_MATRIX is an array, possible of length 1 #}
+    {% for MATRIX in RHS_MATRIX %}
+    // {# RHS_MATRIX is an array, possible of length 1 #}
     {
       {{MATRIX[0]| join(", ")}}
         {% for ROW in MATRIX[1:] %}
@@ -66,12 +87,12 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
     {% endfor %}
   };
 
-  {% if MASS_MATRIX_SCALING is not defined %}
+  {% if RHS_MATRIX_SCALING is not defined %}
   #error If matrices are predefined, scaling has to be defined, too
   {% endif %}
 
   static std::vector<int> scaleFactors = {
-      {% for el in MASS_MATRIX_SCALING %}
+      {% for el in RHS_MATRIX_SCALING %}
         {{el}},
       {% endfor %}
   };
@@ -79,7 +100,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   // may not be static, as it depends upon h
   tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
-  logTraceOutWith1Argument("getMassMatrix", result);
+  logTraceOutWith1Argument("getRhsMatrix", result);
   return result;
 }
 {% endif %}
@@ -365,4 +386,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, b
   }
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const { return _state; }
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const { 
+  return _state; 
+}
+
+

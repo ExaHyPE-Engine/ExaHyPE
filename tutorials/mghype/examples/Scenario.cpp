@@ -1,7 +1,8 @@
 #include "Scenario.h"
+#include "tarch/la/Scalar.h"
 
 
-double tests::multigrid::matrixfree::poisson::getPointWiseRhs(
+double tutorials::mghype::examples::getPointWiseRhs(
   const tarch::la::Vector<Dimensions, double>&  x
 ) {
 /*

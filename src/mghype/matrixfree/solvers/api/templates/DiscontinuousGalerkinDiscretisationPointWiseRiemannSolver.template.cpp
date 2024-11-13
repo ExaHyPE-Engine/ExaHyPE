@@ -9,22 +9,14 @@
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCell(
+{% if CUSTOM_INIT_CELL=="" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCellDoF(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< CellUnknowns, double >&  value,
-  tarch::la::Vector< CellUnknowns, double >&  rhs
+  tarch::la::Vector< UnknownsPerCellNode, double >&    value,
+  tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
+  tarch::la::Vector< Dimensions, int >&         node
 ) {
-{{CUSTOM_INIT_CELL}}
+  // @todo init your code here
 }
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initFace(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< FaceUnknownsSolution,   double >&  solution,
-  tarch::la::Vector< FaceUnknownsProjection, double >&  projection
-) {
-  // @todo insert your code here. For most codes can stay empty
-}
-
+{% endif %}
