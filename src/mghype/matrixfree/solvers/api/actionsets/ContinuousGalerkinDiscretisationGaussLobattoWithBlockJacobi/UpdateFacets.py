@@ -59,6 +59,8 @@ self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "deltaU", 
       }
       else {
         double du = repositories::{{SOLVER_INSTANCE}}.OmegaFace / fineGridFace{{SOLVER_NAME}}.getDiagonal(i) * fineGridFace{{SOLVER_NAME}}.getResidual(i);
+        repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual( fineGridFace{{SOLVER_NAME}}.getResidual(i), marker.h() );
+        repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates( du, marker.h() );    
         assertion( du==du );
         assertion( not std::isnan(du) );
         fineGridFace{{SOLVER_NAME}}.setDeltaU( i, du );
@@ -125,66 +127,6 @@ self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "deltaU", 
       }
     }
     
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
-      repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
-    r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
-
-    for (int d=0; d<Dimensions; d++) {
-      // names are inverted here, i.e. code works, but variable names are wrong
-      int unknownInPreimage = 0;
-      dfore(node,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,d,0) {
-        tarch::la::Vector< Dimensions, int > nodeOnLeftSideOfImage  = node;
-        tarch::la::Vector< Dimensions, int > nodeOnRightSideOfImage = node;
-        nodeOnLeftSideOfImage(d)  = 0;
-        nodeOnRightSideOfImage(d) = repositories::{{SOLVER_INSTANCE}}.PolyDegree;
-
-        for (int unknown=0; unknown<repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode; unknown++) {
-          int unknownInLeftImage  = peano4::utils::dLinearised( nodeOnLeftSideOfImage,  repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) * repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode + unknown;
-          int unknownInRightImage = peano4::utils::dLinearised( nodeOnRightSideOfImage, repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) * repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode + unknown;
-  
-          double diagonalUpdate;
-          diagonalUpdate = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h())(unknownInLeftImage,unknownInLeftImage);
-          assertion( diagonalUpdate==diagonalUpdate );
-          assertion2(diagonalUpdate>0.0,repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),unknownInLeftImage);
-          fineGridFaces{{SOLVER_NAME}}( d ).setDiagonal( 
-            unknownInPreimage,
-            fineGridFaces{{SOLVER_NAME}}( d ).getDiagonal( unknownInPreimage ) 
-            + 
-            diagonalUpdate
-          );
-          diagonalUpdate = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h())(unknownInRightImage,unknownInRightImage);
-          assertion( diagonalUpdate==diagonalUpdate );
-          assertion2(diagonalUpdate>0.0,repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),unknownInLeftImage);
-          fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).setDiagonal( 
-            unknownInPreimage,
-            fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).getDiagonal( unknownInPreimage ) 
-            + 
-            diagonalUpdate
-          );
-          
-          assertion(r(unknownInLeftImage)==r(unknownInLeftImage));
-          assertion( not std::isnan(r(unknownInLeftImage)) );
-          fineGridFaces{{SOLVER_NAME}}( d ).setResidual( 
-            unknownInPreimage,
-            fineGridFaces{{SOLVER_NAME}}( d ).getResidual( unknownInPreimage ) 
-            + 
-            r(unknownInLeftImage)
-          );
-          assertion(r(unknownInRightImage)==r(unknownInRightImage));
-          assertion( not std::isnan(r(unknownInRightImage)) );
-          assertion2( r(unknownInRightImage)>-1.0, r(unknownInRightImage), unknownInRightImage );
-          fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).setResidual( 
-            unknownInPreimage,
-            fineGridFaces{{SOLVER_NAME}}( d+Dimensions ).getResidual( unknownInPreimage ) 
-            + 
-            r(unknownInRightImage)
-          );
-          
-          unknownInPreimage++;
-        }
-      }
-    }
-
     logTraceOutWith2Arguments("touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
   }
   """
