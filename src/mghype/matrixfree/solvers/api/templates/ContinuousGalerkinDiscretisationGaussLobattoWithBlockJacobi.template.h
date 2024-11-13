@@ -39,6 +39,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      *
      * @see Documentation in superclass
      */
+    {% if CUSTOM_INIT_CELL=="" %}
     virtual void initCellDoF(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
@@ -46,16 +47,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
       tarch::la::Vector< Dimensions, int >&              node
     ) override;
-
-    /**
-     * Set boundary values
-     *
-     * Boundary values are imposed through the boundary faces. Hence,
-     * this routine is invoked over the points on a face.
-     */
-    virtual void setBoundaryConditions(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< UnknownsPerCellNode, double >&  solution
-    ) override;
+    {% endif %}
 };

@@ -43,7 +43,6 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
                custom_init_actionset = None,
                custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
                custom_init_cell      = "",
-               custom_boundary_conditions = "",
                enable_plotting = True, # sometimes we want to disable standard plotting...
                plot_predicate = "true" # enable custom plotting behaviour
                ):
@@ -80,7 +79,6 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     self._custom_plot_actionset         = custom_plot_actionset
 
     self._custom_init_cell              = custom_init_cell
-    self._custom_boundary_conditions    = custom_boundary_conditions
 
     self._enable_plotting               = enable_plotting
     self._plot_predicate                = plot_predicate
@@ -239,7 +237,6 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
         "POLY_DEGREE"                 : self._polynomial_degree,
         "SOLVER_TOLERANCE"            : self._solver_tolerance,
         "CUSTOM_INIT_CELL"            : self._custom_init_cell,
-        "CUSTOM_BOUNDARY_CONDITIONS"  : self._custom_boundary_conditions,
         "INTEGRATION_POINTS"          : self._integration_points,
         "NARROW_TO_INTERIOR_MATRIX"   : self._construct_narrow_to_interior_matrix(),
     }

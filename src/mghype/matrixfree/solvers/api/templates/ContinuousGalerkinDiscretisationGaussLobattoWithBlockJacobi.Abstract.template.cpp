@@ -65,6 +65,19 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
+{% if CUSTOM_INIT_CELL!="" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCellDoF(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  tarch::la::Vector< UnknownsPerCellNode, double >&  value,
+  tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
+  tarch::la::Vector< Dimensions, int >&              node
+) {
+{{CUSTOM_INIT_CELL}}
+}
+{% endif %}
+
+
 {% if RHS_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,

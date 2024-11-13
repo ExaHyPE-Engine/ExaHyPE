@@ -95,16 +95,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
       tarch::la::Vector< UnknownsPerCellNode, double >&  value,
       tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
       tarch::la::Vector< Dimensions, int >&              node
-    ) = 0;
-
-    /**
-     * Initialise a face degree of freedom
-     */
-    virtual void setBoundaryConditions(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< UnknownsPerCellNode, double >&  solution
-    ) = 0;
+    ) {% if CUSTOM_INIT_CELL=="" %} = 0 {% endif %};
 
     virtual celldata::{{SOLVER_NAME}}::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
