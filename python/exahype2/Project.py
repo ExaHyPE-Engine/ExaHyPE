@@ -765,3 +765,7 @@ thus appreciate any citation of the original release paper
     @property
     def subdirectory(self):
         return self._subdirectory
+
+    @property
+    def additional_includes(self):
+        return self._additional_includes
