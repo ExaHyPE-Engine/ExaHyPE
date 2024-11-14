@@ -1,5 +1,5 @@
 include:
-  - .continuous_integration/gitlab-templates.yml
+  - .continuous_integration/templates/variables.yml
 
 stages:
   - Compiler
@@ -10,8 +10,8 @@ GCC_OpenMP:
   variables:
     CC: "gcc"
     CXX: "g++"
-    CFLAGS: "-O3 -fopenmp"
-    CXXFLAGS: "-O3 -std=c++20 -w"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w -fopenmp"
     LDFLAGS: "-fopenmp"
     IMAGE_TAG: "${IMAGE_TAG_GCC}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
@@ -19,10 +19,12 @@ GCC_OpenMP:
                             --enable-blockstructured \
                             --enable-swift \
                             --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --with-multithreading=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-build-and-test.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
 Intel_OpenMP:
@@ -31,8 +33,8 @@ Intel_OpenMP:
   variables:
     CC: "icx"
     CXX: "icpx"
-    CFLAGS: "-O3 -fiopenmp"
-    CXXFLAGS: "-O3 -std=c++20 -w"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w -fiopenmp"
     LDFLAGS: "-fiopenmp"
     IMAGE_TAG: "${IMAGE_TAG_INTEL}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
@@ -40,10 +42,12 @@ Intel_OpenMP:
                             --enable-blockstructured \
                             --enable-swift \
                             --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --with-multithreading=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-build-and-test.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
 LLVM_OpenMP:
@@ -52,8 +56,8 @@ LLVM_OpenMP:
   variables:
     CC: "clang"
     CXX: "clang++"
-    CFLAGS: "-O3 -fopenmp"
-    CXXFLAGS: "-O3 -std=c++20 -w"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w -fopenmp"
     LDFLAGS: "-fopenmp"
     IMAGE_TAG: "${IMAGE_TAG_LLVM}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
@@ -61,10 +65,12 @@ LLVM_OpenMP:
                             --enable-blockstructured \
                             --enable-swift \
                             --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements \
                             --with-multithreading=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-build-and-test.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
 NVIDIA:
@@ -73,7 +79,7 @@ NVIDIA:
   variables:
     CC: "nvc"
     CXX: "nvc++"
-    CFLAGS: "-O3"
+    CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w"
     LDFLAGS: ""
     IMAGE_TAG: "${IMAGE_TAG_NVIDIA}"
@@ -81,8 +87,10 @@ NVIDIA:
                             --enable-loadbalancing \
                             --enable-blockstructured \
                             --enable-swift \
-                            --enable-particles"
+                            --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements"
   trigger:
     include:
-      - .continuous_integration/gitlab-automake-build-and-test.yml
+      - .continuous_integration/pipelines/automake.yml
     strategy: depend

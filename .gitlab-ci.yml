@@ -1,6 +1,5 @@
 stages:
   - BuildSystem
-  - Formatting
   - Publish
 
 Automake:
