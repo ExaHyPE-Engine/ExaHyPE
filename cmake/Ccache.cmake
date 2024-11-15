@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 option(USE_CCACHE "Use Ccache" ON)
 
 if(USE_CCACHE)
@@ -5,14 +7,10 @@ if(USE_CCACHE)
 
   if(CCACHE)
     # Set up wrapper scripts
-    set(C_LAUNCHER   "${CCACHE}")
+    set(C_LAUNCHER "${CCACHE}")
     set(CXX_LAUNCHER "${CCACHE}")
     configure_file(cmake/launch-c.in launch-c)
     configure_file(cmake/launch-cxx.in launch-cxx)
-    #execute_process(COMMAND chmod a+rx
-    #  "${CMAKE_BINARY_DIR}/launch-c"
-    #  "${CMAKE_BINARY_DIR}/launch-cxx"
-    #)
     file(CHMOD "${CMAKE_BINARY_DIR}/launch-c" PERMISSIONS
       OWNER_READ OWNER_WRITE OWNER_EXECUTE)
     file(CHMOD "${CMAKE_BINARY_DIR}/launch-cxx" PERMISSIONS

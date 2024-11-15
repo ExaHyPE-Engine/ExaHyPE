@@ -1,7 +1,6 @@
 stages:
-  - Pages
   - BuildSystem
-  - Formatting
+  - Pages
 
 Automake:
   stage: BuildSystem
