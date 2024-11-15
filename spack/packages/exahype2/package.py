@@ -29,29 +29,12 @@ class Exahype2(CMakePackage, CudaPackage):
 
     version("p4", branch="p4")
 
-    # Config options
-    variant(
-        "dimensions",
-        default="2,3",
-        values=("2", "3"),
-        multi=True,
-        description="Dimensionality",
-    )
-    variant(
-        "build_type",
-        default="Debug;Release;Asserts;Trace;Stats",
-        values=("Debug", "Release", "Asserts", "Trace", "Stats", "Debug;Release;Asserts;Trace;Stats"),
-        multi=False,
-        description="Build type",
-    )
-
     variant("mpi", default=False, description="Build with MPI support")
     variant("tracer", default=False, description="Build with particle tracer support")
     variant("hdf5", default=False, description="Build with HDF5 support")
     variant("netcdf", default=False, description="Build with NetCDF support")
 
     depends_on("cmake", type="build")
-    depends_on('libxsmm+generator')
 
     depends_on("mpi", when="+mpi")
 
@@ -62,12 +45,19 @@ class Exahype2(CMakePackage, CudaPackage):
     depends_on("netcdf-c +shared +mpi", when="+mpi +netcdf")
 
     depends_on('py-pip')
+    depends_on('py-h5py')
     depends_on('py-numpy')
     depends_on('py-scipy')
-    depends_on('py-matplotlib')
     depends_on('py-sympy')
     depends_on('py-mpmath')
     depends_on('py-jinja2')
+    depends_on('py-matplotlib')
+
+    depends_on('gsl')
+    depends_on('blis')
+    depends_on('libxsmm+generator')
+    #depends_on('paraview+ipo+python')
+    #depends_on('paraview+mpi+osmesa+ipo+python+hdf5')
 
     variant("omp", default=False, description="Build with OpenMP multithreading support")
     variant("sycl", default=False, description="Build with SYCL multithreading support")
@@ -103,9 +93,7 @@ class Exahype2(CMakePackage, CudaPackage):
             "-DENABLE_LOADBALANCING=ON",
             "-DENABLE_BLOCKSTRUCTURED=ON",
             "-DENABLE_EXAHYPE=ON",
-            "-DWITH_LIBXSMM=ON",
-            self.define_from_variant("WITH_DIMENSIONS", "dimensions"),
-            self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
+            "-DWITH_LIBXSMM=OFF",
             self.define_from_variant("WITH_MPI", "mpi"),
             self.define_from_variant("ENABLE_PARTICLES", "tracer"),
         ]
@@ -130,6 +118,5 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def setup_run_environment(self, env):
         env.prepend_path("PEANO_ROOT", self.spec.prefix)
-        env.prepend_path("EXAHYPE_ROOT", self.spec.prefix)
-        env.prepend_path("EXAHYPE2_ROOT", self.spec.prefix)
+        env.prepend_path("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")

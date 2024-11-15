@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 include(FindPackageHandleStandardArgs)
 
 find_path(Delta_INCLUDE_DIR Delta/Delta-serial.h)
