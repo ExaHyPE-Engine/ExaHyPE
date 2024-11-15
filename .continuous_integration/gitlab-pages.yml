@@ -8,7 +8,7 @@ pages:
     - .Tags
     - .Variables
     - .BeforeScript
-  stage: Publish
+  stage: Pages
   allow_failure: false
   dependencies: []
   script:

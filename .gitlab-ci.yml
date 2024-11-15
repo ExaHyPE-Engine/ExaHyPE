@@ -1,11 +1,6 @@
 stages:
-  - Pages
   - BuildSystem
-<<<<<<< HEAD
-  - Publish
-=======
-  - Formatting
->>>>>>> refs/remotes/origin/p4
+  - Pages
 
 Automake:
   stage: BuildSystem
