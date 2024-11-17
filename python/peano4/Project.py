@@ -55,7 +55,6 @@ class Project (object):
         self.namespaces.append(self.namespace)
       if not self.subdirectory in self.subdirectories:
         self.subdirectories.append(self.subdirectory)
-    print("project.subdirectories = ", self.subdirectories)
 
     #
     # Create default output model, i.e. those parts that have to be there
@@ -81,6 +80,8 @@ class Project (object):
 
     if executable:
       self.output.makefile.set_executable_name(executable)
+
+    self.is_extended = False
 
 
   def __str__(self):
@@ -142,9 +143,6 @@ class Project (object):
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
 
-    # print("project.subdirectories = ", self.subdirectories)
-    # print("main.subdirectories = ", self.main.project.subdirectories)
-
     self.main.construct_output(self.output,self.project_name + "-main")
     self.output.generate(overwrite, self.directory, self.subdirectories)
     if self.subconstants:
@@ -153,23 +151,22 @@ class Project (object):
     else:
       self.constants.generate(overwrite, self.directory)
 
-    print( "generation complete" )
+    print("generation complete")
 
     if throw_away_data_after_generation:
       self.datamodel = None
       self.solversteps = None
       self.output      = None
       gc.collect()
-      print( "threw away all data and ran garbage collection" )
+      print("threw away all data and ran garbage collection")
 
   def build(self,
             make=True,
             make_clean_first=True,
             throw_away_data_after_build=False,
-            number_of_parallel_builds=-1,
-            additional_libraries=[]):
+            number_of_parallel_builds=-1):
     """!
-      Invokes the underlying make/C build mechanism on the project.
+      Invokes the underlying make build mechanism on the project.
 
       number_of_parallel_builds: int
         This is mapped onto make -jnumber_of_parallel_builds, i.e., it
@@ -187,59 +184,48 @@ class Project (object):
     if not self.is_generated:
       self.generate()
 
-    if not make:
-      return
+    if make:
+      if make_clean_first:
+        print("clean up project ... in {}".format(self.directory))
+        try:
+          if make_clean_first:
+            subprocess.check_call(["make", "clean"], cwd=self.directory)
+          self.is_built = False
+          print("clean complete")
+        except Exception as e:
+          print("clean failed (" + str(e) + ") - continue anyway")
 
-    if make_clean_first:
-      print( "clean up project ... in {}".format(self.directory) )
-      try:
-        if make_clean_first:
-          subprocess.check_call(["make", "clean"], cwd=self.directory)
-        self.is_built = False
-        print( "clean complete" )
-      except Exception as e:
-        print( "clean failed (" + str(e) + ") - continue anyway" )
-
-    if not self.is_built:
-      print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
-      try:
-        from peano4.output.Helper import find_CMake_build_dir
-        cmake_build_dir = find_CMake_build_dir()
-        if cmake_build_dir != "":
-          # Configuring twice with CMake is necessary because of the following:
-          # - Generated application needs to be added as a target, this forces cmake .. unless the user calls from the bash.
-          # - Generated applications CMakeLists might change the CMAKE_BUILD_TYPE to reflect the user's chosen build mode.
-          command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
-          process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        else:
+      if not self.is_built:
+        print("start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")
+        try:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # Extract warnings and errors from error message
-        error_message = process.stderr.decode().strip()
-        warnings = re.findall(r"(?i)warning:.*", error_message)
-        errors = re.findall(r"(?i)error:.*", error_message)
-        # Print warnings into the terminal
-        if warnings:
-          print("\nWarnings ({}):".format(len(warnings)))
-          print("\n".join(warnings))
-        if errors:
-          print("\nErrors ({}):".format(len(errors)))
-          error_message = "\n".join(errors)
-        # Check the return code for linker errors
-        # Raise exception with errors
-        if process.returncode != 0:
-          linker_error_message = process.stderr.decode().strip() + "\n" + error_message
-          raise Exception(linker_error_message)
-        print("compile completed successfully")
-        self.is_built = True
-        self.build_was_successful = True
-      except Exception as e:
-        self.is_built = True
-        self.build_was_successful = False
-        print(str(e))
-        print("compile was not successful")
-        sys.exit(1)
-    else:
-      print( "cannot build as code generation has not been successful" )
+          # Extract warnings and errors from error message
+          error_message = process.stderr.decode().strip()
+          warnings = re.findall(r"(?i)warning:.*", error_message)
+          errors = re.findall(r"(?i)error:.*", error_message)
+          # Print warnings into the terminal
+          if warnings:
+            print("\nWarnings ({}):".format(len(warnings)))
+            print("\n".join(warnings))
+          if errors:
+            print("\nErrors ({}):".format(len(errors)))
+            error_message = "\n".join(errors)
+          # Check the return code for linker errors
+          # Raise exception with errors
+          if process.returncode != 0:
+            linker_error_message = process.stderr.decode().strip() + "\n" + error_message
+            raise Exception(linker_error_message)
+          print("compile completed successfully")
+          self.is_built = True
+          self.build_was_successful = True
+        except Exception as e:
+          self.is_built = True
+          self.build_was_successful = False
+          print(str(e))
+          print("compile was not successful")
+          sys.exit(1)
+      else:
+        print("cannot build as code generation has not been successful")
 
     if throw_away_data_after_build:
       self.cleanup()
@@ -247,7 +233,7 @@ class Project (object):
       self.solversteps  = None
       self.output       = None
       gc.collect()
-      print( "threw away all data and ran garbage collection" )
+      print("threw away all data and ran garbage collection")
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """!
@@ -343,6 +329,8 @@ class Project (object):
       #         dict_merged[key] = value
       #   return dict_merged
 
+    assert(subproject._subdirectory != ""), "subdirectory of a subproject mustn't be empty"
+
     self.namespace = subproject.namespace
     self.namespaces.append(subproject.namespace)
     self.datamodel.namespace = subproject.datamodel.namespace
@@ -367,13 +355,30 @@ class Project (object):
     for particle in subproject.datamodel.global_data:
       self.datamodel.add_global(particle)
 
-    # ...
-
     #
     # merge all steps of solversteps
     #
+
+    # make the steps currently contained in the Peano4 project aware of the incoming subproject's data
+    for step in self.solversteps._steps:
+      added_step = subproject.solversteps._steps[0]
+      step.cell_data.extend(added_step.cell_data)
+      step.face_data.extend(added_step.face_data)
+      step.vertex_data.extend(added_step.vertex_data)
+
+    # make the incoming subproject's steps aware of the Peano4 project data
+    if len(self.solversteps._steps):
+      for added_step in subproject.solversteps._steps:
+        step = self.solversteps._steps[0]
+        added_step.cell_data.clear()
+        added_step.cell_data.extend(step.cell_data)
+        added_step.face_data.clear()
+        added_step.face_data.extend(step.face_data)
+        added_step.vertex_data.clear()
+        added_step.vertex_data.extend(step.vertex_data)
+
+    # finally append the incoming subproject's steps to the Peano4 project's steps
     for step in subproject.solversteps._steps:
-      # self.solversteps.add_step(step)
       self.solversteps._steps.append(step)
 
     #
@@ -395,10 +400,6 @@ class Project (object):
     else:
       self.output.makefile.d["FC"] = subproject.output.makefile.d["FC"]
 
-    # ... for makefile dictionary
-    for library in subproject.output.makefile.d["CMAKE_CORE_LIBS"]:
-      self.output.makefile.add_cmake_core_library(library)
-
     for flag in subproject.output.makefile.d["CXXFLAGS"].split():
       self.output.makefile.add_CXX_flag(flag)
 
@@ -411,10 +412,6 @@ class Project (object):
     self.output.makefile.d["LIBS"] += subproject.output.makefile.d["LIBS"]
     self.output.makefile.d["GENERATED_INCLUDE_DIRS"] |= subproject.output.makefile.d["GENERATED_INCLUDE_DIRS"]
     self.output.makefile.d["MODE"] = subproject.output.makefile.d["MODE"]
-    # self.output.makefile.d["GPUOBJS"] += subproject.output.makefile.d["GPUOBJS"]
-
-    # result_project.output.makefile.add_gpu_object()
-    # result_project.output.makefile.d["CMAKE_LIBS"]
 
     for module in subproject.output.makefile.d["FORTRAN_MODULES"]:
       self.output.makefile.add_Fortran_module(module)
@@ -434,8 +431,6 @@ class Project (object):
       self.output.makefile.add_h_file(filename, False)
     for filename in subproject.output.makefile.cppfiles:
       self.output.makefile.add_cpp_file(filename, False)
-    for filename in subproject.output.makefile.cufiles:
-      self.output.makefile.add_cu_file(filename, False)
     for filename in subproject.output.makefile.fortranfiles:
       self.output.makefile.add_Fortran_file(filename, False)
 
@@ -443,8 +438,6 @@ class Project (object):
       self.output.makefile.add_h_file(filename, True)
     for filename in subproject.output.makefile.generated_cppfiles:
       self.output.makefile.add_cpp_file(filename, True)
-    for filename in subproject.output.makefile.generated_cufiles:
-      self.output.makefile.add_cu_file(filename, True)
     for filename in subproject.output.makefile.generated_fortranfiles:
       self.output.makefile.add_Fortran_file(filename, True)
 
@@ -463,16 +456,17 @@ class Project (object):
     for i in subproject.output.artefacts:
       self.output.add(i)
 
-
     #
     # the last added subproject becomes the master project (which will provide the template for the main file)
     #
-    if master:
+    if not self.is_extended:
       self.main = subproject.main
       self.rootnamespace = subproject.rootnamespace
       self._subdirectory = subproject._subdirectory
+      self.is_extended = True
+    self.main.merge(subproject.main)
 
-    self.main.project = self
+    # self.main.project = self
     # self.main.overwrite = subproject.main.overwrite
     # self.main.d.update(subproject.main.d)
 
@@ -481,28 +475,6 @@ class Project (object):
     #
     self.subconstants.append(subproject.constants)
 
-    ## not needed, automatically done by subproject
-    # result_project.set_solver_repository_dict()
-    # result_project.generate_solver_repository()
-
-    # print("=== BEGIN output artefacts: ===")
-    # artefacts_list = []
-    # for item in result_project.output.artefacts:
-    #   # if isinstance(item, peano4.output.Jinja2TemplatedHeaderImplementationFilePair):
-    #     artefacts_list.append(f"Item = \nHeaderFile:{type(item)}")
-    # output_str = '\n'.join(artefacts_list)
-    # print(output_str)
-    # print("=== END output artefacts: ===")
-
-    # print("=== BEGIN main dict: ===")
-    # main_dict = []
-    # for key, value in self.main.d.items():
-    #     main_dict.append(f"Key = {key}, Value = \n{value}")
-    # output_str = '\n'.join(main_dict)
-    # print(output_str)
-    # print("=== END main dict: ===")
-
-    # return result_project
 
   @property
   def subdirectory(self):

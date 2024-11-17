@@ -72,7 +72,7 @@ rm *patch-file *vtu *.pvd *.bak *.csv
 
 If you have set up your experiment via the Python script with the -plot 
 command, you can use the standard Peano scripts to convert 
-@ref tarch_patch_files "Peano's patch files":
+@ref documentation_tarch_visualisation "Peano's patch files":
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~

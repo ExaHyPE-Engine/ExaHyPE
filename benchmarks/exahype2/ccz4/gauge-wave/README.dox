@@ -2,6 +2,9 @@
 
 @page benchmarks_exahype2_ccz4_gauge_wave CCZ4 Gauge wave test
 
+\tableofcontents
+
+
 Very simple benchmark with a time-invariant solution subject to a shift that we can use to assess the convergence order.
 
 The CCZ4 Gauge wave test is a relatively simple setup, where we employ a 
@@ -158,70 +161,6 @@ mesh sizes from above.
 @image html example-output/Tracer-dg2-rk2-0.3-rank-0-snapshot-0.csv.png
 @image html example-output/Tracer-dg3-rk3-0.3-rank-0-snapshot-0.csv.png
 @image html example-output/Tracer-dg4-rk4-0.5-rank-0-snapshot-0.csv.png
-
-
-## Implementation of second order formulation
-
-To realise the second order formulation, you have to invoke the Python 
-script with the -so switch.
-If this switch is set, we add an additional mesh traversal to the arising
-Peano project, which we call after each and every Runge-Kutta step, as 
-well as after the very last step.
-
-### Alter the main function
-
-We now need a main file that can both handle the additional mesh sweep as
-well as the version without an additional sweep. We don't want to write a
-main twice. Therefore, we either add
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-or we don't. This will yield a define pragma in Constants.h (generated).
-We query this pragma in the code when we decide which step we pick
-
-@snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case distinction
-
-and also within the switch statement which runs the additional step:
-
-@snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case step
-
-
-### Logic behind the additional mesh traversal selection
-
-A naive way to implement the activation of the additional mesh sweep is the
-following code snippet:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    if (
-      repositories::isFirstGridSweepOfTimeStep()
-      and
-      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
-      ) {
-        peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
-      );
-      continueToSolve         = true;
-    } else 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This variant kicks off the manual reconstruction prior to the first mesh sweep of 
-the Runge-Kutta scheme. This seems to work and to do the job in our setup. However, 
-it is not enough for higher-order convergence, where we would need a preprocessing
-step prior to each intermediate step. We ignore this fact here.
-
-
-### Hijack the projection
-
-Once we have computed the second derivatives into auxiliary variables, we have to 
-project those guys onto the boundary. For this, we hijack the projection of the 
-Runge-Kutta scheme. The documentation of exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces
-requires K+1 predicates for a Runge-Kutta scheme of Kth order. The first K entries
-correspond to the Runge-Kutta scheme. The last one allows you to do something 
-different for the initialisation. We disable all K-1 entries, and only set the 
-very last option to true. This is clearly a hack, but if you study the 
-generated code, it seems to work.
 
 
 */

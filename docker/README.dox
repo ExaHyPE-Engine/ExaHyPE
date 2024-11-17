@@ -4,7 +4,47 @@
 
 Here we maintain Dockerfiles for different compilers.
 
-## Build
+## Usage
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+We have encountered compatibility issues with Apple chips (M2) and Docker.
+At this point, we would not encourage people to use Docker containers with these chips.
+You may try out to add following flag to the `docker run` command: `--platform Linux/amd64`.
+</div>
+
+For users, it is recommended to pull the available Docker images from [Dockerhub](https://hub.docker.com/u/peanoframework).
+All Docker images that have the extension `gcc`, `intel`, `nvidia`, `llvm`, `targetdart` (a modified version of `llvm`), or `amd`
+provide all commonly the same dependencies that are needed to build, run and visualise Peano applications.
+All dependencies within the images are installed via Spack.
+Each image additional provides one of the compilers with MPI that are also configured for GPU offloading.
+You may choose any image to pull from Dockerhub that fits your needs in a compiler and your hardware configuration.
+
+You may ignore images that have the extension `base`, `spack`, or `apptainer`. These are only used for development.
+
+To use the prebuilt images, we do recommended that you first clone Peano, then navigate into the Peano checkout (`PEANO_ROOT`)
+and run the Docker container interactively by mapping the Peano directory into the container (here, we use `work` as our mapping point):
+
+```shell
+docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler> /bin/bash
+```
+
+### With GPU Support
+
+```shell
+docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler> /bin/bash
+```
+
+### With Port Forwarding (JupyterLab)
+
+```shell
+docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
+```
+
+
+## Build (for Developers)
+
+The next part is mostly relevant for developers of the project or if you want to change or add some additionally dependencies
+to the Docker images yourself. Keep in mind, that building the image takes a signifiant amount of time and requires root access.
 
 To build the Docker images, make sure to execute the following commands in the Peano root directory.
 
@@ -32,27 +72,5 @@ docker build -t peanoframework/targetdart -f docker/Dockerfile.targetdart .
 ```shell
 docker build -t peanoframework/exahype2 -f docker/Dockerfile.exahype2 .
 ```
-
-## Usage
-
-```shell
-docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler> /bin/bash
-```
-
-### With GPU Support
-
-```shell
-docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler> /bin/bash
-```
-
-### With Port Forwarding (JupyterLab)
-
-```shell
-docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
-```
-
-## Dockerhub
-
-You can find prebuilt Docker images for each compiler we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
 
 */

@@ -1,0 +1,84 @@
+/**
+
+@page documentation_tarch_visualisation Visualisation
+
+\tableofcontents 
+
+\li \subpage documentation_tarch_visualisation_pyvista
+\li \subpage documentation_tarch_visualisation_offline-conversion
+\li \subpage documentation_tarch_visualisation_paraview
+\li \subpage tarch_patch_file_format
+\li \subpage documentation_tarch_visualisation_probing-data
+
+
+Peano writes different types of files: Some history data (point probes)
+yield plain csv files, particles typically can dump into VTK files 
+directly, which you can open with tools such as <a href="https://pyvista.org/">PyVista</a>, Paraview or VisIt.
+The majority of volumetric Eulerian data in Peano however is dumped in
+a bespoke Peano data file format.
+This data format is also used to display "only" meshes or domain decomposition.
+ 
+
+
+
+# Writing outputs through the tarch
+
+@todo Yet to be written
+
+
+# Tweaking your pictures (for developers)
+
+Peano's default VTK plotters project Peano's tree-based grid onto an
+unstructured mesh, as VTK does not support tree meshes. The underlying
+mechanism is straightforward:
+
+1.  If a vertex is touched/read the first time, it is dumped as vertex
+    of the unstructured output mesh if it is not refined, i.e. if no
+    other vertex does exist at the same location on a finer mesh level.
+
+2.  If a hanging vertex is created, we add a new vertex to the output
+    dump if this hanging vertex has not been written before. The
+    plotters typically maintain one big hash map to bookkeep which
+    hanging vertices have already been written.
+
+3.  If the tree traversal runs into an unrefined cell, this cell is made
+    a cell of the unstructured output mesh.
+
+The block format/the conversion tools in contrast generate all the
+points multiple times. If you have to cells sharing a vertex, the vertex
+is dumped twice. For patch-based problems, this is okish, as the number
+of vertices that are shared is way smaller than the total number of
+vertices in the domain (vertices within a patch are not dumped multiple
+times). As a consequence of the redundant vertex dumps, isosurfaces,
+e.g., might not work. If you need them, it is reasonable to project/map
+the actual data onto a regular mesh first.
+
+If your PDE has $m$ quantities, Peano's block format dumps them into a
+vector of cardinality $m$ per vertex or cell, respectively. Most
+visualisation filters/tools however require data to be either scalar or
+vector data. In Paraview, use the calculator filter to extract only some
+quantities from the data dump. Alternatively, you can ask the convert
+tool to extract only some data into the vtu output.
+
+Please note that most visualisation codes (such as Paraview) do
+interpolate bi-/tri-linearly within the cells. If a cell's face is
+adjacent to cells on finer levels, hanging vertices on the face exist.
+If they do not hold the linearly interpolated value, you will discover
+visualisation artifacts.
+
+For smooth output pictures of meshes with adaptivity, you have to
+
+-   set the plotted properties on hanging vertices due to $d$-linear
+    interpolation, and
+
+-   you have to add the plotter mapping after you have invoked the
+    mapping that does initialise the hanging vertices.
+
+Please note that the dumped unstructured mesh is a non-conformal mesh.
+Algorithms such as isosurface identification thus might yield invalid
+results - it depends on your visualisation algorithms.
+
+
+    
+    
+*/

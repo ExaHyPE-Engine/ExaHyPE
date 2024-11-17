@@ -214,7 +214,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     observer.add_action_set( new_action_set )
     pass
   
-  def add_implementation_files_to_project(self, namespace, output, subdirectory=""):
+  def add_implementation_files_to_project(self, namespace, output, subdirectory="", abstract_overwrite=True):
     """
     
     The solver creates two classes: An abstract base class and its 
@@ -254,7 +254,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       namespace,
       subdirectory + ".", 
       dictionary,
-      True,
+      abstract_overwrite,
       True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",

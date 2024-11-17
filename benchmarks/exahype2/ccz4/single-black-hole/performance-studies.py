@@ -31,6 +31,7 @@ from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - CCZ4-Performance studies benchmarking script"
@@ -88,14 +89,7 @@ if __name__ == "__main__":
         default=1.8,
         help="Minimal cell size (AMR) or regular mesh cell size (without AMR), default=1.8",
     )
-    parser.add_argument(
-        "-asserts",
-        "--asserts",
-        dest="asserts",
-        action="store_true",
-        default=False,
-        help="Switch on assertions",
-    )
+    parser.add_argument("-m",   "--mode",               dest="mode",           choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes) )
     parser.add_argument(
         "-amr",
         "--amr",
@@ -122,7 +116,7 @@ if __name__ == "__main__":
             "tailored",
             "parallel-for",
             "subtasks",
-            "subtasks-and-kernel-parallelisation"
+            "subtasks-and-kernel-parallelisation",
         ],
         required=True,
         help="Task scheduler flavours",
@@ -131,10 +125,7 @@ if __name__ == "__main__":
         "-lbm",
         "--load-balancing-metric",
         dest="load_balancing_metric",
-        choices=[
-            "generic",
-            "tailored"
-        ],
+        choices=["generic", "tailored"],
         required=True,
         help="Load balancing metric",
     )
@@ -158,6 +149,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Do not compile the code after generation",
     )
+    parser.add_argument(
+        "--interpolation-method",
+        dest="interpolation_method",
+        help="Set method to interpolate between solvers",
+    )
 
     args = parser.parse_args()
 
@@ -175,85 +171,102 @@ if __name__ == "__main__":
     domain_size = [18, 18, 18]
 
     if args.amr:
-      max_cell_size = domain_size[0]/3.0
+        max_cell_size = domain_size[0] / 3.0
     else:
-      max_cell_size = args.cell_size
+        max_cell_size = args.cell_size
 
     ########################################################################################
     # Configure run
     ########################################################################################
     if "limited" in args.solver:
         if args.scheduler == "native-no-priorities":
-            project.set_multicore_orchestration( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+            project.set_multicore_orchestration(
+                "tarch::multicore::orchestration::Hardcoded::createNative()"
+            )
             enable_higher_priority_for_FV_tasks = False
-            parallelise_interpolation           = KernelParallelisation.NONE
-            fv_kernel_parallelisation           = KernelParallelisation.NONE
+            parallelise_interpolation = KernelParallelisation.NONE
+            fv_kernel_parallelisation = KernelParallelisation.NONE
         elif args.scheduler == "native":
-            project.set_multicore_orchestration( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+            project.set_multicore_orchestration(
+                "tarch::multicore::orchestration::Hardcoded::createNative()"
+            )
             enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation           = KernelParallelisation.NONE
-            fv_kernel_parallelisation           = KernelParallelisation.NONE
+            parallelise_interpolation = KernelParallelisation.NONE
+            fv_kernel_parallelisation = KernelParallelisation.NONE
         elif args.scheduler == "tailored":
-            project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+            project.set_multicore_orchestration(
+                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
+            )
             enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation           = KernelParallelisation.NONE
-            fv_kernel_parallelisation           = KernelParallelisation.NONE
+            parallelise_interpolation = KernelParallelisation.NONE
+            fv_kernel_parallelisation = KernelParallelisation.NONE
         elif args.scheduler == "parallel-for":
-            project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+            project.set_multicore_orchestration(
+                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
+            )
             enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation           = KernelParallelisation.PARALLEL_FOR
-            fv_kernel_parallelisation           = KernelParallelisation.NONE
+            parallelise_interpolation = KernelParallelisation.PARALLEL_FOR
+            fv_kernel_parallelisation = KernelParallelisation.NONE
         elif args.scheduler == "subtasks":
-            project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+            project.set_multicore_orchestration(
+                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
+            )
             enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation           = KernelParallelisation.SUBTASKS
-            fv_kernel_parallelisation           = KernelParallelisation.NONE
+            parallelise_interpolation = KernelParallelisation.SUBTASKS
+            fv_kernel_parallelisation = KernelParallelisation.NONE
         elif args.scheduler == "subtasks-and-kernel-parallelisation":
-            project.set_multicore_orchestration( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+            project.set_multicore_orchestration(
+                "new benchmarks::exahype2::ccz4::MulticoreOrchestration()"
+            )
             enable_higher_priority_for_FV_tasks = True
-            parallelise_interpolation           = KernelParallelisation.SUBTASKS
-            fv_kernel_parallelisation           = KernelParallelisation.SUBTASKS
+            parallelise_interpolation = KernelParallelisation.SUBTASKS
+            fv_kernel_parallelisation = KernelParallelisation.SUBTASKS
         else:
             assert False, "not supported yet"
 
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
-        my_primary_solver = FD4SolverWithoutLimiter(name          = "CCZ4SBH",
-                                                    patch_size    = FD4PatchSize,
-                                                    min_cell_size = args.cell_size, 
-                                                    max_cell_size = max_cell_size
-                                                    )
+        my_primary_solver = FD4SolverWithoutLimiter(
+            name="CCZ4SBH",
+            patch_size=FD4PatchSize,
+            min_cell_size=args.cell_size,
+            max_cell_size=max_cell_size,
+        )
         project.add_solver(my_primary_solver)
         added_limiter = False
-        args.end_time*=10
+        args.end_time *= 10
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
-        my_primary_solver = FD4SolverWithLimiter(name          = "CCZ4SBH",
-                                                 patch_size    = FD4PatchSize,
-                                                 min_cell_size = args.cell_size, 
-                                                 max_cell_size = max_cell_size,
-                                                 parallelisation_of_interpolation = parallelise_interpolation,
-                                                 parallelisation_of_kernels       = fv_kernel_parallelisation
-                                                 )
+        my_primary_solver = FD4SolverWithLimiter(
+            name="CCZ4SBH",
+            patch_size=FD4PatchSize,
+            min_cell_size=args.cell_size,
+            max_cell_size=max_cell_size,
+            parallelisation_of_interpolation=parallelise_interpolation,
+            parallelisation_of_kernels=fv_kernel_parallelisation,
+            interpolation_method=args.interpolation_method,
+        )
 
-        my_secondary_solver = Limiter(name                      = "CCZ4SBH",
-                                      patch_size                = FD4PatchSize,
-                                      amend_priorities          = enable_higher_priority_for_FV_tasks,
-                                      parallelisation_of_kernels       = fv_kernel_parallelisation
-                                      )
+        my_secondary_solver = Limiter(
+            name="CCZ4SBH",
+            patch_size=FD4PatchSize,
+            amend_priorities=enable_higher_priority_for_FV_tasks,
+            parallelisation_of_kernels=fv_kernel_parallelisation,
+        )
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
     elif "fv" in args.solver:
-        my_primary_solver = FVSolver(name                      = "CCZ4SBH",
-                                     patch_size                = 4,
-                                     min_cell_size = args.cell_size, 
-                                     max_cell_size = max_cell_size
-                                     )
+        my_primary_solver = FVSolver(
+            name="CCZ4SBH",
+            patch_size=4,
+            min_cell_size=args.cell_size,
+            max_cell_size=max_cell_size,
+        )
         project.add_solver(my_primary_solver)
         added_limiter = False
-        args.end_time*=10
+        args.end_time *= 10
     else:
         raise "unknown solver type {}".format(args.solver)
 
@@ -261,15 +274,10 @@ if __name__ == "__main__":
     # Build the project
     ########################################################################################
 
-    if args.asserts:
-        build_mode = peano4.output.CompileMode.Asserts
-    else:
-        build_mode = peano4.output.CompileMode.Release
-
     if args.plot:
-      plot_interval = args.end_time
+        plot_interval = args.end_time
     else:
-      plot_interval = 0.0
+        plot_interval = 0.0
 
     project.set_global_simulation_parameters(
         dimensions,  # dimensions
@@ -287,12 +295,12 @@ if __name__ == "__main__":
     # project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     # my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    project.set_Peano4_installation(args.peanodir, build_mode)
+    project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
 
-    if args.load_balancing_metric=="generic":
-      project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-        """
+    if args.load_balancing_metric == "generic":
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+            """
           new ::exahype2::LoadBalancingConfiguration(
             0.98, 
             1, 
@@ -300,16 +308,21 @@ if __name__ == "__main__":
             {}
           ),
           new toolbox::loadbalancing::metrics::CellCount()
-        """.format(args.trees,2*args.trees),
+        """.format(
+                args.trees, 2 * args.trees
+            ),
         )
     else:
-      load_balancing_cell_label = exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
-      load_balancing_action_set = exahype2.grid.FineGridCellLoadBalancingCostMetric(load_balancing_cell_label,
-                                                                                    "1.0 / (1.0+tarch::la::norm2(marker.x()))")
-      project.add_action_set_to_create_grid( load_balancing_action_set )
-      project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-        """
+        load_balancing_cell_label = (
+            exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
+        )
+        load_balancing_action_set = exahype2.grid.FineGridCellLoadBalancingCostMetric(
+            load_balancing_cell_label, "1.0 / (1.0+tarch::la::norm2(marker.x()))"
+        )
+        project.add_action_set_to_create_grid(load_balancing_action_set)
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+            """
           new ::exahype2::LoadBalancingConfiguration(
             0.98, 
             1, 
@@ -317,7 +330,9 @@ if __name__ == "__main__":
             {}
           ),
           new toolbox::loadbalancing::metrics::CustomCellWeight()
-        """.format(args.trees,2*args.trees),
+        """.format(
+                args.trees, 2 * args.trees
+            ),
         )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
@@ -326,9 +341,7 @@ if __name__ == "__main__":
         peano4_project, "../../../../applications/exahype2/ccz4"
     )
 
-    peano4_project.output.makefile.add_linker_flag(
-        "-lm -lgsl -lgslcblas"
-    )
+    peano4_project.output.makefile.add_linker_flag("-lm -lgsl -lgslcblas")
     peano4_project.output.makefile.add_cpp_file(
         "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
     )
@@ -354,12 +367,10 @@ if __name__ == "__main__":
         "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
     )
     if added_limiter:
-        peano4_project.output.makefile.add_cpp_file(
-            "MulticoreOrchestration.cpp"
-        )
-    #peano4_project.output.makefile.add_h_file(
+        peano4_project.output.makefile.add_cpp_file("MulticoreOrchestration.cpp")
+    # peano4_project.output.makefile.add_h_file(
     #    "../CompressedFloat.h"
-    #)
+    # )
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")
@@ -377,4 +388,6 @@ if __name__ == "__main__":
         peano4_project.output.makefile.add_h_file("CCZ4SBH_FD4.h")
 
     peano4_project.generate(throw_away_data_after_generation=False)
-    peano4_project.build(make=not args.no_make, make_clean_first=True, number_of_parallel_builds=args.j)
+    peano4_project.build(
+        make=not args.no_make, make_clean_first=True, number_of_parallel_builds=args.j
+    )

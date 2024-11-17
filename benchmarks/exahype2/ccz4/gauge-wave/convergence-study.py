@@ -108,14 +108,7 @@ parser.add_argument(
     default=0.3,
     help="Cell size (default 0.3)",
 )
-parser.add_argument(
-    "-asserts",
-    "--asserts",
-    dest="asserts",
-    action="store_true",
-    default=False,
-    help="Switch on assertions",
-)
+parser.add_argument("-m",   "--mode",               dest="mode",           choices=peano4.output.CompileModes, default=peano4.output.CompileModes[0], help="|".join(peano4.output.CompileModes) )
 parser.add_argument(
     "-tracer",
     "--tracer",
@@ -126,7 +119,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-
 
 project = exahype2.Project(
     ["benchmarks", "exahype2", "ccz4"],
@@ -244,7 +236,7 @@ project.add_solver(my_solver)
 # Tracer setting
 ########################################################################################
 if args.tracer:
-    if args.asserts:
+    if peano4.output.string_to_mode(args.mode)==peano4.output.CompileMode.Asserts:
         time_delta_between_two_snapsots = 1e-4
     else:
         time_delta_between_two_snapsots = 0.1
@@ -264,12 +256,8 @@ if args.tracer:
 # Build the project
 ########################################################################################
 
-if args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
-else:
-    build_mode = peano4.output.CompileMode.Release
 
-if args.asserts:
+if peano4.output.string_to_mode(args.mode)==peano4.output.CompileMode.Asserts:
     delta_plot = 1.0 / 100
 else:
     delta_plot = 1.0 / 20
@@ -294,11 +282,11 @@ project.set_global_simulation_parameters(
 probe_point = [-12,-12,0.0]
 project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
 
-project.set_Peano4_installation(args.peanodir, build_mode)
+project.set_Peano4_installation(args.peanodir, peano4.output.string_to_mode(args.mode))
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
-    "(new ::exahype2::LoadBalancingConfiguration(0.98,27,true))",
+    "(new ::exahype2::LoadBalancingConfiguration(0.98,27,true,2,2))",
 )
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)

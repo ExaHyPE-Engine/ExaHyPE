@@ -49,7 +49,6 @@ All components are integrated into one repository, one code base, and documented
   - @subpage page_documentation_home
   - @subpage page_continuous_integration
 - @subpage page_tutorials_overview
-- @subpage page_applications_overview
 - Extensions
   - @subpage page_peano4_home
   - @subpage page_toolbox_home

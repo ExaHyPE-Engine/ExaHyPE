@@ -1,8 +1,5 @@
 #include "peano.h"
-#include "../config.h"
-
-#include "peano4/utils/Loop.h"
-#include "peano4/parallel/Node.h"
+#include "config.h"
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
@@ -11,6 +8,7 @@
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/tarch.h"
 
+#include "peano4/utils/Loop.h"
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
