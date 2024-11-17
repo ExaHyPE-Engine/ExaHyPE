@@ -2,18 +2,16 @@
 
 @page page_exahype2_tutorials_toyproblems_acoustic The Acoustic Wave Equation
 
-\tableofcontents 
+\tableofcontents
 
-# Black-box usage of this code
+# Define and Build the Project
 
-Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build 
-the acoustic project which you find in tutorials/exahype2/toyproblems/acoustic:
+Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the advection project:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export PYTHONPATH=../../../../python
 python3 acoustic.py
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 Ensure you set the PYTHONPATH properly before that.
 Assuming this was successful, you should see several files have appeared in your working directory.
@@ -27,7 +25,7 @@ The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
 
 
-# Dive into the script
+# Dive Into the Script
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
@@ -42,7 +40,9 @@ These merely import the necessary packages from Peano 4 and ExaHyPE 2
 which will let us define and build our project. For more details about
 the implementation, consider the comments in the Python script.
 
-## Two-dimensional Acoustic Wave Equation
+
+# Two-dimensional Acoustic Wave Equation
+
 The acoustic wave equation describes the propagation of a wave through a material.
 This equation assumes that all movements are only small perturbations over the background flow field.
 They can be obtained by linearising the more general Euler equation over this background field.
@@ -83,7 +83,9 @@ Further, the flux is given by:
 The eigenvalues of the flux are -c, 0 and c.
 These equations are telling us that the change in time of the velocity is proportional to the gradient of pressure.
 
-### Result
+
+## Result
+
 | t=0.5 s                    |  t=1.0 s                   |
 | :-------------------------:|:-------------------------: |
 | ![](Acoustic_2D_start.png) | ![](Acoustic_2D_end.png)   |

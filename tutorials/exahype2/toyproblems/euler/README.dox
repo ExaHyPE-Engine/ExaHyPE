@@ -2,11 +2,18 @@
 
 @page page_exahype2_tutorials_toyproblems_euler The Euler Equation
 
-## Define and Build the Project
+\tableofcontents
+
+# Define and Build the Project
+
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the Euler project:
 
-    python3 euler.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../../python
+python3 euler.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Ensure you set the PYTHONPATH properly before that.
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
 One file, in particular, is of interest to us now: the file simply named ExaHyPE2-Euler-* is the executable for our implementation.
@@ -16,6 +23,9 @@ We will therefore run this executable file by using the following command:
 
 The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
+
+
+# Dive Into the Script
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
@@ -30,7 +40,9 @@ These merely import the necessary packages from Peano 4 and ExaHyPE 2
 which will let us define and build our project. For more details about
 the implementation, consider the comments in the Python script.
 
-## Two-dimensional Euler Equation
+
+# Two-dimensional Euler Equation
+
 The Euler equation describe the movement of a fluid if there is neither loss of
 energy due to frictional forces nor heat conduction in the system.
 In the finite volume form and given no external forces, the two-dimensional form
@@ -71,19 +83,25 @@ This can also be rewritten as
 To implement this equation, the following things are needed: the initial condition,
 the boundary conditions, the maximal eigenvalue, the flux, and (optionally) the refinement criterion.
 
-### Initial Conditions
+
+## Initial Conditions
+
 We start with the initial conditions: here we define a starting configuration with a uniform
 density of 1.0, a uniform starting momentum of 0.0 in both x- and y-directions and a starting energy
 that is 1.0 inside of a circle of radius 0.2 around the center of the domain and 1.01 outside of it.
 Note that we use momenta and not velocities as our variables of choice,
 this will affect the formulation of some of the equations later.
 
-### Boundary Conditions
+
+## Boundary Conditions
+
 Then we can define our boundary conditions.
 You can choose any boundary conditions you prefer but we have chosen to use the
 homogeneous Neumann boundary conditions.
 
-### Eigenvalues
+
+## Eigenvalues
+
 Next, we can define the eigenvalues of our system. The eigenvalues of the 2-dimensional Euler equation are:
 
 @f$
@@ -115,14 +133,18 @@ For dry air, which can be approximated as an ideal gas, c depends on the pressur
                       \end{array} \right)
 @f$
 
-### Result
+
+## Result
+
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
 | ![](Euler_2D_start.png)    | ![](Euler_2D_end.png)      |
 
 The computed energy of the 2D Euler equation at times t=0.0 s and t=1.0 s.
 
-## Three-dimensional Euler Equation
+
+# Three-dimensional Euler Equation
+
 Finally, we can implement the Euler equation in three dimensions.
 
 The three-dimensional Euler equation are very similar to the two-dimensional equations:
@@ -170,7 +192,9 @@ And you can use the same approximation for the pressure and wave velocity:
         \end{array} \right)
 @f$
 
-### Result
+
+## Result
+
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
 | ![](Euler_3D_start.png)    | ![](Euler_3D_end.png)      |
