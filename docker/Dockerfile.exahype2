@@ -1,21 +1,41 @@
-FROM peanoframework/gcc:latest
+FROM peanoframework/spack:latest
 
-WORKDIR /Peano
+WORKDIR /exahype2
 
-RUN . /opt/spack-environment/activate.sh && \
-wget --progress=bar:force:noscroll https://gitlab.lrz.de/hpcsoftware/Peano/-/archive/p4/Peano-p4.tar.gz \
-&& tar -xvf Peano-p4.gz && mv Peano-p4/* . && \
+RUN wget --progress=bar:force:noscroll https://gitlab.lrz.de/hpcsoftware/Peano/-/archive/infrastructure-cmake/Peano-p4.tar.gz && \
+tar -xvf Peano-p4.tar.gz && \
+mv Peano-p4/tutorials/exahype2* tutorials && \
+mv Peano-p4/applications/exahype2* applications && \
+mv Peano-p4/benchmarks/exahype2* benchmarks && \
+mv Peano-p4/spack /opt/spack-peano && \
 rm -rf Peano-p4* && \
-CC=gcc CXX=g++ python configure.py --exahype --particles --multithreading=omp && \
-make -j8 && make check
+spack repo add /opt/spack-peano
+
+RUN mkdir /opt/spack-environment \
+&&  (echo spack: \
+&&   echo '  packages:' \
+&&   echo '    all:' \
+&&   echo '      target: [x86_64]' \
+&&   echo '' \
+&&   echo '  specs:' \
+&&   echo '  - exahype2+omp' \
+&&   echo '' \
+&&   echo '  concretizer:' \
+&&   echo '    unify: true' \
+&&   echo '  config:' \
+&&   echo '    install_tree: /opt/software' \
+&&   echo '  view: /opt/views/view') > /opt/spack-environment/spack.yaml
+
+RUN . /opt/spack/share/spack/setup-env.sh && cd /opt/spack-environment && spack env activate . && spack concretize -f && spack install --fail-fast && spack gc -y && spack clean -a
+RUN . /opt/spack/share/spack/setup-env.sh && cd /opt/spack-environment && spack env activate --sh -d . > activate.sh
 
 RUN { \
       echo '#!/bin/sh' \
       && echo '.' /opt/spack-environment/activate.sh \
-      && echo export PYTHONPATH=$PYTHONPATH:/Peano/python \
       && echo 'exec "$@"'; \
     } > /entrypoint.sh \
-&& chmod a+x /entrypoint.sh
+&& chmod a+x /entrypoint.sh \
+&& ln -s /opt/views/view /opt/view
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]

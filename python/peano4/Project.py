@@ -80,9 +80,8 @@ class Project (object):
 
     if executable:
       self.output.makefile.set_executable_name(executable)
-    
-    self.is_extended = False
 
+    self.is_extended = False
 
 
   def __str__(self):
@@ -152,23 +151,22 @@ class Project (object):
     else:
       self.constants.generate(overwrite, self.directory)
 
-    print( "generation complete" )
+    print("generation complete")
 
     if throw_away_data_after_generation:
       self.datamodel = None
       self.solversteps = None
       self.output      = None
       gc.collect()
-      print( "threw away all data and ran garbage collection" )
+      print("threw away all data and ran garbage collection")
 
   def build(self,
             make=True,
             make_clean_first=True,
             throw_away_data_after_build=False,
-            number_of_parallel_builds=-1,
-            additional_libraries=[]):
+            number_of_parallel_builds=-1):
     """!
-      Invokes the underlying make/C build mechanism on the project.
+      Invokes the underlying make build mechanism on the project.
 
       number_of_parallel_builds: int
         This is mapped onto make -jnumber_of_parallel_builds, i.e., it
@@ -186,59 +184,48 @@ class Project (object):
     if not self.is_generated:
       self.generate()
 
-    if not make:
-      return
+    if make:
+      if make_clean_first:
+        print("clean up project ... in {}".format(self.directory))
+        try:
+          if make_clean_first:
+            subprocess.check_call(["make", "clean"], cwd=self.directory)
+          self.is_built = False
+          print("clean complete")
+        except Exception as e:
+          print("clean failed (" + str(e) + ") - continue anyway")
 
-    if make_clean_first:
-      print( "clean up project ... in {}".format(self.directory) )
-      try:
-        if make_clean_first:
-          subprocess.check_call(["make", "clean"], cwd=self.directory)
-        self.is_built = False
-        print( "clean complete" )
-      except Exception as e:
-        print( "clean failed (" + str(e) + ") - continue anyway" )
-
-    if not self.is_built:
-      print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
-      try:
-        from peano4.output.Helper import find_CMake_build_dir
-        cmake_build_dir = find_CMake_build_dir()
-        if cmake_build_dir != "":
-          # Configuring twice with CMake is necessary because of the following:
-          # - Generated application needs to be added as a target, this forces cmake .. unless the user calls from the bash.
-          # - Generated applications CMakeLists might change the CMAKE_BUILD_TYPE to reflect the user's chosen build mode.
-          command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
-          process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        else:
+      if not self.is_built:
+        print("start to compile with concurrency level of " + str(number_of_parallel_builds) + " ...")
+        try:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # Extract warnings and errors from error message
-        error_message = process.stderr.decode().strip()
-        warnings = re.findall(r"(?i)warning:.*", error_message)
-        errors = re.findall(r"(?i)error:.*", error_message)
-        # Print warnings into the terminal
-        if warnings:
-          print("\nWarnings ({}):".format(len(warnings)))
-          print("\n".join(warnings))
-        if errors:
-          print("\nErrors ({}):".format(len(errors)))
-          error_message = "\n".join(errors)
-        # Check the return code for linker errors
-        # Raise exception with errors
-        if process.returncode != 0:
-          linker_error_message = process.stderr.decode().strip() + "\n" + error_message
-          raise Exception(linker_error_message)
-        print("compile completed successfully")
-        self.is_built = True
-        self.build_was_successful = True
-      except Exception as e:
-        self.is_built = True
-        self.build_was_successful = False
-        print(str(e))
-        print("compile was not successful")
-        sys.exit(1)
-    else:
-      print( "cannot build as code generation has not been successful" )
+          # Extract warnings and errors from error message
+          error_message = process.stderr.decode().strip()
+          warnings = re.findall(r"(?i)warning:.*", error_message)
+          errors = re.findall(r"(?i)error:.*", error_message)
+          # Print warnings into the terminal
+          if warnings:
+            print("\nWarnings ({}):".format(len(warnings)))
+            print("\n".join(warnings))
+          if errors:
+            print("\nErrors ({}):".format(len(errors)))
+            error_message = "\n".join(errors)
+          # Check the return code for linker errors
+          # Raise exception with errors
+          if process.returncode != 0:
+            linker_error_message = process.stderr.decode().strip() + "\n" + error_message
+            raise Exception(linker_error_message)
+          print("compile completed successfully")
+          self.is_built = True
+          self.build_was_successful = True
+        except Exception as e:
+          self.is_built = True
+          self.build_was_successful = False
+          print(str(e))
+          print("compile was not successful")
+          sys.exit(1)
+      else:
+        print("cannot build as code generation has not been successful")
 
     if throw_away_data_after_build:
       self.cleanup()
@@ -246,7 +233,7 @@ class Project (object):
       self.solversteps  = None
       self.output       = None
       gc.collect()
-      print( "threw away all data and ran garbage collection" )
+      print("threw away all data and ran garbage collection")
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """!
@@ -413,10 +400,6 @@ class Project (object):
     else:
       self.output.makefile.d["FC"] = subproject.output.makefile.d["FC"]
 
-    # ... for makefile dictionary
-    for library in subproject.output.makefile.d["CMAKE_CORE_LIBS"]:
-      self.output.makefile.add_cmake_core_library(library)
-
     for flag in subproject.output.makefile.d["CXXFLAGS"].split():
       self.output.makefile.add_CXX_flag(flag)
 
@@ -429,7 +412,6 @@ class Project (object):
     self.output.makefile.d["LIBS"] += subproject.output.makefile.d["LIBS"]
     self.output.makefile.d["GENERATED_INCLUDE_DIRS"] |= subproject.output.makefile.d["GENERATED_INCLUDE_DIRS"]
     self.output.makefile.d["MODE"] = subproject.output.makefile.d["MODE"]
-    # self.output.makefile.d["GPUOBJS"] += subproject.output.makefile.d["GPUOBJS"]
 
     for module in subproject.output.makefile.d["FORTRAN_MODULES"]:
       self.output.makefile.add_Fortran_module(module)

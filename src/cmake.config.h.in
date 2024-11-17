@@ -1,8 +1,0 @@
-/**
- * This is the config.h.in file for the CMake build system.
- * The CMake build system does not need the config file as all of the
- * definitions are given as compile definitions (-D...) during the
- * build. The file still needs to be generated as source files include config.h.
- *
- * Do not delete this generated (yet empty) file.
- */
