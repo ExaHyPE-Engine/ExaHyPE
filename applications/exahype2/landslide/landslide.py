@@ -137,6 +137,14 @@ class Landslide:
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
 
+        parser.add_argument(
+            "--storage",
+            type=str,
+            choices=[e.name for e in exahype2.solvers.Storage],
+            default="Heap",
+            help="The storage scheme to use."
+        )
+
         available_load_balancing_strategies = [
             "None",
             "SpreadOut",
@@ -299,6 +307,7 @@ class Landslide:
         }
 
         solver.set_implementation(**implementation_params)
+        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         return solver
 
