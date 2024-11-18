@@ -160,6 +160,14 @@ class Elastic:
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
 
+        parser.add_argument(
+            "--storage",
+            type=str,
+            choices=[e.name for e in exahype2.solvers.Storage],
+            default="Heap",
+            help="The storage scheme to use."
+        )
+
         available_load_balancing_strategies = [
             "None",
             "SpreadOut",
@@ -312,6 +320,7 @@ class Elastic:
         if solver_params["auxiliary_variables"] != 0:
             solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
+        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         if "ADERDG" in args.solver:
             solver.add_kernel_optimisations(is_linear = True,)
