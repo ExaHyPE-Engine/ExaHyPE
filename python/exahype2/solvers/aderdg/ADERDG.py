@@ -256,7 +256,7 @@ class ADERDG(object):
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
 
-        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
+        self.switch_storage_scheme(Storage.Heap, Storage.Heap)
 
         # Create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified.
         self.create_data_structures()
@@ -1408,8 +1408,8 @@ Material parameters:    """
         face_data_storage: Storage,
     ):
         """
-        By default, we hold all data on the heap using smart pointers. You can explicitly switch
-        to storage on the call stack or heap using raw pointers.
+        By default, we hold all data on the heap using raw pointers. You can explicitly switch
+        to storage on the call stack or heap using smart pointers.
 
         @see create_data_structures()
         """
