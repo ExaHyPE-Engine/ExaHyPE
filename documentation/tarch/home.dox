@@ -10,6 +10,7 @@
 \li \subpage documentation_tarch_visualisation
 \li \subpage tarch_services
 \li \subpage page_tarch_multicore 
+\li \subpage page_tarch_mpi 
 \li \subpage tarch_accelerator_SYCL
 \li \subpage tarch_NoncriticalAssertions
 
