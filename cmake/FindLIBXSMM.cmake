@@ -1,3 +1,6 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 if(LIBXSMM_INCLUDE_DIRS AND LIBXSMM_INCLUDE_DIRS AND LIBXSMM_LIBRARIES AND LIBXSMM_VERSION AND LIBXSMM_EXECUTABLE)
   set(LIBXSMM_FOUND TRUE)
 else()

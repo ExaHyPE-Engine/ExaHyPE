@@ -1,3 +1,4 @@
+#include <tarch/multicore/Task.h>
 #include "Node.h"
 #include "StartTraversalMessage.h"
 #include "TreeManagementMessage.h"
@@ -16,7 +17,6 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Lock.h"
 
 

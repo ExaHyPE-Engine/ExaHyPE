@@ -2,8 +2,8 @@
 
 #include <limits>
 
+#include "../../tarch/multicore/Task.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/multicore/Tasks.h"
 
 tarch::multicore::orchestration::GeneticOptimisation::Key::Key(
   int             numberOfTasksToHoldBack_,

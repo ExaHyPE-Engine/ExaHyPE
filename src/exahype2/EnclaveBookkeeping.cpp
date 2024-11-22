@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "../tarch/multicore/Task.h"
 #include "EnclaveTask.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
@@ -9,7 +10,6 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/otter.h"
-#include "tarch/multicore/Tasks.h"
 
 
 tarch::logging::Log exahype2::EnclaveBookkeeping::_log("exahype2::EnclaveBookkeeping");

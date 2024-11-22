@@ -7,7 +7,6 @@
 #pragma once
 
 #include "peano4/datamanagement/CellMarker.h"
-#include "tarch/multicore/Tasks.h"
 #include "tarch/NonCriticalAssertions.h"
 
 #include "exahype2/fv/rusanov/rusanov.h"
@@ -17,6 +16,7 @@
 
 #include <vector>
 #include <memory>
+#include "../../../../src/tarch/multicore/Task.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"

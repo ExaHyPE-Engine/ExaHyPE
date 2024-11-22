@@ -1,9 +1,14 @@
 include:
-  - .continuous_integration/gitlab-templates.yml
+  - .continuous_integration/templates/tags.yml
+  - .continuous_integration/templates/variables.yml
+  - .continuous_integration/templates/before-script.yml
 
 pages:
-  extends: .BeforeScript
-  stage: Publish
+  extends:
+    - .Tags
+    - .Variables
+    - .BeforeScript
+  stage: Pages
   allow_failure: false
   dependencies: []
   script:

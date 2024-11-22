@@ -3,10 +3,6 @@
 from .Visualiser import Visualiser
 
 try:
-  from .VTU                import VTU
-  from .Interactive        import Interactive
-  from .VTU_legacy         import VTU_legacy
-except ModuleNotFoundError:
-  print("postprocessing tools imported without paraview/pvpython modules")
-
-from .PatchFile            import PatchFile
+    from .VTUUnstructuredGrid import VTUUnstructuredGrid
+except ImportError:
+    print("vtk is not available. Cannot process VTU/VTK files.")

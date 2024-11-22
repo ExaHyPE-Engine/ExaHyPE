@@ -1,3 +1,4 @@
+#include <tarch/multicore/Task.h>
 #include "PingPongTest.h"
 #include "../StartTraversalMessage.h"
 #include "../TreeManagementMessage.h"
@@ -9,7 +10,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/orchestration/Hardcoded.h"
 
 

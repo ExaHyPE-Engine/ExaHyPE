@@ -22,8 +22,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_tensor_product(
         marker,
@@ -44,9 +44,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                coarseGridCellValues,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+      const double* __restrict__ coarseGridCellValues,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_tensor_product(
         marker,
@@ -68,9 +68,9 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                coarseGridCellValues,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+      const double* __restrict__ coarseGridCellValues,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
       int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
@@ -82,7 +82,7 @@ namespace toolbox {
         unknowns,
         C::InterpolationData,
         C::InterpolationColumnIndices,
-	C::InterpolationRowIndices,
+        C::InterpolationRowIndices,
         coarseGridCellValues,
         coarseGridFaceValues,
         fineGridFaceValues
@@ -95,11 +95,32 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                coarseGridCellValues,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+      const double* __restrict__ coarseGridCellValues,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_second_order(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        coarseGridCellValues,
+        coarseGridFaceValues,
+        fineGridFaceValues
+      );
+    }
+
+    template <typename C>
+    void interpolateHaloLayer_AoS_third_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__ coarseGridCellValues,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
+    ) {
+      interpolateHaloLayer_AoS_third_order(
         marker,
         numberOfDoFsPerAxisInPatch,
         overlap,
@@ -116,8 +137,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__                coarseGridCellValues,
-      double* __restrict__                      fineGridCellValues
+      const double* __restrict__ coarseGridCellValues,
+      double* __restrict__ fineGridCellValues
     ) {
       interpolateCell_AoS_tensor_product(
         marker,
@@ -154,16 +175,16 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__                coarseGridCellValues,
-      double* __restrict__                      fineGridCellValues
+      const double* __restrict__ coarseGridCellValues,
+      double* __restrict__ fineGridCellValues
     ) {
       interpolateCell_AoS_matrix(
         marker,
         numberOfDoFsPerAxisInPatch,
         unknowns,
         C::InterpolationData,
-	C::InterpolationColumnIndices,
-	C::InterpolationRowIndices,
+        C::InterpolationColumnIndices,
+        C::InterpolationRowIndices,
         coarseGridCellValues,
         fineGridCellValues
       );
@@ -174,8 +195,8 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__                coarseGridCellValues,
-      double* __restrict__                      fineGridCellValues
+      const double* __restrict__ coarseGridCellValues,
+      double* __restrict__ fineGridCellValues
     ) {
       interpolateCell_AoS_second_order(
         marker,
@@ -186,6 +207,22 @@ namespace toolbox {
       );
     }
 
+    template <typename C>
+    void interpolateCell_AoS_third_order(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__ coarseGridCellValues,
+      double* __restrict__ fineGridCellValues
+    ) {
+      interpolateCell_AoS_third_order(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        unknowns,
+        coarseGridCellValues,
+        fineGridCellValues
+      );
+    }
 
 
     template <typename C>
@@ -201,8 +238,8 @@ namespace toolbox {
         numberOfDoFsPerAxisInPatch,
         unknowns,
         C::RestrictionData,
-	C::RestrictionColumnIndices,
-	C::RestrictionRowIndices,
+        C::RestrictionColumnIndices,
+        C::RestrictionRowIndices,
         fineGridValues,
         coarseGridValues
       );
@@ -217,6 +254,23 @@ namespace toolbox {
       double*                                   coarseGridValues
     ) {
       restrictCell_AoS_second_order(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        unknowns,
+        fineGridValues,
+        coarseGridValues
+      );
+    }
+
+    template <typename C>
+    void restrictCell_AoS_third_order(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    ) {
+      restrictCell_AoS_third_order(
         marker,
         numberOfDoFsPerAxisInPatch,
         unknowns,
@@ -256,7 +310,7 @@ namespace toolbox {
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside = false
     ) {
       restrictInnerHalfOfHaloLayer_AoS_tensor_product(
         marker,
@@ -278,8 +332,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
       int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) * 3 + marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
@@ -291,9 +345,9 @@ namespace toolbox {
         unknowns,
         C::InterpolationData,
         C::InterpolationColumnIndices,
-	C::InterpolationRowIndices,
-	patchIndexLinear * C::InterpolationDataOffset,
-	patchIndexLinear * C::InterpolationRowIndicesOffset,
+        C::InterpolationRowIndices,
+        patchIndexLinear * C::InterpolationDataOffset,
+        patchIndexLinear * C::InterpolationRowIndicesOffset,
         coarseGridFaceValues,
         fineGridFaceValues
       );
@@ -306,10 +360,29 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
     ) {
       interpolateHaloLayer_AoS_second_order(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        coarseGridFaceValues,
+        fineGridFaceValues
+      );
+    }
+
+    template <typename C>
+    void interpolateHaloLayer_AoS_third_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__ coarseGridFaceValues,
+      double* __restrict__ fineGridFaceValues
+    ) {
+      interpolateHaloLayer_AoS_third_order(
         marker,
         numberOfDoFsPerAxisInPatch,
         overlap,
@@ -339,9 +412,9 @@ namespace toolbox {
         unknowns,
         C::RestrictionData,
         C::RestrictionColumnIndices,
-	C::RestrictionRowIndices,
-	patchIndexLinear * C::RestrictionDataOffset,
-	patchIndexLinear * C::RestrictionRowIndicesOffset,
+        C::RestrictionRowIndices,
+        patchIndexLinear * C::RestrictionDataOffset,
+        patchIndexLinear * C::RestrictionRowIndicesOffset,
         fineGridValues,
         coarseGridValues
       );
@@ -366,6 +439,25 @@ namespace toolbox {
       );
     }
 
+    template <typename C>
+    void restrictHaloLayer_AoS_third_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    ) {
+      restrictHaloLayer_AoS_third_order(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        fineGridValues,
+        coarseGridValues
+      );
+    }
+
 
     template <typename C>
     void restrictInnerHalfOfHaloLayer_AoS_matrix(
@@ -375,7 +467,7 @@ namespace toolbox {
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside = false
     ) {
       int normal = marker.getSelectedFaceNumber() % 3;
       int patchIndexLinear = (Dimensions == 2) ? marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) : marker.getRelativePositionWithinFatherCell()((normal + 1) % Dimensions) + 3 * marker.getRelativePositionWithinFatherCell()((normal + 2) % Dimensions);
@@ -387,9 +479,9 @@ namespace toolbox {
         unknowns,
         C::RestrictionData,
         C::RestrictionColumnIndices,
-	C::RestrictionRowIndices,
-	patchIndexLinear * C::RestrictionDataOffset,
-	patchIndexLinear * C::RestrictionRowIndicesOffset,
+        C::RestrictionRowIndices,
+        patchIndexLinear * C::RestrictionDataOffset,
+        patchIndexLinear * C::RestrictionRowIndicesOffset,
         fineGridValues,
         coarseGridValues,
         swapInsideOutside
@@ -404,7 +496,7 @@ namespace toolbox {
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside = false
     ) {
       restrictInnerHalfOfHaloLayer_AoS_second_order(
         marker,
@@ -417,6 +509,26 @@ namespace toolbox {
       );
     }
 
-  }
-}
+    template <typename C>
+    void restrictInnerHalfOfHaloLayer_AoS_third_order(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside = false
+    ) {
+      restrictInnerHalfOfHaloLayer_AoS_third_order(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        fineGridValues,
+        coarseGridValues,
+        swapInsideOutside
+      );
+    }
 
+  } // namespace blockstructured
+} // namespace toolbox
