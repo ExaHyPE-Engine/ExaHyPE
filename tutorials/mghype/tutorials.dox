@@ -1,33 +1,34 @@
 /**
 
-@page page_multigrid_tutorials Tutorials
+@page page_mghype_tutorials Tutorials
 
 @image html documentation/icons/MGHyPE.png
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
 The first few tutorials are based upon Jupyter notebooks. Please browse through
 the links below and study the webpages. However, they are created ***from*** the
 notebooks automatically, i.e. you get the full experience only by studying the
-notebooks. For this, switch to 
+notebooks. For this, switch to
 
        cd tutorials/mghype
-       
+
 and issue `jupyter-notebook hitchhikers-guide.ipynb`. All the follow-up notebooks
 are then held within the exercises subdirectory. Change into the subfolders there
-and fire up the notebook to get started. 
+and fire up the notebook to get started.
 
-The more advanced tutorials then rely on scripts, i.e. do not recommend to you to 
-change into some subdirectories and to use Jupyter notebooks. Simply follow the 
+The more advanced tutorials then rely on scripts, i.e. do not recommend to you to
+change into some subdirectories and to use Jupyter notebooks. Simply follow the
 instructions!
 </div>
 
 - \subpage tutorials_mghype_hitchhikers-guide
 - Numerics tour de force
   - \subpage tutorials_mghype_numerics_continuous_galerkin_poisson
+  - \subpage tutorials_mghype_numerics_mixed_dg_poisson
   - \subpage tutorials_multigrid_matrixfree_continuous_galerkin_poisson
   - \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
-  - \subpage tutorials_mghype_numerics_mixed_dg_poisson
-- Examples 
+  - \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
+- Examples
   - \subpage tutorials_mghype_examples_01_matrix-free-cg
   - \subpage tutorials_mghype_examples_02_higher-order-cg
   - \subpage tutorials_mghype_examples_03_matrix-free-dg
@@ -40,11 +41,8 @@ instructions!
 - Adding features
 
 
-
 ## How to add your own tutorial
 
-All of Peano's and ExaHyPE's follow the same @ref page_tutorials_overview "tutorial conventions".
-
-
+All of MGHyPE's tutorials follow the same @ref page_tutorials_overview "tutorial conventions".
 
 */
