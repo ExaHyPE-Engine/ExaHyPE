@@ -59,7 +59,7 @@ Unit_Tests:
     - Build
   retry: 1
 
-MGHyPE_Tests:
+ExaHyPE2_ADER_DG_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -67,7 +67,82 @@ MGHyPE_Tests:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .MGHyPE_Tests
+    - .ExaHyPE2_ADER_DG_Tests
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_AMR_SWE_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_AMR_SWE_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_Limiting_Static_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_Limiting_Static_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_Limiting_Posteriori_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+MGHyPE_MatrixFree_Tests:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .MGHyPE_MatrixFree_Tests
   needs:
     - job: Build
   dependencies:

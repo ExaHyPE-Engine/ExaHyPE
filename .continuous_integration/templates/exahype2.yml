@@ -1,3 +1,38 @@
+.ExaHyPE2_ADER_DG_Tests:
+  parallel:
+    matrix:
+    - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerGaussianBell, EulerIsotropicVortex, SWERadialDamBreak, SWERestingLake]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario;"
+
+.ExaHyPE2_ADER_DG_AMR_SWE_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-amr-swe; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-amr-swe.py; OMP_NUM_THREADS=1 ./ADER-DG-AMR-SWE > ADER-DG-AMR-SWE.out"
+  artifacts:
+    paths:
+      - tests/exahype2/aderdg-amr-swe/ADER-DG-AMR-SWE.out
+    expire_in: 2 hours
+
+.ExaHyPE2_ADER_DG_Limiting_Static_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting-static; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-limiting-static.py; OMP_NUM_THREADS=1 ./ADER-DG-Limiting-Static > ADER-DG-Limiting-Static.out"
+  artifacts:
+    paths:
+      - tests/exahype2/aderdg-limiting-static/ADER-DG-Limiting-Static.out
+    expire_in: 2 hours
+
+.ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting-posteriori; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-limiting-posteriori.py;"
+
+.ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting-euler-airfoil; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-limiting-euler-airfoil.py; OMP_NUM_THREADS=1 ./ADER-DG-Limiting-Euler-Airfoil > ADER-DG-Limiting-Euler-Airfoil.out"
+  artifacts:
+    paths:
+      - tests/exahype2/aderdg-limiting-euler-airfoil/ADER-DG-Limiting-Euler-Airfoil.out
+    expire_in: 2 hours
+
 .ExaHyPE2_Tutorials:
   parallel:
     matrix:
