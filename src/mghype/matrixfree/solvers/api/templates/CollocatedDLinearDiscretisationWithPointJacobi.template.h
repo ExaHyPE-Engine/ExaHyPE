@@ -34,6 +34,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      */
     virtual ~{{CLASSNAME}}();
 
+    /**
+     * Initialise a vertex
+     *
+     * This routine is called once throughout the mesh construction. Users
+     * are supposed to set an initial value and the right-hand side. This
+     * routine is only called for real degrees of freedom, i.e. for inner
+     * vertices on the finest mesh. Boundary vertices are initialised through
+     * setBoundaryConditions() once per mesh traversal (so you can realise
+     * non-Dirichlet conditions). The domain is determined by getVertexDoFType()
+     * which you find in the superclass. You might however want to overwrite it.
+     * If you alter getVertexDoFType(), you should also overwrite getCellDoFType()
+     * such that the two routines return consistent results.
+     */
     virtual void initVertex(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,

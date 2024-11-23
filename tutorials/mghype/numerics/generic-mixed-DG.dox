@@ -1,4 +1,9 @@
-# Mathematical basics of mixed DG
+/**
+
+@page tutorials_mghype_numerics_mixed_dg_poisson Mixed DG for the Poisson equation
+
+\tableofcontents
+
 
 We aim to solve
 
@@ -127,3 +132,5 @@ So @f$ \widehat{u} @f$ depends on @f$ u^+ + u^- @f$ subject to some weights plus
     \\
   \widehat{(n,p)} & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ - \tau^- u^- + (n,p^+) + (n,p^-) \right) 
 \f}
+
+&/

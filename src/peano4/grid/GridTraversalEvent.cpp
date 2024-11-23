@@ -7,7 +7,7 @@
 
 
 
-peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoPowerD>  __isVertexParentOfSubtree, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
+peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoPowerD>  __isVertexParentOfSubtree, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __numberOfAdjacentTreesPerVertex, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
 setX( __x);
 setH( __h);
 setHasBeenRefined( __hasBeenRefined);
@@ -20,6 +20,7 @@ setIsCellLocal( __isCellLocal);
 setIsParentCellLocal( __isParentCellLocal);
 setIsVertexAdjacentToParallelDomainBoundary( __isVertexAdjacentToParallelDomainBoundary);
 setIsFaceAdjacentToParallelDomainBoundary( __isFaceAdjacentToParallelDomainBoundary);
+setNumberOfAdjacentTreesPerVertex( __numberOfAdjacentTreesPerVertex);
 setIsAdjacentCellLocal( __isAdjacentCellLocal);
 setVertexDataFrom( __vertexDataFrom);
 setVertexDataTo( __vertexDataTo);
@@ -46,6 +47,7 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& 
   setIsParentCellLocal( copy.getIsParentCellLocal() );
   setIsVertexAdjacentToParallelDomainBoundary( copy.getIsVertexAdjacentToParallelDomainBoundary() );
   setIsFaceAdjacentToParallelDomainBoundary( copy.getIsFaceAdjacentToParallelDomainBoundary() );
+  setNumberOfAdjacentTreesPerVertex( copy.getNumberOfAdjacentTreesPerVertex() );
   setIsAdjacentCellLocal( copy.getIsAdjacentCellLocal() );
   setVertexDataFrom( copy.getVertexDataFrom() );
   setVertexDataTo( copy.getVertexDataTo() );
@@ -87,6 +89,8 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << "isVertexAdjacentToParallelDomainBoundary=" << getIsVertexAdjacentToParallelDomainBoundary();
   out << ","; 
   out << "isFaceAdjacentToParallelDomainBoundary=" << getIsFaceAdjacentToParallelDomainBoundary();
+  out << ","; 
+  out << "numberOfAdjacentTreesPerVertex=" << _numberOfAdjacentTreesPerVertex;
   out << ","; 
   out << "isAdjacentCellLocal=" << getIsAdjacentCellLocal();
   out << ","; 
@@ -421,6 +425,26 @@ void   peano4::grid::GridTraversalEvent::flipIsFaceAdjacentToParallelDomainBound
 }
 
 
+tarch::la::Vector<TwoPowerD,int>   peano4::grid::GridTraversalEvent::getNumberOfAdjacentTreesPerVertex() const {
+  return    _numberOfAdjacentTreesPerVertex;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setNumberOfAdjacentTreesPerVertex(const tarch::la::Vector<TwoPowerD,int>& value) {
+  _numberOfAdjacentTreesPerVertex = value;
+}
+
+
+int   peano4::grid::GridTraversalEvent::getNumberOfAdjacentTreesPerVertex(int index) const {
+  return   _numberOfAdjacentTreesPerVertex(index);
+}
+
+
+void   peano4::grid::GridTraversalEvent::setNumberOfAdjacentTreesPerVertex(int index, int value) {
+  _numberOfAdjacentTreesPerVertex(index) = value;
+}
+
+
 std::bitset<ThreePowerD>   peano4::grid::GridTraversalEvent::getIsAdjacentCellLocal() const {
 
   std::bitset<ThreePowerD> result;
@@ -706,6 +730,7 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
+  NumberOfAttributes++;
 
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
   int*          blocklen = new int[NumberOfAttributes];
@@ -747,6 +772,9 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   counter++;
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoPowerD;
   counter++;
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
@@ -805,6 +833,8 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   MPI_Get_address( &(instances[0]._isVertexAdjacentToParallelDomainBoundary), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._isFaceAdjacentToParallelDomainBoundary), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._numberOfAdjacentTreesPerVertex.data()[0]), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._isAdjacentCellLocal), &disp[counter] );
   counter++;
