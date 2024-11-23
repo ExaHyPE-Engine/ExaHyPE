@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "../../tarch/multicore/Task.h"
 #include "stacks.h"
 
 #include "peano4/parallel/Node.h"
@@ -12,8 +13,6 @@
 #include "tarch/logging/Log.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Tasks.h"
-
 #include "peano4/grid/GridVertex.h"
 #include "peano4/grid/TraversalObserver.h"
 

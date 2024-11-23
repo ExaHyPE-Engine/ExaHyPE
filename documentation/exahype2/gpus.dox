@@ -102,6 +102,109 @@ the clue: This is a normal function, i.e. you can use the solver's state
 and make the result depend on this one.
  
  
+# Sanity checks
+
+The sections below discuss what you should see in the code.
+
+
+## Introduce aggressively vectorised kernel
+
+@todo This will change completely as we switch to xDSL. Notably, we will not support 
+multiple target GPUs in one source code anymore.
+
+Once you have a GPU-ready solver, it makes sense to doublecheck quickly if the 
+solver really dispatches the correct compute kernels.
+For this, we first study the generated task. 
+Stateless routines are also very useful on the CPU, as we can aggressively
+vectorise over them.
+Therefore, the task should look similar to
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+double benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::applyKernelToCell(...) {
+  ...
+  
+  if (repositories::instanceOfCCZ4FV.patchCanUseStatelessPDETerms(
+      marker.x(),
+      marker.h(),
+      t,
+      dt
+  )) {
+    ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+      ...
+     >(patchData);
+  } else {
+     ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors<
+      ...
+     >(patchData,
+     ...
+     );
+  }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The kernels might look completely different, but the principle is clear: 
+Whenever we hit a cell, we check if patchCanUseStatelessPDETerms() holds.
+If this is not the case, we use the default version. However, if it holds, 
+then we invoke the specialised version which assumes that there is a version
+with static (stateless) calls. 
+
+
+## Fused compute kernels
+
+@todo This will change completely as we switch to xDSL. Notably, we will not support 
+multiple target GPUs in one source code anymore.
+
+Scroll further down until you see the fuse() routine. This one is again 
+very simple to digest:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+bool benchmarks::exahype2::ccz4::tasks::CCZ4FVEnclaveTask::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
+  ...
+  #if defined(GPUOffloadingOMP)
+    if (targetDevice >= 0) {
+      foundOffloadingBranch = true;
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseHeapStateless<
+      ...
+      >(targetDevice, patchData);
+    }
+  #endif
+
+  #if defined(GPUOffloadingSYCL)
+    if (targetDevice >= 0 or targetDevice == Host) {
+      foundOffloadingBranch = true;
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseHeapStateless<
+        ...
+      >(targetDevice, patchData);
+    }
+  #endif
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We see here, that SYCL can run on both the host and the device, whereas we pick
+the OpenMP version if and only if we have picked a valid device.
+
+
+If this call logic makes no sense, most solvers have attributes such as
+
+        self._fused_compute_kernel_call_cpu
+        self._fused_compute_kernel_call_gpu
+
+to switch to the modified kernel realisation variant. Typically, there are 
+factory mechanisms to alter those guys:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+my_solver._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+  my_solver._flux_implementation, 
+  my_solver._ncp_implementation, 
+  my_solver._source_term_implementation, 
+  compute_max_eigenvalue_of_next_time_step=True, 
+  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
+  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ 
+ 
   */
   
   

@@ -7,7 +7,7 @@
 #include <vector>
 
 int main(){
-  const int unknowns = 59;
+/*  const int unknowns = 59;
   const int numMatrices = 6;
 
   int patchSizes[] = {
@@ -210,9 +210,9 @@ int main(){
     normal_k3,
     normal_k3
   };
-
+*/
   // Setup Data
-
+/*
   peano4::grid::GridTraversalEvent dummyEvent;
   dummyEvent.setRelativePositionToFather(1, 1);
   peano4::datamanagement::FaceMarker faceMarker(dummyEvent);
@@ -235,9 +235,31 @@ int main(){
   double* dt_tensor = new double[numMatrices];
   double* dt_second_order = new double[numMatrices];
 
-  // Run Benchmark
+  double dt_second_volumetric_1;
+  double dt_second_volumetric_2;
+  double sourceData[59*(6 + 2 * 3) * (6 + 2 * 3) * (6 + 2 * 3)];
+  for (int i = 0; i < 59 * (6 + 2 * 3) * (6 + 2 * 3) * (6 + 2 * 3); i++) sourceData[i] = 1.0;
+  double destinationData[59 * (6*16 + 2 * 3) * (6*16 + 2 * 3) * (6 * 16 + 2 * 3)];
 
-  for (int i = 0; i < numMatrices; i++){
+    begin = std::chrono::steady_clock::now(); 
+    for (int j = 0; j < 1; j++){
+      interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(6, 6*16, 3, 1, 59, sourceData, destinationData, ::peano4::utils::LoopPlacement::SpreadOut);
+    }
+    end = std::chrono::steady_clock::now();
+    dt_second_volumetric_1 = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0; 
+  
+begin = std::chrono::steady_clock::now(); 
+    for (int j = 0; j < 1; j++){
+      ::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_secondOrder(6, 6*16, 3, 1, 59, sourceData, destinationData, ::peano4::utils::LoopPlacement::SpreadOut);
+    }
+    end = std::chrono::steady_clock::now();
+    dt_second_volumetric_2 = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0; 
+  
+
+  double* dt_volumetric_second_order = new double[numVolumetric];
+  // Run Benchmark
+*/
+  /*for (int i = 0; i < numMatrices; i++){
     begin = std::chrono::steady_clock::now(); 
     for (int j = 0; j < 100; j++){
       ::toolbox::blockstructured::interpolateHaloLayer_AoS_matrix(faceMarker, patchSizes[i], haloSizes[i], unknowns, interpolationData[i].data(), columnIndices[i].data(), rowIndices[i].data(), 0, 0, coarseData, fineData);    
@@ -264,18 +286,48 @@ int main(){
     dt_second_order[i] = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0; 
   }
 
-
+*/
   // Write results to file
 
-  std::ofstream file("results_interpolation.txt");
-  for (int i = 0; i < numMatrices; i++){
-    file << "Patch Size: " << patchSizes[i] << "\n";
-    file << "Halo Size: " << haloSizes[i] << "\n";
-    file << "Unknowns: " << unknowns << "\n";
-    file << "Matrix: " << dt_matrix[i] << "s\n";
-    file << "Tensor Product: " << dt_tensor[i] << "s\n";
-    file << "Second Order: " << dt_second_order[i] << "s\n";
-    file << "\n";
+//  std::ofstream file("results_interpolation.txt");
+
+//  std::chrono::steady_clock::time_point begin;
+//  std::chrono::steady_clock::time_point end;
+
+  //double dt_second_volumetric_1;
+  //double dt_second_volumetric_2;
+  double sourceData[59*(6 + 2 * 3) * (6 + 2 * 3) * (6 + 2 * 3)];
+  for (int i = 0; i < 59 * (6 + 2 * 3) * (6 + 2 * 3) * (6 + 2 * 3); i++) sourceData[i] = 1.0;
+  double destinationData[59 * (6*16 + 2 * 3) * (6*16 + 2 * 3) * (6 * 16 + 2 * 3)];
+
+    /*begin = std::chrono::steady_clock::now(); 
+    for (int j = 0; j < 1; j++){
+      ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(6, 6*16, 3, 1, 59, sourceData, destinationData, ::peano4::utils::LoopPlacement::SpreadOut);
+    }
+    end = std::chrono::steady_clock::now();
+    dt_second_volumetric_1 = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0; 
+  */
+//begin = std::chrono::steady_clock::now(); 
+  //  for (int j = 0; j < 1; j++){
+      ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_secondOrder(6, 6*16, 3, 1, 59, sourceData, destinationData, ::peano4::utils::LoopPlacement::SpreadOut);
+    //}
+  //  end = std::chrono::steady_clock::now();
+    //dt_second_volumetric_2 = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000.0; 
+
+//file << dt_second_volumetric_1 << "\n";
+//file << dt_second_volumetric_2 << "\n";
+
+/*  for (int i = 0; i < numMatrices; i++){
+    //file << "Patch Size: " << patchSizes[i] << "\n";
+    //file << "Halo Size: " << haloSizes[i] << "\n";
+    //file << "Unknowns: " << unknowns << "\n";
+    //file << "Matrix: " << dt_matrix[i] << "s\n";
+    //file << "Tensor Product: " << dt_tensor[i] << "s\n";
+    //file << "Second Order: " << dt_second_order[i] << "s\n";
+    //file << "\n";
   }
-  file.close();
+file << dt_second_volumetric_1 << "\n";
+file << dt_second_volumetric_2 << "\n";
+*/
+  //file.close();
 }

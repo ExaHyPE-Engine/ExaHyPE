@@ -1,34 +1,39 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${FILES_TO_GLOB})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-
-foreach(mode IN LISTS CMAKE_BUILD_TYPE)
+foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
-  foreach(dimension IN LISTS WITH_DIMENSIONS)
+  foreach(dimension IN LISTS PEANO_DIMENSIONS)
     add_executable(UnitTests${dimension}d_${mode_lower})
-    #display_header("Creating Makefile of UnitTests${dimension}d_${mode_lower}")
     add_test(NAME UnitTests${dimension}d_${mode_lower} COMMAND UnitTests${dimension}d_${mode_lower})
 
-    target_sources(UnitTests${dimension}d_${mode_lower} PRIVATE ${SOURCES})
-    target_include_directories(UnitTests${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(UnitTests${dimension}d_${mode_lower} PUBLIC Dimensions=${dimension} ${PEANO_${mode_upper}_DEFINITIONS})
-    target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower} Tarch_${mode_lower})
-    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE project_warnings)
-    target_compile_options(UnitTests${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
-    target_link_options(UnitTests${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
+    target_sources(UnitTests${dimension}d_${mode_lower} PRIVATE main.cpp)
+    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE PeanoOptions)
+    target_compile_definitions(UnitTests${dimension}d_${mode_lower} PRIVATE Dimensions=${dimension} ${PEANO_${mode_upper}_DEFINITIONS})
+    target_compile_options(UnitTests${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
+    target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE Peano4Core${dimension}d_${mode_lower})
+    if(ENABLE_PARTICLES)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxParticles${dimension}d_${mode_lower})
+    endif()
+    if(ENABLE_FINITEELEMENTS)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxFiniteElements${dimension}d_${mode_lower})
+    endif()
+    if(ENABLE_BLOCKSTRUCTURED)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxBlockStructured${dimension}d_${mode_lower})
+    endif()
+    if(ENABLE_LOADBALANCING)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ToolboxLoadBalancing${dimension}d_${mode_lower})
+    endif()
     if(ENABLE_EXAHYPE)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ExaHyPE2Core${dimension}d_${mode_lower})
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE ExaHyPE2Core${dimension}d_${mode_lower})
+    endif()
+    if(ENABLE_MGHYPE)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE Multigrid${dimension}d_${mode_lower})
     endif()
     if(ENABLE_SWIFT)
-      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC SWIFT2Core${dimension}d_${mode_lower})
-    endif()
-
-    if(USE_COMPONENT_DEFINITIONS)
-      target_compile_definitions(UnitTests${dimension}d_${mode_lower} PUBLIC ${USE_COMPONENT_DEFINITIONS})
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE SWIFT2Core${dimension}d_${mode_lower})
     endif()
 
     install(TARGETS UnitTests${dimension}d_${mode_lower}
@@ -39,6 +44,8 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
               NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
       ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
               COMPONENT           ${PROJECT_NAME}_Devel
+      PUBLIC_HEADER DESTINATION   ${CMAKE_INSTALL_INCLUDEDIR}
+      PRIVATE_HEADER DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
     )
   endforeach()
 endforeach()

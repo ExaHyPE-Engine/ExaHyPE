@@ -77,19 +77,34 @@ class tarch::logging::Statistics {
      */
     static Statistics& getInstance();
 
-    /**
-     * Log one particular value
-     *
-     * @param identifier Unique name (string) for this event
-     */
     #ifdef TrackStatistics
+      /**
+       * Log one particular value
+       *
+       * A log means that you basically report a snapshot. The value is
+       * memorised. It is up to the database logic to decide if to store this
+       * value or not.
+       *
+       * @param identifier Unique name (string) for this event
+       * @see updateDataSnapshot() for the data base logic.
+       */
       void log( const std::string& identifier, double value, bool disableSampling = false );
+
+      /**
+       * Log an event
+       */
       void log( const std::string& identifier, const std::string& value );
-      void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false );
+
+      /**
+       * Increment an internal stats counter
+       *
+       * There is no decrement, as you can always pass in a negative value as well.
+       */
+      void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false, bool clearAfterDatabaseDump = false );
     #else
       inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value, [[maybe_unused]] bool disableSampling = false ) {}
       inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] const std::string& value ) {}
-      inline void inc( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value = 1.0, [[maybe_unused]] bool disableSampling = false ) {}
+      inline void inc( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value = 1.0, [[maybe_unused]] bool disableSampling = false, bool clearAfterDatabaseDump = false ) {}
     #endif
 
     /**
@@ -163,7 +178,9 @@ class tarch::logging::Statistics {
        */
       DataSet();
       DataSet(double time);
-      void createNewSnapshot(double t);
+      void createNewSnapshot(double t, bool clearAfterDatabaseDump);
+
+      std::string toString() const;
     };
 
     struct LogMessage {

@@ -2,15 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UserInterface.h"
 
+#include "../tarch/multicore/Task.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/mpi/Rank.h"
 
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
-
-#include "tarch/multicore/Tasks.h"
-#include "tarch/multicore/orchestration/StrategyFactory.h"
 
 #include "peano4/peano.h"
 

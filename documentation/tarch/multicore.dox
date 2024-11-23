@@ -1,6 +1,6 @@
 /**
 
-\page page_tarch_multicore Multicore abstraction
+\page page_tarch_multicore Multicore programming
 
 \tableofcontents
 
@@ -32,7 +32,7 @@ where value is
  tarch::multicore.
 
 
-## Administering the multithreaded environment
+# Administering the multithreaded environment
 
  The central instance managing the threads on a system is tarch::multicore::Core.
  This is a singleton and the name thus is slightly wrong. It does not really represent
@@ -43,7 +43,7 @@ where value is
  Core class.
 
 
-## Avoid race conditions
+# Avoid race conditions
 
  For multithreaded code, it is important that the code can lock (protect) code
  regions and free them. For this, the multithreading layer offers different
@@ -71,18 +71,39 @@ static tarch::multicore::BooleanSemaphore myFancySemaphore;
 
  The class tarch::multicore::BooleanSemaphore should be studied for a more detailed
  documentation of the thread locks.
+ 
+ 
+ The plain semaphore does not work recursively, i.e. if a thread locks a 
+ semaphore and then locks again, it deadlocks itself. You can avoid this
+ by switching to a recursive semaphore. They are more expensive yet allow
+ that a thread locks the same semaphore repeatedly.
+ 
+ Each semaphore also supports a try_lock() operation, so you can do busy
+ polling. try_lock's are not supported by the tarch::multicore::Lock object.
+ You have to access the semaphore directly and manually free it later, 
+ whereas the Lock object automatically frees the semaphore in its 
+ destructor (unless you do so before that manually).
 
 
-## Write bespoke multithreaded variants
+# Atomics
+
+At the moment, the tarch does ***not*** provide a backend-independent 
+abstraction of atomics. We hope that such a thing would be obsolete 
+anyway, as C++'s std::atomic works with all backends. If this is not the
+case and if you need atomics, you have to write backend-specific variants
+protected by preprocessor macros (see below).
+
+
+# Write bespoke multithreaded variants
 
 The namespace tarch::multicore provides a set of preprocessor macros and 
 further information how to write bespoke code for codes that have to 
 distinguish single-threaded realisation from bespoke variants.
 
 
-## Work with tasks
+# Work with tasks
 
-All the tasking is modelld through the class tarch::multicore::Task.
+All the tasking is modelled through the class tarch::multicore::Task.
 That is, Peano expects each task to be a subclass of this guy.
 The actually task submission, dependency tracking, and synchronisation
 then is all realised through functions within the namespace
@@ -92,6 +113,9 @@ The namespace's documentation also explains how we are using the tasks in
 codes such as ExaHyPE and what typical task execution patterns look like.
 It also provides an overview of different task characteristics.
 
+# Implementation
+
+Most implementation details can be found in the \ref tarch::multicore "namespace documentation".
 
  */
  

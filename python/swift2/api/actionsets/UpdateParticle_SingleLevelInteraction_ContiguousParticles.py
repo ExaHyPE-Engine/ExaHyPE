@@ -63,7 +63,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(
             unprepare_traversal_kernel=unprepare_traversal_kernel,
             additional_includes=additional_includes
             + """
-#include "tarch/multicore/Tasks.h"                
+#include "tarch/multicore/Task.h"                
 #include "swift2/swift2.h"                
 #include "swift2/TaskNumber.h"                
                  """,

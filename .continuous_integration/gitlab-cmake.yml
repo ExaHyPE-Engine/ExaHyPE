@@ -1,5 +1,5 @@
 include:
-  - .continuous_integration/gitlab-templates.yml
+  - .continuous_integration/templates/variables.yml
 
 stages:
   - Compiler
@@ -16,10 +16,12 @@ GCC_OpenMP:
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-build-and-test.yml
+      - .continuous_integration/pipelines/cmake.yml
     strategy: depend
 
 Intel_OpenMP:
@@ -34,10 +36,12 @@ Intel_OpenMP:
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-build-and-test.yml
+      - .continuous_integration/pipelines/cmake.yml
     strategy: depend
 
 LLVM_OpenMP:
@@ -52,10 +56,12 @@ LLVM_OpenMP:
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DWITH_MULTITHREADING=omp"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-build-and-test.yml
+      - .continuous_integration/pipelines/cmake.yml
     strategy: depend
 
 NVIDIA:
@@ -69,8 +75,10 @@ NVIDIA:
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
                             -DENABLE_PARTICLES=ON"
   trigger:
     include:
-      - .continuous_integration/gitlab-cmake-build-and-test.yml
+      - .continuous_integration/pipelines/cmake.yml
     strategy: depend

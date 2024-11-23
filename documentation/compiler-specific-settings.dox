@@ -229,7 +229,8 @@ export I_MPI_CXX=icpx
 For NVIDIA GPUs:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-CC=clang CXX=clang++ ./configure --with-multithreading=omp --with-gpu=omp  CFLAGS="-O3 -W -Wall -Wno-attributes -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_XX" CXXFLAGS="-std=c++17 -O3 -W -Wall -Wno-attributes -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_XX" LDFLAGS="-march=native -mtune=native -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_XX"
+export MARCH=sm_XX
+CC=clang CXX=clang++ ./configure --with-multithreading=omp --with-gpu=omp CXXFLAGS="-std=c++17 -O3 -W -Wall -Wno-attributes -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=$MARCH" LDFLAGS="-march=native -mtune=native -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=$MARCH"
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 where XX has to be replaced by the actual compute capability of the device.

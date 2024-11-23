@@ -1,73 +1,91 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .Filter import Filter
-from peano4.visualisation.Patch  import Patch
+from peano4.visualisation.input.Patch import Patch
 
 
-class AverageOverCell( Filter ):
-  """
-    
-    Run over all cells. Each cell holds a patch with dof x dof (2d) or 
+class AverageOverCell(Filter):
+    """
+    Run over all cells. Each cell holds a patch with dof x dof (2d) or
     dof x dof x dof (3d) cells. Each cell hosts unknown unknowns. This
-    filter reduces each patch to a 1x1 or 1x1x1 outcome, i.e. a point 
+    filter reduces each patch to a 1x1 or 1x1x1 outcome, i.e. a point
     cloud.
-          
-  """
-  def __init__(self, verbose=False):
-    Filter.__init__(self, True, False, verbose)
-    pass
-
- 
-  def render(self, cell_data, dof, dimension, unknowns, is_data_associated_to_cell, description, mapping):
     """
-    
-      Overwrite this one for the particular filter. 
-      
-    """
-    result_cell_data = []
 
-    delta_for_print = 10    
-    ratio_for_print = 0
-    if len(cell_data)>10000:
-      delta_for_print = 1
-      
-    if dimension==2:
-      vertices_per_
+    def __init__(self, verbose=False):
+        Filter.__init__(self, True, False, verbose)
+        pass
 
-    for patch in cell_data:
-      average_values = [0] * unknowns
+    def render(
+        self,
+        cell_data,
+        dof,
+        dimension,
+        unknowns,
+        is_data_associated_to_cell,
+        description,
+        mapping,
+    ):
+        """
+        Overwrite this one for the particular filter.
+        """
+        result_cell_data = []
 
-      entries_per_cell = dof**dimension
+        for patch in cell_data:
+            average_values = [0] * unknowns
 
-      for i in range(0,entries_per_cell):
-        for j in range(0,unknowns):
-          average_values[j] = average_values[j] + patch.values[i*unknowns+j]
-      for j in range(0,unknowns):
-        average_values[j] = average_values[j]/entries_per_cell
+            entries_per_cell = dof**dimension
 
-      new_patch = Patch(patch.offset, patch.size, average_values, patch.subdomain_number)
-      result_cell_data.append( new_patch )
+            for i in range(0, entries_per_cell):
+                for j in range(0, unknowns):
+                    average_values[j] = (
+                        average_values[j] + patch.values[i * unknowns + j]
+                    )
+            for j in range(0, unknowns):
+                average_values[j] = average_values[j] / entries_per_cell
 
-    if self.verbose and len(result_cell_data)==0:
-      print( "snapshot has been empty")
-    elif self.verbose:
-      print( "replaced " + str(len(result_cell_data)) + " patches with one voxel with average values")
+            new_patch = Patch(
+                patch.offset, patch.size, average_values, patch.subdomain_number
+            )
+            result_cell_data.append(new_patch)
 
-    mapping = []
-    if dimension==2:
-      mapping = [0.0, 0.0,
-                 1.0, 0.0,
-                 0.0, 1.0,
-                 1.0, 1.0]
-    else:
-      mapping = [0.0, 0.0, 0.0,
-                 1.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0,
-                 1.0, 1.0, 0.0,
-                 0.0, 0.0, 1.0,
-                 1.0, 0.0, 1.0,
-                 0.0, 1.0, 1.0,
-                 1.0, 1.0, 1.0
-                ]
-    return result_cell_data, 1, dimension, unknowns, True, description, mapping
+        if self.verbose and len(result_cell_data) == 0:
+            print("Snapshot has been empty")
+        elif self.verbose:
+            print(
+                "Replaced "
+                + str(len(result_cell_data))
+                + " patches with one voxel with average values"
+            )
 
+        mapping = []
+        if dimension == 2:
+            mapping = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+        else:
+            mapping = [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                1.0,
+                0.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+            ]
+        return result_cell_data, 1, dimension, unknowns, True, description, mapping
