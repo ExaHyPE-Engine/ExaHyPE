@@ -81,6 +81,38 @@ touchCellLastTime | Invoked when the traversal automaton moves from fine to coar
 ------------- | ------------- | -------------
 
 
+## Example
+
+We illustrate some of this behaviour by means of a sketch we usually use to 
+explain domain decomposition. So please ignore the colours of the cells in
+this example:
+
+@image html domain-decomposition/replicated-boundary-data.png
+
+In a serial code, Peano runs through the mesh. Here's some statements on 
+events triggered throughout the traversal:
+
+- Before it kicks off the traversal, beginTraversal() is called.
+- When the code hits cell A, it first of all calls touchVertexFirstTime() on
+  the green vertex, as this vertex has never been used before. This is the only
+  time touchVertexFirstTime() is called for this particular vertex.
+- We get a touchCellFirstTime() event for cell A. At this point, we know that 
+  touchVertexFirstTime() has been called once and exactly once for all
+  @f$ 2^d @f$ adjacent vertices.
+- As the cell is not refined further, we immediately get a touchCellLastTime()
+  after the touchCellFirstTime(). 
+- When we continue the right neighbour, we'll invoke touchVertexFirstTime() on
+  the red vertex. However, such knowledge should not be encoded into any
+  action set logic. 
+- At one point later throughout the traversal, we'll get a touchCellLastTime()
+  for cell B. 
+- After this one has returned, Peano knows that the green vertex will never be
+  used by any of its @f$ 2^d @f$ adjacent cells, i.e. we know that touchCellLastTime()
+  has been called for all of these guys. Consequently, the code will now invoke
+  touchVertexLastTime() on the green guy. This event is also called exactly
+  once throughout the traversal.
+
+
 ## Markers
 
 Whenever you encounter a face, vertex or cell, Peano's action sets will be 
@@ -158,41 +190,9 @@ properties:
 These flags (set in the constructor) give the user control over the order
 of the actions for each even throughout the traversal. They also allow you
 to specify if events can run in parallel.
-
-    There are two properties which feed into the order in which actions are 
-    executed:
-
-    - descend_invocation_order: 
-      Each action set has a descend_invocation_order. The action sets are invoked later
-      in order following their descend_invocation_order throughout the steps down within
-      the tree. Their call order is inverted when we backtrace within the
-      tree. The order allows you to add the action sets in a different
-      order than they are actually used later on. See peano4.solversteps.Step.add_action_set().
-
-    - parallel:
-      Different action sets might be run in parallel if this flag is set.
-      
-    Assume there are four action sets A, B, C and D all tied to an algorithmic 
-    step. The following properties hold:
-    
-    - A: order=4,  parallel=False
-    - B: order=-1,  parallel=False
-    - C: order=6,  parallel=True
-    - D: order=6,  parallel=True
-
-    When the traversal hits touchVertexFirstTime(), it will call
-    
-    - B.touchVertexFirstTime() (as this one has the smallest order value), then
-    - A.touchVertexFirstTime(), and finally
-    - C.touchVertexFirstTime() and D.touchVertexFirstTime() in parallel.
-    
-    For touchCellFirstTime(), the same order is used. However, when we go up 
-    the tree, we invert the order. That is
-
-    - C.touchVertexLastTime() and D.touchVertexLastTime() are invoked in 
-      parallel before
-    - A.touchVertexLastTime(), which in turn precedes
-    - B.touchVertexLastTime().
+Again: This is the control how two touchCellFirstTime() events from two different
+action sets are triggered ***for the same cell*** on one tree simultaneously.
+It has nothing to do with data decomposition, i.e. how the trees are split.
 
 
 */
