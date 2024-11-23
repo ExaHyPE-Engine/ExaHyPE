@@ -72,6 +72,6 @@ namespace tarch {
         const std::set<TaskNumber>&  inDependencies,
         const TaskNumber&            taskNumber
       );
-    } // namespace internal
+    } // namespace taskfusion
   }
 }
