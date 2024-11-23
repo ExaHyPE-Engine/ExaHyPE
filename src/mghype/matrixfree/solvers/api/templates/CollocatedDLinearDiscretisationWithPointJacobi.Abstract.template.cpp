@@ -118,20 +118,33 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
-  clearGlobalResidual();
+  clearGlobalResidualAndSolutionUpdate();
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
-  if (_state == State::Solve) {
+  if ( _state == State::Solve ) {
+    synchroniseGlobalResidualAndSolutionUpdate();
+  }
+
+  if (
+    tarch::mpi::Rank::getInstance().isGlobalMaster()
+    and
+    _state == State::Solve
+  ) {
     logInfo( "endMeshSweep()", toString() );
   }
+
   _state = State::Solve;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update() const {
   return _state == State::Solve;
+}
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
+  return _state;
 }
 
 {{ABSTRACT_SOLVER_IMPLEMENTATION_EXTRAS}}

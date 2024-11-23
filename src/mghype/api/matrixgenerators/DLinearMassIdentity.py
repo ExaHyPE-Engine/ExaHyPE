@@ -29,13 +29,13 @@ class DLinearMassIdentity(MatrixGenerator):
   def __init__(self,
                dimensions,
                poly_degree,
-               unknowns_per_vertex_dof,
+               unknowns_per_node,
                ):
 
     super( DLinearMassIdentity, self ).__init__(dimensions,
                                     poly_degree,
                                    )
-    self.unknowns_per_vertex_dof = unknowns_per_vertex_dof
+    self.unknowns_per_node = unknowns_per_node
     
     # Use matrices for DG Interior Penalty for Poisson equation as we only need the cell-cell and mass matrices, which are identical fro CG
     self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(self.poly_degree)
@@ -45,7 +45,7 @@ class DLinearMassIdentity(MatrixGenerator):
     """!
     @todo should this be 2**D or (p+1)**D? suppose it's not relevant, given this is a linear solver
     """
-    return 2**(self.Dimensions)
+    return 2**(self.dimensions)
  
     
   def get_cell_identity_matrix(self):
@@ -55,9 +55,9 @@ class DLinearMassIdentity(MatrixGenerator):
     scaling, i.e. its scaling is @f$ h^0 @f$.
         
     """
-    dim    = self._cell_dofs * self.unknowns_per_vertex_dof
+    dim    = self._cell_dofs * self.unknowns_per_node
     #           identity matrix.
-    output = np.eye(dim,dim) * 2**(-self.Dimensions)
+    output = np.eye(dim,dim) * 2**(-self.dimensions)
     return output, 0
 
     
@@ -83,7 +83,7 @@ class DLinearMassIdentity(MatrixGenerator):
     '''!
     Here we use a normalised identity matrix instead of the mass matrix.
     To achieve the result (Id_global * b_global), the local matrix should be
-    divided by 2^Dimensions, see get_cell_identity_matrix().
+    divided by 2^dimensions, see get_cell_identity_matrix().
     For example, in 2D, it is 0.25*Id, which, when summed
     for 4 cells sharing each interior vertex, will result in the global identity.
     Note that this does not differentiate between interior and boundary vertices.
@@ -100,10 +100,6 @@ class DLinearMassIdentity(MatrixGenerator):
     '''
     output = self.get_cell_identity_matrix()[0]
     
-    #pad the output
-    if self.unknowns_per_vertex_dof > 1:
-      output = self.pad_matrix(output)
-
     return [output], [0]
         
 
@@ -120,27 +116,4 @@ class DLinearMassIdentity(MatrixGenerator):
     '''
     
     output = self.block_matrix._A_CC[(0,0)][(0,0)]
-    
-    #pad the output
-    if self.unknowns_per_vertex_dof > 1:
-      output = self.pad_matrix(output)
-
-    return [output], [self.Dimensions - 2]
-          
-
-  def pad_matrix(self, matrix):
-    """!
-    This method pads a matrix by concatenating one copy of itself to the end
-    for each unknown_per_vertex dof.
-
-    @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. Maybe provide option to not do this, eg just leave some of them empty
-    """
-    shape  = matrix.shape
-    # make it bigger 
-    output_shape  = [ self.unknowns_per_vertex_dof * s for s in shape ]
-    output        = np.zeros( output_shape )
-
-    for u in range( self.unknowns_per_vertex_dof ):
-      output[ shape[0]*u: shape[0]*(1+u), shape[1]*u:shape[1]*(1+u) ] = matrix
-    
-    return output
+    return [output], [self.dimensions - 2]

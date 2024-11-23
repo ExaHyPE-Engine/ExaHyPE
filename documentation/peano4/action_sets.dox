@@ -54,8 +54,8 @@ event behaviour.
 
 Event  | Semantics | Dependencies
 ------------- | ------------- | -------------
-prepareTraversal | Static routine of an action set which is called before any action set for the particular mesh travesal is created at all. | Precedes the construction of the action sets for the next mesh traversal. Called once per MPI rank only.
-unprepareTraversal   | Inform listeners about end of traversal on this particular subtree after all action sets have termianted and have been destructed. Static binding. | Very last event per rank.
+prepareTraversal | Static routine of an action set which is called before any action set for the particular mesh travesal is created at all. | Precedes the construction of the action sets for the next mesh traversal. Called once per MPI rank only. Study this routine in the context of @ref page_peano_domain_decomposition "data decomposition discussion".
+unprepareTraversal   | Inform listeners about end of traversal on this particular subtree after all action sets have termianted and have been destructed. Static binding. | Very last event per rank. Study this routine in the context of @ref page_peano_domain_decomposition "data decomposition discussion".
 ------------- | ------------- | -------------
 beginTraversal | Inform listeners about start of traversal on this particular subtree. | Called prior to any other event in this grid sweep.
 endTraversal   | Inform listeners about end of traversal on this particular subtree. | Called after all other event in this grid sweep.
@@ -137,6 +137,15 @@ There's no cell enumerator, as you never get more than one cell.
 
 
 ## Sequence and parallelisation of actions
+
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+The term parallelisation here has noting to do with domain decomposition. It simply 
+means that you might want to do various things for a cell/vertex/face when you hit
+it for the first/last time and these things can run in parallel. 
+@ref page_peano_domain_decomposition "Domain decomposition is discussed separatedly".
+</div>
+    
 
 An algorithmic step (Observer) within Python corresonds 1:1 to a class of the
 type peano4::grid::TraversalObserver, and it holds a set of actions. Actions 
