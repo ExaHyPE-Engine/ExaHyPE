@@ -147,7 +147,7 @@ class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
 #include <functional>
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/EnclaveTask.h"
-#include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/Task.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes 
 
 

@@ -33,7 +33,6 @@ class Project(object):
 
     def __init__(self, namespace, project_name, executable, directory=".", subdirectory="", abstract_overwrite=True):
         self._project = peano4.Project(namespace, project_name, directory, subdirectory)
-        self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
         self._subdirectory = subdirectory
         self._abstract_overwrite = abstract_overwrite
 
@@ -53,7 +52,6 @@ class Project(object):
         self._timeout                 = 3600
         self._gpus                    = []
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
-                                          "tarch/multicore/orchestration/StrategyFactory.h",
                                           "tarch/accelerator/Device.h"
                                         ]
         self._Peano_src_directory     = "."
@@ -199,7 +197,7 @@ class Project(object):
     def __export_constants(self):
         """
         We export ExaHyPE's constants. Besides the constants from ExaHyPE,
-        I also export some parameters from Peano onto the ExaHyPE constants
+        we also export some parameters from Peano onto the ExaHyPE constants
         file. Therefore, it is important that you parse the configure output
         before we export the constants.
         """
@@ -305,14 +303,14 @@ thus appreciate any citation of the original release paper
     ):
         """
         ! Set the global simulation parameters
-        
+
         @param dimensions: 2 or 3
-        
+
         @param offset: [Float]
           Has to have dimension number of entries.
-          
+
         @param size: [Float}
-          Has to have dimension number of entries and all of them have to be 
+          Has to have dimension number of entries and all of them have to be
           positive. At this point, we strongly suggest that all size entries
           are exactly the same. While Peano and ExaHyPE do support anisotropic
           meshes, most compute kernels do not, so working with something else
@@ -730,12 +728,6 @@ thus appreciate any citation of the original release paper
         )
         self.__export_constants()
 
-        # self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
-        # self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
-
-        # if self._add_particles_library:
-        #  self._project.output.makefile.add_library( "ToolboxParticles$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
-
         self._project.output.makefile.set_mode(self._build_mode)
 
         return self._project
@@ -773,3 +765,7 @@ thus appreciate any citation of the original release paper
     @property
     def subdirectory(self):
         return self._subdirectory
+
+    @property
+    def additional_includes(self):
+        return self._additional_includes

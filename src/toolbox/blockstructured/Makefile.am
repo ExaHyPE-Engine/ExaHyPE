@@ -17,7 +17,9 @@ ToolboxBlockstructured_SOURCES = \
   UnitTests.cpp \
   tests/InterpolationTest.cpp \
   tests/IandRInMatricesTest.cpp \
-  tests/IandRSecondOrderTest.cpp
+  tests/IandRSecondOrderTest.cpp \
+  tests/IandRThirdOrderTest.cpp \
+  tests/IandRVolumetricTest.cpp
   
 libToolboxBlockstructured2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
 libToolboxBlockstructured2d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE) 

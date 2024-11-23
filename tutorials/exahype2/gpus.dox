@@ -4,6 +4,8 @@
 
 @tableofcontents 
 
+@image html gpus.png
+
 ExaHyPE uses GPUs in a classic ***offloading*** mode: 
 It takes particular tasks, ships them to the GPU and then ships them
 back. This happens under the hood, and neither does data reside on the
@@ -37,11 +39,6 @@ of these guys in one rush. We refer to this as ***fused*** updates.
 The description above gives us a clear roadmap how to offload code in 
 ExaHyPE to the accelerator:
 
-1. Compile with GPU support
-2. Pick a task-based solver, as we only offload tasks to GPUs
-3. Ensure that these tasks have a stateless variant
-4. Enable task fusion
-
 
 # Compile with GPU support
 
@@ -55,7 +52,7 @@ The @ref tarch_logging "logging section" discusses variations of the
 toolchain support.
 
 
-# Pick a solver with GPU support
+# Pick a task-based solver
 
 The particular tasking concept that we implement in ExaHyPE is called enclave
 tasking. 
@@ -81,11 +78,84 @@ on your chosen solver configuration. Solvers that support enclave tasking
 typically have a distinct name. exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking is
 for example a solver which yields tasks.
 
+Once you have chosen such a solver and compile the code, there should be a tasks
+subdirectory after you've lowered your code to C++.
+It makes sense to look into this C++ code from time to time to check if the 
+generated code does make sense.
+
+
+# Assess suitability
+
+Before we look into generated code or even start to implement something for 
+GPUs, we should assess if there are any tasks that could, in theory, go to the 
+accelerator.
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+Many developers jump straight into accelerator programming and then are 
+frustrated if ExaHyPE does not use the GPU and blame the code. Most of their 
+time, they haven't done their homework: Peano always tries to maximise the 
+CPU usage first before it offloads to the GPU. For tiny problems or unfortunate
+load balancing, the code hence might not use the GPU even though the code is,
+in principle, GPU-ready. This is a natural consequence of our aim to 
+<b>minimise data movements</b>. If we don't have to ship data to the GPU, we
+don't do it!
+</div>
+
+Peano provides an ecosystem to assess to which degree a code might be suitable
+for an accelerator even before we start the porting:
+
+1. Compile in the @ref tarch_logging "statistics mode". This requires you to switch to
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.set_Peano4_installation(..., peano4.output.CompileMode.Stats)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Run the code. I recommend that you use a fairly short run, i.e. only a few
+   time steps. The code will provide a statistics file:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tarch::logging::Statistics::writeToCSV(string)          write statistics to file statistics-rank-0.csv (total no of entries=117)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Peano's postprocessing comes along with several scripts to inspect and 
+   to postprocess the outcome. Inspect the statistics file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistics-rank-0.csv 
+Column 	| Counter
+--------|----------------
+0	|  time (always used to plot)
+1	|  exahype2::EnclaveBookkeeping::memory-allocations
+2	|  mpi wait times
+3	|  tarch::multicore::bsp-concurrency-level
+4	|  tarch::multicore::spawned-tasks
+5	|  tarch::multicore::taskfusion::process-fused-tasks
+6	|  tarch::multicore::taskfusion::submit-fused-tasks
+7	|  grid-control-events
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   to find out which column gives you information about spawned tasks and all
+   the fused tasks.
+4. Visualise the number of tasks over time:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 4,5,6 -o pdf statistics-rank-0.csv
+python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 5 -pt step -o pdf statistics-rank-0.csv
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If we get pictures similar to 
+
+@image html gpu-statistics-00.png
+@image html gpu-statistics-01.png
+
+we face issues: Apparently the code does spawn a lot of tasks which could, in 
+theory, be fused, but the fusion only ever takes one task at a time and deploys
+it. Consult the @tarch_logging "statistics page" for some more information on 
+the plots.
+
+In this example, we clearly don't produce tasks quickly enough. There are 
+always some cores idling which snap away fusable tasks before they can 
+accumulate on the host. Further to that, the scheduler changes its behaviour
+after some time and no tasks are produced at all anymore. These effects have 
+to be studied and sorted out first, before we continue to try to offload to the
+GPU.
+
+
 
 # Enable stateless compute kernels
-
-
-## Pick the right solver
 
 You next have to instruct your solver that 
 you plan to have patch or cell updates without (write) access to the solver's internal 
@@ -123,7 +193,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-## Provide the additional PDE terms without state.
+# Provide the additional PDE terms without state
 
 To faciliate the offloading, we have to create alternative versions of
 our PDE term functions that can work independent of the solver object
@@ -198,86 +268,67 @@ Therefore, we have the assertions on the CPU, but the core part that
 goes to the GPU is free of assertions. The same holds for the logging.
 
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 Most ExaHyPE solvers allow you to insert the realisation of a routine directly
-from the Python code. In this case, the call ends up the AbstractMySolver
-class. 
-Most classes call the corresponding routine set_implementation(). If you use
-this one, the code generator usually does not distinguish the two callback
-flavours and uses the same code snippet for the normal as well as the 
-vectorised version.
-However, it is likely that the files end up in the cpp file of the abstract 
-super class. That is, the compiler will not be able to inline anything. If 
-your compiler struggles with the inlining, you might be forced either 
-
-- to dive into linker-time optimisation - Intel, for example, did allow you to 
-  run interprocedural optimisation (ipo) on bundles of object files; or
-- to switch to a manual implementation and to move the GPU routines into the
-  headers. 
+from the Python code. In this case, both calls end up the AbstractMySolver
+class: the default variant and the stateless variant, too.
+</div>
 
 
-## Alter compute kernel
+# Compile, run and check
 
-You now have a GPU-ready solver, but the solver does not yet know how to 
-address the GPU as all of ExaHyPE's generic solvers are written for CPUs
-in the first place. We therefore have to inform the solver that there are
-bespoke GPU kernels. They typically have a 
+In principle, the code is now GPU ready. Compile and run.
+
+
+# Tailor kernel choice
+
+Most ExaHyPE solvers employ at least three different kernel variations:
+a normal one, one that vectorises aggressively on the host, and one that
+offloads to the GPU. If you use the default configuration, all should be
+set to some reasonable defaults. If this is not the case, you can manually
+alter
 
         self._fused_compute_kernel_call_cpu
+        self._fused_compute_kernel_call_gpu
 
-attribute to switch to a faster kernel realisation variant. 
-
-You do not have to set this function call directly. There are factory 
-mechanisms:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-my_solver._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
-  my_solver._flux_implementation, 
-  my_solver._ncp_implementation, 
-  my_solver._source_term_implementation, 
-  compute_max_eigenvalue_of_next_time_step=True, 
-  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
-  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
-)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+These values hold C++ strings, which are typically method invocations to the 
+corresponding computing kernels. If you play around with these values, you 
+might want to study @ref page_exahype_gpu "further GPU realisation details" 
+and dive into the code.
 
 
 # Fuse tasks
 
-@todo We might want the default strategy to offload each and every task to the GPU. If we do that, then this section belongs to the more techi GPU discussion, but it is easier to do the offloading
+Finally, we might want to tailor the fusion of tasks. For example, you might
+want to offload to the GPU if and only if there are enough tasks that you can 
+bundle (fuse) into one meta task. Of you might want to use different GPUs 
+depending on the task context. These decisions are made by the multithreading
+orchestration (among other things).
 
-Finally, we enable the fusion of tasks. By default, ExaHyPE does some 
-task fusion but only for a reasonable number of fusable tasks. If you have a 
-multithreaded code and a small setup, you might never hit a setup where enough
-"free" tasks are in the system such that the technical architecture fuses them.
-You might want to pick a different orchestration which enforces task fusion 
-(or even forces each task onto the GPU).
-
-There are two ways to do this. You can switch the strategy
+You can switch the orchestration
 manually in your C++ file. By default, the initialisation of ExaHyPE does this:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 tarch::multicore::setOrchestration( tarch::multicore::orchestration::createDefaultStrategy() );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you study tarch::multicore::orchestration::createDefaultStrategy(), you'll see
-that this one disables task fusion. So you have to reset the orchestration later on.
-
-The more elegant variant is likely that you use 
+You can alter this one.
+A more elegant variant is likely that you use 
 exahype2.Project.set_multicore_orchestration() to let the lowering into Peano 
 automatically insert an appropriate setOrchestration() call. The namespace
 tarch::multicore::orchestration holds a bundle of different orchestration strategies
 that you can use to tweak your code. A good starting point is
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-my_project.set_multicore_orchestration( "" )
+my_project.set_multicore_orchestration( "new otherOrchestration(...)" )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Very advanced codes write their own orchestration which ships particular tasks 
-specifically to the GPU. 
-Through this, you can tailor the task execution pattern towards your specific needs.
 
 
-# Select which octants (cells or patches) to ship to the GPU and back
+
+# Advanced techniques
+
+## Select which octants (cells or patches) to ship to the GPU and back
 
 If only some patches/cells can be offloaded to the GPU, then you can
 redefine the routine
@@ -296,13 +347,22 @@ is written in the AbstractXXX solver. But nothing stops you from redefining
 the function in your particular solver subclass.
 
 
+## Write your own orchestration
+
+Very advanced codes write their own orchestration which ships particular tasks 
+specifically to the GPU. 
+Through this, you can tailor the task execution pattern towards your specific needs.
+Notably, the orchestration is asked per task type whether and where to ship the 
+task.
+
+
 # Further reading
 
 - Switch to a toolchain for your particular GPU backend. Information on this can be found at \ref tarch_logging.
-- Switch on the statistics. The multicore backend tells you how many "fusable" tasks arise over time. Information on this can be found at \ref tarch_logging.
 - Consult the @ref  page_exahype_performance_optimisation "The code does not use all cores" discussion.
 - @ref tarch::multicore "The multicore layer in the technical architecture"
 - @ref page_exahype_gpu provides a more technical discussion of the GPU offloading
+
  
   */
   

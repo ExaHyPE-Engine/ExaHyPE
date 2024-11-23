@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "tarch/multicore/Tasks.h"
+#include "../../../../src/tarch/multicore/Task.h"
 #include "tarch/accelerator/Device.h"
 #ifdef PureFV
 #else
