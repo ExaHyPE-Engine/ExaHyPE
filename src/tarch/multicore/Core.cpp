@@ -60,9 +60,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 void tarch::multicore::Core::configure(int numberOfThreads) {}
 
-void tarch::multicore::Core::shutdown() {
-  internal::shutdownInternalTaskQueues();
-}
+void tarch::multicore::Core::shutdown() {}
 
 bool tarch::multicore::Core::isInitialised() const { return true; }
 
