@@ -38,10 +38,21 @@ parser.add_argument(
     default=False,
     help="Plot historgram of particle positions",
 )
+parser.add_argument(
+    "-dx",
+    "--displacement",
+    dest="max_displacement",
+    required=False,
+    default=0.12499,
+    type=float,
+    help="Maximal displacement in units of interparticle distance",
+)
+
 
 args = parser.parse_args()
 npart = args.particle_number
 seed = args.random_seed
+max_displacement = args.max_displacement
 
 
 # ---------------------------------------------------
@@ -94,9 +105,9 @@ def get_coords(box_xmin, box_xmax, box_ymin, box_ymax, box_zmin, box_zmax, npart
     # uniform particle distribution.
 
     # rng.random returns random numbers in [0, 1). Scale that to [-1, 1)
-    displacement_x = (2.0 * rng.random((npart3, 1)) - 1.0) * 0.499 * dx
-    displacement_y = (2.0 * rng.random((npart3, 1)) - 1.0) * 0.499 * dy
-    displacement_z = (2.0 * rng.random((npart3, 1)) - 1.0) * 0.499 * dz
+    displacement_x = (2.0 * rng.random((npart3, 1)) - 1.0) * max_displacement * dx
+    displacement_y = (2.0 * rng.random((npart3, 1)) - 1.0) * max_displacement * dy
+    displacement_z = (2.0 * rng.random((npart3, 1)) - 1.0) * max_displacement * dz
     new_coords[:, 0] += displacement_x[:, 0]
     new_coords[:, 1] += displacement_y[:, 0]
     new_coords[:, 2] += displacement_z[:, 0]
@@ -143,11 +154,11 @@ coords[3 * npart3 :, :3] = new_coords[:, :3]
 # for the cell size.
 # So let's scale the particles down into a smaller box than the actual
 # box size.
-scale = 1.0 / 5
+scale = 0.4
 coords *= scale
 h *= scale
 # and shift them into the center
-coords += 0.4
+coords += 0.3
 
 
 if args.plot:
@@ -168,13 +179,16 @@ grp.attrs["NumPart_Total"] = [npart**3, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_Total_HighWord"] = [0, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_ThisFile"] = [npart**3, 0, 0, 0, 0, 0]
 # This is an addition for this test to be able to estimate the search radius.
-grp.attrs["NumPart_base"] = [npart / scale]
+grp.attrs["NumPart_base"] = [npart]
 grp.attrs["Time"] = 0.0
 grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 grp.attrs["Flag_Entropy_ICs"] = 0
 grp.attrs["Dimension"] = 3
+# Non-swift additions
 grp.attrs["RandomSeed"] = seed
+grp.attrs["MaxDisplacement"] = max_displacement
+grp.attrs["NumpyVersion"] = np.__version__
 
 # Units
 grp = file.create_group("/Units")

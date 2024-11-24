@@ -10,7 +10,7 @@ export OMP_NUM_THREADS=2
 IC_FILENAME="test_sml_1D.hdf5"
 
 # Parameters
-N_PART=1000          # fixed by IC file
+N_PART=1000
 CELL_SIZE=0.1
 H_TOLERANCE=1e-6
 

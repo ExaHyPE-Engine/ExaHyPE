@@ -182,7 +182,7 @@ KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
 
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / npart_base
-hydro_H_max = 8 * dx
+hydro_H_max = 4 * dx
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )

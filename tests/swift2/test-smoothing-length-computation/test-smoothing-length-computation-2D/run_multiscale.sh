@@ -10,7 +10,7 @@ export OMP_NUM_THREADS=2
 IC_FILENAME="test_sml_2D.hdf5"
 
 # Parameters
-N_PART=20
+N_PART=10
 # if the cell size is too small, the initial search radius may be too small,
 # and you won't find correct smoothing lengths. Instead, you'll get Warnings
 # "h ~ h_max"

@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 
 """!
-Generates 3D randomized particle distribution.
+Generates 3D uniform particle distribution with randomized small displacements.
 """
 
 fileName = "test_sml_3D.hdf5"
@@ -34,10 +34,21 @@ parser.add_argument(
     default=False,
     help="Plot historgram of particle positions",
 )
+parser.add_argument(
+    "-dx",
+    "--displacement",
+    dest="max_displacement",
+    required=False,
+    default=0.2499,
+    type=float,
+    help="Maximal displacement in units of interparticle distance",
+)
+
 
 args = parser.parse_args()
 npart = args.particle_number
 seed = args.random_seed
+max_displacement = args.max_displacement
 
 
 # ---------------------------------------------------
@@ -74,7 +85,7 @@ for i in range(npart):
 
 rng = np.random.RandomState(seed=seed)
 # rng.random returns random numbers in [0, 1). Scale that.
-displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.199 * dx
+displacement = (2.0 * rng.random(coords.shape) - 1.0) * max_displacement * dx
 #  displacement = np.zeros(coords.shape)
 coords[:, 0] += displacement[:, 0]
 coords[:, 1] += displacement[:, 1]
@@ -86,11 +97,13 @@ coords[:, 2] += displacement[:, 2]
 # for the cell size.
 # So let's scale the particles down into a smaller box than the actual
 # box size.
-scale = 1.0 / 5
+# Also, at full scale, the particles along the boundary/in corners start
+# disagreeing stupidly. So let's not do that.
+scale = 0.6
 coords *= scale
 h *= scale
 # and shift them into the center
-coords += 0.4
+coords += 0.2
 
 if args.plot:
     from matplotlib import pyplot as plt
@@ -110,13 +123,16 @@ grp.attrs["NumPart_Total"] = [npart**3, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_Total_HighWord"] = [0, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_ThisFile"] = [npart**3, 0, 0, 0, 0, 0]
 # This is an addition for this test to be able to estimate the search radius.
-grp.attrs["NumPart_base"] = [npart / scale]
+grp.attrs["NumPart_base"] = [npart]
 grp.attrs["Time"] = 0.0
 grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 grp.attrs["Flag_Entropy_ICs"] = 0
 grp.attrs["Dimension"] = 3
+# Non-swift additions
 grp.attrs["RandomSeed"] = seed
+grp.attrs["MaxDisplacement"] = max_displacement
+grp.attrs["NumpyVersion"] = np.__version__
 
 # Units
 grp = file.create_group("/Units")
