@@ -278,6 +278,9 @@ grid_traversal_event.add_attribute(
         "isFaceAdjacentToParallelDomainBoundary", "TwoTimesD", compress=True
     )
 )
+grid_traversal_event.add_attribute(
+    peano4.dastgen2.Peano4IntegerArray("numberOfAdjacentTreesPerVertex", "TwoPowerD")
+)
 
 grid_traversal_event.add_attribute(
     dastgen2.attributes.BooleanArray(

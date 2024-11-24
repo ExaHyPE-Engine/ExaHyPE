@@ -56,6 +56,8 @@ struct peano4::datamanagement::FaceMarker {
 
     std::bitset<2*Dimensions>             _isLocal;
 
+    std::bitset<2*Dimensions>             _isAdjacentToParallelBoundary;
+
     bool                                  _cellIsLocal;
 
     int _select;
@@ -161,6 +163,9 @@ struct peano4::datamanagement::FaceMarker {
 
     bool isLocal() const;
     bool isLocal(int i) const;
+
+    bool isAdjacentToParallelBoundary() const;
+    bool isAdjacentToParallelBoundary(int i) const;
 
     /**
      * Return relative position within father cell. The result is from

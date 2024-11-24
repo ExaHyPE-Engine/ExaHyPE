@@ -2,7 +2,19 @@
 
 \page page_peano_domain_decomposition Domain decomposition
 
-@image html domain-decomposition.png
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+This page will frequently refer to action sets and their order. It therefore
+is reasonable to study @ref peano_action_sets "the description of action sets"
+first. 
+</div>
+    
+    
+@image html domain-decomposition/domain-decomposition.png
 
 Peano starts from spacetrees and thinks in whole trees and only supports two
 types of decomposition operations: a split and a join. At the same time,
@@ -16,239 +28,122 @@ trees issue tasks, then these tasks team up with the tasks handling the
 individual spacetrees. Your task graph starts to contain a mixture of
 tree tasks and user-defined tasks. This section discusses solely the
 tree decomposition aspect within Peano, i.e. ignores that there might be tasks as well.
-It discusses the multiscale non-overlapping domain decomposition.
-
-The page is split into different parts:
-
-1. We discuss how to the domain decomposition is realised within Peano's 
-   core code.
-2. We discuss how to use the domain decomposition within a shared memory code,
-   i.e. what you have to do from a user's point of view.
-3. We discuss how to use the domain decomopsition within an MPI code,
-   i.e. what you have to do from a user's point of view.
-4. We discuss the underlying algorithms and design principles.
 
 
-## Domain decomposition within a (typical) Peano application
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+Each subtree is completely independent: If Peano cuts a tree into chunks,
+these trees do not share any data anymore, no matter whether they are 
+deployed onto separate ranks or separate treads or a mixture of those. 
+We work with a multiscale, non-overlapping domain decomposition.
+</div>
+
+
+
+# Domain decomposition within a (typical) Peano application
 
 A tree in Peano is split along the Peano space-filling curve. This
-implies that the decomposition of the finest mesh is a non-overlapping
-decomposition where each cell is assigned to exactly one chunk. Each 
-chunk is mapped onto one thread on one rank.
+implies that the decomposition on each mesh level is a non-overlapping
+decomposition where each cell is assigned to exactly one chunk.
 
-If you run Peano 4, you buy into MPI's SPMD paradigm, i.e. every
+
+@image html domain-decomposition/replicated-boundary-data.png
+
+
+The illustration above makes this point: The blue and the red 
+tree own a part of the overall domain.
+They do not share any cells, but they have a common boundary of four
+edges.
+
+
+Data on these edges is replicated, i.e. the four faces exist twice:
+once on the red and on the blue tree.
+Also the two marked vertices exist twice. 
+
+
+Peano still works with proper trees and will actually let the red tree store parts of the blue partition as well and vice versa.
+How this is done is hidden from the user.
+Effectively, you know that each rank will somehow run through a part of the global domain.
+Some synchronisation and consistency rules remain in place:
+
+- Red will definitely skip all blue cells even if it should hold them.
+- Both trees will preserve the exactly same order for all shared data. If red touches the green vertex prior to the red one, then the blue partition will also process the vertices in the same order.
+- After each mesh traversal, the two trees will exchange their data (although there are two other data exchange schemes as well).
+- Both trees will trigger the related additional merge actions as described below.
+
+
+
+## Observers and action sets
+
+If you run Peano 4, you buy into a SPMD paradigm, i.e. every
 single rank hosts one instance of Peano. Each Peano instance in return
-hosts multiple subspacetrees, i.e. multiscale domain partitions. It is
+hosts multiple subspacetrees, i.e. multiscale domain partitions. 
+When you pick a new observer with some action sets and you call 
+traverse(), you expect that all the trees on each and every rank
+run through their mesh and use the same observer, i.e. deploy
+events to the same action sets.
+
+
+It is
 the user's responsibility to ensure that the ranks do coordinate with
 each other. That is, the user has to ensure that whenever you run a
 certain type of grid sweep on one rank, then the other ranks run this
-sweep as well. 
-
-All the trees on one rank are held within one instance peano4::parallel::SpacetreeSet.
-The set is actually a singleton, to you don't have to ensure manually that
-there is only one set on your rank.
-You can tell the spacetree set to
-decompose one of the local spacetrees further through its split()
-routine.
-If you invoke its traverse() routine, it will automatically ensure that 
-all spacetrees do the same, though the actual travesal of various trees 
-(aka subdomains) will run in parallel on multiple threads. 
+sweep as well. I provide remarks on this at the end of the page. Most users will never
+ever see this part - notably not if they use high-level toolkits built
+on top of Peano such as ExaHyPE or Swift 2. The main codes produced by
+these high-level extensions automatically guarantee that all ranks do
+exactly the same. 
 
 
-## Distributed memory programming (MPI)
+## Lifecycle of action sets
 
-A typical Peano4 code distinguishes the global master (rank 0) from the
-workers (all other ranks). The global master hosts all the program
-logic, i.e. decides which steps to run in which order. There's no reason
-for you not to emancipate from this pattern, but it has proven of value.
-The main of a Peano 4 application therefore always looks similar to
+Each action set (instance of the class) is created once per tree.
+In addition, a prototype action set does exist.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) { 
-  // All the program logic, i.e. all decisions here else
-}
-else { 
-  // React to rank 0's decisions what to do next on all ranks
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  
-Before we start, lets assume that each individual step (type of run
-through the mesh) has a unique positive number.
+In the baseline version, only one instance of an action set does exist
+per rank. 
+For this action set, we call prepareTraversal().
+Once this routine has terminated, 
+we create N clones of the action set object if we host N subtrees.
+As ranks can host different numbers of subtrees, the number of clones
+differs per rank.
 
+As each subtree is completely independent of all other subtrees, 
+beginTraversal() and endTraversal() are called on the clone, i.e. 
+multiple times.
+If vertices or faces sit exactly at the interface of subdomains, they
+their touchVertexFirstTime() is called multiple times, i.e. once per
+instance of this vertex. touchVertexLastTime() and the face events 
+follow analogously.
 
-Peano handles all (multiscale) boundary data transfer and data migration
-within the mesh.
-Everything not tied to the mesh is \emph{not} handled by \Peano.
-That means there's not even a reduction of the grid statistics over MPI.
-We do provide reduction and broadcast features however. 
-If you need these global data, I recommend that you realise all reductions and
-broadcasts in your main rather than inside of the \Peano\ mappers or other
-classes.
+After all trees on a rank have finished their traversal, i.e. all the 
+endTraversal() calls have returned, the clones of the action sets are
+destroyed, and we all unprepareTraversal() one final time on the 
+vanilla/baseline instance of the action set.
 
 
-Distributed memory programming in Peano can be tricky, as we have a lot
-of different threads per rank and the ranks run pretty asynchronously.
-Therefore, it is always a bad idea to use blocking or synchronising
-routines. Instead, you should use on routines implemented within 
-tarch::parallel as they usually take the MPI+X stuff into account.
-Here are a few recommendations:
+## Data exchange
 
-1.  Do not use a blocking send or receive, even if routines are
-    logically blocking. Instead, use a non-blocking routine and poll the
-    termination via `MPI_Test`. While you poll, invoke
-    `receiveDanglingMessages()` on the services to allow  to free the
-    queue from other messages such as load balancing requests which
-    might be in your way.
+After the traversal has terminated, Peano is responsible to exchange
+all data. This is completely hidden. At one point prior to the next
+usage of any data, Peano will issue additional merge routines, so 
+users can define domain-specific logic:
 
-2.  Register your own routine as a service (see
-    `tarch::services::Service`) and equip it with a
-    `receiveDanglingMessages()` routine which probes the MPI queues. If
-    a message of relevance is in the MPI queue, receive it. If you can't
-    react directly, buffer it internally. This routine ensures that the
-    MPI buffers can't overflow. Overflows force MPI to fall back from
-    eager to rendeszouz communication which can lead to deadlocks.
 
-3.  Do never impose any synchronisation unless absolutely required.
-    Notably, try to avoid synchronisation within the action sets! In the
-    ideal case, you implement a Jacobi-like data exchange: The action
-    sets send stuff out. There's a service (see above) which receives
-    the data. This data is then used by the action set (or another one)
-    in the subsequent grid pass.
-
-4.  If you have a global operation, use a non-blocking collective and
-    wait for the collective's test in the subsequent grid run-through.
-
-If a message consists of multiple parts, you might have to fuse it into
-one message to avoid that the first part of a message is received and
-queue polling (on another thread) then grabs the second part
-misinterpreting it for the first part of yet another message.
-
-### Synchronisation
-
-I also offer a boolean semaphore accross all MPI ranks. This one is
-quite expensive, as it has to lock both all threads and all ranks and
-thus send quite some messages forth and back.
-
-The usage is similar to the shared memory lock, but you have to give the
-semaphore a unique name (you might construct a string using the
-`__LINE__` and `__FILE__` macro). It is the name that  uses to ensure
-that the semaphore is unique accross all ranks. In this way, the
-semaphore is similar to an OpenMP named critical section. I recommend to
-avoid MPI barrier whenever possible. Details can be found in
-`tarch::mpi::Rank::barrier()`.
-
-### Exchange global data between ranks (reduction)
-
-If you reduce data betwen the ranks, I recommend that you use 's
-wrappers. They have two advantages: They automatically provide deadlock
-tracking, and they poll the MPI queues, i.e. if the code stalls as too
-many other messages for other purposes (global load balancing, plotting,
-...) drop in, and remove these messages from the buffers such that MPI
-can make progress. The usage is detailed in
-`tarch::mpi::Rank::allReduce`, but the code usually resembles:
+Event  | Semantics | Dependencies
+------------- | ------------- | -------------
+receiveAndMergeVertex | If a vertex exists on N different trees, this routine is called N-1 times per tree, i.e. in total N(N-1) times: Each local vertex is presented its N-1 counterparts per traversal. | This routine precedes touchVertexFirstTime().
+receiveAndMergeFace | If a face exists on two trees, this routine is called once per tree, i.e. twice in total: Each local face is presented its counterpart per traversal. | This routine precedes touchVertexFaceTime().
+------------- | ------------- | -------------
+touchVertexLastTime | Afer this routine has terminated, each tree takes (for all vertices along a boundary) the latest version and shares it with all other replicas. It sends it out. The sent data will be presented to the merge routine on the counterpart at an arbitrary time in the next mesh sweep. | This routine precedes receiveAndMergeVertex of the next mesh sweep. 
+touchFaceLastTime | Afer this routine has terminated, each tree takes (for all faces along a boundary) the latest version and shares it with the other tree holding a copy of this face. It sends it out. The sent data will be presented to the merge routine on the counterpart at an arbitrary time in the next mesh sweep. | This routine precedes receiveAndMergeFace of the next mesh sweep. 
+------------- | ------------- | -------------
+prepareTraversal | Is called once per rank before we create the actual action sets. | Precedes the beginTraversal() calls which are called once per subtree.
+unprepareTraversal | Is called ocne per rank after the rank-local traversals have all terminated. | Follows the last endTraversal() call.
+------------- | ------------- | -------------
 
 
 
-If you reduce data betwen the ranks, I recommend that you use \Peano's wrappers.
-They have two advantages:
-They automatically provide deadlock tracking, and they poll the MPI queues,
-i.e.~if the code stalls as too many other messages for other purposes (global
-load balancing, plotting, \ldots) drop in, and remove these messages from the
-buffers such that MPI can make progress. The usage is detailed in
-\texttt{tarch::mpi::Rank::allReduce}, but the code usually resembles:
-
-~~~~~~~~~~~~~~~~~~~~~
-double myBuffer = _myVariable;
-
-tarch::mpi::Rank::getInstance().allReduce(
-  &myBuffer,
-  &_myVariable,
-  1, MPI_DOUBLE,
-  MPI_MIN,
-  [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-);
-~~~~~~~~~~~~~~~~~~~~~
-
-
-## Shared memory programming
-
-This section discusses *shared memory programming from a domain decomposition view*.
-More general remarks on shared memory primitives and task-based 
-programming can be found in the discussion of the tarch::multicore
-namespace.
-
-Realising global variables shared between action sets is in principle
-impossible: Action sets are not persistent. They are created per
-traversal per tree. Furthermore, you have absolutely no knowledge how
-many trees any rank hosts. The only thing you know is that all trees
-will kind of start their traversal around the same time.
-
-However, there is a design pattern that you can use. It relies on the
-observations that (i) all the `beginTraversal()` events are triggered
-**after** all the global trees have synchronised. (ii) Tree 0 exists
-always.
-
--   There are two static datasets per rank. This is the only valid
-    data in-between any two grid traversals. One is the current data,
-    one is the data from the previous sweep.
-
--   Every action sets builds up its local current data and commits this
-    data to the static global dataset in endTraversal(). This local
-    reduction has to be protected by a (rank-local) semaphore.
-
--   In the main routine, each rank calls a routine which reduces the
-    static current data set to rank 0. Rank 0 then broadcasts the
-    reduced data and each rank rolls over the reduced data into the
-    static old data set. The current data is cleared.
-
--   Every action set copies the old data set into its local copy.
-
-These MPI/thread-global barriers can be very expensive and have the
-potential to lead to deadlocks/timeouts. Use them with care and localise
-their behaviour.
-
-
-
-### Design patterns for global variables between action sets
-
-Realising global variables shared between action sets is in principle
-impossible: 
-Action sets are not persistent. 
-They are created per traversal per tree.
-Furthermore, you have absolutely no knowledge how many trees any rank hosts.
-The only thing you know is that all trees will kind of start their traversal
-around the same time.
-
-
-However, there is a design pattern that you can use.
-It relies on the observations that (i) all the \texttt{beginTraversal()} events
-are triggered \emph{after} all the global trees have synchronised.
-(ii) Tree 0 exists always.
-
-
-\begin{itemize}
-  \item There are two \emph{static} datasets per rank. This is the only valid
-  data in-between any two grid traversals. One is the current data, one is the
-  data from the previous sweep.
-  \item Every action sets builds up its local current data and commits this 
-  data to the static global dataset in \texttt{endTraversal()}. This local
-  reduction has to be protected by a (rank-local) semaphore.
-  \item In the main routine, each rank calls a routine which reduces the
-  static current data set to rank 0. Rank 0 then broadcasts the reduced data and
-  each rank rolls over the reduced data into the static old data set. The
-  current data is cleared.
-  \item Every action set copies the old data set into its local copy.
-\end{itemize}
-
-
-\begin{remark}
-  These MPI/thread-global barriers can be very expensive and have the potential
-  to lead to deadlocks/timeouts. Use them with care and localise their
-  behaviour.
-\end{remark}
-
-
-## Underlying algorithms
+# Decomposition constraints
 
 Before we discuss any algorithms that Peano employs, it is important to state 
 that Peano always commits to two fundamental constraints:
@@ -274,7 +169,16 @@ It will try to stay close to 100, but the constraints have a higher priority
 than your request.
 
 
-#### Examples
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+Load balancing schemes make ***recommendations*** to Peano how to split up 
+the mesh. However, a split() call is never strict, i.e. Peano might decide
+to ignore it or to implement it only partially. This happens whenever the mesh 
+changes on-the-fly or a constraint might be violated if we followed the split
+instruction strictly.
+</div>
+
+
+## Examples
 
 @image html domain-decomposition/tree-topology.png
 
@@ -313,7 +217,7 @@ want to try to meet the number of cells split off or try to maximise the
 probability that whole trees are split off. 
 
 
-#### Rationale
+## Rationale
 
 We want to work with a proper master-worker topology such that we have 
 well defined relations where a tree has to send data to if data has to 
@@ -339,8 +243,7 @@ of vertex data with neighbours. No data has to be propagated between
 levels just to get the vertex data right.
 
 
-#### Data flow patterns
-
+# Data flow patterns
 
 With these two constraints in place, we can discuss Peano's data flow:
 The code relies on a multiscale non-overlapping domain decomposition. Within the
@@ -401,7 +304,7 @@ This yet has to be written.
 
 
 
-## Splits
+# Splits
 
 Splits are triggered via peano4::parallel::SpacetreeSet::split().
 Whenever you split a tree, Peano creates the new trees (either as
@@ -517,14 +420,14 @@ substeps:
 @image html domain-decomposition/split-data-flow.png
 
 
-#### User data throughout splits
+## User data throughout splits
 
 There is no need for the user to implement something manually, as long
 as the user ensures that the grid observer replicates the master tree on
 all new workers. The `SpacetreeSet` offers a function to do this
 automatically.
 
-#### Data ownership throughout splits
+## Data ownership throughout splits
 
 Throughout the split traversals, the code continues to interact with the
 user and continues to compute, i.e. all splitting is seamlessly
@@ -533,7 +436,7 @@ split, the logical ownership of all data resides with the master,
 i.e. it is the master automaton who asks the user code what operations
 to invoke on the data.
 
-#### Observation and best practices
+## Observation and best practices
 
 As  preserves the logical topology between trees, it is reasonable to
 strive for as wide tree topologies as possible. Otherwise, your meshes
@@ -543,7 +446,7 @@ rather than splitting a into b,c and then b and c again.
 
 
 
-## Joins
+# Joins
 
 Joins are completely hidden from the user, i.e. there's no way to
 actively join trees. To understand why Peano issues joins from time to
@@ -592,7 +495,7 @@ zipping to bring the info of two trees together. If I realise a
 deteriorated-trees-only policy, I don't need such zipping as (almost)
 all information is available on the master already.
 
-#### Temporal ordering throughout joins with SpacetreeSet
+## Temporal ordering throughout joins with SpacetreeSet
 
 Analogous to the splitting process, each join is broken up into two
 traversals. Throughout these traversals, the code continues to interact
@@ -621,7 +524,7 @@ has read its information. Whenever it runs through a mesh entity for the
 very last time, it merges its local user data with the streamed-in
 records from the (former) worker.
 
-#### Data ownership throughout joins
+## Data ownership throughout joins
 
 Throughout the split traversals, the code continues to interact with the
 user and continues to compute, i.e. all splitting is seamlessly
@@ -630,7 +533,7 @@ split, the logical ownership of all data resides with the master,
 i.e. it is the master automaton who asks the user code what operations
 to invoke on the data.
 
-#### Grid data streaming throughout joins
+## Grid data streaming throughout joins
 
 In principle, one might assume that no streaming is required if we merge
 only deteriorated trees. After all, if a rank deploys some subtree to
@@ -651,7 +554,7 @@ stacks and write the data to them. When we hand the data over to the
 master, we revert the order on the stack and thus effectively convert it
 into a stream.
 
-#### User data streaming throughout joins
+## User data streaming throughout joins
 
 This section is incomplete and only partially implemented.
 
@@ -667,7 +570,132 @@ Throughout the join, no data flows logically, as the master already has
 the mesh. Furthermore, only data that is actually owned by the worker is
 handed over to the master.
 
+All the trees on one rank are held within one instance peano4::parallel::SpacetreeSet.
+The set is actually a singleton, to you don't have to ensure manually that
+there is only one set on your rank.
+You can tell the spacetree set to
+decompose one of the local spacetrees further through its split()
+routine.
+If you invoke its traverse() routine, it will automatically ensure that 
+all spacetrees do the same, though the actual travesal of various trees 
+(aka subdomains) will run in parallel on multiple threads. 
 
+
+# Implementation
+
+
+## Using replication information
+
+Sometimes, you have to know how often a vertex or face is replicated. 
+If you compute the global residual of a linear equation system for example, you 
+likely would like to accumultae this information in touchVertexLastTime() or
+touchVertexFirstTime(). However, this means that you consider faces and vertices
+at domain boundaries multiple times. 
+
+For faces, you can simply check if a face is at the parallel boundary. For this,
+peano4::datamanagement::FaceMarker provides you the routine
+peano4::datamanagement::FaceMarker::isAdjacentToParallelBoundary().
+For vertices, the equivalent is peano4::datamanagement::VertexMarker::getNumberOfAdjacentTrees().
+
+
+
+
+
+## Distributed memory (MPI) realisation
+
+A typical Peano4 code distinguishes the global master (rank 0) from the
+workers (all other ranks). The global master hosts all the program
+logic, i.e. decides which steps to run in which order. There's no reason
+for you not to emancipate from this pattern, but it has proven of value.
+The main of a Peano 4 application therefore always looks similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) { 
+  // All the program logic, i.e. all decisions here else
+}
+else { 
+  // React to rank 0's decisions what to do next on all ranks
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+Before we start, lets assume that each individual step (type of run
+through the mesh) has a unique positive number.
+
+
+Peano handles all (multiscale) boundary data transfer and data migration
+within the mesh.
+Everything not tied to the mesh is not handled by Peano.
+That means there's not even a reduction of the grid statistics over MPI.
+We do provide reduction and broadcast features however. 
+If you need these global data, I recommend that you realise all reductions and
+broadcasts in your main rather than inside of the Peano mappers or other
+classes. See the discussion at @ref page_tarch_mpi. 
+
+
+
+## Shared memory between different trees (instances of action sets) and different action sets on one rank
+
+This section discusses *shared memory programming from a domain decomposition view*.
+More general remarks on shared memory primitives and task-based 
+programming can be found in the discussion of the tarch::multicore
+namespace.
+
+Realising global variables shared between action sets is in principle
+impossible: Action sets are not persistent. They are created per
+traversal per tree. Furthermore, you have absolutely no knowledge how
+many trees any rank hosts. The only thing you know is that all trees
+will kind of start their traversal around the same time.
+
+However, nothing stops you from having a singleton data or static 
+data set somewhere and to let all action sets write into this one.
+You just have to ensure that you protected writes with semaphores.
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  If a lot of action sets all hit the same static data concurrently,
+  you get a lot of lock overhead. In this case I recommend that 
+  each data set creates its own local data and reduces all information
+  from its tree there. In endTraversal(), you can then lock the static
+  global data and commit your data there before the action set is
+  destroyed.
+</div>
+
+
+
+## Design patterns for (MPI) global variables between action sets
+
+Realising global variables shared between action sets is in principle
+impossible: 
+Action sets are not persistent. 
+They are created per traversal per tree.
+Furthermore, you have absolutely no knowledge how many trees any rank hosts.
+The only thing you know is that all trees will kind of start their traversal
+around the same time.
+
+
+However, there is a design pattern that you can use.
+It relies on the observations that (i) all the beginTraversal() events
+are triggered after all the global trees have synchronised.
+(ii) Tree 0 exists always.
+
+- There are two `static` datasets per rank. This is the only valid
+  data in-between any two grid traversals. One is the current data, one is the
+  data from the previous sweep.
+- Every action sets builds up its local current data and commits this 
+  data to the static global dataset in endTraversal(). This local
+  reduction has to be protected by a (rank-local) semaphore.
+- In the main routine, each rank calls a routine which reduces the
+  static current data set to rank 0. Rank 0 then broadcasts the reduced data and
+  each rank rolls over the reduced data into the static old data set. The
+  current data is cleared. If you don't want to bother your main, you can use 
+  prepareTraversal() or unprepareTraversal() for this.
+- Every action set copies the old data set into its local copy.
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+  These MPI/thread-global barriers can be very expensive and have the potential
+  to lead to deadlocks/timeouts. Use them with care and localise their
+  behaviour.
+</div>
 
 
 

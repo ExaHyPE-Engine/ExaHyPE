@@ -127,6 +127,12 @@ private:
   tarch::la::Vector<Dimensions, int> _relativePositionOfCellWithinFatherCell;
 
   /**
+   * Number of adjacent trees per vertex. Obviously only relevant/valid
+   * if the vertex is local.
+   */
+  tarch::la::Vector<TwoPowerD,int>   _numberOfAdjacentTrees;
+
+  /**
    * Some unit tests prefer to construct a marker manually, so I offer a
    * dummy default constructor. The normal code should and does not use a
    * default constructor.
@@ -196,6 +202,16 @@ public:
 
   bool willBeRefined() const;
   bool willBeRefined(int i) const;
+
+  /**
+   * Number of adjacent trees of current vertex
+   *
+   * This routine is valid if and only if you call it for a local,
+   * non-hanging vertex. Otherwise, its behaviour is undefined (and
+   * will actually trigger an assertion).
+   */
+  int   getNumberOfAdjacentTrees() const;
+  int   getNumberOfAdjacentTrees(int i) const;
 
   /**
    * @see isLocal(int) for currently selected/represented vertex

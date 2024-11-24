@@ -47,11 +47,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     enum class SmoothingState {
       // FirstFineGridSmoothing,
       PreSmoothing,
-      Restrict,
+      RestrictToNextLevel,
       PostSmoothing
     };
-
-    SmoothingState getSmoothingState();
 
     using mghype::matrixfree::solvers::Solver::toString;
 
@@ -116,6 +114,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      */
     void suspend();
 
+    State          getState() const;
+    SmoothingState getSmoothingState() const;
     bool update(int level) const;
 
     int  getActiveLevel() const;
@@ -128,13 +128,24 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
      * since we expect to do something on the level above
      * the active level as well as the active level.
     */
-    bool restrict() const;
+    bool restrictToNextLevel() const;
     bool prolongate() const;
 
   protected:
     static tarch::logging::Log  _log;
 
+    /**
+     * This determines whether this solver is currently active (being used
+     * as a correction solver in the two-grid setup) or suspended
+     * (currently dormant and waiting to be restarted by the coupler).
+     */
     State           _state;
+
+    /**
+     * Internal state which determines whether we are pre-smoothing, prolongating
+     * or post-smoothing.
+     * 
+     */
     SmoothingState  _smoothingState;
 
     int _activeLevel;
