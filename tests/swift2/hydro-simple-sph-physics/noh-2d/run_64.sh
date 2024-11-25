@@ -21,7 +21,7 @@ CELL_SIZE=0.3 # Cells of size < 0.333 work faster, but the corner particles have
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
 echo python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
-python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE  --debug
+python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
