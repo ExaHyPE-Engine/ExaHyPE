@@ -7,10 +7,10 @@
 debug  HydroPartSet -1 white always-on
 debug  tarch                               -1     black always-on
 debug  peano4                              -1     black always-on
-debug  tests                               -1     white always-on
+debug  tests                               -1     black always-on
 debug  benchmarks                          -1     black always-on
-debug  swift2                              -1     white always-on
-debug  toolbox                             -1     white always-on
+debug  swift2                              -1     black always-on
+debug  toolbox                             -1     black always-on
 
 info  tarch                                -1     white always-on
 info  peano4                               -1     white always-on
