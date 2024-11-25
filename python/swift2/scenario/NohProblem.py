@@ -26,9 +26,9 @@ class NohProblemIC:
 
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0);
+      const double GridSize_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
+      particle->setSearchRadius( 0.999 * GridSize_x );
 
       /* Constant density field */
       particle->setDensity ( 1.0 );
