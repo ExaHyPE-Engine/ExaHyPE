@@ -1,0 +1,1 @@
+../test-smoothing-length-computation-1D/compare_results.py

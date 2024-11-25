@@ -4,15 +4,18 @@
 #
 # General debug settings
 #
+debug  HydroPartSet -1 white always-on
 debug  tarch                               -1     black always-on
 debug  peano4                              -1     black always-on
 debug  tests                               -1     black always-on
+debug  benchmarks                          -1     black always-on
 debug  swift2                              -1     black always-on
-debug  toolbox                             -1     white always-on
+debug  toolbox                             -1     black always-on
 
 info  tarch                                -1     white always-on
 info  peano4                               -1     white always-on
 info  tests                                -1     white always-on
+info  benchmarks                           -1     white always-on
 info  swift2                               -1     white always-on
 info  toolbox                              -1     white always-on
  
@@ -20,5 +23,6 @@ trace  tarch                               -1     black always-on
 trace  peano4                              -1     black always-on
 trace  tests                               -1     black always-on
 trace  swift2                              -1     black always-on
+trace  benchmarks                          -1     black always-on
 trace  toolbox                             -1     black always-on
 

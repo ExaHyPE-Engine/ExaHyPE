@@ -9,11 +9,12 @@ class NohProblemIC:
     """
 
     def __init__(self, dimensions):
-        if dimensions == 2:
+        if dimensions == 2 or dimensions == 3:
             self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
+       * Template located in python/swift2/scenario/NohProblem.py
        */
 
       /*
@@ -25,9 +26,9 @@ class NohProblemIC:
 
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0);
+      const double GridSize_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
+      particle->setSearchRadius( 0.999 * GridSize_x );
 
       /* Constant density field */
       particle->setDensity ( 1.0 );
@@ -53,16 +54,14 @@ class NohProblemIC:
        */
 
       // Box centre
-      tarch::la::Vector<Dimensions,double> x_0(0.5);
+      tarch::la::Vector<Dimensions,double> x_0 = DomainOffset + 0.5 * DomainSize;
 
       // Distance of particle to centre
       tarch::la::Vector<Dimensions,double> dist = particle->getX() - x_0;
       double norm_dist = tarch::la::norm2(dist);
 
       // Cap min value of distance
-      if ( tarch::la::equals(norm_dist, 0.0) ){
-        norm_dist = 1e-10;
-      }
+      norm_dist = std::max(norm_dist, 1e-10);
 
       // Set velocity
       tarch::la::Vector<Dimensions,double> v_ini = -1.0 * dist / norm_dist;
@@ -73,11 +72,18 @@ class NohProblemIC:
 
       // Vectors
       for(int d=0; d<Dimensions; d++){
-         particle->setA          (d,0);
+         particle->setA(d,0.);
       }
 
+      #if Dimensions < 3
       /* For 2D sims, we only get one component */
-      particle->setRot_v(0);
+      particle->setRot_v(0.);
+      #else
+      for(int d=0; d<Dimensions; d++){
+         particle->setRot_v(d, 0.);
+      }
+      #endif
+
 
       /* Initialise the "extended" arrays */
       particle->setV_full(particle->getV());
@@ -99,14 +105,67 @@ class NohProblemIC:
       particle->setBalsara (0.0);
 
       particle->setCellHasUpdatedParticle(false);
-      particle->setPartid(1);
 
-      /* Verbose */
+      #if PeanoDebug > 0
+
+      // Set a reproducible particle ID assuming we're distributing particles on a regular grid
+      // int max - 1
+      int MAX_PART_NUMBER = 2147483646;
+      if (HYDRO_DIMENSIONS==2) {
+        // ~ sqrt int max - 1
+        MAX_PART_NUMBER = 46339;
+      }
+      else if (HYDRO_DIMENSIONS==3) {
+        // ~ cbrt int max - 1
+        MAX_PART_NUMBER = 1289;
+      }
+
+      double xp = particle->getX(0);
+      double oneOverDx = MAX_PART_NUMBER / DomainSize[0];
+      int i = (int) ((xp - DomainOffset[0]) * oneOverDx);
+      int partid = i;
+
+      // Assuming here we're running 1D experiments on a 2D grid,
+      // as we always do, then we don't need compile time macro guards.
+      if (HYDRO_DIMENSIONS > 1) {
+        double yp = particle->getX(1);
+        double oneOverDy = MAX_PART_NUMBER / DomainSize[1];
+        int j = (int) ((yp - DomainOffset[1]) * oneOverDy);
+        partid += j * MAX_PART_NUMBER;
+      }
+
+      // For 3D, we need the guard.
+      #if Dimensions > 2
+      if (HYDRO_DIMENSIONS > 2){
+        double zp = particle->getX(2);
+        double oneOverDz = MAX_PART_NUMBER / DomainSize[2];
+        int k = (int) ((zp - DomainOffset[2]) * oneOverDz);
+        partid += k * MAX_PART_NUMBER * MAX_PART_NUMBER;
+      }
+      #endif
+
+      particle->setPartid(partid);
+
+      // TODO MLADEN: REMOVE THIS ONCE YOU'RE SATISFIED.
+      int max_reasonable;
+      if (HYDRO_DIMENSIONS == 1)
+        max_reasonable = MAX_PART_NUMBER + 1;
+      else if (HYDRO_DIMENSIONS == 2)
+        max_reasonable = (MAX_PART_NUMBER + 1) * (MAX_PART_NUMBER + 1);
+      else
+        max_reasonable = (MAX_PART_NUMBER + 1) * (MAX_PART_NUMBER + 1) * (MAX_PART_NUMBER + 1);
+
+      assertion2(partid <= max_reasonable, partid, max_reasonable);
+      assertion1(partid >= 0, partid);
+
+      #endif
+
       logDebug( "Init()", "dist = " << dist );
       logDebug( "Init()", "v_ini = " << v_ini );
       logDebug( "Init()", "Particle: " << particle->toString() );
 
-      /* End of inserted block */
+
+      /* End of inserted block from python/swift2/scenario/NohProblem.py */
 
     """
         else:
