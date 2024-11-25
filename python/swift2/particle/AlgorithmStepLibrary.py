@@ -254,10 +254,6 @@ def get_algorithm_step_dict(particle):
     algorithm_steps_dict["PredictHydro"] = predictHydro
 
     # --------------------------------------------------------------------------
-    #
-    # TODO: Do I need
-    #  + v_iter.insert( "::swift2::timestepping::resetMovedParticleMarker"),
-    # in vertex first time? search radius might change in FirstInitPart
     # --------------------------------------------------------------------------
     sph_densityWithConstantSearchRadius = AlgorithmStep(
         name="SPH_DensityLoopWithConstantSearchRadius",
