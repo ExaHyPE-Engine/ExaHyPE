@@ -218,13 +218,10 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
-    if args.debug:
-        print("Overwriting --asserts with --debug")
-        build_mode = peano4.output.CompileMode.Debug
-elif args.debug:
+if args.debug:
     build_mode = peano4.output.CompileMode.Debug
+elif args.asserts:
+    build_mode = peano4.output.CompileMode.Asserts
 else:
     build_mode = peano4.output.CompileMode.Release
 
