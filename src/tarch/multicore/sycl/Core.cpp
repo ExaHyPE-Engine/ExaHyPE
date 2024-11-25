@@ -63,8 +63,6 @@ tarch::multicore::Core::Core():
   std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
             << " with " << _numberOfThreads << " threads" << std::endl;
   #endif
-
-  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
