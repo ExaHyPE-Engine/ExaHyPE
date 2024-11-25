@@ -3,7 +3,9 @@ import argparse
 import numpy as np
 
 """!
-Generates 1D random particle distribution.
+Generates 1D uniform particle distribution with randomized small displacements.
+"Multiscale" variant: Create a region of particles with very high density to
+trigger multilevel interactions with sparse regions
 """
 
 fileName = "test_sml_multiscale_1D.hdf5"
@@ -26,10 +28,29 @@ parser.add_argument(
     type=int,
     help="Seed for RNG",
 )
+parser.add_argument(
+    "-p",
+    "--plot",
+    dest="plot",
+    action="store_true",
+    default=False,
+    help="Plot historgram of particle positions",
+)
+parser.add_argument(
+    "-dx",
+    "--displacement",
+    dest="max_displacement",
+    required=False,
+    default=0.2499,
+    type=float,
+    help="Maximal displacement in units of interparticle distance",
+)
+
 
 args = parser.parse_args()
 npart = args.particle_number
 seed = args.random_seed
+max_displacement = args.max_displacement
 
 
 # ---------------------------------------------------
@@ -66,7 +87,7 @@ def get_coords(box_min, box_max, npart):
     # uniform particle distribution.
 
     # rng.random returns random numbers in [0, 1). Scale that.
-    displacement = (2.0 * rng.random((npart, 1)) - 1.0) * 0.499 * dx
+    displacement = (2.0 * rng.random((npart, 1)) - 1.0) * max_displacement * dx
     new_coords[:, 0] += displacement[:, 0]
 
     return new_coords
@@ -84,14 +105,15 @@ new_coords = get_coords(4.0 / 6.0, 5.0 / 6 * boxSize, npart)
 coords[3 * npart :, 0] = new_coords[:, 0]
 
 
-from matplotlib import pyplot as plt
+if args.plot:
+    from matplotlib import pyplot as plt
 
-plt.figure()
-plt.subplot(121)
-plt.plot(coords[:, 0], m, marker=".")
-plt.subplot(122)
-plt.hist(coords[:, 0], bins=200)
-plt.show()
+    plt.figure()
+    plt.subplot(121)
+    plt.plot(coords[:, 0], m, marker=".")
+    plt.subplot(122)
+    plt.hist(coords[:, 0], bins=200)
+    plt.show()
 
 
 # File
@@ -110,7 +132,11 @@ grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 grp.attrs["Flag_Entropy_ICs"] = 0
 grp.attrs["Dimension"] = 1
+
+# Non-swift additions
 grp.attrs["RandomSeed"] = seed
+grp.attrs["MaxDisplacement"] = max_displacement
+grp.attrs["NumpyVersion"] = np.__version__
 
 # Units
 grp = file.create_group("/Units")

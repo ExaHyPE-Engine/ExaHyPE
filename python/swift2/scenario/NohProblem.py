@@ -14,6 +14,7 @@ class NohProblemIC:
 
       /* Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
+       * Template located in python/swift2/scenario/NohProblem.py
        */
 
       /*
@@ -25,9 +26,9 @@ class NohProblemIC:
 
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0);
+      const double GridSize_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
+      particle->setSearchRadius( 0.999 * GridSize_x );
 
       /* Constant density field */
       particle->setDensity ( 1.0 );
@@ -105,6 +106,8 @@ class NohProblemIC:
 
       particle->setCellHasUpdatedParticle(false);
 
+      #if PeanoDebug > 0
+
       // Set a reproducible particle ID assuming we're distributing particles on a regular grid
       // int max - 1
       int MAX_PART_NUMBER = 2147483646;
@@ -143,13 +146,7 @@ class NohProblemIC:
 
       particle->setPartid(partid);
 
-      logDebug( "Init()", "dist = " << dist );
-      logDebug( "Init()", "v_ini = " << v_ini );
-      logDebug( "Init()", "Particle: " << particle->toString() );
-
-      #if PeanoDebug > 0
       // TODO MLADEN: REMOVE THIS ONCE YOU'RE SATISFIED.
-
       int max_reasonable;
       if (HYDRO_DIMENSIONS == 1)
         max_reasonable = MAX_PART_NUMBER + 1;
@@ -163,7 +160,11 @@ class NohProblemIC:
 
       #endif
 
-      /* End of inserted block */
+      logDebug( "Init()", "dist = " << dist );
+      logDebug( "Init()", "v_ini = " << v_ini );
+      logDebug( "Init()", "Particle: " << particle->toString() );
+
+      /* End of inserted block from python/swift2/scenario/NohProblem.py */
 
     """
         else:

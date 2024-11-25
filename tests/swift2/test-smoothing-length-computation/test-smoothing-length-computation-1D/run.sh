@@ -5,12 +5,12 @@ set -e
 set -o pipefail
 
 # set threads number
-export OMP_NUM_THREADS=4
+export OMP_NUM_THREADS=2
 
 IC_FILENAME="test_sml_1D.hdf5"
 
 # Parameters
-N_PART=1000          # fixed by IC file
+N_PART=1000
 CELL_SIZE=0.1
 H_TOLERANCE=1e-6
 
@@ -22,7 +22,7 @@ python3 makeIC.py -np $N_PART -s $rand
 for neighbors in 3 5 10; do
     echo running for $neighbors neighbors
     echo 'generate and compile code ...'
-    python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE --asserts
+    python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE --debug
     echo 'running test ...'
     ./testSML | tee output-$neighbors.log
     echo 'comparing results ...'
