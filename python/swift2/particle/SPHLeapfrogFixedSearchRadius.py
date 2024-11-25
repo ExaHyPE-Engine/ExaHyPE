@@ -333,7 +333,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         Make sure get_algorithm_steps_dict(self) has been called before.
         """
         initsteps = [
-            self.algorithm_steps_dict["SPHFirstInitParticle"],
+            self.algorithm_steps_dict["SPH_FirstInitParticle"],
             self.algorithm_steps_dict["SPH_Density"],
             self.algorithm_steps_dict["SPH_Force"],
             self.algorithm_steps_dict["SPH_Timestep"],

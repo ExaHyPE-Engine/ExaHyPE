@@ -204,17 +204,16 @@ class SPHParticle(Particle):
         self.sml_iteration_count = dastgen2.attributes.Integer(
             "smoothingLengthIterCount"
         )
-        # TODO: add back in later with full left/right fix
-        #  self.sml_iter_left_bound = dastgen2.attributes.Double("smlIterLeftBound")
-        #  self.sml_iter_right_bound = dastgen2.attributes.Double("smlIterRightBound")
+        self.sml_iter_left_bound = dastgen2.attributes.Double("smlIterLeftBound")
+        self.sml_iter_right_bound = dastgen2.attributes.Double("smlIterRightBound")
         self.data.add_attribute(self.wcount)
         self.data.add_attribute(self.wcount_dh)
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.hDot)
         self.data.add_attribute(self.rho_dh)
         self.data.add_attribute(self.sml_iteration_count)
-        #  self.data.add_attribute(self.sml_iter_left_bound)
-        #  self.data.add_attribute(self.sml_iter_right_bound)
+        self.data.add_attribute(self.sml_iter_left_bound)
+        self.data.add_attribute(self.sml_iter_right_bound)
 
         # Extra ------------------------------------------------------------------------
         self.has_no_neighbours = dastgen2.attributes.Boolean("hasNoNeighbours")
