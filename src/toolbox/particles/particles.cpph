@@ -90,7 +90,7 @@ void toolbox::particles::insertParticleIntoCell(
 
   assertion3(
     tarch::la::
-      smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())),
+      smaller(newParticle->getSearchRadius(), tarch::la::min(marker.h())),
     marker.toString(),
     newParticle->toString(),
     spacetreeId
@@ -120,15 +120,15 @@ void toolbox::particles::insertParticleIntoCell(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
     newParticle->getX(),
     partID,
-    true, // is local
+    true, // is always local, we set that a few lines above
     marker.x() - 0.5 * marker.h()
       + tarch::la::multiplyComponents(
         tarch::la::Vector<Dimensions, double>(targetVertex),
         marker.h()
-      ),
-    marker.h(),
+      ),        // vertexX
+    marker.h(), // vertexH
     spacetreeId,
     "toolbox::particles::insertParticleIntoCell()",
-    true
+    true // particle is new
   );
 }

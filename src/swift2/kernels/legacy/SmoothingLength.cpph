@@ -28,8 +28,10 @@ void swift2::kernels::legacy::
     pow_dimension(eta);
   const int max_iterations = localParticle->getSmlMaxIterations();
 
-  double left  = hydro_h_min;
-  double right = hydro_h_max;
+  double left = localParticle->getSmlIterLeftBound();
+  double right = localParticle->getSmlIterRightBound();
+  // double left = hydro_h_min;
+  // double right = hydro_h_max;
 
   // Now on to the smoothing length computation
   const double h_old     = localParticle->getSmoothingLength();
@@ -40,9 +42,14 @@ void swift2::kernels::legacy::
 
   bool hasNoNeighbours = false;
 
+#if (PeanoDebug > 0)
+  int partID = localParticle->getPartid() ;
+#else
+  int partID = -1;
+#endif
+
   const int iteration = localParticle->getSmoothingLengthIterCount();
   localParticle->setSmoothingLengthIterCount(iteration + 1);
-
 
   // Condition changes here compared to swift1 because we've done
   // hydro_end_density already
@@ -89,14 +96,16 @@ void swift2::kernels::legacy::
     }
 
     assertion4(
-      //     localParticle->getIsBoundaryParticle()
-      //     or
       (left <= right),
       "Invalid left and right",
       left,
       right,
       localParticle->toString()
     );
+
+    // store the new boundaries for this time step.
+    localParticle->setSmlIterLeftBound(left);
+    localParticle->setSmlIterRightBound(right);
 
     // Skip if h is already h_max and we don't have enough neighbours
     // Same if we are below h_min
@@ -106,9 +115,13 @@ void swift2::kernels::legacy::
       // radius
       logWarning(
         "hydro_update_smoothing_length_and_rerun_if_required",
-        "particle wants a smaller or bigger SML than it's allowed to have."
-          << " partID " << localParticle->getPartid() << " h_old " << h_old
-          << " h_min " << hydro_h_min << " h_max " << hydro_h_max << " f " << f
+        "particle wants a smaller or bigger SML than it's allowed to have." <<
+        " particle x=" << localParticle->getX() <<
+        ", partID=" << partID <<
+        ", h_old=" << h_old <<
+        ", h_min=" << hydro_h_min <<
+        ", h_max=" << hydro_h_max <<
+        ", f=" << f
       );
 
       // We have a particle whose smoothing length is already set (wants
@@ -130,13 +143,19 @@ void swift2::kernels::legacy::
     // via the python project generation.
 
     if (iteration > max_iterations - 10) {
+
       logWarning(
         "hydro_update_smoothing_length_and_rerun_if_required",
-        "Smoothing length convergence problem: iteration "
-          << iteration << " part ID " << localParticle->getPartid() << " h_old "
-          << h_old << " h_new " << h_new << " f " << f << " f_prime " << f_prime
-          << " n_sum " << n_sum << " n_target " << n_target << " left " << left
-          << " right " << right
+        "Smoothing length convergence problem: iteration=" << iteration <<
+          ", partID=" << partID <<
+          ", h_old=" << h_old <<
+          ", h_new=" << h_new <<
+          ", f=" << f <<
+          ", f_prime=" << f_prime <<
+          ", n_sum=" << n_sum <<
+          ", n_target=" << n_target <<
+          ", left=" << left <<
+          ", right=" << right
       );
     }
 
@@ -208,15 +227,15 @@ void swift2::kernels::legacy::
     // the limit we impose on it.
     logWarning(
       "hydro_update_smoothing_length_and_rerun_if_required",
-      "Got a particle that is lost cause. Setting h = h_max , id="
-        << localParticle->getPartid()
+      "Got a particle that is lost cause. Setting h = h_max" <<
+      "particle x=" << localParticle->getX()
+      << ", partID=" << partID
     );
     // Do some damage control if no neighbours at all were found
-    // if (has_no_neighbours) {
-    //   ... we already crash if this is the case.
-    //   logError("hydro_update_smoothing_length_and_rerun_if_required",
-    //   "Particle also has no neighbours... TODO");
-    // }
+    if (hasNoNeighbours) {
+      logError("hydro_update_smoothing_length_and_rerun_if_required",
+      "Particle also has no neighbours... TODO");
+    }
     localParticle->setSmoothingLengthConverged(true);
   } else if (localParticle->getSmoothingLength() <= hydro_h_min) {
     // Ok, this particle is a lost cause...
@@ -225,14 +244,15 @@ void swift2::kernels::legacy::
     // the limit we impose on it.
     logWarning(
       "hydro_update_smoothing_length_and_rerun_if_required",
-      "Got a particle that is lost cause. Setting h = h_min , id="
-        << localParticle->getPartid()
+      "Got a particle that is lost cause. Setting h = h_min. " <<
+      "particle x=" << localParticle->getX()
+      << ", partID=" << partID
     );
     localParticle->setSmoothingLengthConverged(true);
-    // if (hasNoNeighbours){
-    //   logError("hydro_update_smoothing_length_and_rerun_if_required",
-    //   "Particle also has no neighbours... TODO");
-    // }
+    if (hasNoNeighbours){
+      logError("hydro_update_smoothing_length_and_rerun_if_required",
+      "Particle also has no neighbours... TODO");
+    }
 
   } else {
     logError(
