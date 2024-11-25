@@ -69,7 +69,8 @@ void swift2::kernels::legacy::hydro_prepare_force(Particle* localParticle) {
 #if PeanoDebug > 0
       ", partID=" << localParticle->getPartid() <<
 #endif
-      ", h = " << h_i
+      ", h = " << h_i<<
+      ", h_max = " << hydro_h_max
     );
   } else {
     const double grad_W_term = common_factor * localParticle->getWcount_dh();
