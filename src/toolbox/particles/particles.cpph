@@ -90,7 +90,7 @@ void toolbox::particles::insertParticleIntoCell(
 
   assertion3(
     tarch::la::
-      smaller(newParticle->getSearchRadius(), tarch::la::min(marker.h())),
+      smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())),
     marker.toString(),
     newParticle->toString(),
     spacetreeId
