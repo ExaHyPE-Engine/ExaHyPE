@@ -297,7 +297,7 @@ particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
 if args.asserts or args.debug:
-    particle_plotter.add_attribute_to_plot(particle.part_id, 1)
+    particle_plotter.add_attribute_to_plot(particle.partid, 1)
     particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
     particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
