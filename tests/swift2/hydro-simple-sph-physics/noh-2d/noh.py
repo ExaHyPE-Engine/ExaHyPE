@@ -275,8 +275,8 @@ particle_set = project.add_particle_species(particle)
 #      )
 #  )
 #  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
-particle_set.generator = (
-    peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
+    particle_set
 )
 #  else:
 #  particle_set.generator = (
@@ -284,7 +284,6 @@ particle_set.generator = (
 #          particle_set
 #      )
 #  )
-
 
 
 if args.debug:

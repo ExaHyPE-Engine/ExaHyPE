@@ -214,7 +214,7 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if  args.debug:
+if args.debug:
     build_mode = peano4.output.CompileMode.Debug
 elif args.asserts:
     build_mode = peano4.output.CompileMode.Asserts

@@ -49,7 +49,7 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle) {
 
   particle->setSmoothingLength(h);
 
-  // Reset left-right bounds outside of the density sweep.
+  // Set left-right bounds
   particle->setSmlIterLeftBound(Particle::getSmlMin());
   particle->setSmlIterRightBound(Particle::getSmlMax());
 }
