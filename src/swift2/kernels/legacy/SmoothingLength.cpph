@@ -30,8 +30,6 @@ void swift2::kernels::legacy::
 
   double left = localParticle->getSmlIterLeftBound();
   double right = localParticle->getSmlIterRightBound();
-  // double left = hydro_h_min;
-  // double right = hydro_h_max;
 
   // Now on to the smoothing length computation
   const double h_old     = localParticle->getSmoothingLength();
