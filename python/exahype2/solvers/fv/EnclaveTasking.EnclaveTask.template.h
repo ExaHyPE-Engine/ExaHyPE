@@ -6,17 +6,19 @@
 // **********************************************************************************************
 #pragma once
 
-#include "../../../../src/tarch/multicore/Task.h"
+#include "repositories/SolverRepository.h"
+
+#include "tarch/multicore/Task.h"
+
 #include "peano4/datamanagement/CellMarker.h"
+
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "repositories/SolverRepository.h"
 
 {{SOLVER_INCLUDES}}
 
 #include <vector>
 #include <memory>
-
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"

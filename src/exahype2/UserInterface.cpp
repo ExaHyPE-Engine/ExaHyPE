@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UserInterface.h"
 
-#include "../tarch/multicore/Task.h"
+#include "tarch/multicore/Task.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/mpi/Rank.h"

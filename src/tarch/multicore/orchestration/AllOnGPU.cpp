@@ -1,8 +1,9 @@
 #include "AllOnGPU.h"
 
 #include "tarch/accelerator/Device.h"
+#include "tarch/multicore/Task.h"
+
 #include <limits>
-#include "../Task.h"
 
 tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
   _device(device),
