@@ -1,6 +1,6 @@
 #include "tarch/multicore/Core.h"
 
-#include "../Task.h"
+#include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
