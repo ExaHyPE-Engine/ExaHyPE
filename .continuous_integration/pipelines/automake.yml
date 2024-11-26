@@ -5,6 +5,7 @@ include:
   - .continuous_integration/templates/run-only-on.yml
   - .continuous_integration/templates/mghype.yml
   - .continuous_integration/templates/exahype2.yml
+  - .continuous_integration/templates/swift2.yml
 
 stages:
   - Build
@@ -81,7 +82,6 @@ SWIFT2_Dastgen:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .SWIFT2_Dastgen
   needs:
@@ -96,7 +96,6 @@ SWIFT2_Sod1D:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .SWIFT2_Sod1D
   needs:
@@ -111,7 +110,6 @@ SWIFT2_Noh2D:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .SWIFT2_Noh2D
   needs:

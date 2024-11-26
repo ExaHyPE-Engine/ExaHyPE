@@ -5,6 +5,7 @@ include:
   - .continuous_integration/templates/run-only-on.yml
   - .continuous_integration/templates/mghype.yml
   - .continuous_integration/templates/exahype2.yml
+  - .continuous_integration/templates/swift2.yml
 
 stages:
   - Build
