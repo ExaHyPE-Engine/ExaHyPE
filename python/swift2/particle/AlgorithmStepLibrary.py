@@ -361,8 +361,13 @@ def get_algorithm_step_dict(particle):
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
+    # The firstInitParticle step  may adapt a particle's search radius to fit
+    # globally set limits. If the radius changes, and since this is the first
+    # step in the run, a particle may be passed further down the tree, in which
+    # case the dependency checks fail unless you permit the
+    # `_MayOverwritePreviousCellUpdatesFromSameSweep` dependency policy.
     firstInit = AlgorithmStep(
-        name="SPHFirstInitParticle",
+        name="SPH_FirstInitParticle",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
         touch_vertex_last_time_kernel=v_iter_for_move.insert(
@@ -372,8 +377,10 @@ def get_algorithm_step_dict(particle):
             #include "Constants.h"
             #include "swift2/kernels/legacy/Swift.h"
         """,
+        cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+        touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
     )
-    algorithm_steps_dict["SPHFirstInitParticle"] = firstInit
+    algorithm_steps_dict["SPH_FirstInitParticle"] = firstInit
 
     return algorithm_steps_dict

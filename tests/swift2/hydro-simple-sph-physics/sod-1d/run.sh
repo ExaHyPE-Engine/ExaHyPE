@@ -15,7 +15,7 @@ END_TIME=0.2      # original setup
 TIMESTEP_SIZE=9.765625e-05 # copied from SWIFT output.
 CFL_FACTOR=0.1
 PLOT_DELTA=0.01
-CELL_SIZE=0.3
+CELL_SIZE=0.15
 
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]

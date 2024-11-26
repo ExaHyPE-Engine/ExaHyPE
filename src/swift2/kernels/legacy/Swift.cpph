@@ -23,9 +23,7 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle) {
   // All the inits done each step too.
   hydro_init_particle(particle);
 
-
   // Verify smoothing length and search radius.
-
   double h = particle->getSmoothingLength();
 
   if (h == 0.) {
@@ -33,8 +31,8 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle) {
     // If the value for smoothing length is non-zero, assume that a
     // reasonable guess has already been made, and e.g. has been
     // provided by the ICs. Otherwise, assume that the search radius
-    // is reasonable, and set the biggest SML the search radius allows for.
-    h = particle->getSearchRadius() * 0.999 * kernel_gamma_inv;
+    // is reasonable.
+    h = particle->getSearchRadius() * 0.5 * kernel_gamma_inv;
   }
 
   h = std::min(h, Particle::getSmlMax());
@@ -44,14 +42,22 @@ void swift2::kernels::legacy::first_init_particle(Particle* particle) {
   // user provided min and max. If that doesn't fit within
   // the search radius, then the search radius is chosen poorly
   // and needs to be adapted.
+
   if (h * kernel_gamma > particle->getSearchRadius()) {
     particle->setSearchRadius(h * kernel_gamma);
   }
+
+  particle->setSmoothingLength(h);
+
+  // Set left-right bounds
+  particle->setSmlIterLeftBound(Particle::getSmlMin());
+  particle->setSmlIterRightBound(Particle::getSmlMax());
 }
 
 
 template <typename Particle>
 void swift2::kernels::legacy::hydro_init_particle(Particle* particle) {
+
   if (particle->getSmoothingLengthConverged()) {
     return;
   }
@@ -65,9 +71,7 @@ void swift2::kernels::legacy::hydro_init_particle(Particle* particle) {
   particle->setDiv_v(0.0);
   particle->setRot_v(0.0);
 
-  // MLADEN: check this
-  // particle->setHasNoNeighbours(false);
-  // particle->setSmoothingLengthIterCount(0);
+  particle->setHasNoNeighbours(false);
 #if PeanoDebug > 0
   particle->setDensityNeighbourCount(0);
 #endif

@@ -11,10 +11,10 @@ IC_FILENAME="test_sml_3D.hdf5"
 
 # Parameters
 N_PART=20
-# if the cell size is too small, the initial search radius may be too small, 
-# and you won't find correct smoothing lengths. Instead, you'll get Warnings 
+# if the cell size is too small, the initial search radius may be too small,
+# and you won't find correct smoothing lengths. Instead, you'll get Warnings
 # "h ~ h_max"
-CELL_SIZE=0.3
+CELL_SIZE=0.5
 H_TOLERANCE=1e-6
 
 
@@ -29,6 +29,6 @@ for neighbors in 30 48 64; do
     echo 'running test ...'
     ./testSML | tee output-$neighbors.log
     echo 'comparing results ...'
-    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 2 | tee results-$neighbors.txt
+    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 3 | tee results-$neighbors.txt
     echo '---------------------'
 done
