@@ -29,7 +29,7 @@
   }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::solvers::Solver {
   public:
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
@@ -64,7 +64,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
-    ) final;
+    );
 
     virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
@@ -92,6 +92,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     bool isSuspended() const;
 
     bool update() const;
+
+    State getState() const;
 
     {{ABSTRACT_SOLVER_HEADER_EXTRAS}}
     

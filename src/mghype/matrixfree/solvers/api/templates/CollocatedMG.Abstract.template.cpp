@@ -169,15 +169,24 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*FourPowerD, {{VERTEX_CARDINALITY}}*Two
   return celldata::{{SOLVER_NAME}}::Type::Interior;
 }
 
+/**
+ * If we suspend, we want to make sure that the program phase
+ * is in its initial state for the next time we revisit.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
   _state = State::Suspend;
+
+  _smoothingState            = SmoothingState::PreSmoothing;
+  _preSmoothingStepsCounter  = 0;
+  _postSmoothingStepsCounter = 0;
+  _activeLevel               = getFinestLevel();
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
   if ( _activeLevel == getFinestLevel() )
-    clearGlobalResidual();
-  logInfo("beginMeshSweep()", "running phase " << toString(_smoothingState) << " at level " << _activeLevel);
-
+    clearGlobalResidualAndSolutionUpdate();
+  if (_state == State::Solve)
+    logInfo("beginMeshSweep()", "running phase " << toString(_smoothingState) << " at level " << _activeLevel);
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
@@ -199,12 +208,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
         // reset the counter and restrict to the
         // next level coarser
         _preSmoothingStepsCounter = 0;
-        _smoothingState = SmoothingState::Restrict;
+        _smoothingState = SmoothingState::RestrictToNextLevel;
       }
 
     } break;
 
-    case SmoothingState::Restrict:
+    case SmoothingState::RestrictToNextLevel:
     /*
     Finished restriction. Time to move up one level
     */
@@ -249,7 +258,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(int level) const {
     (level == _activeLevel);
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::restrict() const {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::restrictToNextLevel() const {
   /*
   In the restriction phase, we do something on one above the active level and something
   on the active level. So this function returns true if we are in Restriction mode.
@@ -257,9 +266,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::restrict() const {
   return
     (_state == State::Solve)
     and
-    (_smoothingState == SmoothingState::Restrict);
-    // and
-    // (level==_activeLevel+1);
+    (_smoothingState == SmoothingState::RestrictToNextLevel);
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::prolongate() const {
@@ -298,7 +305,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SmoothingState s
     {
       output << "PreSmoothing" << _preSmoothingStepsCounter;
     } break;
-    case SmoothingState::Restrict:
+    case SmoothingState::RestrictToNextLevel:
     {
       output << "Restrict";
     } break;
@@ -307,14 +314,16 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SmoothingState s
       output << "PostSmoothing" << _postSmoothingStepsCounter;
     } break;
     default:
-    {
-      // output  "";
-    } break;
+    {} break;
   }
 
   return output.str();
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::SmoothingState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSmoothingState() {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const {
+  return _state;
+}
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::SmoothingState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSmoothingState() const {
   return _smoothingState;
 }

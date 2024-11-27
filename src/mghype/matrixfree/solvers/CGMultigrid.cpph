@@ -1,10 +1,9 @@
 #include "CGMultigrid.h"
 #include "peano4/utils/Loop.h"
 
-// tarch::logging::Log mghype::matrixfree::solvers::cgmultigrid::_log("mghype::matrixfree::solvers::cgmultigrid");
 
 template<class CGSolver>
-void mghype::matrixfree::solvers::cgmultigrid::restrict(
+void mghype::matrixfree::solvers::cgmultigrid::restrictToNextLevel(
   const tarch::la::Matrix< TwoPowerD, FourPowerD, double >& restrictionMatrix,
   auto& coarseGridVertices,
   auto& fineGridVertex,

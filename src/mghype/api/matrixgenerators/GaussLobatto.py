@@ -25,20 +25,20 @@ class GaussLobatto(MatrixGenerator):
   
   '''
   def __init__(self,
-               Dimensions,
+               dimensions,
                poly_degree,
                unknowns_per_cell_node,
                unknowns_per_face_node,
                use_unit_interval=False):
 
-    super( GaussLobatto, self ).__init__(Dimensions,
+    super( GaussLobatto, self ).__init__(dimensions,
                                          poly_degree
                                          )
     self.unknowns_per_cell_node = unknowns_per_cell_node
     self.unknowns_per_face_node = unknowns_per_face_node
 
-    self.cell_nodes    = ( self.poly_degree + 1 ) ** (self.Dimensions)
-    self.face_nodes    = ( self.poly_degree + 1 ) ** (self.Dimensions - 1)
+    self.cell_nodes    = ( self.poly_degree + 1 ) ** (self.dimensions)
+    self.face_nodes    = ( self.poly_degree + 1 ) ** (self.dimensions - 1)
 
     self.use_unit_interval = use_unit_interval
 
@@ -121,7 +121,7 @@ class GaussLobatto(MatrixGenerator):
 
   def get_cell_identity_matrix(self):
     dim    = self.cell_nodes * self.unknowns_per_cell_node
-    output = np.eye(dim,dim)# * 2**(-self.Dimensions)
+    output = np.eye(dim,dim)# * 2**(-self.dimensions)
     return output
       
   def get_cell_mass_matrix(self):
@@ -133,13 +133,6 @@ class GaussLobatto(MatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    # dim    = self.cell_nodes * self.unknowns_per_cell_node
-    # output = np.zeros((dim,dim))
-    # for i in range( self.cell_nodes ):
-    #   for j in range( self.cell_nodes ):
-    #     for k in range( self.unknowns_per_cell_node ):
-    #       output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.eval_integral(functions=[ self.get_polynomial(i), self.get_polynomial(j) ]) 
-    
     output = self.block_matrix._RHS_CC[(1,1)]
     return output
 
@@ -147,17 +140,6 @@ class GaussLobatto(MatrixGenerator):
     '''
     Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
     '''
-    # dim    = self.cell_nodes * self.unknowns_per_cell_node
-    # output = np.zeros((dim,dim))
-    # for i in range( self.cell_nodes ):
-    #   for j in range( self.cell_nodes ):
-    #     for k in range( self.unknowns_per_cell_node ):
-    #       pass
-    #       # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
-    #       #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
-    #       #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
-    #       #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
-    #       #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
     return self.block_matrix._A_CC[(0,0)][(0,0)]
   
   def get_face_to_cell_matrix(self):
@@ -195,11 +177,6 @@ class GaussLobatto(MatrixGenerator):
     #  [ 0.          0.         -0.33333333 -0.16666667 -0.16666667 -0.33333333  0.16666667  0.33333333 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.16666667 -0.33333333]
     #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
     #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
-  
-    #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
-    #cellDim = self.cell_nodes * self.unknowns_per_cell_node
-    # 
-    #return np.zeros((faceDim,cellDim))
   
   def get_cell_to_face_matrix(self):
     """Return the projection operator
@@ -292,7 +269,7 @@ class GaussLobatto(MatrixGenerator):
     Now assume there are 2 "solutions" (i.e. f-variables: q^f and u^f) and two sets of projections: q^pm an.
     """
 
-    assert self.Dimensions == 2, "Only works for 2D"
+    assert self.dimensions == 2, "Only works for 2D"
 
     n_rows = 2 * (self.poly_degree + 1)
     n_cols = 4 * (self.poly_degree + 1)
@@ -304,18 +281,19 @@ class GaussLobatto(MatrixGenerator):
     return matrix
   
 
-'''
-New class to mimic the one above
-'''
 class GLMatrixFree(GaussLobatto):
+  """!
+  
+  
+  """
   def __init__(self,
-               Dimensions,
+               dimensions,
                poly_degree,
                unknowns_per_cell_node,
-               solutions_per_face_node,   # number of solutions   we hold per node. Default to 2 since we have u and q
-               projections_per_face_node, # number of projections we hold per node. Default to 2 since we have u and q
-               use_unit_interval=False):
-    super( GLMatrixFree, self ).__init__(Dimensions,
+               solutions_per_face_node,   # number of solutions   we hold per node.
+               projections_per_face_node # number of projections  we hold per node.
+              ):
+    super( GLMatrixFree, self ).__init__(dimensions,
                                          poly_degree,
                                          unknowns_per_cell_node,
                                          solutions_per_face_node
@@ -345,8 +323,8 @@ class GLMatrixFree(GaussLobatto):
   def get_cell_from_face_matrix(self):
     '''
     the shape of this should be:
-    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows (= 4 for 2D and 1st order)
-    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *Dimensions cols (= 16 for 2D and 1st order)
+    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.dimensions rows (= 4 for 2D and 1st order)
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) * 2 *dimensions cols (= 16 for 2D and 1st order)
     
     solutions_per_face_node counts u and q
     multiply further by number of nodes per face
@@ -354,9 +332,9 @@ class GLMatrixFree(GaussLobatto):
 
     '''
 
-    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions # number of cell unknowns
-    f_unknowns_per_face = self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) # q^f and u^f unknowns per face
-    f_unknowns = f_unknowns_per_face * 2 * self.Dimensions # total number of q^f and u^f unknowns on all faces 
+    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.dimensions # number of cell unknowns
+    f_unknowns_per_face = self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) # q^f and u^f unknowns per face
+    f_unknowns = f_unknowns_per_face * 2 * self.dimensions # total number of q^f and u^f unknowns on all faces 
     
     # SCALING: scaled by h
     A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
@@ -373,10 +351,10 @@ class GLMatrixFree(GaussLobatto):
     A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
     A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
 
-    assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
+    assert self.dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
 
     # select indices corresponding to q^f and u^f unknowns
-    q_indices = [ index for index in range(f_unknowns) if (index % f_unknowns_per_face) < ( self.poly_degree + 1 ) ** (self.Dimensions-1) ]
+    q_indices = [ index for index in range(f_unknowns) if (index % f_unknowns_per_face) < ( self.poly_degree + 1 ) ** (self.dimensions-1) ]
     # example for degree = 1: index%4 < 2 selects q_indices = [0,1, 4,5, 8,9, 12,13] out of range(16)
     u_indices = [ index for index in range(f_unknowns) if index not in q_indices]
 
@@ -413,22 +391,22 @@ class GLMatrixFree(GaussLobatto):
     Matrix without redundant projections is convenient for computing the Schur-complement matrix.
 
     The output matrix with redundant projections should have:                                               extra factor to account for all the faces
-    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows (= 32 in 2D 1st order)
-    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols (= 4  in 2D 1st order)
+    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) * 2 *self.dimensions rows (= 32 in 2D 1st order)
+    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.dimensions                                  cols (= 4  in 2D 1st order)
 
     The output matrix without redundant projections should have half the number of row as the previous one:
     rows (= 16 in 2D 1st order)
     cols (= 4  in 2D 1st order)
     """
     
-    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions # number of cell unknowns
-    nodes_per_face = ( self.poly_degree + 1 ) ** (self.Dimensions-1)
+    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.dimensions # number of cell unknowns
+    nodes_per_face = ( self.poly_degree + 1 ) ** (self.dimensions-1)
     proj_unknowns_per_face = 2 * self._projections_per_face_node * nodes_per_face # q^-+, u^-+ projection unknowns per face
-    proj_unknowns = proj_unknowns_per_face * 2 * self.Dimensions # total number of q^-+, u^-+ projection unknowns on all faces
+    proj_unknowns = proj_unknowns_per_face * 2 * self.dimensions # total number of q^-+, u^-+ projection unknowns on all faces
 
     # number of "not redundant" projections: the same as q^f and u^f unknowns in get_cell_from_face
-    f_unknowns_per_face = self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) # q^f and u^f unknowns per face
-    f_unknowns = f_unknowns_per_face * 2 * self.Dimensions # total number of q^f and u^f unknowns on all faces = how many projections excluding the redundant ones
+    f_unknowns_per_face = self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) # q^f and u^f unknowns per face
+    f_unknowns = f_unknowns_per_face * 2 * self.dimensions # total number of q^f and u^f unknowns on all faces = how many projections excluding the redundant ones
 
     ### Compute the gradient projections
     A_qp_u_left   = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
@@ -465,7 +443,7 @@ class GLMatrixFree(GaussLobatto):
     P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
 
 
-    assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
+    assert self.dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
     # q^\pm - gradient projections, scaled by h**-1
     matrix_0_redundant =  np.zeros((proj_unknowns,      cell_unknowns)) # should be 32x4 for 2D 1st order, includes redundant projections
     matrix_0           =  np.zeros((proj_unknowns // 2, cell_unknowns)) # should be 16x4 for 2D 1st order, no redundant projections
@@ -478,7 +456,7 @@ class GLMatrixFree(GaussLobatto):
     ##############################################
 
     # select indices corresponding to q and u projections -- same way as ^f-variables in get_cell_from_face
-    q_indices = [ index for index in range(f_unknowns) if (index % f_unknowns_per_face) < ( self.poly_degree + 1 ) ** (self.Dimensions-1) ]
+    q_indices = [ index for index in range(f_unknowns) if (index % f_unknowns_per_face) < ( self.poly_degree + 1 ) ** (self.dimensions-1) ]
     # example for degree = 1: index%4 < 2 selects q_indices = [0,1, 4,5, 8,9, 12,13] out of range(16)
     u_indices = [ index for index in range(f_unknowns) if index not in q_indices]
 
@@ -587,8 +565,8 @@ class GLMatrixFree(GaussLobatto):
     Well, it's 2 * self._projections_per_face_node on each node.
 
     So the output of this matrix should have:                                               extra factor to account for all the faces
-    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows (= 32)
-    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols (= 4)
+    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) * 2 *self.dimensions rows (= 32)
+    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.dimensions                                  cols (= 4)
 
     """
 
@@ -639,8 +617,8 @@ class GLMatrixFree(GaussLobatto):
   def get_boundary_matrix(self):
     '''
     @Alex shape of this should be 
-    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)   rows (= 4)
-    projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) cols (= 4)
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1)   rows (= 4)
+    projections_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1) cols (= 4)
 
     we are fixing the value of the solution vector on the boundary with the value of 
     the projections here. you can assume everything was set to 0 initially
@@ -649,9 +627,9 @@ class GLMatrixFree(GaussLobatto):
     '''
     return np.eye( 
       # ( 
-      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)
+      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1)
       # ,
-      # self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1))
+      # self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.dimensions-1))
      , dtype=int )
   
   def get_cell_system_matrix_for_laplacian(self):

@@ -83,7 +83,7 @@ class Project:
     self.set_global_simulation_parameters( dimensions  = 2,
                                            offset      = [0.0, 0.0],
                                            domain_size = [1.0, 1.0],
-                                           plot_each_timestep = False,
+                                           plot_after_each_mesh_sweep = False,
                                            )
 
 
@@ -149,8 +149,8 @@ class Project:
                                        dimensions,
                                        offset,
                                        domain_size,
-                                       plot_each_timestep,
-                                       max_iterations=5000,
+                                       plot_after_each_mesh_sweep,
+                                       max_iterations=100,
                                        plotter_precision = 5,
                                        ):
     """
@@ -166,7 +166,7 @@ class Project:
     self._domain_offset      = offset
     self._domain_size        = domain_size
     self._dimensions         = dimensions
-    self._plot_each_timestep = plot_each_timestep
+    self._plot_after_each_mesh_sweep = plot_after_each_mesh_sweep
     self._max_iterations     = max_iterations
     self._plotter_precision  = plotter_precision
     if plotter_precision<=0:
@@ -190,7 +190,7 @@ class Project:
     self._project.main = MatrixFreeMain(self._project,
                                 self._domain_offset,
                                 self._domain_size,
-                                self._plot_each_timestep,
+                                self._plot_after_each_mesh_sweep,
                                 self._max_iterations
                                 )
 
@@ -252,6 +252,7 @@ class Project:
     print( "---------------------------------------")
     print( "Create data for solver " +solver._name  )
     print( "---------------------------------------")
+    print( solver )
 
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
 

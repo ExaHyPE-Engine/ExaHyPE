@@ -26,12 +26,12 @@ def prepare_CG_correction_solvers( dg_solver,
     @see AbstractDGCGCoupling for a description of where the individual values are used.
     
     """
-    assert cg_solver._unknowns_per_vertex==dg_solver._unknowns_per_cell_node
-    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "sumOfInjectedValues", str(cg_solver._unknowns_per_vertex) ) )
-    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "oldValue", str(cg_solver._unknowns_per_vertex) ) )
-    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "newRestrictedRhs", str(cg_solver._unknowns_per_vertex) ) )
-    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "delta", str(cg_solver._unknowns_per_vertex) ) )
-    cg_solver._vertex_data.data.add_attribute( dastgen2.attributes.Integer( "numberOfRestrictions" ) )
+    assert cg_solver._unknowns_per_vertex_node==dg_solver._unknowns_per_cell_node
+    cg_solver._vertex_data.data.add_or_replace_attribute( peano4.dastgen2.Peano4DoubleArray( "sumOfInjectedValues", str(cg_solver._unknowns_per_vertex_node) ) )
+    cg_solver._vertex_data.data.add_or_replace_attribute( peano4.dastgen2.Peano4DoubleArray( "oldU", str(cg_solver._unknowns_per_vertex_node) ) )
+    cg_solver._vertex_data.data.add_or_replace_attribute( peano4.dastgen2.Peano4DoubleArray( "newRestrictedRhs", str(cg_solver._unknowns_per_vertex_node) ) )
+    cg_solver._vertex_data.data.add_or_replace_attribute( peano4.dastgen2.Peano4DoubleArray( "delta", str(cg_solver._unknowns_per_vertex_node) ) )
+    cg_solver._vertex_data.data.add_or_replace_attribute( dastgen2.attributes.Integer( "numberOfRestrictions" ) )
 
 
 class AbstractDGCGCoupling(ActionSet):
@@ -328,31 +328,8 @@ class AbstractDGCGCoupling(ActionSet):
       tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSolutions;
 
       for (int f=0; f<TwoPowerD; f++) {
-        tarch::la::Vector< repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution, double > solutionOnFace;
-        if ( fineGridFaces{{DG_SOLVER_NAME}}(f).getType() == facedata::{{DG_SOLVER_NAME}}::Type::Interior ) {
-          solutionOnFace = repositories::{{DG_SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFaces{{DG_SOLVER_NAME}}(f).getProjection();
-        }
-
-        else if ( fineGridFaces{{DG_SOLVER_NAME}}(f).getType() == facedata::{{DG_SOLVER_NAME}}::Type::Boundary ) {
-          int startIndex = f < Dimensions ? 
-                           repositories::{{DG_SOLVER_INSTANCE}}.NodesPerFace * repositories::{{DG_SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
-                           0;
-          const auto boundaryMatrix = repositories::{{DG_SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
-          for (int row=0; row<boundaryMatrix.rows(); row++)
-          {
-            double rowSolution = 0;
-            for (int col=0; col<boundaryMatrix.cols(); col++)
-            {
-              rowSolution += boundaryMatrix( row, col ) * fineGridFaces{{DG_SOLVER_NAME}}(f).getProjection( col + startIndex );
-            }
-            // place this solution into the face
-            solutionOnFace(row) = rowSolution;
-          }
-        }
-
-        // place this into the faceSolutions vector
-        for (int s=0; s<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
-          faceSolutions( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = solutionOnFace(s);
+      for (int s=0; s<repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+        faceSolutions( f*repositories::{{DG_SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{DG_SOLVER_NAME}}(f).getSolution(s);
       }
 
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
@@ -707,7 +684,7 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
                  injection_matrix,
                  injection_matrix_scaling,
                  use_fas,
-                 smoothing_steps_DG = 4,
+                 smoothing_steps_DG = 5,
                  smoothing_steps_CG = -1,
                  ):        
         """!
@@ -757,7 +734,10 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         assert smoothing_steps_DG>=1, "at least one smoothing step required"
         assert smoothing_steps_CG>=1 or smoothing_steps_CG==-1, "at least one smoothing step required"
         
-        self.smoothing_steps_DG = smoothing_steps_DG
+        # Logically speaking, the only thing we do on the "final" sweep is send the face solutions down to
+        # the coupler to calculate the residual, which we restrict. So we add on another sweep here so that
+        # we perform the exact number of sweeps that the caller asked for.
+        self.smoothing_steps_DG = smoothing_steps_DG + 1
         self.smoothing_steps_CG = smoothing_steps_CG
 
         self.cg_solver = cg_solver
