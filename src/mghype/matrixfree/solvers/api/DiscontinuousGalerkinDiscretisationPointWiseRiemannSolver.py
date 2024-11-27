@@ -6,8 +6,11 @@ import dastgen2
 import os
 
 from .Solver import Solver
-from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateResidual, ProjectOntoFaces, UpdateFaceSolution, ProjectIntoCellAndUpdateCellSolution
+from .actionsets.DGSolver.InitDofs                             import InitDofsDG
+from .actionsets.DGSolver.UpdateResidual                       import UpdateResidual
+from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
+from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution
+from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution import ProjectIntoCellAndUpdateCellSolution
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
@@ -428,12 +431,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     """
     if self._enable_plotting: # true by default
-      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", predicate_plot=self._plot_predicate) )
-      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", predicate_plot=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution", plot_predicate=self._plot_predicate) )
+      observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate) )
 
     if self._custom_plot_actionset:
       for name, getter in self._custom_plot_actionset:
-        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, predicate_plot=self._plot_predicate) )
+        observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, plot_predicate=self._plot_predicate) )
 
   def add_to_create_grid(self, observer):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
@@ -457,16 +460,16 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     own ordering starting from _basic_descend_order.
     
     """
-    descend_order = observer.highest_descend_invocation_order() + self._basic_descend_order
+    descend_order = observer.highest_descend_invocation_order()
     if self.preprocessing_action_set != None:
-      self.preprocessing_action_set.descend_invocation_order = descend_order + 0
+      self.preprocessing_action_set.descend_invocation_order = 0
       observer.add_action_set( self.preprocessing_action_set )
     observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
     observer.add_action_set( ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) )
     observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
     observer.add_action_set( UpdateResidual(self, descend_order+4, False) )
     if self.postprocessing_action_set != None:
-      self.postprocessing_action_set.descend_invocation_order = descend_order + 4
+      self.postprocessing_action_set.descend_invocation_order = descend_order + 5
       observer.add_action_set( self.postprocessing_action_set )
 
   

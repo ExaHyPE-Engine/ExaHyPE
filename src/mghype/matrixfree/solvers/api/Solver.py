@@ -21,7 +21,7 @@ class Solver:
     self._face_data   = peano4.datamodel.DaStGen2( name )
     self._cell_data   = peano4.datamodel.DaStGen2( name )
 
-    self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Corner", "Coarse", "Outside", "Undefined"] ) )
+    self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
     self._face_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
     self._cell_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse", "Outside", "Undefined"] ) )
 
@@ -85,4 +85,16 @@ Return the name of the object that will be created for this solver.
 
   @property
   def name(self):
-      return self._name
+    return self._name
+
+  def __str__(self):
+    return """
+Name:                  {}
+h_min:                 {}
+h_max:                 {}
+""".format(
+      self._name,
+      self.min_h,
+      self.max_h,
+    )
+          

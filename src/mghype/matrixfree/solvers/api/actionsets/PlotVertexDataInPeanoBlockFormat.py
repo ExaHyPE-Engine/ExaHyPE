@@ -11,7 +11,8 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
                solver,
                variable_name,
                getter,
-               plot_predicate="true"
+               plot_predicate="true",
+               cell_predicate="true"
                ):
     """!
     
@@ -21,6 +22,15 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
       we hardcode the number of unknowns per vertex that we plot
       to 1, and we make some important customisations. Particularly
       regarding the place we plot.
+
+      \param plot_predicate: string
+        This determines whether we want to plot in this cell. This prevents
+        spurious creation of patch files that we don't want to print.
+
+      \param cell_predicate: string
+        This determines whether we want to plot in this cell. For instance,
+        we use this flag to prevent plotting on levels that are not the
+        finest level.
         
     """
     super( PlotVertexDataInPeanoBlockFormat, self ).__init__()
@@ -48,17 +58,19 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
 
 
   __Template_EndTraversal = """
-  assertion(_dataWriter!=nullptr);
-  assertion1(_dataWriter!=nullptr,_treeNumber);
-  
-  _dataWriter->close();
-  _writer->writeToFile();
-  
-  delete _dataWriter;
-  delete _writer;
+  if ( {{PLOT_PREDICATE}} ) {
+    assertion(_dataWriter!=nullptr);
+    assertion1(_dataWriter!=nullptr,_treeNumber);
+    
+    _dataWriter->close();
+    _writer->writeToFile();
+    
+    delete _dataWriter;
+    delete _writer;
 
-  _dataWriter = nullptr;
-  _writer     = nullptr;
+    _dataWriter = nullptr;
+    _writer      = nullptr;
+  }
 """
 
     
@@ -80,7 +92,7 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
 
   __Template_TouchCellFirstTime = """ 
   if (
-    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse
+    fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior
     and
     {{PLOT_PREDICATE}}
   ) {
@@ -101,31 +113,34 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal = """
-  tarch::mpi::Lock lock( _semaphore );
-  
-  static int counter = -1;
-  counter++;
-  
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
+  if ({{PLOT_PREDICATE}}) {
+    tarch::mpi::Lock lock( _semaphore );
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
-    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
-  }
-
-  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{SOLVER_NAME}}.{{VARIABLE}}",
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    counter
-  );
+    static int counter = -1;
+    counter++;
     
-  _dataWriter = _writer->createVertexDataWriter( 
-    "{{VARIABLE}}", 
-    2,  // number of dofs per axis per cell                                          
-    repositories::{{SOLVER_INSTANCE}}.VertexUnknowns,
-    "Solution",
-    "Solution as delivered through MF Solver"
-  );
+    std::ostringstream snapshotFileName;
+    snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}-" << counter ;
+
+    if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
+      snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
+    }
+
+    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+      Dimensions, snapshotFileName.str(), "{{SOLVER_NAME}}.{{VARIABLE}}",
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+      counter
+    );
+      
+    _dataWriter = _writer->createVertexDataWriter( 
+      "{{VARIABLE}}", 
+      2,  // number of dofs per axis per cell
+      repositories::{{SOLVER_INSTANCE}}.VertexUnknowns,
+      "Solution",
+      "Solution as delivered through MF Solver"
+    );
+    _dataWriter->setPrecision(16);
+  }
 """
 
 

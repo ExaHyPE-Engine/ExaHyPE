@@ -6,8 +6,10 @@ import dastgen2
 import os
 
 from .Solver                        import Solver
-from .actionsets.InitDofsMG         import InitDofsCollocatedMG
-from .actionsets.CollocatedMGSolver import CollocatedMGSolver, Restriction, Prolongation
+from .actionsets.CollocatedMGSolver.InitDofs           import InitDofsCollocatedMG
+from .actionsets.CollocatedMGSolver.CollocatedMGSolver import CollocatedMGSolver
+from .actionsets.CollocatedMGSolver.Restriction        import Restriction
+from .actionsets.CollocatedMGSolver.Prolongation       import Prolongation
 from .actionsets.PlotVertexDataInPeanoBlockFormat import PlotVertexDataInPeanoBlockFormat
 
 from abc import abstractmethod
@@ -73,11 +75,12 @@ class CollocatedMG(Solver):
                descend_order,
                restriction_matrix,
                prolongation_matrix,
-               smoother_relaxation = 0.6
+               smoother_relaxation = 0.6,
+               plot_predicate="true"
                ):
     super( CollocatedMG, self ).__init__( name,
-                                          min_h,
-                                          max_h
+                                          min_h=min_h,
+                                          max_h=max_h
                                           )
     
     assert pre_smoothing_steps  >= 1
@@ -92,9 +95,7 @@ class CollocatedMG(Solver):
     self._vertex_data.data.add_attribute( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
     self._cell_data.data.add_attribute  ( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
 
-    matrix_dims = (2**dimensions) * unknowns_per_vertex
-    
-    self._unknowns_per_vertex = unknowns_per_vertex
+    self._unknowns_per_vertex_node = unknowns_per_vertex
 
     # already initialised this in superclass!
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "u",          str(unknowns_per_vertex) ) )
@@ -116,6 +117,7 @@ class CollocatedMG(Solver):
     self._basic_descend_order           = descend_order
     
     self._smoother_relaxation           = smoother_relaxation
+    self._plot_predicate                = plot_predicate
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedMG, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -136,15 +138,16 @@ class CollocatedMG(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( Prolongation(self,descend_invocation_order=0) )
-    observer.add_action_set( CollocatedMGSolver(self,descend_invocation_order=1) )
-    observer.add_action_set( Restriction(self,descend_invocation_order=2) )
+    invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
+    observer.add_action_set( Prolongation(self,descend_invocation_order=invocation_order+0) )
+    observer.add_action_set( CollocatedMGSolver(self,descend_invocation_order=invocation_order+1) )
+    observer.add_action_set( Restriction(self,descend_invocation_order=invocation_order+2) )
     pass
   
   def add_to_plot(self, observer):
-    plot_predicate = f""" fineGridCell{self.typename()}.getLevel() == repositories::{self.instance_name()}.getFinestLevel() """
-    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "u",   "getU",   plot_predicate=plot_predicate))
-    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=plot_predicate))
+    cell_predicate = f"""fineGridCell{self.typename()}.getLevel() == repositories::{self.instance_name()}.getFinestLevel() """
+    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "u",   "getU",   plot_predicate=self._plot_predicate, cell_predicate=cell_predicate))
+    observer.add_action_set(PlotVertexDataInPeanoBlockFormat(self, "rhs", "getRhs", plot_predicate=self._plot_predicate, cell_predicate=cell_predicate))
     pass
 
   def add_implementation_files_to_project(self, namespace, output, subdirectory=""):
@@ -170,7 +173,7 @@ class CollocatedMG(Solver):
         "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling,
         "MASS_MATRIX"         : self._mass_matrix,
         "MASS_MATRIX_SCALING" : self._mass_matrix_scaling,
-        "VERTEX_CARDINALITY":            self._unknowns_per_vertex,
+        "VERTEX_CARDINALITY":            self._unknowns_per_vertex_node,
         "SOLVER_NAME":                   self.typename(),
         "SOLVER_TOLERANCE"            :  self._solver_tolerance,
         "SMOOTHER_RELAXATION":           self._smoother_relaxation,

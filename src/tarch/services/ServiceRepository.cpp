@@ -1,10 +1,9 @@
-#include "tarch/services/ServiceRepository.h"
+#include "ServiceRepository.h"
 
-#include "../multicore/Task.h"
-#include "tarch/Assertions.h"
 #include "tarch/tarch.h"
+#include "tarch/Assertions.h"
+#include "tarch/multicore/Task.h"
 #include "tarch/multicore/RecursiveLock.h"
-
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"

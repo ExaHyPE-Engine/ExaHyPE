@@ -2,3 +2,4 @@
  use, please see the copyright notice at www.peano-framework.org
 """
 import mghype.api.matrixgenerators
+import mghype.api.postprocessing
