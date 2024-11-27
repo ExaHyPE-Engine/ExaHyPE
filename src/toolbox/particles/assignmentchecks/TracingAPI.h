@@ -81,6 +81,16 @@ namespace toolbox {
        * Event::Type::ConsecutiveMoveEvent. It will also keep track the original
        * position of the particle, before the first move event of that sequence
        * has occurred, as well as the current particle position.
+       *
+       * In earlier versions, we tested for a previous event existing on any
+       * tree in the database. This lead to concurrency issues. Sometimes (on
+       * rare occasions) when a particle is being lifted or dropped in its local
+       * tree, these changes won't have made it into the database for trees where
+       * the particle is virtual as the trees will race over write access to
+       * the database. In these scenarios the checks will fail because they find
+       * that the particle hasn't been associated to the same vertex.
+       * Since we now keep track of a particle history for each tree it finds
+       * itself on, these checks are deprecated.
        */
       void moveParticle(
         const std::string&                           particleName,

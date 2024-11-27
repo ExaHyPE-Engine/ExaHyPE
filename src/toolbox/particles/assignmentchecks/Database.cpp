@@ -295,7 +295,12 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::
 
         if (std::find(treesToKeep.begin(), treesToKeep.end(), thisTree) == treesToKeep.end()){
           treesToKeep.push_back(thisTree);
-          past.trace = "substitute-for-whole-trajectory/" + past.trace;
+          // In certain cases, especially for virtual particles, the last saved event
+          // may be a substitution already. We don't want to keep prepending the string
+          // with the notifier, so check for it.
+          if (not past.trace.starts_with("substitute-for-whole-trajectory/")){
+            past.trace = "substitute-for-whole-trajectory/" + past.trace;
+          }
           eventsToKeep.push_back(past);
         }
 

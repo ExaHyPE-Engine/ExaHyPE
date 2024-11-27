@@ -214,87 +214,53 @@ void toolbox::particles::assignmentchecks::moveParticle(
     newParticleX,
     dx,
     vertexH
-  )
+  );
 
-    // use old particle position to find history.
-    ParticleSearchIdentifier identifier
-    = ParticleSearchIdentifier(
-      particleName,
-      oldParticleX,
-      particleID,
-      tarch::la::max(vertexH)
-    );
+  // use old particle position to find history.
+  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
+    particleName,
+    oldParticleX,
+    particleID,
+    tarch::la::max(vertexH)
+  );
 
   ParticleEvents history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
   // else first.
-  assert(history.size() > 0);
+  assertion(history.size() > 0);
 
-  Event previousEvent    = database.getPreviousEvent(history, treeId);
-  Event anyPreviousEvent = database.getPreviousEvent(
-    history,
-    Database::AnyTree
+  Event previousEvent = database.getPreviousEvent(history, treeId);
+
+  // Can't be sieve event, particle needs to have been assigned to vertex
+  // first
+  assertion3(
+    previousEvent.type == Event::Type::AssignToVertex
+    or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
+    or previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+    "Invalid previous event type",
+    previousEvent.toString(),
+    database.particleHistory(identifier)
   );
 
-  // We need to have at least 1 event somewhere.
-  // Even if the database had been trimmed, at least 1 event remains. But the
-  // remaining event may have been on a different tree.
-  assertion(anyPreviousEvent.type != internal::Event::Type::NotFound);
 
-  // We must still be on the same vertex, or something is wrong.
-  // Exception: erase event. We don't keep track of the vertex data there,
-  // because the particle gets detached from vertices first.
-  if (anyPreviousEvent.type != internal::Event::Type::Erase) {
-    assertion4(
-      tarch::la::equals(anyPreviousEvent.vertexH, vertexH),
-      "Vertices not the same",
-      anyPreviousEvent.vertexH,
-      vertexH,
-      database.particleHistory(identifier)
-    );
-    assertion3(
-      tarch::la::equals(anyPreviousEvent.vertexX, vertexX),
-      "Vertices not the same",
-      anyPreviousEvent.vertexX,
-      vertexX
-    );
-  }
+  assertion5(
+    tarch::la::equals(previousEvent.vertexH, vertexH),
+    "Vertices not the same",
+    previousEvent.vertexH,
+    vertexH,
+    treeId,
+    database.particleHistory(identifier)
+  );
+  assertion5(
+    tarch::la::equals(previousEvent.vertexX, vertexX),
+    "Vertices not the same",
+    previousEvent.vertexX,
+    vertexX,
+    treeId,
+    database.particleHistory(identifier)
+  );
 
-
-  if (previousEvent.type != Event::Type::NotFound) {
-    // This must be on the same tree then.
-    // We can apply stricter checks.
-
-    // Can't be sieve event, particle needs to have been assigned to vertex
-    // first
-    assertion(
-      previousEvent.type == Event::Type::AssignToVertex
-      or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
-      or previousEvent.type
-           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex
-    );
-
-    // We must still be on the same vertex, or something is wrong.
-    assertion3(
-      tarch::la::equals(previousEvent.vertexH, vertexH),
-      "Vertices not the same",
-      previousEvent.vertexH,
-      vertexH
-    );
-    assertion3(
-      tarch::la::equals(previousEvent.vertexX, vertexX),
-      "Vertices not the same",
-      previousEvent.vertexX,
-      vertexX
-    );
-    assertion3(
-      previousEvent.treeId == treeId,
-      "Tree not the same",
-      previousEvent.treeId,
-      treeId
-    );
-  }
-
+  // Now actually write the move event down.
   if ((previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) or (previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex)){
 
     // Either way, the event we'll write down is a consecutive move
