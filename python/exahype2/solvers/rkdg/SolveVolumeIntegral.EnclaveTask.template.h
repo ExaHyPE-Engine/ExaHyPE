@@ -6,17 +6,19 @@
 // **********************************************************************************************
 #pragma once
 
-#include "peano4/datamanagement/CellMarker.h"
-#include "tarch/NonCriticalAssertions.h"
+#include "repositories/SolverRepository.h"
 
-#include "exahype2/fv/rusanov/rusanov.h"
+#include "tarch/NonCriticalAssertions.h"
+#include "tarch/multicore/Task.h"
+
+#include "peano4/datamanagement/CellMarker.h"
+
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "repositories/SolverRepository.h"
+#include "exahype2/fv/rusanov/rusanov.h"
 
 #include <vector>
 #include <memory>
-#include "../../../../src/tarch/multicore/Task.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"

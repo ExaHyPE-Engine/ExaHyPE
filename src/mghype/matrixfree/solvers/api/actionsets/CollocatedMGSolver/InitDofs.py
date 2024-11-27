@@ -48,6 +48,7 @@ class InitDofsCollocatedMG(ActionSet):
     case celldata::{{SOLVER_NAME}}::Type::Interior:
     {
       fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
     }
     break;
   }
@@ -134,7 +135,7 @@ class InitDofsCollocatedMG(ActionSet):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
+    self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex_node
 
   def get_body_of_operation(self,operation_name):
     result = ""
