@@ -262,6 +262,16 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   } enddforx
 
+  dfor2(k) {
+    std::set<int> neighbourIds;
+
+    for (int i = 0; i < TwoPowerD; i++) {
+      neighbourIds.insert(fineGridVertices[kScalar].getAdjacentRanks(i));
+    }
+
+    event.setNumberOfAdjacentTreesPerVertex(kScalar,neighbourIds.size());
+  } enddforx
+
   logTraceOutWith2Arguments( "createGenericCellTraversalEvent(...)", event.toString(), _id );
   return event;
 }

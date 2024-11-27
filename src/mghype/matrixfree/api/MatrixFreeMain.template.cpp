@@ -147,6 +147,11 @@ bool selectNextAlgorithmicStep() {
         break;
 
 {% endif %}
+      case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Undef:
+        {
+          assertionMsg(false, "should not be called" );
+        }
+        break;
     }
   }
   else {
