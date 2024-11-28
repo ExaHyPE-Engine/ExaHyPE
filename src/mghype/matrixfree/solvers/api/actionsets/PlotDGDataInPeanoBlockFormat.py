@@ -11,7 +11,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
                solver,
                variable_name,
                getter,
-               predicate_plot = "true"
+               plot_predicate = "true"
                ):
     """
     
@@ -25,7 +25,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
     self.d["SOLVER_NAME"]            = solver.typename()
     self.d[ "VARIABLE" ]             = variable_name
     self.d[ "GETTER" ]               = getter
-    self.d["PREDICATE_PLOT"]         = predicate_plot
+    self.d["PLOT_PREDICATE"]         = plot_predicate
 
   __Template_Constructor = """
   _writer          = nullptr;
@@ -43,7 +43,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
 
 
   __Template_EndTraversal = """
-  if ( {{PREDICATE_PLOT}} ) {
+  if ( {{PLOT_PREDICATE}} ) {
     assertion(_dataWriter!=nullptr);
     assertion1(_dataWriter!=nullptr,_treeNumber);
     
@@ -78,7 +78,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
 if (
   fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior
   and
-  {{PREDICATE_PLOT}}
+  {{PLOT_PREDICATE}}
 ) {
 
   logTraceInWith1Argument("Plot::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
@@ -115,7 +115,7 @@ if (
 """
 
   __Template_BeginTraversal = """
-  if ({{PREDICATE_PLOT}}) {
+  if ({{PLOT_PREDICATE}}) {
     tarch::mpi::Lock lock( _semaphore );
 
     static int counter = -1;
@@ -141,6 +141,8 @@ if (
       "Solution",
       "Solution as delivered through MF Solver"
     );
+
+    _dataWriter->setPrecision(16);
   }
 """
 

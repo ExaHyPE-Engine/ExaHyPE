@@ -1,11 +1,6 @@
 # This file is part of the Peano multigrid project. For conditions of 
 # distribution and use, please see the copyright notice at www.peano-framework.org
-'''
 
-here we put in a base class for generating 
-matrices that we pipe into c++ code
-
-'''
 from abc import abstractmethod
 
 import numpy as np
@@ -16,24 +11,21 @@ from itertools import product
 
 class MatrixGenerator:
   """!
-  use this as a base class for generating matrices 
-  that we pipe into the c++ code
+      
+  Base class for generating matrices that we pipe into the C++ code
 
-  Every method marked abstract is intended to be
-  overwritten in child class, but some will come
-  with default behaviour.
-
-  Warning - we didn't write the getFunctions in a
-  functional way, and so eval integral cannot
-  accept derivatives at this time
+  Every method marked abstract is intended to be overwritten in child classes, but some will come
+  with default behaviour. 
 
   """
   def __init__(self,
                dimensions,
-               poly_degree
+               poly_degree,
+               unknowns_per_node=1
                ):
-    self.Dimensions    = dimensions
+    self.dimensions    = dimensions
     self.poly_degree   = poly_degree
+    self.unknowns_per_node = unknowns_per_node
 
     self.polynomials1d = self.get_polynomial1d()
     self.derivatives1d = [ p.deriv() for p in self.polynomials1d ]
@@ -44,9 +36,10 @@ class MatrixGenerator:
   def get_polynomial1d(self):
     """!
     Method to create a list of 1D polynomials.
+    
     We promote these to higher dimensions by
     taking tensor products. 
-
+    
     By default, we will return Lagrange polynomials,
     but we can overwrite this in child class
     """
@@ -114,7 +107,7 @@ class MatrixGenerator:
     for number of dimensions which is less 
     """
     if dim==-1:
-      dim=self.Dimensions
+      dim=self.dimensions
     #make array of length dim, where each 
     #entry is a copy of self.points1d
     points = [self.points1d for _ in range(dim)]
@@ -144,7 +137,7 @@ class MatrixGenerator:
     be implemented in the child class.
     """
     if dim==-1:
-      dim = self.Dimensions
+      dim = self.dimensions
     #dummy function to return product of entries in array
     def arrayProduct(array):
       output = 1
@@ -178,7 +171,7 @@ class MatrixGenerator:
     """
     #support converting index to any dimension. default to max
     if dim==-1:
-      dim=self.Dimensions
+      dim=self.dimensions
     assert index in range((self.poly_degree+1) ** dim), "index outside of range!"
     output = [0 for _ in range(dim)]
     for d in range(dim-1,-1,-1):
@@ -195,14 +188,14 @@ class MatrixGenerator:
     We pass in an index and a dimension, which will, by default
     be set to the number of dimensions of the problem.
 
-    The index should be betweeen 0 and (self.poly_degree)^self.Dimensions
+    The index should be betweeen 0 and (self.poly_degree)^self.dimensions
 
     We convert the index into a tuple (x,y,z) of indices, pull
     out appropriate polynomials and return a function object.
     This function object will expect dim arguments.
     """
     if dim == -1: 
-      dim = self.Dimensions
+      dim = self.dimensions
 
     # the indices of the polynomials we wanna fetch
     # warning: will misfire if "index" not in correct range for dim
@@ -238,7 +231,7 @@ class MatrixGenerator:
     dimension, we take a derivative rather than the poly itself
     """
     if dim == -1: 
-      dim = self.Dimensions
+      dim = self.dimensions
     assert dimForDeriv in range(dim), f"dimForDeriv={dimForDeriv}, dim={dim}"
 
 
@@ -267,7 +260,7 @@ class MatrixGenerator:
 
   def eval_integral(self, functions, dim=-1, factor=1):
     if dim == -1:
-      dim = self.Dimensions
+      dim = self.dimensions
     points  = self.get_points_for_dimension(dim)
     weights = self.get_weights_for_dimension(dim)
     output  = 0
@@ -286,10 +279,29 @@ class MatrixGenerator:
   @abstractmethod
   def get_cell_system_matrix_for_laplacian(self):
     """!
+     
+    Construct the Laplacian
     
-    The resulting matrix has to be scaled by @f$ h^{d-1} @f$.
+    Create the Laplacian. This routine represents the fact
+    that the Laplacian is kind of the evergreen of many 
+    PDEs, and we therefore provide a factory method for 
+    this one always.
+    
+    These factory methods all return two lists. The first
+    one is a list of matrices @f$ A_1, A_2, ... @f$ defined relative to the unit
+    cube or square, respectively. The second list has the
+    same length as the first list, and stores integer indices
+    @f$ k_1, k_2, k_3, ... @f$. Throughout the assemly, you
+    should then apply the local matrix
+    @f$ A = h^{k_1} A_1 + h^{k_2} A_2 + ... @f$. The mass 
+    matrix typically is only one matrix scaled with d, i.e.
+    we return a list hosting only one matrix as first argument
+    and the second list only hosts the integer self.dimensions.
 
     Implement this in child class.
+    
+    @return [Matrix] x [Int]
+      The two lists have to have the same number of entries.
 
     """
     raise NotImplementedError
@@ -297,17 +309,27 @@ class MatrixGenerator:
   @abstractmethod
   def get_cell_mass_matrix(self):
     """!
+    Factory for cell mass matrix.
     
-    A factor method to pre-assemble the mass matrix for a cell. This is
-    a routine every matrix generator should provide. Obviously, some 
-    schemes host function spaces on the faces and therefore might have
-    mass matrices for the faces, too. Therefore, we call is cell mass
-    matrix.
-
-    The resulting matrix has to be scaled by @f$ h^d @f$.
-
-    Implement this in child class.
+    Consult get_cell_system_matrix_for_laplacian() for an overview
+    of the result types. As the mass matrix is typically fairly
+    simple (it does not host any derivative), and as we work within
+    a finite element mindset, this routine returns a list with one
+    matrix as first argument, and then a list with the integer
+    self.dimensions.
     
     """
     raise NotImplementedError
 
+  @abstractmethod
+  def get_cell_identity_matrix(self):
+    """!
+    
+    Construct identity for this particular equation system
+    
+    Not that this is identity construction has to take the number of
+    unknowns into account as well as the number of degrees of freedom
+    hosted within a cell.
+        
+    """
+    raise NotImplementedError

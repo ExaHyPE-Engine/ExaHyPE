@@ -27,24 +27,18 @@ namespace swift2 {
      */
     template <typename Particle>
     void computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity(
-      double cflFactor, double initialTimeStepSize, double maxRelativeGrowth = 0.1
+      double cflFactor,
+      double initialTimeStepSize,
+      double maxRelativeGrowth = 0.1
     );
 
 
-    //    void computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double
-    //    initialTimeStepSize );
-
-
     /**
-     * Determines the maximum global time step size dt allowed by the CLF condition in
-     * SPH simulations.
-     * The operation overwrites dt only if adjustTimeStepSize is true.
+     * Determines the maximum global time step size dt allowed by the CLF
+     * condition in SPH simulations. The operation overwrites dt only if
+     * adjustTimeStepSize is true.
      */
-    // @TODO implement the CFL time step for SPH. IT depends not on V but on the signal velocity.
-    // At the moment we use this function only to keep dt=constant
-
-    template <typename Particle>
-    void computeCFLTimeStepSizeSPH();
+    template <typename Particle> void computeCFLTimeStepSizeSPH();
 
 
   } // namespace timestepping

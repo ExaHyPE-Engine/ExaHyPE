@@ -41,6 +41,10 @@ class InsertParticlesFromHDF5File(ActionSet):
 
     __Template_TouchCellFirstTime = jinja2.Template(
         """
+  // ----------------------------------------------------------------------------------
+  // Start of snippet template in python/swift2/input/InsertParticlesFromHDF5File.py
+  // ----------------------------------------------------------------------------------
+
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
     tarch::multicore::Lock lock( _semaphore );
 
@@ -113,12 +117,16 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
 
+      newParticle->setSmlIterLeftBound(SmlMin);
+      newParticle->setSmlIterRightBound(SmlMax);
+
       newParticle->setU              ( InternalEnergy );
 
       /*
        * Initialize remaining fields
        * @TODO some of these should be initialised elsewhere to keep this
        * initialisation script general for any hydro scheme, etc.
+       * See swift2::kernels::legacy::first_init_particle()
        */
 
       /* Internal search radius used by Peano.
@@ -127,14 +135,11 @@ class InsertParticlesFromHDF5File(ActionSet):
       const double GridSize_x = GridSize(0);
       const double searchRadiusGlobal = SmlMax * kernel_gamma;
 
-      // TODO: use radius from smoothing length, not global one.
-      // Solve this once you add variable search radii.
-
       if (tarch::la::greater(searchRadiusGlobal, 0.5 * GridSize_x)) {
           std::ostringstream out;
           out << " Global upper limit for search radius is > mesh size. You need to increase your cell size" <<
               " or reduce hydro_h_max in your project python file." <<
-              " 0.5 * GridSize:" << 0.5 * GridSize_x <<
+              " GridSize:" << GridSize_x <<
               " max global search radius: " << searchRadiusGlobal;
           logError("InsertParticlesFromHDF5File.py:", out.str());
       }
@@ -178,7 +183,9 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setBalsara (0.0);
 
       // Set particle id
+#if PeanoDebug > 0
       newParticle->setPartid( ParticleID );
+#endif
 
       /*
        * All particle attributes for SPH have thus been set
@@ -198,11 +205,18 @@ class InsertParticlesFromHDF5File(ActionSet):
                                                        << marker.toString() << " on tree " << _spacetreeId );
 
   }
+  // -----------------------------------------------------------------------------
+  // End of snippet template in python/swift2/input/InsertParticlesFromHDF5File.py
+  // -----------------------------------------------------------------------------
 """
     )
 
     __Template_EndTraversal = jinja2.Template(
         """
+  // -------------------------------------------------------------------------------
+  // Start of snippet template in python/swift2/input/InsertParticlesFromHDF5File.py
+  // -------------------------------------------------------------------------------
+
   if (_particleNumberOnThisTree==0) {
     logWarning( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId );
   }
@@ -212,6 +226,10 @@ class InsertParticlesFromHDF5File(ActionSet):
   #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
   assertion( _particleNumberOnThisTree>0 );
   #endif
+
+  // -----------------------------------------------------------------------------
+  // End of snippet template in python/swift2/input/InsertParticlesFromHDF5File.py
+  // -----------------------------------------------------------------------------
 """
     )
 

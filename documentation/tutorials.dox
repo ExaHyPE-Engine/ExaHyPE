@@ -6,26 +6,27 @@ The tutorials are embedded into their respective extension documentation.
 However, the list below provides an overview over some tutorials.
 
 <table border="0">
- <tr>
-  <td style="vertical-align: bottom">
-   @image html documentation/icons/ExaHyPE-flows.png
-   @ref page_exahype2_tutorials "ExaHyPE 2"
-  </td>
-  <td style="vertical-align: bottom">
-   @image html documentation/icons/swift.png
-   @ref swift_tutorials "Swift 2"
-  </td>
- </tr>
- <tr>
-  <td style="vertical-align: bottom">
-   @image html documentation/icons/MGHyPE.png
-   @ref page_multigrid_tutorials "MGHyPE"
-  </td>
-  <td style="vertical-align: bottom">
-   @image html documentation/icons/peano4.png
-   @ref tutorials_peano4_tutorials "Peano 4 - core"
-  </td>
- </tr>
+  <tr>
+    <td style="vertical-align: bottom">
+      @image html documentation/icons/peano4.png
+      @ref tutorials_peano4_tutorials "Peano 4"
+    </td>
+    <td style="vertical-align: bottom">
+      @image html documentation/icons/ExaHyPE-flows.png
+      @ref page_exahype2_tutorials "ExaHyPE 2"
+    </td>
+  </tr>
+
+  <tr>
+    <td style="vertical-align: bottom">
+      @image html documentation/icons/swift.png
+      @ref swift_tutorials "Swift 2"
+    </td>
+    <td style="vertical-align: bottom">
+      @image html documentation/icons/MGHyPE.png
+      @ref page_mghype_tutorials "MGHyPE"
+    </td>
+  </tr>
 </table>
 
 
@@ -33,10 +34,9 @@ However, the list below provides an overview over some tutorials.
 
 Tutorials are written as plain Doxygen files and typically have the extension dox.
 
-
-If you prefer to have Python notebooks, please store the notebook (without any 
-binary content) in the repo. The notebooks then have to be converted before we 
-actually invoke doxygen. This is done by calling
+If you prefer to have Python notebooks, please store the notebook (without any binary content) in the repository.
+The notebooks then have to be converted before we actually invoke doxygen.
+This is done by calling
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 documentation/convert-jupyter-notebooks.py
@@ -46,33 +46,31 @@ If you now call Doxygen, the notebook is integrated into the static webpage.
 
 ## Naming conventions
 
-This webpage will be given the identifier that corresponds to the qualified file path, 
-where all / are replaced with underscores and the postfix is eliminated. So if 
+This webpage will be given the identifier that corresponds to the qualified file path,
+where all / are replaced with underscores and the postfix is eliminated. So if
 your file is called
 
      Peano/tutorials/mghype/hitchhikers-guide.ipynb
 
-then you'll get a page with the identifier 
+then you'll get a page with the identifier
 
      tutorials_mghype_hitchhikers-guide
 
 
 ## Content formatting
 
-- If you have boxes in your Jupyter notebook which are classified as raw, these are 
-  unfortunately not preserved by the markdown export of the notebooks. However, our 
-  postprocessing script is able to reconstruct a proper formatting if you indent the 
-  lines within your raw box by at least give spaces, just as you would do with 
+- If you have boxes in your Jupyter notebook which are classified as raw, these are
+  unfortunately not preserved by the markdown export of the notebooks. However, our
+  postprocessing script is able to reconstruct a proper formatting if you indent the
+  lines within your raw box by at least give spaces, just as you would do with
   markdown in Doxygen. You have to indent every single line of the block though.
-  
+
   If all is a mess, just add a line of tilde chars when you start the raw block
   as well as the very end. You should be all set then.
 - If you use formulae, start them with two dollar signs. You can also use LaTeX
   commands directly. But don't mix them!
 - Image should be translated one to one, but we faced some issues when relative
-  paths are used. As long as pics reside within the same directory or a 
+  paths are used. As long as pics reside within the same directory or a
   subdirectory, all should be fine.
-  
 
 */
-

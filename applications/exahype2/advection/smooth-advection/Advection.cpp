@@ -15,9 +15,9 @@ void applications::exahype2::advection::Advection::initialCondition(
   bool                                          gridIsConstructed
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = std::sin(x(0) * std::numbers::pi) * std::sin(x(1) * std::numbers::pi)
+    Q[i] = std::sin(x(0) * tarch::la::PI) * std::sin(x(1) * tarch::la::PI)
     #if Dimensions == 3
-      * std::sin(x(2) * std::numbers::pi)
+      * std::sin(x(2) * tarch::la::PI)
     #endif
     ;
   }

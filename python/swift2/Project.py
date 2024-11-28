@@ -13,6 +13,7 @@ from swift2.actionsets.DynamicMeshRefinementAnalysis import (
     DynamicMeshRefinementAnalysis,
 )
 from swift2.output.SWIFTMain import SWIFTMain
+from swift2.actionsets.Cleanup import Cleanup
 
 import swift2.api.graphcompiler
 
@@ -65,6 +66,7 @@ class Project(object):
             "InitialConditions", False
         )
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
+        self.algorithm_step_cleanup = peano4.solversteps.Step("Cleanup", False)
 
         self.additional_action_sets_per_solver_step = []
 
@@ -442,8 +444,8 @@ levels.
          sweeps. The actual mapping is outsourced into the function represented
          by self.task_graph_compiler. This way, users can switch the translator's
          behaviour. This function returns a sequence of mesh traversals. On top
-         of that, we have the default traversals to create a grid, to plot it, and
-         to initialise the setup.
+         of that, we have the default traversals to create a grid, to plot it,
+         to initialise the setup, and to clean up after we're done.
 
          Once we have our three default steps plus a sequence of algorithmic steps
          per time step, we run through the following steps:
@@ -499,6 +501,13 @@ levels.
             )
 
         #
+        # Create cleanup action sets
+        #
+
+        for current_species_set in self._particle_species_set:
+            self.algorithm_step_cleanup.add_action_set(Cleanup(current_species_set))
+
+        #
         # Create mesh traversals aka solver steps
         #
         initialisation_steps = self.initialisation_steps_task_graph_compiler(
@@ -520,6 +529,7 @@ levels.
             self.algorithm_step_create_grid.use_vertex(current_species_set)
             self.algorithm_step_initial_conditions.use_vertex(current_species_set)
             self.algorithm_step_plot.use_vertex(current_species_set)
+            self.algorithm_step_cleanup.use_vertex(current_species_set)
 
         #
         # Add the cell statistics and the task markers everywhere
@@ -548,14 +558,17 @@ levels.
             self.algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
             self.algorithm_step_initial_conditions.use_cell(cell_marker_for_statistics)
             self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
+            self.algorithm_step_cleanup.use_cell(cell_marker_for_statistics)
 
             self.algorithm_step_create_grid.use_cell(cell_marker_for_tasks)
             self.algorithm_step_initial_conditions.use_cell(cell_marker_for_tasks)
             self.algorithm_step_plot.use_cell(cell_marker_for_tasks)
+            self.algorithm_step_cleanup.use_cell(cell_marker_for_tasks)
 
             self.algorithm_step_create_grid.use_vertex(vertex_marker_for_tasks)
             self.algorithm_step_initial_conditions.use_vertex(vertex_marker_for_tasks)
             self.algorithm_step_plot.use_vertex(vertex_marker_for_tasks)
+            self.algorithm_step_cleanup.use_vertex(vertex_marker_for_tasks)
 
             for solverstep in solver_steps:
                 solverstep.use_vertex(current_species_set)
@@ -594,6 +607,7 @@ levels.
         self._project.solversteps.add_step(self.algorithm_step_create_grid)
         self._project.solversteps.add_step(self.algorithm_step_initial_conditions)
         self._project.solversteps.add_step(self.algorithm_step_plot)
+        self._project.solversteps.add_step(self.algorithm_step_cleanup)
 
         for solverstep in solver_steps:
             for action_set in self.additional_action_sets_per_solver_step:

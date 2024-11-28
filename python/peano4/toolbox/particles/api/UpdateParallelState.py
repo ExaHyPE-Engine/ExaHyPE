@@ -56,47 +56,47 @@ class UpdateParallelState(ActionSet):
 
 
     ## Merges along domain boundary
-    
+
     We would like all state updates to be localised within this action set.
-    However, we cannot do everything here: We also have to update the 
+    However, we cannot do everything here: We also have to update the
     parallel state when we merge along the domain boundary. This happens
-    in the particle set's merge(). The documentation around merge() is 
+    in the particle set's merge(). The documentation around merge() is
     summarise here, as we have multiple particle set implementations, but
     all of them are realised through Jinja templates. So it is better to
     have stuff in one place only.
-    
-    The merge in principle is trivial: If a neighbour sends you in a 
+
+    The merge in principle is trivial: If a neighbour sends you in a
     virtual particle, don't do anything with it. Just ignore it. If it
     is local at the neighbour, we add it to our local vertex.
-    
+
     @image html UpdateParallelState_merge.png
-    
+
     The sketch above illustrates why it is important to neglect virtual
-    particles sent in: In the sketch, the left subdomain sends its 
-    particle (green) over to the right, where it is marked as virtual 
-    (red). The right one now sends this particle back (dark green) and 
+    particles sent in: In the sketch, the left subdomain sends its
+    particle (green) over to the right, where it is marked as virtual
+    (red). The right one now sends this particle back (dark green) and
     we would hold redundant information.
-    
+
     The sketch also illustrates why we throw away virtual particles after
     the mesh sweep: If the particle moves on the owning rank - and it can
-    only move there - the neighbour would have two virtual copies (as it 
+    only move there - the neighbour would have two virtual copies (as it
     cannot match old one to new one). So we better throw away all old stuff
     by default.
-    
+
     With that data flow in mind, particles crossing domain boundaries are
     automatically given the correct state. We wouldn't have to implement
-    and local/non-local logic in the merge(). This could all be done in 
-    this action set. However, we still need some logic here. 
+    and local/non-local logic in the merge(). This could all be done in
+    this action set. However, we still need some logic here.
 
-    The reason is simple: A merge happens in each and every mesh sweep, 
-    even if particles do not move. When a particle flies into a domain 
+    The reason is simple: A merge happens in each and every mesh sweep,
+    even if particles do not move. When a particle flies into a domain
     (it doesn't have to fly, most of the time it has been there anyway)
-    and is a local one at the neighbour, we cannot imply toggle it to 
+    and is a local one at the neighbour, we cannot imply toggle it to
     virtual here, as it might be owned redundantly if it sits directly
     on the domain boundaries. We have to rerun the "is local
     here" analysis after each merge.
 
-    
+
     ## Statistics
 
     The mapping keeps some statistics on any state update. These statistics
@@ -145,18 +145,43 @@ class UpdateParallelState(ActionSet):
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
 
-  // Have left the domain in the previous mesh sweep. So we set it to virtual 
+  // Have left the domain in the previous mesh sweep. So we set it to virtual
   // now. After this iteration, the particle will be thrown away. This can only
-  // happen if the previous mesh sweep has altered the position, i.e. while we 
-  // set the particle to virtual here, some other tree will just receive this 
-  // one and set it local there. In most cases, this will be a replace of an 
+  // happen if the previous mesh sweep has altered the position, i.e. while we
+  // set the particle to virtual here, some other tree will just receive this
+  // one and set it local there. In most cases, this will be a replace of an
   // existing (virtual) particle copy.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
     logDebug( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
     _numberOfParticlesThatHaveLeftTheirDomain++;
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+
+    #if PeanoDebug > 0
+    int partID = p->getPartid();
+    #else
+    int partID = -1;
+    #endif
+
+    toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      "{{PARTICLE}}",
+      p->getX(),
+      partID,
+      true,
+      marker.x(),
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexFirstTime"
+    );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(
+      "{{PARTICLE}}",
+      p->getX(),
+      partID,
+      false,
+      marker.x(),
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexFirstTime"
+    );
   }
 }
 """
@@ -175,16 +200,42 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     p++;
   }
   else {
-    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
-    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
-    #if !defined(Parallel)
-    assertion2(
-      ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
-      (*p)->toString(),
-      marker.toString()
-    );
+    #if PeanoDebug > 0
+    int partID = (*p)->getPartid();
+    #else
+    int partID = -1;
     #endif
+
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
+    toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      "{{PARTICLE}}",
+      (*p)->getX(),
+      partID,
+      false,
+      marker.x(),
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexLastTime"
+    );
+    toolbox::particles::assignmentchecks::eraseParticle(
+      "{{PARTICLE}}",
+      (*p)->getX(),
+      partID,
+      false,
+      marker.h(),
+      _treeNumber,
+      "UpdateParallelState::__Template_TouchVertexLastTime"
+    );
+    // #if !defined(Parallel)
+    // This assertion breaks when running without MPI on 1 tree with periodic
+    // boundary conditions on. It doesn't account for periodic BCs being mapped
+    // onto a boundary exchange too.
+    // assertion2(
+    //   ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
+    //   (*p)->toString(),
+    //   marker.toString()
+    // );
+    // #endif
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }

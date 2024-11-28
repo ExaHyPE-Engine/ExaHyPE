@@ -12,6 +12,11 @@
 
 namespace swift2 {
   namespace kernels {
+
+    // template for convenience and code legibility.
+    template <typename ParticleContainer>
+    using PCParticle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
+
     /**
      * Definition of particle update (unary operation)
      *
@@ -194,8 +199,8 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void forAllParticles(
-      const peano4::datamanagement::VertexMarker&                  marker,
-      ParticleContainer&                                           assignedParticles,
+      const peano4::datamanagement::VertexMarker&                         marker,
+      ParticleContainer&                                                  assignedParticles,
       ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
       UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
           ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
@@ -207,11 +212,11 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void forAllLocalParticles(
-      const peano4::datamanagement::CellMarker&                    marker,
-      ParticleContainer&                                           localParticles,
-      ParticleUnaryOperatorOnCell<typename std::remove_pointer<typename ParticleContainer::value_type>::type > auto f,
-      UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
-          predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+      const peano4::datamanagement::CellMarker&                  marker,
+      ParticleContainer&                                         localParticles,
+      ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f,
+      UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>
+          predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<ParticleContainer>>
     );
 
 
@@ -231,9 +236,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void forAllParticlesVectorised(
-      const peano4::datamanagement::VertexMarker&                  marker,
-      ParticleContainer&                                           assignedParticles,
-      int                                                          numberOfAssignedParticles,
+      const peano4::datamanagement::VertexMarker&                         marker,
+      ParticleContainer&                                                  assignedParticles,
+      int                                                                 numberOfAssignedParticles,
       ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto  f
     );
 
@@ -371,12 +376,11 @@ namespace swift2 {
       const peano4::datamanagement::CellMarker&  marker,
       LocalParticleContainer&                    localParticles,
       ActiveParticleContainer&                   activeParticles,
-      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
-          auto f,
-      UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
-          localParticlePredicate = ::swift2::kernels::alwaysUpdateInCellKernel<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>,
-      UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
-          particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+      UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
+          localParticlePredicate = ::swift2::kernels::alwaysUpdateInCellKernel<PCParticle<LocalParticleContainer>>,
+      UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
+          particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<PCParticle<LocalParticleContainer>>
     );
 
 
@@ -408,8 +412,7 @@ namespace swift2 {
       ActiveParticleContainer&                   activeParticles,
       const std::vector<int>&                    numberOfLocalParticlesPerVertex,
       const std::vector<int>&                    numberOfActiveParticlesPerVertex,
-      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
-         auto f
+      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
     );
 
     /**
@@ -422,8 +425,7 @@ namespace swift2 {
       ActiveParticleContainer&                   activeParticles,
       const std::vector<int>&                    numberOfLocalParticlesPerVertex,
       const std::vector<int>&                    numberOfActiveParticlesPerVertex,
-      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
-         auto f
+      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
     );
 
     namespace internal {

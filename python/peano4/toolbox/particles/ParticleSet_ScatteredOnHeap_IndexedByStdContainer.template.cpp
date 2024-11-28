@@ -52,11 +52,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   }
   else if ( iteratorToExistingCopy!=end() ) {
     neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
-   
+
     #if PeanoDebug>0
     neighbourParticle->setDebugX( (*iteratorToExistingCopy)->getDebugX() );
+    int neighbourPartID = neighbourParticle->getPartid();
+    #else
+    int neighbourPartID = -1;
     #endif
-    
+
     if ( (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local and incomingParticleWillBeLocal ) {
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfRedundantlySharedLocalParticles++;
@@ -75,20 +78,31 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
 
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-      neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
-      marker.x(), marker.h(), spacetreeId,
+      neighbourParticle->getX(),
+      neighbourPartID,
+      (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+      marker.x(),
+      marker.h(),
+      spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     toolbox::particles::assignmentchecks::eraseParticle(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-      neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+      neighbourParticle->getX(),
+      neighbourPartID,
+      (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+      marker.h(),
       spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-      neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
-      marker.x(), marker.h(), spacetreeId,
+      neighbourParticle->getX(),
+      neighbourPartID,
+      neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
+      marker.x(),
+      marker.h(),
+      spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
 
@@ -98,6 +112,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   }
   else {
     neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
+
+    #if PeanoDebug>0
+    int neighbourPartID = neighbourParticle->getPartid();
+    #else
+    int neighbourPartID = -1;
+    #endif
 
     _container.push_back(neighbourParticle);
 
@@ -114,8 +134,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
 
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-      neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
-      marker.x(), marker.h(), spacetreeId,
+      neighbourParticle->getX(),
+      neighbourPartID,
+      neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
+      marker.x(),
+      marker.h(),
+      spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
   }

@@ -19,6 +19,7 @@
 \li \subpage swift_parallelisation
 \li \subpage swift_graph_compiler
 \li \subpage swift_runtime_analysis
+\li \subpage swift_debugging
 \li \subpage page_swift_performance_optimisation
 
 
@@ -113,7 +114,7 @@ and then you can configure with
 
 
          ./configure --enable-particles --enable-swift --enable-loadbalancing \
-             --enable-blockstructured --enable-exahype2 --with-hdf5 \
+             --enable-blockstructured --enable-exahype --with-hdf5 \
              CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" \
              LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
              LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" \
@@ -171,17 +172,18 @@ This Readme file might be your first point of recherche.
 
 The best reference for Swift is
 
-      @inproceedings{10.1145/2929908.2929916,
-        author = {Schaller, Matthieu and Gonnet, Pedro and Chalk, Aidan B. G. and Draper, Peter W.},
-        title = {SWIFT: Using Task-Based Parallelism, Fully Asynchronous Communication, and Graph Partition-Based Domain Decomposition for Strong Scaling on More than 100,000 Cores},
-        year = {2016},
-        publisher = {Association for Computing Machinery},
-        doi = {10.1145/2929908.2929916},
-        booktitle = {Proceedings of the Platform for Advanced Scientific Computing Conference},
-        articleno = {2},
-        numpages = {10},
-        series = {PASC '16}
-      }
+    @article{SCHALLER202403,
+        author = {Schaller, Matthieu and Borrow, Josh and Draper, Peter W and Ivkovic, Mladen and McAlpine, Stuart and Vandenbroucke, Bert and Bahé, Yannick and Chaikin, Evgenii and Chalk, Aidan B G and Chan, Tsang Keung and Correa, Camila and van Daalen, Marcel and Elbers, Willem and Gonnet, Pedro and Hausammann, Loïc and Helly, John and Huško, Filip and Kegerreis, Jacob A and Nobels, Folkert S J and Ploeckinger, Sylvia and Revaz, Yves and Roper, William J and Ruiz-Bonilla, Sergio and Sandnes, Thomas D and Uyttenhove, Yolan and Willis, James S and Xiang, Zhen},
+        title = "{Swift: a modern highly parallel gravity and smoothed particle hydrodynamics solver for astrophysical and cosmological applications}",
+        journal = {Monthly Notices of the Royal Astronomical Society},
+        volume = {530},
+        number = {2},
+        pages = {2378-2419},
+        year = {2024},
+        month = {03},
+        issn = {0035-8711},
+        doi = {10.1093/mnras/stae922},
+    }
 
 
 The official pidt paper is
