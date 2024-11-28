@@ -266,7 +266,9 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     std::set<int> neighbourIds;
 
     for (int i = 0; i < TwoPowerD; i++) {
-      neighbourIds.insert(fineGridVertices[kScalar].getAdjacentRanks(i));
+      if (fineGridVertices[kScalar].getAdjacentRanks(i)>=0) {
+        neighbourIds.insert(fineGridVertices[kScalar].getAdjacentRanks(i));
+      }
     }
 
     event.setNumberOfAdjacentTreesPerVertex(kScalar,neighbourIds.size());
