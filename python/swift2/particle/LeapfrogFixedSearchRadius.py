@@ -37,6 +37,11 @@ class LeapfrogFixedSearchRadius(Particle):
     Study swift2.particle.ExplicitEulerFixedSearchRadius for further
     information including all parameter documentation.
 
+    @param add_partid: Whether to add a particle ID.
+    Normally, that is done in the Particle super class if PeanoDebug > 0.
+    For certain tests however, a particle ID is required even in release mode.
+    So switch this on if you need it and are building release mode.
+
     """
 
     def __init__(
@@ -50,6 +55,7 @@ class LeapfrogFixedSearchRadius(Particle):
         particles_per_cell=0,
         min_h=0.005,
         max_h=0.3,
+        add_partid=False,
     ):
         super(LeapfrogFixedSearchRadius, self).__init__(
             name,
@@ -64,10 +70,12 @@ class LeapfrogFixedSearchRadius(Particle):
         # Particle attributes
         self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
         self.accelerator = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
-        self.part_id = dastgen2.attributes.Integer("partid", initval="0")
         self.data.add_attribute(self.velocity)
         self.data.add_attribute(self.accelerator)
-        self.data.add_attribute(self.part_id)
+
+        if add_partid:
+            self.partid = dastgen2.attributes.Integer("partid", initval="0")
+            self.data.add_or_replace_attribute(self.partid)
 
         self.__setup_algorithm_steps()
 
@@ -150,7 +158,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 touch_vertex_last_time_kernel=f"""
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
                 ::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
-                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
+                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
                 """,
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"

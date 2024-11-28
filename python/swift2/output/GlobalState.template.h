@@ -47,6 +47,7 @@
   void startInitialConditionsStep();
   void startTimeStep();
   void startPlotStep();
+  void startCleanupStep();
   void startIntermediateStep();
 
   void finishGridConstructionStep();
@@ -60,6 +61,7 @@
    */
   void finishTimeStep();
   void finishPlotStep();
+  void finishCleanupStep();
   void finishIntermediateStep();
 
   bool rerunPreviousGridSweep();

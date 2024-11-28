@@ -15,7 +15,14 @@ ToolboxParticles_SOURCES = \
   TrajectoryDatabase.cpp \
   UnitTests.cpp \
   particles.cpp \
+  assignmentchecks/Database.cpp \
+  assignmentchecks/Event.cpp \
+  assignmentchecks/MeshSweepData.cpp \
+  assignmentchecks/ParticleIdentifier.cpp \
   assignmentchecks/TracingAPI.cpp \
+  assignmentchecks/tests/TestHelpers.cpp \
+  assignmentchecks/tests/TestParticle.cpp \
+  assignmentchecks/UnitTests.cpp \
   potentials/Springs.cpp \
   tests/MultiscaleTransitionsTest.cpp \
   tests/TestHelpers.cpp \

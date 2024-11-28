@@ -1,8 +1,8 @@
 #include "Hardcoded.h"
 
-#include <limits>
+#include "tarch/multicore/Task.h"
 
-#include "../Task.h"
+#include <limits>
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBSP() {
   return new Hardcoded(
