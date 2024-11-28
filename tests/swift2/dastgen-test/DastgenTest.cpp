@@ -971,11 +971,12 @@ void swift2::dastgenTest::checkConstructors(void) {
   Part p2 = Part(
     /* tarch::la::Vector<Dimensions,double>  __debugX = */ dummyDimDoubleVector,
     /* tarch::la::Vector<Dimensions,double>  __debugH = */ dummyDimDoubleVector
-      * 2.,
+    * 2.,
     /* tarch::la::Vector<Dimensions,double>  __x = */ dummyDimDoubleVector * 3.,
     /* tarch::la::Vector<Dimensions,double>  __cellH = */ dummyDimDoubleVector
-      * 4.,
+    * 4.,
     /* double  __searchRadius = */ 1.,
+    /* int __partID = */ 42,
     /* ParallelState  __ParallelState = */ Part::ParallelState::Local,
     /* MoveState  __MoveState = */ Part::MoveState::New,
     /* bool  __CellHasUpdatedParticle = */ false,

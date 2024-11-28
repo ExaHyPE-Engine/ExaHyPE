@@ -16,10 +16,7 @@
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 tarch::multicore::Core::Core():
-  _numberOfThreads(std::thread::hardware_concurrency()) {
-
-  internal::configureInternalTaskQueues(_numberOfThreads);
-}
+  _numberOfThreads(std::thread::hardware_concurrency()) {}
 
 tarch::multicore::Core::~Core() {}
 

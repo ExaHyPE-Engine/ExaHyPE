@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 
 """!
-Generates 1D random particle distribution.
+Generates 1D uniform particle distribution with randomized small displacements.
 """
 
 fileName = "test_sml_1D.hdf5"
@@ -26,10 +26,21 @@ parser.add_argument(
     type=int,
     help="Seed for RNG",
 )
+parser.add_argument(
+    "-dx",
+    "--displacement",
+    dest="max_displacement",
+    required=False,
+    default=0.2499,
+    type=float,
+    help="Maximal displacement in units of interparticle distance",
+)
+
 
 args = parser.parse_args()
 npart = args.particle_number
 seed = args.random_seed
+max_displacement = args.max_displacement
 
 
 # ---------------------------------------------------
@@ -56,7 +67,7 @@ for i in range(npart):
 
 rng = np.random.RandomState(seed=seed)
 #  rng.random returns random numbers in [0, 1). Scale that.
-displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.499 * dx
+displacement = (2.0 * rng.random(coords.shape) - 1.0) * max_displacement * dx
 coords[:, 0] += displacement[:, 0]
 
 # File
@@ -75,7 +86,11 @@ grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 grp.attrs["Flag_Entropy_ICs"] = 0
 grp.attrs["Dimension"] = 1
+
+# Non-swift additions
 grp.attrs["RandomSeed"] = seed
+grp.attrs["MaxDisplacement"] = max_displacement
+grp.attrs["NumpyVersion"] = np.__version__
 
 # Units
 grp = file.create_group("/Units")

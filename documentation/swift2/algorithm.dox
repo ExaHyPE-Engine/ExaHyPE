@@ -7,33 +7,54 @@ This page hosts generic remarks on some algorithmic steps and their implementati
 
 # Cut-off radius realisation in the force calculation
 
-Swift 2 builds up its interaction lists (who has to be checked against whom) 
-on-the-fly while it runs through the mesh. Hereby, it employs the concept of 
+Swift 2 builds up its interaction lists (who has to be checked against whom)
+on-the-fly while it runs through the mesh. Hereby, it employs the concept of
 a @ref page_toolbox_particles_mesh_traversal "search radius": Only particles
-within the the search radius of a particle @f$ p_i @f$ are taken into account 
+within the the search radius of a particle @f$ p_i @f$ are taken into account
 when we search for any other particle @f$ p_j @f$ interacting.
 
-In Swift, the search radius @f$ r_{\text{search}} @f$ is a 
-***technical quantity***. The physics are not directly impacted by it. They
-are determined by the smoothing length @f$ r_{\text{smooth}} @f$ which changes 
-(more) frequently. Our code runs through the mesh and looks at all particles
-around a particle within the search radius. For the density calculation, all
-particles within the smoothing length then enter the equations. For the 
-force calculation, we have a symmetric correlation: Two particles interact
-if 
+In Swift, the search radius @f$ r_{\text{search}} @f$ is
+a ***technical quantity*** (See also @ref swift_terminology). The physics are
+not directly impacted by it. They are determined by the smoothing length @f$
+r_{\text{smooth}} @f$ which changes (more) frequently. The smoothing length
+directly determines the interaction radius @f$r_{\text{iact}} @f$:
+
+@f$r_{\text{iact}} = \gamma_{\text{kernel}} r_{\text{smooth}}@f$
+
+where @f$\gamma_{\text{kernel}}@f$ is a constant which depends on the
+spatial dimensionality and the SPH kernel used (see @ref swift_terminology and
+<a href="https://arxiv.org/abs/1204.2471">Dehnen & Aly 2012</a> ). Its
+numerical value is @f$\sim 2@f$.
+
+Naturally, we must ensure that the search radius is always equal or greater than
+the interaction radius.
+
+Our code runs through the mesh and looks at all particles around a particle
+within the search radius. **It is important to note that we have different types
+of interactions in our loops.** For the density calculation, all particles
+within the interaction radius then enter the equations. We interact a particle i
+with a particle j if:
 
 @f$
- |x(p_i) - x(p_j)| \leq r_{\text{smooth}}(p_i) 
- \wedge 
- |x(p_j) - x(p_i)| \leq r_{\text{smooth}}(p_i).
-@f$ 
+ |x(p_i) - x(p_j)| \leq r_{\text{iact}}(p_i).
+@f$
 
-Without the or, we could end up with non-symmetric forces. 
+For the force calculation however, we have a symmetric correlation: Two
+particles interact if:
+
+@f$
+ |x(p_i) - x(p_j)| \leq r_{\text{iact}}(p_i)
+ \wedge
+ |x(p_j) - x(p_i)| \leq r_{\text{iact}}(p_j).
+@f$
+
+Without the or, we could end up with non-symmetric forces.
 
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
 Due to the symmetry the force calculation, the smoothing length has to be at
-most half of the search radius. Otherwise, we miss out on particles.
+most @f$ 1/\gamma_{\text{kernel}} \approx 1/2@f$ of the search radius.
+Otherwise, we miss out on particles.
 </div>
 
 
@@ -42,26 +63,28 @@ most half of the search radius. Otherwise, we miss out on particles.
 The illustration above shows what can be wrong if the constraint
 
 @f$
- r_{\text{smooth}}(p_i) \leq \frac{1}{2} r_{\text{search}}(p_i)
+\gamma_{\text{kernel}} r_{\text{smooth}}(p_i) = r_{\text{iact}}(p_i) \leq
+ r_{\text{search}}(p_i)
 @f$
 
 is violated: The red particle has to be updated within the middle cell. Let its
-search radius be depicted with the dotted circle, and the actual smoothing 
-length with a solid one. As we store particles next to their closest vertex, we 
+search radius be depicted with the dotted circle, and the actual interaction
+radius with a solid one. As we store particles next to their closest vertex, we
 effectively can compare the red particle against all particles that are stored
 within the dashed square: We test all particles within the cell plus a h/2 halo.
-This is in line with 
+This is in line with
 @ref page_toolbox_particles_mesh_traversal "Peano's search radius and sorting"
 definition.
 
-Consequently, we compare red with green, find out that their search radius 
-overlaps as well as their smoothing length not. So we ignore evaluate the 
-interaction. Red and blue are never compared even.
+Consequently, we compare red with green and find out that (a) their search radius
+overlaps, and (b) their interaction radius doesn't. So we ignore the
+interaction. Red and blue are never even compared.
 
-Assume the smoothing length now becomes almost the search radius (dotted circle).
-Now, green is still within the smoothing radius of red, so nothing has changed
+Now assume the smoothing length grows, increasing the interaction radius, such
+that it now becomes almost the search radius (dotted circle).
+Now, green is still within the interaction radius of red, so nothing has changed
 here. Blue however now ends up within the search radius of red, yet is not taken
 into account as it is stored within a vertex that is not adjacent to the current
-cell. We miss out on this iteration. 
+cell. We miss out on this iteration.
 
  */

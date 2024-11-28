@@ -1,3 +1,5 @@
+/* Template in python/swift2/output/GlobalState.template.cpp */
+
 #include <algorithm>
 
 #include "GlobalState.h"
@@ -142,6 +144,11 @@ void startPlotStep() {
 }
 
 
+void startCleanupStep() {
+  logTraceIn( "CleanupStep()" );
+}
+
+
 void finishTimeStep() {
   logTraceIn( "finishTimeStep()" );
 
@@ -214,6 +221,14 @@ void finishPlotStep() {
   vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   {%- endfor %}
   logTraceOut( "PlotStep()" );
+}
+
+
+void finishCleanupStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+  {%- endfor %}
+  logTraceOut( "CleanupStep()" );
 }
 
 
