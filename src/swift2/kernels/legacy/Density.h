@@ -4,6 +4,7 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+#include "swift2/kernels/legacy/Swift.h"
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
@@ -13,14 +14,7 @@ namespace swift2 {
 
       /**
        * @brief Prepares a particle for the density calculation.
-       *
-       * Zeroes all the relevant arrays in preparation for the sums taking place
-       * in the various density loop over neighbours. Typically, all fields of
-       * the density sub-structure of a particle get zeroed in here.
        */
-      template <typename Particle>
-      void hydro_prepare_density(Particle* localParticle);
-
       template <typename Particle>
       void prepareDensity(
         const peano4::datamanagement::VertexMarker& marker,
@@ -28,7 +22,7 @@ namespace swift2 {
       ) {
         if (::swift2::kernels::
               localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_prepare_density(&localParticle);
+          hydro_init_particle(&localParticle);
         }
       }
 
@@ -114,8 +108,9 @@ namespace swift2 {
        *   = - \nu \frac{1}{h ^ {\nu + 1}} f(r/h) +
        *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial h}
        *   =  - \nu \frac{1}{h ^ {\nu + 1}} f(q) +
-       *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial q} \frac{\partial q}{\partial h}
-       *   =  - \frac{1}{h} \left( \nu W(q) + q \frac{\partial W(q)}{\partial q} \right)
+       *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial q} \frac{\partial
+       * q}{\partial h} =  - \frac{1}{h} \left( \nu W(q) + q \frac{\partial
+       * W(q)}{\partial q} \right)
        * @f$
        *
        * which is a quantity we accumulate in the density interaction kernel

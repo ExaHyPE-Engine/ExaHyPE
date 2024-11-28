@@ -95,24 +95,49 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
         )
 
     """
-  
+
   Takes those particles which are not within h/2 reach of a vertex
   and lift those.
-  
+
   """
     __Template_LiftParticles = jinja2.Template(
         """
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
+
     toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
+
+    #if PeanoDebug > 0
+    int partID = (*p)->getPartid();
+    #else
+    int partID = -1;
+    #endif
+
     switch ( instruction ) {
       case toolbox::particles::ParticleReassociationInstruction_Keep:
         if (toolbox::particles::particleWillBeDroppedFurther(**p,marker)) {
           _numberOfLiftsIntoSieveSet++;
           logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " locally, as it has to be dropped to next level in next iteration" );
-          toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-          toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+          toolbox::particles::assignmentchecks::detachParticleFromVertex(
+            "{{PARTICLE}}",
+            (*p)->getX(),
+            partID,
+            (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+            marker.x(),
+            marker.h(),
+            _spacetreeId,
+            "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
+          );
+          toolbox::particles::assignmentchecks::assignParticleToSieveSet(
+            "{{PARTICLE}}",
+            (*p)->getX(),
+            partID,
+            (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+            marker.h(),
+            _spacetreeId,
+            "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
+          );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
         }
         else {
           p++;
@@ -131,10 +156,27 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       #endif
         _numberOfLiftsIntoSieveSet++;
         logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
-        toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-        toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
-        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
+        toolbox::particles::assignmentchecks::detachParticleFromVertex(
+          "{{PARTICLE}}",
+          (*p)->getX(),
+          partID,
+          (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+          marker.x(),
+          marker.h(),
+          _spacetreeId,
+          "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
+        );
+        toolbox::particles::assignmentchecks::assignParticleToSieveSet(
+          "{{PARTICLE}}",
+          (*p)->getX(),
+          partID,
+          (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+          marker.h(),
+          _spacetreeId,
+          "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
+        );
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
+        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
         break;
       default:
         assertionMsg( false, "value not implemented" );
@@ -145,16 +187,16 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     )
 
     """!
-        
+
     The sieve here differs from the default one in the lift-drop variants. It
     inserts also remote particles, i.e. directly into the halo layer. It also
     does not eliminate particles from the sieve set.
-        
+
     """
     _Template_Sieve = jinja2.Template(
         """
   if ( _sieveParticleSet.hasParticlesToBeSievedIntoVertices() ) {
-    auto sievedParticles = _sieveParticleSet.getParticlesToBeSievedIntoVertex( 
+    auto sievedParticles = _sieveParticleSet.getParticlesToBeSievedIntoVertex(
       marker,
       true,   // removeReturnedParticlesFromSet,
       false,  // onlyReturnParticlesThatWillBeLocal
@@ -162,11 +204,11 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     );
 
     for (auto& sievedParticle: sievedParticles) {
-      _numberOfDropsFromSieveSet++;      
-      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( 
-        new globaldata::{{PARTICLE}}(*sievedParticle), 
-        marker, 
-        _spacetreeId 
+      _numberOfDropsFromSieveSet++;
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle(
+        new globaldata::{{PARTICLE}}(*sievedParticle),
+        marker,
+        _spacetreeId
       );
     }
 

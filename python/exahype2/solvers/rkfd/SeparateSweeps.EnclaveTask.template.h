@@ -6,24 +6,22 @@
 // **********************************************************************************************
 #pragma once
 
-
-#include "../../../../src/tarch/multicore/Task.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "exahype2/EnclaveBookkeeping.h"
-#include "exahype2/EnclaveTask.h"
 #include "repositories/SolverRepository.h"
 
+#include "tarch/multicore/Task.h"
+
+#include "peano4/datamanagement/CellMarker.h"
+
+#include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/EnclaveTask.h"
 
 {{SOLVER_INCLUDES}}
 
-
 #include <vector>
-
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
 #endif
-
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {

@@ -68,9 +68,9 @@ class Enumeration(Attribute):
     def get_methods(self, _full_qualified_name, for_declaration=True):
         accessor_name = self.get_accessor_name()
 
-        toStringQualifier = "const"
+        toStringQualifier = ""
         if for_declaration:
-            toStringQualifier = "const static"
+            toStringQualifier = "static"
 
         return [
             (

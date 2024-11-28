@@ -2,12 +2,18 @@
 
 @page page_exahype2_tutorials_toyproblems_swe The Shallow Water Equation (SWE)
 
+\tableofcontents
 
-## Define and Build the Project
+# Define and Build the Project
+
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the SWE project:
 
-    python3 swe.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../../python
+python3 swe.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Ensure you set the PYTHONPATH properly before that.
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
 One file, in particular, is of interest to us now: the file simply named ExaHyPE2-SWE is the executable for our implementation.
@@ -17,6 +23,9 @@ We will therefore run this executable file by using the following command:
 
 The solution folder contains the solution of our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
+
+
+# Dive Into the Script
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
@@ -31,7 +40,8 @@ These merely import the necessary packages from Peano 4 and ExaHyPE 2
 which will let us define and build our project. For more details about
 the implementation, consider the comments in the Python script.
 
-## Two-dimensional Shallow Water Equations
+# Two-dimensional Shallow Water Equations
+
 The shallow water equations describe the flow of fluid given the assumption that the horizontal length scale
 is much higher than the vertical length scale and are defined by the following formula:
 
@@ -85,16 +95,22 @@ These auxiliary variables are accessed in the same way as the regular variables,
 Initial- and boundary conditions for these auxiliary variables should be defined, but no flux or non-conservative product can be set,
 as they can never change anyway.
 
-### Initial Conditions
+
+## Initial Conditions
+
 We start with the initial conditions: For this, we want the initial water height to be 1.0 everywhere,
 the initial velocities to be 0.0 everywhere and the bathymetry should be 0.0 in a radius of 0.40 around
 the center of the domain, 0.1 anywhere else.
 
-### Boundary Conditions
+
+## Boundary Conditions
+
 Then we can define our boundary conditions. For this simple case, we will simply use reflecting boundary conditions.
 This means all values except the momenta will be the same outside of the as inside of it.
 
-### Eigenvalues
+
+## Eigenvalues
+
 Next, we can define the eigenvalues of our system.
 This is important because the largest eigenvalue defines the behaviour of the PDE,
 and among others the maximum allowable timestep for which the solver remains stable.
@@ -102,7 +118,9 @@ Since the maximal eigenvalue is dependent on the velocity,
 you will need to take into account the normal direction as this will determine whether you should
 use the velocity in the x- or y-direction to compute it. For the gravity g, you can use 9.81 m/s^2.
 
-### Flux
+
+## Flux
+
 Now, let's define our flux in x- and y-direction.
 The directions of the flux are defined by the normal parameter.
 This parameter defines through which surface, and therefore in which direction,
@@ -110,13 +128,17 @@ the flux is being computed. Here if the normal is 0, we are computing the flux i
 and if the normal is 1, we are computing the flux in y-direction.
 For higher dimensions, there would logically be additional directions to implement the flux.
 
-### Non-conservative Term
+
+## Non-conservative Term
+
 Finally, we fill in the non-conservative part in the function nonconservativeProduct.
 This needs to go into the variable BTimesDeltaQ.
 This function has a parameter deltaQ through which you can access the space derivatives of the unknowns and
 auxiliary variables in the direction defined by the normal's current value.
 
-### Result
+
+## Result
+
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
 | ![](SWE_start.png)         | ![](SWE_end.png)           |
@@ -124,7 +146,7 @@ auxiliary variables in the direction defined by the normal's current value.
 The computed height of the fluid according to our computation of the shallow water equations at times t=0.0 s and t=1.0 s.
 The fluid has rushed in from the sides to fill the depression at the center.
 
-## Increasing Resolution
+# Increasing Resolution
 If you've completed the implementation, you may have noticed that the resolution is somewhat low.
 We're interested in increasing the resolution so we can see more details in the solution.
 This means we need to consider our volume size, so in the first step, we will discuss how the volume size is calculated.

@@ -196,7 +196,7 @@ Particle properties:
         Add dependency checks as well as mesh consistency checks to the algorithm steps
 
         This function actually modifies the AlgorithmSteps to contain the
-        debug dependency checks. Is called by self.add_dependency_checks()
+        debug dependency checks. Is called by self._add_dependency_checks()
         and uses the validation routines from swift2::dependencychecks.
 
         The routine is used to either add checks for the init phase or the
