@@ -11,7 +11,7 @@ due to added functionality or as they want to couple the ExaHyPE solver with
 another code. The latter approach is the most flexible use case. We therefore
 discuss this one here, as it covers the "simpler" ambition to add only an 
 additional mesh sweep to an existing ExaHyPE solver. Therefore, our dicussions
-follows the @ref page_peano_mergin_applications "Peano's generic coupling description".
+follows the @ref page_peano_merging_applications "Peano's generic coupling description".
 Please read through this discussion before continuing with this section (the
 description actually refers back to this page at one point).
 
@@ -19,7 +19,7 @@ description actually refers back to this page at one point).
 The way how to add steps is relatively mechanical:
 
 1. Generate the peano4.Project object from ExaHyPE. This is referred to as
-   "lowering" in @ref page_peano_mergin_applications.
+   "lowering" in @ref page_peano_merging_applications.
    
    ~~~~~~~~~~~~~~~~~~~~~~~
    peano4_project = project.generate_Peano4_project()
