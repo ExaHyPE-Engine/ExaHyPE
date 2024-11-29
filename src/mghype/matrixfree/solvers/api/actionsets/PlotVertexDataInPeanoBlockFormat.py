@@ -41,6 +41,7 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
     self.d[ "VARIABLE" ]             = variable_name
     self.d[ "GETTER" ]               = getter
     self.d["PLOT_PREDICATE"]         = plot_predicate
+    self.d["CELL_PREDICATE"]         = plot_predicate
         
   __Template_Constructor = """
   _writer      = nullptr;
@@ -95,6 +96,8 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
     fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior
     and
     {{PLOT_PREDICATE}}
+    and
+    {{CELL_PREDICATE}}
   ) {
   int vertexIndices[TwoPowerD];
 
