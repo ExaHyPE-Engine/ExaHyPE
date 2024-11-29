@@ -193,7 +193,7 @@ bool peano4::datamanagement::VertexMarker::isParentCellLocal() const {
 
 
 bool peano4::datamanagement::VertexMarker::isLocal(int i) const {
-  assertion1( not _isLocal[i] or _numberOfAdjacentTrees[i]==1, toString() );
+  assertion1( not _isLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
   return _isLocal[i];
 }
 
