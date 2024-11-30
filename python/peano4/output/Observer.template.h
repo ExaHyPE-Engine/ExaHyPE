@@ -72,10 +72,32 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalO
     virtual std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const override;
 
     /**
+     * Prepare traversal
+     *
      * This routine is not called by the spacetree set or the spacetree. It is
-     * up to the user to invoke it.
+     * up to the user to invoke it. Typically, this is done in the main: You
+     * create the reference instance of the observer (the one that then serves
+     * as blueprint for all trees) and you call the prepare operation on it. It
+     * is static, so this kind of makes sense (and you could actually call it
+     * before you create the reference instance):
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * observers::TimeStep observer;
+     * observers::TimeStep::prepareTraversal();
+     * watch.start();
+     * peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+     * watch.stop();
+     * observers::TimeStep::unprepareTraversal();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * The code snippet above is just an example. Codes like SWIFT or ExaHyPE
+     * typically add the prepare/unprepare calls automatically to their main.
      */
     static void prepareTraversal();
+
+    /**
+     * @see prepareTraversal()
+     */
     static void unprepareTraversal();
 
     virtual void beginTraversal(
