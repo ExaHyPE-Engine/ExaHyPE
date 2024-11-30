@@ -124,7 +124,7 @@ void finishTimeStep() {
   logTraceIn( "finishTimeStep()" );
 
   globaldata::HydroPart::getSpecies().finishTimeStep();
-  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::HydroPartSet::printParticleStateStatistics() );
 
@@ -165,7 +165,7 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
-  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+
 
   loadBalancer.finishStep();
   logTraceOut( "GridConstructionStep()" );
@@ -173,7 +173,7 @@ void finishGridConstructionStep() {
 
 
 void finishInitialisationStep() {
-  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+
 
   vertexdata::HydroPartSet::reduceReassignmentStatistics();
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
@@ -184,7 +184,7 @@ void finishInitialisationStep() {
 
 
 void finishInitialConditionStep() {
-  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+
 
   vertexdata::HydroPartSet::clearReassignmentStatistics();
   vertexdata::HydroPartSet::clearParticleStateStatistics();
@@ -195,14 +195,12 @@ void finishInitialConditionStep() {
 
 
 void finishPlotStep() {
-  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+
   logTraceOut( "PlotStep()" );
 }
 
 
 void finishIntermediateStep() {
-  vertexdata::HydroPartSet::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-
   vertexdata::HydroPartSet::reduceReassignmentStatistics();
   if (vertexdata::HydroPartSet::registeredAnyResorting()) {
     logInfo( "finishIntermediateStep()", vertexdata::HydroPartSet::printReassignmentStatistics() );
