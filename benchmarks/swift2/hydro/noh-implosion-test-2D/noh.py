@@ -605,7 +605,6 @@ if __name__ == "__main__":
         particle_set,
         "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
     )
-    particle_plotter.add_attribute_to_plot(particle.part_id, 1)
     particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
     particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
     particle_plotter.add_attribute_to_plot(particle.mass, 1)
