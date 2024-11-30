@@ -90,5 +90,5 @@ if(TARGET Peano::Multigrid{{DIM}}d_${mode_lower})
 endif()
 
 if(TARGET Peano::SWIFT2Core{{DIM}}d_${mode_lower})
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Swift2Core{{DIM}}d_${mode_lower})
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::SWIFT2Core{{DIM}}d_${mode_lower})
 endif()
