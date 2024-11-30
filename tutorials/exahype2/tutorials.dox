@@ -28,7 +28,7 @@ instructions!
   - \subpage page_tutorials_exahype2_numerics_finite-differences
   - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
   - \subpage page_tutorials_exahype2_numerics_ADER-DG
-- Exercises
+- Exercises (interactive step-by-step examples of core ExaHyPE components)
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
   - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
@@ -39,10 +39,9 @@ instructions!
   - \subpage page_exahype2_tutorials_toyproblems_elastic
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
+- \subpage tutorials_exahype2_applications_exagrype (numerical relativity extension built on top of ExaHyPE) 
+- \subpage tutorials_exahype2_applications_exaseis (seismology extension built on top of ExaHyPE)
 - \subpage tutorials_exahype2_design-patterns
-- Applications built on top of Peano
-  - \subpage tutorials_exahype2_applications_exagrype
-  - \subpage tutorials_exahype2_applications_exaseis
 - Adding features
   - \subpage tutorials_exahype_gpu
   - Adding your own compute kernels <!-- (Harrison's work) -->
