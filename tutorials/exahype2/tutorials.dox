@@ -4,20 +4,20 @@
 
 @image html documentation/exahype2/ExaHyPE-logo.jpg
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
 The first few tutorials are based upon Jupyter notebooks. Please browse through
 the links below and study the webpages. However, they are created ***from*** the
 notebooks automatically, i.e. you get the full experience only by studying the
-notebooks. For this, switch to 
+notebooks. For this, switch to
 
        cd tutorials/exahype2
-       
+
 and issue `jupyter-notebook hitchhikers-guide.ipynb`. All the follow-up notebooks
 are then held within the exercises subdirectory. Change into the subfolders there
-and fire up the notebook to get started. 
+and fire up the notebook to get started.
 
-The more advanced tutorials then rely on scripts, i.e. do not recommend to you to 
-change into some subdirectories and to use Jupyter notebooks. Simply follow the 
+The more advanced tutorials then rely on scripts, i.e. do not recommend to you to
+change into some subdirectories and to use Jupyter notebooks. Simply follow the
 instructions!
 </div>
 
@@ -28,7 +28,7 @@ instructions!
   - \subpage page_tutorials_exahype2_numerics_finite-differences
   - \subpage page_tutorials_exahype2_numerics_Runge-Kutta
   - \subpage page_tutorials_exahype2_numerics_ADER-DG
-- Exercises
+- Exercises (interactive step-by-step examples of core ExaHyPE components)
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-vanilla
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
   - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
@@ -39,21 +39,18 @@ instructions!
   - \subpage page_exahype2_tutorials_toyproblems_elastic
   - \subpage page_exahype2_tutorials_toyproblems_euler
   - \subpage page_exahype2_tutorials_toyproblems_swe
+- \subpage tutorials_exahype2_applications_exagrype (numerical relativity extension built on top of ExaHyPE) 
+- \subpage tutorials_exahype2_applications_exaseis (seismology extension built on top of ExaHyPE)
 - \subpage tutorials_exahype2_design-patterns
-- Applications built on top of Peano
-  - \subpage tutorials_exahype2_applications_exagrype
-  - \subpage tutorials_exahype2_applications_exaseis
-- Adding features	
+- Adding features
   - \subpage tutorials_exahype_gpu
   - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
   - \subpage tutorials_exahype2_additional_mesh_sweeps
 
 
-
 ## How to add your own tutorial
 
-All of Peano's and ExaHyPE's follow the same @ref page_tutorials_overview "tutorial conventions".
-
+All of ExaHyPE's tutorials follow the same @ref page_tutorials_overview "tutorial conventions".
 
 */

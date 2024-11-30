@@ -3,20 +3,13 @@
 #pragma once
 
 
-#include <map>
-#include <vector>
-#include <list>
-
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
-
 
 namespace toolbox {
   namespace particles {
     /**
-     * @namespace toolbox::particles::assignmentchecks Correctness checks of particle-mesh assignment
+     * @namespace toolbox::particles::assignmentchecks Correctness checks of
+     * particle-mesh assignment
      *
      * This API is inspired by SWIFT's swift2::dependencychecks as introduced
      * by Mladen: We keep some history of particle-mesh associations, trace new
@@ -24,12 +17,13 @@ namespace toolbox {
      * tracing degenerates to empty routines if we work in release mode, so
      * there should not be any overhead.
      *
-     * Most toolbox routines do automatically report against this API. However, to
-     * make the checks work, you have to report particle movements manually.
+     * Most toolbox routines do automatically report against this API. However,
+     * to make the checks work, you have to report particle movements manually.
      *
-     * Furthermore, you might want to invoke toolbox::particles::assignmentchecks::startMeshSweep()
-     * prior to your traversals to ensure that you get a nice break-down of all
-     * mesh transitions.
+     * Furthermore, you might want to invoke
+     * toolbox::particles::assignmentchecks::startMeshSweep() prior to your
+     * traversals to ensure that you get a nice break-down of all mesh
+     * transitions.
      *
      * ## Enable assignment checks
      *
@@ -43,449 +37,16 @@ namespace toolbox {
      * expensive. The checks also might yield invalid errors once you run them
      * over multiple ranks, i.e with -DParallel.
      */
+
     namespace assignmentchecks {
-      namespace internal {
-        struct ParticleIdentifier;
-        struct Event;
-        class MeshSweepData;
-        class Database;
-
-        /**
-         * Key for internal bookkeeping of vertex-particle association
-         *
-         * We assume that a particle is unique due to its name (species) and
-         * its position. Particle information will be stored in a (hash) map
-         * and therefore needs a smaller operator.
-         *
-         * ## Sorting
-         *
-         * The sorting is very simple: We first use the name as criterion if
-         * two particles are the same or one is smaller than the others. For
-         * this, we can use the string's < operator. If two particles have the
-         * same name, we first sort along the x axis, then (for those particles
-         * with the same x value) along the y axis, and so forth.
-         *
-         * As the keys work with floating point data, we have to take
-         * truncation errors into account. Originally, I did attempt to realise
-         * the routine as follows:
-         *
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * if (particleName < rhs.particleName) {
-         *   assertion2( *this!=rhs, toString(), rhs.toString() );
-         *   return true;
-         * }
-         * if (particleName > rhs.particleName) {
-         *   assertion2( *this!=rhs, toString(), rhs.toString() );
-         *   return false;
-         * }
-         * for (int d = 0; d < Dimensions; d++) {
-         *   if (tarch::la::smaller(particleX(d), rhs.particleX(d))) {
-         *     assertion2( *this!=rhs, toString(), rhs.toString() );
-         *     return true;
-         *   }
-         *   if (tarch::la::greater(particleX(d), rhs.particleX(d))) {
-         *     assertion2( *this!=rhs, toString(), rhs.toString() );
-         *     return false;
-         *   }
-         * }
-         * assertion2( *this==rhs, toString(), rhs.toString() );
-         * return false;
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         *
-         * This variant does not work, as it is too fuzzy. Situations
-         * as the one below can arise:
-         *
-         * - We have A!<B, as A and B overlap.
-         * - We have B!<A, as B and A overlap (and B is actually further right).
-         * - Consequently, A==B. This follows the C++ map logic.
-         * - We have B!<C, as B and C overlap.
-         * - We have C!<B, as B and C overlap.
-         * - Consequently, B==C.
-         *
-         * However, we clearly have A!=C which contradicts the statements above.
-         *
-         * I originally envisaged a very non-elegant solution to this problem:
-         *
-         * - The < operator which determines the storage order in the map is
-         *   bit-wise and neglects the fact that we have floating-point data.
-         * - Whenever we construct a new particle identifier, we first check
-         *   if there's an entry in the database which is "close". If so, we
-         *   use this identifier rather than a completely new one.
-         *
-         * I found this approach to be extremely expensive. Every time we
-         * construct a particle identifier, we might run throught the whole
-         * database. In most cases however, we will terminate the database
-         * run through early: As soon as getEntry() finds a fit, it returns
-         * immediately. So it is unsuccessful entry constructions which really
-         * hurt us. These arise for assignParticleToVertex() for new particles.
-         * In this case, we cannot avoid that we run through the whole
-         * database. If a particle moves however, we don't have to search for
-         * existing entries. This movement will yield a new position which is
-         * not in there yet. So we disable the search here (though this
-         * obviously means we cannot check if two particles coincide
-         * spatially).
-         */
-        struct ParticleIdentifier {
-          static double Precision;
-
-          friend class Database;
-
-          std::string                           particleName;
-          tarch::la::Vector<Dimensions, double> particleX;
-
-          /**
-           * Equals predicate
-           *
-           * I originally declared this function as
-           *
-           * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-           * bool operator==(const ParticleIdentifier& rhs) const;
-           * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-           *
-           * Some variants of C++ however require an external operator (not
-           * embedded into class or namespace) to compare two objects. We have
-           * seen issues with Intel 2023, e.g., while 2024 was absolutely fine.
-           * It might also be due to a lack of C++2x flags. Anyway, I decided
-           * to define an equals operation and to define the operator== and
-           * operator!= using this function.
-           *
-           * To some degree, this is actually the cleaner solution, as it
-           * highlights the difference to the < operator. This equality
-           * routine and the comparison operator are not compatible, as the
-           * present routine is purely floating point error-aware, while the
-           * comparison operator uses bit-wise inequality.
-           */
-          bool numericalEquals( const ParticleIdentifier& rhs ) const;
-          bool operator<(const ParticleIdentifier& rhs) const;
-
-          std::string toString() const;
-
-          private:
-            /**
-             * Never create a particle identifier manually
-             *
-             * Instead, use Database::createParticleIdentifier() to construct
-             * one. This routine takes care of floating point in accuracies.
-             */
-            ParticleIdentifier(const std::string& particleName__, const tarch::la::Vector<Dimensions, double>& particleX__);
-        };
-
-        /**
-         * Event
-         *
-         * An event is an assocation or de-association of a particle and a
-         * vertex.
-         */
-        struct Event {
-          enum class Type { NotFound, AssignToSieveSet, AssignToVertex, Erase, DetachFromVertex, MoveWhileAssociatedToVertex };
-
-          Type                                  type;
-          bool                                  isLocal;
-          tarch::la::Vector<Dimensions, double> vertexX;
-          tarch::la::Vector<Dimensions, double> previousParticleX;
-          tarch::la::Vector<Dimensions, double> vertexH;
-          int                                   treeId;
-          std::string                           trace;
-
-          /**
-           * Construct an event which identifies a vertex assignment or the removal from a vertex.
-           */
-          Event(
-            Type                                          type_,
-            bool                                          isLocal_,
-            const tarch::la::Vector<Dimensions, double>&  vertexX_,
-            const tarch::la::Vector<Dimensions, double>&  vertexH_,
-            int                                           treeId_,
-            const std::string&                            trace_
-          );
-
-          /**
-           * Construct a move event
-           *
-           * This event should always be tied to an identifier in the global map
-           * which uses the new position as key.
-           */
-          Event(
-            Type                                          type_,
-            const tarch::la::Vector<Dimensions, double>&  previousParticleX,
-            int                                           treeId_,
-            const std::string&                            trace_
-          );
-
-          /**
-           * Construct an event that identifies the association to the sieve set or an erase.
-           */
-          Event(Type type_, bool isLocal_, int treeId_,             const std::string& trace_);
-
-          /**
-           * Construct an invalid event. Is used as return value if no data is
-           * found in the database.
-           */
-          Event(Type type_);
-
-          std::string toString() const;
-        };
-
-        using ParticleEvents = std::vector<Event>;
-
-        /**
-         * Mesh sweep data set
-         *
-         * All the traces bookkept for one single mesh sweep. This is a plain
-         * extension of the std::map which simply adds a unique name on top.
-         * So all the original semantics of a map are preserved.
-         *
-         * Please see ParticleIdentifier for an in-depth discussion of the
-         * comparison key to be used here.
-         */
-        class MeshSweepData: public std::map<ParticleIdentifier, ParticleEvents> {
-          public:
-            MeshSweepData(const std::string& meshSweepName);
-
-            std::string getName() const;
-          private:
-            const std::string _meshSweepName;
-        };
-
-        class Database {
-          private:
-            tarch::multicore::MultiReadSingleWriteSemaphore  _semaphore;
-
-            std::list<MeshSweepData> _data;
-
-            /**
-             * Of how many previous associations do we want to keep track
-             *
-             * If we do not clean up the database every now and then, we
-             * will run into situations where the memory footprint exceeds the
-             * available mem. More importantly, the validation steps will last
-             * for ages. So we clean up the database of old data every now and
-             * then. This threshold indicates how many old data entries to keep.
-             * Set it to std::numerics<int>::max() to disable this type of
-             * garbage collection on the history.
-             */
-            int _maxParticleSnapshotsToKeepTrackOf;
-
-            /**
-             * Remove the particle trajectory that ends up in lastIdentifier
-             *
-             * This is typically invoked by addEvent(). It is not thread-safe,
-             * i.e. does not acquire a write lock.
-             */
-            void removeTrajectory(
-              const ParticleIdentifier&  lastIdentifier,
-              int                        spacetreeId,
-              int                        firstNRecentEntriesToSkip = 0
-            );
-
-            /**
-             * Not thread-safe
-             *
-             * Run through the individual snapshots and remove those trajectory
-             * entries which are now empty. If a whole snapshot becomes empty, we
-             * delete it but if and only if it is not the very last one. If we
-             * deleted the very last one, we'd confuse the timeline of some
-             * particles as the ordering of the snapshots carries temporal
-             * causalities.
-             */
-            void removeEmptyDatabaseSnapshots();
-
-          public:
-            static constexpr int SearchWholeDatabase = 0;
-            static constexpr int AnyTree = -1;
-            static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
-
-            Database( int maxParticleSnapshotsToKeepTrackOf = 16 );
-
-            /**
-             * Create a particle identifier
-             *
-             * This routine runs through the whole database and looks for a
-             * particle identifier which is equal to the parameters. Equal here
-             * uses the comparison operator of ParticleIdentifier::operator==()
-             * and hence is floating-point aware.
-             *
-             * If it finds no matching entry, it returns a new identifier with
-             * the precise arguments. If it finds one "close enough", it returns
-             * this one instead of one matching the precise arguments. See
-             * ParticleIdentifier's discussion on map storage for further
-             * details.
-             *
-             * Cannot be const as we have a semaphore to be thread-safe.
-             *
-             * @param fitToExistingParticles is the search tolerance that we
-             *   use when we crawl through the database.
-             */
-            ParticleIdentifier createParticleIdentifier(
-              const std::string&                            particleName,
-              const tarch::la::Vector<Dimensions, double>&  particleX,
-              double                                        searchTolerance = ParticleIdentifier::Precision
-            );
-
-            /**
-             * Add a new snapshot for a new mesh sweep
-             */
-            void startMeshSweep(const std::string&  meshSweepName);
-
-             /**
-              * Return last entry matching identifier
-             *
-             * This routine runs backwards (from new to old) through the
-             * database and searches for a particle entry with the specified
-             * position and name. If there's none or the last logged entry for
-             * this particle is an erase event, then the routine returns an
-             * invalid event.
-             *
-             * We expect that identifier has been constructed through
-             * createParticleIdentifier() to accommodate floating-point inaccuracies.
-             *
-             * Cannot be const as we have a semaphore to be thread-safe.
-             *
-             * If the routine encounters a move particle, it changes the
-             * identifier and invokes itself recursively for this identifier.
-             * This way, we can follow a particle through the database even
-             * though it has changed its position in space. If the find
-             * information on a previous position, this previous position is held
-             * as raw floating point data, i.e. might differ from the position
-             * use in the database to identify previous particle states by
-             * floating point accuracy. So we have to make them match before we
-             * continue to search recursively.
-             *
-             * ## Implementation
-             *
-             * I originally thought that I have to release the lock before I
-             * jump into the recursion. This is however not necessary, as we
-             * are working with read/write locks and I can have an arbitrary
-             * number of read locks in this case. Actually, it would be
-             * outrightly wrong to free it, as someone might alter the data
-             * structure in-between a function and its recursive re-invocation.
-             * So we have to keep it lock until we return.
-             *
-             *
-             * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
-             *
-             * @return tuple of event and identifier. In most cases, the
-             *   identifier returned will equal the parameter identifier.
-             *   However, if the particle has moved, the result identifier
-             *   will identify the spatial position corresponding to the
-             *   returned event.
-             */
-            std::pair< Event, ParticleIdentifier > getEntry(
-              const ParticleIdentifier&  identifier,
-              int                        spacetreeId,
-              int                        firstNRecentEntriesToSkip = SearchWholeDatabase
-            );
-
-            /**
-             * Print history of one particle
-             *
-             * Cannot be const as we have a semaphore to be thread-safe.
-             *
-             * The particle runs backwards through the database and plots all
-             * fitting identifiers. When we encounter a move, we memorise it.
-             * Once at the end of the database, we look if there has been a
-             * move before. If so, we call the search again for this previous
-             * particle position. When we construct the particle identifier
-             * for the tail recursion, we have to take into account that the
-             * previous position is stored as raw position data, but the
-             * database's entries might be slightly off due to truncation
-             * errors.
-             *
-             * If there are multiple moves, we only take the first one into
-             * account. Multiple moves might occur if several particles
-             * "hop through" the same spatial position in the database. Only
-             * the most recent one however is relevant for identifier.
-             */
-            std::string particleHistory(const ParticleIdentifier& identifier);
-
-            std::string lastMeshSweepSnapshot();
-
-            /**
-             * Count total number of entries for a particle
-             *
-             * Cannot be const as we have a semaphore to be thread-safe.
-             */
-            int totalEntries(const ParticleIdentifier& identifier);
-
-            /**
-             * Return number of snapshots
-             *
-             * These are the active snapshots still held in the database.
-             * addEntry()'s garbage collection might have removed some of
-             * them already.
-             */
-            int getNumberOfSnapshots() const;
-
-            /**
-             * Add a new event to the database
-             *
-             * If there is not yet an entry for identifier in the current
-             * snapshot, we create one. Afterwards, we append event to this
-             * new dataset for particle identifier and clean up the database,
-             * i.e. throw away irrelevant old data.
-             *
-             *
-             * ## Garbage/history collection
-             *
-             * Eventually, it is time to clean up the database. This happens if
-             * and only if we have a maximum database size set in
-             * _maxParticleSnapshotsToKeepTrackOf.
-             *
-             * - If the new event is an assignment, then we know that now
-             *   future request will ever look backwards in history beyond this
-             *   assignment. So we can delete all of this historic data.
-             * - If we have tons of particle moves switching vertices (and
-             *   hence deleting and re-associating particles), we can eliminate
-             *   all of those and instead add two events: one that attaches a
-             *   particle and one that moves it in one go.
-             *
-             * I originally thought that I'd also like to remove old data
-             * entries whenever we encounter an erase event. However, this is
-             * not necessary: If we have an erase event (for an expired halo
-             * element), we'll very likely get a new assignment in a second.
-             * This assignment will then eliminate previous "expired"
-             * information as per the description above.
-             */
-            void addEvent(ParticleIdentifier identifier, const Event& event);
-
-            /**
-             * Dump the whole database
-             *
-             * Cannot be const as we have a semaphore to be thread-safe.
-             */
-            std::string toString();
-
-            /**
-             * Eliminate existing particles, so only those that are "forgotten" remain
-             *
-             * This routine runs through the particles for which we have
-             * recorded events in the last snapshot. If the event
-             *
-             * - affects a remote particle;
-             * - is a move;
-             * - is an assignment to vertex,
-             *
-             * we know that it cannot eliminate existing particles. So we
-             * remote their trajectories via removeTrajectory(). If the
-             * last snapshot is empty, we remove it completely.
-             *
-             * After a sweep through the last snapshot, we run through the
-             * algorithm again, maybe eliminating further data (if we got
-             * rid of a snapshot).
-             *
-             * Once this routine has terminated, we get the stuff in the
-             * database for particles that seem to have been left over. We also
-             * get a lot of historic data, but if we plot the database and
-             * study solely the last snapshot, we typically get a good idea of
-             * which particles got lost.
-             */
-            void eliminateExistingParticles();
-
-        };
-      } // namespace internal
 
       /**
-       * Inform API that this is the end of a grid run-throuch
+       * Get the history of stored sweeps.
+       */
+      std::string sweepHistory();
+
+      /**
+       * Inform API that this is the end of a grid run-throuch.
        *
        * Delegates to the corresponding method in the database.
        */
@@ -499,63 +60,38 @@ namespace toolbox {
        * removed from its associated vertex.
        */
       void eraseParticle(
-        const std::string&                            particleName,
-        const tarch::la::Vector<Dimensions, double>&  particleX,
-        bool                                          isLocal,
-        int                                           treeId,
-        const std::string&                            trace
+        const std::string&                           particleName,
+        const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
+        bool                                         isLocal,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
+        int                                          treeId,
+        const std::string&                           trace
       );
 
       /**
        * Record the movement of a particle
        *
        * We insert a new entry which memorises the particle movements. However,
-       * we don't want to hold arbitrary small wiggles. So we construct the old
-       * and the new particle identifier (name + position) and if they are
-       * different, subject the ParticleIdentifier comparison operator and its
-       * precision, then we log the new event.
-       * If oldParticleX however equals newParticleX, the function degenerates to nop
-       * and nothing is traced.
-       *
-       * This means that we might skip a few (tiny) particle movements. So if
-       * we finally search for the origin particle, we have to pick a bigger
-       * tolerance. After all, we might have skipped quite a lot of moves. In
-       * theory, it should be enough if we increased the tolerance by a factor
-       * of two. In practice, this is still too restrictive. We did
-       * make good experiences with increasing the tolerance by one order of
-       * magnitude.
-       *
-       * As we work with this tolerances and therefore skip particles, we have
-       * to be careful which old particle x we dump into the database. We
-       * could use oldParticleX, but we have just discussed above that we
-       * search for a corresponding entry which might be off slightly.
-       * Therefore, we do not bookmark oldParticleX -> newParticleX, but
-       * instead store found old particleX -> newParticleX.
+       * something we come across very often is that particles, once assigned to
+       * a vertex, very often stay assigned to the same vertex for a long time
+       * (=many sweeps) and only experiences small movements. Rather than
+       * tracing every single move event individually, the database will mark
+       * consecutive move events using a special event type,
+       * Event::Type::ConsecutiveMoveEvent. It will also keep track the original
+       * position of the particle, before the first move event of that sequence
+       * has occurred, as well as the current particle position.
        */
       void moveParticle(
-         const std::string&                            particleName,
-         const tarch::la::Vector<Dimensions, double>&  oldParticleX,
-         const tarch::la::Vector<Dimensions, double>&  newParticleX,
-         int                                           treeId,
-         const std::string&                            trace
+        const std::string&                           particleName,
+        const tarch::la::Vector<Dimensions, double>& oldParticleX,
+        const tarch::la::Vector<Dimensions, double>& newParticleX,
+        const int                                    particleID,
+        const tarch::la::Vector<Dimensions, double>& vertexX,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
+        int                                          treeId,
+        const std::string&                           trace
       );
-
-      /**
-       * Eliminate all "live" particles from database
-       *
-       * This routine can be used to find "lost" particles. It runs through the
-       * database and eliminates all those particles which do still exist.
-       *
-       * This routine is not called routinely, as it can be very expensive.
-       *
-       * @param numberOfParticles Specify the number of particles you are
-       *   searching for or pass in a negative number to indicate that all
-       *   particles still have to be in the domain.
-       *
-       * @param eliminateExistingParticlesFromDatabase This operation prunes
-       *   the database and speeds up the validation process significantly.
-       */
-      void eliminateExistingParticles();
 
       /**
        * Assign a particle to a vertex
@@ -571,7 +107,8 @@ namespace toolbox {
        * - A new particle might have been inserted into the domain for the very
        *   first time. In this case, the particle has to be "free", i.e. it may
        *   not have been assigned to any other vertex yet. The search should
-       *   reduce a NotFound.
+       *   reduce a NotFound, or find that in a previous sweep it had been a
+       *   virtual particle that has been erased.
        * - The particle might have been dropped from a coarser level. See
        *   corresponding discussion for virtual particles below including some
        *   sketches.
@@ -596,11 +133,12 @@ namespace toolbox {
        * - The particle comes in through the boundary as part of the boundary
        *   exchange. In this case, the particle has to be "free", i.e. it may
        *   not be assigned to any other vertex yet. The particle has to be new
-       *   (NotFound in database).
+       *   (NotFound in database), or virtual in a previous sweep as well and
+       *   having been erased.
        * - If it is an update of the halo copy, we would expect the
        *   corresponding merge() to replace this copy. A replacement manifests
        *   in an event sequence of detach->erase->assign, so we still get a
-       *   NotFound throughout the assign.
+       *   NotFound or Erase throughout the assign.
        * - A virtual particle might also be subject of a mesh drop: If we lift
        *   a particle, exchange it along the boundary, we have to drop it on
        *   both sides again. We update its state
@@ -661,16 +199,25 @@ namespace toolbox {
        *
        * @param particleIsNew If we know that a particle is new, there's no
        *                      need to search through the database.
+       * @param reassignmentOnSameTreeDepthAllowed If true, assume our
+       *                      particle sorting/bookkeeping algorithm allows
+       *                      for a particle to be reassigned from one vertex
+       *                      to another vertex on the same depth in the tree
+       *                      directly (through its movement). Otherwise,
+       *                      expect the particle to be sorted either via
+       *                      sieves, lifts, or drops.
        */
       void assignParticleToVertex(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
         bool                                         isLocal,
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace,
-        bool                                         particleIsNew = false
+        bool                                         particleIsNew = false,
+        bool reassignmentOnSameTreeDepthAllowed                    = false
       );
 
 
@@ -684,6 +231,7 @@ namespace toolbox {
       void detachParticleFromVertex(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
         bool                                         isLocal,
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
@@ -699,11 +247,13 @@ namespace toolbox {
        * before.
        */
       void assignParticleToSieveSet(
-        const std::string&                            particleName,
-        const tarch::la::Vector<Dimensions, double>&  particleX,
-        bool                                          isLocal,
-        int                                           treeId,
-        const std::string&                            trace
+        const std::string&                           particleName,
+        const tarch::la::Vector<Dimensions, double>& particleX,
+        const int                                    particleID,
+        bool                                         isLocal,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
+        int                                          treeId,
+        const std::string&                           trace
       );
 
       /**
@@ -719,8 +269,7 @@ namespace toolbox {
        * which is really not what you want. This routine tries to reconstruct a
        * meaningful result.
        */
-      template <typename Particle>
-      std::string pruneTypeName() {
+      template <typename Particle> std::string pruneTypeName() {
         std::string result    = typeid(Particle).name();
         std::size_t lastDigit = result.find_last_of("0123456789");
         if (lastDigit != std::string::npos) {
@@ -731,27 +280,74 @@ namespace toolbox {
       }
 
       /**
+       * Eliminate existing particles, so only those that are "forgotten"
+       * remain
+       *
+       * This routine runs through the particles for which we have
+       * recorded events. If the last event
+       *
+       * - affects a remote particle;
+       * - is a move;
+       * - is an assignment to vertex,
+       *
+       * we know that it cannot eliminate existing particles. So we
+       * remote their trajectories via removeTrajectory(). If the
+       * last snapshot is empty, we remove it completely.
+       *
+       * Once this routine has terminated, we get the stuff in the
+       * database for particles that seem to have been left over. We also
+       * get a lot of historic data, but if we plot the database and
+       * study solely the last snapshot, we typically get a good idea of
+       * which particles got lost.
+       */
+      void eliminateExistingParticles();
+
+      /**
        * Ensure that database is empty
        *
        * This one is usually called after eliminateExistingParticles() and will
        * leave the user only with particles which have "magically" disappeared.
        *
-       * This routine uess exit(-1) if no assertions are enabled.
+       * This routine uses exit(-1) if no assertions are enabled.
        */
       void ensureDatabaseIsEmpty();
+
+      using ParticlePosition = tarch::la::Vector<Dimensions, double>;
+
+      /**
+       * Record the current particle positions in a vector.
+       */
+      template <typename ParticleContainer>
+      std::vector<ParticlePosition> recordParticlePositions(
+        const ParticleContainer& container
+      );
+
+      /**
+       * Trace the particle movements.
+       *
+       * This routine runs through the particles in container and invokes
+       * moveParticle() for each and every particle which has moved. That is,
+       * we assume that recordedPositions has been obtained through
+       * recordParticlePositions() before, and both recordedPositions and
+       * container hold the same particles in the same order (even though they
+       * might have moved in-between).
+       *
+       * We only record particles that have moved, but actually the comparison
+       * here is only an optimisation, as the moveParticle itself will once
+       * again check that the particle has actually changed its position.
+       */
+      template <typename ParticleContainer>
+      void traceParticleMovements(
+        const ParticleContainer&                     container,
+        const std::vector<ParticlePosition>&         recordedPositions,
+        const tarch::la::Vector<Dimensions, double>& vertexX,
+        const tarch::la::Vector<Dimensions, double>& vertexH,
+        int                                          spacetreeId
+      );
+
     } // namespace assignmentchecks
   }   // namespace particles
 } // namespace toolbox
 
 
-/**
- * Comparison operator
- *
- * Some older variants of C++ require an external operator (not embedded
- * into class or namespace) to compare two objects. We have seen issues
- * with Intel 2023, e.g., while 2024 was absolutely fine. Delegates to
- * member function.
- */
-bool operator==(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs );
-bool operator!=(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs );
-
+#include "TracingAPI.cpph"

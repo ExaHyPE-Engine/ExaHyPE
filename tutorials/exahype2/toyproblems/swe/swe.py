@@ -36,11 +36,6 @@ size = [2.0, 2.0]
 offset = [0.0, 0.0]
 
 """
-Set to true, to visualise/convert the output data using a postprocessor.
-"""
-visualise = False
-
-"""
 Choose how often a snapshot is written.
 """
 time_in_between_two_snapshots = end_time / 100
@@ -207,18 +202,6 @@ This defines where the output files should go.
 If you omit this, output files are automatically put into the application's folder
 """
 my_project.set_output_path("solution")
-
-if visualise:
-    output_patch_file = "solution/solution-SWE.peano-patch-file"
-    if os.path.isfile(output_patch_file):
-        subprocess.call(
-            [
-                "python3",
-                "../../../python/peano4/visualisation/render.py",
-                str(output_patch_file),
-            ]
-        )
-    sys.exit(0)
 
 """
 If you only target a sequential execution, you can omit the load balancing.

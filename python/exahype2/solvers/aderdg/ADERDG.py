@@ -18,6 +18,8 @@ from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
+from exahype2.solvers.Storage import Storage
+
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
 and Gauss-Lobatto nodes, helps to avoid having to constantly pass a string and ensure that this string is
@@ -139,7 +141,7 @@ class ADERDG(object):
         self._polynomials = Polynomials.Gauss_Legendre
         self._basis       = GaussLegendreBasis(order + 1)
         self._architecture  = "noarch"
-        self._use_libxsmm     = False
+        self._use_libxsmm  = False
 
         self._initialise_patches = False
 
@@ -148,10 +150,6 @@ class ADERDG(object):
         self._solution_persistent_storage_precision = PrecisionType["double"]
         self._precompute_picard_precision = False
         self._use_half_precision          = False
-
-        # Determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
-        self._hold_cell_data_on_heap_with_smart_pointer = False
-        self._hold_face_data_on_heap_with_smart_pointer = False
 
         # Whether or not to plot information about the grid as well as information about the content of the patches
         self._plot_grid_properties = plot_grid_properties
@@ -258,6 +256,8 @@ class ADERDG(object):
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
 
+        self.switch_storage_scheme(Storage.Heap, Storage.Heap)
+
         # Create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified.
         self.create_data_structures()
         self.create_action_sets()
@@ -270,6 +270,9 @@ Name:                   """
             + """
 Type:                   """
             + self.__class__.__module__
+            + """
+Storage schemes:        """
+            + str(self._cell_data_storage) + ", " + str(self._face_data_storage)
             + """
 DG order:               """
             + str(self._order)
@@ -367,18 +370,58 @@ Material parameters:    """
             self._corrector_computation_precision,
         )
 
-        # If user has specified that they want the data on the heap
-        if self._hold_cell_data_on_heap_with_smart_pointer:
-          self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+        if self._cell_data_storage == Storage.CallStack:
+          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArray(
               self._current_time_step,
               self._solution_persistent_storage_precision
           )
-          self._previous_time_step.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
+          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArray(
               self._previous_time_step,
               self._solution_persistent_storage_precision
           )
-        if self._hold_face_data_on_heap_with_smart_pointer:
-          self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+        elif self._cell_data_storage == Storage.Heap:
+          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+              self._current_time_step,
+              self._solution_persistent_storage_precision
+          )
+          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+              self._previous_time_step,
+              self._solution_persistent_storage_precision
+          )
+        elif self._cell_data_storage == Storage.SmartPointers:
+          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+              self._current_time_step,
+              self._solution_persistent_storage_precision
+          )
+          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+              self._previous_time_step,
+              self._solution_persistent_storage_precision
+          )
+        else:
+            assert False, "Storage variant {} not supported".format(
+                self._cell_data_storage
+            )
+
+        if self._face_data_storage == Storage.CallStack:
+          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArray(
+              self._rhs_estimates_projection,
+              self._corrector_computation_precision
+          )
+          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArray(
+              self._flux_estimates_projection,
+              self._corrector_computation_precision
+          )
+        elif self._face_data_storage == Storage.Heap:
+          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+              self._rhs_estimates_projection,
+              self._corrector_computation_precision
+          )
+          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+              self._flux_estimates_projection,
+              self._corrector_computation_precision
+          )
+        elif self._face_data_storage == Storage.SmartPointers:
+          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
               self._rhs_estimates_projection,
               self._corrector_computation_precision
           )
@@ -386,6 +429,10 @@ Material parameters:    """
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
+        else:
+            assert False, "Storage variant {} not supported".format(
+                self._face_data_storage
+            )
 
         # Custom merge implementation takes into account that the faces project such that
         # the left cell projects to the left half of the face and the right cell projects to the right half.
@@ -1269,20 +1316,18 @@ Material parameters:    """
 
     def add_kernel_optimisations(
         self,
-        is_linear = False,
+        is_linear   = False,
         polynomials = Polynomials.Gauss_Legendre,
-        use_libxsmm     = False,
-        precision = False,
+        use_libxsmm = False,
+        precision   = False,
         predictor_computation_precisions        = False,
         corrector_computation_precision         = False,
         solution_persistent_storage_precision   = False,
         precompute_picard_precision             = False,
-        precision_criterion_implementation = PDETerms.User_Defined_Implementation,
-        riemann_solver_implementation = PDETerms.None_Implementation,
-        hold_cell_data_on_heap_with_smart_pointer = False,
-        hold_face_data_on_heap_with_smart_pointer = False,
-        architecture = "noarch",
-        initialise_patches = False
+        precision_criterion_implementation      = PDETerms.User_Defined_Implementation,
+        riemann_solver_implementation           = PDETerms.None_Implementation,
+        architecture        = "noarch",
+        initialise_patches  = False
     ):
         if polynomials is Polynomials.Gauss_Legendre:
             self._basis = GaussLegendreBasis(self._order + 1)
@@ -1352,12 +1397,29 @@ Material parameters:    """
         if riemann_solver_implementation is not PDETerms.None_Implementation:
             self._riemann_solver_implementation = riemann_solver_implementation
 
-        self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
-        self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
-
         self._architecture = architecture
 
         self._initialise_patches = initialise_patches
+
+        self.create_data_structures()
+        self.create_action_sets()
+
+    def switch_storage_scheme(
+        self,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
+    ):
+        """
+        By default, we hold all data on the heap using raw pointers. You can explicitly switch
+        to storage on the call stack or heap using smart pointers.
+
+        @see create_data_structures()
+        """
+        assert isinstance(cell_data_storage, Storage)
+        assert isinstance(face_data_storage, Storage)
+
+        self._cell_data_storage = cell_data_storage
+        self._face_data_storage = face_data_storage
 
         self.create_data_structures()
         self.create_action_sets()

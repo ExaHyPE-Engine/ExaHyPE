@@ -6,6 +6,7 @@
 
 #include "tarch/services/Service.h"
 
+#include "tarch/multicore/Task.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
@@ -17,7 +18,6 @@
 #include <list>
 #include <map>
 #include <set>
-#include "../../tarch/multicore/Task.h"
 
 namespace peano4 {
   namespace grid {

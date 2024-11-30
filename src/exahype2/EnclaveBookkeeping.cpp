@@ -1,18 +1,17 @@
 #include "EnclaveBookkeeping.h"
+#include "EnclaveTask.h"
+
+#include "tarch/Assertions.h"
+#include "tarch/logging/Statistics.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/multicore/Task.h"
+#include "tarch/multicore/Lock.h"
 
 #include <algorithm>
 
-#include "../tarch/multicore/Task.h"
-#include "EnclaveTask.h"
-#include "tarch/Assertions.h"
-#include "tarch/accelerator/Device.h"
-#include "tarch/logging/Statistics.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/multicore/otter.h"
-
 
 tarch::logging::Log exahype2::EnclaveBookkeeping::_log("exahype2::EnclaveBookkeeping");
+
 
 const std::string exahype2::EnclaveBookkeeping::MemoryAllocationsInLookupTableIdentifier(
   "exahype2::EnclaveBookkeeping::memory-allocations"

@@ -2,11 +2,18 @@
 
 @page page_exahype2_tutorials_toyproblems_elastic The Elastic Wave Equation
 
-## Define and Build the Project
+\tableofcontents
+
+# Define and Build the Project
+
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the elastic project:
 
-    python3 elastic.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../../python
+python3 elastic.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Ensure you set the PYTHONPATH properly before that.
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
 One file, in particular, is of interest to us now: the file simply named ExaHyPE2-Elastic-* is the executable for our implementation.
@@ -16,6 +23,9 @@ We will therefore run this executable file by using the following command:
 
 The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
+
+
+# Dive Into the Script
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
@@ -30,7 +40,9 @@ These merely import the necessary packages from Peano 4 and ExaHyPE 2
 which will let us define and build our project. For more details about
 the implementation, consider the comments in the Python script.
 
-## Two-dimensional Elastic Wave Equation
+
+# Two-dimensional Elastic Wave Equation
+
 The elastic wave equation describes the propagation of waves in elastic solids.
 They are commonly derived from the conservation of momentum and the constitutive relation,
 defined by Hookes's law. With the assumption that the relation between stress and strain can
@@ -85,7 +97,9 @@ These speeds also define the eigenvalues of the flux:
     \left( -c_p, -c_s , 0 , c_s , c_p \right)
 @f$
 
-### Result
+
+## Result
+
 | t=0.0 s                    | t=1.0 s                    |
 | :-------------------------:|:-------------------------: |
 | ![](Elastic_2D_start.png)  | ![](Elastic_2D_end.png)    |

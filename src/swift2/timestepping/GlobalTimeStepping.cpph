@@ -2,17 +2,25 @@
 
 
 template <typename Particle>
-void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity(
-  const double cflFactor, const double initialTimeStepSize, double maxRelativeGrowth
-) {
-  const double minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0);
+void swift2::timestepping::
+  computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity(
+    const double cflFactor,
+    const double initialTimeStepSize,
+    double       maxRelativeGrowth
+  ) {
+  const double minH = peano4::parallel::SpacetreeSet::getInstance()
+                        .getGridStatistics()
+                        .getMinH()(0);
   const double maxV = Particle::getSpecies().getMaxVelocity();
 
   if (tarch::la::equals(maxV, 0.0)) {
     Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
   } else {
     double oldTimeStepSize = Particle::getSpecies().getMaxTimeStepSize();
-    double newTimeStepSize = std::min(cflFactor * minH / maxV, oldTimeStepSize * (1.0 + maxRelativeGrowth));
+    double newTimeStepSize = std::min(
+      cflFactor * minH / maxV,
+      oldTimeStepSize * (1.0 + maxRelativeGrowth)
+    );
     Particle::getSpecies().setTimeStepSize(newTimeStepSize, false);
   }
 }
@@ -21,7 +29,10 @@ void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMax
 template <typename Particle>
 void swift2::timestepping::computeCFLTimeStepSizeSPH() {
 
-  const double cflFactor           = Particle::getCfl();
+  assert(false);
+  // Don't use this.
+  // TODO mladen: delete this once other timestepping is done.
+
   const double initialTimeStepSize = Particle::getInitialTimeStepSize();
   const bool   adjustTimeStepSize  = Particle::getAdjustTimeStepSize();
 
@@ -29,7 +40,8 @@ void swift2::timestepping::computeCFLTimeStepSizeSPH() {
   Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
 
   if (adjustTimeStepSize) {
-    // @TODO implement the CFL time step for SPH. IT depends not on V but on the signal velocity.
+    // @TODO implement the CFL time step for SPH. IT depends not on V but on the
+    // signal velocity.
     assertionMsg(false, "adjustable time step size not implemented yet");
   }
 }

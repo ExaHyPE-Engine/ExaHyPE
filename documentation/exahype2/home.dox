@@ -2,8 +2,6 @@
 
 @page page_exahype2_home ExaHyPE 2
 
-\tableofcontents
-
 @image html documentation/exahype2/ExaHyPE-logo.jpg
 
 ExaHyPE 2 itself is a hyperbolic PDE engine, its goal is to provide a generic engine in which users can
@@ -29,6 +27,9 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_exahype_benchmarks
 - Realisation of numerics
   - \subpage documentation_exahype2_solvers_finite_volumes
+  - \subpage exahype2_fv_rusanov
+  - \subpage exahype2_dg
+  - \subpage exahype2_dg_DG_AMD
   - \subpage documentation_exahype2_solvers_aderdg
   - \subpage documentation_exahype2_solvers_enclave_solvers
 - Core functionality, numerics and ingredients
@@ -38,14 +39,18 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage benchmarks_peano4_interpolation_restriction_performance
 - Postprocessing and data analysis
   - \subpage page_exahype_visualisation
+  - \subpage page_exahype_checkpointing
+  - \subpage page_exahype_extend-visualisation
+- Advanced features
+  - \subpage page_exahype2_coupling
 - HPC  
   - \subpage page_exahype_runtime_analysis
   - \subpage page_exahype_performance_optimisation
   - \subpage page_exahype_parallelisation
   - \subpage page_exahype_multicore
   - \subpage page_exahype_gpu
-\li \subpage page_exahype_cpp_kernels
-\li \subpage exahype2_enumerator
+- Utilities
+  - \subpage exahype2_enumerator
 
 
 # Building the ExaHyPE 2 extension

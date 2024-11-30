@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include <tarch/multicore/Task.h>
+#include "tarch/multicore/Task.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"

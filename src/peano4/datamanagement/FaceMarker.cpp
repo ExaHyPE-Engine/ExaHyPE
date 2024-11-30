@@ -14,11 +14,13 @@ peano4::datamanagement::FaceMarker::FaceMarker(
   _cellCentre(event.getX()),
   _h(event.getH()),
   _cellIsLocal(event.getIsCellLocal()),
-  _select(select) {
+  _select(select),
+  _isAdjacentToParallelBoundary(event.getIsFaceAdjacentToParallelDomainBoundary()),
+  _relativePositionOfCellWithinFatherCell(event.getRelativePositionToFather()),
+  _isLocal( event.getIsFaceLocal() ) {
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
     _hasBeenRefined[faceNumber] = false;
     _willBeRefined[faceNumber]  = false;
-    _isLocal[faceNumber]        = event.getIsFaceLocal(faceNumber);
 
     const int normal = faceNumber % Dimensions;
     for (int i=0; i<TwoPowerD; i++) {
@@ -28,7 +30,6 @@ peano4::datamanagement::FaceMarker::FaceMarker(
       _willBeRefined.set(  faceNumber, _willBeRefined[faceNumber]  or event.getWillBeRefined(studiedVertex.to_ulong()) );
     }
   }
-  _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
 }
 
 

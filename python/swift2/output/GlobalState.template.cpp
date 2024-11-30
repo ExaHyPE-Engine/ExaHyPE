@@ -1,3 +1,5 @@
+/* Template in python/swift2/output/GlobalState.template.cpp */
+
 #include <algorithm>
 
 #include "GlobalState.h"
@@ -142,12 +144,16 @@ void startPlotStep() {
 }
 
 
+void startCleanupStep() {
+  logTraceIn( "CleanupStep()" );
+}
+
+
 void finishTimeStep() {
   logTraceIn( "finishTimeStep()" );
 
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::{{PARTICLE}}Set::printParticleStateStatistics() );
   {%- endfor %}
@@ -174,10 +180,6 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-  {%- endfor %}
-
   loadBalancer.finishStep();
   logTraceOut( "GridConstructionStep()" );
 }
@@ -185,8 +187,6 @@ void finishGridConstructionStep() {
 
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-
   vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
   {%- endfor %}
@@ -198,8 +198,6 @@ void finishInitialisationStep() {
 
 void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
@@ -210,17 +208,17 @@ void finishInitialConditionStep() {
 
 
 void finishPlotStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-  {%- endfor %}
   logTraceOut( "PlotStep()" );
+}
+
+
+void finishCleanupStep() {
+  logTraceOut( "CleanupStep()" );
 }
 
 
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-
   vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
   if (vertexdata::{{PARTICLE}}Set::registeredAnyResorting()) {
     logInfo( "finishIntermediateStep()", vertexdata::{{PARTICLE}}Set::printReassignmentStatistics() );

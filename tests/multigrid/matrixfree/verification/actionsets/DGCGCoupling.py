@@ -30,7 +30,7 @@ class Test4Coupling(ActionSet):
 
     // gather vertex values to interpolate upwards:
     tarch::la::Vector< Cols, double > vertexValues;
-    for (int i=0; i<TwoPowerD; i++) vertexValues[i] = fineGridVertices{{CG_SOLVER_NAME}}(i).getValue( 0 );
+    for (int i=0; i<TwoPowerD; i++) vertexValues[i] = fineGridVertices{{CG_SOLVER_NAME}}(i).getU( 0 );
 
     static std::vector< tarch::la::Matrix< Rows, Cols, double > > matrices = {
       {% for MATRIX in PROLONGATION_MATRIX %}

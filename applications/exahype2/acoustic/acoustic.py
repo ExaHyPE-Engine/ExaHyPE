@@ -1,10 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os
-import re
-import sys
 import argparse
-import subprocess
 
 import peano4
 import exahype2
@@ -161,11 +157,11 @@ class Acoustic:
         )
 
         parser.add_argument(
-            "-vis",
-            "--visualise",
-            action="store_true",
-            default=False,
-            help="Visualise the output data using the postprocessor.",
+            "--storage",
+            type=str,
+            choices=[e.name for e in exahype2.solvers.Storage],
+            default="Heap",
+            help="The storage scheme to use."
         )
 
         available_load_balancing_strategies = [
@@ -322,6 +318,7 @@ class Acoustic:
         if solver_params["auxiliary_variables"] != 0:
             solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
+        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         if "ADERDG" in args.solver:
             solver.add_kernel_optimisations(is_linear = True,)
@@ -358,18 +355,6 @@ class Acoustic:
                 args.periodic_boundary_conditions_z,
             ],
         )
-
-        if args.visualise:
-            output_patch_file = f"{args.output}/solution-Acoustic.peano-patch-file"
-            if os.path.isfile(output_patch_file):
-                subprocess.call(
-                    [
-                        "python3",
-                        f"{args.peano_dir}/python/peano4/visualisation/render.py",
-                        str(output_patch_file),
-                    ]
-                )
-            sys.exit(0)
 
         if args.load_balancing_strategy != "None":
             project.set_load_balancing(
