@@ -31,7 +31,7 @@ class ParticleIteratorTemplate(str):
         return self.template.replace("*FUNCTION*", function)
 
 
-def _get_particle_iterator_templates(particle_name, kernel_realisation):
+def _get_particle_iterator_templates(particle_name):
     """!
     Construct particle interaction iterator call templates given the
     desired particle interaction kernel realisation. These signature
@@ -69,8 +69,6 @@ def _get_particle_iterator_templates(particle_name, kernel_realisation):
 
     @param particle_name: str
         the particle class name.
-    @param particle_interaction_kernel_realisation: SPHParticle.ParticleKernelRealisation
-        enum for kernel realisation.
 
 
     4 ParticleIteratorTemplate objects containing particle iterator code snippets.
@@ -88,38 +86,12 @@ def _get_particle_iterator_templates(particle_name, kernel_realisation):
 
     PARTICLE = particle_name
 
-    iterate_over_particles_assigned_to_vertex_for_move = None
-    iterate_over_particles_assigned_to_vertex = None
-    iterate_over_particles_assigned_to_cell = None
-    iterate_over_particles_assigned_to_vertex_with_global_reduction = None
+#@test_csrtodok
 
-    if kernel_realisation == SPHParticle.ParticleKernelRealisation.NO_OPTIMISATION:
-        iterate_over_particles_assigned_to_vertex_for_move = None
-        iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
-        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"
-    elif kernel_realisation == SPHParticle.ParticleKernelRealisation.USE_OUTER_GUARDS:
-        iterate_over_particles_assigned_to_vertex_for_move = None
-        iterate_over_particles_assigned_to_vertex = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
-    elif kernel_realisation == SPHParticle.ParticleKernelRealisation.VECTORISE_ALL:
-        iterate_over_particles_assigned_to_vertex_for_move = None
-        iterate_over_particles_assigned_to_vertex = f"::swift2::kernels::forAllParticlesVectorised( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*WithMasking<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairsVectorised( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, *FUNCTION*WithMasking<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
-    elif (
-        kernel_realisation
-        == SPHParticle.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
-    ):
-        iterate_over_particles_assigned_to_vertex_for_move = None
-        iterate_over_particles_assigned_to_vertex = f"::swift2::kernels::forAllParticlesVectoriseWithCheckPreamble( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, *FUNCTION*<globaldata::{PARTICLE}>);"
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
-    else:
-        raise NotImplementedError(
-            f"Requested kernel realisation {particle_interaction_kernel_realisatio} not implemented"
-        )
+    iterate_over_particles_assigned_to_vertex_for_move = None
+    iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
+    iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::{PARTICLE}>);"
+    iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"
 
     #  Set defaults or raise error if there shouldn't be defaults and we missed something.
 
@@ -165,7 +137,6 @@ def get_algorithm_step_dict(particle):
 
     algorithm_steps_dict = {}
 
-    realisation = particle._particle_interaction_kernel_realisation
     project_namespace = particle._swift_project_namespace
 
     PARTICLE = particle.name
@@ -176,7 +147,7 @@ def get_algorithm_step_dict(particle):
         c_iter,
         v_iter,
         v_iter_with_global_reduction,
-    ) = _get_particle_iterator_templates(PARTICLE, realisation)
+    ) = _get_particle_iterator_templates(PARTICLE)
 
     # --------------------------------------------------------------------------
     # --------------------------------------------------------------------------
