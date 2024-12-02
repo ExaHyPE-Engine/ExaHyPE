@@ -100,6 +100,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  const int numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -110,6 +111,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  const int numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
@@ -119,7 +121,12 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     __Template_TouchCellFirstTime = jinja2.Template(
         """
   {{SET_IMPLEMENTATION}}< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
+  std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
+  std::vector< int >                            numberOfCoalescedActiveParticlesPerVertex( TwoPowerD );
+
   for (int i=0; i<TwoPowerD; i++) {
+    numberOfCoalescedActiveParticlesPerVertex[i] = -1;
+    numberOfCoalescedLocalParticlesPerVertex[i]  = -1;
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       _activeParticles.insert( p );
     }
