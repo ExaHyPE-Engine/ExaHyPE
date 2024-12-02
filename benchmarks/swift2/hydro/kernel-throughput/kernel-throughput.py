@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Create SWIFT project and particle species
     ########################################################################################
 
-    project_namespace = ["benchmarks", "swift2", "hydro", "kernel_benchmarks"]
+    project_namespace = ["benchmarks", "swift2", "hydro", "kernel_throughput"]
 
     project = swift2.Project(
         namespace=project_namespace, project_name="Benchmarks", executable=args.output_file
@@ -270,6 +270,8 @@ if __name__ == "__main__":
     )
     peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
     peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
+
+    peano4_project.output.makefile.add_cpp_file( "NohProblem.cpp" )
 
     peano4_project.constants.export_const_with_type("Benchmark_MaxParticles", str(args.max_particle_number), "int")
     peano4_project.constants.export_const_with_type("Benchmark_MinParticles", str(args.min_particle_number), "int")
