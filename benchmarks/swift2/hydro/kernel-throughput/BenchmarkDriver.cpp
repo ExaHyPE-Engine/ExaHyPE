@@ -37,7 +37,7 @@
 tarch::logging::Log _log("::");
 
 
-using namespace benchmarks::swift2::hydro::aos_vs_soa_kernel_benchmarks;
+using namespace benchmarks::swift2::hydro::kernel_benchmarks;
 
 
 /**
@@ -108,19 +108,6 @@ void runCPUBenchmark(int numberOfParticles) {
     logInfo( "runBenchmark(int)", " No of work items: " << numberOfWorkItems );
     logInfo( "runBenchmark(int)", "===============================");
 
-
-    auto prefetchIntoCaches = [&]() -> void {
-      if (Benchmark_CachePrefetch) {
-        #pragma omp parallel for schedule(static,1)
-        for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
-          // pick any kernel
-          for (auto& p: workItemParticleSet[workItem]) {
-            p->setSmoothingLength( p->getSmoothingLength() * 2.0 );
-          }
-        }
-      }
-    };
-
     for (int sample=0; sample<Benchmark_Samples; sample++) {
         if (Benchmark_Testforce) {
             initParticles(workItemParticleSet, numberOfWorkItems, numberOfParticles);
@@ -130,7 +117,7 @@ void runCPUBenchmark(int numberOfParticles) {
                 ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::resetAcceleration<globaldata::HydroPart>);
             }
 
-            prefetchIntoCaches();
+
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
             #pragma omp parallel for schedule(static,1)
@@ -150,7 +137,7 @@ void runCPUBenchmark(int numberOfParticles) {
                 ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::prepareDensity<globaldata::HydroPart>);
             }
 
-            prefetchIntoCaches();
+
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
             #pragma omp parallel for schedule(static,1)
@@ -166,7 +153,7 @@ void runCPUBenchmark(int numberOfParticles) {
 
         if (Benchmark_Testkick1) {
             initParticles(workItemParticleSet, numberOfWorkItems, numberOfParticles);
-            prefetchIntoCaches();
+
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
             #pragma omp parallel for schedule(static,1)
@@ -182,7 +169,7 @@ void runCPUBenchmark(int numberOfParticles) {
 
         if (Benchmark_Testkick2) {
             initParticles(workItemParticleSet, numberOfWorkItems, numberOfParticles);
-            prefetchIntoCaches();
+
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
             #pragma omp parallel for schedule(static,1)
@@ -199,15 +186,13 @@ void runCPUBenchmark(int numberOfParticles) {
 
         if (Benchmark_Testdrift) {
             initParticles(workItemParticleSet, numberOfWorkItems, numberOfParticles);
-            prefetchIntoCaches();
+
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
             #pragma omp parallel for schedule(static,1)
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
-              for (int i=0; i<Benchmark_WorkItemRepeats; i++) {
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::timestepping::resetMovedParticleMarkerWithMasking<globaldata::HydroPart>);
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
-              }
+              ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::timestepping::resetMovedParticleMarkerWithMasking<globaldata::HydroPart>);
+              ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
             }
 
             watch.stop();

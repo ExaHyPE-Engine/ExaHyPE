@@ -1,12 +1,12 @@
 /**
  @page benchmarks_swift2_hydro_kernel_throughput Kernel throughput benchmark
  
- This is a short benchmark which assesses the kernel throughputs of the Swift 2
- project. In our own research, we use this benchmark primarily to study the 
- impact of our proposed C++ language modifications. Obviously,  the benchmark
- can also be used to assess a machinery.
+ @tableofcontents
  
- ## Design
+ This is a short benchmark which assesses the kernel throughputs of the Swift 2
+ project. 
+ 
+ # Design
  
  The benchmark design is very simple. We first create a simple SPH test through 
  the full-blown Swift 2 software stack. Before we compile, we however replace
@@ -19,9 +19,9 @@
  - Number of particles. The benchmark driver iterates over those particles 
    internally. You can alter the maximum particles count however (invoke the 
    Python script with --help for details).
- - Each test is repeated sample times. The default is 16, but you can alter it 
+ - The whole test suite is repeated ```sample``` times. The default is 16, but you can alter it 
    through the Python script.
- - The number of particles is split up into work items, i.e. chunks of 
+ - The tutal number of particles is split up into work items, i.e. chunks of 
    continuous particles. For a real setup, we can think of these work items
    as the number of particles associated typically with a vertex while we 
    kick them, or we can read them as the average number of particles per 
@@ -37,22 +37,6 @@
    work item size, but linear complexity overall. We do not write these loops
    here ourselves, but we directly invoke the Swift 2 loop routines, i.e. 
    everything we measure is 1:1 from the Swift 2 code base.
- - We always use the masked variant of the kernel, i.e. the one which computes
-   all particle updates and then applies these updates subject to a final 
-   distance check. This is likely not the most efficient way for many real 
-   setups, but it yields kind of deterministic workload per work item.
- - We can control on the Python level if we want to invoke the kernel once
-   or multiple times. If you pick ```--work-item-repeats 1''', the kernel
-   behaviour very much resembles a loop-based SPH realisation: All particles
-   are kicked, then all are drifted, ... Notably, each kernel might have to 
-   load all data through the bus. If you use a higher value, such as 
-   ```--work-item-repeats 32''', you apply the kernel multiple times in a row.
-   This is similar to a task-based approach, where subsequent phases on a small
-   chunk of particles (i.e. a work item) immediately follow each other. The 
-   particels therefore likely remain in a closeby cache.
- - The benchmark also supports a flag --cache-prefetch. If set, the test
-   driver tries to bring the particles of a work item into the local cache
-   before we start a measurement.
 
  
  ## Build a demo
