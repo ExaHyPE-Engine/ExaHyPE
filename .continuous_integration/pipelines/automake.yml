@@ -82,6 +82,7 @@ SWIFT2_Dastgen:
   extends:
     - .Tags
     - .Variables
+    - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .SWIFT2_Dastgen
   needs:
@@ -96,6 +97,7 @@ SWIFT2_Sod1D:
   extends:
     - .Tags
     - .Variables
+    - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .SWIFT2_Sod1D
   needs:
@@ -110,6 +112,7 @@ SWIFT2_Noh2D:
   extends:
     - .Tags
     - .Variables
+    - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .SWIFT2_Noh2D
   needs:
