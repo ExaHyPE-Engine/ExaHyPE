@@ -143,6 +143,8 @@ void swift2::kernels::legacy::hydro_reset_acceleration(Particle* localParticle
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_force(Particle* localParticle) {
 
+  static tarch::logging::Log _log("swift2::kernels::legacy");
+
   const int    hydroDimensions    = localParticle->getHydroDimensions();
   const double hydroDimensionsInv = 1. / (double)hydroDimensions;
 
@@ -157,13 +159,34 @@ void swift2::kernels::legacy::hydro_end_force(Particle* localParticle) {
   );
 
 #if PeanoDebug > 0
-  // TODO: temporary allow for difference of 1
-  // assertion2(
-  //   localParticle->getDensityNeighbourCount(
-  //   ) <= localParticle->getForceNeighbourCount() + 1,
-  //   "Interacted with fewer particles in Force than in Density loop",
-  //   localParticle->toString()
-  // );
+  // During the smoothing length computation, we complete a neighbour loop
+  // while assuming we have the correct sml. In the final step, we compute
+  // the new sml and compare it to the one we used. If the difference is
+  // small enough, as set by the convergence criterion, we consider the
+  // sml converged. However, it is imporant to note that we use "small
+  // enough", not "zero". So the sml may be slightly different after the
+  // sml computation iteration completes.
+  // Down the line, this can lead to scenarios where we interacted with
+  // more particles during the density loop than the force loop. Provided
+  // the convergence criterion has been set adequately small, the difference
+  // in results should be negligible. However, since for a fixed smoothing
+  // length one expects equal or more neighbour interactions during a force
+  // loop since we take into account either a particle's own radius or the
+  // radius of the interacting neighbour, as opposed to only the particle's
+  // own radius during the density loop, this expectation is no longer strictly
+  // satisfied.
+  // Previously, I used to have an assertion here to make sure the interaction
+  // counts satisfy that expectation. For the reason explained above, that
+  // doesn't work. So instead, we just check for it and raise a warning, since
+  // it *could* be an indication of something going wrong. Typically, one can
+  // expect a 1-2 particle difference. If it's larger than that, there is
+  // most likely an issue present.
+  if (localParticle->getDensityNeighbourCount() > localParticle->getForceNeighbourCount()) {
+    logWarning("hydro_end_force()",
+        "Particle interacted with fewer particles in Force than in Density loop" <<
+        localParticle->toString()
+        )
+  }
 #endif
 }
 
