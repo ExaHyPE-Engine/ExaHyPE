@@ -118,6 +118,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
       ::swift2::kernels::forAllParticles(
         marker,
         assignedParticles,
+        numberOfAssignedParticles,
         [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
           ::swift2::boundaryconditions::applyFixedBoundaryCondition(
             assignedParticle,
