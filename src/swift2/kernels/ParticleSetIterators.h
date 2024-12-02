@@ -201,9 +201,8 @@ namespace swift2 {
     void forAllParticles(
       const peano4::datamanagement::VertexMarker&                         marker,
       ParticleContainer&                                                  assignedParticles,
-      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
-      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
-          ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+      int                                                                 numberOfCoalescedAssignedParticles,
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f
     );
 
 
@@ -214,60 +213,8 @@ namespace swift2 {
     void forAllLocalParticles(
       const peano4::datamanagement::CellMarker&                  marker,
       ParticleContainer&                                         localParticles,
-      ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f,
-      UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>
-          predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<ParticleContainer>>
-    );
-
-
-    /**
-     * Alternative to forAllParticles() which vectorises
-     *
-     * This routine attempts a brute force vectorisation of the function calls.
-     * Therefore, it does not accept a predicate. We simply rely on the fact
-     * that all compute kernels have to realise their validity checks
-     * internally anyway and make the outer loop a for loop which should
-     * vectorise. For this outer loop, we employ @ref peano4_utils_Loop_parallel "Peano's loop macros" from
-     * peano4/utils/Loop.h, which ensure that we use bespoke loop constructs
-     * depending on the multithreading backend chosen.
-     *
-     * This routine is not be used/does not work if f alters the global state,
-     * i.e. if f performs a global reduction.
-     */
-    template <typename ParticleContainer>
-    void forAllParticlesVectorised(
-      const peano4::datamanagement::VertexMarker&                         marker,
-      ParticleContainer&                                                  assignedParticles,
-      int                                                                 numberOfAssignedParticles,
-      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto  f
-    );
-
-
-    /**
-     * Alternative implementation of forAllParticles_vectorise()
-     *
-     * This routine is a variant of the vectorised kernels which works with a
-     * dedicated check preamble: First, it evaluates the predicate for each
-     * particle in the list and memorises the outcome. After that, we split
-     * the sequence of particles into chunks of 8. If more than 5 particles
-     * have to be updated, we do all 8 of the chunk in one block. If not, we
-     * subdivide the block into two chunks of size 4 and continue recursively.
-     *
-     * Logically, it would be nice to work with a bitset here. However, bitsets
-     * are large, and it is not clear if operations on them would map onto
-     * AVX instructions.
-     *
-     * This routine is not be used/does not work if f alters the global state,
-     * i.e. if f performs a global reduction.
-     */
-    template <typename ParticleContainer>
-    void forAllParticlesVectoriseWithCheckPreamble(
-      const peano4::datamanagement::VertexMarker&                  marker,
-      ParticleContainer&                                           assignedParticles,
-      int                                                          numberOfAssignedParticles,
-      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
-      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
-          ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+      const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
+      ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f
     );
 
 
@@ -376,55 +323,8 @@ namespace swift2 {
       const peano4::datamanagement::CellMarker&  marker,
       LocalParticleContainer&                    localParticles,
       ActiveParticleContainer&                   activeParticles,
-      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
-      UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
-          localParticlePredicate = ::swift2::kernels::alwaysUpdateInCellKernel<PCParticle<LocalParticleContainer>>,
-      UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
-          particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<PCParticle<LocalParticleContainer>>
-    );
-
-
-    /**
-     * Brute-force vectorised update
-     *
-     * The idea behind this routine is that we run over the particle pairs in a
-     * brute force manner. It works if and only if the user works with
-     * coalesced memory access and therefore knows the number of local
-     * particles. We assume/hope that f is vectorisable. To avoid simultaneous
-     * writes to one particle, we loop over the active particles first and then
-     * over the local ones. That is, we compute the impact of one active
-     * particle onto all local particles.
-     *
-     * The interaction between fine and coarse particles requires special
-     * attention: If a particle pair arises from different resolution levels,
-     * we have to add the arising force bi-directionally. However, the
-     * underlying check ("are we on the same level") is not vector-friendly.
-     * What we do therefore is to extract this check out into a separate
-     * nested loop which we add as a epilogue.
-     *
-     * @todo Pawel I think this is a second place where we can, in the second
-     *       variant, use a bitset.
-     */
-    template <typename LocalParticleContainer, typename ActiveParticleContainer>
-    void forAllParticlePairsVectorised(
-      const peano4::datamanagement::CellMarker&  marker,
-      LocalParticleContainer&                    localParticles,
-      ActiveParticleContainer&                   activeParticles,
-      const std::vector<int>&                    numberOfLocalParticlesPerVertex,
-      const std::vector<int>&                    numberOfActiveParticlesPerVertex,
-      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
-    );
-
-    /**
-     * @todo dummy function at the moment. Only wraps around forAllParticlePairsVectorised()
-     */
-    template <typename LocalParticleContainer, typename ActiveParticleContainer>
-    void forAllParticlePairsVectoriseWithCheckPreamble(
-      const peano4::datamanagement::CellMarker&  marker,
-      LocalParticleContainer&                    localParticles,
-      ActiveParticleContainer&                   activeParticles,
-      const std::vector<int>&                    numberOfLocalParticlesPerVertex,
-      const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+      const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
+      const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
       ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
     );
 
