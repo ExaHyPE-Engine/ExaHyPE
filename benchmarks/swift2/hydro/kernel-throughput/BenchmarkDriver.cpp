@@ -28,16 +28,20 @@
 #include "swift2/timestepping/Leapfrog.h"
 #include "swift2/timestepping/TimeStepping.h"
 
-#include "swift2/scenario/NohProblem.h"
+#include "NohProblem.h"
 
 #include "tarch/timing/Measurement.h"
 #include "tarch/multicore/otter.h"
 
 
+#include "globaldata/HydroPart.h"
+#include "vertexdata/HydroPartSet.h"
+
+
 tarch::logging::Log _log("::");
 
 
-using namespace benchmarks::swift2::hydro::kernel_benchmarks;
+using namespace benchmarks::swift2::hydro::kernel_throughput;
 
 
 /**
@@ -64,7 +68,7 @@ void initParticle( globaldata::HydroPart& particle, int numberOfParticles, int i
                 #endif
   };
   particle.setX(x);
-  ::swift2::scenario::initNohProblemIC(particle, 1.0, particlesPerAxis, Dimensions );
+  initNohProblemIC(particle, 1.0, particlesPerAxis, Dimensions );
 }
 
 
@@ -83,11 +87,11 @@ void runCPUBenchmark(int numberOfParticles) {
     const peano4::datamanagement::VertexMarker  vertexMarker(gridTraversalEvent);
     const peano4::datamanagement::CellMarker    cellMarker(gridTraversalEvent);
 
-    ::tarch::timing::Measurement         timingForceKernel;
-    ::tarch::timing::Measurement         timingDensityKernel;
-    ::tarch::timing::Measurement         timingKick1Kernel;
-    ::tarch::timing::Measurement         timingKick2Kernel;
-    ::tarch::timing::Measurement         timingDriftKernel;
+    ::tarch::timing::Measurement         timingBaselineForceKernel;
+    ::tarch::timing::Measurement         timingBaselineDensityKernel;
+    ::tarch::timing::Measurement         timingBaselineKick1Kernel;
+    ::tarch::timing::Measurement         timingBaselineKick2Kernel;
+    ::tarch::timing::Measurement         timingBaselineDriftKernel;
 
     int numberOfWorkItems = numberOfParticles / Benchmark_WorkItemSize;
     numberOfWorkItems += (numberOfParticles % Benchmark_WorkItemSize==0) ? 0 : 1;
@@ -112,43 +116,55 @@ void runCPUBenchmark(int numberOfParticles) {
         if (Benchmark_Testforce) {
             initParticles(workItemParticleSet, numberOfWorkItems, numberOfParticles);
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::resetSmoothingLengthIterationCounter<globaldata::HydroPart>);
-                //::swift2::kernels::forAllParticles( vertexMarker, particleSet[thread], ::swift2::kernels::legacy::prepareHydroForce<globaldata::HydroPart>);
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::resetAcceleration<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::resetSmoothingLengthIterationCounter<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::resetAcceleration<globaldata::HydroPart>);
             }
 
 
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
+            std::vector<int> dummyEntries(TwoPowerD);
+            std::vector<int> coalscedEntries(TwoPowerD);
+            for (int i=0; i<TwoPowerD; i++) {
+              dummyEntries[i]=-1;
+            }
+
             #pragma omp parallel for schedule(static,1)
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
+
               for (int i=0; i<Benchmark_WorkItemRepeats; i++) {
-                ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::legacy::forceKernelWithMasking<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], dummyEntries, dummyEntries, ::swift2::kernels::legacy::forceKernelWithMasking<globaldata::HydroPart>);
               }
             }
 
             watch.stop();
-            timingForceKernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
+            timingBaselineForceKernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
         }
 
         if (Benchmark_Testdensity) {
             initParticles(workItemParticleSet, numberOfWorkItems, numberOfParticles);
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::prepareDensity<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::prepareDensity<globaldata::HydroPart>);
             }
 
 
             ::tarch::timing::Watch watch("", "runBenchmark(int)", false);
 
+            std::vector<int> dummyEntries(TwoPowerD);
+            std::vector<int> coalscedEnries(TwoPowerD);
+            for (int i=0; i<TwoPowerD; i++) {
+              dummyEntries[i]=-1;
+            }
+
             #pragma omp parallel for schedule(static,1)
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
               for (int i=0; i<Benchmark_WorkItemRepeats; i++) {
-                ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::legacy::densityKernelWithMasking<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], dummyEntries, dummyEntries, ::swift2::kernels::legacy::densityKernelWithMasking<globaldata::HydroPart>);
               }
             }
 
             watch.stop();
-            timingDensityKernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
+            timingBaselineDensityKernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
         }
 
         if (Benchmark_Testkick1) {
@@ -159,12 +175,12 @@ void runCPUBenchmark(int numberOfParticles) {
             #pragma omp parallel for schedule(static,1)
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
               for (int i=0; i<Benchmark_WorkItemRepeats; i++) {
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
               }
             }
 
             watch.stop();
-            timingKick1Kernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
+            timingBaselineKick1Kernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
         }
 
         if (Benchmark_Testkick2) {
@@ -175,13 +191,13 @@ void runCPUBenchmark(int numberOfParticles) {
             #pragma omp parallel for schedule(static,1)
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
               for (int i=0; i<Benchmark_WorkItemRepeats; i++) {
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
-                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::resetPredictedValuesWithMasking<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
+                ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::resetPredictedValuesWithMasking<globaldata::HydroPart>);
               }
             }
 
             watch.stop();
-            timingKick2Kernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
+            timingBaselineKick2Kernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
         }
 
         if (Benchmark_Testdrift) {
@@ -191,20 +207,20 @@ void runCPUBenchmark(int numberOfParticles) {
 
             #pragma omp parallel for schedule(static,1)
             for (int workItem=0; workItem<numberOfWorkItems; workItem++) {
-              ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::timestepping::resetMovedParticleMarkerWithMasking<globaldata::HydroPart>);
-              ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
+              ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::timestepping::resetMovedParticleMarkerWithMasking<globaldata::HydroPart>);
+              ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
             }
 
             watch.stop();
-            timingDriftKernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
+            timingBaselineDriftKernel.setValue( watch.getCalendarTime()/Benchmark_WorkItemRepeats );
         }
     } // end of sample loop
 
-    logInfo( "runBenchmark(int)", "density kernel: " << timingDensityKernel.getValue() << "  " << timingDensityKernel.toString() );
-    logInfo( "runBenchmark(int)", "force kernel:   " << timingForceKernel.getValue() << "  " << timingForceKernel.toString() );
-    logInfo( "runBenchmark(int)", "kick1 kernel:   " << timingKick1Kernel.getValue() << "  " << timingKick1Kernel.toString() );
-    logInfo( "runBenchmark(int)", "kick2 kernel:   " << timingKick2Kernel.getValue() << "  " << timingKick2Kernel.toString() );
-    logInfo( "runBenchmark(int)", "drift kernel:   " << timingDriftKernel.getValue() << "  " << timingDriftKernel.toString() );
+    logInfo( "runBenchmark(int)", "density (baseline): " << timingBaselineDensityKernel.getValue() << "  " << timingBaselineDensityKernel.toString() );
+    logInfo( "runBenchmark(int)", "force (baseline):   " << timingBaselineForceKernel.getValue() << "  " << timingBaselineForceKernel.toString() );
+    logInfo( "runBenchmark(int)", "kick1 (baseline):   " << timingBaselineKick1Kernel.getValue() << "  " << timingBaselineKick1Kernel.toString() );
+    logInfo( "runBenchmark(int)", "kick2 (baseline):   " << timingBaselineKick2Kernel.getValue() << "  " << timingBaselineKick2Kernel.toString() );
+    logInfo( "runBenchmark(int)", "drift (baseline):   " << timingBaselineDriftKernel.getValue() << "  " << timingBaselineDriftKernel.toString() );
 
     for (int currentWorkItem=0; currentWorkItem<numberOfWorkItems; currentWorkItem++) {
       tarch::freeMemory(*workItemParticleSet[currentWorkItem].begin(), tarch::MemoryLocation::Heap);
@@ -236,6 +252,7 @@ void initGridTraversalEvent() {
             true,                 // bool    __isParentCellLocal,
             0,                    // std::bitset< TwoPowerD >        __isVertexAdjacentToParallelDomainBoundary,
             0,                    // std::bitset< TwoTimesD >        __isFaceAdjacentToParallelDomainBoundary,
+            tarch::la::Vector<TwoPowerD,int>(1),    //  __numberOfAdjacentTreesPerVertex
             std::bitset< ThreePowerD >().all(), //       __isAdjacentCellLocal,
             tarch::la::Vector< TwoPowerD, int >(0), //     __vertexDataFrom,
             tarch::la::Vector< TwoPowerD, int >(0), //     __vertexDataTo,
@@ -261,12 +278,12 @@ int main(int argc, char** argv) {
     tarch::initNonCriticalAssertionEnvironment();
 
     peano4::initSingletons(
-      benchmarks::swift2::hydro::aos_vs_soa_kernel_benchmarks::DomainOffset,
-      benchmarks::swift2::hydro::aos_vs_soa_kernel_benchmarks::DomainSize,
-      benchmarks::swift2::hydro::aos_vs_soa_kernel_benchmarks::PeriodicBC
+      DomainOffset,
+      DomainSize,
+      PeriodicBC
     );
 
-    benchmarks::swift2::hydro::aos_vs_soa_kernel_benchmarks::repositories::DataRepository::initDatatypes();
+    repositories::DataRepository::initDatatypes();
 
     initGridTraversalEvent();
 
@@ -292,7 +309,7 @@ int main(int argc, char** argv) {
 
 
     peano4::shutdownSingletons();
-    benchmarks::swift2::hydro::aos_vs_soa_kernel_benchmarks::repositories::DataRepository::shutdownDatatypes();
+    repositories::DataRepository::shutdownDatatypes();
     peano4::shutdownParallelEnvironment();
 
     return ExitCodeSuccess;
