@@ -9,9 +9,10 @@
   - \subpage applications_exahype2_exaseis
   - \subpage applications_exahype2_gprdr_GPRDR
   - \subpage applications_exahype2_loh_1_LOH_1
-- Astrophysics
-  - \subpage applications_exahype2_selfgravitation
+- ExaGRyPE (Astrophysics)
   - \subpage applications_exahype2_ccz4
+- Other astrophysics
+  - \subpage applications_exahype2_selfgravitation
 - Tsunamis and flooding
   - \subpage applications_exahype2_swe
   - \subpage applications_exahype2_landslide
