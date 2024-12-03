@@ -217,6 +217,13 @@ void runBenchmark(int numberOfParticles) {
           "force (coalesced,native)",
           numberOfParticles
       );
+      assessKernel(
+          [&](int workItem) -> void {
+            ::swift2::kernels::ompoffloading::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::forceKernelWithMasking<globaldata::HydroPart>);
+          },
+          "force (omp,offloading)",
+          numberOfParticles
+      );
     }
 
     if (Benchmark_Testdensity) {
@@ -235,6 +242,13 @@ void runBenchmark(int numberOfParticles) {
         "density (coalesced,native)",
         numberOfParticles
       );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::ompoffloading::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernelWithMasking<globaldata::HydroPart>);
+        },
+        "density (omp,offloading)",
+        numberOfParticles
+      );
     }
 
     if (Benchmark_Testkick1) {
@@ -251,6 +265,13 @@ void runBenchmark(int numberOfParticles) {
           ::swift2::kernels::coalesced::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
         },
         "kick1 (coalesced,native)",
+        numberOfParticles
+      );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::ompoffloading::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
+        },
+        "kick1 (omp,offloading)",
         numberOfParticles
       );
     }
@@ -273,6 +294,14 @@ void runBenchmark(int numberOfParticles) {
         "kick2 (coalesced,native)",
         numberOfParticles
       );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::ompoffloading::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
+          ::swift2::kernels::ompoffloading::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::resetPredictedValuesWithMasking<globaldata::HydroPart>);
+        },
+        "kick2 (omp,offloading)",
+        numberOfParticles
+      );
     }
 
     if (Benchmark_Testdrift) {
@@ -291,6 +320,14 @@ void runBenchmark(int numberOfParticles) {
           ::swift2::kernels::coalesced::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
         },
         "drift (coalesced,native)",
+        numberOfParticles
+      );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::ompoffloading::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::timestepping::resetMovedParticleMarkerWithMasking<globaldata::HydroPart>);
+          ::swift2::kernels::ompoffloading::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>);
+        },
+        "drift (omp,offloading)",
         numberOfParticles
       );
     } // end of sample loop
