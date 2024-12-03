@@ -65,7 +65,7 @@ def read_file(file_name,
 
 
 Kernels  = [ "density", "force", "kick1", "kick2", "drift" ]
-ImplementationVariant = [ "(baseline)", "(coalesced,native)" ]
+ImplementationVariant = [ "(baseline)", "(coalesced,native)", "(omp,offloading)" ]
 Colors   = [ "#20a040", "#a04020", "#4020a0", "#30f060", "#f06030", "#6030f0" ]
 Symbols  = [ "-s", "-o", "-^", "-v", "-<", "->" ]
 
