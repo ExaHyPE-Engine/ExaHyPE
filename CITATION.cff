@@ -1,0 +1,79 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Peano
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Tobias
+    family-names: Weinzierl
+  - given-names: Sean
+    family-names: Baccas
+  - given-names: Cristian
+    family-names: Barrera-Hinojosa
+  - given-names: Alexander
+    family-names: Belozerov
+  - given-names: Johannes
+    family-names: Bockhorst
+  - given-names: Yakup
+    family-names: Budanaz
+  - given-names: Dominic
+    family-names: Etienne Charrier
+  - given-names: Thomas
+    family-names: Flynn
+  - given-names: Jonathan
+    family-names: Frawley
+  - given-names: Uzmar
+    family-names: Gomez
+  - given-names: Mladen
+    family-names: Ivkovic
+  - given-names: Lando
+    family-names: Jahn
+  - given-names: Sven
+    family-names: Köppel
+  - given-names: Chung
+    family-names: Loi
+  - given-names: Marc
+    family-names: Marot-Lassauzaie
+  - given-names: Eike
+    family-names: Mueller
+  - given-names: Daniel
+    family-names: Nagy
+  - given-names: Dmitry
+    family-names: Nikolaenko
+  - given-names: Pawel
+    family-names: Radtke
+  - given-names: Anne
+    family-names: Reinarz
+  - given-names: Philipp
+    family-names: Samfass
+  - given-names: Holger
+    family-names: Schulz
+  - given-names: Ujwal
+    family-names: Shende
+  - given-names: Timothy
+    family-names: Stokes
+  - given-names: Yashas
+    family-names: Tejaskumar Gandhi
+  - given-names: Adam
+    family-names: Tuft
+  - given-names: Mark
+    family-names: Turner
+  - given-names: Marion
+    family-names: Weinzierl
+  - given-names: Mario
+    family-names: Wille
+  - given-names: Florian
+    family-names: Wunderlich
+  - given-names: Han
+    family-names: Zhang
+repository-code: 'https://gitlab.lrz.de/hpcsoftware/Peano'
+url: >-
+  https://tobiasweinzierl.webspace.durham.ac.uk/software/peano/
+abstract: >-
+  Peano is an open-source framework for solvers on
+  dynamically adaptive Cartesian meshes.
+license: BSD-4-Clause

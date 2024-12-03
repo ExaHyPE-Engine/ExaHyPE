@@ -151,7 +151,11 @@ public:
 #endif
 
   /**
-   * Invoke exchangeSieveListsGlobally().
+   * Finish traversal.
+   *
+   * Invokes toolbox::particles::ParticleSet<T>::finishedTraversal(). This
+   * routine should be called by prepareTraversal() on each and every rank
+   * after particles have been started to be resorted.
    */
   static void finishedTraversal(
       const tarch::la::Vector<Dimensions,double>   domainOffset,

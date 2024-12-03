@@ -4,6 +4,8 @@
 
 @image html documentation/icons/peano4.png
 
+- \subpage page_peano4_tutorials_finite_volumes
+
 ## How to add your own tutorial
 
 All of Peano's tutorials follow the same @ref page_tutorials_overview "tutorial conventions".
