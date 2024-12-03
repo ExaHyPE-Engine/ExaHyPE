@@ -1,0 +1,73 @@
+#include "swift2/kernels/ParticleUpdatePredicates.h"
+#include "peano4/utils/Loop.h"
+
+
+#include <bit>
+#include <list>
+
+
+#include "config.h"
+
+
+#if defined(GPUOffloadingOMP)
+template <typename ParticleContainer>
+void swift2::kernels::ompoffloading::forAllParticles(
+    const peano4::datamanagement::VertexMarker&   marker,
+    ParticleContainer&                            assignedParticles,
+    int                                           numberOfCoalescedAssignedParticles,
+    ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType>    auto f
+) {
+#pragma omp target is_device_ptr(buf0devData) is_device_ptr(buf1devData) is_device_ptr(buf2devData) is_device_ptr(buf3devData)
+#pragma omp teams distribute parallel for
+  for (auto& particle : assignedParticles) {
+    if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,*particle)) {
+      f(marker,*particle);
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::ompoffloading::forAllLocalParticles(
+  const peano4::datamanagement::CellMarker&                    marker,
+  ParticleContainer&                                           localParticles,
+  const std::vector<int>&                                      numberOfCoalescedLocalParticles,
+  ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>>   auto f
+) {
+#pragma omp target is_device_ptr(buf0devData) is_device_ptr(buf1devData) is_device_ptr(buf2devData) is_device_ptr(buf3devData)
+#pragma omp teams distribute parallel for
+  for (auto& particle : localParticles) {
+    if (::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,*particle)) {
+      f(marker,*particle);
+    }
+  }
+}
+
+
+template <typename LocalParticleContainer, typename ActiveParticleContainer>
+void swift2::kernels::ompoffloading::forAllParticlePairs(
+  const peano4::datamanagement::CellMarker&  marker,
+  LocalParticleContainer&                    localParticles,
+  ActiveParticleContainer&                   activeParticles,
+  const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
+  const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
+  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
+) {
+#pragma omp target is_device_ptr(buf0devData) is_device_ptr(buf1devData) is_device_ptr(buf2devData) is_device_ptr(buf3devData)
+#pragma omp teams distribute parallel for
+  for (auto& localParticle : localParticles) {
+    if ( ::swift2::kernels::alwaysUpdateInCellKernel(marker, *localParticle) ) {
+      for (auto& activeParticle : activeParticles) {
+        if ( ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(marker, *localParticle, *activeParticle) ) {
+          f(marker, *localParticle, *activeParticle);
+          if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+            tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+            f(marker, *activeParticle, *localParticle);
+          }
+        }
+      }
+    }
+  }
+}
+#endif
+

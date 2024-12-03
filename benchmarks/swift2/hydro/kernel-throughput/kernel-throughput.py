@@ -72,7 +72,7 @@ if __name__ == "__main__":
         "-wis",
         "--work-item-size",
         dest="work_item_size",
-        default=64,
+        default=1024,
         type=int,
         help="Size of a work item",
     )
@@ -83,14 +83,6 @@ if __name__ == "__main__":
         default=1,
         type=int,
         help="Size of a work item",
-    )
-    parser.add_argument(
-        "-cp",
-        "--cache-prefetch",
-        dest="cache_prefetch",
-        action="store_true",
-        default=False,
-        help="Prefetch data of work item before measurement starts",
     )
     parser.add_argument(
         "-o",
