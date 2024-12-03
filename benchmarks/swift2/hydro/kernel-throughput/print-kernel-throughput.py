@@ -65,7 +65,7 @@ def read_file(file_name,
 
 
 Kernels  = [ "density", "force", "kick1", "kick2", "drift" ]
-ImplementationVariant = [ "(baseline)" ]
+ImplementationVariant = [ "(baseline)", "(coalesced,native)" ]
 Colors   = [ "#20a040", "#a04020", "#4020a0", "#30f060", "#f06030", "#6030f0" ]
 Symbols  = [ "-s", "-o", "-^", "-v", "-<", "->" ]
 
@@ -88,7 +88,7 @@ def process_file(filename):
         if Kernels[0] == kernel and ImplementationVariant[0] == implementation:
           label = kernel + " " + implementation
         elif Kernels[0] == kernel:
-          label = implementation
+          label = "... " + implementation
         elif ImplementationVariant[0] == implementation:
           label = kernel
           
@@ -100,7 +100,7 @@ def process_file(filename):
                 )                           
 
     plt.xlabel("Particles")
-    plt.ylabel("Throughput")
+    plt.ylabel("Time per particle [t]=s")
 
     plt.xscale('log', base=10)
     plt.yscale('log', base=10)
