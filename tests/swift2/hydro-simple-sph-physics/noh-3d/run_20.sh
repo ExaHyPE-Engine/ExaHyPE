@@ -9,18 +9,16 @@ export OMP_NUM_THREADS=4
 
 # Parameters
 N_PART=20
-# END_TIME=0.2
-END_TIME=0.01
+END_TIME=0.6
 TIMESTEP_SIZE=0.0001
 CFL_FACTOR=0.2
-# PLOT_DELTA=0.0001
-PLOT_DELTA=0.01
+PLOT_DELTA=0.05
 CELL_SIZE=0.5
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
 echo python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
-python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts
+python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
