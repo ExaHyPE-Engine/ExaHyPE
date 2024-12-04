@@ -57,7 +57,7 @@ namespace swift2 {
        * This innermost loop should, in theory, be well-suited to vectorise.
        */
       template <typename ParticleContainer>
-      void forAllLocalParticles(
+      void forAllParticles(
         const peano4::datamanagement::CellMarker&                  marker,
         ParticleContainer&                                         localParticles,
         const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
@@ -71,14 +71,14 @@ namespace swift2 {
        * We know in this case that activeParticles is clustered into chunks
        * described by numberOfCoalescedActiveParticlesPerVertex. The same
        * reasoning holds for localParticles. So this routine is very similar
-       * to forAllLocalParticles(), but it hosts two different particle sets
+       * to forAllParticles(), but it hosts two different particle sets
        * (which might even point to different particle types) and the set of
        * active particles is likely much bigger than the local particles.
        *
        * Our implementation does not exploit our specialist knowledge about
        * the local particles. It loops over them one by one. Per local
        * particles it has to loop over all active particles. Here, we
-       * employ exactly the techniques described for forAllLocalParticles(),
+       * employ exactly the techniques described for forAllParticles(),
        * i.e. we run over the active particle set chunk-wisely. Per chunk,
        * we exploit the fact that particles are stored continuously.
        */

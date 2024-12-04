@@ -25,7 +25,7 @@ void swift2::kernels::coalesced::forAllParticles(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::coalesced::forAllLocalParticles(
+void swift2::kernels::coalesced::forAllParticles(
   const peano4::datamanagement::CellMarker&                    marker,
   ParticleContainer&                                           localParticles,
   const std::vector<int>&                                      numberOfLocalParticles,

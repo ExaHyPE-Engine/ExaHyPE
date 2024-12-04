@@ -284,7 +284,7 @@ EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 #
 ###############################################################################
 particle_force = """
-::swift2::kernels::forAllLocalParticles(
+::swift2::kernels::forAllParticles(
   marker,
   localParticles,
   [=](

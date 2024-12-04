@@ -18,7 +18,7 @@ namespace swift2 {
 
 
       template <typename ParticleContainer>
-      void forAllLocalParticles(
+      void forAllParticles(
         const peano4::datamanagement::CellMarker&                  marker,
         ParticleContainer&                                         localParticles,
         const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
