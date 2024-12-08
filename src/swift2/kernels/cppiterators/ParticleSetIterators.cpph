@@ -249,12 +249,15 @@ void swift2::kernels::coalesced::prefixcheck::forAllParticlePairs(
           std::bitset<SubChunkSize> updateParticleEffect(0);
           std::bitset<SubChunkSize> evaluateBottomUpParticleEffect(0);
 
+          // @todo This part has to vectorise; likely doesn't so atm
+          //       Note that we can, in theory, overlead re the type of f, so could specialise for density
           for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
             PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+particleIndex+particleIndexWithinThisSubchunk);
             updateParticleEffect[particleIndexWithinThisSubchunk]           = particlePairPredicate(marker, *localParticle, activeParticle);
             evaluateBottomUpParticleEffect[particleIndexWithinThisSubchunk] = tarch::la::oneGreater(activeParticle.getCellH(), localParticle->getCellH());
           }
 
+          // @todo Turns out most kernels seem to have two out of SubChunkSize interactions, so no hope to vectorise here
           if (updateParticleEffect.all()) {
             for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
               PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+particleIndex+particleIndexWithinThisSubchunk);
@@ -262,6 +265,7 @@ void swift2::kernels::coalesced::prefixcheck::forAllParticlePairs(
             }
           }
           else if (updateParticleEffect.any()) {
+            std::cout << "|"<< updateParticleEffect.count();
             for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
               if (updateParticleEffect[particleIndexWithinThisSubchunk]) {
                 PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+particleIndex+particleIndexWithinThisSubchunk);
