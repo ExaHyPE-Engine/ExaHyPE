@@ -11,6 +11,8 @@ namespace swift2 {
       /**
        * Version of forAllParticles assuming chunks of coalesced memory
        *
+       * Please consult the cousin routine in swift2/kernels/ParticleSetIterators.h for generic docu.
+       *
        * The routine accepts a container of pointers called assignedParticles.
        * This is really just a sequence of pointers to particles on the heap
        * and we can, for the generic baseline implementation in the namespace
@@ -30,12 +32,15 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker&                         marker,
         ParticleContainer&                                                  assignedParticles,
         int                                                                 numberOfCoalescedAssignedParticles,
-        ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f
+        ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
+        UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
       );
 
 
       /**
        * Version of forAllParticles assuming chunks of coalesced memory
+       *
+       * Please consult the cousin routine in swift2/kernels/ParticleSetIterators.h for generic docu.
        *
        * The routine accepts a container of pointers called assignedParticles.
        * This is really just a sequence of pointers to particles on the heap
@@ -61,12 +66,15 @@ namespace swift2 {
         const peano4::datamanagement::CellMarker&                  marker,
         ParticleContainer&                                         localParticles,
         const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
-        ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f
+        ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f,
+        UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>  predicate
       );
 
 
       /**
        * Simple vectorised version of pair-wise comparison
+       *
+       * Please consult the cousin routine in swift2/kernels/ParticleSetIterators.h for generic docu.
        *
        * We know in this case that activeParticles is clustered into chunks
        * described by numberOfCoalescedActiveParticlesPerVertex. The same
@@ -89,8 +97,42 @@ namespace swift2 {
         ActiveParticleContainer&                   activeParticles,
         const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
         const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
-        ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
+        ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+        UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>  localParticlePredicate,
+        UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>  particlePairPredicate
       );
+
+      namespace prefixcheck {
+        template <typename ParticleContainer>
+        void forAllParticles(
+          const peano4::datamanagement::VertexMarker&                         marker,
+          ParticleContainer&                                                  assignedParticles,
+          int                                                                 numberOfCoalescedAssignedParticles,
+          ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
+          UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
+        );
+
+        template <typename ParticleContainer>
+        void forAllParticles(
+          const peano4::datamanagement::CellMarker&                  marker,
+          ParticleContainer&                                         localParticles,
+          const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
+          ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f,
+          UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>  predicate
+        );
+
+        template <typename LocalParticleContainer, typename ActiveParticleContainer>
+        void forAllParticlePairs(
+          const peano4::datamanagement::CellMarker&  marker,
+          LocalParticleContainer&                    localParticles,
+          ActiveParticleContainer&                   activeParticles,
+          const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
+          const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
+          ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+          UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>  localParticlePredicate,
+          UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>  particlePairPredicate
+        );
+      }
     }
   } // namespace kernels
 } // namespace swift2

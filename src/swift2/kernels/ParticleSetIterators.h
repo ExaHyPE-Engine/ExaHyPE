@@ -171,6 +171,8 @@ namespace swift2 {
      * functor f actually accepts references. It is the responsibility of
      * this routine to map pointers onto references.
      *
+     * ## Predicate
+     *
      * The predicate can be used to mask out certain updates.
      *
      * We distinguish two use cases for the particle self-interactions:
@@ -181,6 +183,21 @@ namespace swift2 {
      * 2. We want to execute computations after and before the particle-particle
      *    interactions kernels, e.g. to 'prepare' or 'end' a given calculation in
      *    SPH loops (e.g. density).
+     *
+     * The most popular predicates therefore are:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * and
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * ::swift2::kernels::alwaysUpdateInVertexKernel<typename ParticleContainer::DoFType>
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     *
+     * ## Consistency remarks
      *
      * In order to ensure the self-interaction kernels execute consistently
      * during the mesh traversals for these type of operations, the user should
@@ -202,19 +219,35 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker&                         marker,
       ParticleContainer&                                                  assignedParticles,
       int                                                                 numberOfCoalescedAssignedParticles,
-      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
+      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
     );
 
 
     /**
      * Loop over all particles within a cell
+     *
+     * ## Predicates
+     *
+     * The most popular predicates in use are
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     * ::swift2::kernels::alwaysUpdateInCellKernel<typename ParticleContainer::DoFType>
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * and
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     * ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<ParticleContainer>>
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
      */
     template <typename ParticleContainer>
     void forAllParticles(
       const peano4::datamanagement::CellMarker&                  marker,
       ParticleContainer&                                         localParticles,
       const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
-      ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f
+      ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f,
+      UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>   predicate
     );
 
 
@@ -273,23 +306,31 @@ namespace swift2 {
      * which reside on coarser levels. This is necessary if some particles have
      * larger cut-off radii than the others or if we work with adaptive meshes.
      *
-     * ## Examples of usage
+     *
+     * ## Predicates
      *
      * This would be a generic predicate as most kernels require it:
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~
-     * UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type> predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+     *       UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
+     *                 localParticlePredicate = ::swift2::kernels::alwaysUpdateInCellKernel<PCParticle<LocalParticleContainer>>,
+     *       UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
+     *                 particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<PCParticle<LocalParticleContainer>>
      * ~~~~~~~~~~~~~~~~~~~~~~~
      *
-     * However, as this function is usually invoked by code generated through
-     * Python, I personally recommend to use a syntax that is easier to parse:
+     * However, you can use a more bespoke version as follows:
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~
-     * "UpdateParticlePairWithinCellPredicate<globaldata::{}>".format( particle._name )
+     *       UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
+     *                 localParticlePredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<LocalParticleContainer>>,
+     *       UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
+     *                 particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<PCParticle<LocalParticleContainer>>
      * ~~~~~~~~~~~~~~~~~~~~~~~
      *
      *
      * ### Hydro Force calculation particle-particle kernel
+     *
+     * @todo This documentation is likely outdated
      *
      * Non-symmetric force interaction between two particles (as per
      * Swift terminology). In this, only the Local particle is updated (in the
@@ -325,7 +366,11 @@ namespace swift2 {
       ActiveParticleContainer&                   activeParticles,
       const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
       const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
-      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
+      ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+      UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
+          localParticlePredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<LocalParticleContainer>>,
+      UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
+          particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<PCParticle<LocalParticleContainer>>
     );
 
     namespace internal {

@@ -59,14 +59,14 @@ def read_file(file_name,
             time = line.split( kernel_name + ":" )[1].split( "(" )[0]
             timings.append( float(time)/particle_counts[-1] )
 
-    assert len(particle_counts)==len(timings), "array dimensions don't match: {} vs {}".format(particle_counts, timings)
+    assert len(particle_counts)==len(timings), "array dimensions don't match: {} vs {} for kernel {}".format(particle_counts, timings, kernel_name)
     return particle_counts, timings
 
 
 
 Kernels  = [ "density", "force", "kick1", "kick2", "drift" ]
-ImplementationVariant = [ "(baseline)", "(coalesced,native)", "(omp,offloading)" ]
-Colors   = [ "#20a040", "#a04020", "#4020a0", "#30f060", "#f06030", "#6030f0" ]
+ImplementationVariant = [ "(baseline)", "(coalesced,native)", "(prefix,native)", "(offloading,omp)" ]
+Colors   = [ "#20a040", "#a04020", "#4020a0", "#f0a0f0", "#f06030", "#6030f0" ]
 Symbols  = [ "-s", "-o", "-^", "-v", "-<", "->" ]
 
 
@@ -100,7 +100,7 @@ def process_file(filename):
                 )                           
 
     plt.xlabel("Particles")
-    plt.ylabel("Time per particle [t]=s")
+    plt.ylabel("Time per particle update [t]=s")
 
     plt.xscale('log', base=10)
     plt.yscale('log', base=10)

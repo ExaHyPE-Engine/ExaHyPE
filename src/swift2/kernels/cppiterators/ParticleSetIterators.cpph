@@ -11,13 +11,14 @@ void swift2::kernels::coalesced::forAllParticles(
     const peano4::datamanagement::VertexMarker&   marker,
     ParticleContainer&                            assignedParticles,
     int                                           numberOfAssignedParticles,
-    ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType>    auto f
+    ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType>    auto f,
+    UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
 ) {
   typename ParticleContainer::value_type pFirstParticle = *assignedParticles.begin();
 
   for (int i=0; i<numberOfAssignedParticles; i++) {
     PCParticle<ParticleContainer>&  particle = *(pFirstParticle+i);
-    if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
+    if (predicate(marker,particle)) {
       f(marker,particle);
     }
   }
@@ -29,14 +30,89 @@ void swift2::kernels::coalesced::forAllParticles(
   const peano4::datamanagement::CellMarker&                    marker,
   ParticleContainer&                                           localParticles,
   const std::vector<int>&                                      numberOfLocalParticles,
-  ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>>   auto f
+  ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>>   auto f,
+  UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>
+            predicate
 ) {
   typename ParticleContainer::value_type pFirstParticle = *localParticles.begin();
 
   for (auto& chunkSize: numberOfLocalParticles) {
     for (int i=0; i<chunkSize; i++) {
       PCParticle<ParticleContainer>&  particle = *(pFirstParticle+i);
-      if (::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,particle)) {
+      if (predicate(marker,particle)) {
+        f(marker,particle);
+      }
+    }
+    pFirstParticle += chunkSize;
+  }
+}
+
+
+template <typename LocalParticleContainer, typename ActiveParticleContainer>
+void swift2::kernels::coalesced::forAllParticlePairs(
+  const peano4::datamanagement::CellMarker&  marker,
+  LocalParticleContainer&                    localParticles,
+  ActiveParticleContainer&                   activeParticles,
+  const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+  const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+  UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
+      localParticlePredicate,
+  UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
+      particlePairPredicate
+) {
+  for (auto& localParticle : localParticles) {
+    if ( localParticlePredicate(marker, *localParticle) ) {
+      typename LocalParticleContainer::value_type pFirstActiveParticle = *activeParticles.begin();
+      for (auto& chunkSize: numberOfActiveParticlesPerVertex) {
+        for (int i=0; i<chunkSize; i++) {
+          PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+i);
+          // @todo test
+          f(marker, *localParticle, activeParticle);
+        }
+        pFirstActiveParticle += chunkSize;
+      }
+    }
+  }
+}
+
+
+
+
+template <typename ParticleContainer>
+void swift2::kernels::coalesced::prefixcheck::forAllParticles(
+    const peano4::datamanagement::VertexMarker&   marker,
+    ParticleContainer&                            assignedParticles,
+    int                                           numberOfAssignedParticles,
+    ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType>    auto f,
+    UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
+) {
+  typename ParticleContainer::value_type pFirstParticle = *assignedParticles.begin();
+
+  for (int i=0; i<numberOfAssignedParticles; i++) {
+    PCParticle<ParticleContainer>&  particle = *(pFirstParticle+i);
+    if (predicate(marker,particle)) {
+      f(marker,particle);
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::coalesced::prefixcheck::forAllParticles(
+  const peano4::datamanagement::CellMarker&                    marker,
+  ParticleContainer&                                           localParticles,
+  const std::vector<int>&                                      numberOfLocalParticles,
+  ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>>   auto f,
+  UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>
+            predicate
+) {
+  typename ParticleContainer::value_type pFirstParticle = *localParticles.begin();
+
+  for (auto& chunkSize: numberOfLocalParticles) {
+    for (int i=0; i<chunkSize; i++) {
+      PCParticle<ParticleContainer>&  particle = *(pFirstParticle+i);
+      if (predicate(marker,particle)) {
         f(marker,particle);
       }
     }
@@ -140,20 +216,25 @@ void swift2::kernels::forAllParticlesVectoriseWithCheckPreamble(
 
 
 template <typename LocalParticleContainer, typename ActiveParticleContainer>
-void swift2::kernels::coalesced::forAllParticlePairs(
+void swift2::kernels::coalesced::prefixcheck::forAllParticlePairs(
   const peano4::datamanagement::CellMarker&  marker,
   LocalParticleContainer&                    localParticles,
   ActiveParticleContainer&                   activeParticles,
   const std::vector<int>&                    numberOfLocalParticlesPerVertex,
   const std::vector<int>&                    numberOfActiveParticlesPerVertex,
-  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f
+  ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
+  UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
+      localParticlePredicate,
+  UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>
+      particlePairPredicate
 ) {
   for (auto& localParticle : localParticles) {
-    if ( ::swift2::kernels::alwaysUpdateInCellKernel(marker, *localParticle) ) {
+    if ( localParticlePredicate(marker, *localParticle) ) {
       typename LocalParticleContainer::value_type pFirstActiveParticle = *activeParticles.begin();
       for (auto& chunkSize: numberOfActiveParticlesPerVertex) {
         for (int i=0; i<chunkSize; i++) {
           PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+i);
+          // @todo test
           f(marker, *localParticle, activeParticle);
         }
         pFirstActiveParticle += chunkSize;

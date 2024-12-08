@@ -120,6 +120,20 @@ namespace swift2 {
 
 
     template <typename Particle>
+    bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticleWithinIterationRange(
+      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+    ) {
+      return &localParticle != &activeParticle
+         and not localParticle.getCellHasUpdatedParticle()
+         and marker.isContained(
+           localParticle.getX(),
+           toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+         )
+         and localParticle.getParallelState() == Particle::ParallelState::Local;
+    }
+
+
+    template <typename Particle>
     bool localParticleCanBeUpdatedInCellKernel(
       const peano4::datamanagement::CellMarker& marker, const Particle& localParticle
     ) {
