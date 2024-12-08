@@ -29,8 +29,6 @@ params = {
 mpl.rcParams.update(params) 
 
 
-global_y_value_min = 1e100
-global_y_value_max = 0 
 
 
 def read_file(file_name, 
@@ -65,7 +63,7 @@ def read_file(file_name,
 
 
 Kernels  = [ "density", "force", "kick1", "kick2", "drift" ]
-ImplementationVariant = [ "(baseline)", "(coalesced,native)", "(prefix,native)", "(offloading,omp)" ]
+ImplementationVariant = [ "(baseline)", "(predicates)", "(coalesced,native)", "(prefix,native)", "(offloading,omp)" ]
 Colors   = [ "#20a040", "#a04020", "#4020a0", "#f0a0f0", "#f06030", "#6030f0" ]
 Symbols  = [ "-s", "-o", "-^", "-v", "-<", "->" ]
 
@@ -74,6 +72,7 @@ def process_file(filename):
     print( "process file {}".format(filename) )
 
     plt.clf()
+    mpl.rcParams.update(params) 
 
     for kernel in Kernels:
       for implementation in ImplementationVariant:
@@ -92,11 +91,13 @@ def process_file(filename):
         elif ImplementationVariant[0] == implementation:
           label = kernel
           
+        MarkerSpacing = 3
         plt.plot( x_data, 
                   y_data, 
                   symbol, 
                   color=color, 
-                  label=label
+                  label=label,
+                  markevery=(ImplementationVariant.index(implementation) % MarkerSpacing,MarkerSpacing)
                 )                           
 
     plt.xlabel("Particles")
@@ -108,7 +109,7 @@ def process_file(filename):
     plt.minorticks_on()
     plt.grid(True, which='both')
     
-    plt.legend()
+    plt.legend(loc="lower left")
         
     plt.savefig(f"{filename}.pdf")
     plt.savefig(f"{filename}.png")

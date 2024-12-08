@@ -137,21 +137,78 @@ namespace swift2 {
         const Particle* activeParticle
       );
 
+
+      /**
+       * Predicate if two particles contribute towards the density checks
+       *
+       * This predicate assumes that ::swift2::kernels::localParticleCanBeUpdatedInCellKernel()
+       * holds. It then evaluates if activeParticle contributes towards
+       * localParticle. Is used by the densityKernel() to find out if the
+       * actual density calculation is to be invoked, but can also be used as
+       * explicit check in combination with densityKernelWithoutChecks().
+       *
+       * ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>
+       */
+      template <typename Particle>
+      bool densityKernelPairEvaluationPredicate(
+        const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+      );
+
+      /**
+       * Invoke density kernel without any outer additional admissibility checks
+       *
+       * Similar to densityKernel(), but we assume that the predicates all
+       * hold, i.e. we do not check them anymore. As
+       * ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(),
+       * we don't have to check anything and directly forward
+       * the call to the Swift 1 "legacy" kernel. It makes no sense to use this
+       * version in the generic pair-wise interactions, but it makes sense to
+       * combine it with coalesced memory accesses and a dedicated outer
+       * predicate.
+       *
+       * That is, a vanilla density calculation equals
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * whereas we can use an optimised version such as
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernelWithoutChecks<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       */
+      template <typename Particle>
+      void densityKernelWithoutChecks(
+        const peano4::datamanagement::CellMarker& marker,
+        Particle&                                 localParticle,
+        const Particle&                           activeParticle
+      );
+
+
+      /**
+       * Density kernel
+       *
+       * This routine forwards the function call to density_kernel(). Please
+       * consult this routine for additional information.
+       *
+       * ## Predicates and preconditions
+       *
+       * This kernel is to be used within ::swift2::kernels::coalesced::forAllParticlePairs.
+       * By default, testIfParticleCanBeUpdated is set and the routine hence uses
+       * densityKernelPredicate() and ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>(marker,localParticle)
+       * to find out if the particle is to be updated. If you can
+       * ensure that densityKernelPredicate() holds and ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>(marker,localParticle)
+       * holds as well, you can set testIfParticleCanBeUpdated
+       * to false.
+       */
       template <typename Particle>
       void densityKernel(
         const peano4::datamanagement::CellMarker& marker,
         Particle&                                 localParticle,
         const Particle&                           activeParticle
-      ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
-                marker,
-                localParticle,
-                activeParticle
-              )) {
-          density_kernel(&localParticle, &activeParticle);
-        }
-      }
+      );
+
 
       /**
        * @todo No masking yet

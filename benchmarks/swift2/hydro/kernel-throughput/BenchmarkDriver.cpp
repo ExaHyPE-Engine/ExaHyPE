@@ -212,6 +212,13 @@ void runBenchmark(int numberOfParticles) {
       );
       assessKernel(
           [&](int workItem) -> void {
+            ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
+          },
+          "force (predicates)",
+          numberOfParticles
+      );
+      assessKernel(
+          [&](int workItem) -> void {
             ::swift2::kernels::coalesced::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
           },
           "force (coalesced,native)",
@@ -244,21 +251,28 @@ void runBenchmark(int numberOfParticles) {
       );
       assessKernel(
         [&](int workItem) -> void {
-          ::swift2::kernels::coalesced::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
+          ::swift2::kernels::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
+        },
+        "density (predicates)",
+        numberOfParticles
+      );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::coalesced::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
         },
         "density (coalesced,native)",
         numberOfParticles
       );
       assessKernel(
         [&](int workItem) -> void {
-          ::swift2::kernels::coalesced::prefixcheck::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
+          ::swift2::kernels::coalesced::prefixcheck::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
         },
         "density (prefix,native)",
         numberOfParticles
       );
       assessKernel(
         [&](int workItem) -> void {
-          ::swift2::kernels::ompoffloading::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
+          ::swift2::kernels::ompoffloading::forAllParticlePairs( cellMarker, workItemParticleSet[workItem], workItemParticleSet[workItem], createCoalescedMemoryIndices(), createCoalescedMemoryIndices(), ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
         },
         "density (offloading,omp)",
         numberOfParticles
@@ -272,6 +286,13 @@ void runBenchmark(int numberOfParticles) {
           ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
         },
         "kick1 (baseline)",
+        numberOfParticles
+      );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
+        },
+        "kick1 (predicates)",
         numberOfParticles
       );
       assessKernel(
@@ -309,6 +330,14 @@ void runBenchmark(int numberOfParticles) {
       );
       assessKernel(
         [&](int workItem) -> void {
+          ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
+          ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::resetPredictedValuesWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
+        },
+        "kick2 (predicates)",
+        numberOfParticles
+      );
+      assessKernel(
+        [&](int workItem) -> void {
           ::swift2::kernels::coalesced::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
           ::swift2::kernels::coalesced::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::resetPredictedValuesWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
         },
@@ -341,6 +370,14 @@ void runBenchmark(int numberOfParticles) {
           ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
         },
         "drift (baseline)",
+        numberOfParticles
+      );
+      assessKernel(
+        [&](int workItem) -> void {
+          ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::timestepping::resetMovedParticleMarkerWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
+          ::swift2::kernels::forAllParticles( vertexMarker, workItemParticleSet[workItem], -1, ::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSizeWithMasking<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::HydroPart>);
+        },
+        "drift (predicates)",
         numberOfParticles
       );
       assessKernel(
