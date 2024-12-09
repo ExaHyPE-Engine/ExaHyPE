@@ -201,6 +201,18 @@ void runBenchmark(int numberOfParticles) {
     logInfo( "runBenchmark(int)", " No of work items: " << numberOfWorkItems );
     logInfo( "runBenchmark(int)", "===============================");
 
+
+    globaldata::HydroPart* arbitaryParticle = *(workItemParticleSet->begin());
+    auto [interaction,postinteraction] = ::swift2::kernels::internal::identifyInteractingParticles<8,globaldata::HydroPart,globaldata::HydroPart>(
+        cellMarker,
+        arbitaryParticle,
+        arbitaryParticle,
+        8,
+        ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>
+    );
+    logInfo( "runBenchmark(int)", " Bit pattern for one entry: " << interaction );
+
+
     if (Benchmark_Testforce) {
       prepareForceBenchmark(numberOfParticles);
       assessKernel(
