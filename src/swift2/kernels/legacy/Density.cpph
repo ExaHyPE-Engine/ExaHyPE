@@ -39,13 +39,13 @@ bool swift2::kernels::legacy::densityKernelPairEvaluationPredicate(
 
   const tarch::la::Vector<Dimensions, double>
                dx = localParticle.getX() - activeParticle.getX();
-  const double r  = tarch::la::norm2(dx);
+  const double rSquared  = tarch::la::norm2Squared(dx);
 
   /* Retrieve basic properties of local and active particles */
   const double hi = localParticle.getSmoothingLength();
 
   /* Compute the actual interaction radius */
-  const double iactR = kernel_gamma * hi;
+  const double iactRSquared = kernel_gamma * kernel_gamma * hi * hi;
 
   return ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
            marker,
@@ -55,8 +55,8 @@ bool swift2::kernels::legacy::densityKernelPairEvaluationPredicate(
          and
          (not localParticle.getSmoothingLengthConverged())
          and
-         tarch::la::smaller(r, iactR)
-         and tarch::la::greater(r, 0.0) // Self-contribution is calculated elsewhere
+         tarch::la::smaller(rSquared, iactRSquared)
+         and tarch::la::greater(rSquared, 0.0) // Self-contribution is calculated elsewhere
          ;
 }
 

@@ -147,6 +147,11 @@ namespace swift2 {
        * actual density calculation is to be invoked, but can also be used as
        * explicit check in combination with densityKernelWithoutChecks().
        *
+       * ## Optimisation
+       *
+       * - The comparison of radii has to be done by comaring the squares, as
+       *   we otherwise would need a square root.
+       *
        * ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>
        */
       template <typename Particle>
