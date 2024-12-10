@@ -74,8 +74,14 @@ void initParticle( globaldata::HydroPart& particle, int numberOfParticles, int i
                 , (index % (particlesPerAxis*particlesPerAxis*particlesPerAxis) ) * h
                 #endif
   };
+
   particle.setX(x);
+  particle.setCellH(0.5);
+
   initNohProblemIC(particle, 1.0, particlesPerAxis, Dimensions );
+
+  particle.setSmoothingLengthConverged(false);
+  particle.setSmoothingLength(1.0/2.0);
 }
 
 
@@ -202,6 +208,12 @@ void runBenchmark(int numberOfParticles) {
     logInfo( "runBenchmark(int)", "===============================");
 
 
+    initParticles(numberOfParticles);
+
+    // This part is only there to be able to study if the function call is
+    // properly vectorised. This is also the reason we plot the outcome, i.e.
+    // the output ensures that the linker does not throw out the function call
+    // alltogether.
     globaldata::HydroPart* arbitaryParticle = *(workItemParticleSet->begin());
     auto [interaction,postinteraction] = ::swift2::kernels::internal::identifyInteractingParticles<8,globaldata::HydroPart,globaldata::HydroPart>(
         cellMarker,
