@@ -5,17 +5,18 @@ set -e
 set -o pipefail
 
 # set threads number
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=4
 
 IC_FILENAME="sodShock.hdf5"
 
 # Parameters
 N_PART=900          # fixed by IC file
-END_TIME=9.765625e-03
+# END_TIME=9.765625e-03
+END_TIME=0.2      # original setup
 TIMESTEP_SIZE=9.765625e-05 # copied from SWIFT output.
 CFL_FACTOR=0.1
 PLOT_DELTA=0.01
-CELL_SIZE=0.15
+CELL_SIZE=0.35
 
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]
