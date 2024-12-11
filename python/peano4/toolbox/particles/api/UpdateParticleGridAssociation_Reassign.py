@@ -172,7 +172,6 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             marker.x(),
             marker.h(),
             _spacetreeId,
-            false,
             "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
           );
           toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -205,7 +204,6 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             marker.x(),
             marker.h(),
             _spacetreeId,
-            false,
             "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
           );
           toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -249,7 +247,6 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             marker.x(),
             marker.h(),
             _spacetreeId,
-            false,
             "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
           );
           toolbox::particles::assignmentchecks::assignParticleToVertex(

@@ -321,7 +321,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
-  const bool                                   inMergeWithPeriodicBoundarySwap,
   const std::string&                           trace
 ) {
 
@@ -501,7 +500,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
-  const bool                                   inMergeWithPeriodicBoundarySwap,
   const std::string&                           trace
 ) {}
 

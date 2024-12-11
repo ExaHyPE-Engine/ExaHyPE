@@ -242,14 +242,11 @@
        * @param neighbourParticle Will either be incorporated into current data
        *   structure or the routine will delete it if it decides not to use
        *   the object the pointer points to.
-       * @param periodicBoundarySwap Is this merge due to a periodic boundary
-       *   swap? If yes, it could have implications for the assignment checks.
        */
       void mergeWithParticle(
         DoFType*                                     neighbourParticle,
         const peano4::datamanagement::VertexMarker&  marker,
-        int                                          spacetreeId,
-        const bool                                   periodicBoundarySwap
+        int                                          spacetreeId
       );
     private:
       static tarch::logging::Log _log;

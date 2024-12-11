@@ -259,7 +259,6 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
-        const bool         inMergeWithPeriodicBoundarySwap,
         const std::string& trace
       );
 

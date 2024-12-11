@@ -308,7 +308,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             peano4::datamanagement::reconstructXOfParentVertex(marker, i),
             marker.h()*3.0,
             _spacetreeId,
-            false,
             "AbstractUpdateParticleGridAssociation::_Template_Drop"
           );
           toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -388,7 +387,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         marker.x(),
         marker.h(),
         _spacetreeId,
-        false,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"
       );
       toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -432,7 +430,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         marker.x(),
         marker.h(),
         _spacetreeId,
-        false,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
       toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -459,11 +456,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     def get_includes(self):
         """!
-        
+
         Inject all the default includes
-        
+
         @see get_body_of_prepareTraversal().
-        
+
         """
         result = jinja2.Template(
             """
@@ -506,21 +503,21 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     def get_body_of_prepareTraversal(self):
         """!
-        
+
         Create prepareTraversal function
-        
+
         Every particle resorting has to invoke
-        
+
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        
-        after each and every time step to consolidate the global data exchange 
+
+        after each and every time step to consolidate the global data exchange
         containers. This routine has to know the domain size and whether there
-        are periodic boundary conditions, as it also is responsible for the 
+        are periodic boundary conditions, as it also is responsible for the
         mirroring/translation along periodic BCs. Therefore, we have to include
         the global constants in get_includes().
-        
+
         """
         return jinja2.Template("""
           vertexdata::{{PARTICLES_CONTAINER}}::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
