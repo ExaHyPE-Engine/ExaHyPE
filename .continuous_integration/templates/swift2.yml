@@ -1,0 +1,12 @@
+.SWIFT2_Dastgen:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/swift2/dastgen-test; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/src python3  dastgen-test.py"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/swift2/dastgen-test; OMP_NUM_THREADS=1 ./dastgen_test"
+
+.SWIFT2_Sod1D:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/swift2/hydro-simple-sph-physics/sod-1d; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/src python3 sod.py -np 900 -et 0.2 -dt 9.765625e-05 -cfl 0.1 -plot 9.765625e-05 -cs 0.3"
+
+.SWIFT2_Noh2D:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/swift2/hydro-simple-sph-physics/noh-2d; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/src python3 noh.py -np 120 -et 0.2 -dt 0.0001 -cfl 0.2 -plot 0.0001 -cs 0.3"
