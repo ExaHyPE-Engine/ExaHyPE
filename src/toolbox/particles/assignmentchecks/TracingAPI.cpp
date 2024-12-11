@@ -360,42 +360,38 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
 
   Event previousEvent = database.addEvent(identifier, event, treeId);
 
-  // if (previousEvent.type == internal::Event::Type::NotFound and inMergeWithPeriodicBoundarySwap) {
-  //   // We have no data on previous event, so no checks.
-  // } else {
-    assertion6(
-      previousEvent.type == internal::Event::Type::AssignToVertex
-        or previousEvent.type
-             == internal::Event::Type::MoveWhileAssociatedToVertex
-        or previousEvent.type
-             == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-      identifier.toString(),
-      event.toString(),
-      previousEvent.toString(),
-      treeId,
-      database.getNumberOfSnapshots(),
-      trace
-    );
-    assertion7(
-      tarch::la::equals(previousEvent.vertexX, vertexX),
-      identifier.toString(),
-      event.toString(),
-      previousEvent.toString(),
-      treeId,
-      database.getNumberOfSnapshots(),
-      trace,
-      database.particleHistory(identifier)
-    );
-    assertion6(
-      tarch::la::equals(previousEvent.vertexH, vertexH),
-      identifier.toString(),
-      event.toString(),
-      previousEvent.toString(),
-      treeId,
-      trace,
-      database.particleHistory(identifier)
-    );
-  // }
+  assertion6(
+    previousEvent.type == internal::Event::Type::AssignToVertex
+      or previousEvent.type
+           == internal::Event::Type::MoveWhileAssociatedToVertex
+      or previousEvent.type
+           == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+    identifier.toString(),
+    event.toString(),
+    previousEvent.toString(),
+    treeId,
+    database.getNumberOfSnapshots(),
+    trace
+  );
+  assertion7(
+    tarch::la::equals(previousEvent.vertexX, vertexX),
+    identifier.toString(),
+    event.toString(),
+    previousEvent.toString(),
+    treeId,
+    database.getNumberOfSnapshots(),
+    trace,
+    database.particleHistory(identifier)
+  );
+  assertion6(
+    tarch::la::equals(previousEvent.vertexH, vertexH),
+    identifier.toString(),
+    event.toString(),
+    previousEvent.toString(),
+    treeId,
+    trace,
+    database.particleHistory(identifier)
+  );
 
   logTraceOut("detachParticleFromVertex(...)");
 }

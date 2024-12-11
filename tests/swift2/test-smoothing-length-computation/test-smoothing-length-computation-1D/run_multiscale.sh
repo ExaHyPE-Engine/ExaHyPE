@@ -15,8 +15,7 @@ CELL_SIZE=0.5
 H_TOLERANCE=1e-6
 
 
-# rand=$RANDOM
-rand=22668
+rand=$RANDOM
 echo 'Generating initial conditions with seed' $rand
 python3 makeIC-multiscale.py -np $N_PART -s $rand
 
