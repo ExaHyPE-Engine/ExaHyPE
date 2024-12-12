@@ -189,7 +189,7 @@ namespace toolbox {
           Event addEvent(
             ParticleSearchIdentifier identifier,
             Event&                   event,
-            const int treeId
+            const int                treeId
           );
 
           /**

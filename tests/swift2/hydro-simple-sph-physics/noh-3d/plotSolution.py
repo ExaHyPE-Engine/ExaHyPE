@@ -100,7 +100,9 @@ rs = us * time
 
 # Post-shock values
 rho_s[np.abs(x_s) < rs] = rho0 * ((gas_gamma + 1) / (gas_gamma - 1)) ** 3
-P_s[np.abs(x_s) < rs] = 0.5 * rho0 * v0**2 * (gas_gamma + 1) ** 3 / (gas_gamma - 1) ** 2
+P_s[np.abs(x_s) < rs] = (
+    0.5 * rho0 * v0**2 * (gas_gamma + 1) ** 3 / (gas_gamma - 1) ** 2
+)
 v_s[np.abs(x_s) < rs] = 0.0
 
 # Pre-shock values

@@ -741,11 +741,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int vertexInd = internal::findVertexInd(localPartX(0), vertexH(0));
 
   // generate (minimal) particle
-  ac::tests::TestParticle localPart = ac::tests::TestParticle(
-    localPartX,
-    particleID,
-    true
-  );
+  ac::tests::TestParticle localPart = ac::tests::
+    TestParticle(localPartX, particleID, true);
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
 
@@ -917,11 +914,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int spacetreeId = 1;
 
   // generate (minimal) particle
-  ac::tests::TestParticle localPart = ac::tests::TestParticle(
-    localPartX,
-    particleID,
-    true
-  );
+  ac::tests::TestParticle localPart = ac::tests::
+    TestParticle(localPartX, particleID, true);
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
 
@@ -1090,11 +1084,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
   vertexX = internal::findVertexX(localPartX, vertexH);
 
   // generate (minimal) particle
-  ac::tests::TestParticle localPart = ac::tests::TestParticle(
-    localPartX,
-    particleID,
-    true
-  );
+  ac::tests::TestParticle localPart = ac::tests::
+    TestParticle(localPartX, particleID, true);
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
 

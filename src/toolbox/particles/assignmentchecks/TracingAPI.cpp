@@ -235,8 +235,9 @@ void toolbox::particles::assignmentchecks::moveParticle(
   // first
   assertion3(
     previousEvent.type == Event::Type::AssignToVertex
-    or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
-    or previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
+      or previousEvent.type
+           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
     "Invalid previous event type",
     previousEvent.toString(),
     database.particleHistory(identifier)
@@ -265,15 +266,15 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
     // Either way, the event we'll write down is a consecutive move
     Event newEvent = Event(
-        Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-        previousEvent.isLocal,
-        vertexX,
-        previousEvent.previousParticleX,
-        vertexH,
-        treeId,
-        previousEvent.trace,
-        -1 // will be modified in database.addEvent
-      );
+      Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      previousEvent.isLocal,
+      vertexX,
+      previousEvent.previousParticleX,
+      vertexH,
+      treeId,
+      previousEvent.trace,
+      -1 // will be modified in database.addEvent
+    );
 
     if (previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) {
       // Rename the trace.

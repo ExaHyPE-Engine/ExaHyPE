@@ -182,10 +182,11 @@ void swift2::kernels::legacy::hydro_end_force(Particle* localParticle) {
   // expect a 1-2 particle difference. If it's larger than that, there is
   // most likely an issue present.
   if (localParticle->getDensityNeighbourCount() > localParticle->getForceNeighbourCount()) {
-    logWarning("hydro_end_force()",
-        "Particle interacted with fewer particles in Force than in Density loop" <<
-        localParticle->toString()
-        )
+    logWarning(
+      "hydro_end_force()",
+      "Particle interacted with fewer particles in Force than in Density loop"
+        << localParticle->toString()
+    )
   }
 #endif
 }

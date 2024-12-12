@@ -1,18 +1,16 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "config.h"
-
-#include "tarch/logging/Log.h"
-#include "tarch/logging/CommandLineLogger.h"
-#include "tarch/logging/ChromeTraceFileLogger.h"
-#include "tarch/logging/LogFilter.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/UnitTests.h"
-
-#include "peano4/peano.h"
 #include "peano4/parallel/Node.h"
+#include "peano4/peano.h"
 #include "peano4/UnitTests.h"
+#include "tarch/logging/ChromeTraceFileLogger.h"
+#include "tarch/logging/CommandLineLogger.h"
+#include "tarch/logging/Log.h"
+#include "tarch/logging/LogFilter.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/UnitTests.h"
 
 #ifdef UseToolboxBlockstructured
 #include "toolbox/blockstructured/UnitTests.h"

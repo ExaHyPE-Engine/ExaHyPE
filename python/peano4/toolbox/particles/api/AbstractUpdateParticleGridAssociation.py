@@ -500,25 +500,26 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
         ).render(**self.d)
 
-
     def get_body_of_prepareTraversal(self):
         """!
 
-        Create prepareTraversal function
+              Create prepareTraversal function
 
-        Every particle resorting has to invoke
+              Every particle resorting has to invoke
 
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        vertexdata::{{PARTICLE}}Set::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        after each and every time step to consolidate the global data exchange
-        containers. This routine has to know the domain size and whether there
-        are periodic boundary conditions, as it also is responsible for the
-        mirroring/translation along periodic BCs. Therefore, we have to include
-        the global constants in get_includes().
+              after each and every time step to consolidate the global data exchange
+              containers. This routine has to know the domain size and whether there
+              are periodic boundary conditions, as it also is responsible for the
+              mirroring/translation along periodic BCs. Therefore, we have to include
+              the global constants in get_includes().
 
         """
-        return jinja2.Template("""
+        return jinja2.Template(
+            """
           vertexdata::{{PARTICLES_CONTAINER}}::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
-        """).render(**self.d)
+        """
+        ).render(**self.d)

@@ -85,12 +85,12 @@ namespace toolbox {
        * In earlier versions, we tested for a previous event existing on any
        * tree in the database. This lead to concurrency issues. Sometimes (on
        * rare occasions) when a particle is being lifted or dropped in its local
-       * tree, these changes won't have made it into the database for trees where
-       * the particle is virtual as the trees will race over write access to
-       * the database. In these scenarios the checks will fail because they find
-       * that the particle hasn't been associated to the same vertex.
-       * Since we now keep track of a particle history for each tree it finds
-       * itself on, these checks are deprecated.
+       * tree, these changes won't have made it into the database for trees
+       * where the particle is virtual as the trees will race over write access
+       * to the database. In these scenarios the checks will fail because they
+       * find that the particle hasn't been associated to the same vertex. Since
+       * we now keep track of a particle history for each tree it finds itself
+       * on, these checks are deprecated.
        */
       void moveParticle(
         const std::string&                           particleName,
@@ -245,7 +245,7 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
-        const std::string& trace
+        const std::string&                           trace
       );
 
       /**
