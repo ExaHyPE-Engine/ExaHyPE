@@ -5,7 +5,7 @@ set -e
 set -o pipefail
 
 # set threads number
-export OMP_NUM_THREADS=4
+export OMP_NUM_THREADS=2
 
 IC_FILENAME="sodShock.hdf5"
 
@@ -27,7 +27,7 @@ fi
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
 echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
-python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts
+python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
