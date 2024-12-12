@@ -2,6 +2,7 @@
 ###############################################################################
 # This file is part of SWIFT.
 # Copyright (c) 2016 Matthieu Schaller (schaller@strw.leidenuniv.nl)
+# Modified to fit the purposes of the Peano4 Noh 3D benchmark.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published
@@ -39,7 +40,7 @@ import sys
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
 
 if len(sys.argv) < 2:
-    time = 0.2
+    time = 0.6
 else:
     time = float(sys.argv[1])
 
@@ -99,12 +100,12 @@ us = 0.5 * (gas_gamma - 1) * v0
 rs = us * time
 
 # Post-shock values
-rho_s[np.abs(x_s) < rs] = rho0 * ((gas_gamma + 1) / (gas_gamma - 1)) ** 2
-P_s[np.abs(x_s) < rs] = 0.5 * rho0 * v0**2 * (gas_gamma + 1) ** 2 / (gas_gamma - 1)
+rho_s[np.abs(x_s) < rs] = rho0 * ((gas_gamma + 1) / (gas_gamma - 1)) ** 3
+P_s[np.abs(x_s) < rs] = 0.5 * rho0 * v0**2 * (gas_gamma + 1) ** 3 / (gas_gamma - 1) ** 2
 v_s[np.abs(x_s) < rs] = 0.0
 
 # Pre-shock values
-rho_s[np.abs(x_s) >= rs] = rho0 * (1 + v0 * time / np.abs(x_s[np.abs(x_s) >= rs]))
+rho_s[np.abs(x_s) >= rs] = rho0 * (1 + v0 * time / np.abs(x_s[np.abs(x_s) >= rs])) ** 2
 P_s[np.abs(x_s) >= rs] = 0
 v_s[x_s >= rs] = -v0
 v_s[x_s <= -rs] = v0
