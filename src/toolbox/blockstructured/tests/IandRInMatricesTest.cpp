@@ -15,7 +15,8 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::run() {
   testMethod(compareRestrictLinearCaseToTensorProductPatch);
 }
 
-void toolbox::blockstructured::tests::IandRInMatricesTest::compareInterpolateLinearCaseToTensorProductPatch() {
+void toolbox::blockstructured::tests::IandRInMatricesTest::
+  compareInterpolateLinearCaseToTensorProductPatch() {
   const double data3d[] = {
     0.59259,  1.18519,  -0.14815, -0.29630, -0.14815, -0.29630, 0.03704,
     0.07407,  1.77778,  -0.44444, -0.44444, 0.11111,  1.18519,  0.59259,
@@ -893,8 +894,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::compareInterpolateLin
     0.66667,
     0.33333,
     0.0000,
-    0.0000
-  };
+    0.0000};
 
   const double tangentInterpolationMatrix1d[] = {
     1.33333, -0.33333, 0.0000,  0.0000,  0.0000, 1.0000, 0.0000, 0.0000,
@@ -906,50 +906,160 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::compareInterpolateLin
     0.66667, 0.0000,   0.0000,  0.0000,  0.0000, 1.0000, 0.0000, 0.0000,
     0.0000,  0.0000,   0.66667, 0.33333, 0.0000, 0.0000, 0.0000, 0.33333,
     0.66667, 0.0000,   0.0000,  0.0000,  0.0000, 1.0000, 0.0000, 0.0000,
-    0.0000,  -0.33333, 1.33333
-  };
+    0.0000,  -0.33333, 1.33333};
 
   constexpr int patchSize = 5;
-  constexpr int overlap = 3;
-  constexpr int unknowns = 1;
-  const     int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap * 2;
+  constexpr int overlap   = 3;
+  constexpr int unknowns  = 1;
+  const int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap
+                       * 2;
 
-  double* coarseData = tarch::allocateMemory<double>(faceSize, tarch::MemoryLocation::Heap);
-  double* fineDataTensorProduct = tarch::allocateMemory<double>(faceSize, tarch::MemoryLocation::Heap);
-  double* fineDataMatrix = tarch::allocateMemory<double>(faceSize, tarch::MemoryLocation::Heap);
+  double* coarseData = tarch::allocateMemory<double>(
+    faceSize,
+    tarch::MemoryLocation::Heap
+  );
+  double* fineDataTensorProduct = tarch::allocateMemory<double>(
+    faceSize,
+    tarch::MemoryLocation::Heap
+  );
+  double* fineDataMatrix = tarch::allocateMemory<double>(
+    faceSize,
+    tarch::MemoryLocation::Heap
+  );
 
-  for (int n = 0; n < faceSize; n++) coarseData[n] = static_cast<double>((n + 1) / unknowns);
+  for (int n = 0; n < faceSize; n++)
+    coarseData[n] = static_cast<double>((n + 1) / unknowns);
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(tarch::la::Vector<Dimensions, int>{i, j, k});
+        dummyEvent.setRelativePositionToFather(
+          tarch::la::Vector<Dimensions, int>{i, j, k}
+        );
 
         for (int axis = 0; axis < 3; axis++) {
           peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
-          int patchIndexLinear = -1;
-          if constexpr (Dimensions == 2) patchIndexLinear = marker1.getRelativePositionWithinFatherCell()((axis + 1) % Dimensions);
-          if constexpr (Dimensions == 3) patchIndexLinear = marker1.getRelativePositionWithinFatherCell()((axis + 1) % Dimensions) * 3 + marker1.getRelativePositionWithinFatherCell()((axis + 2) % Dimensions);
+          int                                patchIndexLinear = -1;
+          if constexpr (Dimensions == 2)
+            patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
+              (axis + 1) % Dimensions
+            );
+          if constexpr (Dimensions == 3)
+            patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
+                                 (axis + 1) % Dimensions
+                               ) * 3
+                               + marker1.getRelativePositionWithinFatherCell()(
+                                 (axis + 2) % Dimensions
+                               );
 
-          for (int n = 0; n < faceSize; n++) fineDataTensorProduct[n] = 0;
-          for (int n = 0; n < faceSize; n++) fineDataMatrix[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            fineDataTensorProduct[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            fineDataMatrix[n] = 0;
 
-          interpolateHaloLayer_AoS_tensor_product(marker1, patchSize, overlap, unknowns, normalInterpolationMatrix1d, tangentInterpolationMatrix1d, coarseData, fineDataTensorProduct);
-          if constexpr (Dimensions == 2) interpolateHaloLayer_AoS_matrix(marker1, patchSize, overlap, unknowns, data2d, indices2d, indptr2d, patchIndexLinear * 45, patchIndexLinear * 16, coarseData, fineDataMatrix);
-          if constexpr (Dimensions == 3) interpolateHaloLayer_AoS_matrix(marker1, patchSize, overlap, unknowns, data3d, indices3d, indptr3d, patchIndexLinear * 405, patchIndexLinear * 76, coarseData, fineDataMatrix);
+          interpolateHaloLayer_AoS_tensor_product(
+            marker1,
+            patchSize,
+            overlap,
+            unknowns,
+            normalInterpolationMatrix1d,
+            tangentInterpolationMatrix1d,
+            coarseData,
+            fineDataTensorProduct
+          );
+          if constexpr (Dimensions == 2)
+            interpolateHaloLayer_AoS_matrix(
+              marker1,
+              patchSize,
+              overlap,
+              unknowns,
+              data2d,
+              indices2d,
+              indptr2d,
+              patchIndexLinear * 45,
+              patchIndexLinear * 16,
+              coarseData,
+              fineDataMatrix
+            );
+          if constexpr (Dimensions == 3)
+            interpolateHaloLayer_AoS_matrix(
+              marker1,
+              patchSize,
+              overlap,
+              unknowns,
+              data3d,
+              indices3d,
+              indptr3d,
+              patchIndexLinear * 405,
+              patchIndexLinear * 76,
+              coarseData,
+              fineDataMatrix
+            );
 
-          for (int n = 0; n < faceSize; n++) validateNumericalEqualsWithEpsWithParams2(fineDataTensorProduct[n], fineDataMatrix[n], 0.01, axis, n);
+          for (int n = 0; n < faceSize; n++)
+            validateNumericalEqualsWithEpsWithParams2(
+              fineDataTensorProduct[n],
+              fineDataMatrix[n],
+              0.01,
+              axis,
+              n
+            );
 
-          for (int n = 0; n < faceSize; n++) fineDataTensorProduct[n] = 0;
-          for (int n = 0; n < faceSize; n++) fineDataMatrix[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            fineDataTensorProduct[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            fineDataMatrix[n] = 0;
 
-          peano4::datamanagement::FaceMarker marker2(dummyEvent, axis + Dimensions);
-          interpolateHaloLayer_AoS_tensor_product(marker2, patchSize, overlap, unknowns, normalInterpolationMatrix1d, tangentInterpolationMatrix1d, coarseData, fineDataTensorProduct);
-          if constexpr (Dimensions == 2) interpolateHaloLayer_AoS_matrix(marker2, patchSize, overlap, unknowns, data2d, indices2d, indptr2d, patchIndexLinear * 45, patchIndexLinear * 16, coarseData, fineDataMatrix);
-          if constexpr (Dimensions == 3) interpolateHaloLayer_AoS_matrix(marker2, patchSize, overlap, unknowns, data3d, indices3d, indptr3d, patchIndexLinear * 405, patchIndexLinear * 76, coarseData, fineDataMatrix);
+          peano4::datamanagement::FaceMarker
+            marker2(dummyEvent, axis + Dimensions);
+          interpolateHaloLayer_AoS_tensor_product(
+            marker2,
+            patchSize,
+            overlap,
+            unknowns,
+            normalInterpolationMatrix1d,
+            tangentInterpolationMatrix1d,
+            coarseData,
+            fineDataTensorProduct
+          );
+          if constexpr (Dimensions == 2)
+            interpolateHaloLayer_AoS_matrix(
+              marker2,
+              patchSize,
+              overlap,
+              unknowns,
+              data2d,
+              indices2d,
+              indptr2d,
+              patchIndexLinear * 45,
+              patchIndexLinear * 16,
+              coarseData,
+              fineDataMatrix
+            );
+          if constexpr (Dimensions == 3)
+            interpolateHaloLayer_AoS_matrix(
+              marker2,
+              patchSize,
+              overlap,
+              unknowns,
+              data3d,
+              indices3d,
+              indptr3d,
+              patchIndexLinear * 405,
+              patchIndexLinear * 76,
+              coarseData,
+              fineDataMatrix
+            );
 
-          for (int n = 0; n < faceSize; n++) validateNumericalEqualsWithEpsWithParams2(fineDataTensorProduct[n], fineDataMatrix[n], 0.01, axis + Dimensions, n);
+          for (int n = 0; n < faceSize; n++)
+            validateNumericalEqualsWithEpsWithParams2(
+              fineDataTensorProduct[n],
+              fineDataMatrix[n],
+              0.01,
+              axis + Dimensions,
+              n
+            );
         }
       }
     }
@@ -960,7 +1070,8 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::compareInterpolateLin
   tarch::freeMemory(fineDataMatrix, tarch::MemoryLocation::Heap);
 }
 
-void toolbox::blockstructured::tests::IandRInMatricesTest::compareRestrictLinearCaseToTensorProductPatch() {
+void toolbox::blockstructured::tests::IandRInMatricesTest::
+  compareRestrictLinearCaseToTensorProductPatch() {
   const double data3d[] = {
     0.037037,  0.037037,  0.037037,  0.037037,  0.037037,  0.037037,  0.037037,
     0.037037,  0.037037,  0.037037,  0.037037,  0.037037,  0.037037,  0.037037,
@@ -1235,8 +1346,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::compareRestrictLinear
     0.0000,
     0.0000,
     -5.0000,
-    6.0000
-  };
+    6.0000};
 
   const double tangentRestrictionMatrix1d[] = {
     0.0000, 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
@@ -1247,51 +1357,165 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::compareRestrictLinear
     0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
     0.0000, 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
     0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
-    0.0000, 1.0000, 0.0000
-  };
+    0.0000, 1.0000, 0.0000};
 
   constexpr int patchSize = 5;
-  constexpr int overlap = 3;
-  constexpr int unknowns = 1;
-  const     int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap * 2;
+  constexpr int overlap   = 3;
+  constexpr int unknowns  = 1;
+  const int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap
+                       * 2;
 
-  double* fineData = tarch::allocateMemory<double>(faceSize, tarch::MemoryLocation::Heap);
-  double* coarseDataTensorProduct = tarch::allocateMemory<double>(faceSize, tarch::MemoryLocation::Heap);
-  double* coarseDataMatrix = tarch::allocateMemory<double>(faceSize, tarch::MemoryLocation::Heap);
+  double* fineData = tarch::allocateMemory<double>(
+    faceSize,
+    tarch::MemoryLocation::Heap
+  );
+  double* coarseDataTensorProduct = tarch::allocateMemory<double>(
+    faceSize,
+    tarch::MemoryLocation::Heap
+  );
+  double* coarseDataMatrix = tarch::allocateMemory<double>(
+    faceSize,
+    tarch::MemoryLocation::Heap
+  );
 
-  for (int n = 0; n < faceSize; n++) fineData[n] = static_cast<double>((n + 1) / unknowns);
+  for (int n = 0; n < faceSize; n++)
+    fineData[n] = static_cast<double>((n + 1) / unknowns);
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(tarch::la::Vector<Dimensions, int>{i, j, k});
+        dummyEvent.setRelativePositionToFather(
+          tarch::la::Vector<Dimensions, int>{i, j, k}
+        );
 
         for (int axis = 0; axis < 3; axis++) {
           peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
-          peano4::datamanagement::FaceMarker marker2(dummyEvent, axis + Dimensions);
+          peano4::datamanagement::FaceMarker
+            marker2(dummyEvent, axis + Dimensions);
 
           int patchIndexLinear = -1;
-          if constexpr (Dimensions == 2) patchIndexLinear = marker1.getRelativePositionWithinFatherCell()((axis + 1) % Dimensions);
-          if constexpr (Dimensions == 3) patchIndexLinear = marker1.getRelativePositionWithinFatherCell()((axis + 1) % Dimensions) + 3 * marker1.getRelativePositionWithinFatherCell()((axis + 2) % Dimensions);
+          if constexpr (Dimensions == 2)
+            patchIndexLinear = marker1.getRelativePositionWithinFatherCell()(
+              (axis + 1) % Dimensions
+            );
+          if constexpr (Dimensions == 3)
+            patchIndexLinear
+              = marker1.getRelativePositionWithinFatherCell()(
+                  (axis + 1) % Dimensions
+                )
+                + 3
+                    * marker1.getRelativePositionWithinFatherCell()(
+                      (axis + 2) % Dimensions
+                    );
 
-          for (int n = 0; n < faceSize; n++) coarseDataTensorProduct[n] = 0;
-          for (int n = 0; n < faceSize; n++) coarseDataMatrix[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            coarseDataTensorProduct[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            coarseDataMatrix[n] = 0;
 
-          restrictHaloLayer_AoS_tensor_product(marker1, patchSize, overlap, unknowns, normalRestrictionMatrix1d, tangentRestrictionMatrix1d, fineData, coarseDataTensorProduct);
-          if constexpr (Dimensions == 2) restrictHaloLayer_AoS_matrix(marker1, patchSize, overlap, unknowns, data2d, indices2d, indptr2d, patchIndexLinear * 28, patchIndexLinear * 7, fineData, coarseDataMatrix);
-          if constexpr (Dimensions == 3) restrictHaloLayer_AoS_matrix(marker1, patchSize, overlap, unknowns, data3d, indices3d, indptr3d, patchIndexLinear * 112, patchIndexLinear * 13, fineData, coarseDataMatrix);
+          restrictHaloLayer_AoS_tensor_product(
+            marker1,
+            patchSize,
+            overlap,
+            unknowns,
+            normalRestrictionMatrix1d,
+            tangentRestrictionMatrix1d,
+            fineData,
+            coarseDataTensorProduct
+          );
+          if constexpr (Dimensions == 2)
+            restrictHaloLayer_AoS_matrix(
+              marker1,
+              patchSize,
+              overlap,
+              unknowns,
+              data2d,
+              indices2d,
+              indptr2d,
+              patchIndexLinear * 28,
+              patchIndexLinear * 7,
+              fineData,
+              coarseDataMatrix
+            );
+          if constexpr (Dimensions == 3)
+            restrictHaloLayer_AoS_matrix(
+              marker1,
+              patchSize,
+              overlap,
+              unknowns,
+              data3d,
+              indices3d,
+              indptr3d,
+              patchIndexLinear * 112,
+              patchIndexLinear * 13,
+              fineData,
+              coarseDataMatrix
+            );
 
-          for (int n = 0; n < faceSize; n++) validateNumericalEqualsWithEpsWithParams3(coarseDataTensorProduct[n], coarseDataMatrix[n], 0.01, axis, n, marker1.getRelativePositionWithinFatherCell());
+          for (int n = 0; n < faceSize; n++)
+            validateNumericalEqualsWithEpsWithParams3(
+              coarseDataTensorProduct[n],
+              coarseDataMatrix[n],
+              0.01,
+              axis,
+              n,
+              marker1.getRelativePositionWithinFatherCell()
+            );
 
-          for (int n = 0; n < faceSize; n++) coarseDataTensorProduct[n] = 0;
-          for (int n = 0; n < faceSize; n++) coarseDataMatrix[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            coarseDataTensorProduct[n] = 0;
+          for (int n = 0; n < faceSize; n++)
+            coarseDataMatrix[n] = 0;
 
-          restrictHaloLayer_AoS_tensor_product(marker2, patchSize, overlap, unknowns, normalRestrictionMatrix1d, tangentRestrictionMatrix1d, fineData, coarseDataTensorProduct);
-          if constexpr (Dimensions == 2) restrictHaloLayer_AoS_matrix(marker2, patchSize, overlap, unknowns, data2d, indices2d, indptr2d, patchIndexLinear * 28, patchIndexLinear * 7, fineData, coarseDataMatrix);
-          if constexpr (Dimensions == 3) restrictHaloLayer_AoS_matrix(marker2, patchSize, overlap, unknowns, data3d, indices3d, indptr3d, patchIndexLinear * 112, patchIndexLinear * 13, fineData, coarseDataMatrix);
+          restrictHaloLayer_AoS_tensor_product(
+            marker2,
+            patchSize,
+            overlap,
+            unknowns,
+            normalRestrictionMatrix1d,
+            tangentRestrictionMatrix1d,
+            fineData,
+            coarseDataTensorProduct
+          );
+          if constexpr (Dimensions == 2)
+            restrictHaloLayer_AoS_matrix(
+              marker2,
+              patchSize,
+              overlap,
+              unknowns,
+              data2d,
+              indices2d,
+              indptr2d,
+              patchIndexLinear * 28,
+              patchIndexLinear * 7,
+              fineData,
+              coarseDataMatrix
+            );
+          if constexpr (Dimensions == 3)
+            restrictHaloLayer_AoS_matrix(
+              marker2,
+              patchSize,
+              overlap,
+              unknowns,
+              data3d,
+              indices3d,
+              indptr3d,
+              patchIndexLinear * 112,
+              patchIndexLinear * 13,
+              fineData,
+              coarseDataMatrix
+            );
 
-          for (int n = 0; n < faceSize; n++) validateNumericalEqualsWithEpsWithParams3(coarseDataTensorProduct[n], coarseDataMatrix[n], 0.01, axis + Dimensions, n, marker1.getRelativePositionWithinFatherCell());
+          for (int n = 0; n < faceSize; n++)
+            validateNumericalEqualsWithEpsWithParams3(
+              coarseDataTensorProduct[n],
+              coarseDataMatrix[n],
+              0.01,
+              axis + Dimensions,
+              n,
+              marker1.getRelativePositionWithinFatherCell()
+            );
         }
       }
     }

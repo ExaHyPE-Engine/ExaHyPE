@@ -314,6 +314,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
             self.algorithm_steps_dict["SPH_Density"],
             self.algorithm_steps_dict["SPH_Force"],
             self.algorithm_steps_dict["SPH_Kick2"],
+            self.algorithm_steps_dict["SPH_Timestep"],
             self.algorithm_steps_dict["SPH_ReduceGlobalQuantities"],
             self.algorithm_steps_dict["SPH_Kick1"],
         ]
@@ -332,11 +333,17 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         Make sure get_algorithm_steps_dict(self) has been called before.
         """
         initsteps = [
+            self.algorithm_steps_dict["SPH_FirstInitParticle"],
             self.algorithm_steps_dict["SPH_Density"],
             self.algorithm_steps_dict["SPH_Force"],
-            # for the first kick in the simulation, we need the reset that
-            # is done in the kick2 algorithm step, but not in the kick1.
-            self.algorithm_steps_dict["SPH_Kick2"],
+            self.algorithm_steps_dict["SPH_Timestep"],
+            # TODO for later: Call kick2 here. When a new simulation step
+            # begins, all particles need to have been kicked. This is necessary
+            # for individual particle timestepping.
+            # The difference between kick1 and kick2 is that we reset some
+            # additional quantities at the end. Since this is the first
+            # time we're calling it, it needs to be kick2.
+            #  self.algorithm_steps_dict["SPH_Kick2"],
         ]
 
         # return deep copies of algorithms steps. Otherwise,

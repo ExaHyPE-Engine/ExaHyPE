@@ -88,13 +88,13 @@ automake --add-missing
   The `--help` option should give you some information about the available
   variants of Peano, its extensions and toolboxes.
 
-I recommend that you start a first test without any additional flavours
+It is recommended that you start a first test without any additional flavours
 of Peano, i.e. to work with a plain `./configure` call. Once the tests pass,
-I recommend that you add further options (IO) and/or parallelisation.
+you may add further options (IO) and/or parallelisation.
 Please note that the baseline configure is not sufficient for most
 applications, as it builds merely Peano's core libraries.
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
 This might be the right time to look ahead and study the tutorials of the codes you wanna use.
 All of them need different toolboxes and extensions. ExaHyPE, for example, requires
 you to activate --enable-blockstructured and --enable-exahype at least (--enable-loadbalancing is recommended),
@@ -119,15 +119,9 @@ specify a proper installation directory via `--prefix`.
 
 ## CMake
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
 CMake's functionality mirrors the capabilities of the Autotools.
-While it has some advantages (out-of-source builds), it increases the memory footprint, 
-and some people run into issues with CMake. 
-This is - most of the time - for one reason:
-If you use CMake, follow the instructions below and then continue to work 
-from your build/installation directory rather than Peano's sources!
 </div>
-
 
 Using CMake is again relatively simple.
 First, we create a new directory.
@@ -149,24 +143,24 @@ cmake Peano-src
 
 where Peano-src points to the checkout.
 
-Next, you might want to type in `cmake help` but this might be a little bit 
+Next, you might want to type in `cmake help` but this might be a little bit
 overwhelmning. Try
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ccmake Peano-dir
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-instead, where you replace Peano-dir with the directory of Peano's sources. 
+instead, where you replace Peano-dir with the directory of Peano's sources.
 Handing in .. does the job for most of the setups.
 
-<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
 This might be the right time to look ahead and study the tutorials of the codes you wanna use.
 All of them need different toolboxes and extensions. ExaHyPE, for example, requires
 you to activate BLOCKSTRUCTURED and EXAHYPE at least (LOADBALANCING is recommended),
 while the SPH code Swift needs at least PARTICLES and SWIFT.
 </div>
 
-Configure by pressing c and then q to finish the configuration. Next, continue 
+Configure by pressing c and then q to finish the configuration. Next, continue
 with building the code.
 
 
@@ -219,10 +213,10 @@ correctness tests and MPI ping-pong tests, i.e. you can both assess a
 valid build plus a working MPI environment.
 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-Good time to stop. Jump straight into one of the tutorials if you want to. 
-If things don't work (Python complains for example), return to this page and 
-read through the text below. But maybe it is the right time just to play around 
+<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
+Good time to stop. Jump straight into one of the tutorials if you want to.
+If things don't work (Python complains for example), return to this page and
+read through the text below. But maybe it is the right time just to play around
 with code.
 </div>
 
@@ -239,7 +233,7 @@ cmake Peano-src -DCMAKE_INSTALL_PREFIX=<install_path>
 make install
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The autotools allow you to do the same by passing in --prefix=mydir into the ./configure command and then you call 
+The autotools allow you to do the same by passing in --prefix=mydir into the ./configure command and then you call
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ./configure --prefix=mydir -- all the other parameters
@@ -247,12 +241,12 @@ make
 make install
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-Peano is ***not*** a piece of software that you use as a black box. 
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+Peano is ***not*** a piece of software that you use as a black box.
 It is an engine that you use to write your own code.
 You can install Peano and its extensions.
 That means basically that you move its static libraries to a separate directory.
-But there is no such thing as a Peano application.  
+But there is no such thing as a Peano application.
 </div>
 
 
@@ -342,11 +336,11 @@ OpenMP for the multithreading support. We also include some flags to suppress wa
 # Cleanup the Peano directory if files from previous builds are present (comment-in to use)
 #make clean && make distclean
 
-# Standard operations
+# Prepare environment
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
 
 # Configure Peano with whatever we need
-CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -fopenmp -Wno-unknown-attributes" LDFLAGS="-fopenmp"
+CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="-std=c++20 -O3 -fopenmp -Wno-attributes" LDFLAGS="-fopenmp"
 
 # Compile and check build. You might want to add -jX to build on X cores in parallel
 echo "Starting compilation"
@@ -372,7 +366,7 @@ OpenMP for the multithreading support. All required flags are automatically adde
 # Cleanup the Peano directory if files from previous builds are present (comment-in to use)
 #rm -rf build
 
-# Standard operations
+# Prepare environment
 mkdir build && cd build
 
 # Configure Peano with whatever we need

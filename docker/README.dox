@@ -9,6 +9,7 @@ Here we maintain Dockerfiles for different compilers.
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
 We have encountered compatibility issues with Apple chips (M2) and Docker.
 At this point, we would not encourage people to use Docker containers with these chips.
+You may try out to add following flag to the `docker run` command: `--platform Linux/amd64`.
 </div>
 
 For users, it is recommended to pull the available Docker images from [Dockerhub](https://hub.docker.com/u/peanoframework).

@@ -217,7 +217,6 @@ class AlgorithmStep(object):
 
 #include "swift2/dependencychecks/DependencyChecks.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
-#include "toolbox/particles/assignmentchecks/Utils.h"
         """
             + includes
         )

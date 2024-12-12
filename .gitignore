@@ -301,6 +301,7 @@ src/unittests/UnitTests*
 
 # Output files
 *patch-file*
+*.vtu
 *.pvd
 *.err
 *.out
@@ -317,5 +318,8 @@ src/unittests/UnitTests*
 *.trs
 *.sh
 compile_commands.json
+
+#
+# Profiling
+# 
 scorep*/
-/documentation/

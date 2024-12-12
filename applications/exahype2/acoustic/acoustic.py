@@ -161,11 +161,11 @@ class Acoustic:
         )
 
         parser.add_argument(
-            "-vis",
-            "--visualise",
-            action="store_true",
-            default=False,
-            help="Visualise the output data using the postprocessor.",
+            "--storage",
+            type=str,
+            choices=[e.name for e in exahype2.solvers.Storage],
+            default="Heap",
+            help="The storage scheme to use."
         )
 
         available_load_balancing_strategies = [
@@ -322,6 +322,7 @@ class Acoustic:
         if solver_params["auxiliary_variables"] != 0:
             solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
+        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         if "ADERDG" in args.solver:
             solver.add_kernel_optimisations(is_linear = True,)
@@ -359,18 +360,6 @@ class Acoustic:
             ],
         )
 
-        if args.visualise:
-            output_patch_file = f"{args.output}/solution-Acoustic.peano-patch-file"
-            if os.path.isfile(output_patch_file):
-                subprocess.call(
-                    [
-                        "python3",
-                        f"{args.peano_dir}/python/peano4/visualisation/render.py",
-                        str(output_patch_file),
-                    ]
-                )
-            sys.exit(0)
-
         if args.load_balancing_strategy != "None":
             project.set_load_balancing(
                 f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}",
@@ -383,6 +372,7 @@ class Acoustic:
             "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
             % str(args.fuse_tasks)
         )
+        project.additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")
 
         project.set_timeout(args.timeout)
 

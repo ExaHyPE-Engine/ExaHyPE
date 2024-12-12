@@ -78,6 +78,10 @@ void swift2::kernels::legacy::hydro_predict_extra(Particle* localParticle) {
   localParticle->setV_sig_AV(
     std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed)
   );
+
+  // Reset left-right bounds outside of the density sweep.
+  localParticle->setSmlIterLeftBound(Particle::getSmlMin());
+  localParticle->setSmlIterRightBound(Particle::getSmlMax());
 }
 
 
