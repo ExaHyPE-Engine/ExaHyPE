@@ -21,7 +21,7 @@ You may choose any image to pull from Dockerhub that fits your needs in a compil
 
 You may ignore images that have the extension `base`, `spack`, or `apptainer`. These are only used for development.
 
-To use the prebuilt images, we do recommended that you first clone Peano, then navigate into the Peano checkout (`PEANO_ROOT`)
+To use the prebuilt images, we do recommended that you first clone Peano, then navigate into the Peano checkout
 and run the Docker container interactively by mapping the Peano directory into the container (here, we use `work` as our mapping point):
 
 ```shell

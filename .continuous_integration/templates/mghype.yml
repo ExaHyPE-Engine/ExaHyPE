@@ -1,6 +1,6 @@
-.MGHyPE_Tests:
+.MGHyPE_MatrixFree_Tests:
   parallel:
     matrix:
     - test: [dg, dg-two-grid, cg, cg-multigrid]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/multigrid/matrixfree/poisson/; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/src python3 $test.py -m release; ./peano4matrixfree"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/multigrid/matrixfree/poisson/; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/src python3 $test.py -m release; ./peano4matrixfree"
