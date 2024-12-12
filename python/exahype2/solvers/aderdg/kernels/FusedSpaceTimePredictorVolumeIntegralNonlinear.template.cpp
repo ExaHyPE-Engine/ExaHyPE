@@ -518,14 +518,18 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}{# USE_FLUX #}
 
 {% if USE_NCP or USE_SOURCE %}
-    pCompType tmpNCP[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
-    pCompType gradQ_PDE[{{NUMBER_OF_UNKNOWNS*DIMENSIONS}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
+{% if USE_NCP %}
+    pCompType tmpNCP[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
+    pCompType gradQ_PDE[{{NUMBER_OF_UNKNOWNS*DIMENSIONS}}] __attribute__((aligned({{ALIGNMENT}})));
+{% endif %}
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+{% if USE_NCP %}
       std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE);
       std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{1*NUMBER_OF_UNKNOWNS}});
 {% if DIMENSIONS==3 %}
       std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{2*NUMBER_OF_UNKNOWNS}});
+{% endif %}
 {% endif %}
 
 {% if USE_SOURCE %}
