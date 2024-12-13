@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-/* #include "peano4/utils/Globals.h" */
-
 #include "tarch/la/Vector.h"
 
 namespace toolbox {
@@ -27,6 +25,10 @@ private:
   int                                   _depth;
 
 public:
+  // Mimic proper particle behaviour
+  enum class ParallelState : int { Local = 0, Virtual = 1 };
+
+public:
   TestParticle(
     const tarch::la::Vector<Dimensions, double>& x,
     int                                          particleID,
@@ -38,9 +40,11 @@ public:
   tarch::la::Vector<Dimensions, double> getVertexH() const;
   tarch::la::Vector<Dimensions, double> getX() const;
   bool                                  isLocal() const;
+  TestParticle::ParallelState           getParallelState() const;
 
   void setDepth(const int depth);
   void setIsLocal(const bool isLocal);
   void setVertexH(const tarch::la::Vector<Dimensions, double>& x);
   void setX(const tarch::la::Vector<Dimensions, double>& x);
+  void setParallelState(const TestParticle::ParallelState parallelState);
 };

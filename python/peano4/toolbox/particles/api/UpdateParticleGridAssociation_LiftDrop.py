@@ -122,6 +122,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     _Template_Sieve = jinja2.Template(
         """
+  // template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_LiftDrop.py
+
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
       marker
@@ -129,11 +131,13 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     for (auto& newParticle: sievedParticles) {
       _numberOfDropsFromSieveSet++;
-      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId);
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
+
+  // end template
 """
     )
 
@@ -147,6 +151,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
         """
+  // template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_LiftDrop.py
+
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
 
@@ -230,6 +236,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         break;
     }
   }
+
+  // end template
 """
     )
 

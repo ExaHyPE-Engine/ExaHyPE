@@ -447,8 +447,10 @@ if __name__ == "__main__":
     KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
     KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
-    hydro_h_max = max_cell_size / 2
-    particle.h_hydro_max = hydro_h_max
+    hydro_H_max = max_cell_size / 2
+    hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+        hydro_H_max, kernel, hydro_dimensions
+    )
 
     # particle.h_hydro_min = 1e-6
     # particle.h_max_iterations = 10
@@ -486,6 +488,11 @@ if __name__ == "__main__":
         particle.u_full.valid_mantissa_bits = args.mantissa_size
 
     particle.data.expose_all_attributes_in_header_file()
+
+    # deploy particle properties
+    # This needs to be done if you're changing any of the default values.
+    # Otherwise, the changes won't propagate into dastgen.
+    particle.set_parameters()
 
     # Add particle to the SWIFT project --------------------------------------------
     # Notice that you any change to the particle will not take effect after adding

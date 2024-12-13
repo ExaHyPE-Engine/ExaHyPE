@@ -21,6 +21,7 @@
 #include "toolbox/particles/memorypool/VertexWiseContinuousMemoryPool.h"
 #include "toolbox/particles/memorypool/GlobalContinuousMemoryPool.h"
 
+// Template: peano4/toolbox/particles/ParticleSet_MemoryPool.template.h
 
 {% for item in NAMESPACE -%}
   {% if not loop.last %}
@@ -241,7 +242,7 @@
        * Should be used, for example, if a particle has left the local domain.
        * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
-       * 
+       *
        *
        * ## Difference to particles on heap
        *
@@ -250,10 +251,10 @@
        * scattered set.
        *
        *
-       * @return an iterator to the particle. This iterator is robust, i.e. even 
+       * @return an iterator to the particle. This iterator is robust, i.e. even
        *   if we have altered the underlying data, this one is still valid. It is
        *   however not efficient, i.e. it might point to begin() and any outer
-       *   loop hence might restart to run over all particles again. 
+       *   loop hence might restart to run over all particles again.
        */
       Container::iterator deleteParticle( Container::iterator  particle );
 
