@@ -305,6 +305,14 @@
  * most load balancing flavours also have a variant which uses top-down
  * splitting. Please consult all classes within toolbox::loadbalancing::strategies.
  *
+ *
+ * ## Formalisation of load balancing
+ *
+ * There is a dedicated subpage
+ * @subpage toolbox_loadbalancing_strategies_Strategies which describes load
+ * balancing with graph theoretic glasses on.
+ *
+ *
  */
 namespace toolbox {
   /**
