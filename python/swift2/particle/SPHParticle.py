@@ -460,3 +460,37 @@ class SPHParticle(Particle):
     @abc.abstractmethod
     def readme_descriptor(self):
         return super(SPHParticle, self).readme_descriptor
+
+
+    def switch_namespace_of_all_particle_iterators( self,
+                                                    new_namespace,
+                                                    old_namespace = "::swift2::kernels::"
+                                                  ):
+        """!
+        
+        Switch the prefix (namespace) of all particle iterators
+        
+        Run through all iterators/kernels and replace the iterator namespaces. This
+        is a simple text replacement and should be used with care. Usually, we may 
+        assume that an algorithm step does already pick a proper realisation by 
+        default, but you might want to change this default behaviour. The problem 
+        is that you will overwrite any bespoke choice, i.e. if a particle species
+        developer has carefully ported some kernels to the GPU but others not, you
+        overwrite these decisions maybe and switch to a different implementation.
+        
+        The realisation is very simple: We run over all algorithm steps and replace
+        all "forAll" function calls with the leading namespace old_namespace with 
+        a new namespace.
+        
+        @param new_namespace: String
+          Please ensure that it starts with :: (to avoid namespace confusion) and 
+          ends with ::, too.
+        
+        """
+        for algorithm_step in self._algorithm_steps:
+            algorithm_step.cell_kernel                    = algorithm_step.cell_kernel.replace( old_namespace + "forAll", new_namespace + "forAll" )
+            algorithm_step.touch_vertex_first_time_kernel = algorithm_step.touch_vertex_first_time_kernel.replace( old_namespace + "forAll", new_namespace + "forAll" )
+            algorithm_step.touch_vertex_last_time_kernel  = algorithm_step.touch_vertex_last_time_kernel.replace( old_namespace + "forAll", new_namespace + "forAll" )
+
+    
+    
