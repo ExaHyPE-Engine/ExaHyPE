@@ -43,11 +43,7 @@ template <typename LocalParticleContainer, typename ActiveParticleContainer>
 void swift2::kernels::forAllParticlePairs(
   const peano4::datamanagement::CellMarker&  marker,
   LocalParticleContainer&                    localParticles,
-<<<<<<< HEAD
-  ActiveParticleContainer&                   firstActiveParticle,
-=======
   ActiveParticleContainer&                   activeParticles,
->>>>>>> refs/remotes/origin/particles-noh2D-vectorisation-MR2
   const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
   const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
   ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
@@ -58,7 +54,7 @@ void swift2::kernels::forAllParticlePairs(
 ) {
   for (auto& localParticle : localParticles) {
     if ( localParticlePredicate(marker, *localParticle) ) {
-      for (auto& activeParticle : firstActiveParticle) {
+      for (auto& activeParticle : activeParticles) {
         if ( particlePairPredicate(marker, *localParticle, *activeParticle) ) {
           f(marker, *localParticle, *activeParticle);
           if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
@@ -70,7 +66,6 @@ void swift2::kernels::forAllParticlePairs(
     }
   }
 }
-<<<<<<< HEAD
 
 
 template <int SubChunkSize, typename LocalParticle, typename ActiveParticle>
@@ -93,5 +88,3 @@ std::pair< std::bitset<SubChunkSize>, std::bitset<SubChunkSize> >  swift2::kerne
 
   return { updateParticleEffect, evaluateBottomUpParticleEffect };
 }
-=======
->>>>>>> refs/remotes/origin/particles-noh2D-vectorisation-MR2
