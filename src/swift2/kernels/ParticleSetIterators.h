@@ -405,3 +405,9 @@ namespace swift2 {
 
 
 #include "ParticleSetIterators.cpph"
+
+
+// Include the specialisations. Has to be last thing here, as the
+// specialisations will use our typedefs.
+#include "swift2/kernels/cppiterators/ParticleSetIterators.h"
+#include "swift2/kernels/ompiterators/ParticleSetIterators.h"
