@@ -1,6 +1,8 @@
 /**
 
-@page swift_particle_new_solver Creating new particle types (solvers)
+@page swift_particle_new_solver Creating new particle types (solvers) with new algorithmic steps
+
+@tableofcontents
 
 
 This page describes how you introduce a new solver. New solver here means that
@@ -13,9 +15,8 @@ in three flavours:
 3. You might tune a certain numerical particle species to yield better
    performance.
 
-Actual performance optimisation is discussed on its @ref page_swift_performance_optimisation "dedicated page".
-This page here describes how you enable the optimisation techniques when you
-introduce your own solvers.
+Higher-level performance optimisation is discussed on its @ref page_swift_performance_optimisation "dedicated page".
+This page focuses on the particle view.
 
 
 # Introduce a new particle type
@@ -72,7 +73,7 @@ to your species with instruction similar to
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-@subsubsection Section_SwiftAlgorithmStep The algorithmic steps for the particle life cycle
+## The algorithmic steps for the particle life cycle
 
 The second essential ingredient to build a particle life cycle is to specify the
 sequence of algorithmic steps. Each particle has to have a routine `algorithm_steps()`
@@ -327,44 +328,264 @@ within the algorithm steps (see remark above on invariants) and performance
 engineers (see remarks below).
 
 
+# Cut-off radius realisation (e.g. in the force calculation)
+
+Swift 2 builds up its interaction lists (who has to be checked against whom)
+on-the-fly while it runs through the mesh. Hereby, it employs the concept of
+a @ref page_toolbox_particles_mesh_traversal "search radius": Only particles
+within the the search radius of a particle @f$ p_i @f$ are taken into account
+when we search for any other particle @f$ p_j @f$ interacting.
+
+In Swift, the search radius @f$ r_{\text{search}} @f$ is
+a ***technical quantity*** (See also @ref swift_terminology). The physics are
+not directly impacted by it. They are determined by the smoothing length @f$
+r_{\text{smooth}} @f$ which changes (more) frequently. The smoothing length
+directly determines the interaction radius @f$r_{\text{iact}} @f$:
+
+@f$r_{\text{iact}} = \gamma_{\text{kernel}} r_{\text{smooth}}@f$
+
+where @f$\gamma_{\text{kernel}}@f$ is a constant which depends on the
+spatial dimensionality and the SPH kernel used (see @ref swift_terminology and
+<a href="https://arxiv.org/abs/1204.2471">Dehnen & Aly 2012</a> ). Its
+numerical value is @f$\sim 2@f$.
+
+Naturally, we must ensure that the search radius is always equal or greater than
+the interaction radius.
+
+Our code runs through the mesh and looks at all particles around a particle
+within the search radius. **It is important to note that we have different types
+of interactions in our loops.** For the density calculation, all particles
+within the interaction radius then enter the equations. We interact a particle i
+with a particle j if:
+
+@f$
+ |x(p_i) - x(p_j)| \leq r_{\text{iact}}(p_i).
+@f$
+
+For the force calculation however, we have a symmetric correlation: Two
+particles interact if:
+
+@f$
+ |x(p_i) - x(p_j)| \leq r_{\text{iact}}(p_i)
+ \wedge
+ |x(p_j) - x(p_i)| \leq r_{\text{iact}}(p_j).
+@f$
+
+Without the or, we could end up with non-symmetric forces.
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+Due to the symmetry the force calculation, the smoothing length has to be at
+most @f$ 1/\gamma_{\text{kernel}} \approx 1/2@f$ of the search radius.
+Otherwise, we miss out on particles.
+</div>
+
+
+@image html algorithm-search-radius.png
+
+The illustration above shows what can be wrong if the constraint
+
+@f$
+\gamma_{\text{kernel}} r_{\text{smooth}}(p_i) = r_{\text{iact}}(p_i) \leq
+ r_{\text{search}}(p_i)
+@f$
+
+is violated: The red particle has to be updated within the middle cell. Let its
+search radius be depicted with the dotted circle, and the actual interaction
+radius with a solid one. As we store particles next to their closest vertex, we
+effectively can compare the red particle against all particles that are stored
+within the dashed square: We test all particles within the cell plus a h/2 halo.
+This is in line with
+@ref page_toolbox_particles_mesh_traversal "Peano's search radius and sorting"
+definition.
+
+Consequently, we compare red with green and find out that (a) their search radius
+overlaps, and (b) their interaction radius doesn't. So we ignore the
+interaction. Red and blue are never even compared.
+
+Now assume the smoothing length grows, increasing the interaction radius, such
+that it now becomes almost the search radius (dotted circle).
+Now, green is still within the interaction radius of red, so nothing has changed
+here. Blue however now ends up within the search radius of red, yet is not taken
+into account as it is stored within a vertex that is not adjacent to the current
+cell. We miss out on this iteration.
+
 
 # Tune a kernel realisation
 
-Tuning a solver can mean various things. First, users can tune
+Swift 2 codes can be tuned in many ways. First, users can tune
 their code by picking an optimising @ref swift_graph_compiler "graph compiler".
-Sophisticated graph compilers improve the memory reusage, reduce memory
-movements, and improve the scalability.
+They can also tweak the memory layout as discussed on @ref page_swift_performance_optimisation.
+On this page, we discuss how we can optimise the particle's compute kernels
+themselves.
+Before you continue to read, please  
+consult @ref swift_runtime_analysis "Swift's page on runtime analysis", too,
+so all follow-up steps can be supported with appropriate measurements.
 
 
-Second, users can switch the iteration scheme, i.e. how they run through
-the sets of particles associated with a cell or vertex.
-Both topics are subject to
-a longer discussion at @ref page_swift_performance_optimisation.
+## Move checks out of the kernels
+
+Users typically start from a generic usage of the iterators in ParticleSetIterators.h.
+That is, they simply type down swift2::kernels::forAllParticlePairs() and hand
+in their compute kernels of choice. Most kernels check internally
+if they are supposed to run or not (consult @ref swift_particle_new_solver "how to introduce a new solver").
+All these iterators do therefore is to invoke the actual kernel per particle or
+particle pair, respectively.
+
+However, it might make sense to evaluate a "shall I run" predicate ahead of the
+actual kernel invocation: If a particle is outside of a cell in a cell kernel,
+it might be reasonable not even to start to run over all the (active) particles
+around it. So this additional check makes mainly sense for particle-particle
+interactions, i.e. forAllParticlePairs(), but Swift 2 realises the same
+guard mechanism for both forAllParticles() and forAllParticlePairs(). Both
+routines do accept additional guards which allow you to mask out certain
+calculations a priori.
+
+If kernels consume a lot of compute time, it might be reasonable to check a 
+priori if it makes sense to involve a kernel at all.
+This again can be done by passing another guard into the iterator. Replace
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( cellMarker, ..., ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::HydroPart>);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+with
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( cellMarker, ..., ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+So far, this does actually decrease the performance, as you evaluate predicates
+now twice. To remove the redundancy, you have to provide a second variant of 
+the compute kernel without these internal checks:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( cellMarker, ..., ::swift2::kernels::legacy::densityKernelWithoutChecks<globaldata::HydroPart>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>, ::swift2::kernels::legacy::densityKernelPairEvaluationPredicate<globaldata::HydroPart>);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-Finally, users can start to use vectorisation over kernels. This section
-describes how you prepare compute kernels. Vectorisation should always be
-guided by compiler feedback. We have @ref swift_runtime_analysis "collected some guidance"
-how to extract the relevant knowledge from the compiler.
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
+If often start with kernels similar to densityKernelWithoutChecks() and add in
+their documentation with which predicate they have to be combined. So I write 
+in the docu "please use ::swift2::kernels::localParticleCanBeUpdatedInCellKernel() with it".
+After that, I write a second routine  densityKernel() which really just 
+evaluates this predicate as recommended and then forwards the call to 
+densityKernelWithoutChecks().
+</div>
 
 
-### Step 1: Making your kernels vectoriser friendly
+If you have a rather complicated logic, such as 
 
-While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
+- particle has to be local,
+- particle has to be within a certain reach of another particle, and
+- particle has to have a certain boolean flag,
+
+then I typically write a bespoke predicate only for this particular case.
+::swift2::kernels::legacy::densityKernelPairEvaluationPredicate() is a 
+nice example of such a kernel-specific predicate.
 
 
 
+## Step 2: Switch to a bespoke iterator
 
-#### Fix issues
+The standard iterators ::swift2::kernels::forAllParticles() and ::swift2::kernels::forAllParticlePairs()
+do not exploit any information about the data layout. Once you have 
+@ref page_swift_performance_optimisation "tweaked your data layout to ensure that you have coalesced (continuous) particle data",
+it is therefore a natural next step to switch to an iterator that exploits this knowledge.
+
+The clean way to do this is to replace your ::swift2::kernels::forAllParticlePairs()
+calls with ::swift2::kernels::coalesced::forAllParticlePairs() or other variants.
+There are several ones available.
+Each one might be particular useful for one kernel-particle combination and 
+make the performance break down for the next one. 
+
+If you don't want to run through your particle step by step, you can use 
+the particle's routine swift2.particle.SPHParticle.switch_namespace_of_all_particle_iterators() to switch 
+the namespace of all iterators. This is the brute-force variant which 
+overwrites all particle-specific tuning (and might break down for particle
+types that do not stick exactly to all default naming conventions).
+
+
+## Step X: Port kernels to GPUs
+
+@todo Yet to be written, but, in principle, it is just a switch to another iterator.
+
+
+
+## Troubleshooting: The kernel does not vectorise despite all these steps
+
+
+### Expose all particle attributes
+
+Vectorisation requires very aggressive inlining. To facilitate such inlining,
+all the setters and getters of particle attributes have to be available in the
+header. Study the
+@ref page_dastgen_home "DaStGen documentation" for remarks how to move getters and
+settings into the header. Notably study the semantics of the function
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle.data.expose_all_attributes_in_header_file()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which moves all attribute setters and getters into the header and hence
+facilitiates very aggressive inlining via copy n paste.
+
+### Validate impact of your work
+
+LLVM-based compilers provide ample feedback on your vectorisation once you add
+the compile flags
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every peano4.Project holds an attribute called makefile of the type peano4.output.Makefile.
+You can add additional compiler flags like these three guys there. 
+Alternatively, you can reconfigure/rerun CMake on the whole project, but that 
+means that you get vectorisation reports for every single file in Peano. As
+any Peano extension picks up the makefile settings from the core library you 
+will get vectorisation reports for your particular SPH code, too. 
+
+For fully vectorised kernels, the reported width will always match the machine
+width (4 for AVX2 and 8 for AVX512 capable machines and double precision
+kernels). Sometimes, the compiler decides against vectorisation:
+
+  ~~~~~~~~~~~~~~~~~~~
+../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: Disabling scalable vectorization, because target does not support scalable vectors. [-Rpass-analysis=loop-vectorize]
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+            ^
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: the cost-model indicates that interleaving is not beneficial [-Rpass-analysis=loop-vectorize]
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: vectorized loop (vectorization width: 8, interleaved count: 1) [-Rpass=loop-vectorize]
+  ~~~~~~~~~~~~~~~~~~~
+
+In this case, it might make sense to overwrite the compiler heuristics. Consult
+your compiler handbook. Again, it might be inconvenient to do this for the whole
+code. Instead, you might want to do it only for one object file. Follow the same
+pattern as introduced above for the optimisation report.
+
+Unfortunately, Swift/Peano has currently no feature to pick compiler arguments
+manually per file. Worse, the Python API overwrite the Makefile. It might make sense to
+design a proper makefile manually and then to disable the overwriting in the
+Peano 4 project that is produced by Swift's Python API. 
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
+We ran sometimes into issues when we studied the success of our vectorisation
+"only" via performance analysis tools such as Advisor or MAQAO. The tools
+showed that we use vectorisation. Still, the code remained slow. In many of
+these cases, the compiler failed to vectorise over multiple particles but
+was successful in vectorising some subcalculations per particle. The resulting
+code then contained AVX instructions, and the tool reported "successfully vectorised"
+which is not what we wanted. It is important to study the actual compiler
+feedback.
+</div>
+
+
+### Tweak your C++ code
 
 We've started to collect a list of todos and no-goes for the vectorisation
 below. You might want to weak this in one way or the other and it will be
 incomplete. But it is a reasonable starting point:
 
-- You cannot collapse the two for loops that invoke the force kernel. That
-  would lead to a scattered iteration space in memory and hence make any
-  vectorisation impossible. In general, it makes sense to try to have only
-  one loop and/or to vectorise over the innermost loop.
 - The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
   this is something one should be able to control via the annotation
 
@@ -424,157 +645,7 @@ incomplete. But it is a reasonable starting point:
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   vectorisation seems to work.
-- Besides inlining, a good approach is to move as many function calls and/or
-  data accesses outside the loop as possible. Specifically:
-  - All reads from the local particle (which is to be updated) should be done
-    before the loop. Store the read data as local variables, i.e. manually
-    extract parameters from their underlying struct.
-  - Inside the loop, all reads/writes that touch the local particle should be
-    substituted with the newly created local variables.
-  - All writes to the local particle should be done after the loop by loading
-    data from the local variables.
-  If you don't follow these recipes, you typically get messages similar to
-  ~~~~~~~~~~~~~~~~~~~
-   ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:316:23: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
-    void swift2::kernels::computeHydroForce(
-  ~~~~~~~~~~~~~~~~~~~
 
-#### Validate outcome
-
-For fully vectorised kernels, the reported width will always match the machine
-width (4 for AVX2 and 8 for AVX512 capable machines and double precision
-kernels). Sometimes, the compiler decides against vectorisation:
-
-  ~~~~~~~~~~~~~~~~~~~
-../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: Disabling scalable vectorization, because target does not support scalable vectors. [-Rpass-analysis=loop-vectorize]
-            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
-            ^
-../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: the cost-model indicates that interleaving is not beneficial [-Rpass-analysis=loop-vectorize]
-../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: vectorized loop (vectorization width: 8, interleaved count: 1) [-Rpass=loop-vectorize]
-  ~~~~~~~~~~~~~~~~~~~
-
-In this case, it might make sense to overwrite the compiler heuristics. Consult
-your compiler handbook. Again, it might be inconvenient to do this for the whole
-code. Instead, you might want to do it only for one object file. Follow the same
-pattern as introduced above for the optimisation report.
-
-Unfortunately, Swift/Peano has currently no feature to pick compiler arguments
-manually. Worse, the Python API overwrite the Makefile. It might make sense to
-design a proper makefile manually and then to disable the overwriting in the
-Peano 4 project that is produced by Swift's Python API. Consult peano4.Project
-for details (see its attribute makefile and the docu of the underlying class
-peano4.output.Makefile).
-
-We ran sometimes into issues when we studied the success of our vectorisation
-"only" via performance analysis tools such as Advisor or MAQAO. The tools
-showed that we use vectorisation. Still, the code remained slow. In many of
-these cases, the compiler failed to vectorise over multiple particles but
-was successful in vectorising some subcalculations per particle. The resulting
-code then contained AVX instructions, and the tool reported "successfully vectorised"
-which is not what we wanted. It is important to study the actual compiler
-feedback.
-
-
-
-### Step 2: Selecting carefully
-
-You switch from normal to any vectorised kernels within the Python interface
-by replacing the cell or vertex kernels. Some care is required for one of
-them:
-
-- cell_kernel. You may assume that all data are always properly aligned
-  in memory when your solver's kernels are invoked.
-- touch_vertex_first_time_kernel. Same story. By the time the user's touch
-  first kernels are actually called, all the data is in the right place.
-- touch_vertex_last_time_kernel. You have to be a little bit careful here.
-  In principle, the data of the vertex should be fine. However, a finer
-  vertex might have decided to lift particles from its place one level up
-  and to place them with the parent. This triggers a scatter on the coarser
-  vertex, and its data is not contiguously stored anymore. Therefore, it
-  makes sense to insert an additional case distinction:
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          touch_vertex_last_time_kernel_for_drift = """
-              if (numberOfAssignedParticles>0) {
-                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles, numberOfAssignedParticles );
-              }
-              else {
-                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );
-              }
-          """
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-Once complete,
-
-
-## Optimising kernels
-
-
-## Wrapping the point to point kernels
-
-Typical Swift 2 kernels look similar to
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  for (auto* localParticle : localParticles) {
-    if (
-      not localParticle->getCellHasUpdatedParticle()
-      and
-      marker.isContained( localParticle->getX() )
-    ) {
-      for (auto* activeParticle : activeParticles) {
-        myFancyKernel(localParticle, activeParticle);
-      }
-    }
-  }
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You loop over the local particles. From the local particles, you pick only
-those guys which actually reside within the cell and have not been updated
-yet. The rationale behind these ifs are provided @ref page_toolbox_particles_mesh_traversal
-"by the generic particle mesh traversal discussion". Note that the
-recommendation there says that you should also add a check like
-willNotBeSievedIntoNextLevel(). We can omit this one here, as we said
-beforehand that we use the optimised kernels if and only if we know that
-the particle-mesh association is stationary and consistent.
-
-We now follow the discussion of peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
-and replace this kernel invocation by
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
-
-  for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
-    typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
-    std::advance( localParticlesIterator, localParticlesChunkSize );
-
-    typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
-    for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
-      typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
-      std::advance( activeParticlesIterator, activeParticlesChunkSize );
-
-      for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-        if (
-          marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
-          and
-          not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
-        ) {
-          for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-            myFancyKernelVectorised(
-              localParticlesChunk  + localParticleNumberInThisChunk,
-              activeParticlesChunk + activeParticleNumberInThisChunk
-            );
-          }
-        }
-      }
-    }
-  }
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Note that the force kernel is now replaced by a rewrite that we will discuss
-next. You might be able to work without such an overwrite in your particular
-case.
 
 
 

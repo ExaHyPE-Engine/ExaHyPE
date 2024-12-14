@@ -101,9 +101,9 @@ DaStGen2. See the corresponding documentation on \ref page_dastgen_home.
 
 ## Generating the Particle Life Cycle
 
-With the particle data defined, we can now set up what equations are being solved, and in
-which order, for each particle for each simulation step. This is documented in detail in
-@ref Section_SwiftAlgorithmStep on the @ref swift_particle_new_solver page.
+With the particle data defined, we can now set up what equations are being 
+solved, and in which order, for each particle for each simulation step. This is
+documented in detail on the @ref swift_particle_new_solver page.
 
 If you are planning on using a new solver, you will need to write new solver kernels.
 Consult the documentation on that given on the
@@ -206,8 +206,8 @@ After the particles have been read in, some further set-up is needed. For
 example, we need to compute the smoothing lengths and densities of the particles
 in order to compute their time step size before the first step can begin.
 
-For details on how to implement the sequence of initialization steps, please refer
-to @ref Section_SwiftAlgorithmStepsInitialization.
+For details on how to implement the sequence of initialization steps, consult
+@ref swift_particle_new_solver.
 
 
 
