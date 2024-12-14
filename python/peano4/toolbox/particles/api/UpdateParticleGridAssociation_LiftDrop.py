@@ -131,7 +131,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     for (auto& newParticle: sievedParticles) {
       _numberOfDropsFromSieveSet++;
-      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId, false);
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId);
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
@@ -179,7 +179,6 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           marker.x(),
           marker.h(),
           _spacetreeId,
-          false,  // not in periodic boundary swap
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -216,7 +215,6 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           marker.x(),
           marker.h(),
           _spacetreeId,
-          false,  // not in periodic boundary swap
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         toolbox::particles::assignmentchecks::assignParticleToVertex(

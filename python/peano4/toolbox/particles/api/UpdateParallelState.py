@@ -180,7 +180,6 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
       marker.x(),
       marker.h(),
       _treeNumber,
-      false, // not in periodic boundary swap
       "UpdateParallelState::__Template_TouchVertexFirstTime"
     );
     toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -230,7 +229,6 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       marker.x(),
       marker.h(),
       _treeNumber,
-      false, // not in periodic boundary swap
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );
     toolbox::particles::assignmentchecks::eraseParticle(

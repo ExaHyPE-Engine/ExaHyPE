@@ -741,11 +741,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int vertexInd = internal::findVertexInd(localPartX(0), vertexH(0));
 
   // generate (minimal) particle
-  ac::tests::TestParticle localPart = ac::tests::TestParticle(
-    localPartX,
-    particleID,
-    true
-  );
+  ac::tests::TestParticle localPart = ac::tests::
+    TestParticle(localPartX, particleID, true);
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
 
@@ -824,7 +821,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         prevVertexX,
         vertexH,
         spacetreeId,
-        false,
         "vertexChangeDetach"
       );
 
@@ -918,11 +914,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int spacetreeId = 1;
 
   // generate (minimal) particle
-  ac::tests::TestParticle localPart = ac::tests::TestParticle(
-    localPartX,
-    particleID,
-    true
-  );
+  ac::tests::TestParticle localPart = ac::tests::
+    TestParticle(localPartX, particleID, true);
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
 
@@ -968,7 +961,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       prevVertexX,
       prevVertexH,
       spacetreeId,
-      false,
       "vertexDetachLift"
     );
 
@@ -1008,7 +1000,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       prevVertexX,
       prevVertexH,
       spacetreeId,
-      false,
       "vertexDetachDrop"
     );
 
@@ -1093,11 +1084,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
   vertexX = internal::findVertexX(localPartX, vertexH);
 
   // generate (minimal) particle
-  ac::tests::TestParticle localPart = ac::tests::TestParticle(
-    localPartX,
-    particleID,
-    true
-  );
+  ac::tests::TestParticle localPart = ac::tests::
+    TestParticle(localPartX, particleID, true);
   // pretend to have a ParticleContainer
   std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
 
@@ -1180,7 +1168,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
         prevVertexX,
         prevVertexH,
         spacetreeId,
-        false,
         "vertexDetachLift"
       );
 
@@ -1217,7 +1204,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
         prevVertexX,
         prevVertexH,
         spacetreeId,
-        false,
         "vertexDetachDrop"
       );
 
@@ -1388,7 +1374,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           prevVertexX,
           prevVertexH,
           spacetreeId,
-          false,
           "vertexDetach::Lift"
         );
 
@@ -1431,7 +1416,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           prevVertexX,
           prevVertexH,
           spacetreeId,
-          false,
           "vertexDetach::Drop"
         );
 
@@ -1512,7 +1496,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
             vertexX,
             p->getVertexH(),
             spacetreeId,
-            false,
             "vertexDetach::LocalToVirtual"
           );
 
@@ -1542,7 +1525,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
             vertexX,
             p->getVertexH(),
             spacetreeId,
-            false,
             "vertexDetach::VirtualToLocal"
           );
 
@@ -1581,7 +1563,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexX,
           (*p)->getVertexH(),
           spacetreeId,
-          false,
           "vertexDetachErase"
         );
         ac::eraseParticle(
@@ -1723,7 +1704,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
         prevVertexX,
         prevVertexH,
         spacetreeId,
-        false,
         "vertexDetach"
       );
 

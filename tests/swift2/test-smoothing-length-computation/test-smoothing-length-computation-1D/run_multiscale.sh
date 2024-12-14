@@ -15,13 +15,11 @@ CELL_SIZE=0.5
 H_TOLERANCE=1e-6
 
 
-# rand=$RANDOM
-rand=22668
+rand=$RANDOM
 echo 'Generating initial conditions with seed' $rand
 python3 makeIC-multiscale.py -np $N_PART -s $rand
 
 for neighbors in 3 5 10; do
-# for neighbors in 10; do
     echo running for $neighbors neighbors
     echo 'generate and compile code ...'
     python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE --debug

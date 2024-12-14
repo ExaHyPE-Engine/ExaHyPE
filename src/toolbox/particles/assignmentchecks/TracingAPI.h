@@ -85,12 +85,12 @@ namespace toolbox {
        * In earlier versions, we tested for a previous event existing on any
        * tree in the database. This lead to concurrency issues. Sometimes (on
        * rare occasions) when a particle is being lifted or dropped in its local
-       * tree, these changes won't have made it into the database for trees where
-       * the particle is virtual as the trees will race over write access to
-       * the database. In these scenarios the checks will fail because they find
-       * that the particle hasn't been associated to the same vertex.
-       * Since we now keep track of a particle history for each tree it finds
-       * itself on, these checks are deprecated.
+       * tree, these changes won't have made it into the database for trees
+       * where the particle is virtual as the trees will race over write access
+       * to the database. In these scenarios the checks will fail because they
+       * find that the particle hasn't been associated to the same vertex. Since
+       * we now keep track of a particle history for each tree it finds itself
+       * on, these checks are deprecated.
        */
       void moveParticle(
         const std::string&                           particleName,
@@ -236,20 +236,6 @@ namespace toolbox {
        * To make this API call valid, the particle has to be assigned to a
        * vertex beforehand. So there has to be a assignParticleToVertex()
        * before this one.
-       *
-       * An exception may occur during mergeWithParticle() if we're using
-       * periodic boundary conditions: Once a particle is mirrored along the
-       * boundary (for the first time), we won't be able to identify its
-       * history in the database due to its change in position. This can
-       * happen during a first mergeWithParticle() in the simulation run.
-       * In that case, permit the previous event to be of type NotFound via
-       * the @param inMergeWithPeriodicBoundarySwap.
-       *
-       * TODO: we may need to extend this to non-periodic boundary swaps
-       * too. If the exchange is via MPI, then a particle may not exists
-       * in the database of the other rank too, and we have the same problem.
-       * Then we should permit an event of type NotFound for any merge event,
-       * not just for periodic boundary data swaps.
        */
       void detachParticleFromVertex(
         const std::string&                           particleName,
@@ -259,8 +245,7 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
-        const bool         inMergeWithPeriodicBoundarySwap,
-        const std::string& trace
+        const std::string&                           trace
       );
 
       /**

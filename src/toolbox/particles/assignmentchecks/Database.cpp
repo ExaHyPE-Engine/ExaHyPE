@@ -239,9 +239,12 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 }
 
 
-toolbox::particles::assignmentchecks::internal::Event toolbox::
-  particles::assignmentchecks::internal::Database::
-    addEvent(ParticleSearchIdentifier identifier, Event& event, const int treeId) {
+toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
+  assignmentchecks::internal::Database::addEvent(
+    ParticleSearchIdentifier identifier,
+    Event&                   event,
+    const int                treeId
+  ) {
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -295,10 +298,10 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::
 
         if (std::find(treesToKeep.begin(), treesToKeep.end(), thisTree) == treesToKeep.end()){
           treesToKeep.push_back(thisTree);
-          // In certain cases, especially for virtual particles, the last saved event
-          // may be a substitution already. We don't want to keep prepending the string
-          // with the notifier, so check for it.
-          if (not past.trace.starts_with("substitute-for-whole-trajectory/")){
+          // In certain cases, especially for virtual particles, the last saved
+          // event may be a substitution already. We don't want to keep
+          // prepending the string with the notifier, so check for it.
+          if (not past.trace.starts_with("substitute-for-whole-trajectory/")) {
             past.trace = "substitute-for-whole-trajectory/" + past.trace;
           }
           eventsToKeep.push_back(past);
@@ -352,10 +355,10 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::
 
 
 void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
-    ParticleSearchIdentifier identifier,
-    Event& oldEvent,
-    Event& newEvent
-    ){
+  ParticleSearchIdentifier identifier,
+  Event&                   oldEvent,
+  Event&                   newEvent
+) {
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -365,7 +368,10 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
 
   auto search = _data.find(identifier);
 
-  assertion1(search != _data.end(), "Trying to replace event of particle with no history");
+  assertion1(
+    search != _data.end(),
+    "Trying to replace event of particle with no history"
+  );
 
   ParticleEvents& history = search->second;
 
@@ -378,19 +384,18 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
         (it->treeId == oldEvent.treeId) and
         (it->isLocal == oldEvent.isLocal) ){
 
-      it->type = newEvent.type;
-      it->isLocal = newEvent.isLocal;
-      it->vertexX = newEvent.vertexX;
-      it->vertexH = newEvent.vertexH;
-      it->treeId = newEvent.treeId;
-      it->trace = newEvent.trace;
+      it->type           = newEvent.type;
+      it->isLocal        = newEvent.isLocal;
+      it->vertexX        = newEvent.vertexX;
+      it->vertexH        = newEvent.vertexH;
+      it->treeId         = newEvent.treeId;
+      it->trace          = newEvent.trace;
       it->meshSweepIndex = newEvent.meshSweepIndex;
 
       break;
     }
   }
 }
-
 
 
 void toolbox::particles::assignmentchecks::internal::Database::

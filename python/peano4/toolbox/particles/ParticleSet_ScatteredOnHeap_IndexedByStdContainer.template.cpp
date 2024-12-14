@@ -17,8 +17,7 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPAC
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   DoFType*                                     neighbourParticle,
   const peano4::datamanagement::VertexMarker&  marker,
-  int                                          spacetreeId,
-  const bool                                   periodicBoundarySwap
+  int                                          spacetreeId
 ) {
   assertion3(
     marker.isContainedInAdjacentCells(neighbourParticle->getX(), 0.5, toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
@@ -87,7 +86,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       marker.x(),
       marker.h(),
       spacetreeId,
-      periodicBoundarySwap, // shortened (true AND periodicBoundarySwap)
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     toolbox::particles::assignmentchecks::eraseParticle(
@@ -170,7 +168,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             DomainSize,
             PeriodicBC
           ));
-          mergeWithParticle(p, marker, spacetreeId, true);
+          mergeWithParticle(p, marker, spacetreeId);
         }
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
@@ -188,7 +186,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour) {
-          mergeWithParticle(p, marker, spacetreeId, false);
+          mergeWithParticle(p, marker, spacetreeId);
         }
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );

@@ -40,6 +40,10 @@ namespace toolbox {
          * is exceeded, the past history will be condensed into a single event,
          * signifying that it had been compacted.
          *
+         * Important: Make sure that _maxParticleSnapshotsToKeepTrackOf is >=
+         * number of spacetrees in your run. @TODO: add a runtime check for this
+         * during startup.
+         *
          * Additionally, something we come across very often is that particles,
          * once assigned to a vertex, very often stay assigned to the same
          * vertex for a long time (=many sweeps) and only experiences small
@@ -68,7 +72,7 @@ namespace toolbox {
         private:
           // Make constructor private so nobody can make one by accident.
           Database() {
-            setMaxParticleSnapshotsToKeepTrackOf(16);
+            setMaxParticleSnapshotsToKeepTrackOf(32);
             this->reset();
           };
 
@@ -185,7 +189,7 @@ namespace toolbox {
           Event addEvent(
             ParticleSearchIdentifier identifier,
             Event&                   event,
-            const int treeId
+            const int                treeId
           );
 
           /**
