@@ -19,8 +19,6 @@
 #include "Constants.h"
 
 #include "swift2/kernels/ParticleSetIterators.h"
-#include "swift2/kernels/cppiterators/ParticleSetIterators.h"
-#include "swift2/kernels/ompiterators/ParticleSetIterators.h"
 
 
 #include "swift2/kernels/legacy/Density.h"
