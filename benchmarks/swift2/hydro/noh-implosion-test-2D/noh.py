@@ -378,9 +378,6 @@ if __name__ == "__main__":
         )
     )
 
-    if args.realisation.split(".")[3] != KernelOptimisation_NoOptimisation:
-        raise NotImplemented()
-
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
         dimensions_hydro=hydro_dimensions,
@@ -392,6 +389,15 @@ if __name__ == "__main__":
         min_h=max_cell_size,
         max_h=max_cell_size,
     )
+
+    if args.realisation.split(".")[3] == KernelOptimisation_NoOptimisation:
+        pass
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseAll:
+        particle.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::")
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseDistanceChecks:
+        particle.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::prefixcheck::")
+    else:
+        raise NotImplemented()
 
     ########################################################################################
     # Set parameters for the SPH simulation
