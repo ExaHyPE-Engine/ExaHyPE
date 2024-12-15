@@ -127,6 +127,12 @@ project.set_load_balancing(
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
 project.set_Peano4_installation("../../../", build_mode)
-peano4_project = project.generate_Peano4_project("False")
+project = project.generate_Peano4_project("False")
+#project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-peano4_project.build(make_clean_first=True)
+project.build(make_clean_first=True)
+
+print(fv_solver)
+print(ader_solver)
+print(limiter)
+print(project)

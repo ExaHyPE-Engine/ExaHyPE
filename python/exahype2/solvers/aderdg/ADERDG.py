@@ -277,6 +277,12 @@ Storage schemes:        """
 DG order:               """
             + str(self._order)
             + """
+Polynomials:            """
+            + str(self._polynomials.name)
+            + """
+Basis:                  """
+            + str(self._basis)
+            + """
 Basis size:             """
             + str(self._order + 1)
             + """

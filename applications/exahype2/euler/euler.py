@@ -335,7 +335,7 @@ class Euler:
         solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         if "ADERDG" in args.solver:
-            solver.add_kernel_optimisations(is_linear = False,)
+            solver.add_kernel_optimisations(is_linear = False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto)
 
         return solver
 
