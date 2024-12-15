@@ -124,7 +124,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
       kernel_variant = KernelVariant.PatchWiseAoS
     )
 
-    solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)
+    solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size)
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
@@ -147,3 +147,9 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
   def create_data_structures(self):
     super(GlobalFixedTimeStepWithEnclaveTasking,self).create_data_structures()
     self._optimise_patch_storage_for_global_time_stepping()
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalFixedTimeStepWithEnclaveTasking, self).user_action_set_includes + """
+#include "exahype2/fv/rusanov/rusanov.h"
+"""

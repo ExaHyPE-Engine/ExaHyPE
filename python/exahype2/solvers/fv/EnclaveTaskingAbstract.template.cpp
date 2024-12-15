@@ -205,7 +205,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
-    logDebug("startTimeStep(...)", "Reset t and dt as state had been " << toString(_solverState));
+    logDebug("startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState));
 
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -232,7 +232,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("startTimeStep()", "phase " + toString(_solverState));
+    logInfo("startTimeStep(...)", "phase " + toString(_solverState));
   }
 }
 
