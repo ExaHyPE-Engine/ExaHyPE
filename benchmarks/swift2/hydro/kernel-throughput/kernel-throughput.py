@@ -89,7 +89,7 @@ if __name__ == "__main__":
         "--output",
         dest="output_file",
         default="kernel-benchmarks",
-        help="Executable file name", 
+        help="Executable file name",
     )
     parser.add_argument(
         "-pd",
@@ -273,12 +273,12 @@ if __name__ == "__main__":
 
     for kernel in Kernels:
       peano4_project.constants.export_boolean("Benchmark_Test" + kernel, kernel in args.kernels )
-        
+
 
 
     ###############################################################################
     # Compilation
-    # 
+    #
     # Before we start the compilation, we add our real benchmark driver.
     ###############################################################################
     peano4_project.output.makefile.add_cpp_file("BenchmarkDriver.cpp")

@@ -26,31 +26,31 @@ params = {
     "axes.labelsize": 16,
     "text.usetex": True
 }
-mpl.rcParams.update(params) 
+mpl.rcParams.update(params)
 
 
 global_y_value_min = 1e100
-global_y_value_max = 0 
+global_y_value_max = 0
 
 
-def read_file(file_name, 
+def read_file(file_name,
               kernel_name,
               ):
     """!
-    
+
     Read one output file
-    
+
     Parses one input file identified through file_name and returns two
     lists: the first one is a list of the number of particles, the second gives
     the timings. We only parse data from one kernel type identified through
     kernel_name.
-        
+
     """
     particle_counts = []
     timings         = []
-    
+
     file = open( file_name, "r" )
-        
+
     for line in file:
         if "Experiment:" in line:
             number_of_particles = line.split( "Experiment:" )[1].split( "particles" )[0]
@@ -62,59 +62,59 @@ def read_file(file_name,
     assert len(particle_counts)==len(timings), "array dimensions don't match: {} vs {}".format(particle_counts, timings)
     return particle_counts, timings
 
-        
+
 def calibrate_data( x_data, y_data, variant ):
     """!
-        
-    The data read from the file are pure data, i.e. raw timings. We 
+
+    The data read from the file are pure data, i.e. raw timings. We
     want to plot througput however, i.e. calculations per second.
-    
+
     @return Flag that clarifies if to plot this data set or not
-    
+
     """
     global global_y_value_min
     global global_y_value_max
-    
+
     for i in range(0,len(x_data)):
         y_data[i]= x_data[i] / y_data[i]
-    
+
     global_y_value_min = min( global_y_value_min, min(y_data) )
     global_y_value_max = max( global_y_value_max, max(y_data) )
-    
-    return True
-        
 
-                                                              
+    return True
+
+
+
 def calibrate_ranges():
     global global_y_value_min
     global global_y_value_max
-    
+
     global_y_value_min = 10**math.floor(math.log10(global_y_value_min))
     global_y_value_max = 10**math.ceil(math.log10(global_y_value_max))
 
 
 
-def write_file():    
+def write_file():
     calibrate_ranges()
-    
+
     plt.savefig(f"{directory}/plot-{kernel_name}.pdf")
     plt.savefig(f"{directory}/plot-{kernel_name}.png")
 
 
 
-Variants = [ "original", "compressed" ] 
+Variants = [ "original", "compressed" ]
 Colors  = [ "#20a040", "#a04020", "#4020a0", "#30f060", "#f06030", "#6030f0" ]
 Symbols = [ "s", "o", "^", "v", "<", ">" ]
 
-def plot_kernel(kernel_name, 
-                directory, 
+def plot_kernel(kernel_name,
+                directory,
                 plot_postprocessing = write_file,
                 calibrate_data = calibrate_data,
                 ):
     """!
-    
+
     @param plot_postprocessing: Functor without arguments or none
-    
+
     """
     plt.clf()
 
@@ -122,35 +122,35 @@ def plot_kernel(kernel_name,
     global global_y_value_max
 
     global_y_value_min = 1e100
-    global_y_value_max = 0 
+    global_y_value_max = 0
 
     plot_counter = 0
-    
+
     for threads in [f"{number:02d}" for number in range(0,256)]:
         for variant in Variants:
             filename = directory + "/" + variant + "-" + str(threads) + "-threads.log"
-            
+
             if os.path.isfile(filename):
                 print( "- found input data file {} for kernel {} with variant {} and thread count {}".format(filename, kernel_name, variant, threads) )
-                x_data, y_data = read_file(filename, 
+                x_data, y_data = read_file(filename,
                                            kernel_name,
                                            )
-                 
-                if calibrate_data( x_data, y_data, variant ):                           
+
+                if calibrate_data( x_data, y_data, variant ):
                     symbol = Symbols[ plot_counter % len(Symbols) ]
                     if variant==Variants[0]:
                         symbol = symbol + "-"
                     elif variant==Variants[1]:
                         symbol = symbol + "--"
-                    
+
                     label = "{}, {} threads".format(variant,threads)
-                    plt.plot( x_data, 
-                              y_data, 
-                              symbol, 
-                              color=Colors[ plot_counter % len(Colors) ], 
+                    plt.plot( x_data,
+                              y_data,
+                              symbol,
+                              color=Colors[ plot_counter % len(Colors) ],
                               label=label
-                              )                           
-                
+                              )
+
                 if variant==Variants[1]:
                     plot_counter += 1
 
@@ -162,14 +162,14 @@ def plot_kernel(kernel_name,
 
     plt.xscale('log', base=10)
     plt.yscale('log', base=10)
-    
+
     plt.minorticks_on()
     plt.grid(True, which='both')
-    
+
     plt.legend()
-    
+
     plot_postprocessing()
-        
+
 
 def process_directory(directory):
     print( "process content of directory {}".format(directory) )

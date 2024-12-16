@@ -418,7 +418,7 @@ their code by picking an optimising @ref swift_graph_compiler "graph compiler".
 They can also tweak the memory layout as discussed on @ref page_swift_performance_optimisation.
 On this page, we discuss how we can optimise the particle's compute kernels
 themselves.
-Before you continue to read, please  
+Before you continue to read, please
 consult @ref swift_runtime_analysis "Swift's page on runtime analysis", too,
 so all follow-up steps can be supported with appropriate measurements.
 
@@ -441,7 +441,7 @@ guard mechanism for both forAllParticles() and forAllParticlePairs(). Both
 routines do accept additional guards which allow you to mask out certain
 calculations a priori.
 
-If kernels consume a lot of compute time, it might be reasonable to check a 
+If kernels consume a lot of compute time, it might be reasonable to check a
 priori if it makes sense to involve a kernel at all.
 This again can be done by passing another guard into the iterator. Replace
 
@@ -456,7 +456,7 @@ with
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 So far, this does actually decrease the performance, as you evaluate predicates
-now twice. To remove the redundancy, you have to provide a second variant of 
+now twice. To remove the redundancy, you have to provide a second variant of
 the compute kernel without these internal checks:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -466,22 +466,22 @@ the compute kernel without these internal checks:
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
 If often start with kernels similar to densityKernelWithoutChecks() and add in
-their documentation with which predicate they have to be combined. So I write 
+their documentation with which predicate they have to be combined. So I write
 in the docu "please use ::swift2::kernels::localParticleCanBeUpdatedInCellKernel() with it".
-After that, I write a second routine  densityKernel() which really just 
-evaluates this predicate as recommended and then forwards the call to 
+After that, I write a second routine  densityKernel() which really just
+evaluates this predicate as recommended and then forwards the call to
 densityKernelWithoutChecks().
 </div>
 
 
-If you have a rather complicated logic, such as 
+If you have a rather complicated logic, such as
 
 - particle has to be local,
 - particle has to be within a certain reach of another particle, and
 - particle has to have a certain boolean flag,
 
 then I typically write a bespoke predicate only for this particular case.
-::swift2::kernels::legacy::densityKernelPairEvaluationPredicate() is a 
+::swift2::kernels::legacy::densityKernelPairEvaluationPredicate() is a
 nice example of such a kernel-specific predicate.
 
 
@@ -489,19 +489,19 @@ nice example of such a kernel-specific predicate.
 ## Step 2: Switch to a bespoke iterator
 
 The standard iterators ::swift2::kernels::forAllParticles() and ::swift2::kernels::forAllParticlePairs()
-do not exploit any information about the data layout. Once you have 
+do not exploit any information about the data layout. Once you have
 @ref page_swift_performance_optimisation "tweaked your data layout to ensure that you have coalesced (continuous) particle data",
 it is therefore a natural next step to switch to an iterator that exploits this knowledge.
 
 The clean way to do this is to replace your ::swift2::kernels::forAllParticlePairs()
 calls with ::swift2::kernels::coalesced::forAllParticlePairs() or other variants.
 There are several ones available.
-Each one might be particular useful for one kernel-particle combination and 
-make the performance break down for the next one. 
+Each one might be particular useful for one kernel-particle combination and
+make the performance break down for the next one.
 
-If you don't want to run through your particle step by step, you can use 
-the particle's routine swift2.particle.SPHParticle.switch_namespace_of_all_particle_iterators() to switch 
-the namespace of all iterators. This is the brute-force variant which 
+If you don't want to run through your particle step by step, you can use
+the particle's routine swift2.particle.SPHParticle.switch_namespace_of_all_particle_iterators() to switch
+the namespace of all iterators. This is the brute-force variant which
 overwrites all particle-specific tuning (and might break down for particle
 types that do not stick exactly to all default naming conventions).
 
@@ -540,11 +540,11 @@ the compile flags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Every peano4.Project holds an attribute called makefile of the type peano4.output.Makefile.
-You can add additional compiler flags like these three guys there. 
-Alternatively, you can reconfigure/rerun CMake on the whole project, but that 
+You can add additional compiler flags like these three guys there.
+Alternatively, you can reconfigure/rerun CMake on the whole project, but that
 means that you get vectorisation reports for every single file in Peano. As
-any Peano extension picks up the makefile settings from the core library you 
-will get vectorisation reports for your particular SPH code, too. 
+any Peano extension picks up the makefile settings from the core library you
+will get vectorisation reports for your particular SPH code, too.
 
 For fully vectorised kernels, the reported width will always match the machine
 width (4 for AVX2 and 8 for AVX512 capable machines and double precision
@@ -566,7 +566,7 @@ pattern as introduced above for the optimisation report.
 Unfortunately, Swift/Peano has currently no feature to pick compiler arguments
 manually per file. Worse, the Python API overwrite the Makefile. It might make sense to
 design a proper makefile manually and then to disable the overwriting in the
-Peano 4 project that is produced by Swift's Python API. 
+Peano 4 project that is produced by Swift's Python API.
 
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
 We ran sometimes into issues when we studied the success of our vectorisation

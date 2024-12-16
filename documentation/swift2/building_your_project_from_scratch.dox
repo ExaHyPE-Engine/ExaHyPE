@@ -101,7 +101,7 @@ DaStGen2. See the corresponding documentation on \ref page_dastgen_home.
 
 ## Generating the Particle Life Cycle
 
-With the particle data defined, we can now set up what equations are being 
+With the particle data defined, we can now set up what equations are being
 solved, and in which order, for each particle for each simulation step. This is
 documented in detail on the @ref swift_particle_new_solver page.
 

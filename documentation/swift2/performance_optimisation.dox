@@ -162,12 +162,12 @@ particle set onto an implementation.
 
 ## Step 3: Optimise the core kernels
 
-Once we have optimised the data layout, we can use this to start tweaking the 
-actual compute kernels. We can, for example, vectorise them aggresively or 
+Once we have optimised the data layout, we can use this to start tweaking the
+actual compute kernels. We can, for example, vectorise them aggresively or
 offload (some of) them to a GPU. These techniques are studied in the last
 sections of @ref swift_particle_new_solver.
 
-Besides the description of "how to tune" a kernel, we strongly advise to 
+Besides the description of "how to tune" a kernel, we strongly advise to
 consult @ref swift_runtime_analysis "Swift's page on runtime analysis", too.
 
 
