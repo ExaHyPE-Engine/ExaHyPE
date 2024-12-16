@@ -24,7 +24,8 @@ params = {
     "ytick.major.width": 1.5,
     "axes.linewidth": 1.5,
     "axes.labelsize": 16,
-    "text.usetex": True
+    "text.usetex": True,
+    "figure.dpi": 300
 }
 mpl.rcParams.update(params)
 
@@ -72,14 +73,14 @@ def process_file(filename):
     plt.clf()
     mpl.rcParams.update(params)
 
-    for kernel in Kernels:
-      for implementation in ImplementationVariant:
+    for k, kernel in enumerate(Kernels):
+      for im, implementation in enumerate(ImplementationVariant):
         x_data, y_data = read_file(filename,
                                    kernel + " " + implementation,
                                     )
 
-        symbol = Symbols[ Kernels.index(kernel) % len(Symbols) ]
-        color  = Colors[ ImplementationVariant.index(implementation) % len(Colors) ]
+        symbol = Symbols[ k % len(Symbols) ]
+        color  = Colors[ im % len(Colors) ]
         label  = None
 
         if Kernels[0] == kernel and ImplementationVariant[0] == implementation:
@@ -115,7 +116,7 @@ def process_file(filename):
 
 if __name__== "__main__":
     if len(sys.argv)!=2:
-        print( "ERROR: Please pass in directory to work on. Expected 1 argument, got {}".format(sys.argv[1:]) )
+        print( "ERROR: Please pass in file to work on. Expected 1 argument, got {}".format(sys.argv[1:]) )
     else:
         file = sys.argv[1]
         process_file(file)
