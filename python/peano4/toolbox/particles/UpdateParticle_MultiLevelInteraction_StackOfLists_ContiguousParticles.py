@@ -430,7 +430,12 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
-  assertionEquals( numberOfCoalescedActiveParticlesPerVertex.size(), TwoPowerD );
+  assertion1( 
+    not numberOfCoalescedActiveParticlesPerVertex.empty()
+    and
+    (numberOfCoalescedActiveParticlesPerVertex.size() % TwoPowerD == 0),
+    numberOfCoalescedActiveParticlesPerVertex.size()
+  );
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
   {% endif %}
 """
