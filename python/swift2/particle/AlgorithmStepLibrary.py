@@ -86,19 +86,17 @@ def _get_particle_iterator_templates(particle_name):
 
     PARTICLE = particle_name
 
-#@test_csrtodok
-
     iterate_over_particles_assigned_to_vertex_for_move = None
-    iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>, numberOfAssignedParticles);"""
-    iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, numberOfLocalParticlesPerVertex, numberOfActiveParticlesPerVertex, *FUNCTION*<globaldata::{PARTICLE}>);"
-    iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
+    iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>, numberOfCoalescedAssignedParticles, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
+    iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, numberOfCoalescedLocalParticlesPerVertex, numberOfCoalescedActiveParticlesPerVertex, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> );"
+    iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}> );"
 
     #  Set defaults or raise error if there shouldn't be defaults and we missed something.
 
     if iterate_over_particles_assigned_to_vertex_for_move is None:
         iterate_over_particles_assigned_to_vertex_for_move = f"""
             auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-            ::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);
+            ::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
             ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
             """
         ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
@@ -110,7 +108,7 @@ def _get_particle_iterator_templates(particle_name):
         raise ValueError("We shouldn't be here.")
 
     if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"
 
     #  finally, wrap the templates into ParticleIteratorTemplate objects
     vertex_for_move = ParticleIteratorTemplate(

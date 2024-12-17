@@ -180,7 +180,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto&          assignedParticles         = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  constexpr int  numberOfAssignedParticles = -1;
+  constexpr int  numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -191,7 +191,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles                  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  constexpr int  numberOfAssignedParticles = -1;
+  constexpr int  numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
@@ -210,8 +210,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     // Keep track of number of particles
     _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
-    numberOfLocalParticlesPerVertex[i]    = -1;
-    numberOfActiveParticlesPerVertex[i]    = -1;
+    numberOfCoalescedLocalParticlesPerVertex[i]    = -1;
+    numberOfCoalescedActiveParticlesPerVertex[i]    = -1;
     
     // Add particles to active particle set
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {

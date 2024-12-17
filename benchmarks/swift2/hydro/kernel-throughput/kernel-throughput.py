@@ -72,7 +72,7 @@ if __name__ == "__main__":
         "-wis",
         "--work-item-size",
         dest="work_item_size",
-        default=64,
+        default=1024,
         type=int,
         help="Size of a work item",
     )
@@ -83,14 +83,6 @@ if __name__ == "__main__":
         default=1,
         type=int,
         help="Size of a work item",
-    )
-    parser.add_argument(
-        "-cp",
-        "--cache-prefetch",
-        dest="cache_prefetch",
-        action="store_true",
-        default=False,
-        help="Prefetch data of work item before measurement starts",
     )
     parser.add_argument(
         "-o",
@@ -128,7 +120,7 @@ if __name__ == "__main__":
     # Create SWIFT project and particle species
     ########################################################################################
 
-    project_namespace = ["benchmarks", "swift2", "hydro", "aos_vs_soa_kernel_benchmarks"]
+    project_namespace = ["benchmarks", "swift2", "hydro", "kernel_throughput"]
 
     project = swift2.Project(
         namespace=project_namespace, project_name="Benchmarks", executable=args.output_file
@@ -143,11 +135,6 @@ if __name__ == "__main__":
     dimensions = args.dimensions
     hydro_dimensions = 2  # dimensions for the hydro
 
-    particle_interaction_kernel_realisation = (
-        swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
-    )
-    #         swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
-
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
         dimensions_hydro=hydro_dimensions,
@@ -158,7 +145,6 @@ if __name__ == "__main__":
         particles_per_cell=100,
         min_h=1.0,
         max_h=1.0,
-        particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
     )
 
     ########################################################################################
@@ -277,12 +263,13 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
     peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
 
+    peano4_project.output.makefile.add_cpp_file( "NohProblem.cpp" )
+
     peano4_project.constants.export_const_with_type("Benchmark_MaxParticles", str(args.max_particle_number), "int")
     peano4_project.constants.export_const_with_type("Benchmark_MinParticles", str(args.min_particle_number), "int")
     peano4_project.constants.export_const_with_type("Benchmark_Samples", str(args.samples), "int")
     peano4_project.constants.export_const_with_type("Benchmark_WorkItemSize", str(args.work_item_size), "int")
     peano4_project.constants.export_const_with_type("Benchmark_WorkItemRepeats", str(args.work_item_repeats), "int")
-    peano4_project.constants.export_boolean("Benchmark_CachePrefetch", args.cache_prefetch)
 
     for kernel in Kernels:
       peano4_project.constants.export_boolean("Benchmark_Test" + kernel, kernel in args.kernels )
