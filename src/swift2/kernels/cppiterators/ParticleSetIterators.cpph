@@ -67,16 +67,21 @@ void swift2::kernels::coalesced::forAllParticlePairs(
       for (auto& chunkSize: numberOfActiveParticlesPerVertex) {
         for (int i=0; i<chunkSize; i++) {
           PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+i);
-          // @todo test
-          f(marker, *localParticle, activeParticle);
+          if ( particlePairPredicate(marker, *localParticle, activeParticle) ) {
+            f(marker, *localParticle, activeParticle);
+
+            if (tarch::la::oneGreater(activeParticle.getCellH(), localParticle->getCellH())) {
+              tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+              f(marker, activeParticle, *localParticle);
+            }
+          }
         }
+
         pFirstActiveParticle += chunkSize;
       }
     }
   }
 }
-
-
 
 
 template <typename ParticleContainer>
@@ -231,15 +236,53 @@ void swift2::kernels::coalesced::prefixcheck::forAllParticlePairs(
   for (auto& localParticle : localParticles) {
     if ( localParticlePredicate(marker, *localParticle) ) {
       typename LocalParticleContainer::value_type pFirstActiveParticle = *activeParticles.begin();
+
       for (auto& chunkSize: numberOfActiveParticlesPerVertex) {
-        for (int i=0; i<chunkSize; i++) {
-          PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+i);
-          // @todo test
-          f(marker, *localParticle, activeParticle);
+        constexpr int SubChunkSize = 8;
+
+        int particleIndex=0;
+        while (particleIndex<chunkSize) {
+          const int thisSubchunkSize = std::min(SubChunkSize,chunkSize-particleIndex);
+
+          auto [updateParticleEffect, evaluateBottomUpParticleEffect] = swift2::kernels::internal::identifyInteractingParticles<SubChunkSize>(
+            marker,
+            localParticle,
+            pFirstActiveParticle+particleIndex,
+            thisSubchunkSize,
+            particlePairPredicate
+          );
+
+          if (updateParticleEffect.all()) {
+            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
+              PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+particleIndex+particleIndexWithinThisSubchunk);
+              f(marker, *localParticle, activeParticle);
+            }
+          }
+          else if (updateParticleEffect.any()) {
+            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
+              if (updateParticleEffect[particleIndexWithinThisSubchunk]) {
+                PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+particleIndex+particleIndexWithinThisSubchunk);
+                f(marker, *localParticle, activeParticle);
+              }
+            }
+          }
+
+          if (evaluateBottomUpParticleEffect.any()) {
+            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
+              if (
+                updateParticleEffect[particleIndexWithinThisSubchunk]
+                and
+                evaluateBottomUpParticleEffect[particleIndexWithinThisSubchunk]
+              ) {
+                tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+                PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticle+particleIndex+particleIndexWithinThisSubchunk);
+                f(marker, activeParticle, *localParticle);
+              }
+            }
+          }
+          particleIndex+=SubChunkSize;
         }
-        pFirstActiveParticle += chunkSize;
       }
     }
   }
 }
-

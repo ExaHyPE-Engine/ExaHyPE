@@ -380,9 +380,34 @@ namespace swift2 {
        * do not write to the same coarse grid particles concurrently.
        */
       extern tarch::multicore::BooleanSemaphore  _multiscaleInteractionSemaphore;
+
+
+      /**
+       * Identify interacting particles
+       *
+       * In several situations, we have a continuous chunk of particles and
+       * want to identify which of these interact with each other due to the
+       * particlePairPredicate. Besides a boolset that identifies those that
+       * do interact, we also return a bitfield which identifies where we would
+       * have to identify multiscale interactions.
+       */
+      template <int SubChunkSize, typename LocalParticle, typename ActiveParticle>
+      std::pair< std::bitset<SubChunkSize>, std::bitset<SubChunkSize> > identifyInteractingParticles(
+          const peano4::datamanagement::CellMarker&  marker,
+          LocalParticle*                             localParticle,
+          ActiveParticle*                            firstActiveParticle,
+          int                                        thisSubchunkSize,
+          UpdateParticlePairWithinCellPredicate<LocalParticle>  particlePairPredicate
+      );
     }
   } // namespace kernels
 } // namespace swift2
 
 
 #include "ParticleSetIterators.cpph"
+
+
+// Include the specialisations. Has to be last thing here, as the
+// specialisations will use our typedefs.
+#include "swift2/kernels/cppiterators/ParticleSetIterators.h"
+#include "swift2/kernels/ompiterators/ParticleSetIterators.h"

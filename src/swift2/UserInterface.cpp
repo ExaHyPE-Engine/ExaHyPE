@@ -23,6 +23,7 @@ bool swift2::commandlinesettings::enableDynamicLoadBalancing() {
 
 
 void swift2::setDefaultLogStatements() {
+  tarch::logging::LogFilter::getInstance().clearFilterList();
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
       tarch::logging::LogFilter::FilterListEntry::TargetInfo,
       tarch::logging::LogFilter::FilterListEntry::AnyRank,

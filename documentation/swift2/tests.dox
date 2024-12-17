@@ -24,6 +24,7 @@ well-suited to use as first examples to get familiar with Swift2.
 ## Physics Tests
 \li \subpage tests_swift2_planet_orbit
 \li \subpage tests_swift2_hydro_simple_sph_noh_2d
+\li \subpage tests_swift2_hydro_simple_sph_noh_3d
 \li \subpage tests_swift2_hydro_simple_sph_sedov_blast
 \li \subpage tests_swift2_hydro_simple_sph_sod_1d
 
