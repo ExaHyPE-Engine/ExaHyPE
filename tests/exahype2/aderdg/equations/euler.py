@@ -17,7 +17,7 @@ class Euler(Equation):
   constexpr double Gamma = """
             + str(self.gamma)
             + """;
-  const double p = (Gamma - 1) * (Q[4] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+  const double p = (Gamma - 1.0) * (Q[4] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
 
   const double c = std::sqrt(Gamma * p * irho);
   const double u = Q[normal + 1] * irho;
@@ -30,7 +30,7 @@ class Euler(Equation):
   constexpr double Gamma = """
             + str(self.gamma)
             + """;
-  const double p = (Gamma-1) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
+  const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
 
   const double c = std::sqrt(Gamma * p * irho);
   const double u = Q[normal + 1] * irho;
@@ -46,7 +46,7 @@ class Euler(Equation):
   constexpr double Gamma = """
             + str(self.gamma)
             + """;
-  const double p = (Gamma -1 ) * (Q[4] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+  const double p = (Gamma - 1.0) * (Q[4] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
 
   F[0] = Q[normal + 1];
   F[1] = Q[normal + 1] * Q[1] * irho;
@@ -54,7 +54,7 @@ class Euler(Equation):
   F[3] = Q[normal + 1] * Q[3] * irho;
   F[4] = Q[normal + 1] * irho * (Q[4] + p);
 
-  F[normal+1] += p;
+  F[normal + 1] += p;
 """
             if self.dimensions == 3
             else """
@@ -62,13 +62,13 @@ class Euler(Equation):
   constexpr double Gamma = """
             + str(self.gamma)
             + """;
-  const double p = (Gamma - 1) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
+  const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
 
   F[0] = Q[normal + 1];
   F[1] = Q[normal + 1] * Q[1] * irho;
   F[2] = Q[normal + 1] * Q[2] * irho;
   F[3] = Q[normal + 1] * irho * (Q[3] + p);
 
-  F[normal+1] += p;
+  F[normal + 1] += p;
 """
         )
