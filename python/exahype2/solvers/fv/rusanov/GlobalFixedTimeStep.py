@@ -130,7 +130,7 @@ class GlobalFixedTimeStep(SingleSweep):
       kernel_variant = KernelVariant.PatchWiseAoS
     )
 
-    solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,False)
+    solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size)
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
@@ -148,3 +148,9 @@ class GlobalFixedTimeStep(SingleSweep):
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
 
     super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalFixedTimeStep, self).user_action_set_includes + """
+#include "exahype2/fv/rusanov/rusanov.h"
+"""

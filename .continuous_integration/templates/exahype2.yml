@@ -45,7 +45,7 @@
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
@@ -54,7 +54,7 @@
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
 
@@ -63,7 +63,7 @@
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
@@ -72,7 +72,7 @@
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
