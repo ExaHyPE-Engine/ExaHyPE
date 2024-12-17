@@ -2,18 +2,20 @@
 
 @page swift_benchmarks Benchmarks
 
-\li \subpage benchmarks_swift2_hydro_noh_imposion_test_2D
-\li \subpage benchmarks_swift2_hydro_noh_imposion_test_3D
 
 
 Swift comes along with a set of benchmarks.
-These can be found under `/benchmarks/swift2/hydro`
-and should all run out-of-the-box via the provided `run.sh` scripts.
+These should all run out-of-the-box via the provided `run.sh` scripts.
 Before you start, ensure that you have configured and built Peano as specified
 for @ref section_compile_peano4_for_swift2 "Swift".
 Notice that some of these will use HDF5 files and hence require the correponding
 configuration for Peano. See @ref section_compile_swift2_with_hdf5.
 
+
+- Hydro benchmarks
+  - \subpage benchmarks_swift2_hydro_noh_imposion_test_2D
+  - \subpage benchmarks_swift2_hydro_noh_imposion_test_3D
+- Other benchmarks
 
  */
 

@@ -118,6 +118,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
       ::swift2::kernels::forAllParticles(
         marker,
         assignedParticles,
+        numberOfAssignedParticles,
         [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
           ::swift2::boundaryconditions::applyFixedBoundaryCondition(
             assignedParticle,
@@ -158,10 +159,6 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         graph compiler from the Sequential suite; or literally any other
         flavour which yields coalesced memory.
 
-        @param particle_interaction_kernel_realisation: ParticleKernelRealisation
-          Switch through various interaction variants.
-
-
         @see peano4::datamanagement::CellMarker
         @see peano4::datamanagement::VertexMarker
 
@@ -178,7 +175,6 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         particles_per_cell=0,  # makes no sense, and should likely be forbidden
         min_h=0.3,
         max_h=0.3,
-        particle_interaction_kernel_realisation: SPHParticle.ParticleKernelRealisation = SPHParticle.ParticleKernelRealisation.USE_OUTER_GUARDS,
     ):
         super(SPHLeapfrogFixedSearchRadius, self).__init__(
             name=name,

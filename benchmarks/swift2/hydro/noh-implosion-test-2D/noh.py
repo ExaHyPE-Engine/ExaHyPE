@@ -33,17 +33,14 @@ Sorting_BucketSort = "bucket-sort"
 SortingVariants = [Sorting_MultiscaleSort, Sorting_BucketSort]
 
 KernelOptimisation_NoOptimisation = "no-optimisation"
-KernelOptimisation_OuterGuards = "outer-guards"
 KernelOptimisation_VectoriseAll = "vectorise-all"
-KernelOptimisation_VectoriseDistanceChecks = "vectorise-distance-checks"
+KernelOptimisation_VectoriseDistanceChecks = "vectorise-distance-checks-preamble"
 
 BasicKernelOptimisationVariants = [
     KernelOptimisation_NoOptimisation,
-    KernelOptimisation_OuterGuards,
 ]
 AllKernelOptimisationVariants = [
     KernelOptimisation_NoOptimisation,
-    KernelOptimisation_OuterGuards,
     KernelOptimisation_VectoriseAll,
     KernelOptimisation_VectoriseDistanceChecks,
 ]
@@ -381,23 +378,7 @@ if __name__ == "__main__":
         )
     )
 
-    if args.realisation.split(".")[3] == KernelOptimisation_NoOptimisation:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
-        )
-    elif args.realisation.split(".")[3] == KernelOptimisation_OuterGuards:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
-        )
-    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseDistanceChecks:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
-        )
-    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseAll:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
-        )
-    else:
+    if args.realisation.split(".")[3] != KernelOptimisation_NoOptimisation:
         raise NotImplemented()
 
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
@@ -410,7 +391,6 @@ if __name__ == "__main__":
         particles_per_cell=particles_per_cell,
         min_h=max_cell_size,
         max_h=max_cell_size,
-        particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
     )
 
     ########################################################################################
@@ -605,7 +585,6 @@ if __name__ == "__main__":
         particle_set,
         "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
     )
-    particle_plotter.add_attribute_to_plot(particle.part_id, 1)
     particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
     particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
     particle_plotter.add_attribute_to_plot(particle.mass, 1)

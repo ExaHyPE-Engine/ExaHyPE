@@ -170,10 +170,6 @@ project.initialisation_steps_task_graph_compiler = (
 )
 
 
-particle_interaction_kernel_realisation = (
-    swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
-)
-
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
@@ -193,7 +189,6 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
-    particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
 )
 
 
