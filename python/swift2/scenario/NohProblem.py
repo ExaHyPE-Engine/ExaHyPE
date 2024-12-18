@@ -164,7 +164,6 @@ class NohProblemIC:
       logDebug( "Init()", "v_ini = " << v_ini );
       logDebug( "Init()", "Particle: " << particle->toString() );
 
-
       /* End of inserted block from python/swift2/scenario/NohProblem.py */
 
     """

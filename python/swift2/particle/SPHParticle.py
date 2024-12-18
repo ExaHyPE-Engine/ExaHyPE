@@ -15,19 +15,6 @@ from enum import Enum
 
 
 class SPHParticle(Particle):
-    class ParticleKernelRealisation(Enum):
-        """!
-
-        Enum to toggle between the various vectorised/not vectorised
-        kernels.
-
-        """
-
-        NO_OPTIMISATION = 0
-        USE_OUTER_GUARDS = 1
-        VECTORISE_ALL = 2
-        VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS = 3
-
     """!
 
     The SPH particle base class. Contains the bare minimum of data
@@ -91,9 +78,6 @@ class SPHParticle(Particle):
     graph compiler from the Sequential suite; or literally any other
     flavour which yields coalesced memory.
 
-    @param particle_interaction_kernel_realisation: ParticleKernelRealisation
-      Switch through various interaction variants.
-
 
     @see peano4::datamanagement::CellMarker
     @see peano4::datamanagement::VertexMarker
@@ -111,7 +95,6 @@ class SPHParticle(Particle):
         particles_per_cell=0,  # makes no sense, and should likely be forbidden
         min_h=0.3,
         max_h=0.3,
-        particle_interaction_kernel_realisation: ParticleKernelRealisation = ParticleKernelRealisation.USE_OUTER_GUARDS,
     ):
         super(SPHParticle, self).__init__(
             name,
@@ -129,9 +112,6 @@ class SPHParticle(Particle):
         self._cfl_factor = cfl_factor
         self._initial_time_step_size = initial_time_step_size
         self._constant_time_step_size = constant_time_step_size
-        self._particle_interaction_kernel_realisation = (
-            particle_interaction_kernel_realisation
-        )
 
         # SPH parameters (default values)
         self._hydro_dimensions = dimensions_hydro
@@ -480,3 +460,37 @@ class SPHParticle(Particle):
     @abc.abstractmethod
     def readme_descriptor(self):
         return super(SPHParticle, self).readme_descriptor
+
+
+    def switch_namespace_of_all_particle_iterators( self,
+                                                    new_namespace,
+                                                    old_namespace = "::swift2::kernels::"
+                                                  ):
+        """!
+
+        Switch the prefix (namespace) of all particle iterators
+
+        Run through all iterators/kernels and replace the iterator namespaces. This
+        is a simple text replacement and should be used with care. Usually, we may
+        assume that an algorithm step does already pick a proper realisation by
+        default, but you might want to change this default behaviour. The problem
+        is that you will overwrite any bespoke choice, i.e. if a particle species
+        developer has carefully ported some kernels to the GPU but others not, you
+        overwrite these decisions maybe and switch to a different implementation.
+
+        The realisation is very simple: We run over all algorithm steps and replace
+        all "forAll" function calls with the leading namespace old_namespace with
+        a new namespace.
+
+        @param new_namespace: String
+          Please ensure that it starts with :: (to avoid namespace confusion) and
+          ends with ::, too.
+
+        """
+        for algorithm_step in self._algorithm_steps:
+            algorithm_step.cell_kernel                    = algorithm_step.cell_kernel.replace( old_namespace + "forAll", new_namespace + "forAll" )
+            algorithm_step.touch_vertex_first_time_kernel = algorithm_step.touch_vertex_first_time_kernel.replace( old_namespace + "forAll", new_namespace + "forAll" )
+            algorithm_step.touch_vertex_last_time_kernel  = algorithm_step.touch_vertex_last_time_kernel.replace( old_namespace + "forAll", new_namespace + "forAll" )
+
+
+

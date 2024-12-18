@@ -217,7 +217,7 @@ void swift2::kernels::legacy::
     // the limit we impose on it.
     logWarning(
       "hydro_update_smoothing_length_and_rerun_if_required",
-      "Got a particle that is lost cause. Setting h = h_max"
+      "Got a particle that is lost cause. Setting h = h_max,"
         << "particle x=" << localParticle->getX() << ", partID=" << partID
     );
     // Do some damage control if no neighbours at all were found
