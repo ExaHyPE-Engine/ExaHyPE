@@ -9,7 +9,7 @@
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 
-// Template: peano4/toolbox/particles/ParticleSet_MemoryPool.template.cpp
+// Template: python/peano4/toolbox/particles/ParticleSet_MemoryPool.template.cpp
 
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
