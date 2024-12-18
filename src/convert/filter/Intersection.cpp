@@ -14,6 +14,7 @@ tarch::logging::Log  convert::filter::Intersection::_log( "convert::filter::Inte
 
 convert::filter::Intersection::Intersection( Strategy strategy ):
   _strategy(strategy) {
+    (void) strategy;
 }
 
 

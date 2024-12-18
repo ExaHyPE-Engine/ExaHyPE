@@ -16,7 +16,6 @@
 #include "smartmpi.h"
 #endif
 
-
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) { return lhs.getPriority() < rhs.getPriority(); }
 
 bool tarch::multicore::TaskComparison::operator()(const Task& lhs, const Task& rhs) const { return lhs < rhs; }
@@ -40,7 +39,7 @@ void tarch::multicore::Task::setPriority(int priority) {
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
-bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int device) {
+bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*device*/) {
   assertion(canFuse());
   for (auto pp : otherTasks) {
     tarch::multicore::Task* currentTask = pp;
@@ -68,45 +67,3 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskTyp
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
   return _taskFunctor();
 }
-
-
-#ifndef SharedMemoryParallelisation
-
-#include <thread>
-
-
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& tasks) {
-  for (auto& p : tasks) {
-    while (p->run()) {
-    }
-    delete p;
-  }
-}
-
-void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
-  if (stillExecuteLocally) {
-    tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
-  } else {
-    delete myTask;
-  }
-}
-
-
-void tarch::multicore::native::spawnTask(
-  Task* job,
-  const std::set<TaskNumber>& inDependencies,
-  const TaskNumber& taskNumber
-) {
-  while (job->run()) {
-  }
-  delete job;
-}
-
-
-void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {}
-
-
-void tarch::multicore::native::waitForAllTasks() {}
-
-#endif

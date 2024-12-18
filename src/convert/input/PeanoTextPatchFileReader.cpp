@@ -19,8 +19,8 @@ tarch::logging::Log convert::input::PeanoTextPatchFileReader::_log( "convert::in
 
 
 convert::input::PeanoTextPatchFileReader::PeanoTextPatchFileReader(const std::string &file):
-  _dimensions(-1),
-  _file(file) {
+  _file(file),
+  _dimensions(-1) {
 }
 
 

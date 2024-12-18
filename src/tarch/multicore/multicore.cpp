@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "multicore.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
@@ -138,12 +140,51 @@ void tarch::multicore::spawnTask(
 ) {
   assertion(task != nullptr);
 
-  ::tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
+  tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
-    taskfusion::translateFusableTaskIntoTaskSequence( task, inDependencies, taskNumber );
-  }
-  else {
-    tarch::multicore::native::spawnTask(task, inDependencies, taskNumber);
+    taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
+  } else {
+    native::spawnTask(task, inDependencies, taskNumber);
   }
 }
+
+
+#ifndef SharedMemoryParallelisation
+
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& tasks) {
+  for (auto& p : tasks) {
+    while (p->run()) {
+    }
+    delete p;
+  }
+}
+
+
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
+  if (stillExecuteLocally) {
+    tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
+  } else {
+    delete myTask;
+  }
+}
+
+
+void tarch::multicore::native::spawnTask(
+  Task* job,
+  const std::set<TaskNumber>& /*inDependencies*/,
+  const TaskNumber& /*taskNumber*/
+) {
+  while (job->run()) {
+  }
+  delete job;
+}
+
+
+void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& /*inDependencies*/) {}
+
+
+void tarch::multicore::native::waitForAllTasks() {}
+
+#endif

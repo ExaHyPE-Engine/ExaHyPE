@@ -13,4 +13,3 @@
     IMAGE_TAG_NVIDIA: "nvidia.sif"
     APPTAINER_BINDDIR: "/dine/data/do009/peano"
     APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"
-    CCACHE_DIR: "/dine/data/do009/peano/.ccache_dir"

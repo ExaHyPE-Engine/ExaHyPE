@@ -115,7 +115,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
 }
 
 
-void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlobalMaster( int number, int forRank ) {
+void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlobalMaster( int number, [[maybe_unused]] int forRank ) {
   assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
   assertion2( number>0, number, forRank );
 

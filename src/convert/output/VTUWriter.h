@@ -35,7 +35,7 @@ namespace convert {
 class convert::output::VTUWriter: public convert::output::Writer {
   public:
 	VTUWriter(const std::string&  directory, const std::string& outputFileWithoutExtention);
-	~VTUWriter();
+	virtual ~VTUWriter() override;
 
 	virtual void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
 
@@ -50,8 +50,8 @@ class convert::output::VTUWriter: public convert::output::Writer {
   private:
     static tarch::logging::Log  _log;
 
-    const std::string& _outputFileWithoutExtension;
-    const std::string& _directory;
+    [[maybe_unused]] const std::string& _outputFileWithoutExtension;
+    [[maybe_unused]] const std::string& _directory;
 
     #ifdef UseVTK
     /**

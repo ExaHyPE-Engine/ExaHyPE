@@ -102,18 +102,18 @@
  */
 namespace otter {
   namespace label {
-    static const char* step                     = "[STEP TASK]";
+    // If Otter is not used these constants are unused and therefore the compiler warns
+    [[maybe_unused]] static const char* step                  = "[STEP TASK]";
   } // namespace label
 
   namespace phase {
-    static const char* init                  = "init";
-    static const char* plot                  = "plot";
-    static const char* timestep              = "time-step";
-    static const char* create_grid           = "create-grid";
-    static const char* create_grid_no_refine = "create-grid-but-postpone-refinement";
-    static const char* create_grid_converge  = "create-grid-and-converge-load-balancing";
+    [[maybe_unused]] static const char* init                  = "init";
+    [[maybe_unused]] static const char* plot                  = "plot";
+    [[maybe_unused]] static const char* timestep              = "time-step";
+    [[maybe_unused]] static const char* create_grid           = "create-grid";
+    [[maybe_unused]] static const char* create_grid_no_refine = "create-grid-but-postpone-refinement";
+    [[maybe_unused]] static const char* create_grid_converge  = "create-grid-and-converge-load-balancing";
   } // namespace phase
-
 } // namespace otter
 
 #if defined(UseOtter)

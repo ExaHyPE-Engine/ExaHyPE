@@ -15,7 +15,7 @@ std::string tarch::multicore::printUnmaskedThreads() {
   cpu_set_t mask;
   sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
-  for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+  for (auto i = 0u; i < std::thread::hardware_concurrency(); i++) {
     if (CPU_ISSET(i, &mask) != 0) {
       out << "x";
     } else {
@@ -35,7 +35,7 @@ int tarch::multicore::getNumberOfUnmaskedThreads() {
   sched_getaffinity(0, sizeof(cpu_set_t), &mask);
 
   int result = 0;
-  for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+  for (auto i = 0u; i < std::thread::hardware_concurrency(); i++) {
     if (CPU_ISSET(i, &mask) != 0) {
       result++;
     }
@@ -48,8 +48,8 @@ int tarch::multicore::getNumberOfUnmaskedThreads() {
 }
 
 #ifndef SharedMemoryParallelisation
-tarch::multicore::Core::Core() {
-}
+
+tarch::multicore::Core::Core() {}
 
 tarch::multicore::Core::~Core() {}
 
@@ -58,7 +58,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   return instance;
 }
 
-void tarch::multicore::Core::configure(int numberOfThreads) {}
+void tarch::multicore::Core::configure(int /*numberOfThreads*/) {}
 
 void tarch::multicore::Core::shutdown() {}
 
