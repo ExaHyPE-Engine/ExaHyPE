@@ -12,19 +12,20 @@
 namespace peano4 {
   namespace grid {
     class TraversalObserver;
-    class GridControlEvent;
+    // Forward declarations as structs
+    struct GridControlEvent;
     struct GridTraversalEvent;
   } // namespace grid
   namespace datamanagement {
-    class CellMarker;
-    class FaceMarker;
-    class VertexMarker;
+    struct CellMarker;
+    struct FaceMarker;
+    struct VertexMarker;
   } // namespace datamanagement
 } // namespace peano4
 
 /**
  *
- * \section  Copy behaviour
+ * \section Copy behaviour
  *
  * There is one observer by grid traversal thread and per rank. The observers
  * are generated from the original observer via the clone() operator.
@@ -160,7 +161,7 @@ return controlEvents;
    * finished. You can expect the calling routine that it calls
    * finishAllOutstandingSendsAndReceives() later on.
    */
-  virtual void exchangeAllVerticalDataExchangeStacks(int masterId){};
+  virtual void exchangeAllVerticalDataExchangeStacks(int /*masterId*/) {};
 
   /**
    * Exchange all the data along the domain boundaries. If the bool is set,
@@ -174,14 +175,14 @@ return controlEvents;
    * finished. You can expect the calling routine that it calls
    * finishAllOutstandingSendsAndReceives() later on.
    */
-  virtual void exchangeAllHorizontalDataExchangeStacks(bool symmetricDataCardinality){};
+  virtual void exchangeAllHorizontalDataExchangeStacks(bool /*symmetricDataCardinality*/) {};
 
   /**
    * Exchange all periodic boundary data. Periodic boundary values are always
    * handled by tree 0, i.e. there's no need to distinguish ranks here. On
    * all trees that are not rank 0, this operation should immediately return.
    */
-  virtual void exchangeAllPeriodicBoundaryDataStacks(){};
+  virtual void exchangeAllPeriodicBoundaryDataStacks() {};
 
   /**
    * Stream data from current tree on which this routine is called to
@@ -195,15 +196,15 @@ return controlEvents;
    * finished. You can expect the calling routine that it calls
    * finishAllOutstandingSendsAndReceives() later on.
    */
-  virtual void streamDataFromSplittingTreeToNewTree(int newWorker){};
-  virtual void streamDataFromJoiningTreeToMasterTree(int masterId){};
+  virtual void streamDataFromSplittingTreeToNewTree(int /*newWorker*/) {};
+  virtual void streamDataFromJoiningTreeToMasterTree(int /*masterId*/) {};
 
   /**
    * Wrap up all sends and receives, i.e. invoke wait() on the MPI requests.
    * The SpacetreeSet provides a generic routine for this that you can call
    * per data container in use.
    */
-  virtual void finishAllOutstandingSendsAndReceives(){};
+  virtual void finishAllOutstandingSendsAndReceives() {};
 
   /**
    * There are three different scenarios when we merge data:
@@ -235,17 +236,13 @@ return controlEvents;
     PeriodicBoundaryDataSwap
   };
 
-  virtual void sendVertex(int position, int toStack, SendReceiveContext context, const GridTraversalEvent& event){};
-  virtual void sendFace(int position, int toStack, SendReceiveContext context, const GridTraversalEvent& event){};
-  virtual void sendCell(int toStack, SendReceiveContext context, const GridTraversalEvent& event){};
+  virtual void sendVertex(int /*position*/, int /*toStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
+  virtual void sendFace(int /*position*/, int /*toStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
+  virtual void sendCell(int /*toStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
 
-  virtual void receiveAndMergeVertex(
-    int position, int fromStack, SendReceiveContext context, const GridTraversalEvent& event
-  ){};
-  virtual void receiveAndMergeFace(
-    int position, int fromStack, SendReceiveContext context, const GridTraversalEvent& event
-  ){};
-  virtual void receiveAndMergeCell(int fromStack, SendReceiveContext context, const GridTraversalEvent& event){};
+  virtual void receiveAndMergeVertex(int /*position*/, int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
+  virtual void receiveAndMergeFace(int /*position*/, int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
+  virtual void receiveAndMergeCell(int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/){};
 
-  virtual void deleteAllStacks(){};
+  virtual void deleteAllStacks() {};
 };
