@@ -106,7 +106,6 @@ toolbox::loadbalancing::strategies::SpreadOutHierarchically::Action toolbox::loa
           return Action::SpreadEquallyOverAllRanks;
         }
       }
-      break;
     case State::IntraRankDistribution:
       {
         const int ThreadsToKeepBusy = std::min( tarch::multicore::Core::getInstance().getNumberOfThreads(), _configuration->getMaxLocalTreesPerRank(_state) );
@@ -123,7 +122,6 @@ toolbox::loadbalancing::strategies::SpreadOutHierarchically::Action toolbox::loa
           return Action::SpreadEquallyOverAllThreads;
         }
       }
-      break;
     default:
       break;
   }

@@ -50,8 +50,8 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
 
     const bool        _highPriorityToWrites;
     BooleanSemaphore  _semaphore;
-    volatile int      _numberOfPendingWriteRequests;
     volatile bool     _writeAccessAcquired;
+    volatile int      _numberOfPendingWriteRequests;
     volatile int      _numberOfActiveReadAccesses;
 
     /**

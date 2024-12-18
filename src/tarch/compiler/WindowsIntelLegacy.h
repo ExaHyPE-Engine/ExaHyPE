@@ -15,7 +15,7 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+#if !defined(UseManualInlining) && !defined(noUseManualInlining)
 #define UseManualInlining
 #endif
 
@@ -33,7 +33,3 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup
-
-#define PragmaPush
-#define SilenceUnknownAttribute
-#define PragmaPop

@@ -11,7 +11,8 @@ GCC_OpenMP:
     CC: "gcc"
     CXX: "g++"
     IMAGE_TAG: "${IMAGE_TAG_GCC}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
@@ -31,7 +32,8 @@ Intel_OpenMP:
     CC: "icx"
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_TAG_INTEL}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
@@ -51,7 +53,8 @@ LLVM_OpenMP:
     CC: "clang"
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_TAG_LLVM}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
@@ -71,7 +74,8 @@ NVIDIA:
     CC: "nvc"
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_TAG_NVIDIA}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \

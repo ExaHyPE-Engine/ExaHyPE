@@ -31,7 +31,3 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup
-
-#define PragmaPush _Pragma("GCC diagnostic push")
-#define SilenceUnknownAttribute _Pragma("GCC diagnostic ignored \"-Wattributes\"")
-#define PragmaPop _Pragma("GCC diagnostic pop")
