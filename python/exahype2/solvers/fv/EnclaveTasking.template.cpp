@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 #include "exahype2/RefinementControl.h"
 
@@ -30,8 +32,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructed );
 
   // @todo Implement your stuff here, but ensure all entries are
-  //   initialised incl all auxiliary variables. The snippet below
-  //   sets everything to zero
+  //       initialised incl all auxiliary variables. The snippet below
+  //       sets everything to zero.
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
@@ -50,7 +52,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] int                                          normal
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
+  // @todo Implement
   logTraceOut( "boundaryConditions(...)" );
 }
 {% endif %}
