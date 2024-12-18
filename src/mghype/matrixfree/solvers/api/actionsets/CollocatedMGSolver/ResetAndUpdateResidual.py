@@ -3,12 +3,12 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class CollocatedMGSolver(ActionSet):
+class ResetAndUpdateResidual(ActionSet):
   templateTouchVertexFirstTime = """ 
   if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
     and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridVertex{{SOLVER_NAME}}.getLevel() )
+    repositories::{{SOLVER_INSTANCE}}.updateResidual( fineGridVertex{{SOLVER_NAME}}.getLevel() )
   ) {
     logTraceInWith1Argument("TouchVertexFirstTimeBoundary", fineGridVertex{{SOLVER_NAME}}.toString());
     auto value = fineGridVertex{{SOLVER_NAME}}.getU();
@@ -23,7 +23,7 @@ class CollocatedMGSolver(ActionSet):
   else if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
     and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridVertex{{SOLVER_NAME}}.getLevel() )
+    repositories::{{SOLVER_INSTANCE}}.updateResidual( fineGridVertex{{SOLVER_NAME}}.getLevel() )
   )
   {
     logTraceInWith3Arguments("TouchVertexFirstTimeInterior", fineGridVertex{{SOLVER_NAME}}.toString(), marker.x(), marker.h());
@@ -41,43 +41,11 @@ class CollocatedMGSolver(ActionSet):
   }
   """
 
-  templateTouchVertexLastTime = """
-  if (
-    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
-    and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridVertex{{SOLVER_NAME}}.getLevel() )
-  ) {
-    logTraceInWith3Arguments("TouchVertexLastTime", fineGridVertex{{SOLVER_NAME}}.toString(), marker.x(), marker.h());
-
-    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
-    {
-      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown), fineGridVertex{{SOLVER_NAME}}.getDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
-      assertion( fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) > 0 );
-      
-      double r   = fineGridVertex{{SOLVER_NAME}}.getResidual(unknown);
-      double du  = repositories::{{SOLVER_INSTANCE}}.Omega 
-                 * 1.0 / fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) * r;
-
-      // only care about solution on finest level...
-      if (
-        fineGridVertex{{SOLVER_NAME}}.getLevel() == repositories::{{SOLVER_INSTANCE}}.getFinestLevel()
-      ) {
-        repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(r, marker.h());
-        repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
-      }
-      
-      fineGridVertex{{SOLVER_NAME}}.setU(unknown, fineGridVertex{{SOLVER_NAME}}.getU(unknown) + du);
-      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown));
-    }
-    logTraceOutWith1Argument("TouchVertexLastTime", fineGridVertex{{SOLVER_NAME}}.toString());
-  }
-  """
-
   templateTouchCellFirstTime = """ 
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior 
     and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridCell{{SOLVER_NAME}}.getLevel() )
+    repositories::{{SOLVER_INSTANCE}}.updateResidual( fineGridCell{{SOLVER_NAME}}.getLevel() )
   ) {
     logTraceInWith3Arguments("Solve::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.toString(), marker.x(), marker.h());
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
@@ -139,7 +107,7 @@ class CollocatedMGSolver(ActionSet):
                solver,
                descend_invocation_order=0,
                parallel=False):
-    super( CollocatedMGSolver, self ).__init__(
+    super( ResetAndUpdateResidual, self ).__init__(
       descend_invocation_order,
       parallel
     )
@@ -155,9 +123,6 @@ class CollocatedMGSolver(ActionSet):
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
-      pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
       pass
     return result
     
@@ -196,4 +161,4 @@ class CollocatedMGSolver(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_Solve"
+    return __name__.replace(".py", "").replace(".", "_")

@@ -1,4 +1,8 @@
 #include "SolverRepository.h"
+#include "exahype2/LoadBalancingConfiguration.h"
+#include "peano4/grid/grid.h"
+#include "tarch/multicore/Core.h"
+#include "peano4/parallel/SpacetreeSet.h"
 
 #include "tarch/logging/Log.h"
 
@@ -7,10 +11,17 @@
 namespace {{N}} {
 {% endfor %}
   namespace repositories {
+    static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
+
     {% for SOLVER in SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
 
+    {% if LOAD_BALANCER != "" %}
+    {{LOAD_BALANCER}}  loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
+    {% else %}
+    toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
+    {% endif %}
     {% for SOLVER in AUX_SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
@@ -30,8 +41,6 @@ namespace {{N}} {
 
 
     void beginMeshSweep() {
-      static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
-
       {% for SOLVER in SOLVER_INSTANCES %}
       {{SOLVER[1]}}.beginMeshSweep();
       {% endfor %}
@@ -41,14 +50,19 @@ namespace {{N}} {
     }
 
     void endMeshSweep() {
-      static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
-
       {% for SOLVER in SOLVER_INSTANCES %}
       {{SOLVER[1]}}.endMeshSweep();
       {% endfor %}
       {% for SOLVER in AUX_SOLVER_INSTANCES %}
       {{SOLVER[1]}}.endMeshSweep();
       {% endfor %}
+    }
+
+    void endCreateGrid() { loadBalancer.finishStep(); }
+    
+    void incrementPlotCounter() {plotCounter++;}
+    int getPlotCounter() {
+      return plotCounter;
     }
   }
 {% for N in NAMESPACE %}

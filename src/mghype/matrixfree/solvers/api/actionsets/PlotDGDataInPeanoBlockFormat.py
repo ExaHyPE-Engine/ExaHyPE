@@ -80,6 +80,7 @@ if (
   and
   {{PLOT_PREDICATE}}
 ) {
+  tarch::mpi::Lock lock( _semaphore );
 
   logTraceInWith1Argument("Plot::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
   

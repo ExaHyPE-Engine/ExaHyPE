@@ -133,14 +133,15 @@ class InitDofsDG(ActionSet):
 
         // vectors to be passed into face
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
-        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > projection;
 
         // send to init
         repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
 
         // put into mesh
         fineGridFace{{SOLVER_NAME}}.setSolution(sol);
-        fineGridFace{{SOLVER_NAME}}.setProjection(projection);
+        fineGridFace{{SOLVER_NAME}}.setLProjection(projection);
+        fineGridFace{{SOLVER_NAME}}.setRProjection(projection);
 
       }
     } break;
@@ -157,14 +158,15 @@ class InitDofsDG(ActionSet):
 
         // vectors to be passed into face
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
-        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double >   projection;
 
         // send to init
         repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
 
         // put into mesh
         fineGridFace{{SOLVER_NAME}}.setSolution(sol);
-        fineGridFace{{SOLVER_NAME}}.setProjection(projection);
+        fineGridFace{{SOLVER_NAME}}.setLProjection(projection);
+        fineGridFace{{SOLVER_NAME}}.setRProjection(projection);
       }
     } break;
     

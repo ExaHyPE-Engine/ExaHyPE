@@ -51,11 +51,23 @@ tarch::timing::Measurement initMeasurement;
 tarch::timing::Measurement solveMeasurement;
 tarch::timing::Measurement plotMeasurement;
 
+/*
+TODO: add in tarch::hasNonCriticalAssertionBeenViolated() clauses, which should set
+  continueToSolve to false.
+*/
 
 bool selectNextAlgorithmicStep() {
-  static bool gridCreated = false;
+  static bool gridCreated     = false;
+  static bool gridInitialised = false;
+  static bool gridBalanced    = false;
+  
   static int solverSteps;
   bool continueToSolve = true;
+  static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
+    std::numeric_limits<double>::max()
+  );
+  static int globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
+  
   static bool plotThenExit = false;
   const int MaxIterations = {{MAXITERATIONS}};
 
@@ -120,6 +132,7 @@ bool selectNextAlgorithmicStep() {
             {{SUBNAMESPACE}}repositories::terminationCriterionHolds()
           )
           {
+            logInfo("selectNextAlgorithmicStep()", "terminating after " << solverSteps << " steps");
             plotThenExit = true;
             peano4::parallel::Node::getInstance().setNextProgramStep(
               {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep( {{SUBNAMESPACE}}repositories::StepRepository::Steps::Plot )
@@ -155,10 +168,6 @@ bool selectNextAlgorithmicStep() {
     }
   }
   else {
-    static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
-      std::numeric_limits<double>::max()
-    );
-    static int globalNumberOfTrees = 0;
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
       {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid)
@@ -201,6 +210,8 @@ void step() {
         watch.stop();
         observers::CreateGrid::unprepareTraversal();
         createGridMeasurement.setValue( watch.getCalendarTime() );
+        
+        repositories::endCreateGrid();
       }
       break;
 
@@ -232,6 +243,7 @@ void step() {
         observers::Solve::unprepareTraversal();
 
         solveMeasurement.setValue( watch.getCalendarTime() );
+        repositories::endCreateGrid();
       }
       break;
 
@@ -239,6 +251,8 @@ void step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
+        repositories::incrementPlotCounter();
+        
         observers::Plot  observer;
         observers::Plot::prepareTraversal();
         watch.start();

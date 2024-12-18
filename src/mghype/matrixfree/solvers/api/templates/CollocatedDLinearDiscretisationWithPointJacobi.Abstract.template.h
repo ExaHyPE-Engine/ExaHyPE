@@ -91,7 +91,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
 
     bool isSuspended() const;
 
-    bool update() const;
+    bool updateSolution() const;
+    bool updateResidual() const;
 
     State getState() const;
 
@@ -101,5 +102,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     static tarch::logging::Log  _log;
 
     State  _state;
+
+    /**
+     * We need to allow the residual and diagonal values to
+     * synchonise across parallel boundaries before updating
+     * the solution. To prevent 0-divison error, we can't
+     * update the solution on the first 
+     */
+    bool _updateSolution;
 };
 

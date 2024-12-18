@@ -4,7 +4,7 @@ import peano4
 import jinja2
 
 
-class CollocatedSolver(ActionSet):
+class ResetAndUpdateResidual(ActionSet):
   """!
 
   Action set implementing the core of the collocated solver
@@ -25,7 +25,7 @@ class CollocatedSolver(ActionSet):
   if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
     and
-    repositories::{{SOLVER_INSTANCE}}.update()
+    repositories::{{SOLVER_INSTANCE}}.updateResidual()
   ) {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.x(), fineGridVertex{{SOLVER_NAME}}.toString());
     auto value = fineGridVertex{{SOLVER_NAME}}.getU();
@@ -40,7 +40,7 @@ class CollocatedSolver(ActionSet):
   else if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
     and
-    repositories::{{SOLVER_INSTANCE}}.update()
+    repositories::{{SOLVER_INSTANCE}}.updateResidual()
   ) {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
@@ -57,57 +57,14 @@ class CollocatedSolver(ActionSet):
   }
   """
 
-  templateTouchVertexLastTime = """
-  if (
-    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
-    and
-    repositories::{{SOLVER_INSTANCE}}.update()
-  ) {
-    logTraceInWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
-
-    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
-    {
-      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown), fineGridVertex{{SOLVER_NAME}}.getDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
-      assertion( fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) > 0 );
-      
-      double r   = fineGridVertex{{SOLVER_NAME}}.getResidual(unknown);
-      double du  = repositories::{{SOLVER_INSTANCE}}.Omega 
-                 * 1.0 / fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) * r;
-
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
-        r, marker.h()
-      );
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(
-        du, marker.h()(0)
-      );
-      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
-
-      fineGridVertex{{SOLVER_NAME}}.setU(unknown, fineGridVertex{{SOLVER_NAME}}.getU(unknown) + du );
-      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown));
-    }
-    logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
-  }
-
-  if ( fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary ) {
-    auto value = 0.0;
-    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
-      fineGridVertex{{SOLVER_NAME}}.setU(unknown, value);
-    }
-  }
-  """
-
   templateTouchCellFirstTime = """ 
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior 
     and
-    repositories::{{SOLVER_INSTANCE}}.update()
+    repositories::{{SOLVER_INSTANCE}}.updateResidual()
   ) {
     logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-    repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize(
-      marker.h()
-    );
-    
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
       // Mass and assembly matrix should be block diagonal, 
@@ -165,8 +122,14 @@ class CollocatedSolver(ActionSet):
   """
   
   def __init__(self,
-               solver):
-    super( CollocatedSolver, self ).__init__()
+               solver,
+               descend_invocation_order=1,
+               parallel=False
+               ):
+    super( ResetAndUpdateResidual, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
@@ -179,9 +142,6 @@ class CollocatedSolver(ActionSet):
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
-      pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
       pass
     return result
 

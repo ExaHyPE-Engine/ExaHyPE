@@ -91,7 +91,7 @@ correction_matrix, correction_matrix_scaling = correction_equation_matrices.get_
 """
 We use the identity matrix everywhere...
 """
-correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMG("CollocatedMG",
+correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMGSingleThreaded("CollocatedMG",
                                                     1,
                                                     args.dimensions,
                                                     args.meshsize,
@@ -164,7 +164,6 @@ project.set_global_simulation_parameters(
   max_iterations = 2000
 )
 
-# project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
