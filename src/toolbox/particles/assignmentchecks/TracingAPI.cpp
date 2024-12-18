@@ -34,10 +34,11 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const std::string&                           trace
 ) {
 
-  logTraceInWith4Arguments(
+  logTraceInWith5Arguments(
     "eraseParticle(...)",
     particleName,
     particleX,
+    particleID,
     isLocal,
     treeId
   );
@@ -54,9 +55,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   );
 
   Event event(Event::Type::Erase, isLocal, treeId, trace);
-
-  ParticleEvents& history       = database.addEvent(identifier, event);
-  Event           previousEvent = getPreviousEvent(history, treeId, 1);
+  Event previousEvent = database.addEvent(identifier, event, treeId);
 
 
   assertion5(
@@ -76,7 +75,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const std::string&                           particleName,
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
-
   bool                                         isLocal,
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
@@ -86,15 +84,17 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool reassignmentOnSameTreeDepthAllowed
 ) {
 
-  logTraceInWith6Arguments(
+  logTraceInWith7Arguments(
     "assignParticleToVertex(...)",
     particleName,
+    particleID,
     particleX,
     isLocal,
     vertexX,
     vertexH,
     treeId
   );
+
 
   using namespace internal;
 
@@ -118,11 +118,10 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     trace
   );
 
-  ParticleEvents& history = database.addEvent(identifier, event);
+  Event previousEvent = database.addEvent(identifier, event, treeId);
 
   if (not(particleIsNew and (not checkNewParticles))) {
     // skip the newly added event.
-    Event previousEvent = getPreviousEvent(history, treeId, 1);
 
     const bool isDropping = previousEvent.type
                               == internal::Event::Type::DetachFromVertex
@@ -144,15 +143,12 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
             and not previousEvent.isLocal
           );
 
-    const bool virtualPartThatHasBeenErased =
-        (previousEvent.type == internal::Event::Type::Erase and (not previousEvent.isLocal));
-
     if (isLocal) {
       assertion7(
-        previousEvent.type == internal::Event::Type::NotFound
+        (previousEvent.type == internal::Event::Type::NotFound
+        ) or (previousEvent.type == internal::Event::Type::Erase)
           or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal)
-          or (isDropping and previousEvent.isLocal) or (isDetached)
-          or virtualPartThatHasBeenErased,
+          or (isDropping and previousEvent.isLocal) or (isDetached),
         identifier.toString(),
         event.toString(),
         previousEvent.toString(),
@@ -165,12 +161,13 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
       assertion7(
           (previousEvent.type == internal::Event::Type::NotFound)
           or
+          (previousEvent.type == internal::Event::Type::Erase)
+          or
           isDroppingFromSieveSet
           or
           (isDropping and not previousEvent.isLocal)
           or
-          (previousEvent.type == internal::Event::Type::DetachFromVertex and previousEvent.isLocal)
-          or virtualPartThatHasBeenErased,
+          (previousEvent.type == internal::Event::Type::DetachFromVertex and previousEvent.isLocal),
           identifier.toString(),
           event.toString(),
           previousEvent.toString(),
@@ -196,11 +193,13 @@ void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                           trace
 ) {
 
-  logTraceInWith3Arguments(
+  logTraceInWith5Arguments(
     "moveParticle(...)",
     particleName,
+    particleID,
     oldParticleX,
-    newParticleX
+    newParticleX,
+    treeId
   );
 
   using namespace internal;
@@ -215,132 +214,82 @@ void toolbox::particles::assignmentchecks::moveParticle(
     newParticleX,
     dx,
     vertexH
-  )
+  );
 
-    // use old particle position to find history.
-    ParticleSearchIdentifier identifier
-    = ParticleSearchIdentifier(
-      particleName,
-      oldParticleX,
-      particleID,
-      tarch::la::max(vertexH)
-    );
+  // use old particle position to find history.
+  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
+    particleName,
+    oldParticleX,
+    particleID,
+    tarch::la::max(vertexH)
+  );
 
-  ParticleEvents& history = database.getParticleHistory(identifier);
+  ParticleEvents history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
   // else first.
-  assert(history.size() > 0);
+  assertion(history.size() > 0);
 
-  Event previousEvent    = getPreviousEvent(history, treeId);
-  Event anyPreviousEvent = getPreviousEvent(history, Database::AnyTree);
+  Event previousEvent = database.getPreviousEvent(history, treeId);
 
-  // We need to have at least 1 event somewhere.
-  // Even if the database had been trimmed, at least 1 event remains. But the
-  // remaining event may have been on a different tree.
-  assertion(anyPreviousEvent.type != internal::Event::Type::NotFound);
-
-  // We must still be on the same vertex, or something is wrong.
+  // Can't be sieve event, particle needs to have been assigned to vertex
+  // first
   assertion3(
-    tarch::la::equals(anyPreviousEvent.vertexH, vertexH),
-    "Vertices not the same",
-    anyPreviousEvent.vertexH,
-    vertexH
-  );
-  assertion3(
-    tarch::la::equals(anyPreviousEvent.vertexX, vertexX),
-    "Vertices not the same",
-    anyPreviousEvent.vertexX,
-    vertexX
-  );
-
-  if (previousEvent.type != Event::Type::NotFound) {
-    // This must be on the same tree then.
-    // We can apply stricter checks.
-
-    // Can't be sieve event, particle needs to have been assigned to vertex
-    // first
-    assertion(
-      previousEvent.type == Event::Type::AssignToVertex
+    previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
       or previousEvent.type
-           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex
-    );
+           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+    "Invalid previous event type",
+    previousEvent.toString(),
+    database.particleHistory(identifier)
+  );
 
-    // We must still be on the same vertex, or something is wrong.
-    assertion3(
-      tarch::la::equals(previousEvent.vertexH, vertexH),
-      "Vertices not the same",
-      previousEvent.vertexH,
-      vertexH
-    );
-    assertion3(
-      tarch::la::equals(previousEvent.vertexX, vertexX),
-      "Vertices not the same",
-      previousEvent.vertexX,
-      vertexX
-    );
-    assertion3(
-      previousEvent.treeId == treeId,
-      "Tree not the same",
-      previousEvent.treeId,
-      treeId
-    );
-  }
 
+  assertion5(
+    tarch::la::equals(previousEvent.vertexH, vertexH),
+    "Vertices not the same",
+    previousEvent.vertexH,
+    vertexH,
+    treeId,
+    database.particleHistory(identifier)
+  );
+  assertion5(
+    tarch::la::equals(previousEvent.vertexX, vertexX),
+    "Vertices not the same",
+    previousEvent.vertexX,
+    vertexX,
+    treeId,
+    database.particleHistory(identifier)
+  );
+
+  // Now actually write the move event down.
   if ((previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) or (previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex)){
 
-    Event newEvent = Event(Event::Type::NotFound);
+    // Either way, the event we'll write down is a consecutive move
+    Event newEvent = Event(
+      Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      previousEvent.isLocal,
+      vertexX,
+      previousEvent.previousParticleX,
+      vertexH,
+      treeId,
+      previousEvent.trace,
+      -1 // will be modified in database.addEvent
+    );
 
     if (previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) {
-      // we turn it into a ConsecutiveMoveWhileAssociatedToVertex and
-      // store the current particle position.
+      // Rename the trace.
       std::ostringstream pastTrace;
       pastTrace
         << "Consecutive Move starting at x=["
         << ::toString(previousEvent.previousParticleX) << "] at sweep "
         << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
-        << " | old trace: " << previousEvent.trace;
-      " | new trace: " + trace;
-
-      // Create new event.
-      newEvent = Event(
-        Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-        previousEvent.isLocal,
-        vertexX,
-        oldParticleX,
-        vertexH,
-        treeId,
-        pastTrace.str(),
-        -1 // will be modified in database.addEvent
-      );
-    } else {
-      newEvent = Event(
-        Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-        previousEvent.isLocal,
-        vertexX,
-        previousEvent.previousParticleX,
-        vertexH,
-        treeId,
-        previousEvent.trace,
-        -1 // will be modified in database.addEvent
-      );
+        << " | old trace: " << previousEvent.trace << " | new trace: " + trace;
+      newEvent.trace = pastTrace.str();
     }
 
-    // In either case, delete old event from history and then re-add it so that
-    // all the mechanisms in addEvent (shortening history, modifying
-    // identifier coordinates) trigger.
-    for (auto it = history.begin(); it != history.end(); it++) {
-      if ((it->meshSweepIndex == previousEvent.meshSweepIndex)
-        and (it->type == previousEvent.type)
-          and (it->treeId == previousEvent.treeId)
-          and (it->isLocal == previousEvent.isLocal)){
-        history.erase(it);
-        break;
-      }
-    }
+    // And replace old event now.
+    database.replaceEvent(identifier, previousEvent, newEvent);
 
-    // Add new event now.
-    database.addEvent(identifier, newEvent);
   } else {
     // Add a new move event.
     Event newEvent = Event(
@@ -352,7 +301,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
       trace
     );
 
-    database.addEvent(identifier, newEvent);
+    database.addEvent(identifier, newEvent, treeId);
   }
 
   // Finally, since the particle moved, do we need to modify the coordinates
@@ -376,15 +325,17 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           trace
 ) {
 
-  logTraceInWith6Arguments(
+  logTraceInWith7Arguments(
     "detachParticleFromVertex(...)",
     particleName,
+    particleID,
     particleX,
     isLocal,
     vertexX,
     vertexH,
     treeId
   );
+
 
   using namespace internal;
   Database& database = Database::getInstance();
@@ -406,9 +357,8 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     trace
   );
 
-  ParticleEvents& history = Database::getInstance().addEvent(identifier, event);
-  Event           previousEvent = getPreviousEvent(history, treeId, 1);
 
+  Event previousEvent = database.addEvent(identifier, event, treeId);
 
   assertion6(
     previousEvent.type == internal::Event::Type::AssignToVertex
@@ -456,19 +406,13 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const std::string&                           trace
 ) {
 
-  logTraceInWith4Arguments(
+  logTraceInWith5Arguments(
     "assignParticleToSieveSet(...)",
     particleName,
+    particleID,
     particleX,
     isLocal,
     treeId
-  );
-
-  logDebug(
-    "assignParticleToSieveSet()",
-    "assign "
-      << particleName << " particle at " << particleX
-      << " to global sieve set on tree " << treeId
   );
 
 
@@ -483,11 +427,9 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   );
 
 
-  internal::Event
-    event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
+  Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
 
-  ParticleEvents& history       = database.addEvent(identifier, event);
-  Event           previousEvent = getPreviousEvent(history, treeId, 1);
+  Event previousEvent = database.addEvent(identifier, event, treeId);
 
   assertion5(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
@@ -511,7 +453,9 @@ void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
 
   internal::Database& database = internal::Database::getInstance();
 
-  if (database.getNumberOfSnapshots() != 0) {
+  // During a reset or initialization, we always add the "initial"
+  // mesh sweep, so the database should have at least 1.
+  if (database.getNumberOfSnapshots() != 1) {
     logInfo(
       "ensureDatabaseIsEmpty()",
       "database still holds " << database.getNumberOfSnapshots() << " snapshots"

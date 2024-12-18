@@ -117,6 +117,6 @@ class Exahype2(CMakePackage, CudaPackage):
 
 
     def setup_run_environment(self, env):
-        env.prepend_path("PEANO_ROOT", self.spec.prefix)
+        env.prepend_path("PEANO_SRC_ROOT_DIR", self.spec.prefix)
         env.prepend_path("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")

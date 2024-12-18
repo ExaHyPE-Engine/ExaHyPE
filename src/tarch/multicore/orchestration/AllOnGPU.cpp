@@ -22,7 +22,7 @@ void tarch::multicore::orchestration::AllOnGPU::endBSPSection(int nestedParallel
   }
 }
 
-tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orchestration::AllOnGPU::fuse(int taskType) {
+tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orchestration::AllOnGPU::fuse(int /*taskType*/) {
   if (_device==RoundRobin) toggleDevice();
   return FuseInstruction(_deviceToUse, 1, std::numeric_limits<int>::max());
 }
@@ -30,8 +30,8 @@ tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orc
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::paralleliseForkJoinSection(
   int nestedParallelismLevel,
-  int numberOfTasks,
-  int codeLocationIdentifier
+  int /*numberOfTasks*/,
+  int /*codeLocationIdentifier*/
 ) {
   if (nestedParallelismLevel <= 1) {
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;

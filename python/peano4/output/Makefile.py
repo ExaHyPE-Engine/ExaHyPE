@@ -265,8 +265,8 @@ the SISC paper
         This script does not accept relative paths. We then search for the subdirectory
         src and parse the Makefile there.
         """
-        if 'PEANO_ROOT' in os.environ:
-          directory = os.environ['PEANO_ROOT']
+        if 'PEANO_SRC_ROOT_DIR' in os.environ:
+          directory = os.environ['PEANO_SRC_ROOT_DIR']
 
         self.d["CONFIGUREPATH"] = directory
 

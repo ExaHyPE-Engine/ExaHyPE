@@ -44,7 +44,7 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
 
 int toolbox::particles::assignmentchecks::internal::Database::
   getNumberOfSnapshots() const {
-  return _data.size();
+  return _meshSweepData.size();
 }
 
 
@@ -77,10 +77,11 @@ void toolbox::particles::assignmentchecks::internal::Database::reset() {
 }
 
 
-toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
+toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
   particles::assignmentchecks::internal::Database::getParticleHistory(
     const ParticleSearchIdentifier& identifier
   ) {
+
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
@@ -92,7 +93,7 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     return *newEventHistory;
   } else {
 
-    ParticleEvents& history = search->second;
+    ParticleEvents history = search->second;
     return history;
   }
 }
@@ -153,10 +154,11 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
+  int                cmswi = getCurrentMeshSweepIndex();
 
   msg << "--------------------------\n";
-  msg << "Last sweep dump: Sweep ["
-      << _meshSweepData.at(_currentMeshSweepIndex).getName() << "]\n";
+  msg << "Last sweep dump: Sweep [" << _meshSweepData.at(cmswi).getName()
+      << "]\n";
   msg << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
@@ -166,7 +168,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     msg << "\n" << identifier.toString();
 
     for (auto event = history.crbegin(); event != history.crend(); event++) {
-      if (event->meshSweepIndex != _currentMeshSweepIndex) {
+      if (event->meshSweepIndex != cmswi) {
         break;
       }
       msg << "\n\t->" << event->toString();
@@ -178,7 +180,10 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
 
 std::string toolbox::particles::assignmentchecks::internal::Database::
-  sweepHistory() const {
+  sweepHistory() {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
   int                counter = 0;
@@ -234,14 +239,15 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 }
 
 
-toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
-  particles::assignmentchecks::internal::Database::
-    addEvent(ParticleSearchIdentifier identifier, Event& event) {
+toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
+  assignmentchecks::internal::Database::addEvent(
+    ParticleSearchIdentifier identifier,
+    Event&                   event,
+    const int                treeId
+  ) {
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
-
-  ParticleEvents output;
 
   // Take note of the current mesh sweep index.
   event.meshSweepIndex = getCurrentMeshSweepIndex();
@@ -259,8 +265,10 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     logDebug(
       "addEvent(...) ",
       "add new particle history thread for " + identifier.toString()
+        + ",Event:" + event.toString()
     );
-    return _data.at(identifier);
+    // there is no previous event.
+    return Event(Event::Type::NotFound);
 
   } else {
 
@@ -269,13 +277,68 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
     // First: Do we need to downsize the history?
     if (history.size() >= _maxParticleSnapshotsToKeepTrackOf) {
 
-      Event last = history.back();
+      ParticleEvents   eventsToKeep;
+      std::vector<int> treesToKeep;
 
-      logDebug("addEvent(...) ", "shortening history to " + last.toString());
+      // Start from the back so we keep the latest event.
+      auto it = history.crbegin();
+      while (it != history.crend()) {
 
-      last.trace = "substitute-for-whole-trajectory/" + last.trace;
+        Event past     = *it;
+        int   thisTree = past.treeId;
+
+#if PeanoDebug > 3
+        if (past.type == Event::Type::NotFound) {
+          logDebug(
+            "addEvent(...)",
+            "Particle histroy shouldn't contain an invalid event"
+          );
+        }
+#endif
+
+        if (std::find(treesToKeep.begin(), treesToKeep.end(), thisTree) == treesToKeep.end()){
+          treesToKeep.push_back(thisTree);
+          // In certain cases, especially for virtual particles, the last saved
+          // event may be a substitution already. We don't want to keep
+          // prepending the string with the notifier, so check for it.
+          if (not past.trace.starts_with("substitute-for-whole-trajectory/")) {
+            past.trace = "substitute-for-whole-trajectory/" + past.trace;
+          }
+          eventsToKeep.push_back(past);
+        }
+
+        it++;
+      }
+
+      logDebug(
+        "addEvent(...) ",
+        "shortening history of " << identifier.toString(
+        ) << " to " << eventsToKeep.size()
+      );
+
+      if (eventsToKeep.size() >= _maxParticleSnapshotsToKeepTrackOf) {
+        logError(
+          "addEvent(...)",
+          "There are more trees than events the database is allowed to keep track of."
+        );
+      }
+
       history.clear();
-      history.push_back(last);
+      for (Event keep : eventsToKeep) {
+        history.push_back(keep);
+      }
+    }
+
+    // Get previous event
+    Event previousEventOnThisTree = Event(Event::Type::NotFound);
+
+    auto it = history.crbegin();
+    while (it != history.crend()) {
+      if (it->treeId == treeId) {
+        previousEventOnThisTree = *it;
+        break;
+      }
+      it++;
     }
 
     // Add the new event now.
@@ -286,7 +349,51 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents& toolbox::
         + ::toString((identifier.particleX));
     );
 
-    return history;
+    return previousEventOnThisTree;
+  }
+}
+
+
+void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
+  ParticleSearchIdentifier identifier,
+  Event&                   oldEvent,
+  Event&                   newEvent
+) {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
+
+  // Take note of the current mesh sweep index.
+  newEvent.meshSweepIndex = getCurrentMeshSweepIndex();
+
+  auto search = _data.find(identifier);
+
+  assertion1(
+    search != _data.end(),
+    "Trying to replace event of particle with no history"
+  );
+
+  ParticleEvents& history = search->second;
+
+  // Get previous event
+  Event previousEventOnThisTree = Event(Event::Type::NotFound);
+
+  for (auto it = history.begin(); it != history.end(); it++) {
+    if ((it->meshSweepIndex == oldEvent.meshSweepIndex) and
+        (it->type == oldEvent.type) and
+        (it->treeId == oldEvent.treeId) and
+        (it->isLocal == oldEvent.isLocal) ){
+
+      it->type           = newEvent.type;
+      it->isLocal        = newEvent.isLocal;
+      it->vertexX        = newEvent.vertexX;
+      it->vertexH        = newEvent.vertexH;
+      it->treeId         = newEvent.treeId;
+      it->trace          = newEvent.trace;
+      it->meshSweepIndex = newEvent.meshSweepIndex;
+
+      break;
+    }
   }
 }
 
@@ -297,6 +404,9 @@ void toolbox::particles::assignmentchecks::internal::Database::
                                           identifier,
     tarch::la::Vector<Dimensions, double> newParticleX
   ) {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
 
   auto search = _data.find(identifier);
 
@@ -320,7 +430,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
   if (shift) {
     // delete old entry in database and add the new one.
     logDebug(
-      "addEvent(...) ",
+      "shiftIdentifierCoordinates(...) ",
       "shifting particle identifier from "
         << key.particleX << " to " << newParticleX
     );
@@ -361,11 +471,14 @@ void toolbox::particles::assignmentchecks::internal::Database::
 
 
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
-  assignmentchecks::internal::getPreviousEvent(
+  assignmentchecks::internal::Database::getPreviousEvent(
     ParticleEvents& particleHistory,
     int             spacetreeId,
     size_t          nFirstEventsToSkip
   ) {
+
+  tarch::multicore::MultiReadSingleWriteLock
+    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   if (particleHistory.size() <= nFirstEventsToSkip) {
     return Event(Event::Type::NotFound);

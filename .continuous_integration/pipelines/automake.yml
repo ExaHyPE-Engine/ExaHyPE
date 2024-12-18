@@ -5,6 +5,7 @@ include:
   - .continuous_integration/templates/run-only-on.yml
   - .continuous_integration/templates/mghype.yml
   - .continuous_integration/templates/exahype2.yml
+  - .continuous_integration/templates/swift2.yml
 
 stages:
   - Build
@@ -144,6 +145,51 @@ MGHyPE_MatrixFree_Tests:
     - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .MGHyPE_MatrixFree_Tests
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+SWIFT2_Dastgen:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .SWIFT2_Dastgen
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+SWIFT2_Sod1D:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .SWIFT2_Sod1D
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+SWIFT2_Noh2D:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .SWIFT2_Noh2D
   needs:
     - job: Build
   dependencies:

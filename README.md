@@ -1,4 +1,6 @@
-[![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-bronze-e6ae77)](https://api.eu.badgr.io/public/assertions/vg8PP-0FQlafJ-L-cRs_Xw "SQAaaS bronze badge achieved")
+[![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-silver-lightgrey)](https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ "SQAaaS silver badge achieved")
+
+[![SQAaaS badge](https://github.com/EOSC-synergy/SQAaaS/raw/master/badges/badges_150x116/badge_software_silver.png)](https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ "SQAaaS silver badge achieved")
 
 <div align="center" style="margin-bottom: 30px;">
   <img src="./documentation/Peano-logo.png"/>

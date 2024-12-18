@@ -163,21 +163,40 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
         self.d["PREPARE_TRAVERSAL_KERNEL"] = prepare_traversal_kernel
         self.d["UNPREPARE_TRAVERSAL_KERNEL"] = unprepare_traversal_kernel
 
+    """!
+    
+    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the 
+    particles are not held in a continuous order. 
+    
+    Introducing this field makes all kernel signatures compatible with 
+    UpdateParticle_SingleLevelInteraction_ContiguousParticles.
+    
+    """
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  constexpr int numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
 """
     )
 
+    """!
+    
+    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the 
+    particles are not held in a continuous order. 
+    
+    Introducing this field makes all kernel signatures compatible with 
+    UpdateParticle_SingleLevelInteraction_ContiguousParticles.
+    
+    """
     __Template_TouchVertexLastTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-
+  constexpr int numberOfCoalescedAssignedParticles = -1;
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
 """
@@ -188,8 +207,12 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  activeParticles;
+  std::vector< int >                             numberOfCoalescedActiveParticlesPerVertex( TwoPowerD );
+  std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
 
   for (int i=0; i<TwoPowerD; i++) {
+    numberOfCoalescedActiveParticlesPerVertex[i] = -1;
+    numberOfCoalescedLocalParticlesPerVertex[i]  = -1;
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       activeParticles.push_front( p );
     }

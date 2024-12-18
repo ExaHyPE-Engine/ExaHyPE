@@ -52,7 +52,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
     For the two vertex kernels, this would look similar to
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    touch_vertex_first_time_kernel = "::swift2::kernels::forAllParticles( marker, assignedParticles, myFunctor );"
+    touch_vertex_first_time_kernel = "::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, myFunctor );"
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     For the cell, it resembles
@@ -184,10 +184,10 @@ class ExplicitEulerFixedSearchRadius(Particle):
                 name="UpdatePositionAndVelocity",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}> );""",
                 touch_vertex_last_time_kernel=f"""
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-                ::swift2::kernels::forAllParticles(marker, assignedParticles, ::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
+                ::swift2::kernels::forAllParticles(marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
                 ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
                 """,
                 prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
@@ -212,7 +212,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, numberOfCoalescedAssignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}> );""",
                 prepare_traversal_kernel=f"""
                     globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                     globaldata::{PARTICLE}::getSpecies().clearVelocity();
