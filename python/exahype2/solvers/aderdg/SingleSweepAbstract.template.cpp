@@ -225,14 +225,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::InitialPrediction;
       break;
     case SolverState::Suspended:
+    case SolverState::Plotting:
 {% if USE_SEPARATE_SWEEPS is sameas True %}
       _solverState = SolverState::InitialPrediction;
 {% else %}
       _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
 {% endif %}
-      break;
-    case SolverState::Plotting:
-      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
       break;
     case SolverState::InitialPrediction:
       _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
@@ -409,8 +407,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return _solverState==SolverState::InitialPrediction or _solverState==SolverState::GridInitialisation or
-   ( (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? _solverState==SolverState::PredictionOnHangingCells : _solverState==SolverState::TimeStep);
+  return _solverState==SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {

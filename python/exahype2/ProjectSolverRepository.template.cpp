@@ -239,15 +239,6 @@ void finishTimeStep() {
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
-  {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal(
-    DomainOffset,
-    DomainSize,
-    PeriodicBC
-  );
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-
   ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.finishStep();
 
@@ -261,15 +252,6 @@ void finishTimeStep() {
 void finishGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishGridConstructionStep();
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-
-  {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal(
-      DomainOffset,
-      DomainSize,
-      PeriodicBC
-    );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -331,15 +313,6 @@ void finishGridInitialisationStep() {
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
-  {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal(
-      DomainOffset,
-      DomainSize,
-      PeriodicBC
-    );
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-
   loadBalancer.finishStep();
   logTraceOut( "GridInitialisationStep()" );
 }
@@ -348,15 +321,6 @@ void finishGridInitialisationStep() {
 void finishPlottingStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishPlottingStep();
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
-
-  {% for item in TRACERS -%}
-  vertexdata::{{ item }}Set::finishedTraversal(
-      DomainOffset,
-      DomainSize,
-      PeriodicBC
-    );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 

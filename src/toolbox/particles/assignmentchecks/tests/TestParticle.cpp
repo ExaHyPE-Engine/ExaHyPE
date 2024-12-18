@@ -38,6 +38,17 @@ bool toolbox::particles::assignmentchecks::tests::TestParticle::isLocal(
   return _isLocal;
 }
 
+toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState toolbox::
+  particles::assignmentchecks::tests::TestParticle::getParallelState() const {
+  if (_isLocal) {
+    return toolbox::particles::assignmentchecks::tests::TestParticle::
+      ParallelState::Local;
+  } else {
+    return toolbox::particles::assignmentchecks::tests::TestParticle::
+      ParallelState::Virtual;
+  }
+}
+
 void toolbox::particles::assignmentchecks::tests::TestParticle::setDepth(
   const int depth
 ) {
@@ -50,6 +61,7 @@ void toolbox::particles::assignmentchecks::tests::TestParticle::setIsLocal(
   _isLocal = isLocal;
 }
 
+
 void toolbox::particles::assignmentchecks::tests::TestParticle::setVertexH(
   const tarch::la::Vector<Dimensions, double>& vertexH
 ) {
@@ -60,4 +72,15 @@ void toolbox::particles::assignmentchecks::tests::TestParticle::setX(
   const tarch::la::Vector<Dimensions, double>& x
 ) {
   _x = x;
+}
+
+void toolbox::particles::assignmentchecks::tests::TestParticle::setParallelState(
+  toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState
+    parallelState
+) {
+  if (parallelState == toolbox::particles::assignmentchecks::tests::TestParticle::ParallelState::Local) {
+    _isLocal = true;
+  } else {
+    _isLocal = false;
+  }
 }

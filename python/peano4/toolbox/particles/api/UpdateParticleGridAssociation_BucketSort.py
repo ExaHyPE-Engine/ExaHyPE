@@ -102,6 +102,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
   """
     __Template_LiftParticles = jinja2.Template(
         """
+  // template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_BucketSort.py
+
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
 
@@ -183,6 +185,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
         break;
     }
   }
+  // template end
 """
     )
 
@@ -195,6 +198,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     """
     _Template_Sieve = jinja2.Template(
         """
+  // template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_BucketSort.py
+
   if ( _sieveParticleSet.hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = _sieveParticleSet.getParticlesToBeSievedIntoVertex(
       marker,
@@ -213,6 +218,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+
+    // template end
   }
 """
     )

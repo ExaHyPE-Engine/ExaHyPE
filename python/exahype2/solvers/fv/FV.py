@@ -1,10 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import jinja2
-
 from abc import abstractmethod
-from enum import Enum
+
+import jinja2
 
 import peano4.datamodel
 import peano4.output.TemplatedHeaderFile
@@ -14,7 +13,6 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 import exahype2.solvers.fv.actionsets
 
-from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.Storage import Storage
 
 class FV(object):
@@ -333,6 +331,9 @@ Type:                   """
 Stateless PDE terms:    """
             + str(self._pde_terms_without_state)
             + """
+Storage schemes:         """
+            + str(self._cell_data_storage) + ", " + str(self._face_data_storage)
+            + """
 Patch size:             """
             + str(self._patch_size)
             + """
@@ -536,11 +537,11 @@ The finest mesh width of """
         This operation can be called multiple times. However, only the very
         last call matters. All previous calls are wiped out.
 
-        If you have a hierarchy of solvers, every create_data_structure()
+        If you have a hierarchy of solvers, every create_data_structures()
         should first(!) call its parent version. This way, you always ensure
         that all data are in place before you continue to alter the more
         specialised versions. So it is (logically) a top-down (general to
-        specialised) run through all create_data_structure() variants
+        specialised) run through all create_data_structures() variants
         within the inheritance tree.
 
         :: Arguments
@@ -738,11 +739,11 @@ The finest mesh width of """
         This operation can be called multiple times. However, only the very
         last call matters. All previous calls are wiped out.
 
-        If you have a hierarchy of solvers, every create_data_structure()
+        If you have a hierarchy of solvers, every create_data_structures()
         should first(!) call its parent version. This way, you always ensure
         that all data are in place before you continue to alter the more
         specialised versions. So it is (logically) a top-down (general to
-        specialised) run through all create_data_structure() variants
+        specialised) run through all create_data_structures() variants
         within the inheritance tree.
 
         ## Recreation vs backup (state discussion)
@@ -1623,8 +1624,8 @@ The finest mesh width of """
         face_data_storage: Storage,
     ):
         """
-        By default, we hold all data on the call stacks. You can explicitly switch
-        to storage on the heap via smart pointers.
+        By default, we hold all data on the heap using smart pointers. You can explicitly switch
+        to storage on the call stack or heap using raw pointers.
 
         @see create_data_structures()
         """

@@ -82,7 +82,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     if (
       refinementCriterion == ::exahype2::RefinementCommand::Refine
       and
-      tarch::la::smallerEquals(tarch::la::max(marker.h()), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
+      tarch::la::smallerEquals(tarch::la::max(marker.h()), 3.0 * repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH)
     ) {
       logDebug("touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;

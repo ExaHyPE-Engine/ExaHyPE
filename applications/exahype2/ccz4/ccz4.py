@@ -496,14 +496,16 @@ if __name__ == "__main__":
     #  pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
-    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95,0,128,128))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOutOnceGridStagnates_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOutHierarchically_SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-    #  "new ::exahype2::LoadBalancingConfiguration(0.95, 32 ,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
+    #  "new ::exahype2::LoadBalancingConfiguration(0.95), new toolbox::loadbalancing::metrics::CellCount()",)
 
 ########################################################################################
 #Tracer setting 

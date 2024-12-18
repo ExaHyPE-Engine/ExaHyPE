@@ -94,8 +94,8 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
-  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : 0;
+  auto&      assignedParticles                  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  const int  numberOfCoalescedAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -105,8 +105,8 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
     __Template_TouchVertexLastTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
-  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : 0;
+  auto&      assignedParticles                  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  const int  numberOfCoalescedAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : -1;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
@@ -118,13 +118,15 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  activeParticles;
-  std::vector< int >                             numberOfActiveParticlesPerVertex( TwoPowerD );
+  std::vector< int >                             numberOfCoalescedActiveParticlesPerVertex( TwoPowerD );
+  std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
   
   for (int i=0; i<TwoPowerD; i++) {
-    numberOfActiveParticlesPerVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
+    numberOfCoalescedActiveParticlesPerVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       activeParticles.push_front( p );
     }
+    numberOfCoalescedLocalParticlesPerVertex[i] = fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       localParticles.push_front( p );
     }

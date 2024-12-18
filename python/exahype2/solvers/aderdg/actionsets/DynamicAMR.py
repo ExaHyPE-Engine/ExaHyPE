@@ -90,6 +90,36 @@ class DynamicAMR(AbstractADERDGActionSet):
   }
 """
 
+        self._Template_CreateCell = """    
+  logTraceIn( "createCell(...)" );
+
+  kernels::{{SOLVER_NAME}}::cellUnknownsProlongation(
+    fineGridCell{{SOLVER_NAME}}Q.value,
+    coarseGridCell{{SOLVER_NAME}}Q.value,
+    marker.getRelativePositionWithinFatherCell()
+  );
+
+  fineGridCell""" + solver._cell_label.name + """.setTimeStamp( coarseGridCell""" + solver._cell_label.name + """.getTimeStamp() );
+  fineGridCell""" + solver._cell_label.name + """.setTimeStepSize( coarseGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
+
+  logTraceOut( "createCell(...)" );
+"""
+
+        self._Template_DestroyCell = """
+  logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
+
+  kernels::{{SOLVER_NAME}}::cellUnknownsRestriction(
+    fineGridCell{{SOLVER_NAME}}Q.value,
+    coarseGridCell{{SOLVER_NAME}}Q.value,
+    marker.getRelativePositionWithinFatherCell()
+  );
+
+  coarseGridCell""" + solver._cell_label.name + """.setTimeStamp( fineGridCell""" + solver._cell_label.name + """.getTimeStamp() );
+  coarseGridCell""" + solver._cell_label.name + """.setTimeStepSize( fineGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
+  
+  logTraceOut( "destroyCell(...)" );
+"""
+
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
@@ -111,6 +141,12 @@ class DynamicAMR(AbstractADERDGActionSet):
             d["RESTRICT_GUARD"] = self._restrict_guard
             result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
             pass
+        if operation_name==peano4.solversteps.ActionSet.OPERATION_CREATE_CELL:
+          result  = jinja2.Template(self._Template_CreateCell).render(**d)
+          pass
+        if operation_name==peano4.solversteps.ActionSet.OPERATION_DESTROY_CELL:
+          result  = jinja2.Template(self._Template_DestroyCell).render(**d)
+          pass
         return result
 
     def get_includes(self):
