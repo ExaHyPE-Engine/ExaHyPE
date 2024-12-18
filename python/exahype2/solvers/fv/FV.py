@@ -331,7 +331,7 @@ Type:                   """
 Stateless PDE terms:    """
             + str(self._pde_terms_without_state)
             + """
-Storage schemes:         """
+Storage schemes:        """
             + str(self._cell_data_storage) + ", " + str(self._face_data_storage)
             + """
 Patch size:             """
