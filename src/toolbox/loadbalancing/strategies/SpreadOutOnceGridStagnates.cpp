@@ -20,11 +20,6 @@ toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::SpreadOutOnceGri
 }
 
 
-toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::~SpreadOutOnceGridStagnates() {
-}
-
-
-
 int toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::getNumberOfTreesPerRank() const {
   int result = 0;
 

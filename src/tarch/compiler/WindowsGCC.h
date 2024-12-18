@@ -14,7 +14,7 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+#if !defined(UseManualInlining) && !defined(noUseManualInlining)
 #define UseManualInlining
 #endif
 
@@ -32,7 +32,3 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup
-
-#define PragmaPush _Pragma("GCC diagnostic push")
-#define SilenceUnknownAttribute _Pragma("GCC diagnostic ignored \"-Wattributes\"")
-#define PragmaPop _Pragma("GCC diagnostic pop")

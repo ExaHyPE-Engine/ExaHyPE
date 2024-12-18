@@ -104,7 +104,7 @@ class tarch::logging::Statistics {
     #else
       inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value, [[maybe_unused]] bool disableSampling = false ) {}
       inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] const std::string& value ) {}
-      inline void inc( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value = 1.0, [[maybe_unused]] bool disableSampling = false, bool clearAfterDatabaseDump = false ) {}
+      inline void inc( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value = 1.0, [[maybe_unused]] bool disableSampling = false, [[maybe_unused]] bool clearAfterDatabaseDump = false ) {}
     #endif
 
     /**

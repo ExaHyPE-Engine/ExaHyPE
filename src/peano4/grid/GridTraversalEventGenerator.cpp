@@ -12,7 +12,7 @@ peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
   _id(id) {}
 
 std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLocal(
-  [[maybe_unused]] GridVertex  vertices[TwoPowerD],
+  [[maybe_unused]] GridVertex                                vertices[TwoPowerD],
   [[maybe_unused]] const SplitSpecification&                 splitTriggered,
   [[maybe_unused]] const std::set<int>&                      splitting,
   [[maybe_unused]] const std::set< int >&                    joinTriggered,
@@ -806,7 +806,7 @@ peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexTyp
 }
 
 int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
-  [[maybe_unused]] GridVertex            vertices[TwoPowerD],
+  [[maybe_unused]] GridVertex                                vertices[TwoPowerD],
   [[maybe_unused]] const SplitSpecification&                 splitTriggered,
   [[maybe_unused]] const std::set<int>&                      splitting,
   [[maybe_unused]] const std::set< int >&                    joinTriggered,

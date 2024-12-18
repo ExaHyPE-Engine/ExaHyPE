@@ -12,7 +12,6 @@
     - echo $CI_COMMIT_BRANCH
     - echo $APPTAINER_BINDDIR
     - echo $APPTAINER_IMAGEDIR
-    - echo $CCACHE_DIR
     - echo $CC
     - echo $CXX
     - echo $CFLAGS

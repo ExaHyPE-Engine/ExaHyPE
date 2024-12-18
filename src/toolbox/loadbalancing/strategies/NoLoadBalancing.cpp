@@ -22,9 +22,14 @@ toolbox::loadbalancing::strategies::NoLoadBalancing::NoLoadBalancing(
 
 void toolbox::loadbalancing::strategies::NoLoadBalancing::finishStep() {
   _statistics.updateGlobalView();
-  if (_costMetrics != nullptr)
+
+  if (_costMetrics != nullptr) {
     _costMetrics->updateGlobalView();
+  }
+
   _blacklist.update();
+
+  dumpStatistics();
 }
 
 

@@ -78,7 +78,7 @@ namespace peano4 {
     struct AutomatonState;
     struct GridControlEvent;
 
-    class GridVertex;
+    struct GridVertex;
 
     /**
      * The term clear() is not 100% correct, as the number of stationary traversals
