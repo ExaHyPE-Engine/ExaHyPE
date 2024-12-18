@@ -211,9 +211,11 @@ class Project:
 
 
   def __set_solver_repository_dict(self):
-      self.dictionary = {}
-      self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-      self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
+    self.dictionary = {}
+    self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+    self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
+    self.dictionary[ "LOAD_BALANCER" ]           = self._load_balancer_name
+    self.dictionary[ "LOAD_BALANCER_ARGUMENTS" ] = self._load_balancer_arguments
 
   def __generate_solver_repository(self):
     # make sure solver repository dict is set    

@@ -6,18 +6,18 @@ import dastgen2
 import os
 
 from .Solver                        import Solver
-from .actionsets.CollocatedMGSolver.InitDofs           import InitDofsCollocatedMG
-from .actionsets.CollocatedMGSolver.CollocatedMGSolver import CollocatedMGSolver
-from .actionsets.CollocatedMGSolver.Restriction        import Restriction
-from .actionsets.CollocatedMGSolver.Prolongation       import Prolongation
-from .actionsets.PlotVertexDataInPeanoBlockFormat import PlotVertexDataInPeanoBlockFormat
+from .actionsets.CollocatedMGSolver.InitDofs               import InitDofsCollocatedMG
+from .actionsets.CollocatedMGSolver.ResetAndUpdateResidual import ResetAndUpdateResidual
+from .actionsets.CollocatedMGSolver.UpdateSolution         import UpdateSolution
+from .actionsets.CollocatedMGSolver.Restriction            import Restriction
+from .actionsets.CollocatedMGSolver.Prolongation           import Prolongation
+from .actionsets.PlotVertexDataInPeanoBlockFormat          import PlotVertexDataInPeanoBlockFormat
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
 
 class CollocatedMG(Solver):
   """!
-  \page matrixfree_collocated_h_coarsening Collocated Solver with h-coarsening
 
   A full mathematical description will follow later, but for now we outline some algorithmic steps here.
 
@@ -56,6 +56,61 @@ class CollocatedMG(Solver):
 
   Every time we run a sweep on the finest level, we update the global residuals. We terminate when the solution on the
   finest level conforms to the given stopping criterion.
+
+  ## Implementation
+
+  We have 4 fundamental action sets, which we discuss here in order of invocation. Each of their operations is guarded by a bool function that lives in the abstract solver class.
+
+  ### UpdateSolution
+  
+  \see mghype.matrixfree.solvers.api.actionsets.CollocatedMGSolver.UpdateSolution
+
+  This is where we take the residual and diag, and set the solution on vertices to \f$ u + du = u + \omega / (diag * residual) \f$. We want to avoid 
+  zero-divsion, as reset the diagonal every sweep, meaning we need to wait until the second pre/post-smoothing sweep to update the solution. We also
+  need to make sure we finalise the solution updates before we restrict/prolongate as well. updateSolution() in the abstract solver class handles all
+  of this behaviour.
+
+  To make sure the solver works in multiple trees, we tell the vertices that lie on parallel domain boundaries to share residual and diagonal with
+  each other, to make sure contributions from neighbouring cells are registered properly. See get_vertex_merge_method in this class.
+
+  This action set also makes sure that the RHS is correctly consolidated - we write our restrictions into the vertex field NewRhs. When we touch
+  a vertex for the first time after restriction, we make sure that the rhs is set to the value of what we restricted (ie the newrhs).
+
+  Ditto for delta after prolongation.
+
+  ### Prolongation
+  \see mghype.matrixfree.solvers.api.actionsets.CollocatedMGSolver.Prolongation
+
+  When we touch a vertex on the coarse level, we set the delta field to be \f$ U - OldU \f$. When we touch a vertex on the fine level, we prolongate
+  the coarse delta into the fine level delta. On the next sweep, we update the fine solution to be \f$ u + delta \f$.
+
+  The abstract solver just needs to check if its smoothing state is set to prolongation, so the logic is much simpler.
+
+  ### ResetAndUpdateResidual
+  
+  \see mghype.matrixfree.solvers.api.actionsets.CollocatedMGSolver.ResetAndUpdateResidual
+
+  When we touch the vertex for the first time, we reset residual and diag to 0, or apply boundary conditions.
+  When we touch the cell for the first time, we perform the jacobi iteration and write the residual into the \f$ 2^D \f$ adjacent vertices.
+
+  The abstract solver class does this if updateResidual() returns true, which it does when:
+    - The refinement level matches the active level
+    - The smoothing state is presmoothing or postsmoothing
+
+  ### Restriction
+
+  \see mghype.matrixfree.solvers.api.actionsets.CollocatedMGSolver.Restriction
+
+  When we touch a coarse vertex for the first time, we reset everything to 0, i.e. rhs and solution.
+  When we touch a fine vertex for the first time, we hand over to the mghype::matrixfree::solvers::cgmultigrid::restrictToNextLevel
+  which writes the fine level residual into the newRhs of the level above.
+
+  ## Infrastructure
+
+  You can now specify the number of levels that you want to use in the solver itself. The finest level is set by the refinement of
+  the mesh and is currently determined at runtime when the mesh is descended for the first time. If we find that the finest level
+  isn't at least one larger than the coarest level, we throw a std::runtime_error.
+
   """
   def __init__(self,
                name,
@@ -75,6 +130,7 @@ class CollocatedMG(Solver):
                descend_order,
                restriction_matrix,
                prolongation_matrix,
+               coarsest_level=0,
                smoother_relaxation = 0.6,
                plot_predicate="true"
                ):
@@ -85,6 +141,7 @@ class CollocatedMG(Solver):
     
     assert pre_smoothing_steps  >= 1
     assert post_smoothing_steps >= 1
+    assert coarsest_level >= 0
 
     self._pre_smoothing_steps  = pre_smoothing_steps
     self._post_smoothing_steps = post_smoothing_steps
@@ -92,18 +149,22 @@ class CollocatedMG(Solver):
     self._restriction_matrix  = restriction_matrix
     self._prolongation_matrix = prolongation_matrix
 
+    self._coarsest_level      = coarsest_level
+
     self._vertex_data.data.add_attribute( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
     self._cell_data.data.add_attribute  ( dastgen2.attributes.Integer( name="Level", initval=-1 ) )
 
     self._unknowns_per_vertex_node = unknowns_per_vertex
 
-    # already initialised this in superclass!
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "u",          str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "oldU",       str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "delta",      str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "diag",       str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
+
+    self._vertex_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_vertex_merge_method()
+    self._vertex_data.peano4_mpi_and_storage_aspect.implementation_file_includes += """\n#include "repositories/SolverRepository.h"\n"""
 
     self._local_assembly_matrix         = local_assembly_matrix
     self._local_assembly_matrix_scaling = local_assembly_matrix_scaling
@@ -139,9 +200,10 @@ class CollocatedMG(Solver):
 
   def add_to_solve(self, observer):
     invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
-    observer.add_action_set( Prolongation(self,descend_invocation_order=invocation_order+0) )
-    observer.add_action_set( CollocatedMGSolver(self,descend_invocation_order=invocation_order+1) )
-    observer.add_action_set( Restriction(self,descend_invocation_order=invocation_order+2) )
+    observer.add_action_set( UpdateSolution(self,descend_invocation_order=invocation_order+0) )
+    observer.add_action_set( Prolongation(self,descend_invocation_order=invocation_order+1) )
+    observer.add_action_set( ResetAndUpdateResidual(self,descend_invocation_order=invocation_order+2) )
+    observer.add_action_set( Restriction(self,descend_invocation_order=invocation_order+3) )
     pass
   
   def add_to_plot(self, observer):
@@ -182,7 +244,8 @@ class CollocatedMG(Solver):
         "RESTRICTION_MATRIX":            self._restriction_matrix,
         "PROLONGATION_MATRIX":           self._prolongation_matrix,
         "CORRECTION_MATRIX":             self._correction_matrix,
-        "CORRECTION_MATRIX_SCALING":     self._correction_matrix_scaling
+        "CORRECTION_MATRIX_SCALING":     self._correction_matrix_scaling,
+        "COARSEST_LEVEL"           :     self._coarsest_level
     }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -210,3 +273,24 @@ class CollocatedMG(Solver):
     output.makefile.add_h_file( subdirectory + self._name + ".h", generated=True )
     output.makefile.add_cpp_file( subdirectory + "Abstract" + self._name + ".cpp", generated=True )
     output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
+
+  def get_vertex_merge_method(self):
+    d = {}
+    d["SOLVER_INSTANCE"] = self.instance_name()
+
+    output = """
+
+  // we can get away with only doing these on the active level
+  if (
+    repositories::{{SOLVER_INSTANCE}}.consolidateResidualAndDiag( getLevel() )
+  ) {
+    // naive += with the diag
+    setDiag( getDiag() + neighbour.getDiag() );
+
+    // ditto for residual
+    setResidual( getResidual() + neighbour.getResidual() );
+  }
+
+    """
+
+    return jinja2.Template(output).render(**d)

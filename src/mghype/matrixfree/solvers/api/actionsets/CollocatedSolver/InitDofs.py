@@ -22,6 +22,9 @@ class InitDofsCollocated(ActionSet):
     }
     return isOnBoundary;
   };
+  
+  // update min/max mesh size
+  repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
 
   logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
@@ -53,6 +56,7 @@ class InitDofsCollocated(ActionSet):
           fineGridVertex{{SOLVER_NAME}}.setU(    dof, value(dof));
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
         }
+
       }
     }
     break;

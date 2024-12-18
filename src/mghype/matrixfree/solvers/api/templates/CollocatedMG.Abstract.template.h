@@ -39,18 +39,21 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     static constexpr int        PreSmoothingSteps  = {{PRE_SMOOTHING_STEPS}};
     static constexpr int        PostSmoothingSteps = {{POST_SMOOTHING_STEPS}};
 
+    static constexpr int        CoarsestLevel      = {{COARSEST_LEVEL}};
+
     enum class State {
       Solve,
       Suspend
     };
 
     enum class SmoothingState {
-      // FirstFineGridSmoothing,
       PreSmoothing,
       RestrictToNextLevel,
-      PostSmoothing
+      PostSmoothing,
+      Prolongation
     };
 
+    //! Only necessary to ensure that we can overload toString
     using mghype::matrixfree::solvers::Solver::toString;
 
     std::string toString(SmoothingState state) const;
@@ -116,12 +119,29 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
 
     State          getState() const;
     SmoothingState getSmoothingState() const;
-    bool update(int level) const;
+    bool updateResidual(int level) const;
+    bool updateSolution(int level) const;
+    bool reportSolutionUpdates(int level) const;
+    bool consolidateResidualAndDiag(int level) const;
 
     int  getActiveLevel() const;
     void setActiveLevel(int);
     int  getFinestLevel() const;
     void setFinestLevel(int);
+
+    int  getVCycleCounter() const { return _vCycleCounter; }
+    void incrementVCycleCounter() { _vCycleCounter++; }
+
+    /**
+     * Call this once after initialisation phase is over.
+     * This will call std::abort if the finest level isn't
+     * at least one larger than the coarsest level.
+     * 
+     * The coarsest level (default 0) is set in the python, and the finest level
+     * is set by the meshsize.
+     * 
+     */
+    void validateRefinementLevel();
 
     /**
      * For now, don't check the level in the function
@@ -153,5 +173,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
 
     int _preSmoothingStepsCounter;
     int _postSmoothingStepsCounter;
+
+    int _vCycleCounter;
 
 }; // {{CLASSNAME}}

@@ -122,7 +122,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
-      tarch::la::Vector< FaceUnknownsProjection,double >& projection
+      tarch::la::Vector< FaceUnknownsSolution,double >&    projection
     ) = 0;
 
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(

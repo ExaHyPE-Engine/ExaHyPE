@@ -11,13 +11,14 @@ from .actionsets.DGSolver.UpdateResidual                       import UpdateResi
 from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
 from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution
 from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution import ProjectIntoCellAndUpdateCellSolution
-from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
+from .actionsets.PlotDGDataInPeanoBlockFormat                  import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
 
-  \page matrixfree_dg_solver Discontinuous Galerkin Solver
-  
+  You can find each of the action sets here:
+  solvers.api.actionsets.DGSolver.InitDofs.InitDofsDG
+
   The text below specifies the semantics and behaviour of this matrix-free
   DG solver. A tutorial running step by step through the steps how to use
   it can be found @ref tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson "in the tutorials section".
@@ -392,7 +393,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     # face stuff
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
+    self._face_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_face_merge_method()
 
     self.preprocessing_action_set  = None
     self.postprocessing_action_set = None
@@ -548,4 +551,22 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     output.makefile.add_h_file( subdirectory + self._name + ".h", generated=True )
     output.makefile.add_cpp_file( subdirectory + "Abstract" + self._name + ".cpp", generated=True )
     output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
+
+  def get_face_merge_method(self):
+    return """
+  if (!marker.willBeRefined()
+    and
+    context == ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange
+  ) { //todo change this to use the face's own enum
+
+    setLProjection(
+      getLProjection() + neighbour.getLProjection()
+    );
+    setRProjection(
+      getRProjection() + neighbour.getRProjection()
+    );
+  }
+
+
+    """
 

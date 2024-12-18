@@ -6,5 +6,10 @@ import mghype.matrixfree.solvers.api.actionsets
 from .CollocatedDLinearDiscretisationWithPointJacobi    import CollocatedDLinearDiscretisationWithPointJacobi
 
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-from .CollocatedMG import CollocatedMG
+from .DiscontinuousGalerkinWithoutFusion                        import DiscontinuousGalerkinWithoutFusion
+from .DGTaskingSolver                                           import DGTaskingSolver
+from .DGPointWiseWithSmartPointerPatches                        import DGPointWiseWithSmartPointerPatches
+from .DiscontinuousGalerkinWithFusionUnshifted                  import DiscontinuousGalerkinWithFusionUnshifted
+from .CollocatedMG                                              import CollocatedMG
+from .CollocatedMGSingleThreaded                                import CollocatedMGSingleThreaded
 

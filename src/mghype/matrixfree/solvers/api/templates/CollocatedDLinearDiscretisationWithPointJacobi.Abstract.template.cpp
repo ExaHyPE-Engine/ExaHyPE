@@ -6,7 +6,7 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
-  _state(State::Solve)
+  _state(State::Solve), _updateSolution(false)
 {}
 
 
@@ -111,6 +111,12 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend() {
   _state = State::Suspend;
+
+  // we don't want to update the solution immediately when we
+  // revisit this solver. We will have updated the solution itself 
+  // during the DGCGCoupling, and we don't want to re-update the
+  // solution with an out-of-date residual.
+  _updateSolution = false;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSuspended() const {
@@ -125,6 +131,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::beginMeshSweep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   if ( _state == State::Solve ) {
     synchroniseGlobalResidualAndSolutionUpdate();
+    
+    // if we were already in State::Solve, then we've done at 
+    // least one sweep, and we can safely re-enable solution updates.
+    _updateSolution = true;
   }
 
   if (
@@ -138,8 +148,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::endMeshSweep() {
   _state = State::Solve;
 }
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateSolution() const {
+  return 
+    _state == State::Solve
+    and
+    _updateSolution;
+}
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update() const {
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateResidual() const {
   return _state == State::Solve;
 }
 

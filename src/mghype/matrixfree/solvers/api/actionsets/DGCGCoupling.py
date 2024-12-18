@@ -33,6 +33,10 @@ def prepare_CG_correction_solvers( dg_solver,
     cg_solver._vertex_data.data.add_or_replace_attribute( peano4.dastgen2.Peano4DoubleArray( "delta", str(cg_solver._unknowns_per_vertex_node) ) )
     cg_solver._vertex_data.data.add_or_replace_attribute( dastgen2.attributes.Integer( "numberOfRestrictions" ) )
 
+    ## add cross-boundary data sharing in
+    ## make sure we agree on a rhs after restricting
+    cg_solver._vertex_data.peano4_mpi_and_storage_aspect.merge_implementation += """\n  setNewRestrictedRhs( getNewRestrictedRhs() + neighbour.getNewRestrictedRhs() ); \n"""
+
 
 class AbstractDGCGCoupling(ActionSet):
   """!
