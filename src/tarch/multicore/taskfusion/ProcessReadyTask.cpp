@@ -44,10 +44,10 @@ bool tarch::multicore::taskfusion::ProcessReadyTask::run() {
 
     lock.free();
 
-    ::tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
-    processedTasks += extractedTasks.size()+1;
+    tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
+    processedTasks += extractedTasks.size() + 1;
 
-    if ( instruction.minTasks>_taskQueue->tasks.size()+1 ) {
+    if (instruction.minTasks > static_cast<int>(_taskQueue->tasks.size()) + 1) {
       logDebug( "run(...)", "here we go with " << extractedTasks.size() << " task(s) as we have to fuse at least " << instruction.minTasks << " task(s)" );
       for (auto& task: extractedTasks) {
         while (task->run()) {

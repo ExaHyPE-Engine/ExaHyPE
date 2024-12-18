@@ -68,7 +68,7 @@ class convert::input::PeanoTextPatchFileReader: public convert::input::PatchFile
  * -
  */
 PeanoTextPatchFileReader(const std::string &file);
-    virtual ~PeanoTextPatchFileReader();
+    virtual ~PeanoTextPatchFileReader() override;
 
     virtual void parse() override;
 

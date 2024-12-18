@@ -39,7 +39,7 @@ class toolbox::loadbalancing::CostMetrics {
      */
     virtual std::string toString() const = 0;
 
-    virtual std::string toString(const std::string& metricName) const;
+    std::string toString(const std::string& metricName) const;
 
     /**
      * Typically called by

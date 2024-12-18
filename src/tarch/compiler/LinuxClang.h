@@ -14,7 +14,7 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+#if !defined(UseManualInlining) && !defined(noUseManualInlining)
 #endif
 
 #define LittleEndian
@@ -30,10 +30,4 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
-#define OpenMPDependenciesInTaskWait
-
 #define OpenMPTaskGroup
-
-#define PragmaPush _Pragma("clang diagnostic push")
-#define SilenceUnknownAttribute _Pragma("clang diagnostic ignored \"-Wunknown-attributes\"")
-#define PragmaPop _Pragma("clang diagnostic pop")

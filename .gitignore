@@ -309,6 +309,7 @@ src/unittests/UnitTests*
 *.err
 *.out
 *.txt
+*.csv
 
 *.o.*
 *.trs*

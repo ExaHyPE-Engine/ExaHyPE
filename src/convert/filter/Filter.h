@@ -20,7 +20,9 @@ namespace convert {
 
 
 class convert::filter::Filter {
-  public:
+public:
+  virtual ~Filter() = default;
+
 	virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) = 0;
 };
 

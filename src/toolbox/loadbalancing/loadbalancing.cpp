@@ -43,10 +43,6 @@ void toolbox::loadbalancing::dumpStatistics() {
     msg << " total=" << sumLocal << "/" << sumRemote << " (local/virtual)";
   }
 
-
-  //msg << " used memory=" << tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte ) << " MByte, "
-  //    << " free memory=" << tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte )  << " MByte";
-
   logInfo( "dumpStatistics()", msg.str() );
 }
 
