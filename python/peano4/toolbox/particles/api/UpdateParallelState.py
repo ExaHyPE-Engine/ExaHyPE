@@ -124,24 +124,34 @@ class UpdateParallelState(ActionSet):
 
     __Template_BeginTraversal = jinja2.Template(
         """
+  // template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
   _numberOfParticlesThatHaveLeftTheirDomain        = 0;
+
+  // end template
 """
     )
 
     __Template_EndTraversal = jinja2.Template(
         """
+  // template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
     _numberOfExpiredHaloParticles,
     _numberOfParticlesThatHaveLeftTheirDomain
   );
+
+  // end template
 """
     )
 
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
+// template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
 
@@ -166,7 +176,7 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
       "{{PARTICLE}}",
       p->getX(),
       partID,
-      true,
+      true, // particle is (currently) local
       marker.x(),
       marker.h(),
       _treeNumber,
@@ -176,7 +186,7 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
       "{{PARTICLE}}",
       p->getX(),
       partID,
-      false,
+      false, // particle is (now) virtual
       marker.x(),
       marker.h(),
       _treeNumber,
@@ -184,11 +194,15 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     );
   }
 }
+
+// end template
 """
     )
 
     __Template_TouchVertexLastTime = jinja2.Template(
         """
+// template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+
 // run over all adjacent vertices
 auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
 while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
@@ -211,7 +225,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       "{{PARTICLE}}",
       (*p)->getX(),
       partID,
-      false,
+      false, // particle is virtual
       marker.x(),
       marker.h(),
       _treeNumber,
@@ -221,7 +235,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       "{{PARTICLE}}",
       (*p)->getX(),
       partID,
-      false,
+      false, // particle is virtual
       marker.h(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
@@ -240,6 +254,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
 }
+
+// end template
 """
     )
 

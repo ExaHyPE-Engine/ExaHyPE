@@ -2,24 +2,18 @@
 
 set -e
 
-# Script to run experiment (Noh 2D)
+# Script to run experiment (Noh 3D)
 
 # set threads number
 export OMP_NUM_THREADS=4
 
 # Parameters
-N_PART=120
-END_TIME=0.2
+N_PART=64
+END_TIME=0.6
 TIMESTEP_SIZE=0.0001
 CFL_FACTOR=0.2
-PLOT_DELTA=0.0001
+PLOT_DELTA=0.05
 CELL_SIZE=0.3
-
-# Parameters
-#N_PART=2000
-PLOT_DELTA=0.0
-
-
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
@@ -28,7 +22,7 @@ python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -pl
 
 # run experiment
 echo 'running experiment...'
-./noh2D | tee output.txt
+./noh3D | tee output.txt
 echo 'experiment run finished.'
 
 # echo 'post-processing results...'

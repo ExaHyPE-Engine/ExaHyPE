@@ -33,7 +33,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     current_species_set,
     mesh_traversals,
     alter_particle_position,
-    use_lists_to_construct_active_sets,
+    use_continuous_particles_sequences,
     step_type: StepType,
     verbose,
 ):
@@ -42,7 +42,7 @@ def translate_one_step_of_species_into_mesh_traversal(
         current_species_set,
         mesh_traversals,
         alter_particle_position,
-        use_lists_to_construct_active_sets,
+        use_continuous_particles_sequences,
         step_type,
         verbose,
         construct_tree_task_graph = False

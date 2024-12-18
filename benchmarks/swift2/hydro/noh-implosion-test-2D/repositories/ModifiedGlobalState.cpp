@@ -15,6 +15,7 @@
 
 
 #include "toolbox/loadbalancing/strategies/SpreadOutOnceGridStagnates.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 
 namespace benchmarks {namespace swift2 {namespace noh {namespace repositories {
@@ -123,6 +124,7 @@ void finishTimeStep() {
   logTraceIn( "finishTimeStep()" );
 
   globaldata::HydroPart::getSpecies().finishTimeStep();
+
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::HydroPartSet::printParticleStateStatistics() );
 
@@ -163,12 +165,16 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
+
+
   loadBalancer.finishStep();
   logTraceOut( "GridConstructionStep()" );
 }
 
 
 void finishInitialisationStep() {
+
+
   vertexdata::HydroPartSet::reduceReassignmentStatistics();
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
 
@@ -178,6 +184,8 @@ void finishInitialisationStep() {
 
 
 void finishInitialConditionStep() {
+
+
   vertexdata::HydroPartSet::clearReassignmentStatistics();
   vertexdata::HydroPartSet::clearParticleStateStatistics();
 
@@ -187,6 +195,7 @@ void finishInitialConditionStep() {
 
 
 void finishPlotStep() {
+
   logTraceOut( "PlotStep()" );
 }
 
