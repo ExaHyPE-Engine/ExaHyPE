@@ -33,17 +33,14 @@ Sorting_BucketSort = "bucket-sort"
 SortingVariants = [Sorting_MultiscaleSort, Sorting_BucketSort]
 
 KernelOptimisation_NoOptimisation = "no-optimisation"
-KernelOptimisation_OuterGuards = "outer-guards"
 KernelOptimisation_VectoriseAll = "vectorise-all"
-KernelOptimisation_VectoriseDistanceChecks = "vectorise-distance-checks"
+KernelOptimisation_VectoriseDistanceChecks = "vectorise-distance-checks-preamble"
 
 BasicKernelOptimisationVariants = [
     KernelOptimisation_NoOptimisation,
-    KernelOptimisation_OuterGuards,
 ]
 AllKernelOptimisationVariants = [
     KernelOptimisation_NoOptimisation,
-    KernelOptimisation_OuterGuards,
     KernelOptimisation_VectoriseAll,
     KernelOptimisation_VectoriseDistanceChecks,
 ]
@@ -381,25 +378,6 @@ if __name__ == "__main__":
         )
     )
 
-    if args.realisation.split(".")[3] == KernelOptimisation_NoOptimisation:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
-        )
-    elif args.realisation.split(".")[3] == KernelOptimisation_OuterGuards:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
-        )
-    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseDistanceChecks:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
-        )
-    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseAll:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
-        )
-    else:
-        raise NotImplemented()
-
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
         dimensions_hydro=hydro_dimensions,
@@ -410,8 +388,16 @@ if __name__ == "__main__":
         particles_per_cell=particles_per_cell,
         min_h=max_cell_size,
         max_h=max_cell_size,
-        particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
     )
+
+    if args.realisation.split(".")[3] == KernelOptimisation_NoOptimisation:
+        pass
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseAll:
+        particle.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::")
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseDistanceChecks:
+        particle.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::prefixcheck::")
+    else:
+        raise NotImplemented()
 
     ########################################################################################
     # Set parameters for the SPH simulation
@@ -447,8 +433,10 @@ if __name__ == "__main__":
     KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
     KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
-    hydro_h_max = max_cell_size / 2
-    particle.h_hydro_max = hydro_h_max
+    hydro_H_max = max_cell_size / 2
+    hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+        hydro_H_max, kernel, hydro_dimensions
+    )
 
     # particle.h_hydro_min = 1e-6
     # particle.h_max_iterations = 10
@@ -486,6 +474,11 @@ if __name__ == "__main__":
         particle.u_full.valid_mantissa_bits = args.mantissa_size
 
     particle.data.expose_all_attributes_in_header_file()
+
+    # deploy particle properties
+    # This needs to be done if you're changing any of the default values.
+    # Otherwise, the changes won't propagate into dastgen.
+    particle.set_parameters()
 
     # Add particle to the SWIFT project --------------------------------------------
     # Notice that you any change to the particle will not take effect after adding
@@ -598,7 +591,6 @@ if __name__ == "__main__":
         particle_set,
         "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
     )
-    particle_plotter.add_attribute_to_plot(particle.part_id, 1)
     particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
     particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
     particle_plotter.add_attribute_to_plot(particle.mass, 1)

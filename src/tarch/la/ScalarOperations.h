@@ -59,6 +59,7 @@ namespace tarch {
      *
      * @param tolerance Absolute tolerance when we compare two values.
      */
+    [[maybe_unused]] // Compiler warns about the inline function unused if no extension is enabled that uses it
     static bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod {
       return lhs - rhs < -tolerance;
     }

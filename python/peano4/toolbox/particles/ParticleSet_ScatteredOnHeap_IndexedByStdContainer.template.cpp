@@ -8,6 +8,8 @@
 #include "toolbox/particles/MultiscaleTransitions.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
+// Template: python/peano4/toolbox/particles/ParticleSet_ScatteredOnHeap_IndexedByStdContainer.template.cpp
+
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 

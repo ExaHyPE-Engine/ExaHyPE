@@ -142,7 +142,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 name="Kick1",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::leapfrogKickWithGlobalTimeStepSize<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::leapfrogKickWithGlobalTimeStepSize<globaldata::{PARTICLE}> );""",
                 prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"
@@ -154,10 +154,10 @@ class LeapfrogFixedSearchRadius(Particle):
                 name="Drift",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}> );""",
                 touch_vertex_last_time_kernel=f"""
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-                ::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
+                ::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
                 ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
                 """,
                 includes="""
@@ -181,7 +181,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}> );""",
                 prepare_traversal_kernel=f"""
                                          globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();

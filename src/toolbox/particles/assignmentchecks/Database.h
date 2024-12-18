@@ -40,6 +40,10 @@ namespace toolbox {
          * is exceeded, the past history will be condensed into a single event,
          * signifying that it had been compacted.
          *
+         * Important: Make sure that _maxParticleSnapshotsToKeepTrackOf is >=
+         * number of spacetrees in your run. @TODO: add a runtime check for this
+         * during startup.
+         *
          * Additionally, something we come across very often is that particles,
          * once assigned to a vertex, very often stay assigned to the same
          * vertex for a long time (=many sweeps) and only experiences small
@@ -68,7 +72,7 @@ namespace toolbox {
         private:
           // Make constructor private so nobody can make one by accident.
           Database() {
-            setMaxParticleSnapshotsToKeepTrackOf(16);
+            setMaxParticleSnapshotsToKeepTrackOf(32);
             this->reset();
           };
 
@@ -124,12 +128,13 @@ namespace toolbox {
            * that after you use it.
            *
            * Cannot be const as we have a semaphore to be
-           * thread-safe.
+           * thread-safe. Returns a copy, not a reference, so that once
+           * semaphore is lifted, the state of the history remains accurate.
            *
            * @return The history of the particle.
            *
            */
-          ParticleEvents& getParticleHistory(
+          ParticleEvents getParticleHistory(
             const ParticleSearchIdentifier& identifier
           );
 
@@ -178,13 +183,29 @@ namespace toolbox {
            * of the last recorded event. The other events in the history
            * will be deleted.
            *
-           * @return the particle history of the particle specified by
-           *   identifier. A convenience so we don't have to search for
-           *   its history again just after we've added an event.
+           * @return the last event on the spacetree with id treeId before
+           * the newly added one.
            */
-          ParticleEvents& addEvent(
+          Event addEvent(
             ParticleSearchIdentifier identifier,
-            Event&                   event
+            Event&                   event,
+            const int                treeId
+          );
+
+          /**
+           * Replace an (old) particle event with a new one.
+           *
+           * This is used e.g. in case where we replace a move event with
+           * a consecutive move event. Put into this function for thread
+           * safety and minimizing lock time of the database.
+           *
+           * Just like addEvent(), it adds the current mesh sweep index to
+           * the newEvent.
+           */
+          void replaceEvent(
+            ParticleSearchIdentifier identifier,
+            Event&                   oldEvent,
+            Event&                   newEvent
           );
 
           /**
@@ -230,29 +251,29 @@ namespace toolbox {
           /**
            * Get the history of stored mesh sweep (names).
            */
-          std::string sweepHistory() const;
+          std::string sweepHistory();
 
           /**
            * Eliminate existing particles from the database. See documentation
            * in TracingAPI.h:eliminateExistingParticles() for more.
            */
           void eliminateExistingParticles();
-        };
 
-        /**
-         * get the previous event from a particle history.
-         *
-         * nFirstEventsToSkip: skip this many events. Useful if you've just
-         * added something to the database using addEvent and are trying to
-         * re-use the history it returns.
-         */
-        Event getPreviousEvent(
-          ParticleEvents& particleHistory,
-          int             spacetreeId,
-          size_t          nFirstEventsToSkip = 0
-        );
+          /**
+           * get the previous event from a particle history.
+           *
+           * nFirstEventsToSkip: skip this many events. Useful if you've just
+           * added something to the database using addEvent and are trying to
+           * re-use the history it returns.
+           */
+          Event getPreviousEvent(
+            ParticleEvents& particleHistory,
+            int             spacetreeId,
+            size_t          nFirstEventsToSkip = 0
+          );
 
-      } // namespace internal
-    }   // namespace assignmentchecks
-  }     // namespace particles
+        }; // class Database
+      }    // namespace internal
+    }      // namespace assignmentchecks
+  }        // namespace particles
 } // namespace toolbox

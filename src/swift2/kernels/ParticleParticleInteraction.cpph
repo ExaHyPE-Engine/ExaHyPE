@@ -18,14 +18,13 @@ bool swift2::kernels::forceKernelDistanceCheck(
 
   const double h_a = localParticle->getSmoothingLength();
 
-  // Distance between the two particles
   tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
-  const double                          r  = tarch::la::norm2(dx);
+  const double                          rSquared  = tarch::la::norm2Squared(dx);
 
   // Get actual interaction radius
-  const double iactR = kernel_gamma * h_a;
+  const double iactRSquared = kernel_gamma * kernel_gamma * h_a * h_a;
 
-  const bool result = tarch::la::smaller(r, iactR);
+  const bool result = tarch::la::smaller(rSquared, iactRSquared);
 
   return result;
 }

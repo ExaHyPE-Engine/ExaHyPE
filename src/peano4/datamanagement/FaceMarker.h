@@ -44,6 +44,10 @@ struct peano4::datamanagement::FaceMarker {
      */
     tarch::la::Vector<Dimensions,double>  _h;
 
+    bool                                  _cellIsLocal;
+
+    int                                   _select;
+
     /**
      * @see hasBeenRefined()
      */
@@ -58,15 +62,11 @@ struct peano4::datamanagement::FaceMarker {
 
     std::bitset<2*Dimensions>             _isAdjacentToParallelBoundary;
 
-    bool                                  _cellIsLocal;
-
-    int _select;
-
-
     /**
      * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
      */
-    tarch::la::Vector<Dimensions,int>  _relativePositionOfCellWithinFatherCell;
+    tarch::la::Vector<Dimensions,int>     _relativePositionOfCellWithinFatherCell;
+
   public:
     /**
      * The derivation of _isLocal and _isRefined is very similar to
