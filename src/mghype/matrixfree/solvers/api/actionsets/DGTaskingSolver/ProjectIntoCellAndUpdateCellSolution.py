@@ -105,7 +105,7 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
 
       // set residual = Mb - A^cc u^C
       tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
-        repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() )        * tarch::la::Vector< residualVecSize, double >( rhsPtr )
+        repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() )        * tarch::la::Vector< residualVecSize, double >( rhsPtr )
       - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * tarch::la::Vector< residualVecSize, double >( solutionPtr );
 
       for (int i=0; i<residualVecSize; i++)

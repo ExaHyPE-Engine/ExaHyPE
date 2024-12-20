@@ -75,7 +75,7 @@ class ResetAndUpdateResidual(ActionSet):
       int startIndex = TwoPowerD * unknown;
       
       auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
-      auto M       = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h());
+      auto M       = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(), marker.h());
 
       // collect all of the vertex values into one vector - apply the appropriate
       // part of the matrix as we go.

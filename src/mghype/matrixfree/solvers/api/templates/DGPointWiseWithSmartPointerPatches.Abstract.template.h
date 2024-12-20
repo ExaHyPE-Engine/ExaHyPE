@@ -125,17 +125,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       tarch::la::Vector< FaceUnknownsSolution,double >&    projection
     ) = 0;
 
-    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
+    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     ) final;
 
-    virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
+    virtual celldata::{{SOLVER_NAME}}::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    virtual facedata::{{SOLVER_NAME}}::Type getFaceDoFType(
+    virtual facedata::{{SOLVER_NAME}}::Type getFaceType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
@@ -145,7 +145,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getMassMatrix(
+    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if MASS_MATRIX is not defined %} = 0 {% endif %};
