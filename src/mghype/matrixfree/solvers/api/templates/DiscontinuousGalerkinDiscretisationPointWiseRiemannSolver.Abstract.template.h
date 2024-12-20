@@ -86,18 +86,95 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
+    /**
+     * During solution updates, we update the solution via
+     * \f$ u = u + \omega * du \f$. Its value is passed in to the python class
+     * and is in the range [0,1]. A value 0 will mean that no updates are performed. 
+     * 0.5 is a typical value.
+     * 
+     */
     static constexpr double     OmegaCell              = {{CELL_RELAXATION}};
+
+    /**
+     * During solution updates, we update the solution via
+     * \f$ u = (1-\omega)*u + \omega * du \f$. Its value is passed in to the DG Solver class
+     * and is in the range [0,1]. A value 0 will mean that no updates are performed. 
+     * 1.0 is a typical value.
+     * 
+     */  
     static constexpr double     OmegaFace              = {{FACE_RELAXATION}};
-    static constexpr int        VertexUnknowns         = {{VERTEX_CARDINALITY}};
+
+    /**
+     * This is the total number of unknowns we store in the cell, taking into account
+     * dimension, polynomial degree and the number of variables that we care about in
+     * this setup.
+     * 
+     * This is set in the python script and sent over via a template. Its value
+     * is equal to UnknownsPerCellNode * ( PolyDegree + 1 ) ^ Dimensions, which
+     * is in turn equal to UnknownsPerCellNode * NodesPerCell.
+     */
     static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
+
+    /**
+     * This is the total number of unknowns we store in the face's solution vector, taking
+     * into account dimension, polynomial degree and the number of variables that we care
+     * about in this setup.
+     * 
+     * Its value is equal to SolutionsPerFaceNode * NodesPerFace.
+     * 
+     */
     static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};
+
+    /**
+     * This is the total number of unknowns we store in the face's projection vector, taking
+     * into account dimension, polynomial degree and the number of variables that we care
+     * about in this setup.
+     * 
+     * Its value is equal to ProjectionsPerFaceNode * NodesPerFace, which is twice as long
+     * as the solution vector. This is to take into account projections from the left and
+     * right sides of a face.
+     */
     static constexpr int        FaceUnknownsProjection = {{FACE_CARDINALITY_PROJECTION}};
 
+    /**
+     * This is the total number of nodes we store logically in the cell, taking into account
+     * polynomial degree and dimensions.
+     * 
+     * Its value is set in the DG Solver class, and is equal to (PolyDegree+1)^Dimensions
+     * 
+     */
     static constexpr int        NodesPerCell           = {{NODES_PER_CELL}};
+
+    /**
+     * This is the total number of nodes we store logically in the face, taking into account
+     * polynomial degree and dimensions.
+     * 
+     * Its value is set in the DG Solver class, and is equal to (PolyDegree+1)^(Dimensions-1)
+     * 
+     */  
     static constexpr int        NodesPerFace           = {{NODES_PER_FACE}};
 
+    /**
+     * This is the number of unknowns we store per cell node. For almost all purposes, 
+     * this number is 1 (ie the solution of the poisson problem in the cell).
+     * 
+     */
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
+
+    /**
+     * This is the number of unknowns we store per face node for the solution. This
+     * is typically 2, ie the true solution as well as its gradient.
+     */
     static constexpr int        SolutionsPerFaceNode   = {{SOLUTIONS_PER_FACE_NODE}};
+
+    /**
+     * This is the number of unknowns we store per face node for the solution. This
+     * is typically 2, ie the true solution as well as its gradient. 
+     *
+     * @todo Kick this out and replace it with SolutionsPerFaceNode, since it doesn't
+     *  make sense if these two numbers differ.
+     * 
+     */
     static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
@@ -125,17 +202,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       tarch::la::Vector< FaceUnknownsSolution,double >&    projection
     ) = 0;
 
-    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h
-    ) final;
-
-    virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
+    /**
+     * Initialise a cell degree of freedom
+     * 
+     */
+    virtual celldata::{{SOLVER_NAME}}::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    virtual facedata::{{SOLVER_NAME}}::Type getFaceDoFType(
+    virtual facedata::{{SOLVER_NAME}}::Type getFaceType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
@@ -145,7 +221,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getMassMatrix(
+    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if MASS_MATRIX is not defined %} = 0 {% endif %};

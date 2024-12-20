@@ -275,7 +275,10 @@ class Project:
     else:
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._subdirectory )
     
-    # @todo das muss raus
+    '''
+    This is for two-grid setup - we mark the correction solver as "auxiliary", so that we 
+    don't exit early before the main solver has reached tolerance.
+    '''
     if auxiliary:
       self._aux_solvers.append( solver )
     else:

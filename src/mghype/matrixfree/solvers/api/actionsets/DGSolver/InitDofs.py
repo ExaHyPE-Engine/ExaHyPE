@@ -13,44 +13,23 @@ class InitDofsDG(ActionSet):
   """
   templateTouchVertexFirstTime = """
 
-  //logTraceInWith3Arguments("InitDofsDG::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
-
-  switch(dofType)
+  if ( marker.willBeRefined() )
   {
-
-    case vertexdata::{{SOLVER_NAME}}::Type::Interior:
-    {
-      if ( marker.willBeRefined() )
-      {
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
-      }
-
-      else
-      {
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Interior );
-      }
-    }
-    break;
-
-    case vertexdata::{{SOLVER_NAME}}::Type::Coarse:
-      assertionMsg(false, "should not be returned by user" );
-      break;
-
-    case vertexdata::{{SOLVER_NAME}}::Type::Undefined:
-      assertionMsg(false, "should not be returned by user" );
-      break;
+    fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
   }
 
+  else
+  {
+    fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Interior );
+  }
 
-  //logTraceOutWith2Arguments("InitDofsDG::touchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -105,7 +84,7 @@ class InitDofsDG(ActionSet):
   templatetouchFaceFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
-  facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
+  facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceType(marker.x(),marker.h());
 
   switch(dofType)
   {

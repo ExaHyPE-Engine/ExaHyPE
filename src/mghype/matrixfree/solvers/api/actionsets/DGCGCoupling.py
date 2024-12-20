@@ -230,7 +230,7 @@ class AbstractDGCGCoupling(ActionSet):
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictHierarchicalResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedProlongationMatrix,
         composedRestrictionMatrix,
-        repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
+        repositories::{{DG_SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ),
         repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridCell{{DG_SOLVER_NAME}}.getRhs(),
@@ -338,7 +338,7 @@ class AbstractDGCGCoupling(ActionSet):
 
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedRestrictionMatrix,
-        repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
+        repositories::{{DG_SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ),
         repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridCell{{DG_SOLVER_NAME}}.getRhs(),

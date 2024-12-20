@@ -77,12 +77,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value
     ) = 0;
 
-    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
+    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     ) const final;
 
-    virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
+    virtual celldata::{{SOLVER_NAME}}::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     ) const;
@@ -93,7 +93,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     ) const {% if LOCAL_ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
 
-    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getMassMatrix(
+    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize,
       const int level

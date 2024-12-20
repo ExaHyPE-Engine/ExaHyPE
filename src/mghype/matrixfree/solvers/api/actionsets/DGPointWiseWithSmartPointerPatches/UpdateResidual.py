@@ -23,12 +23,12 @@ class UpdateResidual(ActionSet):
       fineGridCell{{SOLVER_NAME}}Solution.get(),
       fineGridCell{{SOLVER_NAME}}Rhs.get(),
       marker.toString(),
-      repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() )
+      repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() )
     );
 
     // write Mb into it, i.e. mass matrix * rhs
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
-      repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}Rhs.get();
+      repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}Rhs.get();
 
     // also subtract A^cc u^c
     r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}Solution.get();

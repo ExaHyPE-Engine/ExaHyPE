@@ -35,8 +35,8 @@ class InitDofsCollocatedMG(ActionSet):
   fineGridCell{{SOLVER_NAME}}.setLevel(
     coarseGridCell{{SOLVER_NAME}}.getLevel() + 1
   );
-
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   switch(dofType)
   {
     case celldata::{{SOLVER_NAME}}::Type::Outside:
@@ -68,7 +68,7 @@ class InitDofsCollocatedMG(ActionSet):
   fineGridVertex{{SOLVER_NAME}}.setOldU( zeroes );
   fineGridVertex{{SOLVER_NAME}}.setDiag( zeroes );
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {

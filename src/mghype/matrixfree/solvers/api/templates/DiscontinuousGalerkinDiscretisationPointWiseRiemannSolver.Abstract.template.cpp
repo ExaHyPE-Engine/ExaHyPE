@@ -9,7 +9,6 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
   _state( State::ProjectOntoFacesOnly )
 {}
 
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
 
 bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
@@ -24,21 +23,14 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
-{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h
-) {
-  return vertexdata::{{SOLVER_NAME}}::Type::Interior;
-}
-
-{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
   return celldata::{{SOLVER_NAME}}::Type::Interior;
 }
 
-{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceDoFType(
+{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -49,11 +41,11 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 
 
 {% if MASS_MATRIX is defined %}
-tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  logTraceInWith2Arguments("getMassMatrix", cellCentre, cellSize);
+  logTraceInWith2Arguments("getRhsMatrix", cellCentre, cellSize);
   static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
     {% for MATRIX in MASS_MATRIX %}
     // {# MASS_MATRIX is an array, possible of length 1 #}
@@ -79,7 +71,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   // may not be static, as it depends upon h
   tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
-  logTraceOutWith1Argument("getMassMatrix", result);
+  logTraceOutWith1Argument("getRhsMatrix", result);
   return result;
 }
 {% endif %}
