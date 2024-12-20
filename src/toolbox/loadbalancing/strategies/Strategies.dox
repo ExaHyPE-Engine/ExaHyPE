@@ -50,7 +50,7 @@
  So is a @f$ \ell_{min} @f$ which is the minimal distance from any node to the tree's root.
  Throughout the grid construction, @f$ \ell < \ell_{max} @f$ is admissible. 
  Once the tree construction has terminated, we know
- @f$ \ell_{min} \leq \ell(n) \leq \ell_{max} @f$ for each and every node.
+ @f$ \ell_{min} \leq \ell(n) \leq \ell_{max} @f$ for each leaf.
 
 
  By default, any new node that is added to the tree is assigned to the 
