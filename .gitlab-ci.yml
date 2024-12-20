@@ -1,7 +1,12 @@
+# Define the stages we have overall.
+# BuildSystem is where we build and test the actual code.
+# Pages is where we generate the doxygen pages and publish them on the website
 stages:
   - BuildSystem
   - Pages
 
+# We define a job within the BuildSystem stage. We use the include statement
+# so that this job does everything in the .yml file linked below.
 Automake:
   stage: BuildSystem
   trigger:
@@ -9,6 +14,8 @@ Automake:
       - .continuous_integration/gitlab-automake.yml
     strategy: depend
 
+# We define a job within the BuildSystem stage. We use the include statement
+# so that this job does everything in the .yml file linked below.
 CMake:
   stage: BuildSystem
   trigger:
@@ -16,5 +23,6 @@ CMake:
       - .continuous_integration/gitlab-cmake.yml
     strategy: depend
 
+# This one contains everything to publish the docu
 include:
   - .continuous_integration/gitlab-pages.yml
