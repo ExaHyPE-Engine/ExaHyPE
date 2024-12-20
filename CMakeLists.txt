@@ -82,6 +82,7 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   target_compile_options(PeanoOptions INTERFACE
     -W
     -Wall
+    -Wextra
     --diag_suppress=unrecognized_attribute
   )
 else()
@@ -252,10 +253,10 @@ set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4 CACHE INTERNAL "")
 
-set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE} CACHE INTERNAL "")
-set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics CACHE INTERNAL "")
+set(PEANO_CXX_FLAGS_STATS -O3 CACHE INTERNAL "")
+set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DNDEBUG -DTrackStatistics CACHE INTERNAL "")
 
-set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG} CACHE INTERNAL "")
+set(PEANO_CXX_FLAGS_ASSERTS -g -O3 CACHE INTERNAL "")
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2 CACHE INTERNAL "")
 
 set(PEANO_CXX_FLAGS_TRACE -g -O2 CACHE INTERNAL "")
@@ -263,18 +264,20 @@ set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
-  #target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
-  target_compile_options(PeanoOptions INTERFACE ${MPI_CXX_FLAGS})
-  target_link_libraries(PeanoOptions INTERFACE ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
-  target_include_directories(PeanoOptions INTERFACE ${MPI_CXX_INCLUDE_DIRS})
-  target_compile_definitions(PeanoOptions INTERFACE Parallel ${MPI_CXX_COMPILE_DEFINITIONS})
-  #target_compile_definitions(PeanoOptions INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
+  target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
+  target_compile_definitions(PeanoOptions INTERFACE Parallel)
+  set(ONLY_IF_MPI_FIND_DEPENDENCY "find_dependency(MPI)")
+else()
+  set(ONLY_IF_MPI_FIND_DEPENDENCY "# MPI not used")
 endif()
 
 if(WITH_OTTER)
   find_package(Otter CONFIG)
   target_link_libraries(PeanoOptions INTERFACE Otter::Otter)
   target_compile_definitions(PeanoOptions INTERFACE UseOtter)
+  set(ONLY_IF_OTTER_FIND_DEPENDENCY "find_dependency(Otter)")
+else()
+  set(ONLY_IF_OTTER_FIND_DEPENDENCY "# Otter not used")
 endif()
 
 if(WITH_PETSC)
@@ -298,13 +301,18 @@ if(WITH_VTK)
   find_package(VTK REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE VTK::CommonCore)
   target_compile_definitions(PeanoOptions INTERFACE UseVTK)
+  set(ONLY_IF_VTK_FIND_DEPENDENCY "find_dependency(VTK)")
+else()
+  set(ONLY_IF_VTK_FIND_DEPENDENCY "# VTK not used")
 endif()
 
 if(WITH_HDF5)
-  find_package(HDF5 REQUIRED)
-  target_link_libraries(PeanoOptions INTERFACE ${HDF5_LIBRARIES} ${HDF5_CXX_LIBRARIES})
-  target_include_directories(PeanoOptions INTERFACE ${HDF5_INCLUDE_DIRS} ${HDF5_CXX_INCLUDE_DIRS})
-  target_compile_definitions(PeanoOptions INTERFACE UseHDF5 ${HDF5_DEFINITIONS} ${HDF5_CXX_DEFINITIONS})
+  find_package(HDF5 REQUIRED COMPONENTS C CXX)
+  target_link_libraries(PeanoOptions INTERFACE HDF5::HDF5)
+  target_compile_definitions(PeanoOptions INTERFACE UseHDF5)
+  set(ONLY_IF_HDF5_FIND_DEPENDENCY "find_dependency(HDF5 COMPONENTS C CXX)")
+else()
+  set(ONLY_IF_HDF5_FIND_DEPENDENCY "# HDF5 not used")
 endif()
 
 if(WITH_NETCDF)

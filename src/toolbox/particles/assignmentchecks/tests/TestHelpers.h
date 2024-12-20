@@ -79,7 +79,6 @@ private:
    */
   void testAddingSweepsToDatabase();
 
-
   /**
    * Test the adding of particle events to the database.
    * This also serves as a unit test for all possible events: I let
@@ -93,6 +92,12 @@ private:
    * event tracing including consistency checks will also be done later.
    */
   void testAddingParticleEvents();
+
+  /**
+   * Test the removal of particle events once their history gets
+   * too long.
+   */
+  void testRemovingParticleEvents();
 
   /**
    * Test adding move events of particles. Calls

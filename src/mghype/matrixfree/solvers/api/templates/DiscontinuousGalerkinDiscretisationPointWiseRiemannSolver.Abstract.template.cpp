@@ -23,7 +23,6 @@ tarch::la::Vector< Dimensions, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}
   _state( State::ProjectOntoFacesOnly )
 {}
 
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
 
 bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
@@ -38,6 +37,13 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  return celldata::{{SOLVER_NAME}}::Type::Interior;
+}
+
 {{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
@@ -48,29 +54,8 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
-{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellType(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h
-) {
-  return celldata::{{SOLVER_NAME}}::Type::Interior;
-}
-
-
-{% if CUSTOM_INIT_CELL!="" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCellDoF(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< UnknownsPerCellNode, double >&  value,
-  tarch::la::Vector< UnknownsPerCellNode, double >&  rhs,
-  tarch::la::Vector< Dimensions, int >&              node
-) {
-{{CUSTOM_INIT_CELL}}
-}
-{% endif %}
-
-
-{% if RHS_MATRIX is defined %}
-tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+{% if MASS_MATRIX is defined %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {

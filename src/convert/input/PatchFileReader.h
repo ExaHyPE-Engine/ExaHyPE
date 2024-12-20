@@ -20,6 +20,8 @@ namespace convert {
 
 class convert::input::PatchFileReader {
   public:
+    virtual ~PatchFileReader() = default;
+
     virtual void parse() = 0;
 
     /**

@@ -22,10 +22,13 @@ class InitDofsCollocated(ActionSet):
     }
     return isOnBoundary;
   };
+  
+  // update min/max mesh size
+  repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
 
   logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -53,6 +56,7 @@ class InitDofsCollocated(ActionSet):
           fineGridVertex{{SOLVER_NAME}}.setU(    dof, value(dof));
           fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
         }
+
       }
     }
     break;
@@ -106,7 +110,7 @@ class InitDofsCollocated(ActionSet):
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {

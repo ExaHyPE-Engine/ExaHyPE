@@ -25,6 +25,8 @@ namespace tarch {
  */
 class tarch::plotter::griddata::blockstructured::PatchWriter {
 public:
+  virtual ~PatchWriter() = default;
+
   /**
    * @return Write has been successful
    */
@@ -47,7 +49,7 @@ public:
    */
   class CellDataWriter {
   public:
-    virtual ~CellDataWriter(){};
+    virtual ~CellDataWriter() = default;
 
     /**
      * Write data for one cell.
@@ -86,7 +88,7 @@ public:
    */
   class VertexDataWriter {
   public:
-    virtual ~VertexDataWriter(){};
+    virtual ~VertexDataWriter() = default;
 
     /**
      * Write data for one cell.

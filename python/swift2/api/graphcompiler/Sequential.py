@@ -26,7 +26,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     current_species_set,
     mesh_traversals,
     alter_particle_position,
-    use_lists_to_construct_active_sets,
+    use_continuous_particles_sequences,
     step_type: StepType,
     verbose,
 ):
@@ -92,7 +92,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     # octant (cell).
     #
     if step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS:
-        if use_lists_to_construct_active_sets:
+        if use_continuous_particles_sequences:
             if verbose:
                 print(
                     "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} can use the peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles action set and hence optimise aggressively".format(
@@ -136,7 +136,7 @@ def translate_one_step_of_species_into_mesh_traversal(
         action_set_particle_particle_interaction.parallel = True
         new_step.add_action_set(action_set_particle_particle_interaction)
     elif step.dependencies == AlgorithmStep.Dependencies.SELF:
-        if use_lists_to_construct_active_sets:
+        if use_continuous_particles_sequences:
             if verbose:
                 print(
                     "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles action set".format(
@@ -236,36 +236,36 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
         if (
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
         ):
-            use_lists_to_construct_active_sets = False
+            use_continuous_particles_sequences = False
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         elif (
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
         ):
-            use_lists_to_construct_active_sets = True
+            use_continuous_particles_sequences = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         elif (
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
             and len(alter_particle_position) > 0
             and alter_particle_position[-1]
         ):
-            use_lists_to_construct_active_sets = False
+            use_continuous_particles_sequences = False
             add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
         elif (
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
         ):
-            use_lists_to_construct_active_sets = False
+            use_continuous_particles_sequences = False
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         elif (
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
             and len(alter_particle_position) > 0
             and alter_particle_position[-1]
         ):
-            use_lists_to_construct_active_sets = True
+            use_continuous_particles_sequences = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
         elif (
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
         ):
-            use_lists_to_construct_active_sets = True
+            use_continuous_particles_sequences = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         else:
            assert False, "variant {} x {} not supported".format(particle_sorting_and_storage,alter_particle_position)
@@ -296,7 +296,7 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
             current_species_set=current_species_set,
             mesh_traversals=mesh_traversals,
             alter_particle_position=alter_particle_position,
-            use_lists_to_construct_active_sets=use_lists_to_construct_active_sets,
+            use_continuous_particles_sequences=use_continuous_particles_sequences,
             step_type=step_type,
             verbose=verbose,
         )

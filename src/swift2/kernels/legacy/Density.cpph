@@ -2,6 +2,65 @@
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
 
+
+template <typename Particle>
+void swift2::kernels::legacy::densityKernelWithoutChecks(
+  const peano4::datamanagement::CellMarker& marker,
+  Particle&                                 localParticle,
+  const Particle&                           activeParticle
+) {
+    assertion3( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle), marker.toString(), localParticle.toString(), activeParticle.toString() );
+    assertion3( densityKernelPredicate(marker,localParticle,activeParticle), marker.toString(), localParticle.toString(), activeParticle.toString() );
+    density_kernel(&localParticle, &activeParticle);
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::densityKernel(
+  const peano4::datamanagement::CellMarker& marker,
+  Particle&                                 localParticle,
+  const Particle&                           activeParticle
+) {
+  if (
+    ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle)
+    and
+    densityKernelPairEvaluationPredicate(marker,localParticle,activeParticle)
+  ) {
+    density_kernel(&localParticle, &activeParticle);
+  }
+}
+
+
+template <typename Particle>
+bool swift2::kernels::legacy::densityKernelPairEvaluationPredicate(
+  const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+) {
+  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle) );
+
+  const tarch::la::Vector<Dimensions, double>
+               dx = localParticle.getX() - activeParticle.getX();
+  const double rSquared  = tarch::la::norm2Squared(dx);
+
+  /* Retrieve basic properties of local and active particles */
+  const double hi = localParticle.getSmoothingLength();
+
+  /* Compute the actual interaction radius */
+  const double iactRSquared = kernel_gamma * kernel_gamma * hi * hi;
+
+  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
+           marker,
+           localParticle,
+           activeParticle
+         )
+         and
+         (not localParticle.getSmoothingLengthConverged())
+         and
+         tarch::la::smaller(rSquared, iactRSquared)
+         and tarch::la::greater(rSquared, 0.0) // Self-contribution is calculated elsewhere
+         ;
+}
+
+
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 
@@ -84,10 +143,6 @@ void swift2::kernels::legacy::density_kernel(
   Particle*       localParticle,
   const Particle* activeParticle
 ) {
-
-  if (localParticle->getSmoothingLengthConverged())
-    return;
-
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
 
@@ -100,16 +155,6 @@ void swift2::kernels::legacy::density_kernel(
   const tarch::la::Vector<Dimensions, double>
                dx = localParticle->getX() - activeParticle->getX();
   const double r  = tarch::la::norm2(dx);
-
-  /* Compute the actual interaction radius */
-  const double iactR = kernel_gamma * hi;
-
-  // This will probably cause issues with vectorisation and should be outside of
-  // the loop.
-  if (
-    tarch::la::smaller(r, iactR)
-    and tarch::la::greater(r, 0.0) // Self-contribution is calculated elsewhere
-  ) {
 
     const double mj     = activeParticle->getMass();
     const double hi_inv = 1. / hi;
@@ -164,6 +209,4 @@ void swift2::kernels::legacy::density_kernel(
       localParticle->getDensityNeighbourCount() + 1
     );
 #endif
-
-  } /* End if r<iactR */
 }

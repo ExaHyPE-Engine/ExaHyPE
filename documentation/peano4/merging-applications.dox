@@ -1,9 +1,11 @@
 /**
 
-  @page page_peano_mergin_applications Merging/coupling various applications
+  @page page_peano_merging_applications Merging/coupling various applications
 
 <!-- Add this one for href links to subitems -->
-\tableofcontents
+  @tableofcontents
+
+  As several code types are built on top of the same Peano infrastructure, we can always combine them or alter the underlying Peano representation by adding additional mesh traversals for example. 
 
   Peano's Python API is a mere wrapper around the Peano C++ core, i.e. it 
   provides a high-level abstraction of Peano's @ref peano_action_sets "action sets",
@@ -120,7 +122,7 @@
   exahype2.Project instance) does ***not*** propagate through anymore.
   
   Once merged, it is reasonably to doublecheck the generated file
-  `project_A.subdirectory + "repositories/StepRepository.h` in each extension subdirectory.
+  ```project_A.subdirectory + "repositories/StepRepository.h``` in each extension subdirectory.
   Each of them defines observers from their corresponding extension project, but 
   `StepRepository` notably hosts an enum called `Steps` which accommodates 
   identifiers for the steps from their corresponding project.
@@ -133,8 +135,9 @@
   algorithmic steps use the same name for two different observers. Our approach in
   merging two projects guarantees unique names by using namespaces passed as parameters
   when creating extension projects. Therefore, steps with the same name from solvers of
-  different extension projects are differentiated as simple as `projectA.namespace + "::Step1`
-  and `projectB.namespace + "::Step1`, where `"Step1"` is the step name
+  different extension projects are differentiated as simple as 
+  ```projectA.namespace + "::Step1```
+  and ```projectB.namespace + "::Step1```, where `"Step1"` is the step name
   in both solvers. 
    
 

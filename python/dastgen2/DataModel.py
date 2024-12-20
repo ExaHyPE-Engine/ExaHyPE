@@ -412,6 +412,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 """
             )
 
+            # inserting include statements that the compiler will not accept in the header file
+            for aspect in self._aspects:
+                if hasattr(aspect, "implementation_file_includes"):
+                    output.write( aspect.implementation_file_includes )
+
             if self.has_nondefault_constructor:
                 self.__generate_constructor_definition(output)
                 output.write("\n\n\n")

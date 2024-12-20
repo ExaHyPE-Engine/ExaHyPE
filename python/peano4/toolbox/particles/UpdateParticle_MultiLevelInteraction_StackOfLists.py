@@ -47,7 +47,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     - ***_numberOfActiveParticlesPerVertex*** is a sequence of integers
       which tells you how many particles within activeParticles are added by one
       particular vertex.
-    - ***numberOfParticlesPerLocalVertex*** is a sequence of integers which
+    - ***numberOfLocalParticlesPerVertex*** is a sequence of integers which
       tells you how many particles within particlesAssociatedWithLocalVertices are
       added by each adjacent vertex.
 
@@ -97,159 +97,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     whose centre lies within the square/cube around the vertex with mesh size
     h. So this area goes h/2 along each each coordinate axis into the
     neighbouring cells.
-
-
-    ## Flattening of particle arrays
-
-    The routine not only keeps track of how many particles we add per iteration.
-    It also keeps track of the number of particles per vertex that have been
-    added. If you know that you work with a @ref page_toolbox_particles_mesh_storage "memory pool", i.e. a consecutive
-    storage of particles, you can use this additional meta information within
-    your kernel invocations to work with loops over consecutive arrays (AoS)
-    rather than sole link lists. You can exploit that you know something
-    about individual chunks indexed by the pointers.
-
-    To exploit this additional information, you cannot use localParticles anymore,
-    i.e. you have to use particlesAssociatedWithLocalVertices. This means, you
-    might have to check if a particle is contained within a cell manually.
-    Once you rewrite your kernels that way, you can exploit the integers
-    _numberOfActiveParticlesPerVertex and numberOfParticlesPerLocalVertex:
-
-    @image html UpdateParticle_MultiLevelInteraction_StackOfLists_continuous-memory.png
-
-    Assume you enter a cell and you get the particlesAssociatedWithLocalVertices
-    list hosting 19 pointers. Further to that, you receive the array
-    numberOfParticlesPerLocalVertex with four integer entries. You know that the
-    first five entries point to one continuous chunk of particles in memory, the
-    next seven do so as well, and so forth. This holds if and only if you work
-    with a memory pool which maintains vertex-local or globally continuous
-    particles.
-
-    I do recommend to call toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks()
-    for your data to ensure that the memory layout above is preserved. Simply
-    add the calls
-
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-      activeParticles,
-      _numberOfActiveParticlesPerVertex
-    );
-    ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-      particlesAssociatedWithLocalVertices,
-      numberOfParticlesPerLocalVertex
-    );
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    to your cell-wise compute kernel.
-
-    The actual compute kernels then typically look similar to the following code
-    snippet:
-
-
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    typename std::list<T*>::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
-
-    for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
-      T*  localParticlesChunk = *localParticlesIterator;
-      std::advance( localParticlesIterator, localParticlesChunkSize );
-
-      for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-        if (
-          not localParticle->getCellHasUpdatedParticle()
-          and
-          marker.isContained(localParticle->getX())
-          and
-          not toolbox::particles::particleWillBeDroppedFurther( *localParticle, marker)
-        ) {
-          [...]
-        }
-      }
-    }
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-    Iterating over the active set follows the same pattern. Most codes will
-    have to couple local and active sets and hence use a kernel structure
-    similar to
-
-
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
-      = particlesAssociatedWithLocalVertices.begin();
-
-    for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
-      typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
-      std::advance(localParticlesIterator, localParticlesChunkSize);
-
-      typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
-        = activeParticles.begin();
-      for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
-        typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
-        std::advance(activeParticlesIterator, activeParticlesChunkSize);
-
-        for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
-             localParticleNumberInThisChunk++) {
-          if (
-            marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
-            and
-            not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
-            and
-            not toolbox::particles::particleWillBeDroppedFurther( localParticlesChunk[localParticleNumberInThisChunk], marker)
-          ) {
-            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-                p2pEvaluation(
-                  localParticlesChunk + localParticleNumberInThisChunk,
-                  activeParticlesChunk + activeParticleNumberInThisChunk
-                );
-            }
-          }
-        }
-      }
-    }
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    This inner loop is where the magic happens, i.e. where we can exploit the
-    fact that localParticlesChunk and activeParticlesChunk both point to coninuous
-    memory regions.
-
-
-    ## Optimising coalesced compute kernels
-
-    Compute kernels can be optimised quite aggressively, but fiddling out how they
-    can be optimised is tedious. I recommend to use MAQAO and Intel's compiler
-    optimisation feedback. Here are some lessons learned:
-
-    - You cannot collapse the two for loops. That would lead to a scattered
-      iteration space in memory and hence make any vectorisation impossible.
-    - The active loop has to be the inner one. I do not understand why, but
-      Intel's icpx refuses to vectorise if the local loop is the inner one.
-    - The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
-      this is something one should be able to control via the annotation
-
-              [[clang::always_inline]]
-
-      but this led to multiple compiler crashes (again with Intel). To some
-      degree this makes sense: The function has to be in the header! I played
-      around with ipo, but that did not resolve the fundamental issues.
-    - You might have to recursively study all inlined methods and make the
-      stuff they use inline as well.
-    - Typically, you have to embed the inner-most loop into a statement alike
-      ~~~~~~~~~~~~~~~~~~~~~~~
-        if (
-          marker.isContained(particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getX())
-          and
-          not particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
-        ) {
-          // read from activeParticles[activeParticleNumberInThisChunk]
-          // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
-        }
-      ~~~~~~~~~~~~~~~~~~~~~~~
-
-    The @ref page_peano_performance_optimisation "generic Peano optimisation" page
-    provides some useful hints how to guide these optimisation through the
-    compiler. It also makes sense to study swift2::kernels::computeHydroForce()
-    which was one of the first routines that we optimised along these ideas.
-
 
     """
 
@@ -332,7 +179,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
-  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  auto&          assignedParticles         = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  constexpr int  numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -342,7 +190,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     __Template_TouchVertexLastTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
-  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  auto& assignedParticles                  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  constexpr int  numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
@@ -353,14 +202,16 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  particlesAssociatedWithLocalVertices;
-  std::vector< int >                            numberOfParticlesPerLocalVertex( TwoPowerD );
+  std::vector< int >                            numberOfLocalParticlesPerVertex( TwoPowerD );
+  std::vector< int >                            numberOfActiveParticlesPerVertex( TwoPowerD );
   
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
     // Keep track of number of particles
     _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
-    numberOfParticlesPerLocalVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
+    numberOfCoalescedLocalParticlesPerVertex[i]    = -1;
+    numberOfCoalescedActiveParticlesPerVertex[i]    = -1;
     
     // Add particles to active particle set
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
@@ -381,7 +232,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
 
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles                  = _activeParticles;
-  std::vector< int >&                             numberOfActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
   {% endif %}
 """

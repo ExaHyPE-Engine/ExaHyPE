@@ -5,6 +5,7 @@ include:
   - .continuous_integration/templates/run-only-on.yml
   - .continuous_integration/templates/mghype.yml
   - .continuous_integration/templates/exahype2.yml
+  - .continuous_integration/templates/swift2.yml
 
 stages:
   - Build
@@ -21,8 +22,8 @@ stages:
 .Build:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CCACHE_DIR=${CCACHE_DIR} CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=../install"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; CCACHE_DIR=${CCACHE_DIR} ninja; ninja install"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build; cd build; CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=../install"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build; ninja; ninja install"
     - mv build/src/unittests/CTestTestfile.cmake build/CTestTestfile.cmake
   artifacts:
     paths:
@@ -59,7 +60,7 @@ Unit_Tests:
     - Build
   retry: 1
 
-MGHyPE_Tests:
+ExaHyPE2_ADER_DG_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -67,7 +68,127 @@ MGHyPE_Tests:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .MGHyPE_Tests
+    - .ExaHyPE2_ADER_DG_Tests
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_AMR_SWE_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_AMR_SWE_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_Limiting_Static_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_Limiting_Static_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_Limiting_Posteriori_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+MGHyPE_MatrixFree_Tests:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .MGHyPE_MatrixFree_Tests
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+SWIFT2_Dastgen:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .SWIFT2_Dastgen
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+SWIFT2_Sod1D:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .SWIFT2_Sod1D
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 1
+
+SWIFT2_Noh2D:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .SWIFT2_Noh2D
   needs:
     - job: Build
   dependencies:

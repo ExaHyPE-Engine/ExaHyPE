@@ -11,7 +11,6 @@ from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.Ini
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateCell       import UpdateCell
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateFacets     import UpdateFacets
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.ProjectResidualsAndDiagonalOntoFacets import ProjectResidualsAndDiagonalOntoFacets
-from .actionsets.CollocatedSolver.CollocatedSolver import CollocatedSolver
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 

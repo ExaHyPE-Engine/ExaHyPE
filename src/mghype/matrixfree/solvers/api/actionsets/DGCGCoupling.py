@@ -33,6 +33,10 @@ def prepare_CG_correction_solvers( dg_solver,
     cg_solver._vertex_data.data.add_or_replace_attribute( peano4.dastgen2.Peano4DoubleArray( "delta", str(cg_solver._unknowns_per_vertex_node) ) )
     cg_solver._vertex_data.data.add_or_replace_attribute( dastgen2.attributes.Integer( "numberOfRestrictions" ) )
 
+    ## add cross-boundary data sharing in
+    ## make sure we agree on a rhs after restricting
+    cg_solver._vertex_data.peano4_mpi_and_storage_aspect.merge_implementation += """\n  setNewRestrictedRhs( getNewRestrictedRhs() + neighbour.getNewRestrictedRhs() ); \n"""
+
 
 class AbstractDGCGCoupling(ActionSet):
   """!
@@ -226,7 +230,7 @@ class AbstractDGCGCoupling(ActionSet):
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictHierarchicalResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedProlongationMatrix,
         composedRestrictionMatrix,
-        repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
+        repositories::{{DG_SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ),
         repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridCell{{DG_SOLVER_NAME}}.getRhs(),
@@ -334,7 +338,7 @@ class AbstractDGCGCoupling(ActionSet):
 
       mghype::matrixfree::solvers::dgcgcoupling::computeAndRestrictResidual<{{DG_SOLVER_NAME}}, {{CG_SOLVER_NAME}}>( 
         composedRestrictionMatrix,
-        repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ),
+        repositories::{{DG_SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() ),
         repositories::{{DG_SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()),
         fineGridCell{{DG_SOLVER_NAME}}.getSolution(),
         fineGridCell{{DG_SOLVER_NAME}}.getRhs(),

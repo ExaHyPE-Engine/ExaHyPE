@@ -55,6 +55,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
         self.send_predicate = "true"
         self.load_store_compute_flag = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
         self.includes = ""
+        self.implementation_file_includes=""
         pass
 
     def __str__(self):

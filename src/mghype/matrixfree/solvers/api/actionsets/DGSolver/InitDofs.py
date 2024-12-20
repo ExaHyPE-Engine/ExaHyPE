@@ -11,6 +11,21 @@ class InitDofsDG(ActionSet):
   This time, we store values only in the cells and just 
   determine the type of vertex we see.
   """
+  templateTouchVertexFirstTime = """
+
+
+  if ( marker.willBeRefined() )
+  {
+    fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
+  }
+
+  else
+  {
+    fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Interior );
+  }
+
+   """
+
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
@@ -100,6 +115,19 @@ class InitDofsDG(ActionSet):
       else 
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Interior );
+
+        // vectors to be passed into face
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > projection;
+
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+
+        // put into mesh
+        fineGridFace{{SOLVER_NAME}}.setSolution(sol);
+        fineGridFace{{SOLVER_NAME}}.setLProjection(projection);
+        fineGridFace{{SOLVER_NAME}}.setRProjection(projection);
+
       }
     } break;
 
@@ -111,6 +139,18 @@ class InitDofsDG(ActionSet):
       }
       else {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Boundary );
+
+        // vectors to be passed into face
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double >   projection;
+
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+
+        // put into mesh
+        fineGridFace{{SOLVER_NAME}}.setSolution(sol);
+        fineGridFace{{SOLVER_NAME}}.setLProjection(projection);
+        fineGridFace{{SOLVER_NAME}}.setRProjection(projection);
       }
     } break;
     case facedata::{{SOLVER_NAME}}::Type::Coarse:

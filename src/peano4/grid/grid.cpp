@@ -11,16 +11,12 @@ namespace {
   [[maybe_unused]] tarch::logging::Log _log("peano4::grid");
 } // namespace
 
-
-
 std::string peano4::SplitInstruction::toString(peano4::SplitInstruction::Mode mode) {
   switch (mode) {
   case SplitInstruction::Mode::AggressiveTopDown:
     return "aggressive-top-down";
-    break;
   case SplitInstruction::Mode::BottomUp:
     return "bottom-up";
-    break;
   }
   return "<undef>";
 }

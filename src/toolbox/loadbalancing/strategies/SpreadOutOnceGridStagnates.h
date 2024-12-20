@@ -45,7 +45,7 @@ namespace toolbox {
 class toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     SpreadOutOnceGridStagnates(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics = new toolbox::loadbalancing::metrics::CellCount() );
-    virtual ~SpreadOutOnceGridStagnates();
+    virtual ~SpreadOutOnceGridStagnates() override = default;
 
     virtual void finishStep() override;
   private:

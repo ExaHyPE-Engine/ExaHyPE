@@ -38,7 +38,10 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 }
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(
-  int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice
+  [[maybe_unused]] int   numberOfTasksToFuse,
+  [[maybe_unused]] bool  fuseImmediately,
+  [[maybe_unused]] bool  processTasksWhileWaitingInBSPArea,
+  [[maybe_unused]] int   targetDevice
 ) {
   return new Hardcoded(
     std::numeric_limits<int>::max(),   // numberOfTasksToHoldBack
@@ -65,19 +68,21 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   _fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned),
   _maxNestedConcurrency(maxNestedConcurrency) {}
 
-void tarch::multicore::orchestration::Hardcoded::startBSPSection(int nestedParallelismLevel) {}
+void tarch::multicore::orchestration::Hardcoded::startBSPSection(int /*nestedParallelismLevel*/) {}
 
-void tarch::multicore::orchestration::Hardcoded::endBSPSection(int nestedParallelismLevel) {}
+void tarch::multicore::orchestration::Hardcoded::endBSPSection(int /*nestedParallelismLevel*/) {}
 
-tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::fuse(int taskType) {
+tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::fuse(int /*taskType*/) {
   return tarch::multicore::orchestration::Hardcoded::FuseInstruction(
     _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse
   );
 }
 
-
-tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::
-  paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::paralleliseForkJoinSection(
+  [[maybe_unused]] int nestedParallelismLevel,
+  [[maybe_unused]] int numberOfTasks,
+  [[maybe_unused]] int codeLocationIdentifier
+) {
   if (nestedParallelismLevel > _maxNestedConcurrency) {
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
   } else {

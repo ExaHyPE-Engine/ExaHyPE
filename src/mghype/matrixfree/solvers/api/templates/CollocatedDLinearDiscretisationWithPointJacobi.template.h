@@ -42,9 +42,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      * routine is only called for real degrees of freedom, i.e. for inner
      * vertices on the finest mesh. Boundary vertices are initialised through
      * setBoundaryConditions() once per mesh traversal (so you can realise
-     * non-Dirichlet conditions). The domain is determined by getVertexDoFType()
+     * non-Dirichlet conditions). The domain is determined by getVertexType()
      * which you find in the superclass. You might however want to overwrite it.
-     * If you alter getVertexDoFType(), you should also overwrite getCellDoFType()
+     * If you alter getVertexType(), you should also overwrite getCellType()
      * such that the two routines return consistent results.
      */
     {%if CUSTOM_INIT_VERTEX=="" %}
