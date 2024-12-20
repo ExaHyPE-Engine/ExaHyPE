@@ -40,6 +40,7 @@ void applications::exahype2::landslide::computePartialDerivatives(double* const 
       const double vCurrentCell = tarch::la::greater(oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::h], 0.0)
                                 ? oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::hv] / oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::h]
                                 : 0.0;
+      const double zCurrentCell = oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::z];
 
       const double hXLeftNeighbourCell = oldQWithHalo[xLeftNeighbourCellSerialized * NumberOfTotalVariables + s::h];
       const double uXLeftNeighbourCell = tarch::la::greater(oldQWithHalo[xLeftNeighbourCellSerialized * NumberOfTotalVariables + s::h], 0.0)
@@ -48,6 +49,7 @@ void applications::exahype2::landslide::computePartialDerivatives(double* const 
       const double vXLeftNeighbourCell = tarch::la::greater(oldQWithHalo[xLeftNeighbourCellSerialized * NumberOfTotalVariables + s::h], 0.0)
                                        ? oldQWithHalo[xLeftNeighbourCellSerialized * NumberOfTotalVariables + s::hv] / oldQWithHalo[xLeftNeighbourCellSerialized * NumberOfTotalVariables + s::h]
                                        : 0.0;
+      const double zXLeftNeighbourCell = oldQWithHalo[xLeftNeighbourCellSerialized * NumberOfTotalVariables + s::z];
 
       const double hXRightNeighbourCell = oldQWithHalo[xRightNeighbourCellSerialized * NumberOfTotalVariables + s::h];
       const double uXRightNeighbourCell = tarch::la::greater(oldQWithHalo[xRightNeighbourCellSerialized * NumberOfTotalVariables + s::h], 0.0)
@@ -64,6 +66,7 @@ void applications::exahype2::landslide::computePartialDerivatives(double* const 
       const double vYLeftNeighbourCell = tarch::la::greater(oldQWithHalo[yLeftNeighbourCellSerialized * NumberOfTotalVariables + s::h], 0.0)
                                        ? oldQWithHalo[yLeftNeighbourCellSerialized * NumberOfTotalVariables + s::hv] / oldQWithHalo[yLeftNeighbourCellSerialized * NumberOfTotalVariables + s::h]
                                        : 0.0;
+      const double zYLeftNeighbourCell = oldQWithHalo[yLeftNeighbourCellSerialized * NumberOfTotalVariables + s::z];
 
       const double hYRightNeighbourCell = oldQWithHalo[yRightNeighbourCellSerialized * NumberOfTotalVariables + s::h];
       const double uYRightNeighbourCell = tarch::la::greater(oldQWithHalo[yRightNeighbourCellSerialized * NumberOfTotalVariables + s::h], 0.0)
@@ -113,6 +116,8 @@ void applications::exahype2::landslide::computePartialDerivatives(double* const 
       oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::vxx] = (vXRightNeighbourCell - 2 * vCurrentCell + vXLeftNeighbourCell);
       oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::vyy] = (vYRightNeighbourCell - 2 * vCurrentCell + vYLeftNeighbourCell);
       oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::vxy] = (vXRightYRightNeighbourCell - vXLeftYRightNeighbourCell - vXRightYLeftNeighbourCell + vXLeftYLeftNeighbourCell);
+      oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::zx] = (zCurrentCell - zXLeftNeighbourCell);
+      oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::zy] = (zCurrentCell - zYLeftNeighbourCell);
     }
   }
 }
