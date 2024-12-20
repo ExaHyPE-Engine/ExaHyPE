@@ -10,13 +10,9 @@ class Landslide:
     _available_solvers = {
         "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
         "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
+
         "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
         "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-        "RusanovGlobalFixedRKDG": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalAdaptiveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
-        "RusanovGlobalAdaptiveEnclaveRKDG": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-        "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
-        "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
     }
 
     def setup_parser(self):
@@ -34,7 +30,7 @@ class Landslide:
             "-dt",
             "--time-step-size",
             type=float,
-            default=0.01,
+            default=0.0001,
             help="Time step size for fixed time-stepping.",
         )
         parser.add_argument(
@@ -64,7 +60,7 @@ class Landslide:
             "-stateless",
             "--stateless",
             action="store_true",
-            default=True,
+            default=False,
             help="Use stateless PDE terms for GPU offloading (requires a GPU enabled Peano build and an enclave solver).",
         )
         parser.add_argument(
@@ -88,13 +84,12 @@ class Landslide:
             help="Use periodic boundary conditions in the y-axis.",
         )
 
-        available_build_modes = ["Release", "Trace", "Asserts", "Stats", "Debug"]
         parser.add_argument(
             "-m",
             "--build-mode",
-            choices=available_build_modes,
-            default="Release",
-            help="|".join(available_build_modes),
+            choices=peano4.output.CompileModes,
+            default=peano4.output.CompileModes[0], # Release
+            help="|".join(peano4.output.CompileModes),
         )
 
         parser.add_argument(
@@ -119,6 +114,19 @@ class Landslide:
             help="Number of finite volumes per axis (dimension) per patch.",
         )
         parser.add_argument(
+            "-rk-order",
+            "--rk-order",
+            type=int,
+            help="Order of time discretisation for Runge-Kutta scheme.",
+        )
+        parser.add_argument(
+            "-dg-order",
+            "--dg-order",
+            type=int,
+            help="Order of space discretisation for Discontinuous Galerkin.",
+        )
+
+        parser.add_argument(
             "-md",
             "--min-depth",
             type=float,
@@ -137,7 +145,7 @@ class Landslide:
             "--storage",
             type=str,
             choices=[e.name for e in exahype2.solvers.Storage],
-            default="Heap",
+            default="CallStack",
             help="The storage scheme to use."
         )
 
@@ -166,22 +174,9 @@ class Landslide:
             help="The quality of the load balancing.",
         )
         parser.add_argument(
-            "-lb-min",
-            "--lb-min-size",
-            type=int,
-            default=0,
-            help="If a tree (partition) is smaller than the given number of cells, we do not split it up further.",
-        )
-        parser.add_argument(
-            "--lb-trees-init",
+            "--trees",
             type=int,
             default=-1,
-            help="Number of trees (partitions) per rank during initial decomposition.",
-        )
-        parser.add_argument(
-            "--lb-trees",
-            type=int,
-            default=-2,
             help="Number of trees (partitions) per rank after initial decomposition.",
         )
         parser.add_argument(
@@ -230,7 +225,7 @@ class Landslide:
             "name": "Landslide",
             "unknowns": {"h": 1, "hu": 1, "hv": 1},
             "auxiliary_variables": {
-                "b": 1,
+                "z": 1, # Elevation
                 "hx": 1,
                 "hy": 1,
                 "ux": 1,
@@ -243,6 +238,8 @@ class Landslide:
                 "vxx": 1,
                 "vyy": 1,
                 "vxy": 1,
+                "zx": 1,
+                "zy": 1,
             },
         }
 
@@ -277,33 +274,32 @@ class Landslide:
                     "min_volume_h": min_h,
                 }
             )
+        elif "ADERDG" in args.solver:
+            solver_params.update(
+                {
+                    "order": args.dg_order,
+                    "max_cell_h": max_h,
+                    "min_cell_h": min_h,
+                }
+            )
 
         solver = self._available_solvers[args.solver](**solver_params)
         solver.plot_description = ", ".join(solver_params["unknowns"].keys()) + ", "
         if solver_params["auxiliary_variables"] != 0:
             solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
+        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
-        solver._preprocess_reconstructed_patch = """
+        if "FV" in args.solver:
+            solver._preprocess_reconstructed_patch = """
       extrapolateHalo<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
       computePartialDerivatives<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
 """.format(
-            NumberOfDofs=args.patch_size,
-            NumberOfUnknowns=sum(solver_params["unknowns"].values()),
-            NumberOfAuxiliaryVariables=sum(solver_params["auxiliary_variables"].values()),
-        )
-
-        implementation_params = {
-            "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-            "flux": "applications::exahype2::landslide::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-            "ncp": "applications::exahype2::landslide::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ);",
-            "eigenvalues": "return applications::exahype2::landslide::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-            "source_term": "applications::exahype2::landslide::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
-        }
-
-        solver.set_implementation(**implementation_params)
-        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
+                NumberOfDofs=args.patch_size,
+                NumberOfUnknowns=sum(solver_params["unknowns"].values()),
+                NumberOfAuxiliaryVariables=sum(solver_params["auxiliary_variables"].values()),
+            )
+        elif "ADERDG" in args.solver:
+            solver.add_kernel_optimisations(is_linear = False,)
 
         return solver
 
@@ -338,10 +334,21 @@ class Landslide:
         )
 
         if args.load_balancing_strategy != "None":
-            project.set_load_balancing(
-                f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}",
-                f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, {args.lb_min_size}, {args.lb_trees_init}, {args.lb_trees})",
+            strategy = f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}"
+            assume_periodic_boundary_conditions = any([
+                args.periodic_boundary_conditions_x,
+                args.periodic_boundary_conditions_y,
+            ])
+            configuration = (
+                f"new ::exahype2::LoadBalancingConfiguration("
+                f"{args.load_balancing_quality},"
+                f"0,"
+                f"{'true' if assume_periodic_boundary_conditions else 'false'},"
+                f"{args.trees},"
+                f"{args.trees})"
             )
+            project.set_load_balancing(strategy, configuration)
+
 
         project.set_number_of_threads(args.threads)
 
@@ -353,61 +360,8 @@ class Landslide:
 
         project.set_timeout(args.timeout)
 
-        build_mode_class = getattr(getattr(peano4, "output"), "CompileMode")
-        build_mode = getattr(build_mode_class, args.build_mode)
-        project.set_Peano4_installation(args.peano_dir, mode=build_mode)
+        project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
         project = project.generate_Peano4_project(verbose=True)
-
-        project.constants.export_constexpr_with_type("g", str(9.81), "double")
-        project.constants.export_const_with_type(
-            "Zeta",
-            str("35.0 * std::numbers::pi / 180.0; // Conversion of degrees to radians"),
-            "double",
-        )
-        project.constants.export_const_with_type(
-            "Zeta1", str("28.95 * std::numbers::pi / 180.0"), "double"
-        )
-        project.constants.export_const_with_type(
-            "Zeta2", str("44.09 * std::numbers::pi / 180.0"), "double"
-        )
-        project.constants.export_const_with_type(
-            "Zeta3", str("31.81 * std::numbers::pi / 180.0"), "double"
-        )
-        project.constants.export_const_with_type("Beta", str(1.07), "double")
-        project.constants.export_const_with_type("Gamma", str(2.01), "double")
-        project.constants.export_const_with_type("BetaStar", str(0.06), "double")
-        # Kappa in the friction law is assumed to be 1 and is just initialised as a const double in the source function.
-        # The user can apply std::pow((Fr/BetaStar), Kappa) for evaluating T in the source function in case the value of Kappa is different from 1.
-        project.constants.export_const_with_type("Kappa", str(1.0), "double")
-        project.constants.export_const_with_type(
-            "FrictionLengthScale", str(0.00035), "double"
-        )
-        project.constants.export_const_with_type(
-            "Mu1", str("std::tan(Zeta1)"), "double"
-        )
-        project.constants.export_const_with_type(
-            "Mu2", str("std::tan(Zeta2)"), "double"
-        )
-        project.constants.export_const_with_type(
-            "Mu3", str("std::tan(Zeta3)"), "double"
-        )
-        project.constants.export_const_with_type(
-            "Nu",
-            str(
-                "(2.0 / 9.0) * (FrictionLengthScale / Beta) * (g * std::sin(Zeta) / std::sqrt(g * std::cos(Zeta)))  * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu1)) - 1.0)"
-            ),
-            "double",
-        )
-        project.constants.export_const_with_type(
-            "Hstart",
-            str("FrictionLengthScale * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu3)) - 1.0)"),
-            "double",
-        )
-        project.constants.export_const_with_type(
-            "Hstop",
-            str("FrictionLengthScale * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu1)) - 1.0)"),
-            "double",
-        )
 
         if args.fpe:
             project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

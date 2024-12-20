@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "FrictionLaw.h"
 #include "VariableShortcuts.h"
 
 #include "tarch/Assertions.h"
@@ -65,7 +66,41 @@ namespace applications::exahype2::landslide {
   #pragma omp declare target
   #endif
   static inline GPUCallableMethod
+  void nonconservativeProductWithElevation(
+    const double* __restrict__                    Q,
+    const double* __restrict__                    deltaQ,
+    const tarch::la::Vector<Dimensions, double>&  x,
+    const tarch::la::Vector<Dimensions, double>&  h,
+    double                                        t,
+    double                                        dt,
+    int                                           normal,
+    double* __restrict__                          BTimesDeltaQ
+  ) InlineMethod;
+  #if defined(GPUOffloadingOMP)
+  #pragma omp end declare target
+  #endif
+
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+  static inline GPUCallableMethod
   void sourceTerm(
+    const double* __restrict__                    Q,
+    const tarch::la::Vector<Dimensions, double>&  x,
+    const tarch::la::Vector<Dimensions, double>&  h,
+    double                                        t,
+    double                                        dt,
+    double* __restrict__                          S
+  ) InlineMethod;
+  #if defined(GPUOffloadingOMP)
+  #pragma omp end declare target
+  #endif
+
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+  static inline GPUCallableMethod
+  void sourceTermWithCoulombFriction(
     const double* __restrict__                    Q,
     const tarch::la::Vector<Dimensions, double>&  x,
     const tarch::la::Vector<Dimensions, double>&  h,

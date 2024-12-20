@@ -1,0 +1,38 @@
+/**
+
+@page applications_exahype2_landslide_inclined_plane Landslide on an Inclined Plane with Friction and Different Materials
+
+<div style="display: flex;">
+    <div style="flex: 50%; padding: 5px;">
+        \image html inclined-plane-0.png
+    </div>
+    <div style="flex: 50%; padding: 5px;">
+        \image html inclined-plane-1.png
+    </div>
+</div>
+
+<p align="center">
+  <img src="inclined-plane-2.png" />
+</p>
+
+# Landslide of Masonry Sand
+
+## With Friction
+
+<p align="center">
+  <img src="inclined-plane-sand-theta_35.gif" />
+</p>
+
+## Without Friction
+
+<p align="center">
+  <img src="inclined-plane-sand-zero-friction-theta_35.gif" />
+</p>
+
+# Landslide of Carborundum
+
+<p align="center">
+  <img src="inclined-plane-carborundum-theta_35.gif" />
+</p>
+
+*/
