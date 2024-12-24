@@ -26,8 +26,8 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::mirrorParticleAlongPer
   tarch::la::Vector<Dimensions, double> result = x;
 
   for (int d=0; d<Dimensions; d++) {
-    if ( periodicBC[d] ) {
-      if ( tarch::la::equals( marker.x()(d), domainOffset(d) ) ) {
+    if ( periodicBC[d] and not (marker.isContainedInAdjacentCellsByDimension(x, d))) {
+      if ( tarch::la::equals(marker.x()(d), domainOffset(d)) ) {
         result(d) -= domainSize(d);
       }
       if ( tarch::la::equals( marker.x()(d), domainOffset(d)+domainSize(d) ) ) {

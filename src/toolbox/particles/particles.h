@@ -100,7 +100,15 @@ namespace toolbox {
     bool particleAssignedToVertexWillBeLocal(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
 
     /**
-     * Mirror a particle along the periodic domain boundaries
+     * Mirror a particle along the periodic domain boundaries.
+     *
+     * We check for every boundary whether it is periodic. Furthermore, we check
+     * whether the particle would be already contained within a vertex along
+     * each dimension. This is necessary for vertices in corners of the domain:
+     * In these cases, we need to mirror the particle only along the boundary
+     * that isn't contained in the vertex. Otherwise, the particle is displaced
+     * too far away. E.g. For a vertex at (0, 0) a particle at (0.95, 0.) would
+     * be displaced to (-0.05, -1.) instead of (-0.5, 0.).
      *
      * @param x Position of the particle as received along a periodic boundary
      *   exchange.
