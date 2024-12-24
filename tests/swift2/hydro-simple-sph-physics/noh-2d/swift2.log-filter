@@ -11,7 +11,7 @@ debug  benchmarks                          -1     black always-on
 debug  swift2                              -1     black always-on
 debug  toolbox                             -1     black always-on
 
-debug  HydroPartSet                        -1     black always-on
+debug  HydroPartSet                        -1     white always-on
 debug  toolbox::particles::assignmentchecks -1    black always-on
 
 info  tarch                                -1     white always-on

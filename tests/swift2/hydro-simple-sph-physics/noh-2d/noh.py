@@ -201,7 +201,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 
 offset = [0, 0, 0]
 domain_size = [2, 2, 2]
-periodic_boundary_conditions = [True, True, True]
+periodic_boundary_conditions = [False, False, False]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
@@ -326,7 +326,7 @@ project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesAlongCartesianGrid(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
-        distance_between_particles_along_one_axis=1.0 / args.particle_number,
+        distance_between_particles_along_one_axis=(domain_size[0] / (args.particle_number)),
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
 """,
