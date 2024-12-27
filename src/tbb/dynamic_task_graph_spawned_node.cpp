@@ -56,3 +56,27 @@ void tbb::dynamic_task_graph_spawned_node::run() {
     __TBB_TRACE_TASK_COMPLETE(this);
   });
 }
+
+
+std::string tbb::dynamic_task_graph_spawned_node::to_string() const {
+  std::string result;
+
+  result = "(";
+  switch (_state) {
+    case State::Complete:
+      result += "complete";
+      break;
+    case State::Spawned:
+      result += "spawned";
+      break;
+    case State::Submitted:
+      result += "submitted";
+      break;
+  }
+
+  result += ",#in=" + std::to_string( _number_of_in_dependencies );
+  result += ",#out=" + std::to_string( _out_dependency.size() );
+  result += ")";
+
+  return result;
+}

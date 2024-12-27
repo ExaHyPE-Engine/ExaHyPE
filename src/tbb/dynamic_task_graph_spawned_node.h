@@ -114,6 +114,11 @@ namespace tbb {
        * @todo Write something about lazy deletion
        */
       void run();
+
+      /**
+       * Helper routine, which likely will not be there in TBB counterpart
+       */
+      std::string to_string() const;
     private:
       std::atomic<State>                              _state;
       std::function<void()>                           _functor;
