@@ -65,9 +65,11 @@ class swift2::TaskEnumerator {
     /**
      * Lock resources
      *
-     * This routine is used to lock the @f$ 2^d @f$ adjacent vertices of a
+     * This routine is used to lock a set of indices. This could be
+     * the @f$ 2^d @f$ adjacent vertices of a
      * cell. This way, we ensure that noone else uses these vertices
-     * concurrently.
+     * concurrently. It can also be used, obviously, to lock the @f$ 2^d @f$
+     * adjacent cells of a vertex in case we know their indices.
      *
      * The implementation is not a simple while loop: We loop over the
      * entries of numbers and try to lock them. If one lock fails, we
@@ -75,6 +77,8 @@ class swift2::TaskEnumerator {
      * again. This way, we avoid deadlocks if multiple cells next to each
      * other each try to lock their adjacent vertices but actually only get
      * around half of the locks they want.
+     *
+     * Entries set to tarch::Enumerator::NoNumber are ignored.
      */
     static void lockResources( const int numbers[TwoPowerD] );
 
@@ -82,6 +86,8 @@ class swift2::TaskEnumerator {
      * Free resources
      *
      * Counterpart to lockResources().
+     *
+     * Entries set to tarch::Enumerator::NoNumber are ignored.
      */
     static void unlockResources( const int numbers[TwoPowerD] );
 

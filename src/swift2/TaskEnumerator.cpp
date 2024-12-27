@@ -46,12 +46,17 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
   while (not gotAllLocks.all()) {
     int counter = 0;
     while (counter<TwoPowerD) {
-      assertion1( _resources.count(numbers[counter])==1, counter );
-      tarch::multicore::Lock lock(
-        *_resources.at( numbers[counter] ),
-        false, false
-      );
-      gotAllLocks[counter] = lock.tryLock();
+      if (numbers[counter] == tarch::Enumerator::NoNumber) {
+        gotAllLocks[counter] = true;
+      }
+      else {
+        assertion2( _resources.count(numbers[counter])==1, counter, numbers[counter] );
+        tarch::multicore::Lock lock(
+          *_resources.at( numbers[counter] ),
+          false, false
+        );
+        gotAllLocks[counter] = lock.tryLock();
+      }
       if (gotAllLocks[counter]) {
         counter++;
       }
@@ -80,11 +85,13 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
 
 void swift2::TaskEnumerator::unlockResources( const int numbers[TwoPowerD] ) {
   for (int i=0; i<TwoPowerD; i++) {
-    assertion1( _resources.count(numbers[i])==1, numbers[i] );
-    tarch::multicore::Lock lock(
-      *_resources.at( numbers[i] ),
-      false, false
-    );
-    lock.free();
+    if (numbers[i] != tarch::Enumerator::NoNumber) {
+      assertion1( _resources.count(numbers[i])==1, numbers[i] );
+      tarch::multicore::Lock lock(
+        *_resources.at( numbers[i] ),
+        false, false
+      );
+      lock.free();
+    }
   }
 }
