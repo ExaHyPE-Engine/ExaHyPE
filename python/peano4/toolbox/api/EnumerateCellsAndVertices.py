@@ -13,7 +13,7 @@ UndefinedNumber = -1
 
 
 def construct_marker_name(task_name):
-    return task_name + "EnclaveMeshEntityNumber"
+    return task_name + "MeshNumber"
 
 
 def create_vertex_marker(task_name,
@@ -35,8 +35,8 @@ def create_vertex_marker(task_name,
     mesh:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    cell_marker_for_tasks   = peano4.toolbox.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(current_species_set.name)
-    vertex_marker_for_tasks = peano4.toolbox.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(current_species_set.name)
+    cell_marker_for_tasks   = peano4.toolbox.EnumerateCellsAndVertices.create_cell_marker(current_species_set.name)
+    vertex_marker_for_tasks = peano4.toolbox.EnumerateCellsAndVertices.create_vertex_marker(current_species_set.name)
 
     self._project.datamodel.add_cell(cell_marker_for_tasks)
     self._project.datamodel.add_vertex(vertex_marker_for_tasks)
@@ -209,7 +209,7 @@ class AssignNumbersToMesh(ActionSet):
         return "  return std::vector< peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
+        return __name__.replace(".py", "").replace(".", "_") + "_AssignNumbersToMesh"
 
     def user_should_modify_template(self):
         return False
@@ -264,7 +264,7 @@ class ClearNumbersOnMesh(ActionSet):
         return "  return std::vector< peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
+        return __name__.replace(".py", "").replace(".", "_") + "_ClearNumbersOnMesh"
 
     def user_should_modify_template(self):
         return False
