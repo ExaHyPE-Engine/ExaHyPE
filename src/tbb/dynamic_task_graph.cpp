@@ -10,6 +10,7 @@ tbb::dynamic_task_graph::dynamic_task_graph(
   _arena(arena) {
 }
 
+#include <iostream>
 
 void tbb::dynamic_task_graph::put(dynamic_task_graph_node& node ) {
   node._spawned_task = std::make_shared<dynamic_task_graph_spawned_node>(node, *this);
@@ -20,23 +21,22 @@ void tbb::dynamic_task_graph::put(dynamic_task_graph_node& node ) {
   for (auto& p: node._in_dependency) {
     if (
       _spawned_tasks.count(p)>0
-      and
-      p->_state!=dynamic_task_graph_spawned_node::State::Complete
     ) {
       tbb::spin_mutex::scoped_lock lock(p->_semaphore);
-      p->_out_dependency.push_back( node._spawned_task );
-      __TBB_TRACE_TASK_ADD_DEPENDENCY(p,node._spawned_task);
-      node._spawned_task->_number_of_in_dependencies++;
-    }
-    else if (
-      _spawned_tasks.count(p)>0
-      and
-      p->_state==dynamic_task_graph_spawned_node::State::Complete
-    ) {
-      _spawned_tasks.erase( p );
+
+      if ( p->_state==dynamic_task_graph_spawned_node::State::Complete ) {
+        lock.release();
+        _spawned_tasks.erase( p );
+      }
+      else {
+        p->_out_dependency.push_back( node._spawned_task );
+        __TBB_TRACE_TASK_ADD_DEPENDENCY(p,node._spawned_task);
+        node._spawned_task->_number_of_in_dependencies++;
+      }
     }
   }
 
+  __TBB_ASSERT( node._spawned_task->_number_of_in_dependencies>=1, "invalid number of in-dependencies (there has to be at least one left over)" );
   _spawned_tasks.insert( node._spawned_task );
 
   node_lock.release();
@@ -66,16 +66,22 @@ void tbb::dynamic_task_graph::wait( const dynamic_task_graph_node& node ) {
 
   __TBB_TRACE_TASK_WAIT( node._spawned_task );
 
-  volatile bool task_still_in_queue = true;
+  auto isTaskStillInQueue = [&]() -> bool {
+    SpawnedTaskMutex::scoped_lock  task_graph_lock(_spawned_task_mutex);
+    __TBB_ASSERT( _spawned_tasks.count(node._spawned_task )<=1, "several tasks in lookup table" );
+
+    return _spawned_tasks.count(node._spawned_task )>0
+       and node._spawned_task->_state!=dynamic_task_graph_spawned_node::State::Complete;
+  };
+
+  volatile bool task_still_in_queue = isTaskStillInQueue();
 
   while ( task_still_in_queue ) {
     std::this_thread::yield();
 
     clean_up_completed_tasks();
 
-    SpawnedTaskMutex::scoped_lock  task_graph_lock(_spawned_task_mutex);
-    task_still_in_queue = _spawned_tasks.count(node._spawned_task )>0
-                      and node._spawned_task->_state!=dynamic_task_graph_spawned_node::State::Complete;
+    task_still_in_queue = isTaskStillInQueue();
   }
 
   __TBB_TRACE_TASK_WAIT_COMPLETE( node._spawned_task );
@@ -91,6 +97,8 @@ void tbb::dynamic_task_graph::wait( const std::set<dynamic_task_graph_node>& nod
 
 void tbb::dynamic_task_graph::wait_for_all() {
   volatile bool task_still_in_queue = true;
+
+  _arena.terminate();
 
   while ( task_still_in_queue ) {
     std::this_thread::yield();

@@ -166,7 +166,7 @@ namespace tbb {
          * immediately or be referenced later on.
          *
          * Once you have submitted a node, it becomes read-only, i.e. you
-         * cannot add any further dependencies to it. But you can still copy
+         * cannot add any further in-dependencies to it. But you can still copy
          * it or you can even delete the object. The ownership of the
          * underlying "real" task now resides within the dynamic_task_graph
          * object.
@@ -189,17 +189,24 @@ namespace tbb {
          *
          * ## Implementation
          *
-         * 1. Create a new spawned task. This is a shared pointers.
-         * 2. Loop over all in-dependencies. For each one, look if this task
-         *    still does exist. If so, lock it and add a forward reference to
-         *    the newly created spawned task. Also increase the number of
-         *    in-dependencies to mark the new task as not ready yet.
+         * 1. Create a new spawned task. This is a shared pointer.
+         * 2. Loop over all in-dependencies. For each one for which we find an
+         *    entry in the graph, first of all lock it. If it has already
+         *    terminated, unlock the semaphore and delete it. This is kind of
+         *    an on-the-fly garbage collection. Otherwise, the task obviously
+         *    has not yet finished, so we increase the number of our
+         *    in-dependencies to mark the new task has to complete before we
+         *    start ourselves, and we add ourselves to the other task's
+         *    out dependencies.
          * 3. Insert task into set of pending tasks.
          * 4. Release semaphore on new task, so all other tasks which feed into
          *    this one can inform it about their termination from now on.
          * 5. Reduce the task's in-counter by one. The constructor of
          *    dynamic_task_graph_spawned_node always increments this counter
          *    artificially by one to avoid that it is released too soon.
+         *
+         * As we jump into incoming_task_has_terminated() straightaway, any
+         * task will xxxx
          */
         void put(dynamic_task_graph_node& node );
 
@@ -228,8 +235,17 @@ namespace tbb {
         /**
          * Wait for all tasks to finish
          *
+         * This is a brute force method which has to be used with care. It will,
+         * for example, deadlock likely if two tasks try to call it at the same
+         * time.
+         *
+         * We know that tbb::dynamic_task_graph_spawned_node::run() will toggle
+         * a task from
          * This drains the graph, i.e. size()==0 will hold once the function
          * terminates.
+         *
+         *
+         *
          */
         void wait_for_all();
 
@@ -256,6 +272,13 @@ namespace tbb {
          */
         SpawnedTasksContainer _spawned_tasks;
 
+        /**
+         * Remove all completed task
+         *
+         * Almost a garbage collection over the tasks that are complete. This
+         * makes follow up traversals of the _spawned_tasks container faster.
+         * The routine is a helper for the waits.
+         */
         void clean_up_completed_tasks();
   };
 }
