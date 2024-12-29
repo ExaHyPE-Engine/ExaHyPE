@@ -8,7 +8,8 @@
 
 
 std::map< int, tarch::multicore::BooleanSemaphore* >  swift2::TaskEnumerator::_resources;
-tarch::Enumerator swift2::TaskEnumerator::_globalEnumerator;
+tarch::Enumerator                                     swift2::TaskEnumerator::_globalEnumerator;
+tarch::multicore::BooleanSemaphore                    swift2::TaskEnumerator::_resourcesSemaphore;
 
 
 void swift2::TaskEnumerator::reset() {
@@ -18,9 +19,11 @@ void swift2::TaskEnumerator::reset() {
 
 int swift2::TaskEnumerator::getNumber() {
   int result = _globalEnumerator.getNumber();
+  tarch::multicore::Lock _lock( _resourcesSemaphore );
   if ( _resources.count(result)==0 ) {
     _resources.insert( {result, new tarch::multicore::BooleanSemaphore()} );
   }
+  assertionEquals1( _resources.count(result), 1, result );
   return result;
 }
 
@@ -50,7 +53,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
         gotAllLocks[counter] = true;
       }
       else {
-        assertion2( _resources.count(numbers[counter])==1, counter, numbers[counter] );
+        assertionEquals2( _resources.count(numbers[counter]), 1, counter, numbers[counter] );
         tarch::multicore::Lock lock(
           *_resources.at( numbers[counter] ),
           false, false
@@ -78,7 +81,8 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
       }
 
       tarch::multicore::Core::getInstance().yield();
-    }
+    } // Hasn't worked, so we have released all the locks and did yield.
+      // While loop fill try again next.
   }
 }
 
@@ -86,6 +90,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
 void swift2::TaskEnumerator::unlockResources( const int numbers[TwoPowerD] ) {
   for (int i=0; i<TwoPowerD; i++) {
     if (numbers[i] != tarch::Enumerator::NoNumber) {
+      tarch::multicore::Lock _lock( _resourcesSemaphore );
       assertion1( _resources.count(numbers[i])==1, numbers[i] );
       tarch::multicore::Lock lock(
         *_resources.at( numbers[i] ),

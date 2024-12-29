@@ -15,16 +15,36 @@ namespace swift2 {
 /**
  * Task enumerator for Swift 2
  *
- * Every particle has a marker associate to the vertices and cells. Each marker
- * holds an enumerator. These enumerators may not give out the same numbers.
+ * Every particle type (species) has a marker associate to the vertices and
+ * cells. So they are all unique numbers. Therefore, each of these markers
+ * is tied to one rank-global enumerator. These enumerators may not give out
+ * the same numbers even for different species.
  * Therefore, we make the enumerator instances (of this type) all become a
  * decorator for tarch::Enumerator which delegates all calls to a global
- * instance.
+ * instance. As a result, each marker type can work with its own instance of
+ * this TaskEnumerator, but behind the scenes, all requests are funneled
+ * through to one big number generator.
  *
- * Besides the administration of the tasks, the routine also maintains a big
+ * Besides the administration of the tasks, the type also maintains a big
  * hash map of resources, which is really just a hash map to boolean semaphores
  * plus some routines that manage access to them. These can be used to ensure
  * that no two cells access the same vertex concurrently.
+ *
+ * We can use objects of this type as proxy to access a big global
+ * table with one lock per global single task number. So if we have a cell
+ * with four neighbours where race conditions might occur, we can use
+ * lockResources() to ensure that we exclusively access those neighbours.
+ * In Swift's original terminology, these are the conflicts that we resolve
+ * at runtime.
+ *
+ *
+ * ## Thread safety
+ *
+ * The class is thread-safe as the underlying tarch::Enumerator object is
+ * thread-safe. However, we need an additional semaphore for the underlying
+ * map of resources.
+ *
+ *
  */
 class swift2::TaskEnumerator {
   public:
@@ -38,6 +58,13 @@ class swift2::TaskEnumerator {
      * Returns a unique non-zero number which is not yet used anywhere else on
      * this rank. This getter also ensures that there's a resource semaphore,
      * so we can lock the underlying resource.
+     *
+     * ## Thread safety
+     *
+     * The tarch::Enumerator is thread safe, so we don't have to protect the
+     * actual result number generation. However, once we have a new number,
+     * we also check if the resource map is properly initialised. For this, we
+     * need a semaphore, as we might alter the container.
      */
     int getNumber();
 
@@ -99,5 +126,7 @@ class swift2::TaskEnumerator {
      * lock and unlock again.
      */
     static std::map< int, tarch::multicore::BooleanSemaphore* >  _resources;
+
+    static tarch::multicore::BooleanSemaphore                    _resourcesSemaphore;
 };
 
