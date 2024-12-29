@@ -48,8 +48,22 @@ namespace tbb {
       friend class dynamic_task_graph;
 
       enum class State {
+        /**
+         * Task is submitted but not yet running. Initial state.
+         */
         Submitted,
+
+        /**
+         * Task is now running. The function tbb::dynamic_task_graph_spawned_node::run()
+         * toggles a task from Submitted into Spawned just before it hands the
+         * task over to the underlying task arena.
+         */
         Spawned,
+
+        /**
+         * The final step of tbb::dynamic_task_graph_spawned_node::run() is to
+         * switch a task to Complete.
+         */
         Complete
       };
 
@@ -75,6 +89,16 @@ namespace tbb {
        */
       dynamic_task_graph_spawned_node(const dynamic_task_graph_spawned_node& ) = delete;
 
+      /**
+       * Decrement the incoming task counter and run if now ready
+       *
+       * We first decrement the incoming task counter. This part has to be
+       * protected with a semaphore, so no two threads can decrement the
+       * task at the same time. While we decrement the task, we can check
+       * if it is ready.
+       *
+       * If a task is ready, we can actually run() it.
+       */
       void incoming_task_has_terminated();
 
       /**

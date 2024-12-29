@@ -26,10 +26,12 @@ void tbb::dynamic_task_graph_spawned_node::incoming_task_has_terminated() {
   _number_of_in_dependencies--;
 
   __TBB_ASSERT( _number_of_in_dependencies>=0, "cannot wait for less than 0 other tasks" );
+  
+  const bool is_ready = _number_of_in_dependencies==0;
 
   lock.release();
 
-  if (_number_of_in_dependencies==0) {
+  if (is_ready) {
     run();
   }
 }
@@ -45,9 +47,8 @@ void tbb::dynamic_task_graph_spawned_node::run() {
 
     _functor();
 
-    _state = State::Complete;
-
     tbb::spin_mutex::scoped_lock lock(_semaphore);
+    _state = State::Complete;
     for (auto& p: _out_dependency) {
       p->incoming_task_has_terminated();
     }
