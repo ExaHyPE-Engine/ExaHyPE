@@ -1,6 +1,6 @@
 #include "dynamic_task_graph_node.h"
 #include "dynamic_task_graph_utils.h"
-
+#include "dynamic_task_graph_spawned_node.h"
 
 #include <oneapi/tbb/spin_mutex.h>
 
@@ -42,3 +42,6 @@ bool tbb::dynamic_task_graph_node::is_submitted() const {
 }
 
 
+std::string tbb::dynamic_task_graph_node::to_string() const {
+  return "(hosted-task=" + _spawned_task->to_string() + ",#in-deps=" + std::to_string(_in_dependency.size() ) + ")";
+}

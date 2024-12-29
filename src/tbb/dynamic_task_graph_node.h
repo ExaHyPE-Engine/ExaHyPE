@@ -36,6 +36,14 @@ namespace tbb {
        */
       dynamic_task_graph_node( std::function<void()> functor );
 
+      /**
+       * You can copy a task graph node after it has been submitted. If you do
+       * so before, there might be two copies of this one task graph node, and
+       * they both might add in-dependencies independently. You might even
+       * submit this handle twice.
+       *
+       * Also consult dynamic_task_graph::put() which
+       */
       dynamic_task_graph_node( const dynamic_task_graph_node&  node );
 
       /**
@@ -60,6 +68,8 @@ namespace tbb {
        * itself anymore.
        */
       bool is_submitted() const;
+
+      std::string to_string() const;
 
     private:
       std::function<void()>                              _functor;
