@@ -6,16 +6,24 @@
 #include "config.h"
 
 
-#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW) and defined(SharedTBB)
-
-
 #include <functional>
 #include <set>
 #include <tbb/task_arena.h>
+
 #include <oneapi/tbb/task_group.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/concurrent_hash_map.h>
 #include <oneapi/tbb/concurrent_queue.h>
+
+
+#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+// In the new TBB version, all the handle and dynamic task graph stuff is
+// merged into the core tasking. No additional includes required.
+#else
+#include "tbb/dynamic_task_graph.h"
+#include "tbb/dynamic_task_graph_node.h"
+#include "tbb/dynamic_task_graph_utils.h"
+#endif
 
 
 namespace tarch {
@@ -37,66 +45,58 @@ namespace tarch {
  * for a task to itself, this bookkeeping interprets this as: Hey, I have a
  * task with number A and now create a new task with number A, but that one
  * should only run once the first one has completed.
+ *
+ * I use the name handle here, as we never directly interact with tasks. In
+ * TBB, there's actually the notion of a task handle. In my own TBB extension,
+ * we work with a dynamic task graph node which wraps (contains) a task that
+ * is shielded away. You would never interact with the tasks directly here
+ * either.
  */
 class tarch::multicore::tbb::TaskHandleRepository {
-    public:
-      using task_handle_number = int;
+  public:
+    using TaskNumber = int;
 
-      TaskHandleRepository();
-      ~TaskHandleRepository();
-      /**
-       * Factor mechanism
-       *
-       * Gives you a new node. If there's already a task with that number,
-       * then this task is backed up in the data structure 
-       * _shadowed_node_container. This way, we can add in-out dependencies
-       * (the task with the same number is an in-dependency for the newly
-       * created task). To add this dependency is the job of the user, i.e.
-       * this routine just ensures that the backup/shadow container is 
-       * properly befilled.
-       */
-      oneapi::tbb::task_handle& include_handle(
-        oneapi::tbb::task_handle&&      handle,
-        task_handle_number              number
-      );
+    TaskHandleRepository() = default;
+    ~TaskHandleRepository();
 
-      oneapi::tbb::task_handle& get_node(const task_handle_number& number);
+    #if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+    using Handle = ::oneapi::tbb::task_handle;
+    #else
+    using Handle = ::tbb::dynamic_task_graph_node;
+    #endif
 
-      /**
-       * Alternative to number-based routine
-       *
-       * This routine is slightly less powerful, as you cannot create any links
-       * to previous tasks with the same number: By the time you have created a
-       * task with a number that you pipe in here with new_task_node, you have
-       * no access to previous tasks which did carry the same number.
-       */
-      void add_dependency( oneapi::tbb::task_handle&  new_task_node, const task_handle_number&  in_dependency);
 
-      /**
-       * Add dependency
-       *
-       * If in_dependency equals new_task_node, then we assume that it refers
-       * to a previously submitted task with the same number. If no such task
-       * is known, the add_dependency creates an anti-dependency. We simply
-       * ignore it.
-       */
-      void add_dependency( const task_handle_number&  new_task_node, const task_handle_number&  in_dependency);
 
-      /**
-       * Wrapper around multiple add_dependency() calls
-       */
-      void add_dependencies( oneapi::tbb::task_handle&  new_task_node, const std::set< task_handle_number >&  in_dependencies );
-      void add_dependencies( const task_handle_number&  new_task_node, const std::set< task_handle_number >&  in_dependencies );
+    /**
+     * Factory mechanism
+     *
+     * If there's already a task with that number, it will be thrown away.
+     * If you want to have tasks with in/out dependencies (identified
+     * through the same task number), you have to add these a priori.
+     */
+    void registerTask(
+      Handle*      newTask,
+      TaskNumber   number
+    );
 
-    private:
-      using HashMap = oneapi::tbb::concurrent_hash_map<task_handle_number, oneapi::tbb::task_handle*>;
-      HashMap  _handle_container;
+    /**
+     * Add dependency
+     *
+     * If in_dependency equals new_task_node, then we assume that it refers
+     * to a previously submitted task with the same number. If no such task
+     * is known, the add_dependency creates an anti-dependency. We simply
+     * ignore it.
+     */
+    void addDependency( Handle*      newTask, const TaskNumber&  in_dependency);
 
-      /**
-       * Holds those nodes which have been reused already.
-       */
-      HashMap  _shadowed_handle_container;
-  };
-}
+    void addDependencies( Handle*    newTask, const std::set< TaskNumber >&  in_dependencies );
 
-#endif
+  private:
+    #if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+    using HashMap = oneapi::tbb::concurrent_hash_map<TaskNumber, oneapi::tbb::task_handle*>;
+    #else
+    using HashMap = oneapi::tbb::concurrent_hash_map<TaskNumber, ::tbb::dynamic_task_graph_node*>;
+    #endif
+
+    HashMap  _taskHandleContainer;
+};
