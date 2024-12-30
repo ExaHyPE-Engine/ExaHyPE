@@ -98,8 +98,6 @@ void tbb::dynamic_task_graph::wait( const std::set<dynamic_task_graph_node>& nod
 void tbb::dynamic_task_graph::wait_for_all() {
   volatile bool task_still_in_queue = true;
 
-  _arena.terminate();
-
   while ( task_still_in_queue ) {
     std::this_thread::yield();
     clean_up_completed_tasks();
