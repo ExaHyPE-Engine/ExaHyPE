@@ -29,6 +29,7 @@ int swift2::TaskEnumerator::getNumber() {
 
 
 void swift2::TaskEnumerator::releaseNumber( int value ) {
+  tarch::multicore::Lock _lock( _resourcesSemaphore );
   _globalEnumerator.releaseNumber(value);
 }
 
@@ -47,6 +48,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
   std::bitset<TwoPowerD> gotAllLocks = 0;
 
   while (not gotAllLocks.all()) {
+    tarch::multicore::Lock _lock( _resourcesSemaphore );
     int counter = 0;
     while (counter<TwoPowerD) {
       if (numbers[counter] == tarch::Enumerator::NoNumber) {

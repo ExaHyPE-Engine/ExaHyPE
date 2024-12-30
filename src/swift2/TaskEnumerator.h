@@ -106,6 +106,15 @@ class swift2::TaskEnumerator {
      * around half of the locks they want.
      *
      * Entries set to tarch::Enumerator::NoNumber are ignored.
+     *
+     * ## Thread-safety
+     *
+     * At any point throughout the calculation, another thread might
+     * insert new resource identifiers into the _resources map
+     * through getNumber() calls. If such a call happens at exactly the
+     * same time as _resources.at( numbers[counter] ), we might end up
+     * with a seg fault. Therefore, the locking itself is protected
+     * until we get all resources.
      */
     static void lockResources( const int numbers[TwoPowerD] );
 
