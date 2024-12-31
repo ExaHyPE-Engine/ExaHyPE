@@ -9,8 +9,8 @@ import swift2
 
 from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
 from .ParticleSortingAndStorage import (
-   ParticleSortingAndStorage,
-   AddAdditionalDummySweep
+    ParticleSortingAndStorage,
+    AddAdditionalDummySweep,
 )
 from .SpeciesStepOrdering import concatenate_steps_of_species
 from .Utils import (
@@ -21,10 +21,8 @@ from .Utils import (
 )
 from .Sequential import (
     map_onto_separate_mesh_traversals,
-    map_onto_separate_mesh_traversals_with_generic_mapper
+    map_onto_separate_mesh_traversals_with_generic_mapper,
 )
-
-
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -35,7 +33,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     use_continuous_particles_sequences,
     step_type: StepType,
     verbose,
-    construct_tree_task_graph = True
+    construct_tree_task_graph=True,
 ):
     """!
 
@@ -49,7 +47,7 @@ def translate_one_step_of_species_into_mesh_traversal(
        markers. This is to ensure that they do not hold any garbage. I can
        clear the set as often as I want. It is just important that I clear
        it at least once per particle species.
-    2. Update the task markers. This is something each and every step in Peano 
+    2. Update the task markers. This is something each and every step in Peano
        does. As we inject the update into each and every action set, we become
        independent of the AMR and when it is actually realised.
     3. Pick computational kernel. This is where the actual computation per step
@@ -83,14 +81,14 @@ def translate_one_step_of_species_into_mesh_traversal(
     @param alter_particle_position: [Bool]
       Inout parameter. We append a new marker to this sequence.
 
-     
+
     ## Use it to construct task graphs
-    
-    The routine is not expected to have an argument construct_tree_task_graph 
-    in Sequential. But I want to use the routines from Sequential. So I give 
+
+    The routine is not expected to have an argument construct_tree_task_graph
+    in Sequential. But I want to use the routines from Sequential. So I give
     this value a default value. This way, I can reuse the routine in TaskGraph,
     where I simply redefine the default.
-      
+
     """
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
@@ -102,38 +100,45 @@ def translate_one_step_of_species_into_mesh_traversal(
         add_user_defined_actions=False,
     )
 
-    action_set_update_marker = UpdateParticleMarker(particle_set = current_species_set,
-                                                    automatically_set_marker_in_leave_cell=False,
-                                                    make_reset_separate_task=True,
-                                                    )
+    action_set_update_marker = UpdateParticleMarker(
+        particle_set=current_species_set,
+        automatically_set_marker_in_leave_cell=False,
+        make_reset_separate_task=True,
+    )
     action_set_update_marker.descend_invocation_order = (
         new_step.highest_descend_invocation_order() + 1
     )
     action_set_update_marker.parallel = True
     new_step.add_action_set(action_set_update_marker)
-    
+    if verbose:
+        print(
+            "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses UpdateParticleMarker".format(
+                len(mesh_traversals),
+                step.name,
+                current_species_set.particle_model.name,
+            )
+        )
+
     #
     # Need to know this for the action sets later down the line, as they have
     # to know if the tasks have to be waited for immediately.
     #
     current_step_alters_particle_position = (
-        step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or 
-        step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
+        step.effect
+        == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+        or step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     )
 
     #
-    # We have to synchronise after each traversal if we work with a 
+    # We have to synchronise after each traversal if we work with a
     # tree or alter the global state
     #
     synchronise_after_each_mesh_traversal = (
-        step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or 
-        step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
-        or 
-        step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
-        or 
-        construct_tree_task_graph
+        step.effect
+        == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+        or step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
+        or step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
+        or construct_tree_task_graph
     )
 
     #
@@ -253,18 +258,18 @@ def translate_one_step_of_species_into_mesh_traversal(
     #
     # As we have a 1:1 mapping, we can directly translate the effect into flags
     #
-    if (current_step_alters_particle_position):
+    if current_step_alters_particle_position:
         alter_particle_position.append(True)
     else:
         alter_particle_position.append(False)
 
     #
-    # Now add the task number management. First step erases all indices, as it 
+    # Now add the task number management. First step erases all indices, as it
     # might be the first time stepping step overall. Other than that, all steps
     # plug into creational and destroy events.
     #
     action_set_assign_task_markers = peano4.toolbox.api.AssignNumbersToMesh(
-        #current_species_set.particle_model.name,
+        # current_species_set.particle_model.name,
         current_species_set.name,
     )
     action_set_assign_task_markers.descend_invocation_order = (
@@ -284,7 +289,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     mesh_traversals.append(new_step)
 
 
-def map_onto_separate_mesh_traversals_constructing_task_tree(
+def map_onto_separate_mesh_traversals_constructing_task_graph(
     sequence_of_steps,
     particle_sorting_and_storage: ParticleSortingAndStorage,
     step_type: StepType,
@@ -302,7 +307,7 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
     sequence.
 
     @image html documentation/Doxygen/Swift/task-graph-tree.png
-    
+
     Whenever we spawn a task, we first generate a new task id. This is the
     number of this task which we store within the task and which the task
     has to free eventually. We also store this task within the associated
@@ -310,6 +315,12 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
     mechanism of the task dependencies. That is, the indices within the
     tree are exclusively used for lookups and not for any semantics.
 
+    ## Realisation
+
+    This routine is actually a pure forward delegation. The actual tasking is
+    injected by passing in translate_one_step_of_species_into_mesh_traversal()
+    as functor. Therefore, this routine holds more information on the actual
+    task semantics.
 
     @param sequence_of_steps: [(Species,Step)]
           Sequence of tuples each consisting of one species and one step. Typically
@@ -331,41 +342,40 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
         particle_sorting_and_storage,
         step_type,
         verbose,
-        translate_one_step_of_species_into_mesh_traversal
+        translate_one_step_of_species_into_mesh_traversal,
     )
 
 
-def add_clear_task_number_to_initialisation_steps(algorithm_steps, 
-                                                  species_sets, 
-                                                  verbose):
+def add_clear_task_number_to_very_first_initialisation_step(
+    algorithm_steps, species_sets, verbose
+):
     """!
-    
+
     Take set of mesh run throughs (algorithm steps) and add clear task number action set
-    
+
     Usually called on initialisation routines.
-    
+
     """
 
-    for step in algorithm_steps:
-      for current_species_set in species_sets:
+    for current_species_set in species_sets:
         action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
             current_species_set.name,
         )
         action_set_erase_task_markers.descend_invocation_order = (
-            step.highest_descend_invocation_order() + 1
+            algorithm_steps[0].lowest_descend_invocation_order() - 1
         )
         action_set_erase_task_markers.parallel = True
-        step.add_action_set(action_set_erase_task_markers)
+        algorithm_steps[0].add_action_set(action_set_erase_task_markers)
         if verbose:
             print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} on particle {} clears task numbers/markers and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set".format(
-                    step.name,
+                "GRAPH COMPILER DEBUG [add_clear_task_number_to_very_first_initialisation_step]: step no {} on particle {} clears task numbers/markers and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set clearing all task numbers and assigning new ones".format(
+                    algorithm_steps[0].name,
                     current_species_set.particle_model.name,
                 )
             )
 
 
-def initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
+def initialisation_steps_onto_task_graph_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -379,13 +389,15 @@ def initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
     @param verbose: {True, False}
 
     """
-    result = map_onto_separate_mesh_traversals(
+    result = map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
-    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    add_clear_task_number_to_very_first_initialisation_step(
+        result, species_sets, verbose
+    )
     return result
 
 
@@ -394,10 +406,10 @@ def initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
 # ====================================
 #
 # These functions are made available through the __init__.py file. They are all
-# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
+# "just" wrappers around the generic map_onto_separate_mesh_traversals()
 # function calls, yet with different arguments.
 #
-def initialisation_steps_onto_task_tree_bucket_sort_scattered_memory(
+def initialisation_steps_onto_task_graph_bucket_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -411,17 +423,19 @@ def initialisation_steps_onto_task_tree_bucket_sort_scattered_memory(
     @param verbose: {True, False}
 
     """
-    result = map_onto_separate_mesh_traversals(
+    result = map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
-    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    add_clear_task_number_to_very_first_initialisation_step(
+        result, species_sets, verbose
+    )
     return result
 
 
-def initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory(
+def initialisation_steps_onto_task_graph_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -435,17 +449,19 @@ def initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory(
     @param verbose: {True, False}
 
     """
-    result = map_onto_separate_mesh_traversals(
+    result = map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
-    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    add_clear_task_number_to_very_first_initialisation_step(
+        result, species_sets, verbose
+    )
     return result
 
 
-def initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory(
+def initialisation_steps_onto_task_graph_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -459,17 +475,19 @@ def initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory(
     @param verbose: {True, False}
 
     """
-    result = map_onto_separate_mesh_traversals(
+    result = map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
-    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    add_clear_task_number_to_very_first_initialisation_step(
+        result, species_sets, verbose
+    )
     return result
 
 
-def particle_steps_onto_task_tree_multiscale_sort_scattered_memory(
+def particle_steps_onto_task_graph_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -487,7 +505,7 @@ def particle_steps_onto_task_tree_multiscale_sort_scattered_memory(
     @param verbose: {True, False}
 
     """
-    return map_onto_separate_mesh_traversals_constructing_task_tree(
+    return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
@@ -495,7 +513,7 @@ def particle_steps_onto_task_tree_multiscale_sort_scattered_memory(
     )
 
 
-def particle_steps_onto_task_tree_bucket_sort_scattered_memory(
+def particle_steps_onto_task_graph_bucket_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -513,7 +531,7 @@ def particle_steps_onto_task_tree_bucket_sort_scattered_memory(
     @param verbose: {True, False}
 
     """
-    return map_onto_separate_mesh_traversals_constructing_task_tree(
+    return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
@@ -521,8 +539,7 @@ def particle_steps_onto_task_tree_bucket_sort_scattered_memory(
     )
 
 
-
-def particle_steps_onto_task_tree_multiscale_sort_coalesced_memory(
+def particle_steps_onto_task_graph_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -540,7 +557,7 @@ def particle_steps_onto_task_tree_multiscale_sort_coalesced_memory(
     @param verbose: {True, False}
 
     """
-    return map_onto_separate_mesh_traversals_constructing_task_tree(
+    return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
@@ -548,7 +565,7 @@ def particle_steps_onto_task_tree_multiscale_sort_coalesced_memory(
     )
 
 
-def particle_steps_onto_task_tree_bucket_sort_coalesced_memory(
+def particle_steps_onto_task_graph_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -566,10 +583,9 @@ def particle_steps_onto_task_tree_bucket_sort_coalesced_memory(
     @param verbose: {True, False}
 
     """
-    return map_onto_separate_mesh_traversals_constructing_task_tree(
+    return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
-
