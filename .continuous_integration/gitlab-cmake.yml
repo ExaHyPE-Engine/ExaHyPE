@@ -10,7 +10,7 @@ GCC_OpenMP:
   variables:
     CC: "gcc"
     CXX: "g++"
-    IMAGE_TAG: "${IMAGE_TAG_GCC}"
+    IMAGE_TAG: "${IMAGE_GCC}"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
@@ -31,7 +31,7 @@ Intel_OpenMP:
   variables:
     CC: "icx"
     CXX: "icpx"
-    IMAGE_TAG: "${IMAGE_TAG_INTEL}"
+    IMAGE_TAG: "${IMAGE_INTEL}"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
@@ -52,7 +52,7 @@ LLVM_OpenMP:
   variables:
     CC: "clang"
     CXX: "clang++"
-    IMAGE_TAG: "${IMAGE_TAG_LLVM}"
+    IMAGE_TAG: "${IMAGE_LLVM}"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
@@ -73,7 +73,27 @@ NVIDIA:
   variables:
     CC: "nvc"
     CXX: "nvc++"
-    IMAGE_TAG: "${IMAGE_TAG_NVIDIA}"
+    IMAGE_TAG: "${IMAGE_NVIDIA}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
+                            -DENABLE_LOADBALANCING=ON \
+                            -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_SWIFT=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
+                            -DENABLE_PARTICLES=ON"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/cmake.yml
+    strategy: depend
+
+AMD:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "amdclang"
+    CXX: "amdclang++"
+    IMAGE_TAG: "${IMAGE_AMD}"
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
                             -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \

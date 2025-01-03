@@ -6,34 +6,22 @@ Here we maintain Apptainer Definition Files for different compilers.
 
 ## Build
 
-At the moment, we do not host pre-built Apptainer containers on some cloud repository. Therefore,
-anyone who is interested in using Apptainer needs to first build the container.
+At the moment, we do not host pre-built Apptainer containers on some cloud repository.
+Therefore, anyone who is interested in using Apptainer needs to first build the container.
 One alternative approach is to pull a Docker image from Dockerhub and then convert to Apptainer.
-See the Apptainer documentation for details. In our experience this only works for simple images.
-There is no guarantee that this will work with our Docker images. Therefore, we do not recommend it.
+See the Apptainer documentation for details.
+In our experience this only works for simple images.
+There is no guarantee that this will work with our Docker images.
+Therefore, we do not recommend it.
 
 To build the Apptainer containers, make sure to execute the following commands in the Peano root directory
 
-Run the Apptainer Docker container:
-
 ```shell
-docker run -it -v ${PWD}:/work --privileged peanoframework/apptainer
-```
-
-Navigate into the /work directory:
-
-```shell
-cd /work
-```
-
-Invoke the following command to build the Apptainer containers:
-
-```shell
-apptainer build apptainer/amd.sif apptainer/Apptainer.amd
 apptainer build apptainer/gcc.sif apptainer/Apptainer.gcc
-apptainer build apptainer/llvm.sif apptainer/Apptainer.llvm
 apptainer build apptainer/intel.sif apptainer/Apptainer.intel
 apptainer build apptainer/nvidia.sif apptainer/Apptainer.nvidia
+apptainer build apptainer/amd.sif apptainer/Apptainer.amd
+apptainer build apptainer/llvm.sif apptainer/Apptainer.llvm
 ```
 
 ## Usage
