@@ -5,17 +5,6 @@ import peano4
 import peano4.toolbox.particles
 
 
-def construct_cell_marker_for_tasks():
-    return peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(
-            "Swift2TaskNumber"
-        )
-
-def construct_vertex_marker_for_tasks():
-    return peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
-            "Swift2TaskNumber"
-        )
-
-
 def construct_touch_vertex_first_time_call(
     current_species_set,
     touch_vertex_first_time_kernel,
@@ -26,7 +15,8 @@ def construct_touch_vertex_first_time_call(
     Take the kernel to be used in touch first time and wrap into tasks
     
     As we work with task dependencies, I decided to always spawn tasks, even if
-    these degenerate to empty ones. Otherwise, it just became a nightmare. 
+    these degenerate to empty ones as no particles are associated to a vertex. 
+    Otherwise, it just became a nightmare. 
     Notably note that the kernel is not empty in most cases, as it is enriched
     with Swift dependency tracking anyway.
     
@@ -47,34 +37,41 @@ def construct_touch_vertex_first_time_call(
       
     ## Realisation 
     
-    - Get the task number to be used (corresponding to TouchVertexFirstTime), 
-      and also get the one corresponding to the TouchVertexLastTime. The latter
-      task is not spawned yet, and will not be spawned by this routine, but 
-      we'll gonna need this number further down.
-    - Allocate the set of in dependencies.
-    - We take the parent task numbers and add them to the dependencies. For 
-      this, we rely entirely on the helper function 
-      ::swift2::getVertexNumbersOfParentVertices(). Consult the routine's 
-      documentation for further info.
-    - We make the new vertex task depend on its touch last counterpart. This 
-      way, we avoid that the
-      previous mesh traversal did not synchronise all tasks (task graph 
-      approach) and this vertex task might still be pending.
-
-    The only tricky or unexpected part here is likley the wrap-around 
-    dependency, i.e. the fact that the task depends upon its predecessor
-    from the previous mesh sweep (touchVertexLastTime).
+    - Get the task number to be used (corresponding to TouchVertexFirstTime). 
+    - Allocate the set of in dependencies from coarser level if a multiscale
+      algorithm is used.
+    - Issue task.  
+    
+    If we build up one task graph per algorithmic step, there's no particularly
+    interesting details left: The underlying observer with its action sets will
+    yield a touch first-vertex first-vertex first-cell-vertex last-vertex last
+    sequence. The last "vertex last" event will be followed by a global 
+    waitForAllTasks() call, and therefore we are ready to for the subsequent 
+    mesh sweep. All the "vertex first" calls will use the same task number.
+    The second "vertex first" task therefore will have an in-out dependency
+    on this number.
+    
+    If we roll around, i.e. build up a task graph over multiple mesh sweeps, no
+    such strategy will work, as we have to insert a "vertex last"-"vertex first"
+    dependency in-between any two sweeps. This fact is ignored here and left 
+    to the user. Indeed, consult MultisweepTaskGraph for details on how they 
+    handle these wrap-around dependencies.
     
     """
     d = {
-        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             current_species_set.name
         ),
         "USE_MULTILEVEL_DEPENDENCIES": use_multilevel_dependencies,
         "TOUCH_VERTEX_FIRST_TIME_KERNEL": touch_vertex_first_time_kernel,
+        "SPECIES_SET_TASK_MARKER_NAME":   peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(current_species_set.name)
     }
     return jinja2.Template(
         """
+  assertion1(
+      fineGridVertex{{MARKER_NAME}}.getNumber()>=0,
+      fineGridVertex{{MARKER_NAME}}.toString()
+  );
   const ::swift2::TaskNumber taskNumberToBeUsed{
       fineGridVertex{{MARKER_NAME}}.getNumber(),
       ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
@@ -89,19 +86,13 @@ def construct_touch_vertex_first_time_call(
   {% else %}
   std::set<::swift2::TaskNumber> inDependencies;  
   {% endif %}
-
-  const ::swift2::TaskNumber taskNumberOfCorrespondingTouchLastTask{
-      fineGridVertex{{MARKER_NAME}}.getNumber(),
-      ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime
-    };
-
-  inDependencies.insert( taskNumberOfCorrespondingTouchLastTask );
-
+  
   logDebug( 
     "touchVertexFirstTime(...)", 
     "create task " << taskNumberToBeUsed.toString() << 
+    " (" << ::swift2::flatten(taskNumberToBeUsed) << ") " <<
     " for " << marker.toString() <<
-    " depends on " << ::swift2::toString(parentTaskNumbers) <<
+    " depends on " << ::swift2::toString(inDependencies) <<
     " with " << assignedParticles.size() << " particles on marker " << marker.toString() 
   );
 
@@ -141,14 +132,19 @@ def construct_touch_cell_first_time_call(
     
     """
     d = {
-        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             current_species_set.name
         ),
         "USE_MULTILEVEL_DEPENDENCIES":   use_multilevel_dependencies,
         "TOUCH_CELL_FIRST_TIME_KERNEL":  touch_cell_first_time_kernel,
+        "SPECIES_SET_TASK_MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(current_species_set.name)
     }
     return jinja2.Template(
         """
+      assertion1(
+        fineGridCell{{MARKER_NAME}}.getNumber()>=0,
+        fineGridCell{{MARKER_NAME}}.toString()
+      );  
       const ::swift2::TaskNumber taskNumberToBeUsed{
         fineGridCell{{MARKER_NAME}}.getNumber(),
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
@@ -203,11 +199,13 @@ def construct_touch_cell_first_time_call(
     ).render(**d)
 
 
+# @todo do not capture this
+
 def construct_touch_vertex_last_time_call(
     current_species_set,
     touch_vertex_last_time_kernel,
     use_multilevel_dependencies,
-    alter_particle_position_or_global_state,
+    alter_particle_position_or_interaction_radius,
 ):
     """!
     
@@ -242,17 +240,23 @@ def construct_touch_vertex_last_time_call(
     
     """
     d = {
-        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             current_species_set.name
         ),
         "USE_MULTILEVEL_DEPENDENCIES":             use_multilevel_dependencies,
-        "ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE": alter_particle_position_or_global_state,
+        "ALTER_PARTICLE_POSITION_OR_INTERACTION_RADIUS": alter_particle_position_or_interaction_radius,
         "TOUCH_VERTEX_LAST_TIME_KERNEL":           touch_vertex_last_time_kernel,
-        "SPECIES_SET_NAME":                        current_species_set.name
+        "SPECIES_SET_NAME":                        current_species_set.name,
+        "SPECIES_SET_TASK_MARKER_NAME":            peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(current_species_set.name)
     }
     return jinja2.Template(
         """
       std::set<::swift2::TaskNumber> inDependencies;
+      
+      assertion1(
+        fineGridVertex{{MARKER_NAME}}.getNumber()>=0,
+        fineGridVertex{{MARKER_NAME}}.toString()
+      );
       
       const ::swift2::TaskNumber taskNumberToBeUsed{
         fineGridVertex{{MARKER_NAME}}.getNumber(),
@@ -299,7 +303,7 @@ def construct_touch_vertex_last_time_call(
       {% if USE_MULTILEVEL_DEPENDENCIES %}
       std::set<::swift2::TaskNumber> parentTasks = getVertexNumbersOfParentVertices(
         marker,
-        coarseGridVertices{{SPECIES_SET_NAME}}EnclaveMeshEntityNumber,
+        coarseGridVertices{{SPECIES_SET_TASK_MARKER_NAME}},
         ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime
       );
       for (auto p: parentTasks) {
@@ -309,14 +313,19 @@ def construct_touch_vertex_last_time_call(
       }
       {% endif %}
       
-      {% if ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE %}
-      constexpr bool alterParticlePositionOrGlobalState = true;
+      {% if ALTER_PARTICLE_POSITION_OR_INTERACTION_RADIUS %}
+      constexpr bool alterParticlePositionOrInteractionRadius = true;
       {% else %}
-      constexpr bool alterParticlePositionOrGlobalState = false;
+      constexpr bool alterParticlePositionOrInteractionRadius = false;
       {% endif %}
 
-      if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrGlobalState ) {
+      if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrInteractionRadius ) {
         tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
+        logDebug(
+          "touchVertexLastTime(...)",
+          "task " << taskNumberToBeUsed.toString() <<
+          " has terminated"
+        );
       }
     """
     ).render(**d)
