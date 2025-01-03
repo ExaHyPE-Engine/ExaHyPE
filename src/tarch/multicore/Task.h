@@ -219,6 +219,26 @@ namespace tarch {
     };
 
     /**
+     * An empty task
+     *
+     * Empty tasks are useful in many cases to create synchronisation points in
+     * task graphs.
+     */
+    class EmptyTask: public Task {
+      public:
+        EmptyTask() = delete;
+
+        /**
+         * Create empty task
+         *
+         * Every empty task is of the type DontFuse.
+         */
+        EmptyTask(int priority);
+
+        virtual bool run() override;
+    };
+
+    /**
      * Frequently used implementation for job with a functor.
      *
      * Cousin implementation to TaskWithCopyOfFunctor which does not copy the

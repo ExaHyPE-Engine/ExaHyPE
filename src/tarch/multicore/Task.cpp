@@ -67,3 +67,10 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskTyp
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
   return _taskFunctor();
 }
+
+tarch::multicore::EmptyTask::EmptyTask(int priority):
+  Task(Task::DontFuse, priority) {}
+
+bool tarch::multicore::EmptyTask::run() {
+  return false;
+}
