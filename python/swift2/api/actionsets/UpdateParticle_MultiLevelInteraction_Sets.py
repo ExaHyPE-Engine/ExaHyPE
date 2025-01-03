@@ -32,7 +32,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(
         unprepare_traversal_kernel,
         additional_includes,
         active_particle_set,
-        alter_particle_position_or_global_state,
+        alter_particle_position_or_interaction_radius,
         wait_for_all_tasks_to_finish_after_traversal,
     ):
         """!
@@ -70,7 +70,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(
                 particle_set,
                 touch_vertex_last_time_compute_particle_update_kernel,
                 use_multilevel_dependencies=True,
-                alter_particle_position_or_global_state=alter_particle_position_or_global_state
+                alter_particle_position_or_interaction_radius=alter_particle_position_or_interaction_radius
             ),
             prepare_traversal_kernel=prepare_traversal_kernel,
             unprepare_traversal_kernel=unprepare_traversal_kernel,

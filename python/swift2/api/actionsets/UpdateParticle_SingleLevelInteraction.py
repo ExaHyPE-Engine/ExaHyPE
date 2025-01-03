@@ -31,7 +31,7 @@ class UpdateParticle_SingleLevelInteraction(
         unprepare_traversal_kernel,
         additional_includes,
         active_particle_set,
-        current_step_alters_particle_position,
+        alter_particle_position_or_interaction_radius,
         wait_for_all_tasks_to_finish_after_traversal,
     ):
         """!
@@ -56,7 +56,7 @@ class UpdateParticle_SingleLevelInteraction(
                 particle_set,touch_vertex_first_time_compute_particle_update_kernel,False
             ),
             touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                particle_set,touch_vertex_last_time_compute_particle_update_kernel,False, current_step_alters_particle_position
+                particle_set,touch_vertex_last_time_compute_particle_update_kernel,False, alter_particle_position_or_interaction_radius
             ),
             prepare_traversal_kernel=prepare_traversal_kernel,
             unprepare_traversal_kernel=unprepare_traversal_kernel,
