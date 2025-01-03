@@ -23,4 +23,4 @@ pages:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
   when: always
-  retry: 1
+  retry: 0
