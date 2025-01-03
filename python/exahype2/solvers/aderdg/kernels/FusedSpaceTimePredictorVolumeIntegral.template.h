@@ -20,8 +20,8 @@ namespace {{ item }} {
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pStoreType* __restrict__                      lQhbnd,
-  pStoreType* __restrict__                      lFhbnd,
+  pStoreType* __restrict__                      lQhbnd[2*Dimensions],
+  pStoreType* __restrict__                      lFhbnd[2*Dimensions],
   cStoreType* const __restrict__                luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
@@ -35,8 +35,8 @@ int fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int fusedSpaceTimePredictorVolumeIntegral(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pStoreType* __restrict__                      lQhbnd,
-  pStoreType* __restrict__                      lFhbnd,
+  pStoreType* __restrict__                      lQhbnd[2*Dimensions],
+  pStoreType* __restrict__                      lFhbnd[2*Dimensions],
   cStoreType* const __restrict__                luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,

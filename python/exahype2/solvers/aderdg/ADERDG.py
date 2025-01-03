@@ -15,6 +15,7 @@ import exahype2.solvers.aderdg.kernels
 import exahype2.solvers.aderdg.actionsets
 
 from exahype2.solvers.PDETerms import PDETerms
+from exahype2.solvers.Storage import Storage
 from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
@@ -150,6 +151,10 @@ class ADERDG(object):
         self._solution_persistent_storage_precision = PrecisionType["double"]
         self._precompute_picard_precision = False
         self._use_half_precision          = False
+
+        # Determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
+        self._cell_data_storage = Storage.CallStack
+        self._face_data_storage = Storage.CallStack
 
         # Whether or not to plot information about the grid as well as information about the content of the patches
         self._plot_grid_properties = plot_grid_properties
@@ -376,49 +381,32 @@ Material parameters:    """
             self._corrector_computation_precision,
         )
 
-        if self._cell_data_storage == Storage.CallStack:
-          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArray(
+        # If user has specified that they want the data on the heap        
+        if self._cell_data_storage == Storage.Heap:
+          self._current_time_step.generator     = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._current_time_step,
               self._solution_persistent_storage_precision
           )
-          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArray(
-              self._previous_time_step,
-              self._solution_persistent_storage_precision
-          )
-        elif self._cell_data_storage == Storage.Heap:
-          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-              self._current_time_step,
-              self._solution_persistent_storage_precision
-          )
-          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+          self._previous_time_step.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._previous_time_step,
               self._solution_persistent_storage_precision
           )
         elif self._cell_data_storage == Storage.SmartPointers:
-          self._current_time_step.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+          self._current_time_step.generator     = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
               self._current_time_step,
               self._solution_persistent_storage_precision
           )
-          self._previous_time_step.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+          self._previous_time_step.generator    = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
               self._previous_time_step,
               self._solution_persistent_storage_precision
           )
-        else:
+        elif self._cell_data_storage != Storage.CallStack:
             assert False, "Storage variant {} not supported".format(
                 self._cell_data_storage
             )
 
-        if self._face_data_storage == Storage.CallStack:
-          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArray(
-              self._rhs_estimates_projection,
-              self._corrector_computation_precision
-          )
-          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArray(
-              self._flux_estimates_projection,
-              self._corrector_computation_precision
-          )
-        elif self._face_data_storage == Storage.Heap:
-          self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+        if self._face_data_storage == Storage.Heap:
+          self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._rhs_estimates_projection,
               self._corrector_computation_precision
           )
@@ -426,6 +414,7 @@ Material parameters:    """
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
+
         elif self._face_data_storage == Storage.SmartPointers:
           self._rhs_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
               self._rhs_estimates_projection,
@@ -435,7 +424,7 @@ Material parameters:    """
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
-        else:
+        elif self._face_data_storage != Storage.CallStack:
             assert False, "Storage variant {} not supported".format(
                 self._face_data_storage
             )
@@ -1332,6 +1321,8 @@ Material parameters:    """
         precompute_picard_precision             = False,
         precision_criterion_implementation      = PDETerms.User_Defined_Implementation,
         riemann_solver_implementation           = PDETerms.None_Implementation,
+        cell_data_storage   = Storage.CallStack,
+        face_data_storage   = Storage.CallStack,
         architecture        = "noarch",
         initialise_patches  = False
     ):
@@ -1402,6 +1393,9 @@ Material parameters:    """
 
         if riemann_solver_implementation is not PDETerms.None_Implementation:
             self._riemann_solver_implementation = riemann_solver_implementation
+
+        self._cell_data_storage = cell_data_storage
+        self._face_data_storage = face_data_storage
 
         self._architecture = architecture
 
