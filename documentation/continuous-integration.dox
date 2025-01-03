@@ -4,41 +4,105 @@
 
 \tableofcontents
 
-On this page, we detail the current function of the CI pipeline.
-Much of the following is subject to change.
+## Gitlab CI
 
+For a full overview of how continuous integration works in gitlab, please consult [their documentation](https://docs.gitlab.com/ee/ci/).
+We detail here some useful info about how we use it within Peano. A few basic things to note:
+
+\li When a developer pushes to any remote branch, the gitlab website "runs a pipeline". This consists of running any steps in the `.gitlab-ci.yml` file.
+\li Our ```.gitlab-ci.yml``` doesn't contain much actual stuff, but rather it redirects to further `.yml` files in the `.continuous_integration` directory.
+\li We use containers to make sure we have a dependable software environment.
 
 ## How do I run the pipeline?
 
 The pipeline runs automatically for all branches and all pushes.
-However, it only runs fully on the `p4` branch.
+However, it only runs fully on the protected branches.
 For all other branches, the pipeline only executes the build and test (unit tests) stages.
 
-At time of writing, ```gitlab-runner``` is installed as a service on multiple nodes of DINE.
+At time of writing, ```gitlab-runner``` is installed multiple nodes of DINE.
 The workers are kept alive by recurring slurm jobs. Peano developers should not need to do
 anything other than push to a branch, and [check the pipelines page on the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines)
-to check that their code has correctly built for each compiler toolchain. Of course,
-this will only check that the core of Peano has been built correctly. See below for info
-on how to write custom tests.
+to check that their code has correctly built for each compiler toolchain.
 
-
-## How does the pipeline work?
-
-Within the repo, we have various scripts to build the code. ```configure.py``` in the top-level
-of Peano will ```configure``` and ```make``` the code according to whatever requirements are
-needed. The only difference here is we use ```apptainer exec``` to make sure that these
-commands are run inside these apptainer images, so that specific compilers can be used
-automatically.
-
-This is planned to change, however, as this isn't so clean. In the future, we either plan
-to mirror the repo to GitHub and use GitHub actions, or make an executor for gitlab-runner
-that can handle apptainer images directly.
+One unfortunate consequence of this is that if the slurm job that manages a particular runner goes down during a pipeline run, it will cause the jobs to hang
+until they timeout, meaning that whoever pushed needs to press the restart button on the pipeline page.
 
 ## How do I write my own tests?
 
 Unfortunately, the use of the apptainer containers is not pretty, and
 so the best thing to do is describe your desired actions in a bash script and ask for help on the
-continuous-integration channel of the Slack. This is due to change in the near future.
+continuous-integration channel of the Slack.
 
+### Anatomy of a test
+
+It's best to copy examples, such as the ones in `.continuous_integration/templates/exahype2.yml`. But here are some general tips:
+
+```
+.Test_Name:
+  stage: Test
+  needs:
+    - job: Build
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd to/my/directory; ./run_my_executable"
+```
+
+Let's discuss this line-by-line.
+
+Start by giving your test a name. Syntax is crucial here. Start with a `.` to indicate it's a template, and finish the line with a colon `:`. Every
+subsequent line must be indented with two spaces, python style.
+
+Next, you need to give the job a stage. `Test` is a fine name.
+
+Next, you need to make sure that this job depends on the build job. That way, it will run strictly after the job that checks it still compiles, and only
+if that succeeded. What's more, you won't have to wait for the whole of Peano to recompile; it will just fetch the compiled libraries that were cooked up
+a short while beforehand.
+
+Finally, the script. This is very ugly. The first part `apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash` just transforms
+the standard bash terminal into one that runs under the container. The names of the environment variables are set for you. Then we need to pipe in our instructions
+(note the triple `<` sign). Conceptually, you need to imagine that the terminal begins at the top level of Peano. So you need to `cd` into whichever directory you
+need to be and run whichever scripts you need to run. Note the separation with semicolon between separate statements, like in a normal bash terminal.
+
+
+## How do I add new runners to project?
+
+Having more runners online at once means more jobs can be run at once. Only the project owner can do these steps:
+
+\li Heading to Settings > CI/CD > Runners
+\li Add a new project runner. Make sure the tag is set to `peano-dine-runner` (no other tags have been written into the repo yet), make sure the project is locked to the current project and click create.
+
+It will then show you a token. Write it down.
+
+Now we need to register this runner. Log into a node where `gitlab-runner` is available, and then type `gitlab-runner register`. Type in the url and
+token as prompted. Pick `shell` as an executor.
+
+This will then create a new config file in `$HOME/.gitlab-runner` directory. Move this to the /dine/data/do009/peano/configs directory.
+
+You can then run the gitlab-runner and supply this config by calling `gitlab-runner run --config /path/to/config.toml`. This is what the slurm job is supposed to do.
+
+### Config template
+
+\verbatim
+
+concurrent = 4
+check_interval = 0
+shutdown_timeout = 0
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = "b101Runner"
+  url = "https://gitlab.lrz.de"
+  id = 35483
+  token = "keep-this-token-private"
+  token_obtained_at = 2024-06-19T11:16:06Z
+  token_expires_at = 0001-01-01T00:00:00Z
+  executor = "shell"
+  builds_dir = "/dine/data/do009/peano/builds_dir"
+  cache_dir  = "/dine/data/do009/peano/cache_dir"
+
+\endverbatim
+
+concurrent denotes the number of concurrent builds that can run at once.
 
 */
