@@ -33,7 +33,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     use_continuous_particles_sequences,
     step_type: StepType,
     verbose,
-    construct_tree_task_graph=True,
+    synchronise_task_graph_after_each_mesh_sweep=True,
 ):
     """!
 
@@ -81,10 +81,15 @@ def translate_one_step_of_species_into_mesh_traversal(
     @param alter_particle_position: [Bool]
       Inout parameter. We append a new marker to this sequence.
 
+    @param synchronise_task_graph_after_each_mesh_sweep: Bool
+      If set, the arising action set ill call a tarch::multicore::waitForAllTasks()
+      after each mesh traversal.
+      
+
 
     ## Use it to construct task graphs
 
-    The routine is not expected to have an argument construct_tree_task_graph
+    The routine is not expected to have an argument synchronise_task_graph_after_each_mesh_sweep
     in Sequential. But I want to use the routines from Sequential. So I give
     this value a default value. This way, I can reuse the routine in TaskGraph,
     where I simply redefine the default.
@@ -134,11 +139,12 @@ def translate_one_step_of_species_into_mesh_traversal(
     # tree or alter the global state
     #
     synchronise_after_each_mesh_traversal = (
-        step.effect
-        == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-        or step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
+        step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
         or step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
-        or construct_tree_task_graph
+        or step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN
+        or step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
+        or step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+        or synchronise_task_graph_after_each_mesh_sweep
     )
 
     #
@@ -168,7 +174,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                alter_particle_position_or_global_state=current_step_alters_particle_position,
+                alter_particle_position_or_interaction_radius=current_step_alters_particle_position,
                 wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
         else:
@@ -189,7 +195,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                alter_particle_position_or_global_state=current_step_alters_particle_position,
+                alter_particle_position_or_interaction_radius=current_step_alters_particle_position,
                 wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
         action_set_particle_particle_interaction.descend_invocation_order = (
@@ -217,7 +223,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                current_step_alters_particle_position=current_step_alters_particle_position,
+                alter_particle_position_or_interaction_radius=current_step_alters_particle_position,
                 wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
             action_set_particle_update.descend_invocation_order = (
@@ -244,7 +250,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                current_step_alters_particle_position=current_step_alters_particle_position,
+                alter_particle_position_or_interaction_radius=current_step_alters_particle_position,
                 wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
             action_set_particle_update.descend_invocation_order = (
