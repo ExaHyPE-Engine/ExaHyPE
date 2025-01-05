@@ -5,11 +5,12 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/multicore/MultiReadSingleWriteLock.h"
 
 
 std::map< int, tarch::multicore::BooleanSemaphore* >  swift2::TaskEnumerator::_resources;
 tarch::Enumerator                                     swift2::TaskEnumerator::_globalEnumerator;
-tarch::multicore::BooleanSemaphore                    swift2::TaskEnumerator::_resourcesSemaphore;
+swift2::TaskEnumerator::ResourcesSemaphore            swift2::TaskEnumerator::_resourcesSemaphore;
 
 
 void swift2::TaskEnumerator::reset() {
@@ -19,7 +20,7 @@ void swift2::TaskEnumerator::reset() {
 
 int swift2::TaskEnumerator::getNumber() {
   int result = _globalEnumerator.getNumber();
-  tarch::multicore::Lock _lock( _resourcesSemaphore );
+  ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Write );
   if ( _resources.count(result)==0 ) {
     _resources.insert( {result, new tarch::multicore::BooleanSemaphore()} );
   }
@@ -29,7 +30,6 @@ int swift2::TaskEnumerator::getNumber() {
 
 
 void swift2::TaskEnumerator::releaseNumber( int value ) {
-  tarch::multicore::Lock _lock( _resourcesSemaphore );
   _globalEnumerator.releaseNumber(value);
 }
 
@@ -48,7 +48,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
   std::bitset<TwoPowerD> gotAllLocks = 0;
 
   while (not gotAllLocks.all()) {
-    tarch::multicore::Lock _lock( _resourcesSemaphore );
+    ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Read );
     int counter = 0;
     while (counter<TwoPowerD) {
       if (numbers[counter] == tarch::Enumerator::NoNumber) {
@@ -92,7 +92,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
 void swift2::TaskEnumerator::unlockResources( const int numbers[TwoPowerD] ) {
   for (int i=0; i<TwoPowerD; i++) {
     if (numbers[i] != tarch::Enumerator::NoNumber) {
-      tarch::multicore::Lock _lock( _resourcesSemaphore );
+      ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Read );
       assertion1( _resources.count(numbers[i])==1, numbers[i] );
       tarch::multicore::Lock lock(
         *_resources.at( numbers[i] ),

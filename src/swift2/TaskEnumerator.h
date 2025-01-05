@@ -5,6 +5,9 @@
 #include "tarch/Enumerator.h"
 #include "peano4/utils/Globals.h"
 
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
+
 #include <map>
 
 namespace swift2 {
@@ -136,6 +139,20 @@ class swift2::TaskEnumerator {
      */
     static std::map< int, tarch::multicore::BooleanSemaphore* >  _resources;
 
-    static tarch::multicore::BooleanSemaphore                    _resourcesSemaphore;
+    /**
+     * Protect the _resources map
+     *
+     * This map holds all the boolean semaphores. An arbitrary number of
+     * threads can hit this map at the same time and try to book some
+     * semaphores. This is technically a read access, as they do not
+     * write to the map. They only read from the map.
+     *
+     * Contrary to this, we may not change the map, i.e. insert new
+     * semaphores, if others try to read it, as new inserts might change
+     * the underlying memory arrangement and hence mess everything up.
+     */
+    using ResourcesSemaphore = tarch::multicore::MultiReadSingleWriteSemaphore;
+
+    static ResourcesSemaphore   _resourcesSemaphore;
 };
 
