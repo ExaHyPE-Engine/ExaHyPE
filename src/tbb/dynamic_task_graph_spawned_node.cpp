@@ -22,14 +22,11 @@ tbb::dynamic_task_graph_spawned_node::dynamic_task_graph_spawned_node(
 
 
 void tbb::dynamic_task_graph_spawned_node::incoming_task_has_terminated() {
-  tbb::spin_mutex::scoped_lock lock(_semaphore);
   _number_of_in_dependencies--;
 
   __TBB_ASSERT( _number_of_in_dependencies>=0, "cannot wait for less than 0 other tasks" );
   
   const bool is_ready = _number_of_in_dependencies==0;
-
-  lock.release();
 
   if (is_ready) {
     run();
@@ -47,15 +44,36 @@ void tbb::dynamic_task_graph_spawned_node::run() {
 
     _functor();
 
-    tbb::spin_mutex::scoped_lock lock(_semaphore);
-    _state = State::Complete;
+    _state = State::Terminated;
+
+    tbb::spin_mutex::scoped_lock lock(_dependencies_semaphore);
     for (auto& p: _out_dependency) {
       p->incoming_task_has_terminated();
     }
+    _state = State::NotifiedSuccessors;
     lock.release();
 
+    _state.notify_all();
     __TBB_TRACE_TASK_COMPLETE(this);
   });
+}
+
+
+
+bool tbb::dynamic_task_graph_spawned_node::add_successor( std::shared_ptr<dynamic_task_graph_spawned_node> successor ) {
+  bool result = false;
+  tbb::spin_mutex::scoped_lock lock(_dependencies_semaphore);
+
+  if (
+    _state != State::Terminated
+    and
+    _state != State::NotifiedSuccessors
+  ) {
+    _out_dependency.push_back( successor );
+    result = true;
+  }
+
+  return result;
 }
 
 
@@ -64,8 +82,11 @@ std::string tbb::dynamic_task_graph_spawned_node::to_string() const {
 
   result = "(";
   switch (_state) {
-    case State::Complete:
-      result += "complete";
+    case State::Terminated:
+      result += "terminated";
+      break;
+    case State::NotifiedSuccessors:
+      result += "notified-successors";
       break;
     case State::Spawned:
       result += "spawned";

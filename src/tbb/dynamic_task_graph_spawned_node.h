@@ -61,10 +61,17 @@ namespace tbb {
         Spawned,
 
         /**
+         * Once a task has terminated, it toggles to complete. This allows a
+         * wait, for example, to continue. However, it does not mean yet that
+         * we have also notified successors.
+         */
+        Terminated,
+
+        /**
          * The final step of tbb::dynamic_task_graph_spawned_node::run() is to
          * switch a task to Complete.
          */
-        Complete
+        NotifiedSuccessors
       };
 
       /**
@@ -143,10 +150,23 @@ namespace tbb {
        * Helper routine, which likely will not be there in TBB counterpart
        */
       std::string to_string() const;
+
+      /**
+       * @return has successfully added this node. If it returns false, then
+       *   the task represented by this object has already terminated and we
+       *   hence could not add anything anymore.
+       */
+      bool add_successor( std::shared_ptr<dynamic_task_graph_spawned_node> successor );
     private:
       std::atomic<State>                              _state;
       std::function<void()>                           _functor;
-      tbb::spin_mutex                                 _semaphore;
+
+      /**
+       * Semaphore over all the dependencies. These are held in a container and
+       * hence need a proper mutex. All other states are realised as atomics to
+       * minimise locking.
+       */
+      tbb::spin_mutex                                 _dependencies_semaphore;
       dynamic_task_graph&                             _task_graph;
       int                                             _number_of_in_dependencies;
       std::vector< std::shared_ptr<dynamic_task_graph_spawned_node> >   _out_dependency;

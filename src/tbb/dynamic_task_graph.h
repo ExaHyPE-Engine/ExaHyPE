@@ -12,6 +12,7 @@
 #include <tbb/task_arena.h>
 #include <oneapi/tbb/task_arena.h>
 #include <oneapi/tbb/spin_mutex.h>
+#include <oneapi/tbb/spin_rw_mutex.h>
 #include <oneapi/tbb/concurrent_unordered_set.h>
 
 
@@ -225,7 +226,7 @@ namespace tbb {
          * @param node Task to wait for. This task has to be submitted.
          *   Otherwise, we trigger an assertion.
          */
-        void wait( const dynamic_task_graph_node& node );
+        void wait( dynamic_task_graph_node node );
 
         /**
          * Wait for set of nodes
@@ -256,14 +257,32 @@ namespace tbb {
          */
         std::size_t size() const;
       private:
+        evtl. sollte der gegen task group arbeiten und nicht gegen die Arena.
+
         ::oneapi::tbb::task_arena&      _arena;
 
-        using SpawnedTaskMutex = ::oneapi::tbb::spin_mutex;
+        /**
+         * I originally used
+         * 
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * using SpawnedTaskMutex = ::oneapi::tbb::spin_mutex;
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * 
+         * but it is absolutely crucial that the lock for the
+         * spawned tasks does not become a bottleneck.
+         */
+        using SpawnedTaskMutex = ::oneapi::tbb::spin_rw_mutex;
         SpawnedTaskMutex       _spawned_task_mutex;
 
         /**
          * See documentation of dynamic_task_graph_spawned_node for a
          * discussion why we have to use smart pointers here.
+         * 
+         * Just to reiterate the core message why we need this: A user
+         * creates an instance of a task, i.e. dynamic_task_graph_node.
+         * Once submitted, this node holds a (smart) pointer to a task,
+         * and then is allowed to throw the node away. So we have to 
+         * safe the submitted task!
          */
         using SpawnedTasksContainer = std::set< std::shared_ptr<dynamic_task_graph_spawned_node> >;
 
