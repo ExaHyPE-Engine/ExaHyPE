@@ -14,6 +14,9 @@ namespace tarch {
 }
 
 
+#if defined(SharedTBB) or defined(SharedTBBExtension)
+#include "tarch/multicore/tbb/MultiReadSingleWriteSemaphore.h"
+#else
 
 /**
  * Read/write Semaphore
@@ -109,5 +112,8 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
   public:
     MultiReadSingleWriteSemaphore(bool highPriorityToWrites = true);
     ~MultiReadSingleWriteSemaphore();
+
+    using Lock = tarch::multicore::MultiReadSingleWriteLock;
 };
 
+#endif

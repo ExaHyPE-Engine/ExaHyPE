@@ -15,8 +15,9 @@ namespace tarch {
 
 
 #if defined(SharedTBB) or defined(SharedTBBExtension)
-#include "tarch/multicore/tbb/MultiReadSingleWriteSemaphore.h"
-#else
+
+
+#include <oneapi/tbb/spin_rw_mutex.h>
 
 /**
  * Read/write Semaphore
@@ -51,11 +52,7 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
   private:
     friend class tarch::multicore::MultiReadSingleWriteLock;
 
-    const bool        _highPriorityToWrites;
-    BooleanSemaphore  _semaphore;
-    volatile bool     _writeAccessAcquired;
-    volatile int      _numberOfPendingWriteRequests;
-    volatile int      _numberOfActiveReadAccesses;
+    ::oneapi::tbb::spin_rw_mutex  _mutex;
 
     /**
      * Waits until I can enter the critical section.
@@ -110,10 +107,14 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
     MultiReadSingleWriteSemaphore& operator = ( const MultiReadSingleWriteSemaphore& ) { return *this; }
 
   public:
+    /**
+     * Argument is ignored in TBB version.
+     */
     MultiReadSingleWriteSemaphore(bool highPriorityToWrites = true);
-    ~MultiReadSingleWriteSemaphore();
+    ~MultiReadSingleWriteSemaphore() = default;
 
     using Lock = tarch::multicore::MultiReadSingleWriteLock;
 };
+
 
 #endif
