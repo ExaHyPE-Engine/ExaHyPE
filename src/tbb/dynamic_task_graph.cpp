@@ -5,9 +5,9 @@
 
 
 tbb::dynamic_task_graph::dynamic_task_graph(
-  ::oneapi::tbb::task_arena&      arena
+  ::oneapi::tbb::task_group&      group
 ):
-  _arena(arena) {
+  _task_group(group) {
 }
 
 #include <iostream>
@@ -27,7 +27,6 @@ void tbb::dynamic_task_graph::put(dynamic_task_graph_node& node ) {
     SpawnedTaskMutex::scoped_lock  task_graph_lock(_spawned_task_mutex, false); // is writer
 
     for (auto& p: node._in_dependency) {
-      // @todo: Docu muss ich erst erhoehen, weil sonst kann es negativ reinlaufen wenn add_successor ge
       node._spawned_task->_number_of_in_dependencies++;
       if (
         _spawned_tasks.count(p)>0
@@ -82,12 +81,7 @@ void tbb::dynamic_task_graph::wait( dynamic_task_graph_node node ) {
 
   if (isTaskStillInQueue()) {
     clean_up_completed_tasks();
-
-    dynamic_task_graph_spawned_node::State old_state = node._spawned_task->_state;
-    while (isTaskStillInQueue()) {
-      node._spawned_task->_state.wait( old_state );
-      arena drain; or ask group
-    }
+    _task_group.wait();
   }
 
   __TBB_TRACE_TASK_WAIT_COMPLETE( node._spawned_task );
@@ -102,13 +96,13 @@ void tbb::dynamic_task_graph::wait( const std::set<dynamic_task_graph_node>& nod
 
 
 void tbb::dynamic_task_graph::wait_for_all() {
-  volatile bool task_still_in_queue = true;
+  _task_group.wait();
 
-  while ( task_still_in_queue ) {
-    std::this_thread::yield();
+  while (not _spawned_tasks.empty()) {
     clean_up_completed_tasks();
-    task_still_in_queue = not _spawned_tasks.empty();
   }
+
+  __TBB_ASSERT( _spawned_tasks.empty(), "set of spawned tasks should be empty" );
 }
 
 

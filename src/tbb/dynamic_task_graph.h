@@ -10,7 +10,7 @@
 #include <functional>
 #include <set>
 #include <tbb/task_arena.h>
-#include <oneapi/tbb/task_arena.h>
+#include <oneapi/tbb/task_group.h>
 #include <oneapi/tbb/spin_mutex.h>
 #include <oneapi/tbb/spin_rw_mutex.h>
 #include <oneapi/tbb/concurrent_unordered_set.h>
@@ -153,7 +153,7 @@ namespace tbb {
          *   user's responsibility to ensure that the arena is valid.
          */
         dynamic_task_graph(
-          ::oneapi::tbb::task_arena&      arena
+          ::oneapi::tbb::task_group&      arena
         );
 
         /**
@@ -206,8 +206,12 @@ namespace tbb {
          *    dynamic_task_graph_spawned_node always increments this counter
          *    artificially by one to avoid that it is released too soon.
          *
-         * As we jump into incoming_task_has_terminated() straightaway, any
-         * task will xxxx
+         * We always have to increment the task dependency counter before we
+         * actually insert the new task, as the predecessor migth literally
+         * just now be about to finish and hence immediately unlock our own
+         * task while we still construct its input dependencies. By incrementing
+         * first, we are on the safe side that our task will not gallop ahead.
+         *
          */
         void put(dynamic_task_graph_node& node );
 
@@ -257,9 +261,7 @@ namespace tbb {
          */
         std::size_t size() const;
       private:
-        evtl. sollte der gegen task group arbeiten und nicht gegen die Arena.
-
-        ::oneapi::tbb::task_arena&      _arena;
+        ::oneapi::tbb::task_group&      _task_group;
 
         /**
          * I originally used

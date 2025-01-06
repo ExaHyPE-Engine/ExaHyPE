@@ -39,7 +39,7 @@ void tbb::dynamic_task_graph_spawned_node::run() {
 
   _state = State::Spawned;
 
-  _task_graph._arena.enqueue([&] {
+  _task_graph._task_group.run([&] {
     __TBB_TRACE_TASK_RUN(this);
 
     _functor();
