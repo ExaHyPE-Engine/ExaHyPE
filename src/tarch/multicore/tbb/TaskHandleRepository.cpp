@@ -4,6 +4,7 @@
 #include <cassert>
 #include "tarch/Assertions.h"
 
+#if defined(SharedTBBExtension) or defined(SharedTBB)
 
 
 #if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
@@ -57,3 +58,5 @@ tarch::multicore::tbb::TaskHandleRepository::~TaskHandleRepository() {
     delete pair.second;
   }
 }
+
+#endif

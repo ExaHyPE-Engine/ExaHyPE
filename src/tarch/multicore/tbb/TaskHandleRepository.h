@@ -2,9 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org.
 #pragma once
 
-
 #include "config.h"
 
+
+#if defined(SharedTBBExtension) or defined(SharedTBB)
 
 #include <functional>
 #include <set>
@@ -100,3 +101,5 @@ class tarch::multicore::tbb::TaskHandleRepository {
 
     HashMap  _taskHandleContainer;
 };
+
+#endif
