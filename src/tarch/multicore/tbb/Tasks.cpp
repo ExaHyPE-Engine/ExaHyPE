@@ -25,47 +25,6 @@
 
 
 namespace {
-  ::oneapi::tbb::task_arena defaultTaskArena;
-
-  /**
-   * Task arena for background tasks
-   *
-   * TBB models the world in task arenas, with the global one having the
-   * default priority. If you don't use task arenas yourself, then you
-   * will always submit to the default arena, i.e. each and every task
-   * will have the same priority. We want to avoid such default behaviour
-   * and instead use the three priorities offered by TBB.
-   */
-  ::oneapi::tbb::task_arena backgroundTaskArena(
-    ::oneapi::tbb::task_arena::automatic,    // max_concurrency
-    1,                                       // reserved_for_masters
-    ::oneapi::tbb::task_arena::priority::low // priority a_priority
-  );
-
-  ::oneapi::tbb::task_arena highPriorityTaskArena(
-    ::oneapi::tbb::task_arena::automatic,     // max_concurrency
-    1,                                        // reserved_for_masters
-    ::oneapi::tbb::task_arena::priority::high // priority a_priority
-  );
-
-  /**
-   * Fiddle out which arena to use for a job
-   *
-   * This operation analyses the task's priority, compares it to the default
-   * priority and then returns a pointer to the fitting task arena.
-   */
-  ::oneapi::tbb::task_arena* getArena(::tarch::multicore::Task* task) {
-    ::oneapi::tbb::task_arena* result = &defaultTaskArena;
-
-    if (task->getPriority() > tarch::multicore::Task::DefaultPriority) {
-      result = &highPriorityTaskArena;
-    } else if (task->getPriority() < tarch::multicore::Task::DefaultPriority) {
-      result = &backgroundTaskArena;
-    }
-
-    return result;
-  }
-
   /**
    * Helper class for dealing with a global task_group
    * 
@@ -97,7 +56,7 @@ namespace {
 
   #if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
   #else
-  static ::oneapi::tbb::dynamic_task_graph                  taskGraph(defaultTaskArena);
+  static ::oneapi::tbb::dynamic_task_graph                  taskGraph(globalTaskGroup);
   #endif
 }
 
@@ -183,7 +142,7 @@ void tarch::multicore::native::processFusedTask(
   Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
 ) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  getArena(myTask)->execute([&, myTask, copyOfTasksOfSameType] {
+  globalTaskGroup.run([&, myTask, copyOfTasksOfSameType] {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
       tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
