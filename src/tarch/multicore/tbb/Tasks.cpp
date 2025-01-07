@@ -207,6 +207,15 @@ void tarch::multicore::native::spawnTask(
         }
       )
     );
+  #elif PeanoDebug>0
+    ::tbb::dynamic_task_graph_node* handle = new ::tbb::dynamic_task_graph_node(
+      [job]() -> void {
+        while (job->run()) {
+        }
+        delete job;
+      },
+      job->toString()
+    );
   #else
     ::tbb::dynamic_task_graph_node* handle = new ::tbb::dynamic_task_graph_node(
       [job]() -> void {
