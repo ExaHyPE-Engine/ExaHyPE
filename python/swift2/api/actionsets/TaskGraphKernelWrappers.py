@@ -104,7 +104,10 @@ def construct_touch_vertex_first_time_call(
       {{TOUCH_VERTEX_FIRST_TIME_KERNEL}}
       {% endif %}
       return false;
-    }
+    }    
+    #if PeanoDebug>0
+    , "touch-vertex-first-time:" + marker.toString()
+    #endif
   );
   
   tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
@@ -193,13 +196,15 @@ def construct_touch_cell_first_time_call(
           
           return false;
         }
+        #if PeanoDebug>0
+        , "cell:" + marker.toString()
+        #endif
       );  
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentVertexAndParentTasks), ::swift2::flatten(taskNumberToBeUsed) );
     """
     ).render(**d)
 
 
-# @todo do not capture this
 
 def construct_touch_vertex_last_time_call(
     current_species_set,
@@ -278,6 +283,11 @@ def construct_touch_vertex_last_time_call(
           ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
         } );
       }
+
+      // - for multiscale algorithms, there's the finer indices, which might add to the counter and hence weaken the assertion
+      // - there is at least one proper adjacent cell, i.e. a local one with a valid counter
+      // - the other ones might all be undef, so they enter the set once; or they might be proper indices and increase the count
+      assertion2( inDependencies.size()>=2, marker.toString(), ::swift2::toString(inDependencies) );
       
       logDebug( 
         "touchVertexLastTime(...)", 
@@ -296,6 +306,9 @@ def construct_touch_vertex_last_time_call(
           {% endif %}
           return false;
         }
+        #if PeanoDebug>0
+        , "touch-vertex-last-time:" + marker.toString()
+        #endif
       );
 
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
