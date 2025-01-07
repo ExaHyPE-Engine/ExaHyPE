@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "tarch/Assertions.h"
+#include "tarch/Enumerator.h"
 
 
 const swift2::TaskNumber swift2::TaskNumber::NoOutDependencies{tarch::multicore::NoOutDependencies, TaskAssociation::TouchVertexFirstTime};
@@ -71,6 +72,7 @@ std::string swift2::TaskNumber::toString() const {
 
 
 tarch::multicore::TaskNumber swift2::TaskNumber::flatten() const {
+  assertionEquals(tarch::multicore::NoOutDependencies,tarch::Enumerator::NoNumber);
   if (_taskCounter == tarch::multicore::NoOutDependencies) {
     return tarch::multicore::NoOutDependencies;
   } else {
