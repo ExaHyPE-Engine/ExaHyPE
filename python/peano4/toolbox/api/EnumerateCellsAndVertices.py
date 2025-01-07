@@ -45,6 +45,9 @@ def create_vertex_marker(task_name,
     Furthermore, you have to add the use_vertex and use_cell instructions to
     each observer (algorithm step) before you add the action sets to the sets
     in turn.
+    
+    Please note that this marker not only holds an index for the vertex. It 
+    also hosts the markers of the adjacent cells.
 
     """
     dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
@@ -121,7 +124,6 @@ class AssignNumbersToMesh(ActionSet):
         @param task_name: String
           The name of the task (attribute tied to the mesh entity) to be 
           manipulated.
-
 
         """
         self._task_name = task_name
@@ -220,14 +222,14 @@ class AssignNumbersToMesh(ActionSet):
  """
 
 
-#  /**
-#   * Used to administer task numbers
-#   */
-#  tarch::multicore::BooleanSemaphore activeTasksSemaphore;
-#  std::set<int>                      activeTaskNumbers;
-
-
 class ClearNumbersOnMesh(ActionSet):
+    """!
+    
+    Clear all the numbers on the mesh
+    
+    We set all entries to AdjacentCellNumber.
+    
+    """
     def __init__(self, task_name):
         self._task_name = task_name
         pass
