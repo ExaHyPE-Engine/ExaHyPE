@@ -91,6 +91,9 @@ class UpdateParticleMarker(ActionSet):
       }
       return false;
     }
+    #if PeanoDebug>0
+    , "update-particle-marker"
+    #endif
   );
   
   tarch::multicore::spawnTask( newTask, std::set<int>{::swift2::flatten(taskNumberToBeUsed)}, ::swift2::flatten(taskNumberToBeUsed) );
