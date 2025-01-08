@@ -45,8 +45,6 @@ namespace tbb {
    */
   class dynamic_task_graph_spawned_node {
     public:
-      friend class dynamic_task_graph;
-
       enum class State {
         /**
          * Task is submitted but not yet running. Initial state.
@@ -65,13 +63,7 @@ namespace tbb {
          * wait, for example, to continue. However, it does not mean yet that
          * we have also notified successors.
          */
-        Terminated,
-
-        /**
-         * The final step of tbb::dynamic_task_graph_spawned_node::run() is to
-         * switch a task to Complete.
-         */
-        NotifiedSuccessors
+        Complete
       };
 
       /**
@@ -107,6 +99,8 @@ namespace tbb {
        * If a task is ready, we can actually run() it.
        */
       void incoming_task_has_terminated();
+
+      void add_incoming_task_dependency();
 
       /**
        * Run the task
@@ -157,8 +151,10 @@ namespace tbb {
        *   hence could not add anything anymore.
        */
       bool add_successor( std::shared_ptr<dynamic_task_graph_spawned_node> successor );
+
+      bool has_terminated() const;
     private:
-      std::atomic<State>                              _state;
+      State                                           _state;
       std::function<void()>                           _functor;
 
       /**
@@ -170,6 +166,10 @@ namespace tbb {
       dynamic_task_graph&                             _task_graph;
       int                                             _number_of_in_dependencies;
       std::vector< std::shared_ptr<dynamic_task_graph_spawned_node> >   _out_dependency;
+
+      #if TBB_USE_DEBUG>0
+      std::string  _task_description;
+      #endif
   };
 
 }

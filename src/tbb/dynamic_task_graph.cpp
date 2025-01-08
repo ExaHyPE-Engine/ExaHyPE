@@ -17,17 +17,15 @@ void tbb::dynamic_task_graph::put(dynamic_task_graph_node& node ) {
 
   {
     SpawnedTaskMutex::scoped_lock  task_graph_lock(_spawned_task_mutex, true); // is writer
-    __TBB_ASSERT( node._spawned_task->_number_of_in_dependencies>=1, "invalid number of in-dependencies (there has to be at least one left over)" );
     _spawned_tasks.insert( node._spawned_task );
   }
-
 
   bool created_at_least_one_new_dependency = false;
   {
     SpawnedTaskMutex::scoped_lock  task_graph_lock(_spawned_task_mutex, false); // is writer
 
     for (auto& p: node._in_dependency) {
-      node._spawned_task->_number_of_in_dependencies++;
+      node._spawned_task->add_incoming_task_dependency();
       if (
         _spawned_tasks.count(p)>0
         and
@@ -37,7 +35,7 @@ void tbb::dynamic_task_graph::put(dynamic_task_graph_node& node ) {
         created_at_least_one_new_dependency = true;
       }
       else {
-        node._spawned_task->_number_of_in_dependencies--;
+        node._spawned_task->incoming_task_has_terminated();
       }
     }
   }
@@ -55,7 +53,7 @@ void tbb::dynamic_task_graph::clean_up_completed_tasks() {
 
   auto p = _spawned_tasks.begin();
   while (p!=_spawned_tasks.end()) {
-    if ((*p)->_state==dynamic_task_graph_spawned_node::State::NotifiedSuccessors) {
+    if ((*p)->has_terminated()) {
       p = _spawned_tasks.erase(p);
     }
     else {
@@ -75,13 +73,12 @@ void tbb::dynamic_task_graph::wait( dynamic_task_graph_node node ) {
     __TBB_ASSERT( _spawned_tasks.count(node._spawned_task )<=1, "several tasks in lookup table" );
 
     return _spawned_tasks.count(node._spawned_task )>0
-       and node._spawned_task->_state!=dynamic_task_graph_spawned_node::State::Terminated
-       and node._spawned_task->_state!=dynamic_task_graph_spawned_node::State::NotifiedSuccessors;
+       and not node._spawned_task->has_terminated();
   };
 
   if (isTaskStillInQueue()) {
-    clean_up_completed_tasks();
     _task_group.wait();
+    clean_up_completed_tasks();
   }
 
   __TBB_TRACE_TASK_WAIT_COMPLETE( node._spawned_task );
@@ -97,9 +94,20 @@ void tbb::dynamic_task_graph::wait( const std::set<dynamic_task_graph_node>& nod
 
 void tbb::dynamic_task_graph::wait_for_all() {
   _task_group.wait();
+  clean_up_completed_tasks();
 
   while (not _spawned_tasks.empty()) {
+    _task_group.wait();
     clean_up_completed_tasks();
+
+//    // @todo Analysis: There are some tasks that are left-over, i.e. are not released
+//    if (_spawned_tasks.size()<=2 and not _spawned_tasks.empty()) {
+      std::cout << std::endl << "#size=" << _spawned_tasks.size();
+      for (auto& p: _spawned_tasks)
+        std::cout << ", " << p->to_string();
+      std::cout.flush();
+//      __TBB_ASSERT( false, "should not happen" );
+//    }
   }
 
   __TBB_ASSERT( _spawned_tasks.empty(), "set of spawned tasks should be empty" );

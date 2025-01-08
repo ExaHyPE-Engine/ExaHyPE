@@ -229,6 +229,8 @@ namespace tbb {
          *
          * @param node Task to wait for. This task has to be submitted.
          *   Otherwise, we trigger an assertion.
+         *
+         * @see wait_for_all()
          */
         void wait( dynamic_task_graph_node node );
 
@@ -240,16 +242,25 @@ namespace tbb {
         /**
          * Wait for all tasks to finish
          *
-         * This is a brute force method which has to be used with care. It will,
-         * for example, deadlock likely if two tasks try to call it at the same
-         * time.
+         * This is a brute force method which has to be used with care. It
+         * strongly synchronises, and it is not clear if it can deadlock if
+         * multiple threads invoke it at the same time.
          *
-         * We know that tbb::dynamic_task_graph_spawned_node::run() will toggle
-         * a task from
-         * This drains the graph, i.e. size()==0 will hold once the function
-         * terminates.
+         * The implementation is close to trivial:
          *
+         * - We hand over the task responsibility to the task group, so the
+         *   task group can process some of its ready tasks.
+         * - We remove all of those tasks which are now flagged as ready.
+         * - We jump back to the start (iteration) if there are still pending
+         *   tasks in the queue.
          *
+         * It seems that wait() on a task group returns immediately if there
+         * are no further tasks pending in there. This is very reasonable yet
+         * might mean that there are still tasks being processed at this point.
+         * They might in return not have released any successor tasks, i.e.
+         * there might still be some tasks in the queue that are marked as
+         * submitted and have not yet been released as their in dependency
+         * counter has not been decreased yet. Therefore, we have to loop.
          *
          */
         void wait_for_all();
