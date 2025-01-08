@@ -1,18 +1,19 @@
 FROM peanoframework/spack:latest as builder
 
-ARG SPACK_ENV_FILE=spack/compilers/intel/spack.yaml
-
 WORKDIR /opt/spack-environment
-COPY ${SPACK_ENV_FILE} spack.yaml
-RUN . /opt/spack/share/spack/setup-env.sh && spack env activate . && spack concretize && spack install --fail-fast && spack gc -y && spack clean -a && spack compiler find
-RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > activate.sh
 
-RUN . ./activate.sh && \
-curl -L "https://developer.codeplay.com/api/v1/products/download?product=oneapi&variant=nvidia&version=2024.1.0&filters[]=12.0&filters[]=linux" -o nvidia-plugin.sh && \
-curl -L "https://developer.codeplay.com/api/v1/products/download?product=oneapi&variant=amd&version=2024.1.0&filters[]=5.4.3&filters[]=linux" -o amd-plugin.sh && \
-bash nvidia-plugin.sh --install-dir $(spack location -i intel-oneapi-compilers) -y && \
-bash amd-plugin.sh --install-dir $(spack location -i intel-oneapi-compilers) -y && \
-rm amd-plugin.sh && rm nvidia-plugin.sh
+COPY spack/compilers/intel/spack.yaml spack.yaml
+
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack compiler find && \
+    spack env activate . && \
+    spack external find && \
+    spack concretize && \
+    spack install --fail-fast && \
+    spack gc -y && \
+    spack clean -a
+
+RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > activate.sh
 
 RUN { \
       echo '#!/bin/sh' \
@@ -28,6 +29,9 @@ COPY --from=builder /opt/spack-environment /opt/spack-environment
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/views /opt/views
 COPY --from=builder /entrypoint.sh /entrypoint.sh
+
+COPY requirements.txt requirements.txt
+RUN . /entrypoint.sh && pip install -r requirements.txt && rm requirements.txt
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]
