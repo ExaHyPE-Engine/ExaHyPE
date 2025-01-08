@@ -26,6 +26,9 @@ Stage: final
   TZ=UTC
   DEBIAN_FRONTEND=noninteractive
 
+%files
+  requirements.txt /requirements.txt
+
 %files from build
   /opt/spack-environment /opt
   /opt/software /opt
@@ -35,6 +38,8 @@ Stage: final
 %post
   export TZ=UTC
   export DEBIAN_FRONTEND=noninteractive
+
+  . /opt/spack-environment/environment_modifications.sh && pip install -r /requirements.txt && rm /requirements.txt
 
   # Symlink the old view location
   ln -s /opt/views/view /opt/view
