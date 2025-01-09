@@ -11,16 +11,6 @@ class SolverVariant(Enum):
   Multicore            = 2
   Accelerator          = 3
 
-# TODO: Multicore, WithVirtualFunctions and Stateless
-# are in conflict.
-# We might want to have something like this:
-# class ExecutionVariant(Enum):
-#   None = 0
-#   ParallelFor = 1
-#   Subtasks = 2
-#   Accelerator = 3
-#
-
 class KernelVariant(Enum):
   PatchWiseAoS    = 10
   PatchWiseAoSoA  = 11
@@ -770,9 +760,10 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] int                                          normal
 ) {
-  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "maxEigenvalue(...)" );
+  logTraceInWith4Arguments("maxEigenvalue(...)", faceCentre, volumeH, t, normal);
+  // @todo Compute max eigenvalue
+  logTraceOut("maxEigenvalue(...)");
+  // @todo Return max eigenvalue (make sure to call logTraceOut before the return)
 }
 {% endif %}
 
@@ -786,9 +777,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   [[maybe_unused]] int                                          normal,
   [[maybe_unused]] double* __restrict__                         F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "flux(...)" );
+  logTraceInWith4Arguments("flux(...)", faceCentre, volumeH, t, normal);
+  // @todo Implement
+  logTraceOut("flux(...)");
 }
 {% endif %}
 
@@ -803,9 +794,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   [[maybe_unused]] int                                          normal,
   [[maybe_unused]] double* __restrict__                         BTimesDeltaQ // BTimesDeltaQQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "nonconservativeProduct(...)" );
+  logTraceInWith4Arguments("nonconservativeProduct(...)", faceCentre, volumeH, t, normal);
+  // @todo Implement
+  logTraceOut("nonconservativeProduct(...)");
 }
 {% endif %}
 
@@ -818,14 +809,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   [[maybe_unused]] double                                       dt,
   [[maybe_unused]] double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+  logTraceInWith4Arguments("sourceTerm(...)", volumeX, volumeH, t, dt);
 
-  // @todo implement and ensure that all entries of S are properly set
-  for (int i=0; i<NumberOfUnknowns; i++) {
+  // @todo Implement and ensure that all entries of S are properly set
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
 
-  logTraceOut( "sourceTerm(...)" );
+  logTraceOut("sourceTerm(...)");
 }
 {% endif %}
 
@@ -842,7 +833,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
   [[maybe_unused]] int                                          normal,
   Offloadable
 ) {
-  // @todo implement
+  // @todo Implement
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
@@ -863,7 +854,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   [[maybe_unused]] double* __restrict__                         F, // F[{{NUMBER_OF_UNKNOWNS}}]
   Offloadable
 ) {
-  // @todo implement
+  // @todo Implement
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
@@ -885,7 +876,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   [[maybe_unused]] double* __restrict__                         BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
   [[maybe_unused]] Offloadable
 ) {
-  // @todo implement
+  // @todo Implement
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
@@ -905,8 +896,8 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   [[maybe_unused]] double* __restrict__                         S, // S[{{NUMBER_OF_UNKNOWNS}}]
   [[maybe_unused]] Offloadable
 ) {
-  // @todo implement but ensure that all entries of S are properly set
-  for (int i=0; i<NumberOfUnknowns; i++) {
+  // @todo Implement but ensure that all entries of S are properly set
+  for (int i = 0; i < NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
 }

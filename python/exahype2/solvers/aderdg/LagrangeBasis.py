@@ -449,28 +449,31 @@ class LagrangeBasis():
             basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
-    
+
     d["ORDER"]              = self.__max_poly_order
-    d["BASIS_DECLARATIONS"] = basisDeclarations  
+    d["BASIS_DECLARATIONS"] = basisDeclarations
     d["BASIS_INITIALIZERS"] = basisInitializers
-   
-   
+
   # public
   def quadrature_points(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points
-  
-  
+
   def quadrature_weights(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
-  
-  
+
 
 class GaussLegendreBasis(LagrangeBasis):
   def _compute_quadrature_points_and_weights(self,num_points):
-    x,w = gauss_legendre(num_points,PREC_DIGITS) 
+    x,w = gauss_legendre(num_points,PREC_DIGITS)
     return self._transform_and_sort_points_and_weights(x,w)
+
+  def __str__(LagrangeBasis):
+    return "GaussLegendreBasis"
 
 class GaussLobattoBasis(LagrangeBasis):
   def _compute_quadrature_points_and_weights(self,num_points):
-    x,w = gauss_lobatto(num_points,PREC_DIGITS) 
+    x,w = gauss_lobatto(num_points,PREC_DIGITS)
     return self._transform_and_sort_points_and_weights(x,w)
+
+  def __str__(LagrangeBasis):
+    return "GaussLobattoBasis"

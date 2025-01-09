@@ -1,75 +1,31 @@
 spack:
-  definitions:
-  - packages: [
-      m4,
-      xz,
-      git,
-      perl,
-      patchelf,
-      binutils+ld+gold,
-      libtool,
-      diffutils,
-      pkgconf,
-      autoconf,
-      automake,
-      gmake,
-      cmake,
-      ninja,
-      py-pip,
-      py-black,
-      py-sympy,
-      py-scipy,
-      py-numpy,
-      py-mpmath,
-      py-jinja2,
-      py-jsonschema,
-      py-jupyterlab,
-      py-matplotlib,
-      gsl,
-      mesa,
-      btop,
-      htop,
-      nvtop,
-    ]
-  - clang_packages: [
-      scorep+cuda+papi+mpi,
-      libxsmm+generator,
-      memkind,
-      blis,
-      boost,
-      openblas,
-      eigen+ipo,
-      papi,
-      likwid+cuda,
-      hwloc+cuda,
-      ucx+cuda,
-      openmpi+cuda fabrics=ucx,
-      babelstream+cuda cuda_arch=70,
-      parmetis+int64+shared+ipo,
-      metis+int64+real64+ipo+shared,
-      hdf5+fortran+threadsafe+mpi+shared,
-      netcdf-c+mpi+shared,
-      netcdf-cxx4+pic+shared,
-      netcdf-fortran+pic+shared,
-      parallel-netcdf+cxx+fortran+pic+shared,
-      petsc+mpi+memkind+metis+cuda+hwloc+openmp,
-      paraview+mpi+ipo+python+hdf5
-    ]
+  specs:
+    - python@3.13.0 %gcc
+    - py-pip@24.3.1 %gcc
+    - llvm@18.1.8 +clang +libomptarget +libomptarget_debug +gold %gcc
+    - libxsmm@1.17 +generator %gcc
+    - memkind@1.14.0 %gcc
+    - openblas@0.3.28 %gcc
+    - eigen@3.4.0 %gcc
+    - papi@7.1.0 %gcc
+    - likwid@5.4.1 +cuda %gcc
+    - hwloc@2.11.1 +cuda %gcc
+    - ucx@1.17.0 +cuda %gcc
+    - cuda@12.6.3 +allow-unsupported-compilers %gcc
+    - openmpi@5.0.5 +cuda fabrics=ucx %gcc
+    - metis@5.1.0 %gcc
+    - parmetis@4.0.3 %gcc
+    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp %gcc
+    - hdf5@1.14.5 -fortran -java +threadsafe +mpi +shared +cxx +hl %gcc
+    - netcdf-c@4.9.2 +mpi +shared %gcc
+    - netcdf-cxx4@4.3.1 +pic +shared %gcc
+    - parallel-netcdf@1.14.0 +cxx -fortran +pic +shared %gcc
   packages:
     all:
       target: [x86_64]
-    llvm:
-      externals:
-      - spec: llvm@18.1.8
-  specs:
-  - matrix:
-    - [$packages]
-  - matrix:
-    - [$clang_packages]
-    - ['%clang@18.1.8']
   concretizer:
     unify: true
+    reuse: true
   config:
     install_tree: /opt/software
-    install_missing_compilers: true
   view: /opt/views/view

@@ -98,13 +98,12 @@ class Acoustic:
             help="Use periodic boundary conditions in the z-axis.",
         )
 
-        available_build_modes = ["Release", "Trace", "Asserts", "Stats", "Debug"]
         parser.add_argument(
             "-m",
             "--build-mode",
-            choices=available_build_modes,
-            default="Release",
-            help="|".join(available_build_modes),
+            choices=peano4.output.CompileModes,
+            default=peano4.output.CompileModes[0], # Release
+            help="|".join(peano4.output.CompileModes),
         )
 
         parser.add_argument(
@@ -189,22 +188,9 @@ class Acoustic:
             help="The quality of the load balancing.",
         )
         parser.add_argument(
-            "-lb-min",
-            "--lb-min-size",
-            type=int,
-            default=0,
-            help="If a tree (partition) is smaller than the given number of cells, we do not split it up further.",
-        )
-        parser.add_argument(
-            "--lb-trees-init",
+            "--trees",
             type=int,
             default=-1,
-            help="Number of trees (partitions) per rank during initial decomposition.",
-        )
-        parser.add_argument(
-            "--lb-trees",
-            type=int,
-            default=-2,
             help="Number of trees (partitions) per rank after initial decomposition.",
         )
         parser.add_argument(
@@ -357,10 +343,21 @@ class Acoustic:
         )
 
         if args.load_balancing_strategy != "None":
-            project.set_load_balancing(
-                f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}",
-                f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, {args.lb_min_size}, {args.lb_trees_init}, {args.lb_trees})",
+            strategy = f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}"
+            assume_periodic_boundary_conditions = any([
+                args.periodic_boundary_conditions_x,
+                args.periodic_boundary_conditions_y,
+                args.periodic_boundary_conditions_z,
+            ])
+            configuration = (
+                f"new ::exahype2::LoadBalancingConfiguration("
+                f"{args.load_balancing_quality},"
+                f"0,"
+                f"{'true' if assume_periodic_boundary_conditions else 'false'},"
+                f"{args.trees},"
+                f"{args.trees})"
             )
+            project.set_load_balancing(strategy, configuration)
 
         project.set_number_of_threads(args.threads)
 
@@ -372,9 +369,7 @@ class Acoustic:
 
         project.set_timeout(args.timeout)
 
-        build_mode_class = getattr(getattr(peano4, "output"), "CompileMode")
-        build_mode = getattr(build_mode_class, args.build_mode)
-        project.set_Peano4_installation(args.peano_dir, mode=build_mode)
+        project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
         project = project.generate_Peano4_project(verbose=True)
 
         if args.fpe:
