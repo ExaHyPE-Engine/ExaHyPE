@@ -14,8 +14,9 @@ swift2::TaskNumber::TaskNumber(int number0, TaskAssociation number1):
   _taskAssociation(number1) {
   if (_taskCounter == ::tarch::multicore::NoOutDependencies) {
     *this = NoOutDependencies;
-  } else if (number0 != std::numeric_limits<int>::max()) {
-    assertion1(number0 >= 0 or number0 == tarch::multicore::NoOutDependencies, toString());
+  }
+  else {
+    assertion1(number0 >= 0, toString());
     assertion1(number1 != TaskAssociation::NumberOfEntries, toString());
     assertion1(number0 <= std::numeric_limits<int>::max()/ static_cast<int>(swift2::TaskNumber::TaskAssociation::NumberOfEntries), toString());
   }

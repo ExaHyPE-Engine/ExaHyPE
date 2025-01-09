@@ -18,14 +18,35 @@ void swift2::TaskEnumerator::reset() {
 }
 
 
-int swift2::TaskEnumerator::getNumber() {
-  int result = _globalEnumerator.getNumber();
+void swift2::TaskEnumerator::insertNumber(int number) {
   ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Write );
-  if ( _resources.count(result)==0 ) {
-    _resources.insert( {result, new tarch::multicore::BooleanSemaphore()} );
+  if (number!=tarch::Enumerator::NoNumber and _resources.count(number)==0 ) {
+    _resources.insert( {number, new tarch::multicore::BooleanSemaphore()} );
   }
-  assertionEquals1( _resources.count(result), 1, result );
-  return result;
+  assertionEquals1( _resources.count(number), 1, number );
+}
+
+
+void swift2::TaskEnumerator::insertNumbers(const tarch::la::Vector<TwoPowerD,int>& numbers) {
+  std::bitset<TwoPowerD> entryMissing = 0;
+
+  {
+    ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Read );
+    for (int i=0; i<TwoPowerD; i++) {
+      entryMissing[i] = numbers[i]!=tarch::Enumerator::NoNumber and _resources.count(numbers[i])==0;
+    }
+  }
+
+  if ( entryMissing.any() ) {
+    for (int i=0; i<TwoPowerD; i++) {
+      insertNumber( numbers[i] );
+    }
+  }
+}
+
+
+int swift2::TaskEnumerator::getNumber() {
+  return _globalEnumerator.getNumber();
 }
 
 
@@ -44,8 +65,14 @@ std::string swift2::TaskEnumerator::toString() const {
 }
 
 
-void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
+void swift2::TaskEnumerator::lockResources( const tarch::la::Vector<TwoPowerD,int>& numbers ) {
   std::bitset<TwoPowerD> gotAllLocks = 0;
+
+  for (int i=0; i<TwoPowerD; i++) {
+    assertion2( numbers[i]==tarch::Enumerator::NoNumber or numbers[i]>=0, i, numbers[i] );
+  }
+
+  insertNumbers(numbers);
 
   while (not gotAllLocks.all()) {
     ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Read );
@@ -74,6 +101,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
       for (int i=0; i<TwoPowerD; i++) {
         if (gotAllLocks[i]) {
           gotAllLocks[i] = false;
+          assertionEquals2( _resources.count(numbers[i]), 1, i, numbers[i] );
           tarch::multicore::Lock lock(
             *_resources.at( numbers[i] ),
             false, false
@@ -89,7 +117,7 @@ void swift2::TaskEnumerator::lockResources( const int numbers[TwoPowerD] ) {
 }
 
 
-void swift2::TaskEnumerator::unlockResources( const int numbers[TwoPowerD] ) {
+void swift2::TaskEnumerator::unlockResources( const tarch::la::Vector<TwoPowerD,int>& numbers ) {
   for (int i=0; i<TwoPowerD; i++) {
     if (numbers[i] != tarch::Enumerator::NoNumber) {
       ResourcesSemaphore::Lock _lock( _resourcesSemaphore, ResourcesSemaphore::Lock::Read );

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/Enumerator.h"
+#include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -59,8 +60,18 @@ class swift2::TaskEnumerator {
      * Create a new task number
      *
      * Returns a unique non-zero number which is not yet used anywhere else on
-     * this rank. This getter also ensures that there's a resource semaphore,
-     * so we can lock the underlying resource.
+     * this rank.
+     *
+     *
+     * ## Correlation to resources
+     *
+     * Resources are tied to numbers in the way that each vertex and cell
+     * number plus its underlying even (touch vertex first, touch cell, touch
+     * vertex last) identifies one unique counter: In practice, each number
+     * that we create can yield up to three resource entries. We don't know
+     * the correlation at this point, so we cannot lock any resources at this
+     * point.
+     *
      *
      * ## Thread safety
      *
@@ -77,6 +88,8 @@ class swift2::TaskEnumerator {
      * Free a number again. number has to be the result of a previous
      * getNumber() call. While getNumber() can generate resources, we do not
      * free them in releaseNumber().
+     *
+     * @see getNumber()
      */
     void releaseNumber( int value );
 
@@ -110,6 +123,7 @@ class swift2::TaskEnumerator {
      *
      * Entries set to tarch::Enumerator::NoNumber are ignored.
      *
+     *
      * ## Thread-safety
      *
      * At any point throughout the calculation, another thread might
@@ -118,8 +132,15 @@ class swift2::TaskEnumerator {
      * same time as _resources.at( numbers[counter] ), we might end up
      * with a seg fault. Therefore, the locking itself is protected
      * until we get all resources.
+     *
+     *
+     * ## Lazy generation of indices
+     *
+     * getNumber() explains why there's no direct 1:1 match of numbers to
+     * resources. Therefore, we create indices lazily at this point through
+     * insertNumbers().
      */
-    static void lockResources( const int numbers[TwoPowerD] );
+    static void lockResources( const tarch::la::Vector<TwoPowerD,int>& numbers );
 
     /**
      * Free resources
@@ -128,7 +149,7 @@ class swift2::TaskEnumerator {
      *
      * Entries set to tarch::Enumerator::NoNumber are ignored.
      */
-    static void unlockResources( const int numbers[TwoPowerD] );
+    static void unlockResources( const tarch::la::Vector<TwoPowerD,int>& numbers );
 
   private:
     static tarch::Enumerator _globalEnumerator;
@@ -154,5 +175,14 @@ class swift2::TaskEnumerator {
     using ResourcesSemaphore = tarch::multicore::MultiReadSingleWriteSemaphore;
 
     static ResourcesSemaphore   _resourcesSemaphore;
+
+    /**
+     * Create a new number
+     *
+     * This routine is robust, i.e. if the number does exist already, we do not
+     * do anything.
+     */
+    static void insertNumber(int number);
+    static void insertNumbers(const tarch::la::Vector<TwoPowerD,int>& numbers);
 };
 
