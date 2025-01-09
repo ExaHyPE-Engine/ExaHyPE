@@ -57,6 +57,22 @@ def construct_touch_vertex_first_time_call(
     to the user. Indeed, consult MultisweepTaskGraph for details on how they 
     handle these wrap-around dependencies.
     
+    
+    ## Capture rules of lambda
+    
+    The task bodies as injected by Swift work with the object's attributes and
+    also with references. Both things are not really copied by a capture
+    = clause: The references are copied, but still point to the same, temporary
+    object. The accesses to object attributes are internally mapped onto 
+    this->attribute and hence the pointer this is copied, but not the attribute
+    itself.
+    
+    All of the rules are detailed in
+    https://en.cppreference.com/w/cpp/language/lambda#Lambda_capture.
+    
+    Therefore, we have to explicitly copy the task-relevant attributes, and we 
+    even use an explicit initialiser to do so.
+    
     """
     d = {
         "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
@@ -99,7 +115,7 @@ def construct_touch_vertex_first_time_call(
   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
     tarch::multicore::Task::DontFuse,
     tarch::multicore::Task::DefaultPriority,
-    [=,this]()->bool {
+    [=,marker=marker,_spacetreeId=_spacetreeId,assignedParticles=fineGridVertexHydroPartSet,numberOfCoalescedAssignedParticles=numberOfCoalescedAssignedParticles]()->bool {
       {% if TOUCH_VERTEX_FIRST_TIME_KERNEL!=None %}
       {{TOUCH_VERTEX_FIRST_TIME_KERNEL}}
       {% endif %}
@@ -132,6 +148,10 @@ def construct_touch_cell_first_time_call(
     additional task number for the parent cell if we have multi-level
     dependencies.
     
+
+    ## Capture rules of lambda
+    
+    Please consult the documentation of  construct_touch_vertex_first_time_call().
     
     """
     d = {
@@ -153,10 +173,13 @@ def construct_touch_cell_first_time_call(
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
       };
       
-      int adjacentResourcesIndices[TwoPowerD];
+      // I originally used [TwoPowerD], but this then is a pointer. Albeit on 
+      // the stack, it will not be copied by the lambda capture below.
+      tarch::la::Vector<TwoPowerD,int> adjacentResourcesIndices;
       std::set<::swift2::TaskNumber> adjacentVertexAndParentTasks;
       for (int i=0; i<TwoPowerD; i++) {
         adjacentResourcesIndices[i] = fineGridVertices{{MARKER_NAME}}(i).getNumber();
+        assertion3(adjacentResourcesIndices[i]==tarch::Enumerator::NoNumber or adjacentResourcesIndices[i]>=0, adjacentResourcesIndices[i], i, marker.toString() );
         adjacentVertexAndParentTasks.insert( ::swift2::TaskNumber{
           fineGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
@@ -183,7 +206,7 @@ def construct_touch_cell_first_time_call(
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
         tarch::multicore::Task::DontFuse,
         tarch::multicore::Task::DefaultPriority,
-        [=,this]()->bool {
+        [=,marker=marker,_spacetreeId=_spacetreeId,localParticles=localParticles,numberOfCoalescedLocalParticlesPerVertex=numberOfCoalescedLocalParticlesPerVertex,activeParticles = _activeParticles,numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex,adjacentResourcesIndices=adjacentResourcesIndices]()->bool {
           ::swift2::TaskEnumerator::lockResources(adjacentResourcesIndices);
         
           {% if TOUCH_CELL_FIRST_TIME_KERNEL!=None %}
@@ -243,6 +266,10 @@ def construct_touch_vertex_last_time_call(
     _pendingDependencies attribute.
     
     
+    ## Capture rules of lambda
+    
+    Please consult the documentation of  construct_touch_vertex_first_time_call().
+    
     """
     d = {
         "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
@@ -300,7 +327,7 @@ def construct_touch_vertex_last_time_call(
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
         tarch::multicore::Task::DontFuse,
         tarch::multicore::Task::DefaultPriority,
-        [=,this]()->bool {
+        [=,marker=marker,_spacetreeId=_spacetreeId,assignedParticles=fineGridVertexHydroPartSet,numberOfCoalescedAssignedParticles=numberOfCoalescedAssignedParticles]()->bool {
           {% if TOUCH_VERTEX_LAST_TIME_KERNEL!=None %}
           {{TOUCH_VERTEX_LAST_TIME_KERNEL}}
           {% endif %}
