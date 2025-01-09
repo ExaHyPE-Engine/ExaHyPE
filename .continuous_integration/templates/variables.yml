@@ -6,10 +6,11 @@
     GIT_DEPTH: 1
     GIT_STRATEGY: fetch # clone
     GIT_FETCH_EXTRA_FLAGS: "--no-tags"
-    IMAGE_TAG_BASE: "base.sif"
-    IMAGE_TAG_GCC: "gcc.sif"
-    IMAGE_TAG_INTEL: "intel.sif"
-    IMAGE_TAG_LLVM: "llvm.sif"
-    IMAGE_TAG_NVIDIA: "nvidia.sif"
+    IMAGE_BASE: "base.sif"
+    IMAGE_GCC: "gcc.sif"
+    IMAGE_INTEL: "intel.sif"
+    IMAGE_LLVM: "llvm.sif"
+    IMAGE_NVIDIA: "nvidia.sif"
+    IMAGE_AMD: "amd.sif"
     APPTAINER_BINDDIR: "/dine/data/do009/peano"
     APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"

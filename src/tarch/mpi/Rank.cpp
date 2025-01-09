@@ -399,10 +399,6 @@ void tarch::mpi::Rank::shutdown() {
 
   IntegerMessage::shutdownDatatype();
 
-#ifdef UseTargetDART
-  finalizeTargetDART();
-#endif
-
   int errorCode = MPI_Finalize();
   if (errorCode) {
     logError( "shutdown()", MPIReturnValueToString(errorCode) );
@@ -470,7 +466,7 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
 }
 
 #ifdef UseTargetDART
-static void targetDartTextPointer() {}
+static void tdTextPointer() {}
 #endif
 
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
@@ -490,7 +486,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   #endif
 
 #ifdef UseTargetDART
-  initTargetDART(reinterpret_cast<void*>(&targetDartTextPointer));
+  td_init(reinterpret_cast<void*>(&tdTextPointer));
 #endif
 
   if (result!=MPI_SUCCESS) {

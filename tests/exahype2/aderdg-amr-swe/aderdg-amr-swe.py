@@ -1,9 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4, exahype2
+import peano4
+import exahype2
 
 order = 3
-
 max_h = 1.0 / 9.0
 min_h = 0.9 / 27.0  # 0.9 / 81.0
 plot_interval = 0.0  # 0.01
@@ -29,10 +29,9 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 )
 
 # solver._split_sweeps = True
+project.add_solver(solver)
 
 project.set_output_path("solutions")
-
-project.add_solver(solver)
 
 project.set_global_simulation_parameters(
     dimensions=2,
@@ -50,7 +49,11 @@ project.set_load_balancing(
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
 project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
-peano4_project = project.generate_Peano4_project("False")
-peano4_project.output.makefile.add_cpp_file("SWE.cpp")
+project = project.generate_Peano4_project("False")
+#project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+project.output.makefile.add_cpp_file("SWE.cpp")
 
-peano4_project.build(make_clean_first=True)
+project.build(make_clean_first=True)
+
+print(solver)
+print(project)

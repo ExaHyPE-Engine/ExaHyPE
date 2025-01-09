@@ -19,7 +19,7 @@ double applications::exahype2::euler::maxEigenvalue(
   nonCriticalAssertion(Q[s::rho] == Q[s::rho]);
   #endif
 
-  const double irho = 1.0 / std::fabs(Q[s::rho]);
+  const double irho = 1.0 / Q[s::rho];
   const double p = (GAMMA - 1.0) * (Q[s::e] - 0.5 * irho * (Q[s::u] * Q[s::u] + Q[s::v] * Q[s::v]
   #if Dimensions == 3
     + Q[s::w] * Q[s::w]
@@ -30,7 +30,7 @@ double applications::exahype2::euler::maxEigenvalue(
   assertion(tarch::la::greaterEquals(p, 0.0));
   #endif
 
-  const double speedOfSound = sqrt(GAMMA * std::fabs(p) * irho);
+  const double speedOfSound = sqrt(GAMMA * p * irho);
   const double u_n          = Q[normal + 1] * irho;
   const double result       = std::fmax(std::fabs(u_n - speedOfSound), std::fabs(u_n + speedOfSound));
 
@@ -60,7 +60,7 @@ void applications::exahype2::euler::flux(
   nonCriticalAssertion(Q[s::rho] == Q[s::rho]);
   #endif
 
-  const double irho = 1.0 / std::fabs(Q[s::rho]);
+  const double irho = 1.0 / Q[s::rho];
   const double p = (GAMMA - 1.0) * (Q[s::e] - 0.5 * irho * (Q[s::u] * Q[s::u] + Q[s::v] * Q[s::v]
   #if Dimensions == 3
     + Q[s::w] * Q[s::w]
@@ -71,15 +71,13 @@ void applications::exahype2::euler::flux(
   assertion(tarch::la::greaterEquals(p, 0.0));
   #endif
 
-  const double coeff = irho * Q[normal + 1];
-  F[s::rho]          = coeff * Q[s::rho];
-  F[s::u]            = coeff * Q[s::u];
-  F[s::v]            = coeff * Q[s::v];
+  F[s::rho]          = Q[normal + 1];
+  F[s::u]            = Q[normal + 1] * Q[s::u] * irho;
+  F[s::v]            = Q[normal + 1] * Q[s::v] * irho;
   #if Dimensions == 3
-  F[s::w]            = coeff * Q[s::w];
-  F[s::e]            = coeff * Q[s::e] + coeff * p;
+  F[s::w]            = Q[normal + 1] * Q[s::w] * irho;
   #endif
-  F[s::e]            = coeff * Q[s::e] + coeff * p;
+  F[s::e]            = Q[normal + 1] * (Q[s::e] + p) * irho;
 
   F[normal + 1] += p;
 }

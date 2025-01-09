@@ -36,9 +36,14 @@ void applications::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4(Qinside[s::rho] > 1e-12, x, t, normal, Qinside[s::rho]);
 #endif
 
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  // Reflective boundary conditions
+  Qoutside[s::rho] = Qinside[s::rho];
+  Qoutside[s::u] = -Qinside[s::u];
+  Qoutside[s::v] = -Qinside[s::v];
+#if Dimensions == 3
+  Qoutside[s::w] = -Qinside[s::w];
+#endif
+  Qoutside[s::e] = Qinside[s::e];
 }
 
 

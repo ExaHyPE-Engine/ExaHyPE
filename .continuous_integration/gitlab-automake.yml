@@ -1,8 +1,16 @@
+# To avoid having to repeat hard links to e.g. the containers everywhere, we make them
+# available with this include statement
 include:
   - .continuous_integration/templates/variables.yml
 
+# This file is included from the top-level gitlab-ci file, meaning that this stage is a sub-stage of the
+# main BuildSystem job.
 stages:
   - Compiler
+
+########################################################
+# Define one sub-pipeline per toolchain:
+########################################################
 
 GCC_OpenMP:
   extends: .Variables
@@ -13,7 +21,7 @@ GCC_OpenMP:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w -fopenmp"
     LDFLAGS: "-fopenmp"
-    IMAGE_TAG: "${IMAGE_TAG_GCC}"
+    IMAGE_TAG: "${IMAGE_GCC}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
                             --enable-blockstructured \
@@ -36,7 +44,7 @@ Intel_OpenMP:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w -fiopenmp"
     LDFLAGS: "-fiopenmp"
-    IMAGE_TAG: "${IMAGE_TAG_INTEL}"
+    IMAGE_TAG: "${IMAGE_INTEL}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
                             --enable-blockstructured \
@@ -59,7 +67,7 @@ LLVM_OpenMP:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w -fopenmp"
     LDFLAGS: "-fopenmp"
-    IMAGE_TAG: "${IMAGE_TAG_LLVM}"
+    IMAGE_TAG: "${IMAGE_LLVM}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
                             --enable-blockstructured \
@@ -82,7 +90,29 @@ NVIDIA:
     CFLAGS: ""
     CXXFLAGS: "-O3 -std=c++20 -w"
     LDFLAGS: ""
-    IMAGE_TAG: "${IMAGE_TAG_NVIDIA}"
+    IMAGE_TAG: "${IMAGE_NVIDIA}"
+    CONFIGURATION_OPTIONS: "--enable-exahype \
+                            --enable-loadbalancing \
+                            --enable-blockstructured \
+                            --enable-swift \
+                            --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/automake.yml
+    strategy: depend
+
+AMD:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "amdclang"
+    CXX: "amdclang++"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w"
+    LDFLAGS: ""
+    IMAGE_TAG: "${IMAGE_AMD}"
     CONFIGURATION_OPTIONS: "--enable-exahype \
                             --enable-loadbalancing \
                             --enable-blockstructured \
