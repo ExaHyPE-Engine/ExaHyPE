@@ -45,7 +45,7 @@ Build:
     - .Variables
     - .BeforeScript
     - .Build
-  retry: 1
+  retry: 0
 
 Unit_Tests:
   stage: Test
@@ -59,7 +59,7 @@ Unit_Tests:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_ADER_DG_Tests:
   stage: Test
@@ -74,7 +74,7 @@ ExaHyPE2_ADER_DG_Tests:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_ADER_DG_AMR_SWE_Test:
   stage: Test
@@ -89,7 +89,7 @@ ExaHyPE2_ADER_DG_AMR_SWE_Test:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_ADER_DG_Limiting_Static_Test:
   stage: Test
@@ -104,7 +104,7 @@ ExaHyPE2_ADER_DG_Limiting_Static_Test:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
   stage: Test
@@ -119,7 +119,7 @@ ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
   stage: Test
@@ -134,7 +134,7 @@ ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 MGHyPE_MatrixFree_Tests:
   stage: Test
@@ -149,7 +149,7 @@ MGHyPE_MatrixFree_Tests:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 SWIFT2_Dastgen:
   stage: Test
@@ -164,7 +164,7 @@ SWIFT2_Dastgen:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 SWIFT2_Sod1D:
   stage: Test
@@ -179,7 +179,7 @@ SWIFT2_Sod1D:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 SWIFT2_Noh2D:
   stage: Test
@@ -194,7 +194,7 @@ SWIFT2_Noh2D:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Tutorials:
   stage: Tutorials
@@ -209,7 +209,7 @@ ExaHyPE2_Tutorials:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Euler:
   stage: Applications
@@ -224,7 +224,7 @@ ExaHyPE2_Euler:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Advection:
   stage: Applications
@@ -239,7 +239,7 @@ ExaHyPE2_Advection:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Acoustic:
   stage: Applications
@@ -254,7 +254,7 @@ ExaHyPE2_Acoustic:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Elastic:
   stage: Applications
@@ -269,7 +269,7 @@ ExaHyPE2_Elastic:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_Kernels:
   stage: Benchmarks
@@ -284,7 +284,7 @@ ExaHyPE2_Kernels:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 ExaHyPE2_SBH:
   stage: Benchmarks
@@ -299,7 +299,7 @@ ExaHyPE2_SBH:
     - job: Build
   dependencies:
     - Build
-  retry: 1
+  retry: 0
 
 #ExaHyPE2_SBH_Coupled:
 #  stage: Benchmarks
@@ -314,4 +314,4 @@ ExaHyPE2_SBH:
 #   - job: Build
 #  dependencies:
 #    - Build
-#  retry: 1
+#  retry: 0

@@ -182,7 +182,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startSend(
   assertion(_metaDataSizeBuffer == nullptr);
   assertion(_metaDataDebugBuffer == nullptr);
 
-  logDebug("startSend(int,int)", toString());
+  logDebug("startSend(int,int)", Base::toString());
 
   _metaDataSizeBuffer = new int[Base::_currentElement];
 #if PeanoDebug >= 1
@@ -219,7 +219,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startSend(
   if (flattenedDataSize > 0) {
     _deepCopyDataBuffer = new typename T::DoFType[flattenedDataSize];
     prepareDataToSendOut();
-    logDebug("startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers");
+    logDebug("startSend(int,int)", "created deep copy of all " << flattenedDataSize << " entries in the vector of pointers");
 
     Base::_ioMPIRequest = new MPI_Request;
     MPI_Isend(
