@@ -204,8 +204,21 @@ formatter on generated files.
 
 
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+Our formatting scripts works only within a virtual environment. To create such 
+an environment, follow the following steps:
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sudo apt install python-venv
+rm -rf .formatting_python_env
+python3 -m venv .
+source bin/activate
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+We install the Python environments, remove old formatting tools, create a new 
+environment within the Peano directory and finally activate this environment.
+From hereon, future steps should only require the very last step. 
+</div>
 
 
 
