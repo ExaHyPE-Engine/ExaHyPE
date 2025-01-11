@@ -519,6 +519,27 @@ namespace tarch {
        * does work.
        *
        *
+       * ## TBB
+       *
+       * With TBB, we maintain two versions: one for a new (preview) TBB
+       * version where dynamic task graph construction is supported, and one
+       * for an older version, where such a feature is not yet available, and
+       * we need our own TBB extension.
+       *
+       * In the one version, we create a task handle via a defer() call. In
+       * the other version, we create an instance of dynamic_task_graph_node.
+       * If the task has no outgoing dependencies, we don't have to register
+       * it in some way, i.e. to memorise, as noone will be able to refer to
+       * it later anyway. However, we have to add an additional incoming
+       * dependency in case that such a task has existed before.
+       *
+       * Next, we add the user-defined incoming dependencies to this task.
+       *
+       * Finally, we either move the handle into the global task group, making
+       * it a proper task (new TBB version), or we put it into our own task
+       * graph object which then translates it into a proper task.
+       *
+       *
        * ## No multithreading
        *
        * We just execute this task. We know that tasks may not have anti-dependencies.
