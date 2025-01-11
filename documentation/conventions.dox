@@ -211,8 +211,8 @@ an environment, follow the following steps:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 sudo apt install python-venv
 rm -rf .formatting_python_env
-python3 -m venv .
-source bin/activate
+python3 -m venv .formatting_python_env
+source .formatting_python_env/bin/activate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We install the Python environments, remove old formatting tools, create a new 
@@ -220,6 +220,9 @@ environment within the Peano directory and finally activate this environment.
 From hereon, future steps should only require the very last step. 
 </div>
 
+
+As with other parts of the code, the @ref page_faq_home might contain further 
+helpful instructions.
 
 
 
