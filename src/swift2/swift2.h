@@ -13,14 +13,14 @@ namespace swift2 {
    * Each particle owns a has-updated marker (a boolean). This marker is unset
    * by UpdateParticleMarker. Cell-wise operations such as the force or density
    * calculation should not update a particle, if its marker is already set. We
-   * work with a week ownership model, i.e. particles that sit on the face
+   * work with a weak ownership model, i.e. particles that sit on the face
    * in-between two cells are updated by the first adjacent cell that becomes
    * active. This is better than a complex rule to make the association unique
    * running risk that we miss out on particles.
    *
    * An example of a predicate that checks this flag is localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle().
    * Despite its name, it also looks if the particle has already been updated
-   * before. We have two different places in teh code where we use this
+   * before. We have two different places in the code where we use this
    * routine:
    *
    * In the sequential/domain-decomposition code, we use touchCellLastTime() to
