@@ -15,6 +15,13 @@
 namespace {
   static tarch::logging::Log _log( "tarch::multicore::native(omp)" );
 
+  /**
+   * We need this counter not for reporting (even though it is useful there),
+   * but to find out if it is save to grow the memory region that we use to
+   * administer all dependencies.
+   *
+   * @see canServeDependencyEntry()
+   */
   int numberOfSpawnedTasks = 0;
 
   using DependencyTrackingDataType = unsigned char;
@@ -34,7 +41,21 @@ namespace {
   int maxSizeOfMemoryRegionUsedForDependencyTracking{0};
 
   /**
+   * Can dependency request be served through blocked memory?
    *
+   * Addresses that represent dependencies in OpenMP have to correspond to
+   * allocated, user-owned memory. To ensure this is the case, I hold one
+   * big memory block for all the dependencies.
+   *
+   * Unfortunately, I do not know how big this memory block has to be. So I
+   * use any opportunity to grow the memory region which arises always if
+   * there are no more tasks pending that might use the dependency tracking.
+   * No new tasks with dependency can be spawned while I grow the memory
+   * region, so I use the named critical section to ensure this does not
+   * happen.
+   *
+   * Along the same lines, I have to block the memory region while I
+   * spawn a task.
    */
   bool canServeDependencyEntry(int taskNumber) {
     bool result = false;
@@ -265,20 +286,24 @@ void tarch::multicore::native::spawnTask(
     numberOfSpawnedTasks++;
 
     OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
-    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+    // Please consult canServeDependencyEntry() for this critical section
+    #pragma omp critical (dependency_checks)
     {
-      OTTER_TASK_START(task);
-      while (job->run()) {
-        OTTER_TASK_YIELD_START();
-        #pragma omp taskyield
-        OTTER_TASK_YIELD_END();
-      }
-      delete job;
+      #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+      {
+        OTTER_TASK_START(task);
+        while (job->run()) {
+          OTTER_TASK_YIELD_START();
+          #pragma omp taskyield
+          OTTER_TASK_YIELD_END();
+        }
+        delete job;
 
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
-      OTTER_TASK_END();
-    }
+        #pragma omp atomic
+        numberOfSpawnedTasks--;
+        OTTER_TASK_END();
+      } // end of task
+    } // end of critical section, i.e. now memory region might change again
   }
   else {
     logDebug(
@@ -365,10 +390,16 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 }
 
 
+/**
+ * Use the opportunity to grow the memory used for dependency tracking
+ * through canServeDependencyEntry().
+ */
 void tarch::multicore::native::waitForAllTasks() {
   OTTER_TASK_WAIT_START(children);
   #pragma omp taskwait
   OTTER_TASK_WAIT_END();
+
+  canServeDependencyEntry(0);
 }
 
 #endif
