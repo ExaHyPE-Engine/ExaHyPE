@@ -110,6 +110,7 @@ void exahype2::fd::applySommerfeldConditions(
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
   logTraceInWith4Arguments( "applySommerfeldConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
+  std::cout<<std::setprecision(8);
 
   exahype2::enumerator::FaceAoSLexicographicEnumerator enumerator(
     faceNumber,
@@ -124,6 +125,7 @@ void exahype2::fd::applySommerfeldConditions(
   tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
+  //std::cout<<"face offseet: "<<faceOffset<<std::endl;
 
   dfore(volume,numberOfGridCellsPerPatchPerAxis,faceNumber % Dimensions,0) {
     tarch::la::Vector<Dimensions,int> insideGridCell  = volume;
@@ -131,18 +133,30 @@ void exahype2::fd::applySommerfeldConditions(
     tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
 
     tarch::la::Vector<Dimensions,double> xOnLayer = x;
+    //if (faceNumber<Dimensions) {
+    //  xOnLayer(faceNumber%Dimensions) -=  volumeH(faceNumber%Dimensions);
+    //}
+    //std::cout<<"xonlayer: "<<xOnLayer<<std::endl;
 
     for (int layer=0; layer<overlap; layer++) {
       if (faceNumber<Dimensions) {
         insideGridCell(faceNumber % Dimensions)  = overlap-layer;
         outsideGridCell(faceNumber % Dimensions) = overlap-1-layer;
+        //std::cout<<"x: "<<x<<std::endl;
+        //std::cout<<"shift: "<< -layer * volumeH(faceNumber%Dimensions)<<std::endl;
         xOnLayer(faceNumber%Dimensions) = x(faceNumber%Dimensions) - layer * volumeH(faceNumber%Dimensions); //for each layer the x is different
+        xOnLayer(faceNumber%Dimensions) -=  volumeH(faceNumber%Dimensions); //due to shortcut above we need to remove another layer to make coordinate correct
+        //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
       }
       else {
         insideGridCell(faceNumber % Dimensions)  = layer+overlap-1;
         outsideGridCell(faceNumber % Dimensions) = layer+overlap;
+        //std::cout<<"x: "<<x<<std::endl;
+        //std::cout<<"shift: "<< +layer * volumeH(faceNumber%Dimensions)<<std::endl;
         xOnLayer(faceNumber%Dimensions) = x(faceNumber%Dimensions) + layer * volumeH(faceNumber%Dimensions); //for each layer the x is different
+        //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
       }
+      //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
 
       if (tarch::la::equals(t,0.0)){ //for the initial timestep, we need to fill the outside volume for old data as well.
         for(int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
@@ -152,6 +166,7 @@ void exahype2::fd::applySommerfeldConditions(
       
       const double rOnLayer=tarch::la::norm2(xOnLayer-systemOrigin);
       const double waveSpeed=maxEigenvalue( Qold + enumerator(outsideGridCell,0), faceCentre, volumeH, t, dt, faceNumber % Dimensions); 
+      //std::cout<<"rOnlayer: "<<rOnLayer<<" waveSpeed: "<<waveSpeed<<std::endl;
 
       logDebug(
         "applySommerfeldConditions(...)",
@@ -170,6 +185,8 @@ void exahype2::fd::applySommerfeldConditions(
       //we try the first approach first to see if it is already sufficient.
       double dtInverse=1/dt;
       double spaceFactor=waveSpeed*rOnLayer/volumeH(faceNumber%Dimensions)/xOnLayer(faceNumber%Dimensions);
+      //std::cout<<"dtInverse: "<<dtInverse<<" spaceFactor: "<<spaceFactor<<std::endl;
+
       //logInfo("text","factor "<< spaceFactor <<" waveSpeed "<<waveSpeed<<" rOnLayer "<<rOnLayer<<" volumeH "<<volumeH(faceNumber%Dimensions)
       //  <<" xOnLayer "<<xOnLayer(faceNumber%Dimensions));
 
