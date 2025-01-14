@@ -13,6 +13,7 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
+
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "peano4/parallel/Node.h"
