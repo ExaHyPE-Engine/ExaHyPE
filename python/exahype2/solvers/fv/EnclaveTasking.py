@@ -193,7 +193,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
+        return __name__.replace(".py", "").replace(".", "_") + "_ReconstructPatchAndApplyFunctor"
 
 
     def _add_action_set_entries_to_dictionary(self, d):
@@ -287,7 +287,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
+        return __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
 
 
 class EnclaveTasking(FV):
