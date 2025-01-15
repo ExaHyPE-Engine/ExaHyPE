@@ -206,7 +206,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _patchUpdates    = 0;
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("startTimeStep()", "phase " + toString(_solverState));
+    logInfo("startTimeStep(...)", "phase " + toString(_solverState));
   }
 }
 
