@@ -4,8 +4,7 @@
 
 
 The ExaGRyPE need to be installed as an application of Peano framework, for general remark on 
-how to install Peano please see \ref page_installation_home. The following instruction will not 
-include explanations for every steps. 
+how to install Peano please see \ref page_installation_home.
 
 The code is still under actively development in the repository at branch application-ccz4
 (the name, which is not a good one, is subject to future change). To start, please clone the
@@ -38,10 +37,10 @@ module load gsl
 and include the installation in the CXX flags in configuration
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-CXXFLAGS="...... -Icosma/local/gsl/2.4/include ......"
+CXXFLAGS="...... -Ipath/to/gsl/version/include ......"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-then enter this subdirectory and add the python path as
+then enter ExaGRyPE subdirectory and add the python path as
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 cd ./applications/exahype2/ccz4/

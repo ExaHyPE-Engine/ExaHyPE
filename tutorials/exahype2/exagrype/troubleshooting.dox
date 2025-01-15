@@ -2,8 +2,24 @@
 
 @page tutorials_exahype2_applications_exagrype_faq TroubleShooting
 
+This papge is for a collection of errors and bugs you may encouter during using ExaGRyPE and some 
+potential solutions for them. Obviously there will always be new issues beyond this list, if so, 
+please do not hesitate to contact us directly via Email/Slack/office-knock etc.  
 
-todo
+# Peano Compiling
 
- */
+If you encouter issues in this stage, it is very likely due to an old compiler or supporting library. Please
+make sure you load an as-new-as-possible Intel compiler and MPI module. Also please make sure you set the 
+compiler correctly:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+export I_MPI_CXX=icpx
+./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="......
+~~~~~~~~~~~~~~~~~~~~~~~
+
+For more information on dependencies and prerequisites, please check the page \ref page_installation_home.
+
+# To be continued...
+
+*/
 
