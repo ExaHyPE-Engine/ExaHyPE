@@ -1,7 +1,6 @@
 FROM peanoframework/llvm:latest
 
-ENV \
-    TD_ACTIVATE=1 \
+ENV TD_ACTIVATE=1 \
     PSM2_CUDA=1
 
 RUN { \
