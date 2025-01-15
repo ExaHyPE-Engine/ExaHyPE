@@ -8,20 +8,34 @@
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
-ExaGRyPE is the numerical relativity application we build based on the engine
+ExaGRyPE is a numerical relativity application built based on the engine
 ExaHyPE2, whose current version conduct simulation of vacuum and black hole spacetimes.
 ExaGRyPE solves the Einstein field equations in the standard CCZ4 formulation under a 3+1 foliation,
-and employs a block-structured Cartesian grid carrying a higher-order Finite Difference scheme with full support of adaptive mesh refinement (AMR). It facilitates massive parallelism combining message passing, domain decomposition and task parallelism, and it supports the injection of particles into the grid as static data probes or as moving tracers.
+and employs a block-structured Cartesian grid carrying a higher-order Finite Difference scheme with full 
+support of adaptive mesh refinement (AMR). It facilitates massive parallelism combining message passing, 
+domain decomposition and task parallelism, and it supports the injection of particles into the grid as 
+static data probes or as moving tracers.
 
-# Problem formulation
+ExaGRyPE is actively under development as a part of the ExaHyPE projects and is evolving as a novel 
+numerical relativity code within the computational astrophysics community. Planned enhancements include optimizing
+its performance, porting it to GPUs, and extending its capabilities to simulate more complex scenarios beyond
+black hole spacetimes. These advancements will involve incorporating matter components via standard Euler fields
+or Smoothed-Particle Hydrodynamics (SPH). Additionally, thanks to the high flexibility in dimensionality offered
+by ExaHyPE2, future versions will enable full simulations of modified gravity theories in higher dimensions.
 
-The ExaGRyPE extension solves the Einstein equations in the Z4 formulation
+The code is completely open-sources and can be found in the Peano repositories. Contribution and comments are welcomed and 
+much appreciated. The release paper of ExaGRyPE is provided below for interested users.
 
-@f{equation}{
+
+# Physics Note
+
+The ExaGRyPE code solves the Einstein equations in the Z4 formulation
+
+@f$
     R_{ab}-\frac{1}{2} g_{ab}R+\nabla_{a} Z_{b}+\nabla_{b} Z_{a}-g_{ab}\nabla^c
     Z_c -\kappa_{1}[n_{a} Z_{b}+n_{b} Z_{a}+\kappa_{2} g_{ab} n_{c}
     Z^{c}]  =  8\pi T_{ab}
-@f}
+@f$
 
 Noabely, we transfer it into a first order formulation following 
 
@@ -58,16 +72,21 @@ variables with
     D_{kij}, P_k \right).
 @f$
 
+Both formulations are now available in the code for difference scenarios. Users are referred to Appendix B
+of the paper below for more details of equations and formulation used in ExaGRyPE.
 
 # Content
 
-- \subpage tutorials_exahype2_applications_exagrype_howto
-- Problem Numerics
-  - first-order formulation
-  - second-order formulation
-- Scenarios and benchmarks
+- \subpage tutorials_exahype2_applications_exagrype_setup
+- \subpage tutorials_exahype2_applications_exagrype_running
+  - Gauge Wave
+  - Single Schwarzschild Black Hole
+  - Binary Black Hole Merger
+- \subpage tutorials_exahype2_applications_exagrype_clusters
+-  Feature benchmarks
   - \ref benchmarks_exahype2_ccz4_gauge_wave
   - \ref benchmarks_exahype2_ccz4_single_black_hole
+- \subpage tutorials_exahype2_applications_exagrype_faq
 
 
 # Reference papers
