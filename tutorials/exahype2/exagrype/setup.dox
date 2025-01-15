@@ -1,0 +1,60 @@
+/**
+
+@page tutorials_exahype2_applications_exagrype_setup Configure ExaGRyPE
+
+
+The ExaGRyPE need to be installed as an application of Peano framework, for general remark on 
+how to install Peano please see \ref page_installation_home. The following instruction will not 
+include explanations for every steps. 
+
+The code is still under actively development in the repository at branch application-ccz4
+(the name, which is not a good one, is subject to future change). To start, please clone the
+Peano and switch to the branch
+
+~~~~~~~~~~~~~~~~~~~~~~~
+git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
+git checkout applications-ccz4
+~~~~~~~~~~~~~~~~~~~~~~~
+
+then configure and compile the Peano under main directory following 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+./configure CC=icx CXX=icpx --with-mpi=mpiicpc --with-multithreading=omp CXXFLAGS="-Ofast -std=c++20 -fiopenmp -march=native -mtune=native -fma -fomit-frame-pointer -Wno-attributes=clang:: -w" LDFLAGS="-fiopenmp" --enable-loadbalancing --enable-exahype --enable-particles --enable-blockstructured --enable-finiteelements
+make -j
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Please notice the missing of certain installed libraries may lead to compiling errors, please check
+\ref tutorials_exahype2_applications_exagrype_faq if necessary.  
+
+Depending on your system, you might have to load the GSL module separately
+before your next step, it is required by the external library of
+initial condition for black holes (no need for gauge wave scenario).
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load gsl
+~~~~~~~~~~~~~~~~~~~~~~~
+
+and include the installation in the CXX flags in configuration
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="...... -Icosma/local/gsl/2.4/include ......"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+then enter this subdirectory and add the python path as
+
+~~~~~~~~~~~~~~~~~~~~~~~
+cd ./applications/exahype2/ccz4/
+export PYTHONPATH=../../../../python
+export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+~~~~~~~~~~~~~~~~~~~~~~~
+
+To clean the repository completely, use following lines
+~~~~~~~~~~~~~~~~~~~~~~~
+rm -rf aclocal.m4 compile src/config.* configure *sh Makefile Makefile.in missing stamp* ar-lib autom4te.cache *.log libtool depcomp *.scan
+find . -name Makefile -delete
+find . -name Makefile.in -delete
+~~~~~~~~~~~~~~~~~~~~~~~
+
+*/
+
