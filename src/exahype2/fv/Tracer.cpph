@@ -161,7 +161,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
   const double* __restrict__ Q,
   double                             timeStepSize,
   tarch::la::Vector<Dimensions, int> indices,
-  tarch::la::Vector<Dimensions, int> factors,
+  tarch::la::Vector<Dimensions, double> factors,
   Particle&                          particle
 ) {
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
@@ -173,7 +173,9 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
     particle.setData(unknown, value);
   }
   
+  //std::cout<<"particle move from "<< particle.getX();
   for (int d = 0; d < Dimensions; d++) {
     particle.setX(d, particle.getX(d) + timeStepSize * factors(d) * particle.getData(indices(d)));
   }
+  //std::cout<<" to "<< particle.getX()<<std::endl;
 }

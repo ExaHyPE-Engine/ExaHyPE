@@ -1,79 +1,13 @@
 /**
 
-@page tutorials_exahype2_applications_exagrype ExaGRyPE
+@page tutorials_exahype2_applications_exagrype How to Use ExaGRyPE
 
 
 @image html arty.png
 
-<!-- Add this one for href links to subitems -->
-\tableofcontents
-
-ExaGRyPE is a numerical relativity application built based on the engine
-ExaHyPE2, whose current version conduct simulation of vacuum and black hole spacetimes.
-ExaGRyPE solves the Einstein field equations in the standard CCZ4 formulation under a 3+1 foliation,
-and employs a block-structured Cartesian grid carrying a higher-order Finite Difference scheme with full 
-support of adaptive mesh refinement (AMR). It facilitates massive parallelism combining message passing, 
-domain decomposition and task parallelism, and it supports the injection of particles into the grid as 
-static data probes or as moving tracers.
-
-ExaGRyPE is actively under development as a part of the ExaHyPE projects and is evolving as a novel 
-numerical relativity code within the computational astrophysics community. Planned enhancements include optimizing
-its performance, porting it to GPUs, and extending its capabilities to simulate more complex scenarios beyond
-black hole spacetimes. These advancements will involve incorporating matter components via standard Euler fields
-or Smoothed-Particle Hydrodynamics (SPH). Additionally, thanks to the high flexibility in dimensionality offered
-by ExaHyPE2, future versions will enable full simulations of modified gravity theories in higher dimensions.
-
-The code is completely open-sources and can be found in the Peano repositories. Contribution and comments are welcomed and 
-much appreciated. The release paper of ExaGRyPE is provided below for interested users.
-
-
-# Physics Note
-
-The ExaGRyPE code solves the Einstein equations in the Z4 formulation
-
-@f$
-    R_{ab}-\frac{1}{2} g_{ab}R+\nabla_{a} Z_{b}+\nabla_{b} Z_{a}-g_{ab}\nabla^c
-    Z_c -\kappa_{1}[n_{a} Z_{b}+n_{b} Z_{a}+\kappa_{2} g_{ab} n_{c}
-    Z^{c}]  =  8\pi T_{ab}
-@f$
-
-Noabely, we transfer it into a first order formulation following 
-
-@f$
-  \partial_t Q +\nabla_i F_i(Q) +B_i (Q) \nabla_i Q = S(Q).
-@f$
-
-Collecting all derived quantities from CCZ4 decomposition, the gauge quantities and 
-helper variables yields an evolving system of over 24 variables
-
-@f$
-  Q(t) = 
-  \left( \tilde{\gamma}_{ij}, \alpha, \beta^i, \phi, \tilde{A}_{ij},K, \Theta,
-  \hat{\Gamma}^i, b^i \right)(t),
-@f$
-
-if the auxiliary varibles representing the first-order derivatives:
-
-@f$
-   A_{i}:=\partial_{i} \alpha, \ B_{k}^{i}:=\partial_{k} \beta^{i}, \ D_{k i
-   j}:=\frac{1}{2} \partial_{k} \tilde{\gamma}_{i j}, \
-   P_{i}:=\partial_{i} \phi
-@f$
-
-are calculated on-fly. In this case we have the second-order formulation of the code. 
-Adding the auxiliary variables to the system and treating them as further
-evolving variables make the code completely first-order, yielding a system of 58 independent 
-variables with 
-
-@f$
-  Q(t) = 
-  \left(
-   \tilde{\gamma}_{ij}, \alpha, \beta^i, \phi, \tilde{A}_{ij},K, \Theta, \hat{\Gamma}^i, b^i, A_k, B^i_k,
-    D_{kij}, P_k \right).
-@f$
-
-Both formulations are now available in the code for difference scenarios. Users are referred to Appendix B
-of the paper below for more details of equations and formulation used in ExaGRyPE.
+This section is designed to provide instructions on installing and using the Numerical
+Relativity code ExaGRyPE. Contribution and comments to improve this tutorial are much 
+welcomed and appreciated.
 
 # Content
 
@@ -83,9 +17,15 @@ of the paper below for more details of equations and formulation used in ExaGRyP
   - Single Schwarzschild Black Hole
   - Binary Black Hole Merger
 - \subpage tutorials_exahype2_applications_exagrype_clusters
+- \subpage tutorials_exahype2_applications_exagrype_advanced
+  - Adding New Physics Scenarios
+  - Postprocessing on-the-fly
+  - Particles as Probes and Tracers
+  - Coupling Multiple Numerical Schemes(Solvers) 
 -  Feature benchmarks
   - \ref benchmarks_exahype2_ccz4_gauge_wave
   - \ref benchmarks_exahype2_ccz4_single_black_hole
+  - \ref benchmarks_exahype2_ccz4_single_black_hole_performance
 - \subpage tutorials_exahype2_applications_exagrype_faq
 
 

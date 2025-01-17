@@ -1,0 +1,90 @@
+/**
+
+@page tutorials_exahype2_applications_exagrype_advanced Advanced Usage of ExaGRyPE
+
+\tableofcontents
+<!-- Add this one for href links to subitems -->
+
+This section is designed to describe more user-defined options to those who are already familar to the basic 
+usage of ExaGRyPE. Users are recommend to read and understand the python/C++ scripts of the code before they
+continue here. 
+
+# Adding New Physics Scenarios
+For no-matter spacetime, different physics scenarios are represent by different initial
+conditions. The initial conditions of ExaGRyPE can be assigned via direct function, e.g., what we do for guage
+wave scenario in \c InitialValues.cpp
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void applications::exahype2::ccz4::newScenario(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double t
+) {
+  Q[0]  = 1.0;
+  Q[1]  = ...... 
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For more complicated initial conditions (e.g. black holes), users can introduce their own calculating library, 
+and include them in before generate and build the Peano project. We also recommend to define a corresponding 
+C++ flag to avoid unnessary include files when other scenario is picked.  
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+peano4_project.output.makefile.add_cpp_file( "MyICCalculators/Calculator1.cpp" )
+peano4_project.output.makefile.add_cpp_file( "MyICCalculators/Calculator2.cpp" )
+......
+peano4_project.output.makefile.add_CXX_flag( "-DIncludeMyCalculator" )
+......
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.......
+#ifdef IncludeMyCalculator
+#include "MyICCalculators/UseMyCalculator.h"
+#endif
+.......
+void applications::exahype2::ccz4::newComplicatedScenario(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double t
+) {
+  MyCalculator(Q, x, t);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Postprocessing on-the-fly
+
+Users can define postprocessing function if they wish to manipulate evolving variables during the 
+timestepping, or to extract more information from the system through the material variables (The material
+variables are additional variables the user can ask the code to output with the evolving system into 
+snapshots to inspection).
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MySolver._auxiliary_variables = 3 #set the number of material variables you need
+
+MySolver._my_user_includes += """
+  #include "../MyPostprocessingfunctions.h"
+"""
+
+MySolver._preprocess_reconstructed_patch = """
+	MyPostprocessingfunction(...);
+	.......
+"""
+
+MySolver.create_data_structures()
+MySolver.create_action_sets()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\c CCZ4.py and \c CCZ4Helper.py contain multiple postprocessing functions that users
+can take as examples to implement their own ones.
+
+# Particles as Probes and Tracers
+
+TODO
+
+# Coupling Multiple Numerical Schemes(Solvers) 
+
+TODO
+
+*/
+

@@ -511,10 +511,10 @@ if __name__ == "__main__":
 #Tracer setting 
 ########################################################################################
     if args.add_tracer==1:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0],[-8.0,-8.0,0]])
-        #    particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
+        #    particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0],[-8.0,-8.0,0]])
+            particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
         #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
         #                            particle_set=tracer_particles, filename="t-design.dat", scale_factor=abs(offset[0])*0.8)
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
@@ -537,7 +537,8 @@ if __name__ == "__main__":
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.02
+          time_delta_between_two_snapsots=0.02,
+          clear_database_after_flush      = True
           )
         dump_action_set.descend_invocation_order = my_solver._action_set_update_cell.descend_invocation_order+2
         project.add_action_set_to_timestepping(dump_action_set)
@@ -557,7 +558,7 @@ if __name__ == "__main__":
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
                                                                 fineGridCell{{SOLVER_NAME}}Q.value,
                                                                 fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-                                                                {17,18,19},
+                                                                {0,3,5},
                                                                 {-1,-1,-1},
                                                                 *p
                                                                """
