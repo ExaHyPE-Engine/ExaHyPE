@@ -22,31 +22,11 @@ namespace tarch {
 /**
  * Read/write Semaphore
  *
- * Semaphore where many people can get write access concurrently but only
- * one can write. If the write lock is on, no reads are allowed.
- *
- * We offer two realisation variants of the semaphore: The default variant
- * gives write accesses high priority. The alternative one gives read
- * accesses higher priority.
- *
- * The latter happens automatically if we don't do anything: If one thread
- * locks the semaphore for reads, any other thread can read as well.
- * Consequently, the probability is high that a read will pass quickly,
- * while a write basically has to wait for a slot where no reads are
- * fired anymore. You can toggle this behaviour when you create the
- * semaphore, but this has to be done with care: The semaphore has been
- * designed to allow concurrent reads, and if you give the writes the
- * higher priority, you eliminate this advantage to some degree.
- *
- * ## Realisation rationale
- *
- * I played around with sleeps, but this is a really stupid idea. It
- * makes the performance deteriorate absolutely. I then integrated the
- * two checks for number of pending write accesses and read accesses
- * into one semaphore loop, and that didn't work either. My assumption
- * is that we then tend to starve all other threads. So the best result
- * is achieved if we poll with tryEnterCriticalSection(), but then
- * check for writes and reads in two stages.
+ * TBB-specific implementation of this class. There's a generic implementation
+ * of tarch::multicore::MultiReadSingleWriteSemaphore in the parent folder.
+ * However, TBB already offers exactly this feature (as opposed to other
+ * multithreading runtimes), so it makes no sense not to use this bespoke
+ * implementation contributed by Intel.
  */
 class tarch::multicore::MultiReadSingleWriteSemaphore {
   private:
