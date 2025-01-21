@@ -576,7 +576,7 @@ if __name__ == "__main__":
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.02,
-          clear_database_after_flush      = False
+          clear_database_after_flush      = True
           )
         dump_action_set.descend_invocation_order = my_solver._action_set_compute_final_linear_combination.descend_invocation_order+2
         project.add_action_set_to_timestepping(dump_action_set)
