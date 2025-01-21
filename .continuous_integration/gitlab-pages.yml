@@ -12,8 +12,8 @@ pages:
   allow_failure: false
   dependencies: []
   script:
-    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${GCC_BASE} python3 documentation/convert-jupyter-notebooks.py
-    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${GCC_BASE} doxygen documentation/Doxyfile
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_GCC} python3 documentation/convert-jupyter-notebooks.py
+    - apptainer exec -e --bind "$PWD" $APPTAINER_IMAGEDIR/${IMAGE_GCC} doxygen documentation/Doxyfile
     - rm -rf public
     - mkdir public
     - mv ./doxygen-html/html/* public/
