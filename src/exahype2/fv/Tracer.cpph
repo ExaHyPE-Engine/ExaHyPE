@@ -173,16 +173,9 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
     particle.setData(unknown, value);
   }
   
-  std::cout<<"particle move from "<< particle.getX();
-  particle.setX(0 , particle.getX(0) + 1e-4);
-  //particle.setX(1 , particle.getX(1) - 1e-4);
-  //for (int d = 0; d < Dimensions; d++) {
-    //particle.setX(d, particle.getX(d) + timeStepSize * factors(d) * particle.getData(indices(d)));
-    //particle.setX(d, particle.getX(d) - timeStepSize * particle.getData(indices(d)) );
-    //double test=particle.getX(d) + (1e-5);
-    //double test=particle.getX(d) - (-1e-5);
-    //double test=particle.getX(d) - (1e-5);
-    //particle.setX(d ,  test);
-  //}
-  std::cout<<" to "<< particle.getX()<<std::endl;
+  //std::cout<<"particle move from "<< particle.getX();
+  for (int d = 0; d < Dimensions; d++) {
+    particle.setX(d, particle.getX(d) + timeStepSize * factors(d) * particle.getData(indices(d)));
+  }
+  //std::cout<<" to "<< particle.getX()<<std::endl;
 }

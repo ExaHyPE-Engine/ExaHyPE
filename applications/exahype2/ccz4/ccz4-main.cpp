@@ -373,9 +373,11 @@ void step() {
     OTTER_TASK_START(step_task);
 
     observers::InitGrid observer;
+    observers::InitGrid::prepareTraversal();
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
+    observers::InitGrid::unprepareTraversal();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
@@ -399,9 +401,11 @@ void step() {
     OTTER_TASK_START(step_task);
 
     observers::PlotSolution observer;
+    observers::PlotSolution::prepareTraversal();
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
+    observers::PlotSolution::unprepareTraversal();
     plotMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
@@ -432,9 +436,11 @@ void step() {
     OTTER_TASK_START(step_task);
 
     observers::TimeStep observer;
+    observers::TimeStep::prepareTraversal();
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
+    observers::TimeStep::unprepareTraversal();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
@@ -451,7 +457,9 @@ void step() {
    
       repositories::suspendSolversForOneGridSweep();
       observers::AdditionalMeshTraversal observer;
+      observers::AdditionalMeshTraversal::prepareTraversal();
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+      observers::AdditionalMeshTraversal::unprepareTraversal();
     }
     break;
   #endif

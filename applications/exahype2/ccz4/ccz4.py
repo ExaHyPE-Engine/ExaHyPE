@@ -546,7 +546,7 @@ if __name__ == "__main__":
     if args.add_tracer==2:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0.333,5e-4,0.1]])
+            particle_set=tracer_particles, coordinates=[[0.2,0,0],[-0.2,0,0]])
         init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation( init_action_set )
         
@@ -558,8 +558,8 @@ if __name__ == "__main__":
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
                                                                 fineGridCell{{SOLVER_NAME}}Q.value,
                                                                 fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-                                                                {0,3,5},
-                                                                {-0.01,-0.01,-0.01},
+                                                                {17,18,19},
+                                                                {-1,-1,-1},
                                                                 *p
                                                                """
                                                                )
