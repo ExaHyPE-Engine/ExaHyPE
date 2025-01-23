@@ -52,14 +52,11 @@ namespace tbb {
  *
  * ## Compatibility
  *
- * You can also gradually enable certain features. To do so, you have to compile
- * with tbb_exension, but then you can manually (via -D flags) define
+ * You can also enable certain features individually. To do so, you have to
+ * compile with tbb_exension, but then you can manually (via -D flags) define
  *
- * - TBB_USE_TASK_GROUP_PREVIEW
- *
- * The n-dimensional range in return is the same as submitted to the TBB
- * standard, i.e. it does not matter which one you use. It is also only
- * a header, so there cannot be any linker issues.
+ * - TBB_USE_TASK_GROUP_PREVIEW to try out TBB's dynamic task group handling
+ * - TBB_PREVIEW_BLOCKED_RANGE_ND to try out TBB's n-dimensional ranges.
  *
  *
  * ## Code usage
