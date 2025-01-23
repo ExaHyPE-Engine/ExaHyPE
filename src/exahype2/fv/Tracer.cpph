@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "peano4/utils/Loop.h"
 
+tarch::logging::Log _log( "exahype2::fv" );
+
 template <int SourceIndex, int... SourceIndices, typename Particle>
 void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
