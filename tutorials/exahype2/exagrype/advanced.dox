@@ -162,7 +162,7 @@ and clear the data base.
 We recommended to output csv file every now and them during the simulation, it will help to reduce memory footprint, and it is
 also safer, as a crash does not trigger automatically dumping, i.e., all particle data still in the memory will lost in this case.
 
-# Coupling Multiple Numerical Schemes(Solvers) 
+# Coupling Multiple Numerical Schemes (Solvers) 
 
 TODO
 

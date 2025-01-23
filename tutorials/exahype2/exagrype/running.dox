@@ -18,6 +18,7 @@ a good benchmark setup for users (and also developers) to test their implemenati
 explanations and eqautions of this benchmark can be found in https://arxiv.org/abs/gr-qc/0305023, section IV.B.
 
 To run a gauge wave simulation in ExaGRyPE, use the command 
+
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 ccz4.py -impl fd4-rk1-adaptive -s gauge -maxh 0.05 -minh 0.05 -ps 9 -plt 0.1 -et 0.5 -exn gauge --domain_r 0.5 --ReSwi 0 -cfl 0.1 --KOSigma 8.0
 export OMP_NUM_THREADS=1
