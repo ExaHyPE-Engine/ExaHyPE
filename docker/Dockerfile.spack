@@ -1,13 +1,10 @@
 FROM peanoframework/base:latest
 
-RUN wget https://github.com/spack/spack/archive/refs/heads/develop.tar.gz -O /opt/spack-develop.tar.gz && \
+RUN wget https://github.com/spack/spack/archive/refs/heads/develop.tar.gz -O /opt/spack.tar.gz && \
 mkdir -p /opt/spack && \
-tar -xzf /opt/spack-develop.tar.gz -C /opt/spack --strip-components=1 && \
-rm /opt/spack-develop.tar.gz
+tar -xzf /opt/spack.tar.gz -C /opt/spack --strip-components=1 && \
+rm /opt/spack.tar.gz
 
 RUN echo ". /opt/spack/share/spack/setup-env.sh" >> /etc/bash.bashrc
-
-ENV SPACK_ROOT=/opt/spack
-ENV PATH=/opt/spack/bin:$PATH
 
 CMD ["/bin/bash"]

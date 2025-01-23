@@ -7,19 +7,14 @@ std::string peano4::grid::toString(peano4::grid::LoadStoreComputeFlag flag) {
   switch (flag) {
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
       return "load-provide-store";
-      break;
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
       return "load-provide-discard";
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
       return "create-dummy-provide-store";
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
       return "create-dummy-provide-discard";
-      break;
     case LoadStoreComputeFlag::NoData:
       return "no-data";
-      break;
   }
   return "<undef>";
 }
@@ -28,19 +23,14 @@ bool peano4::grid::loadPersistently(LoadStoreComputeFlag flag) {
   switch (flag) {
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
       return true;
-      break;
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
       return true;
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
       return false;
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
       return false;
-      break;
     case LoadStoreComputeFlag::NoData:
       return false;
-      break;
   }
   assertion(false);
   return false;
@@ -50,19 +40,14 @@ bool peano4::grid::storePersistently(LoadStoreComputeFlag flag) {
   switch (flag) {
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
       return true;
-      break;
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
       return false;
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
       return true;
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
       return false;
-      break;
     case LoadStoreComputeFlag::NoData:
       return false;
-      break;
   }
   assertion(false);
   return false;
@@ -73,19 +58,14 @@ bool peano4::grid::computeOnData(LoadStoreComputeFlag flag) {
   switch (flag) {
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
       return true;
-      break;
     case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
       return true;
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
       return true;
-      break;
     case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
       return true;
-      break;
     case LoadStoreComputeFlag::NoData:
       return false;
-      break;
   }
   assertion(false);
   return false;

@@ -1,4 +1,4 @@
-.MGHyPE_Tests:
+.MGHyPE_MatrixFree_Tests:
   parallel:
     matrix:
     - test: [dg, dg-two-grid, cg, cg-multigrid]

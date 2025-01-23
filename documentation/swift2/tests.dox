@@ -16,17 +16,21 @@ well-suited to use as first examples to get familiar with Swift2.
 
 
 ## Functional Tests
-\li \subpage tests_swift2_dastgen_test
-\li \subpage tests_swift2_test_density_calculation
-\li \subpage tests_swift2_test_smoothing_length_computation
-\li \subpage tests_swift2_test_boundary_conditions
+- \subpage tests_swift2_dastgen_test
+- \subpage tests_swift2_test_density_calculation
+- \subpage tests_swift2_test_smoothing_length_computation
+- \subpage tests_swift2_test_boundary_conditions
 
 ## Physics Tests
-\li \subpage tests_swift2_planet_orbit
-\li \subpage tests_swift2_hydro_simple_sph_noh_2d
-\li \subpage tests_swift2_hydro_simple_sph_sedov_blast
-\li \subpage tests_swift2_hydro_simple_sph_sod_1d
+- \subpage tests_swift2_planet_orbit
+- \subpage tests_swift2_hydro_simple_sph_noh_2d
+- \subpage tests_swift2_hydro_simple_sph_noh_3d
+- \subpage tests_swift2_hydro_simple_sph_sedov_blast
+- \subpage tests_swift2_hydro_simple_sph_sod_1d
 
+## Tests from the Jupyter notebooks
+- \subpage tests_swift2_hydro-simple-sph-physics_sedov-blast_plot-sedov-1d
+- \subpage tests_swift2_hydro-simple-sph-physics_sedov-blast_plot-sedov-1d
 
  */
 

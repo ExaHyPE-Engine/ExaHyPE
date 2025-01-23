@@ -16,7 +16,7 @@ std::string tarch::toString(MemoryLocation value) {
 
 #if defined(GPUOffloadingOff)
 
-void* tarch::internal::allocateRawData(std::size_t size, MemoryLocation location, int) {
+void* tarch::internal::allocateRawData(std::size_t size, [[maybe_unused]] MemoryLocation location, int) {
   assertion2(size > 0, size, toString(location));
   // Aligned alloc requires size to be a multiple of the alignment
   void* data = std::aligned_alloc(

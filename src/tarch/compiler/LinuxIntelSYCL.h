@@ -1,4 +1,4 @@
-// Default variant of CompilerSpecificSettings.h for GCC on Linux.
+// Default variant of CompilerSpecificSettings.h for Intel SYCL on Linux.
 // For a detailed description of the semantics of the settings, please
 // consult LinuxIntel.h which is the most elaborate documentation.
 
@@ -22,7 +22,7 @@
 #define AlignmentOnHeap 64
 #endif
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+#if !defined(UseManualInlining) && !defined(noUseManualInlining)
 #define UseManualInlining
 #endif
 
@@ -35,8 +35,6 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
-#define OpenMPDependenciesInTaskWait
-
 /**
  * This flag had been undefined before.
  *
@@ -44,7 +42,3 @@
  * OpenMP.
  */
 #define OpenMPTaskGroup
-
-#define PragmaPush
-#define SilenceUnknownAttribute
-#define PragmaPop

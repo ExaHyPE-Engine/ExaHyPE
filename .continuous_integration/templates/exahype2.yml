@@ -1,60 +1,95 @@
+.ExaHyPE2_ADER_DG_Tests:
+  parallel:
+    matrix:
+    - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerGaussianBell, EulerIsotropicVortex, SWERadialDamBreak, SWERestingLake]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg.py -s $scenario;"
+
+.ExaHyPE2_ADER_DG_AMR_SWE_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-amr-swe; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-amr-swe.py; OMP_NUM_THREADS=1 ./ADER-DG-AMR-SWE > ADER-DG-AMR-SWE.out"
+  artifacts:
+    paths:
+      - tests/exahype2/aderdg-amr-swe/ADER-DG-AMR-SWE.out
+    expire_in: 2 hours
+
+.ExaHyPE2_ADER_DG_Limiting_Static_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting-static; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-limiting-static.py; OMP_NUM_THREADS=1 ./ADER-DG-Limiting-Static > ADER-DG-Limiting-Static.out"
+  artifacts:
+    paths:
+      - tests/exahype2/aderdg-limiting-static/ADER-DG-Limiting-Static.out
+    expire_in: 2 hours
+
+.ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting-posteriori; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-limiting-posteriori.py;"
+
+.ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/aderdg-limiting-euler-airfoil; PYTHONPATH=$CI_PROJECT_DIR/python python3 aderdg-limiting-euler-airfoil.py; OMP_NUM_THREADS=1 ./ADER-DG-Limiting-Euler-Airfoil > ADER-DG-Limiting-Euler-Airfoil.out"
+  artifacts:
+    paths:
+      - tests/exahype2/aderdg-limiting-euler-airfoil/ADER-DG-Limiting-Euler-Airfoil.out
+    expire_in: 2 hours
+
 .ExaHyPE2_Tutorials:
   parallel:
     matrix:
     - tutorial: [euler, acoustic, elastic, advection, swe]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/toyproblems/$tutorial; CCACHE_DIR=${CCACHE_DIR} PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/toyproblems/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
 
 .ExaHyPE2_Euler:
   parallel:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Advection:
   parallel:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Acoustic:
   parallel:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/acoustic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Elastic:
   parallel:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalAdaptiveADERDG]
+      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
 .ExaHyPE2_Kernels:
   parallel:
     matrix:
     - kernel: [euler, acoustic, elastic, advection]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python CCACHE_DIR=${CCACHE_DIR} python3 kernel-benchmarks.py -e -fpe -m Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks.py -e -fpe -m Release"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
 
 .ExaHyPE2_SBH:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance_testbed.py -et 0.01 -minh 0.05"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance_testbed.py -et 0.01 -minh 0.05"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/performance-testbed; ./peano4_test"
 
 .ExaHyPE2_SBH_Coupled:
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 CCACHE_DIR=${CCACHE_DIR} python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; PYTHONPATH=$PYTHONPATH:$CI_PROJECT_DIR/python:$CI_PROJECT_DIR/applications/exahype2/ccz4 python3 performance-studies.py -lbm tailored -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/ccz4/single-black-hole; OMP_NUM_THREADS=1 ./peano_sbh"

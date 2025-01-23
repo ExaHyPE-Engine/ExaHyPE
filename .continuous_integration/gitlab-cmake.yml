@@ -1,8 +1,17 @@
+# To avoid having to repeat hard links to e.g. the containers everywhere, we make them
+# available with this include statement
 include:
   - .continuous_integration/templates/variables.yml
 
+
+# This file is included from the top-level gitlab-ci file, meaning that this stage is a sub-stage of the
+# main BuildSystem job.
 stages:
   - Compiler
+
+########################################################
+# Define one sub-pipeline per toolchain:
+########################################################
 
 GCC_OpenMP:
   extends: .Variables
@@ -10,8 +19,9 @@ GCC_OpenMP:
   variables:
     CC: "gcc"
     CXX: "g++"
-    IMAGE_TAG: "${IMAGE_TAG_GCC}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    IMAGE_TAG: "${IMAGE_GCC}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
@@ -30,8 +40,9 @@ Intel_OpenMP:
   variables:
     CC: "icx"
     CXX: "icpx"
-    IMAGE_TAG: "${IMAGE_TAG_INTEL}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    IMAGE_TAG: "${IMAGE_INTEL}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
@@ -50,8 +61,9 @@ LLVM_OpenMP:
   variables:
     CC: "clang"
     CXX: "clang++"
-    IMAGE_TAG: "${IMAGE_TAG_LLVM}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    IMAGE_TAG: "${IMAGE_LLVM}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
@@ -70,8 +82,29 @@ NVIDIA:
   variables:
     CC: "nvc"
     CXX: "nvc++"
-    IMAGE_TAG: "${IMAGE_TAG_NVIDIA}"
-    CONFIGURATION_OPTIONS: "-DENABLE_EXAHYPE=ON \
+    IMAGE_TAG: "${IMAGE_NVIDIA}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
+                            -DENABLE_LOADBALANCING=ON \
+                            -DENABLE_BLOCKSTRUCTURED=ON \
+                            -DENABLE_SWIFT=ON \
+                            -DENABLE_MGHYPE=ON \
+                            -DENABLE_FINITEELEMENTS=ON \
+                            -DENABLE_PARTICLES=ON"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/cmake.yml
+    strategy: depend
+
+AMD:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "amdclang"
+    CXX: "amdclang++"
+    IMAGE_TAG: "${IMAGE_AMD}"
+    CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DENABLE_EXAHYPE=ON \
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \

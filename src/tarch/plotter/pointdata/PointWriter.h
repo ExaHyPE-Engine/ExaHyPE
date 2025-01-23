@@ -22,6 +22,8 @@ namespace tarch {
  */
 class tarch::plotter::pointdata::PointWriter {
   public:
+    virtual ~PointWriter() = default;
+
     /**
      * Counterpart to close() on all the depending writers.
      */

@@ -81,6 +81,16 @@ namespace toolbox {
        * Event::Type::ConsecutiveMoveEvent. It will also keep track the original
        * position of the particle, before the first move event of that sequence
        * has occurred, as well as the current particle position.
+       *
+       * In earlier versions, we tested for a previous event existing on any
+       * tree in the database. This lead to concurrency issues. Sometimes (on
+       * rare occasions) when a particle is being lifted or dropped in its local
+       * tree, these changes won't have made it into the database for trees
+       * where the particle is virtual as the trees will race over write access
+       * to the database. In these scenarios the checks will fail because they
+       * find that the particle hasn't been associated to the same vertex. Since
+       * we now keep track of a particle history for each tree it finds itself
+       * on, these checks are deprecated.
        */
       void moveParticle(
         const std::string&                           particleName,
@@ -108,7 +118,7 @@ namespace toolbox {
        *   first time. In this case, the particle has to be "free", i.e. it may
        *   not have been assigned to any other vertex yet. The search should
        *   reduce a NotFound, or find that in a previous sweep it had been a
-       *   virtual particle that has been erased.
+       *   particle that has been erased.
        * - The particle might have been dropped from a coarser level. See
        *   corresponding discussion for virtual particles below including some
        *   sketches.
@@ -125,7 +135,7 @@ namespace toolbox {
        *   its parallel flag yet. Therefore, it might have changed.
        * - A particle might change from remote to local. This can only happen
        *   in UpdateParallelState after a merge, which first detaches a particle
-       *   and then readds it with the local flag set.
+       *   and then re-adds it with the local flag set.
        *
        *
        * ### Consistency check for virtual particles
@@ -198,14 +208,13 @@ namespace toolbox {
        * global sieve set.
        *
        * @param particleIsNew If we know that a particle is new, there's no
-       *                      need to search through the database.
+       *   need to search through the database.
        * @param reassignmentOnSameTreeDepthAllowed If true, assume our
-       *                      particle sorting/bookkeeping algorithm allows
-       *                      for a particle to be reassigned from one vertex
-       *                      to another vertex on the same depth in the tree
-       *                      directly (through its movement). Otherwise,
-       *                      expect the particle to be sorted either via
-       *                      sieves, lifts, or drops.
+       *   particle sorting/bookkeeping algorithm allows for a particle to be
+       *   reassigned from one vertex to another vertex on the same depth in
+       *   the tree directly (due to its movement). Otherwise, expect the
+       *   particle to be sorted either via sieves or a sequence of lifts and
+       *   drops.
        */
       void assignParticleToVertex(
         const std::string&                           particleName,
@@ -335,6 +344,17 @@ namespace toolbox {
        * We only record particles that have moved, but actually the comparison
        * here is only an optimisation, as the moveParticle itself will once
        * again check that the particle has actually changed its position.
+       *
+       * We skip the checks for virtual particles. Virtual particles may end up
+       * here during a lift operation: They have been moved on a lower level
+       * and are now in the process of being lifted. In these cases, the checks
+       * we have set up fail, as the particle being lifted is not assigned to
+       * the correct vertex any more. Skipping these checks is fine because
+       * these virtual particles have already been moved while they've been
+       * Local, and the appropriate event has been noted and checked beforehand.
+       * Other virtual particles, i.e. virtual particles that have been virtual
+       * even before the move operation, should never have been part of the
+       * assignedParticles list that is being looped over.
        */
       template <typename ParticleContainer>
       void traceParticleMovements(

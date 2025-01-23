@@ -1,4 +1,4 @@
-// Default variant of CompilerSpecificSettings.h for GCC on Linux.
+// Default variant of CompilerSpecificSettings.h for Clang on Linux.
 // For a detailed description of the semantics of the settings, please
 // consult LinuxIntel.h which is the most elaborate documentation.
 
@@ -14,7 +14,7 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+#if !defined(UseManualInlining) && !defined(noUseManualInlining)
 #endif
 
 #define LittleEndian
@@ -30,10 +30,4 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
 
-#define OpenMPDependenciesInTaskWait
-
 #define OpenMPTaskGroup
-
-#define PragmaPush _Pragma("GCC diagnostic push")
-#define SilenceUnknownAttribute _Pragma("GCC diagnostic ignored \"-Wattributes\"")
-#define PragmaPop _Pragma("GCC diagnostic pop")

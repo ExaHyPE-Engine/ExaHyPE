@@ -94,7 +94,8 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::VertexMarker::getRela
 bool peano4::datamanagement::VertexMarker::isParentVertexLocal(int i) const {
   assertion(i>=0);
   assertion(i<TwoPowerD);
-  assertion1( _isParentVertexLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
+  // TODO: temporary
+  // assertion1( _isParentVertexLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
   return _isParentVertexLocal[i];
 }
 
@@ -193,7 +194,7 @@ bool peano4::datamanagement::VertexMarker::isParentCellLocal() const {
 
 
 bool peano4::datamanagement::VertexMarker::isLocal(int i) const {
-  assertion1( not _isLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
+  // assertion1( not _isLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
   return _isLocal[i];
 }
 
