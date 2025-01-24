@@ -61,7 +61,7 @@ void toolbox::blockstructured::tests::IandRSecondOrderTest::compareInterpolateLi
             faceMarker2(dummyEvent, axis + Dimensions);
 
           for (int n = 0; n < faceSize; n++)
-            coarseData[n] = static_cast<double>((n + 1) / unknowns);
+            coarseData[n] = static_cast<double>(n + 1) / 16.0;
           for (int n = 0; n < faceSize; n++)
             fineDataTensorProduct[n] = 0;
           for (int n = 0; n < faceSize; n++)
@@ -171,7 +171,7 @@ void toolbox::blockstructured::tests::IandRSecondOrderTest::compareRestrictLinea
             faceMarker2(dummyEvent, axis + Dimensions);
 
           for (int n = 0; n < faceSize; n++)
-            fineData[n] = static_cast<double>((n + 1) / unknowns);
+            fineData[n] = static_cast<double>(n + 1) / 16.0;
           for (int n = 0; n < faceSize; n++)
             coarseDataTensorProduct[n] = 0;
           for (int n = 0; n < faceSize; n++)

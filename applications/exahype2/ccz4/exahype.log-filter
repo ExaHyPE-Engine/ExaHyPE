@@ -10,7 +10,7 @@ debug  exahype2                            -1     black always-on
 
 info  tarch                                -1     white always-on
 info  peano4                               -1     white always-on
-info  examples                             -1     white always-on
+info  applications                         -1     white always-on
 info  exahype2                             -1     white always-on
 info  toolbox                              -1     white always-on
 info  peano4::grid::Spacetree              -1     white always-on

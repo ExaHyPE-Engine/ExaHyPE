@@ -31,14 +31,14 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
-    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
+    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0
   };
 
   double Qnew[] = {
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   0.0, 0.0, 0.0, 0.0, 0.0, 0.0
   };
 
 
@@ -58,34 +58,92 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  gridCellH
     ) -> void {
-      Q[0] = 1.0;
-      Q[1] = 2.0;
+      Q[0] = 0.0;
+      Q[1] = 1.0;
     },
-    {1.0,0.0,0.0},
-    {0.05,0.05,0.05},
-    1.0,
-    0.01,
-    2,
-    3,
-    2,
-    0,
+    {1.0,0.0,0.0}, //face center
+    {0.05,0.05,0.05}, //patch size (in length)
+    1.0, //t
+    0.01, //dt
+    2, //cell number per axis in patch
+    3, //overlap
+    2, //unknowns number
+    0, //auxiliary
     3, //facenumber
-    {0.0,0.0,0.0},
+    {0.0,0.0,0.0}, //origin
     Qold,
     Qnew
   );
 
-/*
-  std::cout<<std::setprecision(1);
+
+  /*std::cout<<std::setprecision(8);
+  std::cout<<"external layers along positive"<<std::endl;
     for (int i=0;i<4;i++){
-      for (int j=0;j<12;j++){
+      for (int j=6;j<12;j++){
         std::cout<<Qnew[i*12+j] << " ";
       }
       std::cout<<"\n";
   }
-*/
 
+  std::cout<<"\n";*/
 
+  //we consider facenumber 0, i.e. face on the x negative, patch size 2, evolving quantity 2. Thus the array has 2x2x2x6=48 entries 
+  double Qold2[] = {
+    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
+    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
+    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,
+    1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0
+  };
+
+  double Qnew2[] = {
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,   1.0, 2.0, 1.0, 2.0, 1.0, 2.0  
+  };
+
+  ::exahype2::fd::applySommerfeldConditions(
+    [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+    ) -> double {
+        return 2.0;
+    },
+    [&](
+        double * __restrict__                        Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH
+    ) -> void {
+      Q[0] = 0.0;
+      Q[1] = 1.0;
+    },
+    {-1.0,0.0,0.0}, //face center
+    {0.05,0.05,0.05}, //patch size (in length)
+    1.0, //t
+    0.01, //dt
+    2, //cell number per axis in patch
+    3, //overlap
+    2, //unknowns number
+    0, //auxiliary
+    0, //facenumber
+    {0.0,0.0,0.0}, //origin
+    Qold2,
+    Qnew2
+  );
+
+  //std::cout<<std::setprecision(8);
+  /*std::cout<<"external layers along negative"<<std::endl;
+    for (int i=0;i<4;i++){
+      for (int j=2;j>=0;j--){
+        std::cout<<Qnew2[i*12+j*2] << " ";
+        std::cout<<Qnew2[i*12+j*2+1] << " ";
+      }
+      std::cout<<"\n";
+  }*/
 
   //validateNumericalEquals( 1.0,  2.0 );//
 }
