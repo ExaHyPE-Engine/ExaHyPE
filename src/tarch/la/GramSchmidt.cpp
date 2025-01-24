@@ -17,7 +17,7 @@ void tarch::la::modifiedGramSchmidt (
     for (int i=0; i < A.rows(); i++){
       R(k,k) += std::pow(A(i,k), 2);
     }
-    if (R(k, k) > std::numeric_limits<float>::min()){
+    if (tarch::la::greater(R(k, k), 0.0)){
       
       R(k,k) = std::sqrt(R(k,k));
       // Normalize k-th column of matrix Q

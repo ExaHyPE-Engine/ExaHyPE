@@ -12,7 +12,7 @@ void tarch::la::backSubstitution(
     for(int i = k+1; i < R.cols(); i++){
       x[k] -= R(k, i)*x[i];
     }
-    if (R(k, k) < -std::numeric_limits<float>::min() or R(k, k) > std::numeric_limits<float>::min()){
+    if (tarch::la::smaller(R(k, k), 0.0) or tarch::la::greater(R(k, k), 0.0)){
       x[k] = x[k]/R(k, k);
     }
   }
