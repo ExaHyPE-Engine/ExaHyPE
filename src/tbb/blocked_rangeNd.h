@@ -73,7 +73,6 @@ private:
      * (see above). When we use the declaration as below - which is equivalent
      * - all seems to work however.
      */
-    template<std::size_t>
     using dim_range_type = tbb::blocked_range<Value>;
 
 public:
