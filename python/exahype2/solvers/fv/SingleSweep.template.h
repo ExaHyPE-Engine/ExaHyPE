@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
@@ -22,7 +24,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     /**
      * Refinement criterion
      *
-     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
+     * ExaHyPE 2 is guided by a maximum and minimum mesh (patch) size.
      * All (dynamic) AMR is constrained by these values, i.e. if your
      * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
      * automatically refine. If you try to refine further than the

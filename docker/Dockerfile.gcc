@@ -1,10 +1,18 @@
 FROM peanoframework/spack:latest as builder
 
-ARG SPACK_ENV_FILE=spack/compilers/gcc/spack.yaml
-
 WORKDIR /opt/spack-environment
-COPY ${SPACK_ENV_FILE} spack.yaml
-RUN . /opt/spack/share/spack/setup-env.sh && spack env activate . && spack concretize && spack install --fail-fast && spack gc -y && spack clean -a && spack compiler find
+
+COPY spack/compilers/gcc/spack.yaml spack.yaml
+
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack compiler find && \
+    spack env activate . && \
+    spack external find && \
+    spack concretize && \
+    spack install --fail-fast && \
+    spack gc -y && \
+    spack clean -a
+
 RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > activate.sh
 
 RUN { \
@@ -21,6 +29,9 @@ COPY --from=builder /opt/spack-environment /opt/spack-environment
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/views /opt/views
 COPY --from=builder /entrypoint.sh /entrypoint.sh
+
+COPY requirements.txt requirements.txt
+RUN . /entrypoint.sh && pip install -r requirements.txt && rm requirements.txt
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]
