@@ -2,7 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
 
-class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCodeSnippets ):
+
+class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCodeSnippets):
   """
   Code snippet generator for fixed time stepping in the Runge-Kutta schemes
   """
@@ -14,19 +15,19 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   if (
     tarch::mpi::Rank::getInstance().isGlobalMaster()
     and
-    (_maxVolumeH>0.0 or _maxVolumeHThisTimeStep>0.0)
+    (_maxVolumeH > 0.0 or _maxVolumeHThisTimeStep > 0.0)
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minVolumeHThisTimeStep << " (volume size)");
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)" );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep(...)", "t            = " << _minTimeStampThisTimeStep);
+    logInfo("startTimeStep(...)", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("startTimeStep(...)", "h_{min}      = " << _minVolumeHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep(...)", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep(...)", "lambda_{max} = " << _maxEigenvalue);
   }
 
-  if ( isFirstGridSweepOfTimeStep() ) {
+  if (isFirstGridSweepOfTimeStep()) {
     _maxEigenvalue = 0.0;
   }
 """
@@ -47,8 +48,8 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
       if (std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize)) {
         ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize > 0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
       }
-      if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-        logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation");
+      if (::tarch::la::smallerEquals(_admissibleTimeStepSize, 0.0, 1e-10)) {
+        logWarning("finishTimeStep()", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation");
       }
     }
 """

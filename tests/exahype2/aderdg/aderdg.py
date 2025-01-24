@@ -49,8 +49,8 @@ parser.add_argument(
     "--p",
     dest="polynomials",
     type=int,
-    default=0,
-    help="Polynomial type, 0 is gauss-legendre, 1 is gauss-lobatto",
+    default=1,
+    help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
 )
 parser.add_argument(
     "-m", "--mode", dest="mode", default="release", help="|".join(modes.keys())
@@ -124,9 +124,9 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
         output_file_name="Error_" + scenario.__class__.__name__,
     )
 
-project.set_output_path("solutions")
-
 project.add_solver(solver)
+
+project.set_output_path("solutions")
 
 scenario.set_global_simulation_parameters(project)
 
@@ -135,7 +135,11 @@ project.set_load_balancing(
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
-peano4_project = project.generate_Peano4_project("False")
-# peano4_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+project = project.generate_Peano4_project("False")
+project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-peano4_project.build(make_clean_first=True)
+project.build(make_clean_first=True)
+
+print(args)
+print(solver)
+print(project)
