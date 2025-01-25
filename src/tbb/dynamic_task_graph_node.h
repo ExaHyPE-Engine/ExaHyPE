@@ -9,6 +9,7 @@
 #include <functional>
 #include <set>
 #include <memory>
+#include <string>
 
 
 namespace tbb {
@@ -36,6 +37,19 @@ namespace tbb {
        */
       dynamic_task_graph_node( std::function<void()> functor );
 
+      /**
+       * Second parameter will be ignored if you work without debugg info
+       */
+      dynamic_task_graph_node( std::function<void()> functor, const std::string& task_description );
+
+      /**
+       * You can copy a task graph node after it has been submitted. If you do
+       * so before, there might be two copies of this one task graph node, and
+       * they both might add in-dependencies independently. You might even
+       * submit this handle twice.
+       *
+       * Also consult dynamic_task_graph::put() which
+       */
       dynamic_task_graph_node( const dynamic_task_graph_node&  node );
 
       /**
@@ -61,6 +75,8 @@ namespace tbb {
        */
       bool is_submitted() const;
 
+      std::string to_string() const;
+
     private:
       std::function<void()>                              _functor;
 
@@ -78,6 +94,10 @@ namespace tbb {
        * use shared pointers here.
        */
       std::vector< std::shared_ptr<dynamic_task_graph_spawned_node> >  _in_dependency;
+
+      #if TBB_USE_DEBUG>0
+      std::string  _task_description;
+      #endif
   };
 }
 

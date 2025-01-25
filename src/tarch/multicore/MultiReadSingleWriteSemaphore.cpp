@@ -2,6 +2,9 @@
 #include "tarch/Assertions.h"
 
 
+#if !defined(SharedTBB) and !defined(SharedTBBExtension)
+
+
 tarch::multicore::MultiReadSingleWriteSemaphore::MultiReadSingleWriteSemaphore(bool highPriorityToWrites):
   _highPriorityToWrites(highPriorityToWrites),
   _writeAccessAcquired(false),
@@ -85,3 +88,6 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalWriteSection(
   _writeAccessAcquired = false;
   _semaphore.leaveCriticalSection();
 }
+
+#endif
+
