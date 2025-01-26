@@ -21,7 +21,7 @@ namespace tarch {
 /**
  * Read/write Semaphore
  *
- * Semaphore where many people can get write access concurrently but only
+ * Semaphore where many people can get read access concurrently but only
  * one can write. If the write lock is on, no reads are allowed.
  *
  * We offer two realisation variants of the semaphore: The default variant

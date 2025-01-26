@@ -17,7 +17,11 @@ namespace {
 
   /**
    * We need this counter not for reporting (even though it is useful there),
+<<<<<<< HEAD
    * but to find out if it is save to grow the memory region that we use to
+=======
+   * but to find out if it is safe to grow the memory region that we use to
+>>>>>>> refs/remotes/origin/particles
    * administer all dependencies.
    *
    * @see canServeDependencyEntry()
