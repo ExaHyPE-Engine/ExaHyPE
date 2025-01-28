@@ -72,7 +72,8 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     3, //facenumber
     {0.0,0.0,0.0}, //origin
     Qold,
-    Qnew
+    Qnew,
+    -1
   );
 
 
@@ -132,7 +133,8 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     0, //facenumber
     {0.0,0.0,0.0}, //origin
     Qold2,
-    Qnew2
+    Qnew2,
+    -1
   );
 
   //std::cout<<std::setprecision(8);
