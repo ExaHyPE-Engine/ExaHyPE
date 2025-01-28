@@ -58,6 +58,10 @@ if __name__ == "__main__":
     parser.add_argument("-so",   "--second-order",    dest="SO_flag",     default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
     parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp", "matrix", "second_order"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "matrix", "second_order" ], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-restart", "--restart-timestamp",   dest="restart_timestamp",    default=0.0, type=float,  help="specify the timestamp you would like to restart. The first checkpointed timestamp will be used to restart the simulation. Default is 0.0 (switch off)" )
+    parser.add_argument("-checkdir", "--checkpoint-directory", dest="checkpoint_path",     type=str, default="./",  help="specify where the code read the checkpoint files FROM, default is the same directory of output above." )
+    parser.add_argument("-clt",  "--checkpoint-step-size",  dest="checkpoint_step_size",  type=float, default=1.0,     help="checkpoint step size (0 to switch it off)" )
+
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -413,7 +417,8 @@ if __name__ == "__main__":
       my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = CCZ4Helper.get_body_of_SommerfeldCondition(
                                                                                   args.scenario,
                                                                                   my_solver._unknowns,
-                                                                                  my_solver._auxiliary_variables)
+                                                                                  my_solver._auxiliary_variables,
+                                                                                  args.restart_timestamp)
 
     solverconstants=""
 
@@ -467,8 +472,20 @@ if __name__ == "__main__":
       args.end_time,                 # end time
       args.plot_start_time, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
-      8  # plotter precision
+      8,  # plotter precision
+      first_checkpoint_time_stamp=0,
+      time_in_between_checkpoints=args.checkpoint_step_size
     )
+
+    if not args.restart_timestamp==0.0:
+      if not args.checkpoint_path=="./":
+        cpath=args.checkpoint_path
+      elif not args.path=="./":
+        cpath=args.path
+      else:
+        cpath="./"
+      project.set_restart_from_checkpoint(expected_restart_timestamp=args.restart_timestamp, checkpoint_path=cpath) 
+
     userinfo.append(("plot start time: "+str(args.plot_start_time)+", plot step size: "+str(args.plot_step_size),None))
     userinfo.append(("Terminal time: "+str(args.end_time),None))
 
@@ -651,7 +668,9 @@ if __name__ == "__main__":
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
     if not args.add_tracer==0:
-        userinfo.append(("tracer output file: "+args.path+"Tracer-test", None))
+      userinfo.append(("tracer output file: "+args.path+"Tracer-test", None))
+    if not args.restart_timestamp==0.0:
+      userinfo.append(("the code will restart from the first checkpoint after timestamp "+str(args.restart_timestamp), None))
     if len(userinfo) >0:
         print("The building information:")
         for msg, exception in userinfo:
