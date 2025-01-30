@@ -56,7 +56,7 @@ class UpdateParticleMarker(ActionSet):
     self.d = {}
     self.d[ "PARTICLE" ]                    = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]         = particle_set.name
-    self.d[ "MARKER_NAME" ]                 = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+    self.d[ "MARKER_NAME" ]                 = peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
        particle_set.name
     )
     self._automatically_set_marker_in_leave_cell = automatically_set_marker_in_leave_cell
@@ -91,6 +91,9 @@ class UpdateParticleMarker(ActionSet):
       }
       return false;
     }
+    #if PeanoDebug>0
+    , "update-particle-marker"
+    #endif
   );
   
   tarch::multicore::spawnTask( newTask, std::set<int>{::swift2::flatten(taskNumberToBeUsed)}, ::swift2::flatten(taskNumberToBeUsed) );

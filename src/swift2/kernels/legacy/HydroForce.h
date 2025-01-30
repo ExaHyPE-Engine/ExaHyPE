@@ -36,17 +36,6 @@ namespace swift2 {
       }
 
       /**
-       * @todo No masking yet
-       */
-      template <typename Particle>
-      void prepareHydroForceWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        prepareHydroForce(marker, localParticle);
-      }
-
-      /**
        * @brief Reset acceleration fields of a particle
        *
        * Resets all hydro acceleration and time derivative fields in preparation

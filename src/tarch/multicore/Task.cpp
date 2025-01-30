@@ -50,13 +50,35 @@ bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*devi
   return true;
 }
 
-tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(int taskType, int priority, const std::function<bool()>& taskFunctor):
-  Task(taskType, priority),
-  _taskFunctor(taskFunctor) {
+std::string tarch::multicore::Task::toString() const {
+  return "<no-description-available>";
 }
+
+tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
+    int taskType,
+    int priority,
+    const std::function<bool()>& taskFunctor
+    #if PeanoDebug>0
+    , const std::string&           taskDescription
+    #endif
+  ):
+  Task(taskType, priority),
+  _taskFunctor(taskFunctor)
+  #if PeanoDebug>0
+  , _taskDescription(taskDescription)
+  #endif
+{}
 
 bool tarch::multicore::TaskWithCopyOfFunctor::run() {
   return _taskFunctor();
+}
+
+std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
+  #if PeanoDebug>0
+  return _taskDescription;
+  #else
+  return "";
+  #endif
 }
 
 tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor):
@@ -66,4 +88,15 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskTyp
 
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
   return _taskFunctor();
+}
+
+tarch::multicore::EmptyTask::EmptyTask(int priority):
+  Task(Task::DontFuse, priority) {}
+
+bool tarch::multicore::EmptyTask::run() {
+  return false;
+}
+
+std::string tarch::multicore::EmptyTask::toString() const {
+  return "empty";
 }
