@@ -18,6 +18,7 @@ namespace {
   /**
    * We need this counter not for reporting (even though it is useful there),
    * but to find out if it is safe to grow the memory region that we use to
+   * administer task numbers.
    *
    * @see canServeDependencyEntry()
    */
