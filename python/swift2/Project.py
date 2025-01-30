@@ -540,10 +540,10 @@ levels.
                     current_species_set.name
                 )
             )
-            cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(
+            cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(
                 current_species_set.name
             )
-            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
+            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_vertex_marker(
                 task_name=current_species_set.name,
                 full_qualified_enumerator_type="::swift2::TaskEnumerator",
                 enumerator_include=""" #include "swift2/TaskEnumerator.h" """,

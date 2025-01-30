@@ -21,18 +21,6 @@ from .Sequential import (
 )
 
 
-from .TaskTree import (
-    particle_steps_onto_task_tree_multiscale_sort_scattered_memory,
-    particle_steps_onto_task_tree_bucket_sort_scattered_memory,
-    particle_steps_onto_task_tree_multiscale_sort_coalesced_memory,
-    particle_steps_onto_task_tree_bucket_sort_coalesced_memory,
-    initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory,
-    initialisation_steps_onto_task_tree_bucket_sort_scattered_memory,
-    initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory,
-    initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory,
-)
-
-
 from .TaskGraph import (
     particle_steps_onto_task_graph_multiscale_sort_scattered_memory,
     particle_steps_onto_task_graph_bucket_sort_scattered_memory,
@@ -42,4 +30,16 @@ from .TaskGraph import (
     initialisation_steps_onto_task_graph_bucket_sort_scattered_memory,
     initialisation_steps_onto_task_graph_multiscale_sort_coalesced_memory,
     initialisation_steps_onto_task_graph_bucket_sort_coalesced_memory,
+)
+
+
+from .MultisweepTaskGraph import (
+    particle_steps_onto_multisweep_task_graph_multiscale_sort_scattered_memory,
+    particle_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory,
+    particle_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory,
+    particle_steps_onto_multisweep_task_graph_bucket_sort_coalesced_memory,
+    initialisation_steps_onto_multisweep_task_graph_multiscale_sort_scattered_memory,
+    initialisation_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory,
+    initialisation_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory,
+    initialisation_steps_onto_multisweep_task_graph_bucket_sort_coalesced_memory,
 )
