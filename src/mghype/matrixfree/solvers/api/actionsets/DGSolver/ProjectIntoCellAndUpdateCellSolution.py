@@ -32,6 +32,12 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
         fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
     }
 
+    // update global residual before multiplying by the preconditioner
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
+      double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
+    }
+
     // multiply by "smoother" / preconditioner
     fineGridCell{{SOLVER_NAME}}.setResidual(
       repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) 
@@ -44,7 +50,6 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
       fineGridCell{{SOLVER_NAME}}.setSolution( i,
         fineGridCell{{SOLVER_NAME}}.getSolution( i ) + du
       );
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
       repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
       repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
     }
