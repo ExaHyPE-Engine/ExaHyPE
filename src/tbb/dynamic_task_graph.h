@@ -10,8 +10,9 @@
 #include <functional>
 #include <set>
 #include <tbb/task_arena.h>
-#include <oneapi/tbb/task_arena.h>
+#include <oneapi/tbb/task_group.h>
 #include <oneapi/tbb/spin_mutex.h>
+#include <oneapi/tbb/spin_rw_mutex.h>
 #include <oneapi/tbb/concurrent_unordered_set.h>
 
 
@@ -37,13 +38,13 @@ namespace tbb {
  * these attempts will be successful.
  *
  * Therefore, this extension is always shipped with Peano, and it is
- * automatically built and added once you translate Peano with --with-tbb_extension.
- * The outcome will end
+ * automatically built and added once you translate Peano with
+ * ``--with-multithreading=tbb_extension``. The outcome will end
  * up in a library called tbb_extension.a, tbb_extension_debug.a or
  * tbb_extension_trace.a. This means that you have to add
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * --with-tbb LDFLAGS=-Lsrc/tb LIBS=-ltbb_extension
+ * --with-multithreading=tbb LDFLAGS=-Lsrc/tbb LIBS=-ltbb_extension
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * to your build. Peano's autotools configuration will do this for you.
@@ -51,14 +52,11 @@ namespace tbb {
  *
  * ## Compatibility
  *
- * You can also gradually enable certain features. To do so, you have to compile
- * with tbb_exension, but then you can manually (via -D flags) define
+ * You can also enable certain features individually. To do so, you have to
+ * compile with tbb_exension, but then you can manually (via -D flags) define
  *
- * - TBB_USE_TASK_GROUP_PREVIEW
- *
- * The n-dimensional range in return is the same as submitted to the TBB
- * standard, i.e. it does not matter which one you use. It is also only
- * a header, so there cannot be any linker issues.
+ * - TBB_USE_TASK_GROUP_PREVIEW to try out TBB's dynamic task group handling
+ * - TBB_PREVIEW_BLOCKED_RANGE_ND to try out TBB's n-dimensional ranges.
  *
  *
  * ## Code usage
@@ -152,7 +150,7 @@ namespace tbb {
          *   user's responsibility to ensure that the arena is valid.
          */
         dynamic_task_graph(
-          ::oneapi::tbb::task_arena&      arena
+          ::oneapi::tbb::task_group&      arena
         );
 
         /**
@@ -166,7 +164,7 @@ namespace tbb {
          * immediately or be referenced later on.
          *
          * Once you have submitted a node, it becomes read-only, i.e. you
-         * cannot add any further dependencies to it. But you can still copy
+         * cannot add any further in-dependencies to it. But you can still copy
          * it or you can even delete the object. The ownership of the
          * underlying "real" task now resides within the dynamic_task_graph
          * object.
@@ -189,17 +187,28 @@ namespace tbb {
          *
          * ## Implementation
          *
-         * 1. Create a new spawned task. This is a shared pointers.
-         * 2. Loop over all in-dependencies. For each one, look if this task
-         *    still does exist. If so, lock it and add a forward reference to
-         *    the newly created spawned task. Also increase the number of
-         *    in-dependencies to mark the new task as not ready yet.
+         * 1. Create a new spawned task. This is a shared pointer.
+         * 2. Loop over all in-dependencies. For each one for which we find an
+         *    entry in the graph, first of all lock it. If it has already
+         *    terminated, unlock the semaphore and delete it. This is kind of
+         *    an on-the-fly garbage collection. Otherwise, the task obviously
+         *    has not yet finished, so we increase the number of our
+         *    in-dependencies to mark the new task has to complete before we
+         *    start ourselves, and we add ourselves to the other task's
+         *    out dependencies.
          * 3. Insert task into set of pending tasks.
          * 4. Release semaphore on new task, so all other tasks which feed into
          *    this one can inform it about their termination from now on.
          * 5. Reduce the task's in-counter by one. The constructor of
          *    dynamic_task_graph_spawned_node always increments this counter
          *    artificially by one to avoid that it is released too soon.
+         *
+         * We always have to increment the task dependency counter before we
+         * actually insert the new task, as the predecessor migth literally
+         * just now be about to finish and hence immediately unlock our own
+         * task while we still construct its input dependencies. By incrementing
+         * first, we are on the safe side that our task will not gallop ahead.
+         *
          */
         void put(dynamic_task_graph_node& node );
 
@@ -217,8 +226,10 @@ namespace tbb {
          *
          * @param node Task to wait for. This task has to be submitted.
          *   Otherwise, we trigger an assertion.
+         *
+         * @see wait_for_all()
          */
-        void wait( const dynamic_task_graph_node& node );
+        void wait( dynamic_task_graph_node node );
 
         /**
          * Wait for set of nodes
@@ -228,8 +239,26 @@ namespace tbb {
         /**
          * Wait for all tasks to finish
          *
-         * This drains the graph, i.e. size()==0 will hold once the function
-         * terminates.
+         * This is a brute force method which has to be used with care. It
+         * strongly synchronises, and it is not clear if it can deadlock if
+         * multiple threads invoke it at the same time.
+         *
+         * The implementation is close to trivial:
+         *
+         * - We hand over the task responsibility to the task group, so the
+         *   task group can process some of its ready tasks.
+         * - We remove all of those tasks which are now flagged as ready.
+         * - We jump back to the start (iteration) if there are still pending
+         *   tasks in the queue.
+         *
+         * It seems that wait() on a task group returns immediately if there
+         * are no further tasks pending in there. This is very reasonable yet
+         * might mean that there are still tasks being processed at this point.
+         * They might in return not have released any successor tasks, i.e.
+         * there might still be some tasks in the queue that are marked as
+         * submitted and have not yet been released as their in dependency
+         * counter has not been decreased yet. Therefore, we have to loop.
+         *
          */
         void wait_for_all();
 
@@ -240,14 +269,30 @@ namespace tbb {
          */
         std::size_t size() const;
       private:
-        ::oneapi::tbb::task_arena&      _arena;
+        ::oneapi::tbb::task_group&      _task_group;
 
-        using SpawnedTaskMutex = ::oneapi::tbb::spin_mutex;
+        /**
+         * I originally used
+         * 
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * using SpawnedTaskMutex = ::oneapi::tbb::spin_mutex;
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * 
+         * but it is absolutely crucial that the lock for the
+         * spawned tasks does not become a bottleneck.
+         */
+        using SpawnedTaskMutex = ::oneapi::tbb::spin_rw_mutex;
         SpawnedTaskMutex       _spawned_task_mutex;
 
         /**
          * See documentation of dynamic_task_graph_spawned_node for a
          * discussion why we have to use smart pointers here.
+         * 
+         * Just to reiterate the core message why we need this: A user
+         * creates an instance of a task, i.e. dynamic_task_graph_node.
+         * Once submitted, this node holds a (smart) pointer to a task,
+         * and then is allowed to throw the node away. So we have to 
+         * safe the submitted task!
          */
         using SpawnedTasksContainer = std::set< std::shared_ptr<dynamic_task_graph_spawned_node> >;
 
@@ -256,6 +301,13 @@ namespace tbb {
          */
         SpawnedTasksContainer _spawned_tasks;
 
+        /**
+         * Remove all completed task
+         *
+         * Almost a garbage collection over the tasks that are complete. This
+         * makes follow up traversals of the _spawned_tasks container faster.
+         * The routine is a helper for the waits.
+         */
         void clean_up_completed_tasks();
   };
 }

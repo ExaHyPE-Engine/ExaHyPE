@@ -24,7 +24,7 @@ class Cleanup(ActionSet):
         self.d["PARTICLES_CONTAINER"] = particle_set.name
         self.d[
             "MARKER_NAME"
-        ] = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        ] = peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             particle_set.name
         )
 

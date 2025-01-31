@@ -15,12 +15,12 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_TaskTree = "task-tree"
 Parallelisation_TaskGraph = "task-graph"
+Parallelisation_MultisweepTaskGraph = "multisweep-task-graph"
 ParallelisationVariants = [
     Parallelisation_DomainDecomposition,
-    Parallelisation_TaskTree,
     Parallelisation_TaskGraph,
+    Parallelisation_MultisweepTaskGraph,
 ]
 
 Storage_Scattered = "scattered"
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         dest="trees",
         default=0,
         type=int,
-        help="Number of trees to be used",
+        help="Number of trees (subdomains) rank rank (0 uses all threads)",
     )
     parser.add_argument(
         "-et",
@@ -146,8 +146,8 @@ if __name__ == "__main__":
         "--particles-per-cell",
         dest="particles_per_cell",
         type=int,
-        default=200,
-        help="Particles per cell (200 is default)",
+        default=100,
+        help="Particles per cell. If we have x particles, we will have 2^d*x particle comparisons on average per cell, as we compare to neighbouring half cells as well",
     )
     parser.add_argument(
         "-pd",
@@ -252,7 +252,7 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_TaskTree
+        args.realisation.split(".")[0] == Parallelisation_MultisweepTaskGraph
         and args.realisation.split(".")[1] == Storage_Scattered
         and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
@@ -263,18 +263,18 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_TaskTree
+        args.realisation.split(".")[0] == Parallelisation_MultisweepTaskGraph
         and args.realisation.split(".")[1] == Storage_Scattered
         and args.realisation.split(".")[2] == Sorting_BucketSort
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_task_tree_bucket_sort_scattered_memory
+            swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_task_tree_bucket_sort_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_TaskTree
+        args.realisation.split(".")[0] == Parallelisation_MultisweepTaskGraph
         and (
             args.realisation.split(".")[1] == Storage_ContinuousPerVertex
             or args.realisation.split(".")[1] == Storage_GlobalContinuous
@@ -282,13 +282,13 @@ if __name__ == "__main__":
         and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_coalesced_memory
+            swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_TaskTree
+        args.realisation.split(".")[0] == Parallelisation_MultisweepTaskGraph
         and (
             args.realisation.split(".")[1] == Storage_ContinuousPerVertex
             or args.realisation.split(".")[1] == Storage_GlobalContinuous

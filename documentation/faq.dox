@@ -247,6 +247,11 @@ undefined reference to for_write_seq_list
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
     might be available if you have no numpy.
 
+- ***The formatting scripts yields error messages***. Remove the .formatting_python_env 
+  directory and re-run the format.py script. Sometimes, errors can occur if the
+  system python libraries get updated or the user has altered their pythonpath 
+  (which is why the PYTHONPATH variable is best left unmodified.) 
+  Removing the .formatting_python_env dir will prompt format.py to re-install all it needs.
 
 # Performance analysis
 
