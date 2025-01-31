@@ -1,33 +1,29 @@
-FROM peanoframework/spack:latest
+FROM peanoframework/spack:latest as builder
 
-WORKDIR /exahype2
+WORKDIR /opt/spack-environment
 
-RUN wget --progress=bar:force:noscroll https://gitlab.lrz.de/hpcsoftware/Peano/-/archive/infrastructure-cmake/Peano-p4.tar.gz && \
-tar -xvf Peano-p4.tar.gz && \
-mv Peano-p4/tutorials/exahype2* tutorials && \
-mv Peano-p4/applications/exahype2* applications && \
-mv Peano-p4/benchmarks/exahype2* benchmarks && \
-mv Peano-p4/spack /opt/spack-peano && \
-rm -rf Peano-p4* && \
-spack repo add /opt/spack-peano
+COPY spack/repo.yaml .
+COPY spack/packages/exahype2 packages/exahype2
+COPY tests/exahype2/ /exahype2/tests
+COPY tutorials/exahype2/ /exahype2/tutorials
+COPY applications/exahype2/ /exahype2/applications
+COPY benchmarks/exahype2/ /exahype2/benchmarks
 
-RUN mkdir /opt/spack-environment \
-&&  (echo spack: \
-&&   echo '  packages:' \
-&&   echo '    all:' \
-&&   echo '      target: [x86_64]' \
-&&   echo '' \
-&&   echo '  specs:' \
-&&   echo '  - exahype2+omp' \
-&&   echo '' \
-&&   echo '  concretizer:' \
-&&   echo '    unify: true' \
-&&   echo '  config:' \
-&&   echo '    install_tree: /opt/software' \
-&&   echo '  view: /opt/views/view') > /opt/spack-environment/spack.yaml
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack env create -d . && \
+    spack env activate -p . && \
+    spack config add packages:all:target:[x86_64] && \
+    spack config add config:install_tree:/opt/software && \
+    spack config add concretizer:unify:true && \
+    spack external find && \
+    spack repo add . && \
+    spack add exahype2 && \
+    spack concretize --reuse && \
+    spack install --fail-fast && \
+    spack gc -y && \
+    spack clean -a
 
-RUN . /opt/spack/share/spack/setup-env.sh && cd /opt/spack-environment && spack env activate . && spack concretize -f && spack install --fail-fast && spack gc -y && spack clean -a
-RUN . /opt/spack/share/spack/setup-env.sh && cd /opt/spack-environment && spack env activate --sh -d . > activate.sh
+RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > activate.sh
 
 RUN { \
       echo '#!/bin/sh' \
@@ -36,6 +32,15 @@ RUN { \
     } > /entrypoint.sh \
 && chmod a+x /entrypoint.sh \
 && ln -s /opt/views/view /opt/view
+
+FROM peanoframework/base:latest
+
+COPY --from=builder /exahype2 /exahype2
+COPY --from=builder /opt/spack-environment /opt/spack-environment
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /entrypoint.sh /entrypoint.sh
+
+WORKDIR /exahype2
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]

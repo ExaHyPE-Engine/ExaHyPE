@@ -10,19 +10,13 @@ Stage: build
   cp /spack.yaml .
 
   . /opt/spack/share/spack/setup-env.sh
+  spack compiler find
+  spack -e . external find
   spack -e . concretize
-  spack -e . install
+  spack -e . install --fail-fast
   spack gc -y
   spack clean
-  spack compiler find
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
-
-  . /opt/spack-environment/environment_modifications.sh
-  curl -L "https://developer.codeplay.com/api/v1/products/download?product=oneapi&variant=nvidia&version=2024.1.0&filters[]=12.0&filters[]=linux" -o nvidia-plugin.sh
-  curl -L "https://developer.codeplay.com/api/v1/products/download?product=oneapi&variant=amd&version=2024.1.0&filters[]=5.4.3&filters[]=linux" -o amd-plugin.sh
-  bash nvidia-plugin.sh --install-dir $(spack location -i intel-oneapi-compilers) -y
-  bash amd-plugin.sh --install-dir $(spack location -i intel-oneapi-compilers) -y
-  rm amd-plugin.sh && rm nvidia-plugin.sh
 
 Bootstrap: docker
 From: peanoframework/base:latest
@@ -31,6 +25,9 @@ Stage: final
 %environment
   TZ=UTC
   DEBIAN_FRONTEND=noninteractive
+
+%files
+  requirements.txt /requirements.txt
 
 %files from build
   /opt/spack-environment /opt
@@ -41,6 +38,8 @@ Stage: final
 %post
   export TZ=UTC
   export DEBIAN_FRONTEND=noninteractive
+
+  . /opt/spack-environment/environment_modifications.sh && pip install -r /requirements.txt && rm /requirements.txt
 
   # Symlink the old view location
   ln -s /opt/views/view /opt/view

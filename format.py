@@ -113,13 +113,16 @@ def check_black(black_cmd):
             print("Checking black formatter runs.")
             print("Running '{}'.".format(cmd))
 
-        run = subprocess.run(
-            cmd,
-            shell=True,
-            stdout=None,
-            check=True,
-            capture_output=True,
-        )
+        try:
+            run = subprocess.run(
+                cmd,
+                shell=True,
+                stdout=None,
+                check=True,
+                capture_output=True,
+            )
+        except Exception as e:
+            print( "Failed to invoke formatter: {} Check that black is available and consult Peano's documentation for information on required packages and settings".format(e) )
 
         # Now check the version
         stdout = run.stdout.decode("UTF-8")
@@ -273,7 +276,8 @@ def setup_venv(peano_root):
 
 
 def get_black_command(peano_root):
-    """
+    """!
+    
     Get the full command used to invoke the python formatter 'black'.
     First get the path to the 'black' executable. It should be in the
     $PEANO_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.

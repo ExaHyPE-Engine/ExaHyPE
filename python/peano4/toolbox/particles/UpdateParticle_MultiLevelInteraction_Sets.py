@@ -122,7 +122,8 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
         """
   {{SET_IMPLEMENTATION}}< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
-  std::vector< int >                            numberOfCoalescedActiveParticlesPerVertex( TwoPowerD );
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
 
   for (int i=0; i<TwoPowerD; i++) {
     numberOfCoalescedActiveParticlesPerVertex[i] = -1;

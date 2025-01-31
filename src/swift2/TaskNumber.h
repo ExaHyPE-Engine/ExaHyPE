@@ -52,7 +52,6 @@ namespace swift2 {
     /**
      * Defines the max indices for each entry in TaskNumber.
      */
-    static const TaskNumber Max;
     static const TaskNumber NoOutDependencies;
 
     std::string toString() const;
@@ -71,6 +70,7 @@ namespace swift2 {
   };
 
   std::string toString(const std::set<TaskNumber>& numbers);
+  std::string toString(const TaskNumber numbers[TwoPowerD]);
 
   /**
    * Alias around method flatten(). I introduced this one so that both the

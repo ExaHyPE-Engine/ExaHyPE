@@ -45,11 +45,24 @@ namespace tbb {
    */
   class dynamic_task_graph_spawned_node {
     public:
-      friend class dynamic_task_graph;
-
       enum class State {
+        /**
+         * Task is submitted but not yet running. Initial state.
+         */
         Submitted,
+
+        /**
+         * Task is now running. The function tbb::dynamic_task_graph_spawned_node::run()
+         * toggles a task from Submitted into Spawned just before it hands the
+         * task over to the underlying task arena.
+         */
         Spawned,
+
+        /**
+         * Once a task has terminated, it toggles to complete. This allows a
+         * wait, for example, to continue. However, it does not mean yet that
+         * we have also notified successors.
+         */
         Complete
       };
 
@@ -75,7 +88,19 @@ namespace tbb {
        */
       dynamic_task_graph_spawned_node(const dynamic_task_graph_spawned_node& ) = delete;
 
+      /**
+       * Decrement the incoming task counter and run if now ready
+       *
+       * We first decrement the incoming task counter. This part has to be
+       * protected with a semaphore, so no two threads can decrement the
+       * task at the same time. While we decrement the task, we can check
+       * if it is ready.
+       *
+       * If a task is ready, we can actually run() it.
+       */
       void incoming_task_has_terminated();
+
+      void add_incoming_task_dependency();
 
       /**
        * Run the task
@@ -114,13 +139,37 @@ namespace tbb {
        * @todo Write something about lazy deletion
        */
       void run();
+
+      /**
+       * Helper routine, which likely will not be there in TBB counterpart
+       */
+      std::string to_string() const;
+
+      /**
+       * @return has successfully added this node. If it returns false, then
+       *   the task represented by this object has already terminated and we
+       *   hence could not add anything anymore.
+       */
+      bool add_successor( std::shared_ptr<dynamic_task_graph_spawned_node> successor );
+
+      bool has_terminated() const;
     private:
-      std::atomic<State>                              _state;
+      State                                           _state;
       std::function<void()>                           _functor;
-      tbb::spin_mutex                                 _semaphore;
+
+      /**
+       * Semaphore over all the dependencies. These are held in a container and
+       * hence need a proper mutex. All other states are realised as atomics to
+       * minimise locking.
+       */
+      tbb::spin_mutex                                 _dependencies_semaphore;
       dynamic_task_graph&                             _task_graph;
       int                                             _number_of_in_dependencies;
       std::vector< std::shared_ptr<dynamic_task_graph_spawned_node> >   _out_dependency;
+
+      #if TBB_USE_DEBUG>0
+      std::string  _task_description;
+      #endif
   };
 
 }

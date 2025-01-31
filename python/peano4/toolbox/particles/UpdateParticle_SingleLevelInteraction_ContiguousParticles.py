@@ -117,9 +117,11 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
         """
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
-  std::list< globaldata::{{ACTIVE_PARTICLE}}* >  activeParticles;
-  std::vector< int >                             numberOfCoalescedActiveParticlesPerVertex( TwoPowerD );
+  std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
+  auto& activeParticles                           = _activeParticles;
   
   for (int i=0; i<TwoPowerD; i++) {
     numberOfCoalescedActiveParticlesPerVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();

@@ -47,10 +47,10 @@
 
  
  The @f$ \ell_{max} @f$ is known a priori.
- So is a @f$ \ell_{min} @f$ which is the minimal distance from any node to the tree's root.
- Throughout the grid construction, @f$ \ell < \ell_{max} @f$ is admissible. 
- Once the tree construction has terminated, we know
- @f$ \ell_{min} \leq \ell(n) \leq \ell_{max} @f$ for each and every node.
+ So is a @f$ \ell_{min} @f$ which is the minimal distance from any leaf node, i.e. unrefined node to the tree's root in the final tree.
+ Throughout the grid construction, @f$ \ell < \ell_{max} @f$ is admissible for an unrefined node, and even @f$ \ell < \ell_{min} \leq \ell_{max} @f will occur early throughout the mesh construction. 
+ Once the tree construction has terminated, we however guarantee
+ @f$ \ell_{min} \leq \ell(n) \leq \ell_{max} @f$ for each leaf.
 
 
  By default, any new node that is added to the tree is assigned to the 
