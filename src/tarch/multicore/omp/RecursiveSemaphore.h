@@ -50,6 +50,8 @@ class tarch::multicore::RecursiveSemaphore {
   public:
     RecursiveSemaphore();
     ~RecursiveSemaphore();
+
+    using Lock = tarch::multicore::RecursiveLock;
 };
 
 #endif

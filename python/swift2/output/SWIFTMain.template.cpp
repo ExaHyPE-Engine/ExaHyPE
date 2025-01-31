@@ -347,8 +347,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::CreateGrid::prepareTraversal();
         repositories::startGridConstructionStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishGridConstructionStep();
         observers::CreateGrid::unprepareTraversal();
+        repositories::finishGridConstructionStep();
         watch.stop();
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -362,8 +362,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::InitialConditions::prepareTraversal();
         repositories::startInitialisationStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishInitialisationStep();
         observers::InitialConditions::unprepareTraversal();
+        repositories::finishInitialisationStep();
         watch.stop();
         initialConditionMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -377,8 +377,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::Plot::prepareTraversal();
         repositories::startPlotStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishPlotStep();
         observers::Plot::unprepareTraversal();
+        repositories::finishPlotStep();
         watch.stop();
         plotMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -393,8 +393,8 @@ void {{NAMESPACE | join("::")}}::step() {
         repositories::startTimeStep();
         repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishIntermediateStep();
         observers::{{SOLVERSTEP_NAMES[0]}}::unprepareTraversal();
+        repositories::finishIntermediateStep();
       }
       break;
     {% for STEP_NUMBER in range(1,SOLVERSTEP_NAMES|length-1) %}
@@ -405,8 +405,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}  observer;
         observers::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}::prepareTraversal();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishIntermediateStep();
         observers::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}::unprepareTraversal();
+        repositories::finishIntermediateStep();
       }
       break;
     {% endfor %}
@@ -417,9 +417,9 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[-1]}}::prepareTraversal();
         repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        observers::{{SOLVERSTEP_NAMES[-1]}}::unprepareTraversal();
         repositories::finishIntermediateStep();
         repositories::finishTimeStep();
-        observers::{{SOLVERSTEP_NAMES[-1]}}::unprepareTraversal();
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -432,8 +432,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}  observer;
         observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::prepareTraversal();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishInitialisationStep();
         observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::unprepareTraversal();
+        repositories::finishInitialisationStep();
         watch.stop();
         initialisationMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -448,8 +448,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::Cleanup::prepareTraversal();
         repositories::startCleanupStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishCleanupStep();
         observers::Cleanup::unprepareTraversal();
+        repositories::finishCleanupStep();
         watch.stop();
         cleanupMeasurement.setValue( watch.getCalendarTime() );
       }
