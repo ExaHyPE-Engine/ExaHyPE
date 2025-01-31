@@ -203,8 +203,9 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  particlesAssociatedWithLocalVertices;
   std::vector< int >                            numberOfLocalParticlesPerVertex( TwoPowerD );
-  std::vector< int >                            numberOfActiveParticlesPerVertex( TwoPowerD );
-  
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
+
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
     // Keep track of number of particles

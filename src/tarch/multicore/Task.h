@@ -135,6 +135,8 @@ namespace tarch {
        *         zero denotes an accelerator.
        */
       virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
+
+      virtual std::string toString() const;
     };
 
     /**
@@ -203,6 +205,10 @@ namespace tarch {
        */
       std::function<bool()> _taskFunctor;
 
+      #if PeanoDebug>0
+      std::string           _taskDescription;
+      #endif
+
     public:
       TaskWithCopyOfFunctor()                             = delete;
       TaskWithCopyOfFunctor(const TaskWithCopyOfFunctor&) = delete;
@@ -214,9 +220,39 @@ namespace tarch {
        *   returns indicator if task has to rerun. See class documentation.
        */
       TaskWithCopyOfFunctor(
-        int taskType, int priority, const std::function<bool()>& taskFunctor);
+        int taskType,
+        int priority,
+        const std::function<bool()>& taskFunctor
+        #if PeanoDebug>0
+        , const std::string&           taskDescription = ""
+        #endif
+      );
 
       virtual bool run() override;
+
+      virtual std::string toString() const override;
+    };
+
+    /**
+     * An empty task
+     *
+     * Empty tasks are useful in many cases to create synchronisation points in
+     * task graphs.
+     */
+    class EmptyTask: public Task {
+      public:
+        EmptyTask() = delete;
+
+        /**
+         * Create empty task
+         *
+         * Every empty task is of the type DontFuse.
+         */
+        EmptyTask(int priority);
+
+        virtual bool run() override;
+
+        virtual std::string toString() const override;
     };
 
     /**

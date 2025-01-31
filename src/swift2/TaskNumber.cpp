@@ -3,10 +3,7 @@
 #include <sstream>
 
 #include "tarch/Assertions.h"
-
-
-const swift2::TaskNumber swift2::TaskNumber::Max{
-  std::numeric_limits<int>::max(), swift2::TaskNumber::TaskAssociation::NumberOfEntries};
+#include "tarch/Enumerator.h"
 
 
 const swift2::TaskNumber swift2::TaskNumber::NoOutDependencies{tarch::multicore::NoOutDependencies, TaskAssociation::TouchVertexFirstTime};
@@ -17,10 +14,11 @@ swift2::TaskNumber::TaskNumber(int number0, TaskAssociation number1):
   _taskAssociation(number1) {
   if (_taskCounter == ::tarch::multicore::NoOutDependencies) {
     *this = NoOutDependencies;
-  } else if (number0 != std::numeric_limits<int>::max()) {
-    assertion1(number0 >= 0 or number0 == tarch::multicore::NoOutDependencies, toString());
+  }
+  else {
+    assertion1(number0 >= 0, toString());
     assertion1(number1 != TaskAssociation::NumberOfEntries, toString());
-    assertion1(number0 <= Max._taskCounter, toString());
+    assertion1(number0 <= std::numeric_limits<int>::max()/ static_cast<int>(swift2::TaskNumber::TaskAssociation::NumberOfEntries), toString());
   }
 }
 
@@ -75,12 +73,22 @@ std::string swift2::TaskNumber::toString() const {
 
 
 tarch::multicore::TaskNumber swift2::TaskNumber::flatten() const {
+  assertionEquals(tarch::multicore::NoOutDependencies,tarch::Enumerator::NoNumber);
   if (_taskCounter == tarch::multicore::NoOutDependencies) {
     return tarch::multicore::NoOutDependencies;
   } else {
-    return _taskCounter * static_cast<int>(Max._taskAssociation)
+    return _taskCounter * static_cast<int>(swift2::TaskNumber::TaskAssociation::NumberOfEntries)
            + static_cast<int>(_taskAssociation);
   }
+}
+
+
+std::string swift2::toString(const TaskNumber numbers[TwoPowerD]) {
+  std::set<TaskNumber> converted;
+  for (int i=0; i<TwoPowerD; i++) {
+    converted.insert( numbers[i] );
+  }
+  return toString(converted);
 }
 
 

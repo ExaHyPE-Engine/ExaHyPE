@@ -14,11 +14,14 @@ namespace tarch {
 }
 
 
+#if defined(SharedTBB) or defined(SharedTBBExtension)
+#include "tarch/multicore/tbb/MultiReadSingleWriteSemaphore.h"
+#else
 
 /**
  * Read/write Semaphore
  *
- * Semaphore where many people can get write access concurrently but only
+ * Semaphore where many people can get read access concurrently but only
  * one can write. If the write lock is on, no reads are allowed.
  *
  * We offer two realisation variants of the semaphore: The default variant
@@ -109,5 +112,8 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
   public:
     MultiReadSingleWriteSemaphore(bool highPriorityToWrites = true);
     ~MultiReadSingleWriteSemaphore();
+
+    using Lock = tarch::multicore::MultiReadSingleWriteLock;
 };
 
+#endif

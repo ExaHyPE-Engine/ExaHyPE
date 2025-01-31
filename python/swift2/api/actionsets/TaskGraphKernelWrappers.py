@@ -5,17 +5,6 @@ import peano4
 import peano4.toolbox.particles
 
 
-def construct_cell_marker_for_tasks():
-    return peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(
-            "Swift2TaskNumber"
-        )
-
-def construct_vertex_marker_for_tasks():
-    return peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
-            "Swift2TaskNumber"
-        )
-
-
 def construct_touch_vertex_first_time_call(
     current_species_set,
     touch_vertex_first_time_kernel,
@@ -26,7 +15,8 @@ def construct_touch_vertex_first_time_call(
     Take the kernel to be used in touch first time and wrap into tasks
     
     As we work with task dependencies, I decided to always spawn tasks, even if
-    these degenerate to empty ones. Otherwise, it just became a nightmare. 
+    these degenerate to empty ones as no particles are associated to a vertex. 
+    Otherwise, it just became a nightmare. 
     Notably note that the kernel is not empty in most cases, as it is enriched
     with Swift dependency tracking anyway.
     
@@ -47,34 +37,57 @@ def construct_touch_vertex_first_time_call(
       
     ## Realisation 
     
-    - Get the task number to be used (corresponding to TouchVertexFirstTime), 
-      and also get the one corresponding to the TouchVertexLastTime. The latter
-      task is not spawned yet, and will not be spawned by this routine, but 
-      we'll gonna need this number further down.
-    - Allocate the set of in dependencies.
-    - We take the parent task numbers and add them to the dependencies. For 
-      this, we rely entirely on the helper function 
-      ::swift2::getVertexNumbersOfParentVertices(). Consult the routine's 
-      documentation for further info.
-    - We make the new vertex task depend on its touch last counterpart. This 
-      way, we avoid that the
-      previous mesh traversal did not synchronise all tasks (task graph 
-      approach) and this vertex task might still be pending.
-
-    The only tricky or unexpected part here is likley the wrap-around 
-    dependency, i.e. the fact that the task depends upon its predecessor
-    from the previous mesh sweep (touchVertexLastTime).
+    - Get the task number to be used (corresponding to TouchVertexFirstTime). 
+    - Allocate the set of in dependencies from coarser level if a multiscale
+      algorithm is used.
+    - Issue task.  
+    
+    If we build up one task graph per algorithmic step, there's no particularly
+    interesting details left: The underlying observer with its action sets will
+    yield a touch first-vertex first-vertex first-cell-vertex last-vertex last
+    sequence. The last "vertex last" event will be followed by a global 
+    waitForAllTasks() call, and therefore we are ready to for the subsequent 
+    mesh sweep. All the "vertex first" calls will use the same task number.
+    The second "vertex first" task therefore will have an in-out dependency
+    on this number.
+    
+    If we roll around, i.e. build up a task graph over multiple mesh sweeps, no
+    such strategy will work, as we have to insert a "vertex last"-"vertex first"
+    dependency in-between any two sweeps. This fact is ignored here and left 
+    to the user. Indeed, consult MultisweepTaskGraph for details on how they 
+    handle these wrap-around dependencies.
+    
+    
+    ## Capture rules of lambda
+    
+    The task bodies as injected by Swift work with the object's attributes and
+    also with references. Both things are not really copied by a capture
+    = clause: The references are copied, but still point to the same, temporary
+    object. The accesses to object attributes are internally mapped onto 
+    this->attribute and hence the pointer this is copied, but not the attribute
+    itself.
+    
+    All of the rules are detailed in
+    https://en.cppreference.com/w/cpp/language/lambda#Lambda_capture.
+    
+    Therefore, we have to explicitly copy the task-relevant attributes, and we 
+    even use an explicit initialiser to do so.
     
     """
     d = {
-        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             current_species_set.name
         ),
         "USE_MULTILEVEL_DEPENDENCIES": use_multilevel_dependencies,
         "TOUCH_VERTEX_FIRST_TIME_KERNEL": touch_vertex_first_time_kernel,
+        "SPECIES_SET_TASK_MARKER_NAME":   peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(current_species_set.name)
     }
     return jinja2.Template(
         """
+  assertion1(
+      fineGridVertex{{MARKER_NAME}}.getNumber()>=0,
+      fineGridVertex{{MARKER_NAME}}.toString()
+  );
   const ::swift2::TaskNumber taskNumberToBeUsed{
       fineGridVertex{{MARKER_NAME}}.getNumber(),
       ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
@@ -89,31 +102,28 @@ def construct_touch_vertex_first_time_call(
   {% else %}
   std::set<::swift2::TaskNumber> inDependencies;  
   {% endif %}
-
-  const ::swift2::TaskNumber taskNumberOfCorrespondingTouchLastTask{
-      fineGridVertex{{MARKER_NAME}}.getNumber(),
-      ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime
-    };
-
-  inDependencies.insert( taskNumberOfCorrespondingTouchLastTask );
-
+  
   logDebug( 
     "touchVertexFirstTime(...)", 
     "create task " << taskNumberToBeUsed.toString() << 
+    " (" << ::swift2::flatten(taskNumberToBeUsed) << ") " <<
     " for " << marker.toString() <<
-    " depends on " << ::swift2::toString(parentTaskNumbers) <<
+    " depends on " << ::swift2::toString(inDependencies) <<
     " with " << assignedParticles.size() << " particles on marker " << marker.toString() 
   );
 
   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
     tarch::multicore::Task::DontFuse,
     tarch::multicore::Task::DefaultPriority,
-    [=,this]()->bool {
+    [=,marker=marker,_spacetreeId=_spacetreeId,assignedParticles=fineGridVertexHydroPartSet,numberOfCoalescedAssignedParticles=numberOfCoalescedAssignedParticles]()->bool {
       {% if TOUCH_VERTEX_FIRST_TIME_KERNEL!=None %}
       {{TOUCH_VERTEX_FIRST_TIME_KERNEL}}
       {% endif %}
       return false;
-    }
+    }    
+    #if PeanoDebug>0
+    , "touch-vertex-first-time:" + marker.toString()
+    #endif
   );
   
   tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
@@ -138,26 +148,38 @@ def construct_touch_cell_first_time_call(
     additional task number for the parent cell if we have multi-level
     dependencies.
     
+
+    ## Capture rules of lambda
+    
+    Please consult the documentation of  construct_touch_vertex_first_time_call().
     
     """
     d = {
-        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             current_species_set.name
         ),
         "USE_MULTILEVEL_DEPENDENCIES":   use_multilevel_dependencies,
         "TOUCH_CELL_FIRST_TIME_KERNEL":  touch_cell_first_time_kernel,
+        "SPECIES_SET_TASK_MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(current_species_set.name)
     }
     return jinja2.Template(
         """
+      assertion1(
+        fineGridCell{{MARKER_NAME}}.getNumber()>=0,
+        fineGridCell{{MARKER_NAME}}.toString()
+      );  
       const ::swift2::TaskNumber taskNumberToBeUsed{
         fineGridCell{{MARKER_NAME}}.getNumber(),
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
       };
       
-      int adjacentResourcesIndices[TwoPowerD];
+      // I originally used [TwoPowerD], but this then is a pointer. Albeit on 
+      // the stack, it will not be copied by the lambda capture below.
+      tarch::la::Vector<TwoPowerD,int> adjacentResourcesIndices;
       std::set<::swift2::TaskNumber> adjacentVertexAndParentTasks;
       for (int i=0; i<TwoPowerD; i++) {
         adjacentResourcesIndices[i] = fineGridVertices{{MARKER_NAME}}(i).getNumber();
+        assertion3(adjacentResourcesIndices[i]==tarch::Enumerator::NoNumber or adjacentResourcesIndices[i]>=0, adjacentResourcesIndices[i], i, marker.toString() );
         adjacentVertexAndParentTasks.insert( ::swift2::TaskNumber{
           fineGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
@@ -184,7 +206,7 @@ def construct_touch_cell_first_time_call(
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
         tarch::multicore::Task::DontFuse,
         tarch::multicore::Task::DefaultPriority,
-        [=,this]()->bool {
+        [=,marker=marker,_spacetreeId=_spacetreeId,localParticles=localParticles,numberOfCoalescedLocalParticlesPerVertex=numberOfCoalescedLocalParticlesPerVertex,activeParticles = _activeParticles,numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex,adjacentResourcesIndices=adjacentResourcesIndices]()->bool {
           ::swift2::TaskEnumerator::lockResources(adjacentResourcesIndices);
         
           {% if TOUCH_CELL_FIRST_TIME_KERNEL!=None %}
@@ -197,17 +219,21 @@ def construct_touch_cell_first_time_call(
           
           return false;
         }
+        #if PeanoDebug>0
+        , "cell:" + marker.toString()
+        #endif
       );  
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentVertexAndParentTasks), ::swift2::flatten(taskNumberToBeUsed) );
     """
     ).render(**d)
 
 
+
 def construct_touch_vertex_last_time_call(
     current_species_set,
     touch_vertex_last_time_kernel,
     use_multilevel_dependencies,
-    alter_particle_position_or_global_state,
+    alter_particle_position_or_interaction_radius,
 ):
     """!
     
@@ -240,19 +266,29 @@ def construct_touch_vertex_last_time_call(
     _pendingDependencies attribute.
     
     
+    ## Capture rules of lambda
+    
+    Please consult the documentation of  construct_touch_vertex_first_time_call().
+    
     """
     d = {
-        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(
             current_species_set.name
         ),
         "USE_MULTILEVEL_DEPENDENCIES":             use_multilevel_dependencies,
-        "ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE": alter_particle_position_or_global_state,
+        "ALTER_PARTICLE_POSITION_OR_INTERACTION_RADIUS": alter_particle_position_or_interaction_radius,
         "TOUCH_VERTEX_LAST_TIME_KERNEL":           touch_vertex_last_time_kernel,
-        "SPECIES_SET_NAME":                        current_species_set.name
+        "SPECIES_SET_NAME":                        current_species_set.name,
+        "SPECIES_SET_TASK_MARKER_NAME":            peano4.toolbox.api.EnumerateCellsAndVertices.construct_marker_name(current_species_set.name)
     }
     return jinja2.Template(
         """
       std::set<::swift2::TaskNumber> inDependencies;
+      
+      assertion1(
+        fineGridVertex{{MARKER_NAME}}.getNumber()>=0,
+        fineGridVertex{{MARKER_NAME}}.toString()
+      );
       
       const ::swift2::TaskNumber taskNumberToBeUsed{
         fineGridVertex{{MARKER_NAME}}.getNumber(),
@@ -274,6 +310,11 @@ def construct_touch_vertex_last_time_call(
           ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime
         } );
       }
+
+      // - for multiscale algorithms, there's the finer indices, which might add to the counter and hence weaken the assertion
+      // - there is at least one proper adjacent cell, i.e. a local one with a valid counter
+      // - the other ones might all be undef, so they enter the set once; or they might be proper indices and increase the count
+      assertion2( inDependencies.size()>=2, marker.toString(), ::swift2::toString(inDependencies) );
       
       logDebug( 
         "touchVertexLastTime(...)", 
@@ -286,12 +327,15 @@ def construct_touch_vertex_last_time_call(
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
         tarch::multicore::Task::DontFuse,
         tarch::multicore::Task::DefaultPriority,
-        [=,this]()->bool {
+        [=,marker=marker,_spacetreeId=_spacetreeId,assignedParticles=fineGridVertexHydroPartSet,numberOfCoalescedAssignedParticles=numberOfCoalescedAssignedParticles]()->bool {
           {% if TOUCH_VERTEX_LAST_TIME_KERNEL!=None %}
           {{TOUCH_VERTEX_LAST_TIME_KERNEL}}
           {% endif %}
           return false;
         }
+        #if PeanoDebug>0
+        , "touch-vertex-last-time:" + marker.toString()
+        #endif
       );
 
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(inDependencies), ::swift2::flatten(taskNumberToBeUsed) );
@@ -299,7 +343,7 @@ def construct_touch_vertex_last_time_call(
       {% if USE_MULTILEVEL_DEPENDENCIES %}
       std::set<::swift2::TaskNumber> parentTasks = getVertexNumbersOfParentVertices(
         marker,
-        coarseGridVertices{{SPECIES_SET_NAME}}EnclaveMeshEntityNumber,
+        coarseGridVertices{{SPECIES_SET_TASK_MARKER_NAME}},
         ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime
       );
       for (auto p: parentTasks) {
@@ -309,14 +353,19 @@ def construct_touch_vertex_last_time_call(
       }
       {% endif %}
       
-      {% if ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE %}
-      constexpr bool alterParticlePositionOrGlobalState = true;
+      {% if ALTER_PARTICLE_POSITION_OR_INTERACTION_RADIUS %}
+      constexpr bool alterParticlePositionOrInteractionRadius = true;
       {% else %}
-      constexpr bool alterParticlePositionOrGlobalState = false;
+      constexpr bool alterParticlePositionOrInteractionRadius = false;
       {% endif %}
 
-      if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrGlobalState ) {
+      if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrInteractionRadius ) {
         tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
+        logDebug(
+          "touchVertexLastTime(...)",
+          "task " << taskNumberToBeUsed.toString() <<
+          " has terminated"
+        );
       }
     """
     ).render(**d)
