@@ -8,6 +8,7 @@ TESTS = src/unittests/UnitTests2d src/unittests/UnitTests3d \
 doc: docs
 
 docs:
+	python3 documentation/convert-jupyter-notebooks.py
 	doxygen documentation/Doxyfile
 
 ACLOCAL_AMFLAGS = -I m4

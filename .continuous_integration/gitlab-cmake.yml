@@ -1,8 +1,17 @@
+# To avoid having to repeat hard links to e.g. the containers everywhere, we make them
+# available with this include statement
 include:
   - .continuous_integration/templates/variables.yml
 
+
+# This file is included from the top-level gitlab-ci file, meaning that this stage is a sub-stage of the
+# main BuildSystem job.
 stages:
   - Compiler
+
+########################################################
+# Define one sub-pipeline per toolchain:
+########################################################
 
 GCC_OpenMP:
   extends: .Variables

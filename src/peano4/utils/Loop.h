@@ -10,19 +10,19 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-#if defined(SharedTBB)
-#include <oneapi/tbb/blocked_range.h>
-#include <oneapi/tbb/blocked_range2d.h>
-#include <oneapi/tbb/blocked_range3d.h>
-#include <oneapi/tbb/parallel_for.h>
 
-  #if defined(TBBExtensionAddRanges)
+#if defined(SharedTBB)
+  #if defined(SharedTBBExtension) and !defined(TBB_PREVIEW_BLOCKED_RANGE_ND)
     #include "tbb/blocked_rangeNd.h"
   #else
-    #define TBB_PREVIEW_BLOCKED_RANGE_ND 1
-    #include <oneapi/tbb/blocked_rangeNd.h>
+    #include <oneapi/tbb/blocked_range.h>
   #endif
+
+  #include <oneapi/tbb/blocked_range2d.h>
+  #include <oneapi/tbb/blocked_range3d.h>
+  #include <oneapi/tbb/parallel_for.h>
 #endif
+
 
 #if defined(SharedSYCL)
 #include "tarch/multicore/sycl/Core.h"

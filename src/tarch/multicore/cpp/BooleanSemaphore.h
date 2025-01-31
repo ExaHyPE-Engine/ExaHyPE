@@ -36,6 +36,8 @@ class tarch::multicore::BooleanSemaphore {
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();
+
+    using Lock = tarch::multicore::Lock;
 };
 
 #endif

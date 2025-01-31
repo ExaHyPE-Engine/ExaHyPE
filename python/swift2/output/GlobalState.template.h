@@ -55,9 +55,15 @@
   void finishInitialConditionsStep();
 
   /**
+   * Finish a time step
+   *
    * Call finishTimeStep() on each individual species and then dump some
    * global information. It is important to call finishTimeStep() first,
    * as it triggers some global reduction.
+   *
+   * In a task-based implementation, it is furthermore absolutely necessary to
+   * call unprepareTraversal() prior to this step, as unprepare synchronises
+   * all the pending tasks and hence consolidates all data.
    */
   void finishTimeStep();
   void finishPlotStep();
