@@ -85,6 +85,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/tbb/multicore.cpp \
 	tarch/multicore/tbb/BooleanSemaphore.cpp \
 	tarch/multicore/tbb/Core.cpp \
+	tarch/multicore/tbb/MultiReadSingleWriteSemaphore.cpp \
 	tarch/multicore/tbb/RecursiveSemaphore.cpp \
 	tarch/multicore/tbb/Tasks.cpp \
 	tarch/multicore/tbb/TaskHandleRepository.cpp \

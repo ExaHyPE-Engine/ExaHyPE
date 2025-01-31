@@ -1,95 +1,60 @@
-#include "config.h"
-
-#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW) and defined(SharedTBB)
-
 #include "TaskHandleRepository.h"
+
+
 #include <cassert>
+#include "tarch/Assertions.h"
+
+#if defined(SharedTBBExtension) or defined(SharedTBB)
 
 
-tarch::multicore::tbb::TaskHandleRepository::TaskHandleRepository()
-    : _handle_container(), _shadowed_handle_container() {}
+#if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+tarch::multicore::tbb::TaskHandleRepository::Handle& tarch::multicore::tbb::TaskHandleRepository::createNewTask() {
+
+}
+#else
+#endif
 
 
-oneapi::tarch::multicore::tbb::task_handle& tarch::multicore::tbb::TaskHandleRepository::include_handle(
-  oneapi::tarch::multicore::tbb::task_handle&& handle,
-  task_handle_number         number
+void tarch::multicore::tbb::TaskHandleRepository::registerTask(
+  Handle*      newTask,
+  TaskNumber   number
 ) {
   HashMap::accessor hash_map_accessor;
   HashMap::accessor shadowed_hash_map_accessor;
 
-  bool task_with_number_has_never_been_created_before  = _handle_container.insert(hash_map_accessor, number);
+  bool task_with_number_has_never_been_created_before  = _taskHandleContainer.insert(hash_map_accessor, number);
 
   if (task_with_number_has_never_been_created_before) {
-    hash_map_accessor->second          = nullptr;
-  }
-  else {
-    bool task_with_number_has_never_been_shadowed_before = _shadowed_handle_container.insert(shadowed_hash_map_accessor, number);
-
-    if (not task_with_number_has_never_been_shadowed_before) {
-      delete shadowed_hash_map_accessor->second;
-    }
-
-    shadowed_hash_map_accessor->second = hash_map_accessor->second;
-    hash_map_accessor->second          = nullptr;
+    delete hash_map_accessor->second;
   }
 
-  hash_map_accessor->second = new task_handle(std::move(handle));
-
-  //__TBB_TRACE_TASK_MEMORIZE_NODE(number,hash_map_accessor->second);
-  return *(hash_map_accessor->second);
+  hash_map_accessor->second = newTask;
 }
 
 
-oneapi::tarch::multicore::tbb::task_handle& tarch::multicore::tbb::TaskHandleRepository::get_node(const task_handle_number& number) {
-  HashMap::accessor hash_map_accessor;
-  __TBB_ASSERT( _handle_container.count(number)==1, std::string( "handle " + std::to_string(number) + " does not exist").c_str() );
-  _handle_container.find(hash_map_accessor,number);
-  return *(hash_map_accessor->second);
-}
-
-
-void tarch::multicore::tbb::TaskHandleRepository::add_dependency( const task_handle_number& new_task_node, const task_handle_number&  number) {
-  if (new_task_node==number) {
-    HashMap::accessor hash_map_accessor_for_previous_task_with_same_number;
-
-    bool theres_a_previous_task_with_this_number = _shadowed_handle_container.find(hash_map_accessor_for_previous_task_with_same_number, number);
-
-    if (theres_a_previous_task_with_this_number) {
-      __TBB_ASSERT( hash_map_accessor_for_previous_task_with_same_number->second!=nullptr, std::string( "no backup of predecessor task " + std::to_string(number) + " available").c_str() );
-      get_node(new_task_node).add_predecessor( *(hash_map_accessor_for_previous_task_with_same_number->second) );
-    }
-  }
-  else {
-    add_dependency( get_node(new_task_node), number );
-  }
-}
-
-
-void tarch::multicore::tbb::TaskHandleRepository::add_dependencies( const task_handle_number& new_task_node, const std::set< task_handle_number >&  in_dependencies ) {
+void tarch::multicore::tbb::TaskHandleRepository::addDependencies( Handle* newTask, const std::set< TaskNumber >&  in_dependencies ) {
   for (auto& p: in_dependencies) {
-    add_dependency( new_task_node, p );
+    addDependency( newTask, p );
   }
 }
 
 
-void tarch::multicore::tbb::TaskHandleRepository::add_dependency( oneapi::tarch::multicore::tbb::task_handle&  new_task_node, const task_handle_number&  number) {
+void tarch::multicore::tbb::TaskHandleRepository::addDependency( Handle* newTask, const TaskNumber&  number) {
   HashMap::accessor hash_map_accessor;
-  if (_handle_container.find(hash_map_accessor, number)) {
-    __TBB_ASSERT( hash_map_accessor->second!=nullptr, std::string( "predecessor task " + std::to_string(number) + " does not exist").c_str() );
-    //__TBB_ASSERT( hash_map_accessor->second->is_submitted(), std::string( "predecessor task " + std::to_string(number) + " is not yet submitted").c_str() );
-    new_task_node.add_predecessor( *(hash_map_accessor->second) );
+  if (_taskHandleContainer.find(hash_map_accessor, number)) {
+    assertionMsg( hash_map_accessor->second!=nullptr, std::string( "predecessor task " + std::to_string(number) + " does not exist").c_str() );
+    #if !defined(SharedTBBExtension) and !defined(TBB_USE_TASK_GROUP_PREVIEW)
+    newTask->add_predecessor( *(hash_map_accessor->second) );
+    #else
+    assertionMsg( hash_map_accessor->second->is_submitted(), std::string( "predecessor task " + std::to_string(number) + " is not yet submitted").c_str() );
+    newTask->add_dependency( *(hash_map_accessor->second) );
+    #endif
   }
 }
 
-
-void tarch::multicore::tbb::TaskHandleRepository::add_dependencies( oneapi::tarch::multicore::tbb::task_handle&  new_task_node, const std::set< task_handle_number >&  in_dependencies ) {
-  for (auto& p: in_dependencies) {
-    add_dependency( new_task_node, p );
-  }
-}
 
 tarch::multicore::tbb::TaskHandleRepository::~TaskHandleRepository() {
-  for (auto& pair : _handle_container) {
+  for (auto& pair : _taskHandleContainer) {
     delete pair.second;
   }
 }

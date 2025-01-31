@@ -13,7 +13,7 @@ UndefinedNumber = -1
 
 
 def construct_marker_name(task_name):
-    return task_name + "EnclaveMeshEntityNumber"
+    return task_name + "MeshNumber"
 
 
 def create_vertex_marker(task_name,
@@ -35,8 +35,8 @@ def create_vertex_marker(task_name,
     mesh:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    cell_marker_for_tasks   = peano4.toolbox.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(current_species_set.name)
-    vertex_marker_for_tasks = peano4.toolbox.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(current_species_set.name)
+    cell_marker_for_tasks   = peano4.toolbox.EnumerateCellsAndVertices.create_cell_marker(current_species_set.name)
+    vertex_marker_for_tasks = peano4.toolbox.EnumerateCellsAndVertices.create_vertex_marker(current_species_set.name)
 
     self._project.datamodel.add_cell(cell_marker_for_tasks)
     self._project.datamodel.add_vertex(vertex_marker_for_tasks)
@@ -45,6 +45,9 @@ def create_vertex_marker(task_name,
     Furthermore, you have to add the use_vertex and use_cell instructions to
     each observer (algorithm step) before you add the action sets to the sets
     in turn.
+    
+    Please note that this marker not only holds an index for the vertex. It 
+    also hosts the markers of the adjacent cells.
 
     """
     dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
@@ -121,7 +124,6 @@ class AssignNumbersToMesh(ActionSet):
         @param task_name: String
           The name of the task (attribute tied to the mesh entity) to be 
           manipulated.
-
 
         """
         self._task_name = task_name
@@ -209,7 +211,7 @@ class AssignNumbersToMesh(ActionSet):
         return "  return std::vector< peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
+        return __name__.replace(".py", "").replace(".", "_") + "_AssignNumbersToMesh"
 
     def user_should_modify_template(self):
         return False
@@ -220,14 +222,14 @@ class AssignNumbersToMesh(ActionSet):
  """
 
 
-#  /**
-#   * Used to administer task numbers
-#   */
-#  tarch::multicore::BooleanSemaphore activeTasksSemaphore;
-#  std::set<int>                      activeTaskNumbers;
-
-
 class ClearNumbersOnMesh(ActionSet):
+    """!
+    
+    Clear all the numbers on the mesh
+    
+    We set all entries to AdjacentCellNumber.
+    
+    """
     def __init__(self, task_name):
         self._task_name = task_name
         pass
@@ -264,7 +266,7 @@ class ClearNumbersOnMesh(ActionSet):
         return "  return std::vector< peano4::grid::GridControlEvent >();\n"
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
+        return __name__.replace(".py", "").replace(".", "_") + "_ClearNumbersOnMesh"
 
     def user_should_modify_template(self):
         return False

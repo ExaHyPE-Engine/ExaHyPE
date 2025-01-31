@@ -18,6 +18,8 @@ namespace tarch {
  * Very simple utility class to build up a global set of numbers on a rank. Is
  * used in various places to create task numbers for example or to enumerate
  * all vertices and cells properly.
+ *
+ * The object is thread-safe, i.e. all modifiers are protected via a semaphore.
  */
 class tarch::Enumerator {
   public:

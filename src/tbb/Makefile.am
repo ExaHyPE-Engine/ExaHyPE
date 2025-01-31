@@ -10,7 +10,6 @@ TBB_SOURCES = \
 	dynamic_task_graph.cpp \
 	dynamic_task_graph_node.cpp \
 	dynamic_task_graph_spawned_node.cpp \
-	dynamic_task_graph_node_repository.cpp \
 	dynamic_task_graph_utils.cpp
 	  
 

@@ -25,6 +25,7 @@
 #include <oneapi/tbb/detail/_config.h>
 #include <oneapi/tbb/detail/_namespace_injection.h>
 #include <oneapi/tbb/detail/_range_common.h>
+#include <oneapi/tbb/detail/_template_helpers.h>
 
 #include <oneapi/tbb/blocked_range.h>
 
@@ -57,17 +58,38 @@ public:
     using value_type = Value;
 
 private:
-    //! Helper type to construct range with N tbb::blocked_range<value_type> objects.
-    template<std::size_t>
-    using dim_range_type = tbb::blocked_range<value_type>;
+    /**
+     * Helper type to construct range with N tbb::blocked_range<value_type> objects.
+     *
+     * The "original" TBB version uses
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~
+     * template<std::size_t>
+     * using dim_range_type = tbb::blocked_range<value_type>;
+     * ~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * but some of our compilers struggle to have this using over a template
+     * employing yet another type that had been declared via a using statement
+     * (see above). When we use the declaration as below - which is equivalent
+     * - all seems to work however.
+     */
+    using dim_range_type = tbb::blocked_range<Value>;
 
 public:
     blocked_rangeNd_impl() = delete;
 
-    //! Constructs N-dimensional range over N half-open intervals each represented as tbb::blocked_range<Value>.
-    blocked_rangeNd_impl(const dim_range_type<Is>&... args) : my_dims{ {args...} } {
+    /**
+     * Newer TBB versions provide a constructor
+     * 
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    blocked_rangeNd_impl(const typename dim_range_type<Is>&... args) : my_dims{ {args...} } {
       __TBB_ASSERT(my_dims.size()==N, "range is not properly initialised" );
     }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * 
+     * We don't use this particular constructor in Peano, but some compilers
+     * struggle with it. Therefore, I just comment it out.
+     */
 
     /**
      *
