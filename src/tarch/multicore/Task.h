@@ -91,10 +91,11 @@ namespace tarch {
       /**
        * Fuse multiple tasks
        *
-       * Fuse the task with a list of further tasks. The routine is guaranteed to
-       * be called only for tasks with the same taskType. So if you carefully
-       * distinguish your tasks, you can downcast all the arguments, as you might
-       * know the real type.
+       * Fuse the task with a list of further tasks. The routine is guaranteed
+       * to be called only for tasks with the same taskType. As long as you
+       * take care that every task type has a unique number, you can downcast
+       * all the objects within otherTasks into the type this virtual function
+       * is called for.
        *
        * This operation is invoked on a task. However, it is also given N=otherTasks.size
        * further tasks of the same type. You have two options now:
