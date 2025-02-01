@@ -20,12 +20,12 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initCellDoF(
   tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
   tarch::la::Vector< Dimensions, int >&         node
 ) {
-  logTraceInWith4Arguments("initCell", x, h, value, rhs);
+  logTraceInWith4Arguments("initCellDoF(...)", x, h, value, rhs);
 
   rhs[0]   = getPointWiseRhs(x);
   value[0] = 0;
 
-  logTraceOutWith4Arguments("initCell", x, h, value, rhs);
+  logTraceOutWith4Arguments("initCellDoF(...)", x, h, value, rhs);
 }
 //! [Set initial guess and rhs]
 
