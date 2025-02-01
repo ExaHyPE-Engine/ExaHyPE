@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
 
   if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("mghype.log-filter")) {
     logWarning(
-      "main()", "no multigrid.log-filter file found or file has been corrupted. Use default logging configuration"
+      "main()", "no mghype.log-filter file found or file has been corrupted. Use default logging configuration"
     );
   }
 
