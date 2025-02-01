@@ -72,6 +72,10 @@ target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoOptions ${GENERATED
 target_include_directories({{EXECUTABLENAME}} PRIVATE ${CMAKE_SOURCE_DIR} ${GENERATED_INCLUDE_DIRS})
 target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_CXXFLAGS})
 
+{% for lib in LIBS.split() if lib.startswith('-L') %}
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE {{ lib[2:] }})
+{% endfor %}
+
 target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Peano4Core{{DIM}}d_${mode_lower})
 
 # Link against additional extension targets, if they exist.

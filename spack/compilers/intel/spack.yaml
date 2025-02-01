@@ -6,7 +6,7 @@ spack:
     - intel-oneapi-mpi@2021.14.1 %gcc
     - intel-oneapi-mkl@2024.2.2 %gcc
     - libxsmm@1.17 +generator %gcc
-    - easi@1.5.0 %gcc
+    - easi@1.5.0 jit=lua %gcc
     - memkind@1.14.0 %gcc
     - openblas@0.3.28 %gcc
     - eigen@3.4.0 %gcc
