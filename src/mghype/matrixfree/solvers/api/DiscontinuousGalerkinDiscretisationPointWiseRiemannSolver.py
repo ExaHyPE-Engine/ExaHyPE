@@ -1,12 +1,14 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
+""" 
+ This file is part of the MGHyPE project within Peano 4. For conditions of distribution and 
+ use, please see the copyright notice at www.peano-framework.org
+"""
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
 from .Solver import Solver
-from .actionsets.DGSolver.InitDofs                             import InitDofsDG
+from .actionsets.dg.InitDofs                                   import InitDofs
 from .actionsets.DGSolver.UpdateResidual                       import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
 from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution
@@ -16,8 +18,10 @@ from .actionsets.PlotDGDataInPeanoBlockFormat                  import PlotDGData
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
 
+  Most efficient solver we have for this type of problem class
+
   You can find each of the action sets here:
-  solvers.api.actionsets.DGSolver.InitDofs.InitDofsDG
+  solvers.api.actionsets.DGSolver.InitDofs.InitDofs
 
   The text below specifies the semantics and behaviour of this matrix-free
   DG solver. A tutorial running step by step through the steps how to use
@@ -207,7 +211,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   So far we have three non-trivial action sets.
 
   ###  InitDofs
-  Code for this is in actionsets.InitDofsDG. So far nothing happens, other than determining which cells/faces are 
+  Code for this is in actionsets.InitDofs. So far nothing happens, other than determining which cells/faces are 
   on the boundary and putting in initial guesses for each cell and face dof. We pass over to the implementation
   cpp file which should be left in situ in the directory for the application.
 
@@ -460,7 +464,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     """
     if self._custom_init_actionset is None:
-      observer.add_action_set( InitDofsDG(self) )
+      observer.add_action_set( InitDofs(self) )
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
 

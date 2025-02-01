@@ -13,23 +13,17 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pt",   "--plot-sweep",     dest="plot_after_each_mesh_sweep", action="store_true", default=False, help="Plot after each timestep. By default (False) we plot after initialisation and at the end" )
-parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../../../", help="Peano4 directory" )
+parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../..", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
-parser.add_argument("-v",   "--variant",              dest="variant",        choices=["sweeps", "union"], required=True, help="Pick variant" )
+parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
+parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       required=True, help="Mesh size")
+parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-union"], required=True, help="Pick variant" )
 args = parser.parse_args()
 
-#! [Create project]
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
-#! [Create project]
-
-
-#! [Construct matrices]
 
 matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
@@ -47,12 +41,11 @@ cell_from_face_projection, \
 cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
 approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
-#! [Construct matrices]
 
 
 
-#! [Instantiate solver]
-solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+#solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithoutFusion(
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
@@ -76,10 +69,9 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
-  integration_points = [ float(i) / (args.poly_degree) for i in range(args.poly_degree+1) ]
+  integration_points = [ float(i) / (args.poly_degree) for i in range(args.poly_degree+1) ],
+  enable_plotting = False
 )
-
-#! [Instantiate solver]
 
 project.add_solver(solver)
 
@@ -94,7 +86,7 @@ project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
-  plot_after_each_mesh_sweep       = args.plot_after_each_mesh_sweep,
+  plot_after_each_mesh_sweep       = False,
   max_iterations                   = 5
 )
 
@@ -102,7 +94,7 @@ project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGr
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
-peano4_project.output.makefile.add_cpp_file( "Scenario.cpp" )
+peano4_project.output.makefile.add_cpp_file( args.peanodir + "/tests/multigrid/matrixfree/poisson/Scenario.cpp" )
 peano4_project.generate()
 
 os.system( "make clean" )

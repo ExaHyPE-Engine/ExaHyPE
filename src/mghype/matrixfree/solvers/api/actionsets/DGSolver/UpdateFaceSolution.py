@@ -50,7 +50,7 @@ class UpdateFaceSolution(ActionSet):
     and
     repositories::{{SOLVER_INSTANCE}}.updateFace()
   ) {
-    logTraceInWith1Argument( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
+    logTraceInWith2Arguments( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection() );
     // Essentially what we do here is fix the solution on the boundary to be 
     // the inner-side projection.
 

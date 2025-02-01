@@ -12,6 +12,8 @@ tarch::la::Vector< Dimensions, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}
 ) {
   tarch::la::Vector< Dimensions, double > result;
   for (int d=0; d<Dimensions; d++) {
+    assertion1( pos(d)>=0, pos );
+    assertion1( pos(d)<PolyDegree+1, pos );
     result(d) = IntegrationPoints( pos(d) );
   }
   return result;
@@ -54,7 +56,7 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
-{% if MASS_MATRIX is defined %}
+{% if RHS_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
@@ -376,3 +378,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, b
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initFace(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
+  tarch::la::Vector< FaceUnknownsSolution,double >&    projection
+) {
+  for (int i=0; i < solution.size(); i++)   solution[i]   = 0;
+  for (int i=0; i < projection.size(); i++) projection[i] = 0;
+}

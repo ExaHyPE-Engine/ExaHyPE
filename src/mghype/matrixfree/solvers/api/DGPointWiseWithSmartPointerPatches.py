@@ -7,7 +7,7 @@ import os
 
 from .Solver                                                    import Solver
 
-from .actionsets.DGPointWiseWithSmartPointerPatches.InitDofs                             import InitDofs
+from .actionsets.dg.InitDofs                                   import InitDofs
 from .actionsets.DGPointWiseWithSmartPointerPatches.UpdateResidual                       import UpdateResidual
 from .actionsets.DGPointWiseWithSmartPointerPatches.ProjectOntoFaces                     import ProjectOntoFaces
 from .actionsets.DGPointWiseWithSmartPointerPatches.UpdateFaceSolution                   import UpdateFaceSolution

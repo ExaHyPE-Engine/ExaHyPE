@@ -1,5 +1,7 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
+""" 
+ This file is part of the MGHyPE project within Peano 4. For conditions of distribution and 
+ use, please see the copyright notice at www.peano-framework.org
+"""
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
@@ -7,7 +9,7 @@ import os
 
 from .Solver import Solver
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-from .actionsets.DGSolver.InitDofs                              import InitDofsDG
+from .actionsets.dg.InitDofs                                   import InitDofs
 from .actionsets.DGSolver.UpdateResidual                        import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                      import ProjectOntoFaces
 from .actionsets.DGSolverWithFusionUnshifted.UpdateFaceSolution import UpdateFaceSolution

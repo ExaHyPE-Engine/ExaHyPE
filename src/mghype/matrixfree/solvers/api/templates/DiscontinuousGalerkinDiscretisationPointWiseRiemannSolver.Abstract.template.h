@@ -212,7 +212,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
       tarch::la::Vector< FaceUnknownsSolution,double >&    projection
-    ) = 0;
+    );
 
     /**
      * Initialise a cell degree of freedom
