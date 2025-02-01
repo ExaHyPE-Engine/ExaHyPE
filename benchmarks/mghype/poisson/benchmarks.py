@@ -17,12 +17,12 @@ parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       def
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
-parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       required=True, help="Mesh size")
-parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-union"], required=True, help="Pick variant" )
+parser.add_argument("-m",   "--meshsize",       dest="meshsize",       required=True, help="Mesh size")
+parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-shifted-and-fused"], required=True, help="Pick variant" )
 args = parser.parse_args()
 
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
-                              namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
+                              namespace = [ "benchmarks", "mghype", "poisson" ]
                             )
 
 matrices = mghype.api.matrixgenerators.GLMatrixFree(
@@ -43,9 +43,13 @@ approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 
+Solver_Type = None
+if args.variant == "dg-sweeps":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted
+elif args.variant == "dg-shifted-and-fused":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 
-#solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
-solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithoutFusion(
+solver = Solver_Type(
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
@@ -70,7 +74,8 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithoutFusion(
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
   integration_points = [ float(i) / (args.poly_degree) for i in range(args.poly_degree+1) ],
-  enable_plotting = False
+  enable_plotting    = False,
+  solver_includes    = """#include "{}/tests/multigrid/matrixfree/poisson/Scenario.h" """.format(args.peanodir)
 )
 
 project.add_solver(solver)
@@ -79,6 +84,7 @@ project.add_solver(solver)
 # Configure build
 #
 build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Asserts
 
 
 cube_size = 1.0
