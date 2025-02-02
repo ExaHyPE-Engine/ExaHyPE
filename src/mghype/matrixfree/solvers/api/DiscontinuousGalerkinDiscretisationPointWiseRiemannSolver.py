@@ -235,6 +235,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   Code for this is in actionsets.DGSolver.UpdateResidual. We do something nontrivial in touchCellFirstTime, namely perform the cell update
   rule as above. We set the residual to be \f$ Mb - A^{cc} u^c \f$.
 
+  
+  @param solver_includes C++ code snippet
+    Arbitrary C++ code snippet. Usually used to include additional files 
+    (therefore the name), though you can use it for preprocessing macros
+    or using statements as well. Has to be a valid C++ expression, i.e. 
+    something similar to
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include "myfile.h"
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
   """
   def __init__(self,

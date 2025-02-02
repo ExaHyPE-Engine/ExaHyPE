@@ -46,7 +46,7 @@ class Solver:
     in child class.
     
     """
-    observer.use_vertex(self._vertex_data)
+#observer.use_vertex(self._vertex_data)
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
   
