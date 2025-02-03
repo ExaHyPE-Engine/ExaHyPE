@@ -15,133 +15,54 @@
 namespace tarch {
   namespace la {
     template <int Size, typename Scalar>
+    struct SmartPointerVector;
+
+    template <int Size, typename Scalar>
     struct Vector;
 
     template <typename NewScalarType, int Size, typename Scalar>
-    tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>&  vector);
+    tarch::la::SmartPointerVector<Size,NewScalarType> convertScalar(const tarch::la::SmartPointerVector<Size,Scalar>&  SmartPointerVector);
   }
 }
 
 /**
- * Pipes the elements of a vector into a std::string and returns the string.
+ * Pipes the elements of a SmartPointerVector into a std::string and returns the string.
  *
  * Not a member of the class as I otherwise can't translate it for GPUs.
  */
 template<int Size, typename Scalar>
-std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
+std::string toString( const tarch::la::SmartPointerVector<Size,Scalar>&  smartPointerVector );
 
 /**
- * Simple vector class
+ * Simple SmartPointerVector class
  *
- * Most features concerning vectors are deployed into separate headers:
- *
- * - Access only few elements within vector (subvector): VectorSlice.h
- * - Functions over the vector such as norms: VectorOperations.h
- * - Binary operators over vectors: VectorScalarOperations.h and
- *   VectorVectorOperations.h
- *
- * There are multiple ways how to construct a vector:
- *
- * - You can use the standard constructor which gives a vector with garbage
- *   entries. You can then set individual entries manually.
- * - You can use the constructor with a scalar which initialises all entries
- *   with the same value.
- * - You can use initialiser lists, i.e. lists in curly brackets { and }, to
- *   construct a vector from a list.
- *
- * To access entries of a vector, the class provides both access via an
- * array notation, i.e. through [...], and with round brackets. The latter
- * notation resembles Matlab. No matter which accessor you use, enumeration
- * always starts with zero.
- *
- * The class wraps an array of fixed size. Therefore, you can access the raw
- * data via data(), but this violates ideas of object-oriented programming
- * and hence should be done with care. Peano for example does this if and
- * only if it has to hand over raw pointers to MPI, e.g.
- *
- *
- * ## GPGPU offloading
- *
- * ### OpenMP
- *
- * To make the vector operations available on the GPU, they have to be labelled
- * as offloadable according to Section 4.5.2 (page 117) of the standard
- * (https://www.openmp.org/wp-content/uploads/openmp-examples-4.5.0.pdf).
- * There, the text highlights that declare target is a declaration thing, i.e.,
- * should not be applied to the definition.
- *
- * However, it is not clear whether the compiler expects the
- * function definition to be within the declaration, too, and if this makes a
- * difference here at all: As the vector is a template, it is header-only
- * anyway. Therefore, the compiler implicitly should have the definition at
- * hand and should be able to identify that code for the GPU has to be
- * generated, too. We only have to be sure that no explicit instantiation of
- * a vector ignores this context, i.e. do not use explicit instantation if you
- * employ GPUs (through OpenMP).
- *
- * With GCC, I struggled using the Vector's copy constructors. That is,
- * my impression is that the GCC compiler struggles to handle templates plus
- * overloading if these are implicitly used within a map clause.
- * Therefore, I often offload code through the standard constructor, deploy
- * the vector components manually, thus avoid all copy constructor
- * invocations explicitly, and finally repuzzle the vector together on the
- * GPU. This implies that GPU routines may never return
- * a Vector instance. See the Rusanov.cpph kernels for examples where this
- * leads to uglier code than necessary. But it works.
- *
- *
- * ## SYCL
- * 
- * Our SYCL kernels seem to be fine without explicit support of the vector,
- * but this is mainly due to the fact that SYCL offers its own range class, 
- * and we construct our vectors typically from this range class. The other 
- * application domain is the double vectors within the cell descriptors, 
- * but we map those onto specialsed variants before we offload anyway, so 
- * they are on the GPU prior to the kernel launch. In the future, it might
- * be appropriate to add explicit copyable traits to to the class such that
- * they can directly go to the GPU:
- * 
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * #include "tarch/accelerator/sycl/Device.h"
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<2,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<3,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<4,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<5,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<2,int> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<3,int> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<4,int> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<5,int> >: std::true_type {};
- * 
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Mirrors exactly tarch::la::Vector, but internally uses a smart pointer
+ * rather than a scalar. The class tries to minimise replication. Therefore,
+ * it provides extensive conversion routines to and from a normal Vector but
+ * limited functionality directly on the smart vector (where appropriate).
  * 
  */
 template <int Size, typename Scalar>
-struct tarch::la::Vector {
+struct tarch::la::SmartPointerVector {
   private:
-    Scalar _values[Size];
+    /**
+     * In the original vector, this is
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * Scalar _values[Size];
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
+    Scalar* _values;
+
+    std::shared_ptr< Scalar[] > _dataSmartPointer;
 
   public:
     /**
      * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
      */
-    Vector() InlineMethod = default;
+    SmartPointerVector() InlineMethod;
 
-    Vector( const Scalar* values ) InlineMethod;
+    SmartPointerVector( const Scalar* values ) InlineMethod;
 
     /**
      * Initialisation via initialisation list.
@@ -150,37 +71,62 @@ struct tarch::la::Vector {
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
      */
-    Vector( std::initializer_list<Scalar> values );
+    SmartPointerVector( std::initializer_list<Scalar> values );
 
-    Vector( const std::bitset<Size>& values ) InlineMethod;
+    SmartPointerVector( const std::bitset<Size>& values ) InlineMethod;
 
     /**
-     * Construct new vector and initialize all components with initialValue.
+     * Construct new SmartPointerVector and initialize all components with initialValue.
      */
-    Vector(const Scalar& initialValue);
+    SmartPointerVector(const Scalar& initialValue);
 
     /**
-     * Assignment operator for any vector type.
-     *
-     * <h2> Vectorisation </h2>
-     *
-     * We do not allow assignment of a vector this itself. Consequently, we can
-     * insert an ivdep statement and thus allow the compiler to optimise.
-     */
-    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
-
-    /**
-     * Copy constructor to copy from any vector type.
+     * Copy constructor to copy from any SmartPointerVector type.
      *
      * The only way to accomplish this with enable-if is to specify a second
      * dummy argument with default value, which is (hopefully) optimized away.
      *
      * @see operator= for a discussion of SSE optimisation.
      */
-    Vector(const Vector<Size,Scalar>&  toCopy);
+    SmartPointerVector(const SmartPointerVector<Size,Scalar>&  toCopy);
 
     /**
-     * Returns the number of components of the vector.
+     * Copy constructor
+     *
+     * As we are working with smart pointers, we do not realy copy under the
+     * hood.
+     *
+     * I originally had
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~
+  _dataSmartPointer( toCopy._dataSmartPointer ),
+  _values( _dataSmartPointer.get() ) {
+     * ~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * but the the compiler told me that _dataSmartPointer is not initialised
+     * at this point. Which I find weird. So now I initialise it explicitly.
+     *
+     *
+     */
+    SmartPointerVector(const Vector<Size,Scalar>&  toCopy);
+
+    /**
+     * Assignment operator for any SmartPointerVector type.
+     *
+     * <h2> SmartPointerVectorisation </h2>
+     *
+     * We do not allow assignment of a SmartPointerVector this itself. Consequently, we can
+     * insert an ivdep statement and thus allow the compiler to optimise.
+     */
+    inline SmartPointerVector<Size,Scalar>& operator= (const SmartPointerVector<Size,Scalar>& toAssign) InlineMethod;
+
+    /**
+     * Conversion assignment operator
+     */
+    inline SmartPointerVector<Size,Scalar>& operator=( const Vector<Size,Scalar>& vector );
+
+    /**
+     * Returns the number of components of the SmartPointerVector.
      */
     int size() const;
 
@@ -190,13 +136,13 @@ struct tarch::la::Vector {
      * <h2> SSE Optimisation </h2>
      *
      * - We have to manually inline this operation. Otherwise, icc interprets operator
-     *   calls, i.e. vector element accesses, as function calls and does not vectorise
-     *   loops containing vector element accesses.
+     *   calls, i.e. SmartPointerVector element accesses, as function calls and does not SmartPointerVectorise
+     *   loops containing SmartPointerVector element accesses.
      */
     inline const Scalar& operator[] (int index) const InlineMethod {
 #if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
-          assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
+          assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a SmartPointerVector with only Size components" );
 #endif
         return _values[index];
     }
@@ -217,7 +163,7 @@ struct tarch::la::Vector {
     /**
      * Returns read-only ref. to component of given index.
      *
-     * If we use the vector on the GPU, we cannot have assertions. If we use
+     * If we use the SmartPointerVector on the GPU, we cannot have assertions. If we use
      * SYCL on the CPU for the multitasking, we cannot have assertions in the
      * SYCL part either, as SYCL aims to be platform-independent, i.e. has to
      * assume that the code generated also will be deployed to a GPU. See
@@ -258,11 +204,9 @@ struct tarch::la::Vector {
     const Scalar * data() const {
       return _values;
     }
+
+    Vector<Size,Scalar> toVector() const;
 };
 
-#include "tarch/la/Vector.cpph"
-#include "tarch/la/VectorOperations.h"
-#include "tarch/la/VectorScalarOperations.h"
-#include "tarch/la/VectorVectorOperations.h"
-#include "tarch/la/VectorSlice.h"
+#include "tarch/la/SmartPointerVector.cpph"
 

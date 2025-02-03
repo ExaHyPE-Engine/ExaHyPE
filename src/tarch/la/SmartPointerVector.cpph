@@ -1,17 +1,33 @@
+
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector(const Scalar* values) {
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector():
+  _dataSmartPointer(
+    tarch::allocateMemory< Scalar >( Size, tarch::MemoryLocation::Heap ),
+    [] (auto p) {
+      tarch::freeMemory( p, tarch::MemoryLocation::Heap );
+    }
+  ) {
+  _values = _dataSmartPointer.get();
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector(const Scalar* values):
+  SmartPointerVector() {
   for (int i=0; i<Size; i++) {
     _values[i] = *(values+i);
   }
 }
 
+
 /**
  * There is seemingly a bug in this constructor. For instance, the arguments peano4::initSingletons
- * to are two objects of type tarch::la::Vector, with length Dimensions. However, passing in two
+ * to are two objects of type tarch::la::SmartPointerVector, with length Dimensions. However, passing in two
  * initializer lists which are longer than Dimensions will cause the second to borrow from the first.
 */
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector(std::initializer_list<Scalar> values) {
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector(std::initializer_list<Scalar> values):
+  SmartPointerVector() {
   int index = 0;
   for (typename std::initializer_list<Scalar>::const_iterator p = values.begin(); p!=values.end(); p++) {
     _values[index] = *p;
@@ -21,67 +37,84 @@ tarch::la::Vector<Size,Scalar>::Vector(std::initializer_list<Scalar> values) {
 
 
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector( const std::bitset<Size>& value ) {
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector( const std::bitset<Size>& value ):
+  SmartPointerVector() {
   for (int i=0; i<Size; i++) {
     _values[i] = value[i] ? 1 : 0;
   }
 }
 
-template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
-  const Vector<Size,Scalar>&  toAssign
-) {
-  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-  assertion(this != &toAssign);
-  #endif
-
-  #ifdef CompilerICC
-  #pragma ivdep
-  #endif
-  for (int i=0; i<Size; i++) {
-    _values[i] = toAssign._values[i];
-  }
-  return *this;
-}
 
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector (
-  const Vector<Size,Scalar>& toCopy
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector (
+  const SmartPointerVector<Size,Scalar>& toCopy
 ):
-  _values() {
+  _dataSmartPointer( toCopy._dataSmartPointer ),
+  _values( nullptr ) {
   #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
   assertion(this != &toCopy);
   #endif
- 
-  #ifdef CompilerICC
-  #pragma ivdep
-  #endif
+
+  _values = _dataSmartPointer.get();
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector (
+  const Vector<Size,Scalar>& toCopy
+):
+  SmartPointerVector() {
   for (int i=0; i<Size; i++) {
-    _values[i] = toCopy._values[i];
+    _values[i] = toCopy[i];
   }
 }
 
+
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector(
+tarch::la::SmartPointerVector<Size,Scalar>::SmartPointerVector(
   const Scalar& initialValue
 ):
-  _values() {
+  SmartPointerVector() {
   for (int i=0; i < Size; i++) {
     _values[i] = initialValue;
   }
 }
 
+
 template<int Size, typename Scalar>
-int tarch::la::Vector<Size,Scalar>::size() const {
+tarch::la::SmartPointerVector<Size,Scalar>&  tarch::la::SmartPointerVector<Size,Scalar>::operator= (
+  const SmartPointerVector<Size,Scalar>&  toAssign
+) {
+  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
+  assertion(this != &toAssign);
+  #endif
+
+  _dataSmartPointer = toAssign._dataSmartPointer;
+  _values = _dataSmartPointer.get();
+
+  return *this;
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::SmartPointerVector<Size,Scalar>& tarch::la::SmartPointerVector<Size,Scalar>::operator=( const Vector<Size,Scalar>& vector ) {
+  for (int i=0; i<Size; i++) _values[i] = vector(i);
+  return *this;
+}
+
+
+template<int Size, typename Scalar>
+int tarch::la::SmartPointerVector<Size,Scalar>::size() const {
   return Size;
 }
 
+
 template<int Size, typename Scalar>
-std::string toString( const tarch::la::Vector<Size,Scalar>& vector ) {
+std::string toString( const tarch::la::SmartPointerVector<Size,Scalar>& SmartPointerVector ) {
   std::ostringstream os;
   os << "[";
   for ( int i=0; i < Size; i++ ) {
-    os << vector(i);
+    os << SmartPointerVector(i);
     if ( i + 1 < Size ) {
       os << ",";
     }
@@ -90,11 +123,22 @@ std::string toString( const tarch::la::Vector<Size,Scalar>& vector ) {
   return os.str();
 }
 
+
 template <typename NewScalarType, int Size, typename Scalar>
-tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>&  vector) {
-  tarch::la::Vector<Size,NewScalarType> result;
+tarch::la::SmartPointerVector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::SmartPointerVector<Size,Scalar>&  SmartPointerVector) {
+  tarch::la::SmartPointerVector<Size,NewScalarType> result;
   for ( int i=0; i < Size; i++ ) {
-    result(i) = vector(i);
+    result(i) = SmartPointerVector(i);
   }
   return result;
 }
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar> tarch::la::SmartPointerVector<Size,Scalar>::toVector() const {
+  tarch::la::Vector<Size,Scalar> result;
+  assertion( _values!=nullptr );
+  for (int i=0; i<Size; i++) result(i) = _values[i];
+  return result;
+}
+
