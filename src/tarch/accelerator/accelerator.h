@@ -7,53 +7,40 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP)
-#define GPUOffloadingOff
-#endif
-
 /**
- * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
+ * Have to include this header, as we need access to the SYCL header file to prevent conflicts with the Dimensions macro.
  */
 #include "tarch/accelerator/sycl/Device.h"
 
 namespace tarch {
-  #if defined(GPUOffloadingHIP)
+  #if defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
     #define GPUCallableMethod __host__ __device__
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-    #define GPUCallableMethod SYCL_EXTERNAL
-  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
-    #define GPUCallableMethod __host__ __device__
+    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
+    GPUCallableMethod void gpuAbort();
+  #elif defined(GPUOffloadingSYCL)
+    // SYCL_EXTERNAL is not required in GPUCallableMethod as we define the device kernels typically inline.
+    // If a device kernel function is defined in a separate .cpp file, then SYCL_EXTERNAL is explicitly needed.
+    #define GPUCallableMethod
+    #define GPUCallableInlineMethod inline
+    SYCL_EXTERNAL void gpuAbort();
+  #elif defined(GPUOffloadingOMP)
+    #define GPUCallableMethod
+    #define GPUCallableInlineMethod inline
+    #pragma omp declare target
+    void gpuAbort();
+    #pragma omp end declare target
   #else
     #define GPUCallableMethod
+    #define GPUCallableInlineMethod // inline
+    #define GPUOffloadingOff // No device accelerator chosen
+    /**
+     * Delegates to std::abort() if no GPU offloading is active. Otherwise is
+     * degenerates to nop, as there is no abort on an accelerator. The vanilla
+     * implementation can be found in accelerator.cpp. The vendor-specific
+     * implementations are hold within their accelerator.cpp file.
+     */
+    void gpuAbort();
   #endif
-
-  #if defined(GPUOffloadingHIP)
-    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-    #define GPUCallableInlineMethod inline
-  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
-    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
-  #else
-    #define GPUCallableInlineMethod //inline
-  #endif
-
-  /**
-   * Delegates to std::abort() if no GPU offloading is active. Otherwise is
-   * degenerates to nop, as there is no abort on an accelerator. The vanilla
-   * implementation can be found in accelerator.cpp. The vendor-specific
-   * implementations are hold within their accelerator.cpp file.
-   */
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-  void gpuAbort();
-#pragma omp end declare target
-#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-  GPUCallableMethod void gpuAbort();
-#elif defined(GPUOffloadingCPP)
-  GPUCallableMethod void gpuAbort();
-#else
-  void gpuAbort();
-#endif
 
   enum class MemoryLocation {
     /**

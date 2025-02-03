@@ -1,7 +1,12 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
+
 #include "tarch/Assertions.h"
 
 #if defined(GPUOffloadingSYCL)
+
+#include "Device.h"
 
 GPUCallableMethod void tarch::gpuAbort() {}
 

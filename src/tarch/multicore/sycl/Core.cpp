@@ -1,30 +1,24 @@
-#include "tarch/Assertions.h"
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Core.h"
-#include "tarch/multicore/Core.h"
 
+#include "tarch/Assertions.h"
+
+#include "tarch/multicore/Core.h"
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
+
 #include "tarch/compiler/CompilerSpecificSettings.h"
+
+#include <map>
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>
 #endif
 
-#include <map>
-
 #if defined(SharedSYCL)
-#include <sstream>
-#include "config.h"
 
-#pragma push_macro("Dimensions")
-#pragma push_macro("assertion")
-#undef Dimensions
-#undef assertion
-#include <CL/sycl.hpp>
-#pragma pop_macro("Dimensions")
-#pragma pop_macro("assertion")
-
-tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
+tarch::logging::Log tarch::multicore::Core::_log("tarch::multicore::Core");
 
 namespace {
   /**
@@ -43,7 +37,7 @@ sycl::queue& tarch::multicore::getHostSYCLQueue() {
  * See the documentation in tarch/accelerator/sycl/Device.h.
  */
 tarch::multicore::Core::Core():
- _numberOfThreads( -1 ) {
+  _numberOfThreads(-1) {
 
   sycl::device cpuDevice;
   try {
@@ -59,8 +53,8 @@ tarch::multicore::Core::Core():
   _numberOfThreads = hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>();
   assertion(_numberOfThreads>0);
 
-  #if PeanoDebug>0
-  std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
+  #if PeanoDebug > 0
+  std::cout << "host (CPU) device queue: " << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
             << " with " << _numberOfThreads << " threads" << std::endl;
   #endif
 }
@@ -115,10 +109,10 @@ int tarch::multicore::Core::getThreadNumber() const {
 }
 
 
-
 void tarch::multicore::Core::yield() {
   // @todo It would be nice to have the opportunity to tell the queue to do
   //       only a few tasks and then to return.
   hostSyclQueue.wait();
 }
-#endif
+
+#endif // defined(SharedSYCL)

@@ -39,285 +39,297 @@ namespace exahype2::fv::rusanov::internal {
     static tarch::logging::Log _log("exahype2::fv::rusanov");
     logTraceIn("timeStepWithRusanovPatchwiseFunctors()");
 
-    parallelForWithSchedulerInstructions(patchIndex, patchData.numberOfCells, loopParallelism) {
+    // SYCL's parallel for does not support capture by reference,
+    // therefore we capture the addresses of the data by value
+    // and work on these raw data instead.
+    const int numberOfPatches = patchData.numberOfCells;
+    double** QIn              = patchData.QIn;
+    double** QOut             = patchData.QOut;
+    double* patchCentre       = patchData.cellCentre[0].data();
+    double* patchSize         = patchData.cellSize[0].data();
+    double* timeStamp         = patchData.t;
+    double* timeStep          = patchData.dt;
+    double* maxEigenvalue     = patchData.maxEigenvalue;
+
+    parallelForWithSchedulerInstructions(patchIndex, numberOfPatches, loopParallelism) {
       // ====================================================
       // Copy solution over and evaluate source (if required)
       // ====================================================
       if constexpr (EvaluateSource) {
-        parallelDforWithSchedulerInstructions(volume, NumberOfVolumesPerAxisInPatch, loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, NumberOfVolumesPerAxisInPatch, loopParallelism) {
           loopbodies::copySolutionAndAddSourceTerm<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             sourceFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            patchData.QOut[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
+            QOut[patchIndex],
             QOutEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
       } else {
-        parallelDPlusOneForWithSchedulerInstructions(
+        simtDPlusOneForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns, NumberOfAuxiliaryVariables), loopParallelism
         ) {
           loopbodies::copySolution(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             patchIndex,
             tarch::la::slice<Dimensions>(volume, 0), // first Dimensions entries
             volume(Dimensions),                      // unknown
-            patchData.QOut[patchIndex],
+            QOut[patchIndex],
             QOutEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
       }
 
       // ====================================================
       // Compute damping due to max eigenvalue
       // ====================================================
-      parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
+      simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
         volume(0) -= HaloSize;
         loopbodies::computeMaxEigenvalue<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           maxEigenvalueFunctor,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre[patchIndex],
+          patchSize[patchIndex],
           patchIndex,
           volume,
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStamp[patchIndex],
+          timeStep[patchIndex],
           0,
           tempEigenvalueX,
           eigenvalueEnumerator
         );
       }
-      endParallelDfor
+      endSimtDfor
 
-      parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
+      simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
         volume(1) -= HaloSize;
         loopbodies::computeMaxEigenvalue<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           maxEigenvalueFunctor,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre[patchIndex],
+          patchSize[patchIndex],
           patchIndex,
           volume,
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStamp[patchIndex],
+          timeStep[patchIndex],
           1,
           tempEigenvalueY,
           eigenvalueEnumerator
         );
       }
-      endParallelDfor
+      endSimtDfor
 
 #if Dimensions == 3
-      parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
+      simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
         volume(2) -= HaloSize;
         loopbodies::computeMaxEigenvalue<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           maxEigenvalueFunctor,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre[patchIndex],
+          patchSize[patchIndex],
           patchIndex,
           volume,
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStamp[patchIndex],
+          timeStep[patchIndex],
           2,
           tempEigenvalueZ,
           eigenvalueEnumerator
         );
       }
-      endParallelDfor
+      endSimtDfor
 #endif
 
-      parallelDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
+      simtDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
         loopbodies::updateSolutionWithEigenvalueDamping(
-          patchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre[patchIndex],
+          patchSize[patchIndex],
           patchIndex,
           tarch::la::slice<Dimensions>(volume, 0),
           volume(Dimensions), // unknown
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          timeStep[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
       }
-      endParallelDfor
+      endSimtDfor
 
         // ====================================================
         // Normal (conservative) flux
         // ====================================================
         if constexpr (EvaluateFlux) {
-        parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
           volume(0) -= HaloSize;
           loopbodies::computeFlux<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             fluxFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
             0, // normal
             tempFluxX,
             fluxEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
 
-          parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
           volume(1) -= HaloSize;
           loopbodies::computeFlux<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             fluxFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
             1, // normal
             tempFluxY,
             fluxEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
 
 #if Dimensions == 3
-        parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, true), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeFlux<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             fluxFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
             2, // normal
             tempFluxZ,
             fluxEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
 #endif
 
-        parallelDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
+        simtDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
           loopbodies::updateSolutionWithFlux(
             tempFluxX,
             tempFluxY,
             tempFluxZ,
             fluxEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             tarch::la::slice<Dimensions>(volume, 0),
             volume(Dimensions),
-            patchData.dt[patchIndex],
-            patchData.QOut[patchIndex],
+            timeStep[patchIndex],
+            QOut[patchIndex],
             QOutEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
       }
 
       if constexpr (EvaluateNonconservativeProduct) {
-        parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, false), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, false), loopParallelism) {
           volume(0) -= HaloSize;
           loopbodies::computeNonconservativeFlux<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             nonconservativeProductFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
             0, // normal
             tempNonconservativeProductX,
             ncpEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
 
-        parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, false), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, false), loopParallelism) {
           volume(1) -= HaloSize;
           loopbodies::computeNonconservativeFlux<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             nonconservativeProductFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
             1, // normal
             tempNonconservativeProductY,
             ncpEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
 
 #if Dimensions == 3
-        parallelDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, false), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, false), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeNonconservativeFlux<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn[patchIndex],
             QInEnumerator,
             nonconservativeProductFunctor,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             volume,
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStamp[patchIndex],
+            timeStep[patchIndex],
             2, // normal
             tempNonconservativeProductZ,
             ncpEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
 #endif
 
-        parallelDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
+        simtDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
           loopbodies::updateSolutionWithNonconservativeFlux(
             tempNonconservativeProductX,
             tempNonconservativeProductY,
             tempNonconservativeProductZ,
             ncpEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre[patchIndex],
+            patchSize[patchIndex],
             patchIndex,
             tarch::la::slice<Dimensions>(volume, 0),
             volume(Dimensions),
-            patchData.dt[patchIndex],
-            patchData.QOut[patchIndex],
+            timeStep[patchIndex],
+            QOut[patchIndex],
             QOutEnumerator
           );
         }
-        endParallelDfor
+        endSimtDfor
       }
 
       if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
@@ -326,19 +338,19 @@ namespace exahype2::fv::rusanov::internal {
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             loopbodies::reduceMaxEigenvalue<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-              patchData.QOut[patchIndex],
+              QOut[patchIndex],
               QOutEnumerator,
               maxEigenvalueFunctor,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
+              patchCentre[patchIndex],
+              patchSize[patchIndex],
               patchIndex,
               volume,
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex]
+              timeStamp[patchIndex],
+              timeStep[patchIndex]
             )
           );
         }
-        patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+        maxEigenvalue[patchIndex] = newMaxEigenvalue;
       }
     }
     endParallelFor
@@ -372,9 +384,9 @@ void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors(
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double* tempFluxX                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;
   double* tempFluxY                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;
@@ -478,9 +490,9 @@ void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors(
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double* tempFluxX                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;
   double* tempFluxY                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;

@@ -42,7 +42,6 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/tests/GramSchmidtTest.cpp \
 	tarch/la/tests/LUDecompositionTest.cpp \
 	tarch/la/tests/VectorTest.cpp \
-	tarch/la/ScalarOperations.cpp \
 	tarch/la/Scalar.cpp \
 	tarch/la/DynamicMatrix.cpp \
 	tarch/la/DynamicMatrixOperations.cpp \

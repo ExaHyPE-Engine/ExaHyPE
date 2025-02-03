@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/la/la.h"
+#include "la.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -18,7 +19,7 @@ namespace tarch {
     struct Vector;
 
     template <typename NewScalarType, int Size, typename Scalar>
-    tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>&  vector);
+    tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>& vector);
   }
 }
 
@@ -27,8 +28,8 @@ namespace tarch {
  *
  * Not a member of the class as I otherwise can't translate it for GPUs.
  */
-template<int Size, typename Scalar>
-std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
+template <int Size, typename Scalar>
+std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
 
 /**
  * Simple vector class
@@ -76,7 +77,7 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
  * anyway. Therefore, the compiler implicitly should have the definition at
  * hand and should be able to identify that code for the GPU has to be
  * generated, too. We only have to be sure that no explicit instantiation of
- * a vector ignores this context, i.e. do not use explicit instantation if you
+ * a vector ignores this context, i.e. do not use explicit instantiation if you
  * employ GPUs (through OpenMP).
  *
  * With GCC, I struggled using the Vector's copy constructors. That is,
@@ -86,50 +87,28 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
  * the vector components manually, thus avoid all copy constructor
  * invocations explicitly, and finally repuzzle the vector together on the
  * GPU. This implies that GPU routines may never return
- * a Vector instance. See the Rusanov.cpph kernels for examples where this
+ * a Vector instance. See the Rusanov kernels for examples where this
  * leads to uglier code than necessary. But it works.
  *
  *
  * ## SYCL
- * 
+ *
  * Our SYCL kernels seem to be fine without explicit support of the vector,
- * but this is mainly due to the fact that SYCL offers its own range class, 
- * and we construct our vectors typically from this range class. The other 
- * application domain is the double vectors within the cell descriptors, 
- * but we map those onto specialsed variants before we offload anyway, so 
- * they are on the GPU prior to the kernel launch. In the future, it might
- * be appropriate to add explicit copyable traits to to the class such that
- * they can directly go to the GPU:
- * 
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * #include "tarch/accelerator/sycl/Device.h"
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<2,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<3,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<4,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<5,double> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<2,int> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<3,int> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<4,int> >: std::true_type {};
- * 
- * template<>
- * struct sycl::is_device_copyable< tarch::la::Vector<5,int> >: std::true_type {};
- * 
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * 
+ * but this is mainly due to the fact that SYCL offers its own range class,
+ * and we construct our vectors typically from this range class. The other
+ * application domain is the double vectors within the cell descriptors,
+ * but we map those onto specialised variants before we offload anyway, so
+ * they are on the GPU prior to the kernel launch. However, when we run our
+ * parallel for loops with SYCL on the host, then we also need to make sure
+ * that the vector class is device copyable (i.e. trivially copyable). We
+ * mark our copy assignment operator and copy constructor as default to let
+ * the compiler generated these for us. As the class contains no dynamic
+ * memory, we can safely do so: https://en.cppreference.com/w/cpp/language/classes#Trivially_copyable_class
+ *
  */
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
   private:
@@ -139,9 +118,10 @@ struct tarch::la::Vector {
     /**
      * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
      */
-    Vector() InlineMethod = default;
+    inline Vector() InlineMethod = default;
 
-    Vector( const Scalar* values ) InlineMethod;
+    inline GPUCallableMethod
+    Vector(const Scalar* values) InlineMethod;
 
     /**
      * Initialisation via initialisation list.
@@ -150,39 +130,41 @@ struct tarch::la::Vector {
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
      */
-    Vector( std::initializer_list<Scalar> values );
+    inline GPUCallableMethod
+    Vector(std::initializer_list<Scalar> values) InlineMethod;
 
-    Vector( const std::bitset<Size>& values ) InlineMethod;
+    inline GPUCallableMethod
+    Vector(const std::bitset<Size>& values) InlineMethod;
 
     /**
-     * Construct new vector and initialize all components with initialValue.
+     * Construct new vector and initialise all components with initialValue.
      */
-    Vector(const Scalar& initialValue);
+    inline GPUCallableMethod
+    Vector(const Scalar& initialValue) InlineMethod;
+
+    inline ~Vector() InlineMethod = default;
 
     /**
      * Assignment operator for any vector type.
      *
-     * <h2> Vectorisation </h2>
-     *
-     * We do not allow assignment of a vector this itself. Consequently, we can
-     * insert an ivdep statement and thus allow the compiler to optimise.
+     * Default assignment as this class needs to be trivially copyable.
      */
-    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
+    inline GPUCallableMethod
+    Vector<Size, Scalar>& operator = (const Vector<Size, Scalar>& toAssign) InlineMethod = default;
 
     /**
      * Copy constructor to copy from any vector type.
      *
-     * The only way to accomplish this with enable-if is to specify a second
-     * dummy argument with default value, which is (hopefully) optimized away.
-     *
-     * @see operator= for a discussion of SSE optimisation.
+     * @see operator= for default copy.
      */
-    Vector(const Vector<Size,Scalar>&  toCopy);
+    inline GPUCallableMethod
+    Vector(const Vector<Size, Scalar>& toCopy) InlineMethod = default;
 
     /**
      * Returns the number of components of the vector.
      */
-    int size() const;
+    inline GPUCallableMethod
+    int size() const InlineMethod;
 
     /**
      * Returns read-only ref. to component of given index.
@@ -193,12 +175,13 @@ struct tarch::la::Vector {
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
-    inline const Scalar& operator[] (int index) const InlineMethod {
-#if defined(GPUOffloadingOff)
-          assertion3 ( index >= 0, index, Size, ::toString(*this) );
-          assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
-#endif
-        return _values[index];
+    inline GPUCallableMethod
+    const Scalar& operator[] (int index) const InlineMethod {
+      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+      assertion3(index >= 0, index, Size, ::toString(*this));
+      assertion3(index < Size, index, Size, ::toString(*this));
+      #endif
+      return _values[index];
     }
 
     /**
@@ -206,12 +189,13 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator[] (int index) InlineMethod {
-#if defined(GPUOffloadingOff)
-          assertion3 ( index >= 0, index, Size, ::toString(*this) );
-          assertion3 ( index < Size, index, Size, ::toString(*this) );
-#endif
-        return _values[index];
+    inline GPUCallableMethod
+    Scalar& operator[] (int index) InlineMethod {
+      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+      assertion3(index >= 0, index, Size, ::toString(*this));
+      assertion3(index < Size, index, Size, ::toString(*this));
+      #endif
+      return _values[index];
     }
 
     /**
@@ -225,12 +209,13 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline const Scalar& operator() (int index) const InlineMethod {
-#if defined(GPUOffloadingOff)
-          assertion3 ( index >= 0, index, Size, ::toString(*this) );
-          assertion3 ( index < Size, index, Size, ::toString(*this) );
-#endif
-        return _values[index];
+    inline GPUCallableMethod
+    const Scalar& operator() (int index) const InlineMethod {
+      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+      assertion3(index >= 0, index, Size, ::toString(*this));
+      assertion3(index < Size, index, Size, ::toString(*this));
+      #endif
+      return _values[index];
     }
 
     /**
@@ -238,31 +223,75 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator() (int index) InlineMethod {
-#if defined(GPUOffloadingOff)
-        assertion3 ( index >= 0, index, Size, ::toString(*this) );
-        assertion3 ( index < Size, index, Size, ::toString(*this) );
-#endif
-       return _values[index];
-     }
+    inline GPUCallableMethod
+    Scalar& operator() (int index) InlineMethod {
+      #if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+      assertion3(index >= 0, index, Size, ::toString(*this));
+      assertion3(index < Size, index, Size, ::toString(*this));
+      #endif
+      return _values[index];
+    }
 
     /**
      * This routine returns a pointer to the first data element. Not a
      * beautiful one as it harms the OO idea, but in many cases it is
      * convenient to have this operation.
      */
-    Scalar* data() {
+    inline GPUCallableMethod
+    Scalar* data() InlineMethod {
       return _values;
     }
 
-    const Scalar * data() const {
+    inline GPUCallableMethod
+    const Scalar* data() const InlineMethod {
       return _values;
     }
 };
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+
+static_assert(
+  std::is_trivially_copyable<tarch::la::Vector<1, int>>::value,
+  "Vector should be trivially copyable!"
+);
+
+static_assert(
+  std::is_trivially_copyable<tarch::la::Vector<2, int>>::value,
+  "Vector should be trivially copyable!"
+);
+
+static_assert(
+  std::is_trivially_copyable<tarch::la::Vector<1, double>>::value,
+  "Vector should be trivially copyable!"
+);
+
+static_assert(
+  std::is_trivially_copyable<tarch::la::Vector<2, double>>::value,
+  "Vector should be trivially copyable!"
+);
+
+#if defined(SharedSYCL) or defined(GPUOffloadingSYCL)
+static_assert(
+  sycl::is_device_copyable<tarch::la::Vector<1, int>>::value,
+  "Vector should be SYCL device copyable!"
+);
+static_assert(
+  sycl::is_device_copyable<tarch::la::Vector<2, int>>::value,
+  "Vector should be SYCL device copyable!"
+);
+static_assert(
+  sycl::is_device_copyable<tarch::la::Vector<1, double>>::value,
+  "Vector should be SYCL device copyable!"
+);
+static_assert(
+  sycl::is_device_copyable<tarch::la::Vector<2, double>>::value,
+  "Vector should be SYCL device copyable!"
+);
+#endif
 
 #include "tarch/la/Vector.cpph"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "tarch/la/VectorSlice.h"
-

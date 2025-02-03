@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "config.h"
-
 
 /**
  * @page tarch_accelerator_SYCL SYCL support
@@ -120,17 +118,17 @@
  * find out which core wrote the error message. So we have to circumnavigate
  * Peano's logging.
  */
-#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#if defined(GPUOffloadingSYCL)
 
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")
 #undef Dimensions
 #undef assertion
-#include <CL/sycl.hpp>
+// Use the single standard header file: https://github.khronos.org/SYCL_Reference/header-file.html
+// We include this header twice in Device.h and Core.h to make sure we can use SYCL multithreading and SYCL GPU offloading independently
+#include <sycl/sycl.hpp>
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
-
-#include <set>
 
 namespace tarch {
   namespace accelerator {
@@ -152,7 +150,7 @@ namespace tarch {
      *
      * @see tarch::multicore::getHostSYCLQueue()
      */
-    sycl::queue& getSYCLQueue( int number );
+    sycl::queue& getSYCLQueue(int number);
 
     /**
      * Write available queues to cout. The logging interface is not used, as

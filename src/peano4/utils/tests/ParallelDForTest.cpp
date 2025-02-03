@@ -32,10 +32,15 @@ void peano4::utils::tests::ParallelDForTest::testParallelDFor() {
     output[i] = 0;
   }
 
+  // SYCL's parallel for does not support capture by reference,
+  // therefore we capture the address of the output by value
+  // and work on this pointer instead.
+  int* outputPtr = output;
+
   for (int sample=0; sample<Samples; sample++) {
     parallelDfor(counter,Size) {
       int index = peano4::utils::dLinearised(counter,Size);
-      output[index]++;
+      outputPtr[index]++;
     } endParallelDfor
   }
 

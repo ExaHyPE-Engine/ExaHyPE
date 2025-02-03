@@ -1,7 +1,3 @@
-#include "tarch/Assertions.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-
-
 template <int Size, typename Scalar>
 tarch::la::Vector<Size, Scalar>& tarch::la::operator*=(Vector<Size, Scalar>& vector, const Scalar& scalar) {
 #ifdef CompilerICC

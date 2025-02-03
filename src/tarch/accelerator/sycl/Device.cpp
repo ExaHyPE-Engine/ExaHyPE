@@ -1,15 +1,17 @@
-#include "Device.h"
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
-
-#include <map>
 
 #include "tarch/Assertions.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+#include <map>
+
 #if defined(GPUOffloadingSYCL)
 
-namespace
-{
+#include "Device.h"
+
+namespace {
   std::map<int, sycl::queue> syclQueues;
 } // namespace
 

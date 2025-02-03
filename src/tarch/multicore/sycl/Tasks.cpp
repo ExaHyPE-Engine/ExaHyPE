@@ -1,4 +1,7 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/Task.h"
+#include "Core.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -6,7 +9,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
-#include "tarch/multicore/sycl/Core.h"
 
 #if defined(SharedSYCL)
 
@@ -35,9 +37,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 }
 
 
-void tarch::multicore::native::spawnTask(Task* job, int in, int out) { tarch::multicore::native::spawnTask(job); }
-
-
 /**
  * Read spawnAndWaitAsTaskLoop() first.
  *
@@ -54,7 +53,11 @@ void tarch::multicore::native::spawnTask(Task* job, int in, int out) { tarch::mu
  *
  * @see spawnAndWaitAsTaskLoop()
  */
-void tarch::multicore::native::spawnTask(Task* job) {
+void tarch::multicore::native::spawnTask(
+  Task*                       job,
+  const std::set<TaskNumber>& /*inDependencies*/,
+  const TaskNumber&           /*taskNumber*/
+) {
   sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
     h.host_task([=]() {
       while (job->run()) {
@@ -64,44 +67,22 @@ void tarch::multicore::native::spawnTask(Task* job) {
   });
 }
 
-/**
- * It is not clear what happens if I use tasksOfSameType directly within the task.
- * It is clear that a pure reference cannot be used within a task, as the task uses
- * firstprivate by default. Therefore, it would copy something which ceases to exist.
- * It is not clear what happens with const references, but we had some memory issues
- * with the newer Intel/LLVM versions. Therefore, I manually copy the list and pass
- * this one into fuse(). The firstprivate annotation is not required, as this is the
- * default. But I leave it in here to highlight that three variables are copied,
- * but tasksOfSameType is not copied and not used within the task.
- */
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
-  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
-  if (stillExecuteLocally) {
-    tarch::multicore::native::spawnTask(myTask);
-  } else {
-    delete myTask;
+
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+  const bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
+  while (stillExecuteLocally and myTask->run()) {
+    tarch::multicore::Core::getInstance().yield();
   }
+  delete myTask;
 }
 
 
 // void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
-}
+void tarch::multicore::native::waitForTasks(const std::set<int>& /*inDependencies*/) {}
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(
-  Task* job, const std::vector<int>& inDependencies, int taskNumber
-) {
-  tarch::multicore::native::spawnTask(job);
-}
+void tarch::multicore::native::waitForAllTasks() {}
 
-
-void tarch::multicore::native::waitForTasks(const std::vector<int>& inDependencies) {}
-
-void tarch::multicore::native::waitForTask(int taskNumber) {}
-#endif
+#endif // defined(SharedSYCL)

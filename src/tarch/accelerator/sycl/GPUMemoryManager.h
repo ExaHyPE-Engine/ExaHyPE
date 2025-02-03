@@ -2,20 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
 
-
 #if !defined(_TARCH_ACCELERATOR_SYCL_GPU_MEMORY_MANAGER) and defined(GPUOffloadingSYCL)
 #define _TARCH_ACCELERATOR_SYCL_GPU_MEMORY_MANAGER
 
+#include "Device.h"
 
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
 
 #include <map>
 #include <list>
 #include <vector>
-
-#include "tarch/accelerator/accelerator.h"
-
 
 namespace tarch {
   namespace accelerator {

@@ -15,14 +15,14 @@ namespace exahype2 {
   /**
    * Forward declaration
    */
-  template<typename inType=double, typename outType=double>
+  template <typename inType, typename outType>
   struct CellData;
 
   namespace fv::rusanov::sycl {
     /**
      * Wrapper around CellData
      *
-     * Within ExaHyPE2, data that has to be processed by the GPU is
+     * Within ExaHyPE 2, data that has to be processed by the GPU is
      * initially on the heap allocated via ::tarch::accelerator::ManagedSharedAcceleratorDeviceMemory.
      * This holds for the core user data. It does not hold for any meta data.
      *

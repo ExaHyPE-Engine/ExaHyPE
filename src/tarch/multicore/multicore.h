@@ -1,5 +1,11 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "config.h"
+
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/multicore/orchestration/Strategy.h"
 
 #include <string>
 #include <set>
@@ -7,15 +13,14 @@
 #include <list>
 #include <limits>
 
-#include "config.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "tarch/multicore/orchestration/Strategy.h"
-
 #if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
 #define SharedMemoryParallelisation
 #endif
 
-#pragma once
+/**
+ * Have to include this header, as we need access to the SYCL header file to prevent conflicts with the Dimensions macro.
+ */
+#include "tarch/multicore/sycl/Core.h"
 
 namespace tarch {
   /**

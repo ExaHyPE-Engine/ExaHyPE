@@ -24,7 +24,10 @@ message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMM
 project(${PEANO_PROJECT_NAME}
   DESCRIPTION ${PEANO_PROJECT_DESCRIPTION}
   HOMEPAGE_URL ${PEANO_AUTHOR_DOMAIN}
-  LANGUAGES C CXX
+  LANGUAGES
+    C
+    CXX
+    #Fortran
 )
 
 set(CMAKE_C_STANDARD 17 CACHE STRING "")
@@ -53,6 +56,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 include(Ccache)
 include(CheckIncludeFiles)
+include(CheckIncludeFileCXX)
 
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
@@ -176,7 +180,7 @@ elseif(WITH_MULTITHREADING STREQUAL "cpp")
   target_compile_definitions(PeanoOptions INTERFACE SharedCPP)
   set(ONLY_IF_MULTITHREADING_FIND_DEPENDENCY "find_dependency(Threads::Threads)")
 elseif(WITH_MULTITHREADING STREQUAL "sycl")
-  check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
+  #check_include_file_cxx(sycl/sycl.hpp HAVE_CL_SYCL_HPP) # Needs -fsycl to find the header. TODO: Add globally
   target_compile_options(PeanoOptions INTERFACE -fsycl)
   target_link_options(PeanoOptions INTERFACE -fsycl)
   target_compile_definitions(PeanoOptions INTERFACE SharedSYCL)
@@ -211,17 +215,16 @@ list(APPEND AVAILABLE_ACCELERATOR_ARCHITECTURES
 set(WITH_GPU_ARCH "none" CACHE STRING "${AVAILABLE_ACCELERATOR_ARCHITECTURES}")
 set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${AVAILABLE_ACCELERATOR_ARCHITECTURES})
 
-string(SUBSTRING "${WITH_GPU_ARCH}" 0 3 GPU_PREFIX)
-if("${GPU_PREFIX}" STREQUAL "sm_")
+if(WITH_GPU_ARCH MATCHES "^sm_")
   set(PEANO_NVIDIA_GPU TRUE)
-elseif("${GPU_PREFIX}" STREQUAL "gfx")
+elseif(WITH_GPU_ARCH MATCHES "^gfx")
   set(PEANO_AMD_GPU TRUE)
-elseif("${GPU_PREFIX}" STREQUAL "spir")
+elseif(WITH_GPU_ARCH MATCHES "^spir")
   set(PEANO_INTEL_GPU TRUE)
 endif()
 
 if(NOT WITH_GPU STREQUAL "no" AND WITH_GPU_ARCH STREQUAL "none")
-  message(FATAL_ERROR "Make sure to also set WITH_GPU_ARCH")
+  message(FATAL_ERROR "No GPU architecture chosen. Make sure to also set WITH_GPU_ARCH")
 endif()
 
 if(WITH_GPU STREQUAL "omp")
@@ -233,6 +236,8 @@ elseif(WITH_GPU STREQUAL "cpp")
   include(StdPar)
 elseif(WITH_GPU STREQUAL "sycl")
   include(SYCL)
+else()
+  set(ONLY_IF_GPU_FIND_DEPENDENCY "# GPU not used")
 endif()
 
 list(APPEND PEANO_DIMENSIONS

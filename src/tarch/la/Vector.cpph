@@ -21,50 +21,14 @@ tarch::la::Vector<Size,Scalar>::Vector(std::initializer_list<Scalar> values) {
 
 
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector( const std::bitset<Size>& value ) {
+tarch::la::Vector<Size,Scalar>::Vector(const std::bitset<Size>& value) {
   for (int i=0; i<Size; i++) {
     _values[i] = value[i] ? 1 : 0;
   }
 }
 
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
-  const Vector<Size,Scalar>&  toAssign
-) {
-  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-  assertion(this != &toAssign);
-  #endif
-
-  #ifdef CompilerICC
-  #pragma ivdep
-  #endif
-  for (int i=0; i<Size; i++) {
-    _values[i] = toAssign._values[i];
-  }
-  return *this;
-}
-
-template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector (
-  const Vector<Size,Scalar>& toCopy
-):
-  _values() {
-  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-  assertion(this != &toCopy);
-  #endif
- 
-  #ifdef CompilerICC
-  #pragma ivdep
-  #endif
-  for (int i=0; i<Size; i++) {
-    _values[i] = toCopy._values[i];
-  }
-}
-
-template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector(
-  const Scalar& initialValue
-):
+tarch::la::Vector<Size, Scalar>::Vector(const Scalar& initialValue):
   _values() {
   for (int i=0; i < Size; i++) {
     _values[i] = initialValue;
@@ -77,7 +41,7 @@ int tarch::la::Vector<Size,Scalar>::size() const {
 }
 
 template<int Size, typename Scalar>
-std::string toString( const tarch::la::Vector<Size,Scalar>& vector ) {
+std::string toString(const tarch::la::Vector<Size, Scalar>& vector) {
   std::ostringstream os;
   os << "[";
   for ( int i=0; i < Size; i++ ) {
@@ -91,7 +55,7 @@ std::string toString( const tarch::la::Vector<Size,Scalar>& vector ) {
 }
 
 template <typename NewScalarType, int Size, typename Scalar>
-tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>&  vector) {
+tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size, Scalar>& vector) {
   tarch::la::Vector<Size,NewScalarType> result;
   for ( int i=0; i < Size; i++ ) {
     result(i) = vector(i);

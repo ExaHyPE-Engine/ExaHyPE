@@ -17,9 +17,9 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless(
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double* tempFluxX                   = EvaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
   double* tempFluxY                   = EvaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
@@ -734,7 +734,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>&patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -744,7 +744,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int tar
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  GPUUSMCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
     SolverType,
@@ -775,7 +775,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>&patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -785,7 +785,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedHeapStateless(int ta
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  GPUCopyCellData                              gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
     SolverType,
@@ -816,7 +816,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData<double, double>&patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData<double, double>& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -826,7 +826,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  GPUManagedCellData                           gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
     SolverType,
@@ -857,7 +857,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>&patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -867,7 +867,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int tar
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  GPUUSMCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovBatchedUSMStateless", false, true);
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
@@ -901,7 +901,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -911,7 +911,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedHeapStateless(int ta
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  GPUCopyCellData                              gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovBatchedHeapStateless", false, true);
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
@@ -945,7 +945,7 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
@@ -955,7 +955,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  GPUManagedCellData                           gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovBatchedManagedStateless", false, true);
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<

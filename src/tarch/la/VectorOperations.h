@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <cmath>
+#include "ScalarOperations.h"
+
 #include <sstream>
 #include <vector>
-
-#include "tarch/la/ScalarOperations.h"
+#include <limits>
 
 /**
  * Forward declaration
@@ -35,20 +35,24 @@ namespace tarch {
      * summed up squared component values.
      */
     template <int Size, typename Scalar>
-    Scalar norm2(const Vector<Size, Scalar>& vector);
+    inline GPUCallableMethod
+    Scalar norm2(const Vector<Size, Scalar>& vector) InlineMethod;
 
     template <int Size, typename Scalar>
-    Scalar norm2Squared(const Vector<Size, Scalar>& vector);
+    inline GPUCallableMethod
+    Scalar norm2Squared(const Vector<Size, Scalar>& vector) InlineMethod;
 
     /**
      * Specialisation that is different to standard definition. Works as result
      * type is not part of the signature
      */
     template <int Size>
-    double norm2(const Vector<Size, std::complex<double>>& vector);
+    inline GPUCallableMethod
+    double norm2(const Vector<Size, std::complex<double>>& vector) InlineMethod;
 
     template <int Size>
-    double norm2Squared(const Vector<Size, std::complex<double>>& vector);
+    inline GPUCallableMethod
+    double norm2Squared(const Vector<Size, std::complex<double>>& vector) InlineMethod;
 
     /**
      * Computes the max-norm of the vector.

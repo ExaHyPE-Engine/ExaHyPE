@@ -12,7 +12,7 @@
 #include "tarch/multicore/Lock.h"
 
 namespace {
-  [[maybe_unused]] tarch::logging::Log _log("toolbox::blockstructured");
+  tarch::logging::Log _log("toolbox::blockstructured");
 
   tarch::multicore::BooleanSemaphore interpolationMapSemaphore;
 } // namespace
