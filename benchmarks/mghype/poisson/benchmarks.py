@@ -18,7 +18,7 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
-parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-shifted-and-fused"], required=True, help="Pick variant" )
+parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
 args = parser.parse_args()
 
@@ -49,6 +49,8 @@ Solver_Type = None
 if args.variant == "dg-sweeps":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted
 elif args.variant == "dg-shifted-and-fused":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+elif args.variant == "tasks":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 
 solver = Solver_Type(
@@ -100,7 +102,6 @@ project.set_global_simulation_parameters(
 
 project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
 project.set_Peano4_installation( args.peanodir, build_mode )
-project.
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file( args.peanodir + "/tests/multigrid/matrixfree/poisson/Scenario.cpp" )
