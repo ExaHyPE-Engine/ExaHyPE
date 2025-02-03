@@ -127,7 +127,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          faceNumber,
       const tarch::la::Vector<Dimensions,double>&  systemOrigin,
       double* __restrict__                         Qold,
-      double* __restrict__                         Qnew
+      double* __restrict__                         Qnew,
+      double                                       CheckpointTimeStamp
     );
 
     /**
@@ -156,7 +157,8 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          faceNumber,
       const tarch::la::Vector<Dimensions,double>&  systemOrigin,
       double* __restrict__                         Qold,
-      double* __restrict__                         Qnew
+      double* __restrict__                         Qnew,
+      double                                       CheckpointTimeStamp
     );
   }
 }

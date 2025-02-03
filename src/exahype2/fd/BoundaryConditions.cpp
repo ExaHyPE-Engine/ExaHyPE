@@ -106,7 +106,8 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          faceNumber,
   const tarch::la::Vector<Dimensions,double>&  systemOrigin,
   double* __restrict__                         Qold,
-  double* __restrict__                         Qnew
+  double* __restrict__                         Qnew,
+  double                                       CheckpointTimeStamp
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
   logTraceInWith4Arguments( "applySommerfeldConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
@@ -159,6 +160,12 @@ void exahype2::fd::applySommerfeldConditions(
       //std::cout<<"xOnlayer: "<<xOnLayer<<std::endl;
 
       if (tarch::la::equals(t,0.0)){ //for the initial timestep, we need to fill the outside volume for old data as well.
+        for(int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
+          (Qold + enumerator(outsideGridCell,0))[i]=(Qold+enumerator(insideGridCell,0))[i];
+        }
+      }
+
+      if (tarch::la::equals(t,CheckpointTimeStamp,1e-8)){ //for the initial timestep, we need to fill the outside volume for old data as well.
         for(int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
           (Qold + enumerator(outsideGridCell,0))[i]=(Qold+enumerator(insideGridCell,0))[i];
         }
@@ -231,7 +238,8 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          faceNumber,
   const tarch::la::Vector<Dimensions,double>&  systemOrigin,
   double* __restrict__                         Qold,
-  double* __restrict__                         Qnew
+  double* __restrict__                         Qnew,
+  double                                       CheckpointTimeStamp
 ) {
   applySommerfeldConditions(
     maxEigenvalue,
@@ -255,7 +263,8 @@ void exahype2::fd::applySommerfeldConditions(
     faceNumber,
     systemOrigin,
     Qold,
-    Qnew
+    Qnew,
+    CheckpointTimeStamp
   );
 }
 
