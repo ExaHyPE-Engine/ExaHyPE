@@ -1,15 +1,15 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .kernels import *
-
-from peano4.toolbox.blockstructured import ReconstructedArrayMemoryLocation
+from .CreateRiemannKernel import *
+from .AbstractSolverDeclarations import AbstractSolverDeclarations
+from .AbstractSolverDefinitions import AbstractSolverDefinitions
+from .SolverDeclarations import SolverDeclarations
+from .SolverDefinitions import SolverDefinitions
 
 from exahype2.solvers import PDETerms
 from exahype2.solvers.fv.EnclaveTasking import EnclaveTasking
+from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
-from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import (
-    AdaptiveTimeSteppingCodeSnippets,
-)
 
 
 class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
@@ -30,20 +30,20 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         eigenvalues=PDETerms.User_Defined_Implementation,
         riemann_solver=PDETerms.User_Defined_Implementation,
         source_term=PDETerms.None_Implementation,
-        plot_grid_properties=False,
         pde_terms_without_state=False,
+        plot_grid_properties=False,
         overlap=1,
     ):
         super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).__init__(
-            name,
-            patch_size,
-            overlap,
-            unknowns,
-            auxiliary_variables,
-            min_volume_h,
-            max_volume_h,
-            plot_grid_properties,
-            pde_terms_without_state,
+            name=name,
+            patch_size=patch_size,
+            overlap=overlap,
+            unknowns=unknowns,
+            auxiliary_variables=auxiliary_variables,
+            min_volume_h=min_volume_h,
+            max_volume_h=max_volume_h,
+            pde_terms_without_state=pde_terms_without_state,
+            plot_grid_properties=plot_grid_properties,
             kernel_namespace="riemann",
         )
         self._time_step_relaxation = time_step_relaxation
@@ -77,22 +77,19 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         eigenvalues=None,
         riemann_solver=None,
         source_term=None,
-        memory_location=None,
-        use_split_loop=False,
         additional_action_set_includes="",
         additional_user_includes="",
     ):
-        """
-        If you pass in User_Defined, then the generator will create C++ stubs
-        that you have to befill manually. If you pass in None_Implementation, it
-        will create nop, i.e., no implementation or defaults. Any other string
-        is copied 1:1 into the implementation. If you pass in None, then the
-        set value so far won't be overwritten.
+        super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).set_implementation(
+            initial_conditions=initial_conditions,
+            boundary_conditions=boundary_conditions,
+            refinement_criterion=refinement_criterion,
+            additional_action_set_includes=additional_action_set_includes,
+            additional_user_includes=additional_user_includes,
+            use_split_loop=False,
+            memory_location=None,
+        )
 
-        Please note that not all options are supported by all solvers.
-
-        This routine should be the very last invoked by the constructor.
-        """
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
         if boundary_conditions is not None:
@@ -109,105 +106,99 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
             self._riemann_solver_implementation = riemann_solver
         if source_term is not None:
             self._source_term_implementation = source_term
-        if memory_location is not None:
-            self._reconstructed_array_memory_location = memory_location
-        if use_split_loop:
-            self._use_split_loop = use_split_loop
 
-        self._compute_kernel_call = create_compute_Riemann_kernel(
+        self._compute_kernel_call = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
-            compute_max_eigenvalue_of_next_time_step=self._compute_eigenvalue,
+            evaluate_max_eigenvalue_of_next_time_step=True,
             solver_variant=SolverVariant.WithVirtualFunctions,
-            kernel_variant=KernelVariant.PatchWiseAoS,
         )
 
-        self._compute_kernel_call_stateless = create_compute_Riemann_kernel(
+        self._compute_kernel_call_stateless = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
-            compute_max_eigenvalue_of_next_time_step=self._compute_eigenvalue,
+            evaluate_max_eigenvalue_of_next_time_step=True,
             solver_variant=SolverVariant.Stateless,
-            kernel_variant=KernelVariant.PatchWiseAoS,
         )
 
-        self._fused_compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel(
+        self._fused_compute_kernel_call_stateless_cpu = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
-            compute_max_eigenvalue_of_next_time_step=self._compute_eigenvalue,
-            solver_variant=SolverVariant.Stateless,
-            kernel_variant=KernelVariant.PatchWiseAoS,
+            evaluate_max_eigenvalue_of_next_time_step=True,
+            solver_variant=SolverVariant.Multicore,
         )
 
-        self._fused_compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel(
+        self._fused_compute_kernel_call_stateless_gpu = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
-            compute_max_eigenvalue_of_next_time_step=self._compute_eigenvalue,
+            evaluate_max_eigenvalue_of_next_time_step=True,
             solver_variant=SolverVariant.Accelerator,
-            kernel_variant=KernelVariant.PatchWiseAoS,
         )
-
-        if (
-            self._reconstructed_array_memory_location
-            == ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
-            or self._reconstructed_array_memory_location
-            == ReconstructedArrayMemoryLocation.HeapWithoutDelete
-            or self._reconstructed_array_memory_location
-            == ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete
-        ):
-            raise Exception(
-                "Memory mode without appropriate delete chosen, i.e. this will lead to a memory leak"
-            )
 
         solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(
             self._time_step_relaxation
         )
 
-        self._abstract_solver_user_declarations = create_abstract_solver_declarations(
+        abstract_solver_declarations = AbstractSolverDeclarations(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
             eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
+        )
+        abstract_solver_definitions = AbstractSolverDefinitions(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            riemann_solver_implementation=self._riemann_solver_implementation,
+            source_term_implementation=self._source_term_implementation,
+            pde_terms_without_state=self._pde_terms_without_state,
+        )
+        solver_declarations = SolverDeclarations(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            riemann_solver_implementation=self._riemann_solver_implementation,
+            source_term_implementation=self._source_term_implementation,
+            pde_terms_without_state=self._pde_terms_without_state,
+        )
+        solver_definitions = SolverDefinitions(
+            flux_implementation=self._flux_implementation,
+            ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
+            riemann_solver_implementation=self._riemann_solver_implementation,
+            source_term_implementation=self._source_term_implementation,
+            pde_terms_without_state=self._pde_terms_without_state,
+        )
+
+        self._abstract_solver_user_declarations = (
+            abstract_solver_declarations.create_abstract_solver_user_declarations()
         )
         self._abstract_solver_user_declarations += (
             solver_code_snippets.create_abstract_solver_user_declarations()
         )
-        self._abstract_solver_user_definitions = create_abstract_solver_definitions(
-            flux_implementation=self._flux_implementation,
-            ncp_implementation=self._ncp_implementation,
-            eigenvalues_implementation=self._eigenvalues_implementation,
-            riemann_solver_implementation=self._riemann_solver_implementation,
-            source_term_implementation=self._source_term_implementation,
-            pde_terms_without_state=self._pde_terms_without_state,
+
+        self._abstract_solver_user_definitions = (
+            abstract_solver_definitions.create_abstract_solver_user_definitions()
         )
         self._abstract_solver_user_definitions += (
             solver_code_snippets.create_abstract_solver_user_definitions()
         )
 
-        self._solver_user_declarations = create_solver_declarations(
-            flux_implementation=self._flux_implementation,
-            ncp_implementation=self._ncp_implementation,
-            eigenvalues_implementation=self._eigenvalues_implementation,
-            riemann_solver_implementation=self._riemann_solver_implementation,
-            source_term_implementation=self._source_term_implementation,
-            pde_terms_without_state=self._pde_terms_without_state,
+        self._solver_user_declarations = (
+            solver_declarations.create_solver_user_declarations()
         )
-        self._solver_user_definitions = create_solver_definitions(
-            flux_implementation=self._flux_implementation,
-            ncp_implementation=self._ncp_implementation,
-            eigenvalues_implementation=self._eigenvalues_implementation,
-            riemann_solver_implementation=self._riemann_solver_implementation,
-            source_term_implementation=self._source_term_implementation,
-            pde_terms_without_state=self._pde_terms_without_state,
+        self._solver_user_definitions = (
+            solver_definitions.create_solver_user_definitions()
         )
 
         self._compute_time_step_size = (
@@ -223,18 +214,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         self._finish_time_step_implementation = (
             solver_code_snippets.create_finish_time_step_implementation()
         )
+
         self._constructor_implementation = (
             solver_code_snippets.create_abstract_solver_constructor_statements()
-        )
-
-        super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).set_implementation(
-            initial_conditions=initial_conditions,
-            boundary_conditions=boundary_conditions,
-            refinement_criterion=refinement_criterion,
-            memory_location=memory_location,
-            use_split_loop=use_split_loop,
-            additional_action_set_includes=additional_action_set_includes,
-            additional_user_includes=additional_user_includes,
         )
 
     @property

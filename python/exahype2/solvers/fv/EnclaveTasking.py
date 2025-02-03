@@ -329,8 +329,8 @@ class EnclaveTasking(FV):
         auxiliary_variables,
         min_volume_h,
         max_volume_h,
-        plot_grid_properties,
         pde_terms_without_state: bool,
+        plot_grid_properties: bool,
         kernel_namespace,
     ):
         """
@@ -350,8 +350,8 @@ class EnclaveTasking(FV):
             auxiliary_variables,
             min_volume_h,
             max_volume_h,
-            plot_grid_properties,
             pde_terms_without_state,
+            plot_grid_properties,
             kernel_namespace,
         )
         self._solver_template_file_class_name = "EnclaveTasking"

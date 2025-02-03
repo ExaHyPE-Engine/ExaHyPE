@@ -2,13 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 namespace exahype2 {
   class Solver;
 }
-
-
 
 class exahype2::Solver {
   public:
@@ -18,7 +14,7 @@ class exahype2::Solver {
      * operations:
      *
      * In C++ you cannot overload w.r.t. static. We however need functions which
-     * exist twice in ExaHyPE: Once as standard (virtual) member functions and
+     * exist twice in ExaHyPE 2: Once as standard (virtual) member functions and
      * once at static version which an be offloaded to a GPU as it does not
      * have a state. Both function variants, in theory, have the same signature
      * but if they had, a compiler could not distinguish them. So I use this
@@ -33,8 +29,11 @@ class exahype2::Solver {
       Yes
     };
 
+    Solver() = default;
+    virtual ~Solver() = default;
+
     /**
-     * There are two different falvours of a minimal time stamp: On the one hand,
+     * There are two different flavours of a minimal time stamp: On the one hand,
      * there's a global minimum time stamp over the whole mesh. This might not
      * be the min time stamp after the last update. If you have local time
      * stepping, then some cells might just have done a tiny time step,
@@ -83,5 +82,3 @@ class exahype2::Solver {
     virtual void startSimulation() = 0;
     virtual void finishSimulation() = 0;
 };
-
-

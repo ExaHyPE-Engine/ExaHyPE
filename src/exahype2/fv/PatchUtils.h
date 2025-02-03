@@ -2,15 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
+#include <vector>
 
 namespace exahype2 {
   namespace fv {
@@ -18,63 +16,77 @@ namespace exahype2 {
      * We need this routine within vectorised and GPUised code. Therefore,
      * it has to be in the header (as link-time optimisation is quite tricky
      * for many compilers). To avoid the implied multiple symbol errors, I
-     * declare the function as static. Now the compilers plot warning, but
-     * everything seems to work.
+     * declare the function as static.
      */
-    static tarch::la::Vector<2,double>  getVolumeSize(
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    )
-    //InlineMethod
-    {
-      tarch::la::Vector<2,double> volumeSize;
-
-      for (int d=0; d<2; d++) {
-        #if !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingOMP)
-        assertion2( numberOfVolumesPerAxisInPatch>=1, h, numberOfVolumesPerAxisInPatch );
-        #endif
-        volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<2, double> getVolumeSize(
+      const tarch::la::Vector<2, double>& h,
+      const int numberOfVolumesPerAxisInPatch
+    ) InlineMethod {
+      #if defined(GPUOffloadingOff)
+      assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
+      #endif
+      tarch::la::Vector<2, double> volumeSize;
+      for (int d = 0; d < 2; d++) {
+        volumeSize(d) = h(d) / numberOfVolumesPerAxisInPatch;
       }
-
       return volumeSize;
     }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
-
-    static tarch::la::Vector<3,double>  getVolumeSize(
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    )
-    //InlineMethod
-    {
-      tarch::la::Vector<3,double> volumeSize;
-
-      for (int d=0; d<3; d++) {
-        volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<3, double> getVolumeSize(
+      const tarch::la::Vector<3, double>& h,
+      const int numberOfVolumesPerAxisInPatch
+    ) InlineMethod {
+      #if defined(GPUOffloadingOff)
+      assertion2(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
+      #endif
+      tarch::la::Vector<3, double> volumeSize;
+      for (int d = 0; d < 3; d++) {
+        volumeSize(d) = h(d) / numberOfVolumesPerAxisInPatch;
       }
-
       return volumeSize;
     }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<2, double> getFaceSize(
+      const tarch::la::Vector<2, double>& h,
+      const int numberOfVolumesPerAxisInPatch
+    ) InlineMethod {
+      return getVolumeSize(h, numberOfVolumesPerAxisInPatch);
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
-    static tarch::la::Vector<2,double>  getFaceSize(
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    )
-    //InlineMethod
-    {
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<3, double> getFaceSize(
+      const tarch::la::Vector<3, double>& h,
+      const int numberOfVolumesPerAxisInPatch
+    ) InlineMethod {
       return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
     }
-
-
-    static tarch::la::Vector<3,double>  getFaceSize(
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    )
-    //InlineMethod
-    {
-      return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
-    }
-
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
     /**
      * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
@@ -91,93 +103,103 @@ namespace exahype2 {
      * @param h      Size of the cell
      * @param index  Index of Finite Volume (in lexicographic ordering)
      */
-    static tarch::la::Vector<2,double>  getVolumeCentre(
-      const tarch::la::Vector<2,double>&  x,
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch,
-      const tarch::la::Vector<2,int>&     index
-    )
-    //InlineMethod
-    {
-      tarch::la::Vector<2,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
-      tarch::la::Vector<2,double> result     = x - 0.5 * h + 0.5 * volumeSize;
-      for (int d=0; d<2; d++) {
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<2, double> getVolumeCentre(
+      const tarch::la::Vector<2, double>& x,
+      const tarch::la::Vector<2, double>& h,
+      const int numberOfVolumesPerAxisInPatch,
+      const tarch::la::Vector<2, int>& index
+    ) InlineMethod {
+      tarch::la::Vector<2, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<2, double> result     = x - 0.5 * h + 0.5 * volumeSize;
+      for (int d = 0; d < 2; d++) {
         result(d) += index(d) * volumeSize(d);
       }
       return result;
     }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
-
-    static tarch::la::Vector<3,double>  getVolumeCentre(
-      const tarch::la::Vector<3,double>&  x,
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch,
-      const tarch::la::Vector<3,int>&     index
-    )
-    //InlineMethod
-    {
-      tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
-      tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
-      for (int d=0; d<3; d++) {
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<3, double> getVolumeCentre(
+      const tarch::la::Vector<3, double>& x,
+      const tarch::la::Vector<3, double>& h,
+      const int numberOfVolumesPerAxisInPatch,
+      const tarch::la::Vector<3, int>& index
+    ) InlineMethod {
+      tarch::la::Vector<3, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<3, double> result     = x - 0.5 * h + 0.5 * volumeSize;
+      for (int d = 0; d < 3; d++) {
         result(d) += index(d) * volumeSize(d);
       }
       return result;
     }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
-
-    static tarch::la::Vector<2,double>  getFaceCentre(
-      const tarch::la::Vector<2,double>&  x,
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch,
-      int                                 overlap,
-      int                                 normal,
-      const tarch::la::Vector<2,int>&     index
-    )
-    //InlineMethod
-    {
-      tarch::la::Vector<2,double> volumeSize = getFaceSize(h,numberOfVolumesPerAxisInPatch);
-      tarch::la::Vector<2,double> result;
-
-      for (int d=0; d<2; d++) {
-        if (d==normal) {
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<2, double> getFaceCentre(
+      const tarch::la::Vector<2, double>& x,
+      const tarch::la::Vector<2, double>& h,
+      const int numberOfVolumesPerAxisInPatch,
+      const int overlap,
+      const int normal,
+      const tarch::la::Vector<2, int>& index
+    ) InlineMethod {
+      tarch::la::Vector<2, double> volumeSize = getFaceSize(h, numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<2, double> result;
+      for (int d = 0; d < 2; d++) {
+        if (d == normal) {
           result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
-        }
-        else {
+        } else {
           result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
         }
         result(d) += index(d) * volumeSize(d);
       }
-
       return result;
     }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
-
-    static tarch::la::Vector<3,double>  getFaceCentre(
-      const tarch::la::Vector<3,double>&  x,
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch,
-      int                                 overlap,
-      int                                 normal,
-      const tarch::la::Vector<3,int>&     index
-    )
-    //InlineMethod
-    {
-      tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
-      tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
-
-      for (int d=0; d<3; d++) {
-        if (d==normal) {
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    tarch::la::Vector<3, double> getFaceCentre(
+      const tarch::la::Vector<3, double>& x,
+      const tarch::la::Vector<3, double>& h,
+      const int numberOfVolumesPerAxisInPatch,
+      const int overlap,
+      const int normal,
+      const tarch::la::Vector<3, int>& index
+    ) InlineMethod {
+      tarch::la::Vector<3, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<3, double> result     = x - 0.5 * h + 0.5 * volumeSize;
+      for (int d = 0; d < 3; d++) {
+        if (d == normal) {
           result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
-        }
-        else {
+        } else {
           result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
         }
         result(d) += index(d) * volumeSize(d);
       }
-
       return result;
     }
-
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
     /**
      * With GCC 10, it was impossible to return/copy the vector class. We
@@ -186,17 +208,15 @@ namespace exahype2 {
      *
      * @see getVolumeSize()
      */
-    double  getVolumeLength(
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
+    double getVolumeLength(
+      const tarch::la::Vector<2, double>& h,
+      int numberOfVolumesPerAxisInPatch
     );
 
-
-    double  getVolumeLength(
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
+    double getVolumeLength(
+      const tarch::la::Vector<3, double>& h,
+      int numberOfVolumesPerAxisInPatch
     );
-
 
     /**
      * Helper routine that I need in the log statements. Applies to
@@ -206,9 +226,8 @@ namespace exahype2 {
      */
     std::string plotVolume(
       const double* __restrict__ Q,
-      int    unknowns
+      int unknowns
     );
-
 
     /**
      * Just runs over the patch and ensures that no entry is non or infinite. In
@@ -235,7 +254,6 @@ namespace exahype2 {
       double* maxValues = nullptr
     );
 
-
     /**
      * Plot patch.
      *
@@ -252,7 +270,6 @@ namespace exahype2 {
       bool   prettyPrint = false
     );
 
-
     std::string plotPatchOverlap(
       const double* __restrict__ Q,
       int    unknowns,
@@ -262,7 +279,6 @@ namespace exahype2 {
       int    normal,
       bool   prettyPrint = false
     );
-
 
     /**
      * A face always holds a left and a right overlap
@@ -282,4 +298,3 @@ namespace exahype2 {
     );
   }
 }
-

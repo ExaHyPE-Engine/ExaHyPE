@@ -4,6 +4,4 @@ from .GlobalFixedTimeStep import GlobalFixedTimeStep
 from .GlobalFixedTimeStepWithEnclaveTasking import GlobalFixedTimeStepWithEnclaveTasking
 
 from .GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
-from .GlobalAdaptiveTimeStepWithEnclaveTasking import (
-    GlobalAdaptiveTimeStepWithEnclaveTasking,
-)
+from .GlobalAdaptiveTimeStepWithEnclaveTasking import GlobalAdaptiveTimeStepWithEnclaveTasking

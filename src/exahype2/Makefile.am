@@ -17,35 +17,36 @@ ExaHyPE2Sources = \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
-  dg/BoundaryConditions.cpp \
-  dg/DGUtils.cpp \
-  dg/CellIntegral.cpp \
-  dg/Riemann.cpp \
-  dg/rusanov/Rusanov.cpp \
-  dg/tests/CellIntegralTest.cpp \
-  dg/tests/DGUtilsTest.cpp \
-  dg/tests/RiemannTest.cpp \
-  dg/tests/TestUtils.cpp \
   enumerator/AoSLexicographicEnumerator.cpp \
   enumerator/SoALexicographicEnumerator.cpp \
   enumerator/SingleDoFEnumerator.cpp \
   enumerator/AoSoALexicographicEnumerator.cpp \
   enumerator/FaceAoSLexicographicEnumerator.cpp \
+  dg/BoundaryConditions.cpp \
+  dg/DGUtils.cpp \
+  dg/CellIntegral.cpp \
+  dg/Riemann.cpp \
+  dg/rusanov/Rusanov.cpp \
+  dg/rusanov/tests/RiemannTest.cpp \
+  dg/tests/CellIntegralTest.cpp \
+  dg/tests/DGUtilsTest.cpp \
+  dg/tests/RiemannTest.cpp \
+  dg/tests/TestUtils.cpp \
   fd/BoundaryConditions.cpp \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
+  fd/tests/CCZ4KernelTest.cpp\
+  fd/tests/SommerfeldBCTest.cpp\
+  fd/fd4/LoopBody.cpp \
+  fd/fd4/FD4_patchwise_functors.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
-  fd/tests/SommerfeldBCTest.cpp\
-  fd/tests/CCZ4KernelTest.cpp\
   fv/tests/InterpolationRestrictionTest.cpp \
-  fd/fd4/LoopBody.cpp \
-  fd/fd4/FD4_patchwise_functors.cpp \
   fv/riemann/Riemann.cpp \
+  fv/riemann/TimeStepWithRiemann.cpp \
   fv/rusanov/rusanov.cpp \
-  dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
