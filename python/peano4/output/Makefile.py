@@ -181,7 +181,6 @@ the SISC paper
         self.d["CXXFLAGS"] += " -I" + path
         self.d["FCFLAGS"] += " -I" + path
 
-
     def add_library(self, library_name, library_path=""):
         """
         If you want to link against a library from Peano, feel free to use
@@ -192,11 +191,10 @@ the SISC paper
 
         A popular invocation including one of Peano's toolboxes is
 
-        project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
+        project.output.makefile.add_library("ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements")
         """
         if library_path != "":
             self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
-        #    self.d["LIBS"] += " -l" + library_name + " "
         self.d["LIBS"] += library_name + " "
 
     def set_mode(self, mode):
