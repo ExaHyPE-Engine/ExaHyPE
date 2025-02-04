@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "compiler/CompilerSpecificSettings.h"
+
 /**
  * @namespace tarch
  *
@@ -33,8 +35,11 @@
  */
 namespace tarch {
   enum class MemoryUsageFormat {
-	MByte
+    MByte,
+    GByte,
   };
+
+  int convertMemorySize(long long value, MemoryUsageFormat format);
 
   /**
    * Method for getting the application's memory footprint
@@ -46,7 +51,7 @@ namespace tarch {
   int getMemoryUsage(MemoryUsageFormat format);
   int getTotalMemory(MemoryUsageFormat format);
   int getFreeMemory(MemoryUsageFormat format);
-}
+} // namespace tarch
 
 /**
  * This is the marker that is to be used after the argument list of a
