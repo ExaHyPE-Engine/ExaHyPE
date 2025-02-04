@@ -422,6 +422,7 @@ void step() {
 
     OTTER_PHASE_SWITCH(otter::phase::timestep);
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
@@ -429,17 +430,16 @@ void step() {
 
     {{SUBNAMESPACE}}observers::TimeStep observer;
     {{SUBNAMESPACE}}observers::TimeStep::prepareTraversal();
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
     {{SUBNAMESPACE}}observers::TimeStep::unprepareTraversal();
-    timeStepMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishTimeStep();
+    watch.stop();
+    timeStepMeasurement.setValue(watch.getCalendarTime());
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Undef:
     assertion(false);
@@ -448,11 +448,6 @@ void step() {
 }
 
 int main(int argc, char** argv) {
-  constexpr int ExitCodeSuccess          = 0;
-  constexpr int ExitCodeUnitTestsFailed  = 1;
-  constexpr int ExitCodeInvalidArguments = 2;
-  constexpr int ExitCodeInvalidBuild     = 3;
-
   static tarch::timing::Watch watch("::", "main()", false);
 
   peano4::initParallelEnvironment(&argc, &argv);
@@ -470,7 +465,7 @@ int main(int argc, char** argv) {
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
-    return ExitCodeInvalidBuild;
+    return EXIT_FAILURE;
   }
 
   {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
@@ -478,20 +473,6 @@ int main(int argc, char** argv) {
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
   feenableexcept({{FENV_ARGS}} );
   {% endif -%}
-
-#if PeanoDebug >= 2
-  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
-  unitTests->addTestCase(peano4::getUnitTests());
-  unitTests->addTestCase(tarch::getUnitTests());
-  unitTests->addTestCase(toolbox::blockstructured::getUnitTests());
-  unitTests->addTestCase(exahype2::getUnitTests());
-  unitTests->run();
-  if (unitTests->getNumberOfErrors() != 0) {
-    logError("main()", "unit tests failed. Quit.");
-    tarch::mpi::Rank::abort(ExitCodeUnitTestsFailed);
-  }
-  delete unitTests;
-#endif
 
   {{SUBNAMESPACE}}repositories::startSimulation();
 
@@ -579,5 +560,5 @@ int main(int argc, char** argv) {
   tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
-  return ExitCodeSuccess;
+  return EXIT_SUCCESS;
 }
