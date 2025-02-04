@@ -1501,7 +1501,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
     TemplateLoadCell_Epilogue = """
-  tarch::multicore::spawnAndWait(tasks);
+  for (auto& p : tasks) {
+    while (p->run()) {
+    }
+    delete p;
+  }
+  //tarch::multicore::spawnAndWait(tasks);
   logTraceOutWith1Argument( "loadCell(...)", _spacetreeId );
 }
 
@@ -1509,7 +1514,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
     TemplateStoreCell_Epilogue = """
-  tarch::multicore::spawnAndWait( tasks );
+  for (auto& p : tasks) {
+    while (p->run()) {
+    }
+    delete p;
+  }
+  //tarch::multicore::spawnAndWait(tasks);
   logTraceOutWith1Argument( "storeCell(...)", _spacetreeId );
 }
 

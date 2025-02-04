@@ -31,7 +31,6 @@ class ReconstructedArrayMemoryLocation(IntEnum):
 
 class ReconstructPatchAndApplyFunctor(ActionSet):
   """!
-  
   This class assumes that you have NxNxN patch within your block. It also assumes that
   you have an 2MxNxN patch on your faces. M<N. The code interprets these face-associated
   data as overlap with the patch, hooks into touchCellLastTime, and projects the cell's
@@ -43,10 +42,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   into this array (gather operation). After that, we can launch the passed functor
   giving it access to the temporary, large array plus the original patch data.
 
-  If you want to swap the functor, please replace self.functor_implementation, 
+  If you want to swap the functor, please replace self.functor_implementation,
   and ensure that all external references (text replacements) are already
   resolved. Consult _add_action_set_entries_to_dictionary() for details.
-  
   """
 
   def __init__(self,
@@ -58,7 +56,6 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
                add_assertions_to_halo_exchange = True
                ):
     """!
-    
   patch: peano4.datamodel.Patch
     Patch which is to be used
 
@@ -173,33 +170,33 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-      double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-      double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-      double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-      double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #elif Dimensions==3
-      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #elif Dimensions==3
-      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #endif
 """
     else:
@@ -216,15 +213,15 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarch:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
-""" 
+"""
     else:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
 
   def get_constructor_body(self):
     return """  _treeNumber = treeNumber;
-"""    
+"""
 
- 
+
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
