@@ -35,6 +35,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmaller(const ParticleIdentifier& rhs) const {
+
   if (*this == rhs) {
     return false;
   }
@@ -56,7 +57,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
       return false;
     }
   }
-  // If everthing is equal so far, then one is not smaller than the oter.
+  // If everthing is equal so far, then one is not smaller than the other.
   return false;
 }
 
@@ -81,8 +82,11 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     if ((particleX(d) - rhs.particleX(d)) < -tolerance) {
       return true;
     }
+    if ((particleX(d) - rhs.particleX(d)) > tolerance) {
+      return false;
+    }
   }
-  // If everthing is equal so far, then one is not smaller than the oter.
+  // If everthing is equal so far, then one is not smaller than the other.
   return false;
 }
 
@@ -94,6 +98,7 @@ std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 }
 
 
+// This takes ParticleIdentifier as argument
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   operator<(
     const toolbox::particles::assignmentchecks::internal::ParticleIdentifier&
@@ -112,10 +117,9 @@ bool toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
 }
 
 
+// This takes Particle !Search! Identifier as argument
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
-  operator<(
-    const toolbox::particles::assignmentchecks::internal::
-      ParticleSearchIdentifier& rhs
+  operator<( const toolbox::particles::assignmentchecks::internal:: ParticleSearchIdentifier& rhs
   ) const {
   return numericalSmallerWithTolerance(rhs, rhs.positionTolerance);
 }
