@@ -69,8 +69,8 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
                                                          auxiliary_variables,
                                                          min_volume_h,
                                                          max_volume_h,
-                                                         plot_grid_properties,
                                                          pde_terms_without_state,
+                                                         plot_grid_properties,
                                                          kernel_namespace="rusanov")
     self._time_step_relaxation = time_step_relaxation
 

@@ -48,6 +48,7 @@ class SubcyclingFixedTimeStep(SingleSweep):
                                                  auxiliary_variables,
                                                  min_volume_h,
                                                  max_volume_h,
+                                                 False,
                                                  plot_grid_properties,
                                                  kernel_namespace="rusanov")
     self._time_step_size = time_step_size
