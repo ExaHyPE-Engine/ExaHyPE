@@ -76,12 +76,13 @@ void tarch::mpi::StringMessage::send(const tarch::mpi::StringMessage& buffer, in
 
 
 void tarch::mpi::StringMessage::receive(tarch::mpi::StringMessage& buffer, int source, int tag, MPI_Comm communicator ) {
+  MPI_Message msg;
   MPI_Status status;
-  MPI_Probe( source, tag, communicator, &status );
+  MPI_Mprobe( source, tag, communicator, &msg, &status );
   int count;
   MPI_Get_count( &status, MPI_CHAR, &count );
   char tmp[count];
-  MPI_Recv( &tmp, count, MPI_CHAR, source, tag, communicator, &status);
+  MPI_Mrecv( &tmp, count, MPI_CHAR, &msg, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
   buffer._data = tmp;
 }
@@ -115,18 +116,19 @@ void tarch::mpi::StringMessage::receive(
   std::function<void()> waitFunctor,
   MPI_Comm communicator
 ) {
+  int         flag = 0;
+  MPI_Message msg;
   MPI_Status  status;
-  int         flag = 0; 
-  MPI_Iprobe( source, tag, communicator, &flag, &status );
+  MPI_Improbe( source, tag, communicator, &flag, &msg, &status );
   startCommunicationFunctor();
   while (!flag) { 
     waitFunctor();
-    MPI_Iprobe( source, tag, communicator, &flag, &status );
+    MPI_Improbe( source, tag, communicator, &flag, &msg, &status );
   }
   int count;
   MPI_Get_count( &status, MPI_CHAR, &count );
   char tmp[count];
-  MPI_Recv( &tmp, count, MPI_CHAR, source, tag, communicator, &status);
+  MPI_Mrecv( &tmp, count, MPI_CHAR, &msg, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
   buffer._data = tmp;
 }
