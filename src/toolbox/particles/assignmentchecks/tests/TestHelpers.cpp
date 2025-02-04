@@ -88,6 +88,45 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::assignmentchecks::
 }
 
 
+toolbox::particles::assignmentchecks::tests::TestParticle*
+toolbox::particles::assignmentchecks::tests::internal::mirrorParticleAlongPeriodicBoundary(
+  toolbox::particles::assignmentchecks::tests::TestParticle* original,
+  bool bx,
+  bool by,
+  bool bz,
+  tarch::la::Vector<Dimensions, double>  boundary
+  ) {
+
+  tarch::la::Vector<Dimensions, double> virtualPartX = original->getX();
+
+  if (bx) {
+    virtualPartX(0) += boundary(0);
+  }
+#if Dimensions > 1
+  if (by) {
+    virtualPartX(1) += boundary(1);
+  }
+#endif
+#if Dimensions > 2
+  if (bz) {
+    virtualPartX(2) += boundary(2);
+  }
+#endif
+
+  TestParticle* mirrored      = new TestParticle(
+    virtualPartX,
+    original->getPartid(),
+    false // virtual particle
+  );
+  mirrored->setVertexH(original->getVertexH());
+  mirrored->setDepth(original->getDepth());
+
+  return mirrored;
+}
+
+
+
+
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testTruthTableSearchAndIDKeys() {
 
@@ -1596,6 +1635,355 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 #endif
 }
 
+void toolbox::particles::assignmentchecks::tests::TestHelpers::
+  testPeriodicBoundaryConditionsCorner() {
+
+#if PeanoDebug > 0
+
+  logTraceIn("testPeriodicBoundaryConditionsCorner()");
+
+  namespace ac = toolbox::particles::assignmentchecks;
+
+  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(1000);
+
+  // IMPORTANT: Needs to be the same as the particle class name you use!
+  // In traceParticleMovements(), this will be derived from the class name.
+  std::string particleName = "TestParticle";
+
+  // (Initial) particle position
+  tarch::la::Vector<Dimensions, double> localPartX_init;
+  // particle displacement each step
+  tarch::la::Vector<Dimensions, double> dx;
+  // position of boundaries.
+  // This should be a plane, but in this simplified test,
+  // where the particle is always travelling diagonally,
+  // a single point does the trick.
+  tarch::la::Vector<Dimensions, double> boundary;
+  tarch::la::Vector<Dimensions, double> zero_corner;
+
+  tarch::la::Vector<Dimensions, double> vertexH_init, prevVertexH;
+  tarch::la::Vector<Dimensions, double> vertexX, prevVertexX;
+
+  // Initialise values
+  double vertexH_default = 0.33333333;
+  double dt              = 1.;
+  int    depth           = 1;
+  int    maxVertexDepth  = 2;
+
+  for (int i = 0; i < Dimensions; i++) {
+    localPartX_init(i) = 0.01;
+    dx(i)              = 0.000001;
+    vertexH_init(i)    = vertexH_default;
+    boundary(i)        = 1.;
+    zero_corner(i)     = 0.;
+  }
+
+  int particleID  = 1;
+  int spacetreeId = 1;
+
+  // generate (minimal) particle
+  ac::tests::TestParticle* localPart = new ac::tests::
+    TestParticle(localPartX_init, particleID, true);
+  localPart->setVertexH(vertexH_init);
+  localPart->setDepth(depth);
+
+  // pretend to have a ParticleContainer
+  std::vector<ac::tests::TestParticle*> particleSet = {localPart};
+
+  // Find initial pseudo-"vertex" particle is assigned to.
+  vertexX = internal::findVertexX(localPart->getX(), localPart->getVertexH());
+
+  // First assignments
+  ac::startMeshSweep("InitUnitTest");
+  ac::assignParticleToVertex(
+    particleName,
+    localPart->getX(),
+    localPart->getPartid(),
+    localPart->isLocal(),
+    vertexX,
+    localPart->getVertexH(),
+    spacetreeId,
+    "initialAssign"
+  );
+
+
+  // Do some mesh sweeps.
+  // NOTE: The database only keeps up to 16 sweeps in memory by default.
+  // After that, entries will be purged. One sweep is added by default ('init').
+  // We've already added another sweep ('InitUnitTest'). So if you go beyond 14,
+  // it'll start deleting stuff before the end.
+  for (int sweep = 0; sweep < 50; sweep++) {
+
+    ac::startMeshSweep("MySweep" + std::to_string(sweep));
+
+    // record old particle positions.
+    auto oldParticlePositions = ac::recordParticlePositions(particleSet);
+
+    // Now drift
+    for (auto p : particleSet) {
+
+      // Grab the vertex X before you move the particle! You need
+      // to know what vertex it's currently assigned to, not what
+      // it may be assigned to later.
+      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+
+      // update particle position.
+      tarch::la::Vector<Dimensions, double> partX = p->getX();
+      partX += dt * dx;
+      p->setX(partX);
+
+      // Trace the movement.
+      ac::traceParticleMovements(
+        particleSet,
+        oldParticlePositions,
+        vertexX,
+        p->getVertexH(),
+        spacetreeId
+      );
+
+      logDebug(
+        "testPeriodicBoundaryConditionsCorner() ",
+        "Moving particle to " << partX
+      );
+
+      logDebug(
+        "testPeriodicBoundaryConditionsCorner() ",
+        "Checking vertex H=" << p->getVertexH() << " X=" << vertexX
+      );
+
+      // Does the particle need lifting from the current vertex?
+      while (internal::liftParticle(
+        p->getX(),
+        vertexX,
+        p->getVertexH(),
+        p->getDepth()
+      )) {
+        p->setDepth(p->getDepth() - 1);
+        prevVertexH = p->getVertexH();
+        prevVertexX = vertexX;
+        p->setVertexH(p->getVertexH() * 3.);
+        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+
+        logDebug(
+          "testPeriodicBoundaryConditionsCorner() ",
+          "Lifting to H="
+            << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth()
+        );
+
+        ac::detachParticleFromVertex(
+          particleName,
+          p->getX(),
+          p->getPartid(),
+          p->isLocal(),
+          prevVertexX,
+          prevVertexH,
+          spacetreeId,
+          "vertexDetach::Lift"
+        );
+
+        ac::assignParticleToVertex(
+          particleName,
+          p->getX(),
+          p->getPartid(),
+          p->isLocal(),
+          vertexX,
+          p->getVertexH(),
+          spacetreeId,
+          "vertexAssign::Lift"
+        );
+      }
+
+      // Now drop it in the correct vertex.
+      while (internal::dropParticle(
+        p->getX(),
+        p->getVertexH(),
+        p->getDepth(),
+        maxVertexDepth
+      )) {
+        p->setDepth(p->getDepth() + 1);
+        prevVertexH = p->getVertexH();
+        prevVertexX = vertexX;
+        p->setVertexH(p->getVertexH() / 3.);
+        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+
+        logDebug(
+          "testPeriodicBoundaryConditionsCorner() ",
+          "Dropping to H="
+            << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth()
+        );
+
+        ac::detachParticleFromVertex(
+          particleName,
+          p->getX(),
+          p->getPartid(),
+          p->isLocal(),
+          prevVertexX,
+          prevVertexH,
+          spacetreeId,
+          "vertexDetach::Drop"
+        );
+
+        ac::assignParticleToVertex(
+          particleName,
+          p->getX(),
+          p->getPartid(),
+          p->isLocal(),
+          vertexX,
+          p->getVertexH(),
+          spacetreeId,
+          "vertexAssign::Drop"
+        );
+      }
+    } // Drift loop
+
+
+
+    // Do we need to create virtual particles?
+    std::vector<ac::tests::TestParticle*> mirroredParticleSet;
+
+    for (auto p : particleSet) {
+      // particle always travels diagonally. Only check 1 coordinate.
+      int vertexInd = internal::findVertexInd(p->getX()[0], p->getVertexH()[0]);
+      if (vertexInd == 0) {
+        // we're at the (0, 0, 0) boundary vertex. Replicate the particle
+        // across the boundary.
+        if (Dimensions > 0) {
+          ac::tests::TestParticle* mirror1 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, true, false, false, boundary);
+          mirroredParticleSet.push_back(mirror1);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror1->getX();
+          );
+        }
+        if (Dimensions > 1) {
+          ac::tests::TestParticle* mirror2 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, true, true, false, boundary);
+          mirroredParticleSet.push_back(mirror2);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror2->getX();
+          );
+          ac::tests::TestParticle* mirror3 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, false, true, false, boundary);
+          mirroredParticleSet.push_back(mirror3);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror3->getX();
+          );
+        }
+        if (Dimensions > 2) {
+          ac::tests::TestParticle* mirror4 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, true, true, true, boundary);
+          mirroredParticleSet.push_back(mirror4);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror4->getX();
+          );
+          ac::tests::TestParticle* mirror5 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, false, true, true, boundary);
+          mirroredParticleSet.push_back(mirror5);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror5->getX();
+          );
+          ac::tests::TestParticle* mirror6 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, false, false, true, boundary);
+          mirroredParticleSet.push_back(mirror6);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror6->getX();
+          );
+          ac::tests::TestParticle* mirror7 =
+            internal::mirrorParticleAlongPeriodicBoundary( p, true, false, true, boundary);
+          mirroredParticleSet.push_back(mirror7);
+          logDebug(
+            "testPeriodicBoundaryConditionsCorner() ",
+            "Creating virtual particle at " << mirror7->getX();
+          );
+        }
+      }
+    }
+
+    for (auto p: mirroredParticleSet) {
+        // Take note of newly created particle.
+        // Assume virtual particle is always at the same depth in the tree
+        // as the local particle, so you may re-use vertexH (but not vertexX)
+        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+
+        ac::assignParticleToVertex(
+          particleName,
+          p->getX(),
+          p->getPartid(), // copy particle ID
+          false,          // this particle is always virtual
+          vertexX,
+          p->getVertexH(),
+          spacetreeId, // Say we only have 1 spacetree
+          "createdVirtualParticle"
+        );
+    }
+
+    // Concatenate vectors
+    particleSet.insert(particleSet.end(), mirroredParticleSet.begin(), mirroredParticleSet.end());
+    assertion(particleSet.size() >= 2);
+
+    // We should be checking whether particles change their virtual state
+    // after crossing a boundary at this point. But we set up the test to
+    // not cross any boundaries, so we're skipping that here.
+
+    // Delete the virtual particles.
+    auto p = particleSet.begin();
+    while (p != particleSet.end()) {
+      if (not(*p)->isLocal()) {
+        logDebug(
+          "testPeriodicBoundaryConditionsCorner() ",
+          "erasing " << (*p)->getX()
+        );
+
+        vertexX = internal::findVertexX((*p)->getX(), (*p)->getVertexH());
+
+        ac::detachParticleFromVertex(
+          particleName,
+          (*p)->getX(),
+          (*p)->getPartid(),
+          (*p)->isLocal(),
+          vertexX,
+          (*p)->getVertexH(),
+          spacetreeId,
+          "vertexDetachErase"
+        );
+        ac::eraseParticle(
+          particleName,
+          (*p)->getX(),
+          (*p)->getPartid(),
+          (*p)->isLocal(),
+          (*p)->getVertexH(),
+          spacetreeId,
+          "eraseVirtualParticle"
+        );
+        delete *p;
+        p = particleSet.erase(p);
+      } else {
+        p++;
+      }
+    }
+
+
+  } // mesh sweep loops
+
+  logDebug(
+    "testPeriodicBoundaryConditionsCorner() Data dump end",
+    eventDatabase.toString()
+  );
+
+  // Clean up after yourself
+  eventDatabase.reset();
+
+  logTraceOut("testPeriodicBoundaryConditionsCorner()");
+#endif
+}
+
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
@@ -1787,6 +2175,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   testMethod(testParticleLiftDrop);
   testMethod(testParticleWalk);
   testMethod(testPeriodicBoundaryConditions);
+  testMethod(testPeriodicBoundaryConditionsCorner);
   testMethod(testSieveSet);
 }
 

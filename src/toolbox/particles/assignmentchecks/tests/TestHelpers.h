@@ -5,6 +5,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/logging/Log.h"
 #include "tarch/tests/TestCase.h"
+#include "TestParticle.h"
 
 namespace toolbox {
   namespace particles {
@@ -55,6 +56,23 @@ namespace toolbox {
             const tarch::la::Vector<Dimensions, double> x,
             const tarch::la::Vector<Dimensions, double> vertexH
           );
+
+          /**
+           * Create a particle mirrored along periodic boundaries.
+           * Assumes we're at the lower left (0, 0, 0) corner of the
+           * simulation box, and applies +boundary correction.
+           *
+           * @param original The original particle to be mirrored.
+           * @param bx if true, mirror along x axis
+           * @param by if true, mirror along y axis
+           * @param bz if true, mirror along z axis
+           * @param boundary position of the boundary. Essentially
+           * equivalent to DomainSize here.
+           */
+          TestParticle* mirrorParticleAlongPeriodicBoundary(
+            TestParticle* original, bool bx, bool by, bool bz,
+            tarch::la::Vector<Dimensions, double>  boundary);
+
 
         } // namespace internal
       }   // namespace tests
@@ -157,6 +175,15 @@ private:
    * domain. So check that we indeed find the correct ancestors.
    */
   void testPeriodicBoundaryConditions();
+
+  /**
+   * Test the periodic boundary conditions of a particle in a corner, being
+   * replicated to any other corner of the box. The assignment checks struggled
+   * with PBCs in the past, and they also had several bugs in it. So this test
+   * should prevent them from reoccurring.
+   * We assume that particles never cross the boundary.
+   */
+  void testPeriodicBoundaryConditionsCorner();
 
   /**
    * Test particle assignments to sieve sets.
