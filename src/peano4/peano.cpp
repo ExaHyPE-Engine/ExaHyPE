@@ -8,7 +8,6 @@
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/tarch.h"
 
-#include "peano4/utils/Loop.h"
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
@@ -25,8 +24,8 @@
 
 void peano4:: writeCopyrightMessage() {
   static bool wrote = false;
-  if (
-    not wrote and tarch::mpi::Rank::getInstance().getRank() == tarch::mpi::Rank::getGlobalMasterRank() ) {
+
+  if (not wrote and tarch::mpi::Rank::getInstance().getRank() == tarch::mpi::Rank::getGlobalMasterRank()) {
     std::cout << "Peano 4 (C) www.peano-framework.org" << std::endl;
     std::string buildInfo = "build: ";
 
@@ -35,45 +34,59 @@ void peano4:: writeCopyrightMessage() {
 
     #ifdef Parallel
     buildInfo += ", with mpi (";
-    buildInfo += std::to_string( tarch::mpi::Rank::getInstance().getNumberOfRanks() );
+    buildInfo += std::to_string(tarch::mpi::Rank::getInstance().getNumberOfRanks());
     buildInfo += " ranks)";
     #else
     buildInfo += ", no mpi";
     #endif
 
     #if defined(SharedOMP)
-    buildInfo += ", omp";
+    buildInfo += ", omp threading";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
+    buildInfo += " threads)";
     #elif defined(SharedTBB)
-    buildInfo += ", tbb";
+    buildInfo += ", tbb threading";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
+    buildInfo += " threads)";
     #elif defined(SharedSYCL)
     buildInfo += ", sycl threading";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
+    buildInfo += " threads)";
     #elif defined(SharedCPP)
     buildInfo += ", C++ threading";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::multicore::Core::getInstance().getNumberOfThreads());
+    buildInfo += " threads)";
     #else
     buildInfo += ", no threading";
     #endif
 
-    if (tarch::multicore::Core::getInstance().getNumberOfThreads()>1) {
-      buildInfo += " (";
-      buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
-      buildInfo += " threads)";
-    }
-
     #if defined(GPUOffloadingOMP)
-    buildInfo += ", omp offloading";
+    buildInfo += ", omp gpu support";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+    buildInfo += " gpus)";
     #elif defined(GPUOffloadingSYCL)
-    buildInfo += ", sycl";
+    buildInfo += ", sycl gpu support";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+    buildInfo += " gpus)";
     #elif defined(GPUOffloadingCPP)
-    buildInfo += ", C++ offloading";
+    buildInfo += ", C++ gpu support";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+    buildInfo += " gpus)";
+    #elif defined(GPUOffloadingCUDA)
+    buildInfo += ", CUDA gpu support";
+    buildInfo += " (";
+    buildInfo += std::to_string(tarch::accelerator::Device::getInstance().getNumberOfDevices());
+    buildInfo += " gpus)";
     #else
     buildInfo += ", no gpu support";
     #endif
-
-    if (tarch::accelerator::Device::getInstance().getNumberOfDevices()>0) {
-      buildInfo += " (";
-      buildInfo += std::to_string( tarch::accelerator::Device::getInstance().getNumberOfDevices() );
-      buildInfo += " gpus)";
-    }
 
     #if PeanoDebug>0
     buildInfo += ", debug level=" + std::to_string(PeanoDebug);
@@ -86,7 +99,7 @@ void peano4:: writeCopyrightMessage() {
 
 void peano4::fillLookupTables() {
 /*
-  Had in in Globals.cpp
+  Had it in Globals.cpp
 
   setupLookupTableForTwoPowI();
   setupLookupTableForThreePowI();
