@@ -193,6 +193,7 @@ list(APPEND AVAILABLE_ACCELERATORS
   "omp"
   "sycl"
   "cpp"
+  "cuda"
 )
 set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${AVAILABLE_ACCELERATORS})
@@ -236,6 +237,8 @@ elseif(WITH_GPU STREQUAL "cpp")
   include(StdPar)
 elseif(WITH_GPU STREQUAL "sycl")
   include(SYCL)
+elseif(WITH_GPU STREQUAL "cuda")
+  include(CUDA)
 else()
   set(ONLY_IF_GPU_FIND_DEPENDENCY "# GPU not used")
 endif()
