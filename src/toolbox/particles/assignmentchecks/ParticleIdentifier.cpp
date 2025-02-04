@@ -119,7 +119,9 @@ bool toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
 
 // This takes Particle !Search! Identifier as argument
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
-  operator<( const toolbox::particles::assignmentchecks::internal:: ParticleSearchIdentifier& rhs
+  operator<(
+    const toolbox::particles::assignmentchecks::internal::
+      ParticleSearchIdentifier& rhs
   ) const {
   return numericalSmallerWithTolerance(rhs, rhs.positionTolerance);
 }

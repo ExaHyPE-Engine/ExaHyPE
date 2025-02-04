@@ -88,13 +88,13 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::assignmentchecks::
 }
 
 
-toolbox::particles::assignmentchecks::tests::TestParticle*
-toolbox::particles::assignmentchecks::tests::internal::mirrorParticleAlongPeriodicBoundary(
-  toolbox::particles::assignmentchecks::tests::TestParticle* original,
-  bool bx,
-  bool by,
-  bool bz,
-  tarch::la::Vector<Dimensions, double>  boundary
+toolbox::particles::assignmentchecks::tests::TestParticle* toolbox::particles::
+  assignmentchecks::tests::internal::mirrorParticleAlongPeriodicBoundary(
+    toolbox::particles::assignmentchecks::tests::TestParticle* original,
+    bool                                                       bx,
+    bool                                                       by,
+    bool                                                       bz,
+    tarch::la::Vector<Dimensions, double>                      boundary
   ) {
 
   tarch::la::Vector<Dimensions, double> virtualPartX = original->getX();
@@ -113,7 +113,7 @@ toolbox::particles::assignmentchecks::tests::internal::mirrorParticleAlongPeriod
   }
 #endif
 
-  TestParticle* mirrored      = new TestParticle(
+  TestParticle* mirrored = new TestParticle(
     virtualPartX,
     original->getPartid(),
     false // virtual particle
@@ -123,8 +123,6 @@ toolbox::particles::assignmentchecks::tests::internal::mirrorParticleAlongPeriod
 
   return mirrored;
 }
-
-
 
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
@@ -1838,7 +1836,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     } // Drift loop
 
 
-
     // Do we need to create virtual particles?
     std::vector<ac::tests::TestParticle*> mirroredParticleSet;
 
@@ -1849,8 +1846,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         // we're at the (0, 0, 0) boundary vertex. Replicate the particle
         // across the boundary.
         if (Dimensions > 0) {
-          ac::tests::TestParticle* mirror1 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, true, false, false, boundary);
+          ac::tests::TestParticle* mirror1 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, true, false, false, boundary);
           mirroredParticleSet.push_back(mirror1);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
@@ -1858,15 +1855,15 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           );
         }
         if (Dimensions > 1) {
-          ac::tests::TestParticle* mirror2 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, true, true, false, boundary);
+          ac::tests::TestParticle* mirror2 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, true, true, false, boundary);
           mirroredParticleSet.push_back(mirror2);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
             "Creating virtual particle at " << mirror2->getX();
           );
-          ac::tests::TestParticle* mirror3 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, false, true, false, boundary);
+          ac::tests::TestParticle* mirror3 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, false, true, false, boundary);
           mirroredParticleSet.push_back(mirror3);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
@@ -1874,29 +1871,29 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           );
         }
         if (Dimensions > 2) {
-          ac::tests::TestParticle* mirror4 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, true, true, true, boundary);
+          ac::tests::TestParticle* mirror4 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, true, true, true, boundary);
           mirroredParticleSet.push_back(mirror4);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
             "Creating virtual particle at " << mirror4->getX();
           );
-          ac::tests::TestParticle* mirror5 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, false, true, true, boundary);
+          ac::tests::TestParticle* mirror5 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, false, true, true, boundary);
           mirroredParticleSet.push_back(mirror5);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
             "Creating virtual particle at " << mirror5->getX();
           );
-          ac::tests::TestParticle* mirror6 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, false, false, true, boundary);
+          ac::tests::TestParticle* mirror6 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, false, false, true, boundary);
           mirroredParticleSet.push_back(mirror6);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
             "Creating virtual particle at " << mirror6->getX();
           );
-          ac::tests::TestParticle* mirror7 =
-            internal::mirrorParticleAlongPeriodicBoundary( p, true, false, true, boundary);
+          ac::tests::TestParticle* mirror7 = internal::
+            mirrorParticleAlongPeriodicBoundary(p, true, false, true, boundary);
           mirroredParticleSet.push_back(mirror7);
           logDebug(
             "testPeriodicBoundaryConditionsCorner() ",
@@ -1906,26 +1903,30 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       }
     }
 
-    for (auto p: mirroredParticleSet) {
-        // Take note of newly created particle.
-        // Assume virtual particle is always at the same depth in the tree
-        // as the local particle, so you may re-use vertexH (but not vertexX)
-        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+    for (auto p : mirroredParticleSet) {
+      // Take note of newly created particle.
+      // Assume virtual particle is always at the same depth in the tree
+      // as the local particle, so you may re-use vertexH (but not vertexX)
+      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
-        ac::assignParticleToVertex(
-          particleName,
-          p->getX(),
-          p->getPartid(), // copy particle ID
-          false,          // this particle is always virtual
-          vertexX,
-          p->getVertexH(),
-          spacetreeId, // Say we only have 1 spacetree
-          "createdVirtualParticle"
-        );
+      ac::assignParticleToVertex(
+        particleName,
+        p->getX(),
+        p->getPartid(), // copy particle ID
+        false,          // this particle is always virtual
+        vertexX,
+        p->getVertexH(),
+        spacetreeId, // Say we only have 1 spacetree
+        "createdVirtualParticle"
+      );
     }
 
     // Concatenate vectors
-    particleSet.insert(particleSet.end(), mirroredParticleSet.begin(), mirroredParticleSet.end());
+    particleSet.insert(
+      particleSet.end(),
+      mirroredParticleSet.begin(),
+      mirroredParticleSet.end()
+    );
     assertion(particleSet.size() >= 2);
 
     // We should be checking whether particles change their virtual state

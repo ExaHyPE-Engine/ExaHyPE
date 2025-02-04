@@ -326,7 +326,9 @@ project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesAlongCartesianGrid(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
-        distance_between_particles_along_one_axis=(domain_size[0] / (args.particle_number)),
+        distance_between_particles_along_one_axis=(
+            domain_size[0] / (args.particle_number)
+        ),
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
 """,

@@ -70,8 +70,12 @@ namespace toolbox {
            * equivalent to DomainSize here.
            */
           TestParticle* mirrorParticleAlongPeriodicBoundary(
-            TestParticle* original, bool bx, bool by, bool bz,
-            tarch::la::Vector<Dimensions, double>  boundary);
+            TestParticle*                         original,
+            bool                                  bx,
+            bool                                  by,
+            bool                                  bz,
+            tarch::la::Vector<Dimensions, double> boundary
+          );
 
 
         } // namespace internal

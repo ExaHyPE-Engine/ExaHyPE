@@ -30,7 +30,11 @@ namespace toolbox {
      *   iterator pointing to existing particle.
      */
     template <typename Iterator>
-    Iterator particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end);
+    Iterator particleIsDuplicate(
+      const typename Iterator::value_type& particle,
+      Iterator                             begin,
+      const Iterator&                      end
+    );
 
     /**
      * Return true if and only if
@@ -41,7 +45,9 @@ namespace toolbox {
      */
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
-      const Particle& particle, const tarch::la::Vector<Dimensions, double>& domainOffset, const tarch::la::Vector<Dimensions, double>& domainWidth
+      const Particle&                              particle,
+      const tarch::la::Vector<Dimensions, double>& domainOffset,
+      const tarch::la::Vector<Dimensions, double>& domainWidth
     );
 
 
@@ -93,11 +99,17 @@ namespace toolbox {
      */
     template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
-      const peano4::datamanagement::CellMarker& marker, Particle* newParticles, peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices, int spacetreeId
+      const peano4::datamanagement::CellMarker&              marker,
+      Particle*                                              newParticles,
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
+      int                                                    spacetreeId
     );
 
 
-    bool particleAssignedToVertexWillBeLocal(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+    bool particleAssignedToVertexWillBeLocal(
+      const tarch::la::Vector<Dimensions, double>& x,
+      const peano4::datamanagement::VertexMarker&  marker
+    );
 
     /**
      * Mirror a particle along the periodic domain boundaries.
@@ -118,11 +130,11 @@ namespace toolbox {
      * @param Position of particle as "seen" from receiving side
      */
     tarch::la::Vector<Dimensions, double> mirrorParticleAlongPeriodicDomains(
-        const tarch::la::Vector<Dimensions, double>& x,
-        const peano4::datamanagement::VertexMarker&  marker,
-        const tarch::la::Vector<Dimensions,double>   domainOffset,
-        const tarch::la::Vector<Dimensions,double>   domainSize,
-        const std::bitset<Dimensions>                periodicBC
+      const tarch::la::Vector<Dimensions, double>& x,
+      const peano4::datamanagement::VertexMarker&  marker,
+      const tarch::la::Vector<Dimensions, double>  domainOffset,
+      const tarch::la::Vector<Dimensions, double>  domainSize,
+      const std::bitset<Dimensions>                periodicBC
     );
 
     /**
@@ -136,10 +148,10 @@ namespace toolbox {
      * lists, such as is used e.g. in exchangeSieveListsGlobally().
      */
     tarch::la::Vector<Dimensions, double> applyPeriodicBoundaryConditions(
-        const tarch::la::Vector<Dimensions, double>& x,
-        const tarch::la::Vector<Dimensions,double>   domainOffset,
-        const tarch::la::Vector<Dimensions,double>   domainSize,
-        const std::bitset<Dimensions>                periodicBC
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>  domainOffset,
+      const tarch::la::Vector<Dimensions, double>  domainSize,
+      const std::bitset<Dimensions>                periodicBC
     );
   } // namespace particles
 } // namespace toolbox
