@@ -38,16 +38,16 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
     double* __restrict__                                timederivative,
     QInterEnumeratorType                                QInterEnumerator
 ) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double temp[QInEnumerator._unknowns], shiftQ[QInEnumerator._unknowns];
-  double gradientQ[QInEnumerator._unknowns*3];
+  double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double temp[QInEnumerator._numberOfUnknowns], shiftQ[QInEnumerator._numberOfUnknowns];
+  double gradientQ[QInEnumerator._numberOfUnknowns*3];
 
 
   // gather
   #if defined(SharedOMP)
   #pragma omp simd
   #endif
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
@@ -60,19 +60,19 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
       dt,
       temp
   );
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] = temp[ unknown ];
   }
   
   //second, add the -B(Q)*\nabla Q, it ask users to define B on the left of the PDE.
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ]; //\partial_x Q_i
-    gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ]; //\partial_y Q_i
-    gradientQ[QInEnumerator._unknowns*2+unknown]=QInGathered[ QInEnumerator._unknowns*3+unknown ]; //\partial_z Q_i
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
+    gradientQ[QInEnumerator._numberOfUnknowns*0+unknown]=QInGathered[ QInEnumerator._numberOfUnknowns*1+unknown ]; //\partial_x Q_i
+    gradientQ[QInEnumerator._numberOfUnknowns*1+unknown]=QInGathered[ QInEnumerator._numberOfUnknowns*2+unknown ]; //\partial_y Q_i
+    gradientQ[QInEnumerator._numberOfUnknowns*2+unknown]=QInGathered[ QInEnumerator._numberOfUnknowns*3+unknown ]; //\partial_z Q_i
   }
   for (int normal=0; normal<3; normal++){
     ncp(
-      QInGathered, gradientQ+QInEnumerator._unknowns*normal,
+      QInGathered, gradientQ+QInEnumerator._numberOfUnknowns*normal,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
       ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
@@ -80,7 +80,7 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
       normal,
       temp
     );
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
       timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] -=temp[ unknown ];
     }
   }
@@ -88,8 +88,8 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
   //third, add flux contribution
   for (int normal=0; normal<3; normal++){
   
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      shiftQ[unknown]=QInGathered[unknown]-0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
+      shiftQ[unknown]=QInGathered[unknown]-0.5*gradientQ[QInEnumerator._numberOfUnknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     flux(
       shiftQ,
@@ -97,12 +97,12 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
       ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t, dt, normal, temp
     );
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
       timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] +=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      shiftQ[unknown]=QInGathered[unknown]+0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
+      shiftQ[unknown]=QInGathered[unknown]+0.5*gradientQ[QInEnumerator._numberOfUnknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     flux(
       shiftQ,
@@ -110,7 +110,7 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
       ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t, dt, normal, temp
     );
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
       timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] -=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     
@@ -137,9 +137,9 @@ void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
     double* __restrict__                         QfaceZpos,
     QInterEnumeratorType                         QInterEnumerator
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-    //double gradientQ[QInEnumerator._unknowns*3];
-    //double deriTGathered[QInEnumerator._unknowns];
+    double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    //double gradientQ[QInEnumerator._numberOfUnknowns*3];
+    //double deriTGathered[QInEnumerator._numberOfUnknowns];
     const tarch::la::Vector<Dimensions,double>  VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell );
     
     //VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell );
@@ -147,30 +147,30 @@ void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
     }
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
       //Q^{n+1/2}_{i-1/2}   
       QfaceXneg[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
                                                                   +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                                  -0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*1+unknown ];
+                                                                  -0.5*VolumeSize(0)*QInGathered[ QInEnumerator._numberOfUnknowns*1+unknown ];
       QfaceYneg[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
                                                                   +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                                  -0.5*VolumeSize(1)*QInGathered[ QInEnumerator._unknowns*2+unknown ];
+                                                                  -0.5*VolumeSize(1)*QInGathered[ QInEnumerator._numberOfUnknowns*2+unknown ];
       QfaceZneg[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
                                                                   +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                                  -0.5*VolumeSize(2)*QInGathered[ QInEnumerator._unknowns*3+unknown ];    
+                                                                  -0.5*VolumeSize(2)*QInGathered[ QInEnumerator._numberOfUnknowns*3+unknown ];    
       //Q^{n+1/2}_{i+1/2}                                                            
       QfaceXpos[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
                                                                   +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*1+unknown ];
+                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._numberOfUnknowns*1+unknown ];
       QfaceYpos[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
                                                                   +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*2+unknown ];
+                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._numberOfUnknowns*2+unknown ];
       QfaceZpos[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
                                                                   +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*3+unknown ];
+                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._numberOfUnknowns*3+unknown ];
     }
 
 }
@@ -190,13 +190,13 @@ void exahype2::fv::musclhancock::internal::computeMaxEigenvalue_LoopBody(
     double* __restrict__                         QMaxEigenvalue,
     QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
 
     // gather
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
     }
 
@@ -286,10 +286,10 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
   double* __restrict__                         QFluxR,
   QFluxEnumeratorType                          QFluxEnumerator
 ) {
-  double QLeft[QInEnumerator._unknowns], QRight[QInEnumerator._unknowns];
-  double tempFlux[QInEnumerator._unknowns];
+  double QLeft[QInEnumerator._numberOfUnknowns], QRight[QInEnumerator._numberOfUnknowns];
+  double tempFlux[QInEnumerator._numberOfUnknowns];
 
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QLeft[unknown]  = QfaceNLeft[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];
     QRight[unknown] = QfaceNRight[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];
   }
@@ -303,7 +303,7 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
       normal,
       tempFlux
   );
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxL[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = tempFlux[unknown];
   }
   
@@ -316,7 +316,7 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
       normal,
       tempFlux
   );
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxR[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = tempFlux[unknown];
   }
 }
@@ -379,16 +379,16 @@ void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
   double* __restrict__                           QD,
   const QNCPFaceEnumeratorType                   QNcpEnumerator
 ) {
-  double QAverage[QInEnumerator._unknowns];
-  double DeltaQ[QInEnumerator._unknowns];
-  double QFluxGathered[QInEnumerator._unknowns];
+  double QAverage[QInEnumerator._numberOfUnknowns];
+  double DeltaQ[QInEnumerator._numberOfUnknowns];
+  double QFluxGathered[QInEnumerator._numberOfUnknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightAdjacentVolume = volumeIndex;
   rightAdjacentVolume(normal)++;
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QAverage[unknown] = 0.5 * QfaceNRight[ QInterEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                         + 0.5 * QfaceNLeft[ QInterEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
     DeltaQ[unknown]    = QfaceNLeft[ QInterEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
@@ -405,7 +405,7 @@ void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
     QFluxGathered
   );
 
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QD[ QNcpEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
   }
 }
@@ -463,21 +463,21 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   bool                                         evalNCP,
   bool                                         evalSRC
 ) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QSourceGathered[QInEnumerator._unknowns];
-  double QNCPGathered[QInEnumerator._unknowns];
-  double gradientQ[QInEnumerator._unknowns*3];
+  double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double QSourceGathered[QInEnumerator._numberOfUnknowns];
+  double QNCPGathered[QInEnumerator._numberOfUnknowns];
+  double gradientQ[QInEnumerator._numberOfUnknowns*3];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
   }
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ];
-    gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ];
-    gradientQ[QInEnumerator._unknowns*2+unknown]=QInGathered[ QInEnumerator._unknowns*3+unknown ];
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
+    gradientQ[QInEnumerator._numberOfUnknowns*0+unknown]=QInGathered[ QInEnumerator._numberOfUnknowns*1+unknown ];
+    gradientQ[QInEnumerator._numberOfUnknowns*1+unknown]=QInGathered[ QInEnumerator._numberOfUnknowns*2+unknown ];
+    gradientQ[QInEnumerator._numberOfUnknowns*2+unknown]=QInGathered[ QInEnumerator._numberOfUnknowns*3+unknown ];
   }
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QInGathered[unknown] += 0.5*dt*timeDerivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];  //Q^n+1/2_i
   }
   //
@@ -492,7 +492,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
       dt,
       QSourceGathered
   );
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
     QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QSourceGathered[unknown];
   }
   }
@@ -501,7 +501,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   //add ncp contribution
   for (int normal=0; normal<3; normal++){
     ncp(
-      QInGathered, gradientQ+QInEnumerator._unknowns*normal,
+      QInGathered, gradientQ+QInEnumerator._numberOfUnknowns*normal,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
       ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
@@ -509,7 +509,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
       normal,
       QNCPGathered
     );
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] -= dt * QNCPGathered[unknown];
     }
   }
@@ -529,13 +529,13 @@ double exahype2::fv::musclhancock::internal::reduceMaxEigenvalue_LoopBody(
     double                                       t,
     double                                       dt
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    double QInGathered[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
 
     // gather
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
     }
 

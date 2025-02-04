@@ -7,7 +7,11 @@ std::string exahype2::enumerator::SoALexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg
     << "(SoA-lex"
-    << ",#cells=" << _numberOfCells << ",#dofs=" << _numberOfDoFsPerAxisInCell << ",#halo=" << _haloSize << ",#unknowns=" << _unknowns << ",#aux=" << _numberOfAuxiliaryVariables
+    << ",#number-of-cells=" << _numberOfCells
+    << ",#number-of-dofs=" << _numberOfDoFsPerAxisInCell
+    << ",#halo-size=" << _haloSize
+    << ",#number-of-unknowns=" << _numberOfUnknowns
+    << ",#number-of-auxiliary-variables=" << _numberOfAuxiliaryVariables
     << ")";
 
 #if PeanoDebug > 0

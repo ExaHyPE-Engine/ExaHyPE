@@ -7,8 +7,12 @@ std::string exahype2::enumerator::FaceAoSLexicographicEnumerator::toString() con
   std::ostringstream msg;
   msg
     << "(FaceAoS-lex"
-    << ",#face-no=" << _faceNumber << ",#dofs-per-axis=" << _numberOfDoFsPerAxisInCell << ",#halo=" << _haloSize << ",#unknowns=" << _unknowns
-    << ",#aux=" << _numberOfAuxiliaryVariables << ")";
+    << ",#face-number=" << _faceNumber
+    << ",#number-of-dofs-per-axis=" << _numberOfDoFsPerAxisInCell
+    << ",#halo-size=" << _haloSize
+    << ",#number-of-unknowns=" << _numberOfUnknowns
+    << ",#number-of-auxiliary-variables=" << _numberOfAuxiliaryVariables
+    << ")";
 
   return msg.str();
 }

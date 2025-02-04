@@ -41,7 +41,7 @@ namespace {
     leftAdjacentVolume3(normal)--;
     leftAdjacentVolume3(normal)--;
 
-    for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+    for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
       CentralQ[unknown] = QIn[QInEnumerator(patchIndex, centralVolume, unknown)];
       DeltaQ[unknown]   = (8.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)]
                         - (8.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, unknown)]
@@ -52,7 +52,7 @@ namespace {
     //direct so
     double cellsize = patchSize(normal)/QInEnumerator._numberOfDoFsPerAxisInCell;
     double gradcoef = 1.0/(12.0*cellsize);
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns; unknown++) {
       CentralQ[unknown] = QIn[ QInEnumerator(patchIndex, centralVolume, unknown) ];
 
       // Q[23+normal] are A_{normal} = \partial_{normal}\alpha
@@ -147,7 +147,7 @@ namespace {
     leftAdjacentVolume3(normal)--;
     leftAdjacentVolume3(normal)--;
 
-    for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+    for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
       CentralQ[unknown] = QIn[QInEnumerator(patchIndex, centralVolume, unknown)];
 
       if (unknown == 23 or unknown == 24 or unknown == 25 or unknown == 55 or unknown == 56 or unknown == 57) {
@@ -208,7 +208,7 @@ namespace {
     int                                       normal,
     double*                                   QDifferentialSourceTermGathered
   ) {
-    double* AdvectionDeltaQ = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
+    double* AdvectionDeltaQ = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
     double AdvectionDeltaTem;
 
     tarch::la::Vector<Dimensions, int> centralVolume        = volumeIndex;
@@ -239,7 +239,7 @@ namespace {
     //int QwithoutAdvection[]={0,1,2,3,4,5,16,17,18,19,23,24,25,26,27,28,29,30,31,32,33,34,
     //                          35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,54,55,56,57}; //used in soccz4, we
     //                          do not update auxiliary variables, also test for non lopsided-aux
-    for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+    for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
       bool NeedAdvection
         = (std::find(std::begin(QwithoutAdvection), std::end(QwithoutAdvection), unknown) == std::end(QwithoutAdvection));
       // if the unknown index is not in the list above, it needs an advection.
@@ -502,9 +502,9 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   const QOutEnumeratorType&     QDiffSrcEnumerator,
   DifferentialSourceTermVariant variant
 ) {
-  double* CentralQ = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-  double* DeltaQ   = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-  double* QDifferentialSourceTermGathered = new double[QDiffSrcEnumerator._unknowns];
+  double* CentralQ = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* DeltaQ   = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* QDifferentialSourceTermGathered = new double[QDiffSrcEnumerator._numberOfUnknowns];
 
   switch (variant) {
   case DifferentialSourceTermVariant::CentralDifferences:
@@ -545,7 +545,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   }
 
   // scatter
-  for (int unknown = 0; unknown < QDiffSrcEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QDiffSrcEnumerator._numberOfUnknowns; unknown++) {
     QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)] = QDifferentialSourceTermGathered[unknown];
   }
 
@@ -569,9 +569,9 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   const QOutEnumeratorType&     QDiffSrcEnumerator,
   DifferentialSourceTermVariant variant
 ) {
-  double* CentralQ = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-  double* DeltaQ   = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-  double* QDifferentialSourceTermGathered = new double[QDiffSrcEnumerator._unknowns];
+  double* CentralQ = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* DeltaQ   = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* QDifferentialSourceTermGathered = new double[QDiffSrcEnumerator._numberOfUnknowns];
 
   switch (variant) {
   case DifferentialSourceTermVariant::CentralDifferences:
@@ -613,7 +613,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   }
 
   // scatter
-  for (int unknown = 0; unknown < QDiffSrcEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QDiffSrcEnumerator._numberOfUnknowns; unknown++) {
     QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)] = QDifferentialSourceTermGathered[unknown];
   }
 
@@ -636,7 +636,7 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   double* __restrict__ QKODsp,
   const QOutEnumeratorType& QKODspEnumerator
 ) {
-  double KOGathered[QInEnumerator._unknowns];
+  double KOGathered[QInEnumerator._numberOfUnknowns];
 
   tarch::la::Vector<Dimensions, int> centralVolume        = volumeIndex;
   tarch::la::Vector<Dimensions, int> leftAdjacentVolume1  = volumeIndex;
@@ -660,7 +660,7 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   leftAdjacentVolume3(normal)--;
 
   // gather
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     KOGathered[unknown]
       = (-20.0 / 64.0) * QIn[QInEnumerator(patchIndex, centralVolume, unknown)]
         + (15.0 / 64.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)]
@@ -672,7 +672,7 @@ void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   }
 
   // scatter
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)] = KOGathered[unknown];
   }
 }
@@ -797,11 +797,11 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   double* __restrict__ QFlux,
   const QOutEnumeratorType& QFluxEnumerator
 ) {
-  double* tempQ         = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-  double* tempFlux      = new double[QInEnumerator._unknowns];
-  double* QFluxGathered = new double[QInEnumerator._unknowns];
+  double* tempQ         = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* tempFlux      = new double[QInEnumerator._numberOfUnknowns];
+  double* QFluxGathered = new double[QInEnumerator._numberOfUnknowns];
 
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] = 0.0;
   }
 
@@ -816,7 +816,7 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   leftAdjacentVolume2(normal) -= 2;
 
   // F^-
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, unknown)];
   }
   flux(
@@ -828,14 +828,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     normal,
     tempFlux
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] -= (8.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // F^--
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, unknown)];
   }
   flux(
@@ -847,14 +847,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     normal,
     tempFlux
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] += (1.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // F^+
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)];
   }
   flux(
@@ -866,14 +866,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     normal,
     tempFlux
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] += (8.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // F^++
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, unknown)];
   }
   flux(
@@ -885,14 +885,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     normal,
     tempFlux
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] -= (1.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // scatter accumulated result
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFlux[QFluxEnumerator(patchIndex, volumeIndex, unknown)] = QFluxGathered[unknown];
   }
 
@@ -915,11 +915,11 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   double* __restrict__ QFlux,
   const QOutEnumeratorType& QFluxEnumerator
 ) {
-  double* tempQ         = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-  double* tempFlux      = new double[QInEnumerator._unknowns];
-  double* QFluxGathered = new double[QInEnumerator._unknowns];
+  double* tempQ         = new double[QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* tempFlux      = new double[QInEnumerator._numberOfUnknowns];
+  double* QFluxGathered = new double[QInEnumerator._numberOfUnknowns];
 
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] = 0.0;
   }
 
@@ -934,7 +934,7 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   leftAdjacentVolume2(normal) -= 2;
 
   // F^-
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, unknown)];
   }
   Solver::flux(
@@ -947,14 +947,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     tempFlux,
     ::exahype2::Solver::Offloadable::Yes
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] -= (8.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // F^--
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, unknown)];
   }
   Solver::flux(
@@ -967,14 +967,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     tempFlux,
     ::exahype2::Solver::Offloadable::Yes
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] += (1.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // F^+
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)];
   }
   Solver::flux(
@@ -987,14 +987,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     tempFlux,
     ::exahype2::Solver::Offloadable::Yes
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] += (8.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // F^++
-  for (int unknown = 0; unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     tempQ[unknown] = QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, unknown)];
   }
   Solver::flux(
@@ -1007,14 +1007,14 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
     tempFlux,
     ::exahype2::Solver::Offloadable::Yes
   );
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFluxGathered[unknown] -= (1.0 / 12.0) * tempFlux[unknown]
                               / (::exahype2::fd::
                                    getGridCellSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell)(normal));
   }
 
   // scatter accumulated result
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  for (int unknown = 0; unknown < QInEnumerator._numberOfUnknowns; unknown++) {
     QFlux[QFluxEnumerator(patchIndex, volumeIndex, unknown)] = QFluxGathered[unknown];
   }
 

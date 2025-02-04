@@ -2,14 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <functional>
-#include <string>
-
-#include "peano4/utils/Globals.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/multicore.h"
 
 namespace exahype2::enumerator {
   /**
@@ -37,11 +30,17 @@ namespace exahype2::enumerator {
    * @see enumerator.h for a generic description of attribute semantics.
    */
   struct SoALexicographicEnumerator {
-    constexpr GPUCallableInlineMethod SoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    inline GPUCallableMethod SoALexicographicEnumerator(
+      int numberOfCells,
+      int numberOfDoFsPerAxisInCell,
+      int haloSize,
+      int numberOfUnknowns,
+      int numberOfAuxiliaryVariables
+    ) InlineMethod:
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
-      _unknowns(unknowns),
+      _numberOfUnknowns(numberOfUnknowns),
       _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
     /**
@@ -50,18 +49,19 @@ namespace exahype2::enumerator {
      * The index always refers to the interior of the cells. So you can use negative
      * indices if you want.
      */
-    GPUCallableInlineMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const InlineMethod {
-      if constexpr (Dimensions == 2) {
-        return unknown * _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) + (volumeIndex(0) + _haloSize);
-      } else {
-        return unknown * _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-                   * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (volumeIndex(2) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) + (volumeIndex(0) + _haloSize);
-      }
+    inline GPUCallableMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const InlineMethod {
+#if Dimensions == 2
+      return unknown * _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (dofIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (dofIndex(0) + _haloSize);
+#else
+      return unknown * _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (dofIndex(2) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (dofIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        + (dofIndex(0) + _haloSize);
+#endif
     }
 
 #if defined(GPUOffloadingOff)
@@ -71,19 +71,25 @@ namespace exahype2::enumerator {
     /**
      * Returns the total size.
      */
-    GPUCallableInlineMethod int size() const InlineMethod {
-      if constexpr (Dimensions == 2) {
-        return _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
-      } else {
-        return _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               * (_unknowns + _numberOfAuxiliaryVariables);
-      }
+    inline GPUCallableMethod int size() const InlineMethod {
+#if Dimensions == 2
+      return _numberOfCells
+        * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        * (_numberOfUnknowns + _numberOfAuxiliaryVariables);
+#else
+      return _numberOfCells
+        * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        * (_numberOfUnknowns + _numberOfAuxiliaryVariables);
+#endif
     }
 
     const int _numberOfCells;
     const int _numberOfDoFsPerAxisInCell;
     const int _haloSize;
-    const int _unknowns;
+    const int _numberOfUnknowns;
     const int _numberOfAuxiliaryVariables;
   };
 } // namespace exahype2::enumerator

@@ -6,7 +6,9 @@
 std::string exahype2::enumerator::SingleDoFEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(single-dof"
-      << ",#unknowns=" << _unknowns << ",#aux=" << _numberOfAuxiliaryVariables << ")";
+    << ",#number-of-unknowns=" << _numberOfUnknowns
+    << ",#number-of-auxiliary-variables=" << _numberOfAuxiliaryVariables
+    << ")";
 
 #if PeanoDebug > 0
   msg

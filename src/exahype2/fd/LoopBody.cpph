@@ -55,11 +55,11 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   double* __restrict__                         QOut,
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
-  double* QInGathered              = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double* QAlgebraicSourceGathered = new double[QInEnumerator._unknowns];
+  double* QInGathered              = new double[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double* QAlgebraicSourceGathered = new double[QInEnumerator._numberOfUnknowns];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
@@ -72,7 +72,7 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
       QAlgebraicSourceGathered
   );
 
-  for (int unknown=0; unknown<QOutEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QOutEnumerator._numberOfUnknowns; unknown++) {
     QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QAlgebraicSourceGathered[unknown];
     assertion4(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
@@ -98,11 +98,11 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   double* __restrict__                         QOut,
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
-  double* QInGathered              = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double* QAlgebraicSourceGathered = new double[QInEnumerator._unknowns];
+  double* QInGathered              = new double[QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double* QAlgebraicSourceGathered = new double[QInEnumerator._numberOfUnknowns];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._numberOfUnknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
@@ -116,7 +116,7 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
       ::exahype2::Solver::Offloadable::Yes
   );
 
-  for (int unknown=0; unknown<QOutEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QOutEnumerator._numberOfUnknowns; unknown++) {
     QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QAlgebraicSourceGathered[unknown];
     assertion4(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
@@ -142,7 +142,7 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   double* __restrict__                         QOut,
   const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
-  double* QAlgebraicSourceGathered = new double[QInEnumerator._unknowns];
+  double* QAlgebraicSourceGathered = new double[QInEnumerator._numberOfUnknowns];
 
   Solver::sourceTerm(
       & (QIn[ QInEnumerator(patchIndex,volumeIndex,0) ]),
@@ -154,7 +154,7 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
       ::exahype2::Solver::Offloadable::Yes
   );
 
-  for (int unknown=0; unknown<QOutEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<QOutEnumerator._numberOfUnknowns; unknown++) {
     QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QAlgebraicSourceGathered[unknown];
     assertion4(
       QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
@@ -178,13 +178,13 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     double                                       t,
     double                                       dt
 ) {
-    double* QGathered = new double[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
+    double* QGathered = new double[QOutEnumerator._numberOfUnknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
     // gather
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
-    for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    for (int unknown=0; unknown<QOutEnumerator._numberOfUnknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
     }
 
