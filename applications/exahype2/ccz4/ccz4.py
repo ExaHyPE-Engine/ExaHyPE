@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "matrix", "second_order" ], default="average",  help="restriction scheme for AMR" )
     parser.add_argument("-restart", "--restart-timestamp",   dest="restart_timestamp",    default=0.0, type=float,  help="specify the timestamp you would like to restart. The first checkpointed timestamp will be used to restart the simulation. Default is 0.0 (switch off)" )
     parser.add_argument("-checkdir", "--checkpoint-directory", dest="checkpoint_path",     type=str, default="./",  help="specify where the code read the checkpoint files FROM, default is the same directory of output above." )
-    parser.add_argument("-clt",  "--checkpoint-step-size",  dest="checkpoint_step_size",  type=float, default=1.0,     help="checkpoint step size (0 to switch it off)" )
+    parser.add_argument("-clt",  "--checkpoint-step-size",  dest="checkpoint_step_size",  type=float, default=0,     help="checkpoint step size (0 to switch it off)" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -136,7 +136,8 @@ if __name__ == "__main__":
             min_meshcell_h=min_mesh_unit_h, max_meshcell_h=max_mesh_unit_h,
             time_step_relaxation=cfl,
             KOSigma=KOSig,
-            reconstruction_with_rk=args.SO_flag
+            reconstruction_with_rk=args.SO_flag#,
+            #plot_grid_properties=True
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-adaptive-enclave":
