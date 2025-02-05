@@ -142,8 +142,20 @@ class LeapfrogFixedSearchRadius(Particle):
                 name="Kick1",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::leapfrogKickWithGlobalTimeStepSize<globaldata::{PARTICLE}> );""",
-                prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
+                touch_vertex_first_time_kernel=f"""
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    ::swift2::kernels::forAllParticles(marker,
+                                                       assignedParticles,
+                                                       numberOfCoalescedAssignedParticles,
+                                                       ::swift2::timestepping::leapfrogKickWithGlobalTimeStepSize<globaldata::{PARTICLE}>,
+                                                       ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
+                    // end template
+                    """,
+                prepare_traversal_kernel=f"""
+                // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                ::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});
+                // end template
+                """,
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
@@ -154,11 +166,28 @@ class LeapfrogFixedSearchRadius(Particle):
                 name="Drift",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    ::swift2::kernels::forAllParticles(
+                        marker,
+                        assignedParticles,
+                        numberOfCoalescedAssignedParticles,
+                        ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}>,
+                        ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
+                    // end template
+                    """,
                 touch_vertex_last_time_kernel=f"""
+                // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-                ::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}> );
+                ::swift2::kernels::forAllParticles(
+                                                    marker,
+                                                    assignedParticles,
+                                                    numberOfCoalescedAssignedParticles,
+                                                    ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}>,
+                                                    ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
+                                                    );
                 ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
+                // end template
                 """,
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"
@@ -170,30 +199,47 @@ class LeapfrogFixedSearchRadius(Particle):
                 name="ReduceVelocityAndDetermineTimeStepSize",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                prepare_traversal_kernel=f"""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});""",
+                prepare_traversal_kernel=f"""
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    ::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});
+                    // end template
+                    """,
                 includes="""
-                                         #include "swift2/timestepping/Euler.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
+                    #include "swift2/timestepping/Euler.h"
+                    #include "swift2/timestepping/GlobalTimeStepping.h"
+                    #include "swift2/timestepping/TimeStepping.h"
                 """,
             ),
             "ReduceGlobalQuantities": AlgorithmStep(
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                touch_vertex_first_time_kernel=f"""::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}> );""",
+                touch_vertex_first_time_kernel=f"""
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    ::swift2::kernels::forAllParticles(
+                        marker,
+                        assignedParticles,
+                        numberOfCoalescedAssignedParticles,
+                        ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{PARTICLE}>,
+                        ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
+                    // end template
+                    """,
                 prepare_traversal_kernel=f"""
-                                         globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
-                                         globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                """,
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
+                    globaldata::{PARTICLE}::getSpecies().clearVelocity();
+                    // end template
+                    """,
                 unprepare_traversal_kernel=f"""
-                                         globaldata::{PARTICLE}::getSpecies().allReduce();
-                                         globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                         ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                         """,
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    globaldata::{PARTICLE}::getSpecies().allReduce();
+                    globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
+                    ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                    // end template
+                    """,
                 includes="""
-                                         #include "swift2/statistics/Reports.h"
-                                         #include "swift2/statistics/Statistics.h"
+                    #include "swift2/statistics/Reports.h"
+                    #include "swift2/statistics/Statistics.h"
                 """,
             ),
         }
