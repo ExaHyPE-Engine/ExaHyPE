@@ -15,64 +15,64 @@ namespace {{ item }} {
 {%- endfor %}
 
 void projectOnFVLimiterSpaceWithHalo(
-  const double* const                           luh,
-  double* const                                 lim
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
+  double* const                                       lim
 );
 
 void projectOnFVLimiterSpaceWithoutHalo(
-  const double* const                           luh,
-  double* const                                 lim
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
+  double* const                                       lim
 );
 
 void projectOnDGSpaceFromFVWithHalo(
-  const double* const                           lim,
-  double* const                                 luh
+  const double* const                                 lim,
+  {{REGULAR_SOLVER_STORAGE_PRECISION}}* const         luh
 );
 
 void projectOnDGSpaceFromFVWithoutHalo(
-  const double* const                           lim,
-  double* const                                 luh
+  const double* const                                 lim,
+  {{REGULAR_SOLVER_STORAGE_PRECISION}}* const         luh
 );
 
 void projectOnFVSpaceWithHaloFromFVWithoutHalo(
-  const double* const                           fvWithoutHalo,
-  double* const                                 fvWithHalo
+  const double* const                                 fvWithoutHalo,
+  double* const                                       fvWithHalo
 );
 
 void projectOnFVSpaceWithoutHaloFromFVWithHalo(
-  double* const                                 fvWithoutHalo,
-  const double* const                           fvWithHalo
+  double* const                                       fvWithoutHalo,
+  const double* const                                 fvWithHalo
 );
 
 bool isPhysicallyAdmissible(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const double                                  timeStamp
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
+  const tarch::la::Vector<Dimensions, double>&        cellCentre,
+  const tarch::la::Vector<Dimensions, double>&        cellSize,
+  const double                                        timeStamp
 );
 
 bool discreteMaximumPrincipleAndMinAndMaxSearch(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  const double                                  relaxationParameter,
-  const double                                  differenceScaling,
-  double*                                       boundaryMinPerObservable,
-  double*                                       boundaryMaxPerObservable
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
+  const double                                        relaxationParameter,
+  const double                                        differenceScaling,
+  double*                                             boundaryMinPerObservable,
+  double*                                             boundaryMaxPerObservable
 );
 
 void findCellLocalLimiterMinAndMax(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           lim,
-  double* const                                 localMinPerObservable,
-  double* const                                 localMaxPerObservable
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
+  const double* const                                 lim,
+  double* const                                       localMinPerObservable,
+  double* const                                       localMaxPerObservable
 );
 
 void findCellLocalMinAndMax(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  double* const                                 localMinPerObservable,
-  double* const                                 localMaxPerObservable
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh,
+  double* const                                       localMinPerObservable,
+  double* const                                       localMaxPerObservable
 );
 
 {% for item in NAMESPACE -%}

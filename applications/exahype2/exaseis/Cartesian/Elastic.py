@@ -13,7 +13,7 @@ def initial():
 
   // LOH1
   bool layerWidth = 1.0;
-  bool upperLayer = x(2) <= layerWidth;
+  bool upperLayer = x(1) <= layerWidth;
 
   // HHS
   // bool upperLayer = false;
@@ -24,8 +24,8 @@ def initial():
 
   //auxiliary variables
   Q[9]  = upperLayer ? 2.6 : 2.7;
-  Q[10]   = upperLayer ? 4.0 : 6.0;
-  Q[11]   = upperLayer ? 2.0 : 3.464;
+  Q[10] = upperLayer ? 4.0 : 6.0;
+  Q[11] = upperLayer ? 2.0 : 3.464;
 """
 
 
@@ -41,27 +41,27 @@ def boundary():
       Qoutside[0+2] = 0.;
       break;
     case 1:
-      Qoutside[3+1] = 0.; //yy
-      Qoutside[3+3] = 0.; //xy
+      // free surface boundary condition
+      Qoutside[3+1] = -Qinside[3+1]; //yy
+      Qoutside[3+3] = -Qinside[3+3]; //xy
+      Qoutside[3+5] = -Qinside[3+5]; //yz
+      Qoutside[0+0] =  Qinside[0+0];
+      Qoutside[0+1] =  Qinside[0+1];
+      Qoutside[0+2] =  Qinside[0+2];
+      break;
+    case 2:
+      Qoutside[3+2] = 0.; //zz
+      Qoutside[3+4] = 0.; //xz
       Qoutside[3+5] = 0.; //yz
       Qoutside[0+0] = 0.;
       Qoutside[0+1] = 0.;
       Qoutside[0+2] = 0.;
-      break;
-    case 2:
-      // free surface boundary condition
-      Qoutside[3+2] = -Qinside[3+2]; //zz
-      Qoutside[3+4] = -Qinside[3+4]; //xz
-      Qoutside[3+5] = -Qinside[3+5]; //yz
-      Qoutside[0+0] = Qinside[0+0];
-      Qoutside[0+1] = Qinside[0+1];
-      Qoutside[0+2] = Qinside[0+2];
   }
 
   //auxiliary variables
-  Qoutside[9]     = Qinside[9];
-  Qoutside[10]      = Qinside[10];
-  Qoutside[11]      = Qinside[11];
+  Qoutside[9]  = Qinside[9];
+  Qoutside[10] = Qinside[10];
+  Qoutside[11] = Qinside[11];
   
 """
 
@@ -73,9 +73,9 @@ def eigenvalue():
 def flux():
   return """
   //Lamé parameters
-  double mu(Q[9] * Q[11] * Q[11]); //rho*cs^2
-  double lambda(Q[9] * Q[10] * Q[10] - 2.0 * mu); //rho*cp^2 - 2 mu
-  double neg_irho(-1.0/Q[9]);
+  auto mu(Q[9] * Q[11] * Q[11]); //rho*cs^2
+  auto lambda(Q[9] * Q[10] * Q[10] - 2.0 * mu); //rho*cp^2 - 2 mu
+  auto neg_irho(-1.0/Q[9]);
 
   switch(normal) {
     case 0:
@@ -111,4 +111,51 @@ def flux():
       F[3+4] = -mu * Q[0+0];              //xz
       F[3+5] = -mu * Q[0+1];              //yz
   }
+"""
+
+def refinement_criterion():
+  return """
+  auto result = ::exahype2::RefinementCommand::Keep;
+
+  tarch::la::Vector<Dimensions, double> sourceLocation = {
+    pointSourceLocation[0][0],
+    pointSourceLocation[0][1],
+    #if Dimensions == 3
+    pointSourceLocation[0][2]
+    #endif
+  };
+
+  if (tarch::la::equals(t, 0.0)) {
+    if (tarch::la::norm2(x - sourceLocation) < 1.0) {
+      result = ::exahype2::RefinementCommand::Refine;
+    }
+  }
+
+  return result;
+"""
+
+def point_source():
+  return """
+  for (int i = 0; i < NumberOfUnknowns; i++) {
+    forceVector[i] = 0.0;
+  }
+
+  constexpr double t0 = 0.1;
+  constexpr double M0 = 10.;//1000.0;
+  double           f  = M0 * t / (t0 * t0) * std::exp(-t / t0);
+
+  forceVector[3+4] = f; //sigma_xy
+"""
+def init_point_source():
+  return """
+  pointSourceLocation[0][0] = 0.0;
+  pointSourceLocation[0][1] = 2.0;
+  pointSourceLocation[0][2] = 0.0;
+"""
+
+def riemann_solver():
+  return """
+  Numerics::riemannSolver<VariableShortcuts, {{CORRECTOR_COMPUTATION_PRECISION}}, Order+1, NumberOfUnknowns, NumberOfUnknowns+NumberOfAuxiliaryVariables, 1>(
+    FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
+  );
 """

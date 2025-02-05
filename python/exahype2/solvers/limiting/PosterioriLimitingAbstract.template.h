@@ -171,9 +171,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         *
         * See superclass for function's semantics.
         */
-        void mapDiscreteMaximumPrincipleObservables(double* const observables, const double* const Q) const {
+        template<typename T>
+        void mapDiscreteMaximumPrincipleObservables(double* const observables, const T* const Q) const {
           if (NumberOfDMPObservables>0) {
-            std::copy_n(Q,NumberOfDMPObservables,observables);
+            for(int i=0; i<NumberOfDMPObservables; i++){
+              observables[i] = Q[i];
+            }
           }
         }
 
@@ -194,7 +197,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 {% if ADMISSIBILITY_IMPLEMENTATION!="<none>" %}
     virtual bool isPhysicallyAdmissible(
-        const double* const                         Q,
+        const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,
         const tarch::la::Vector<Dimensions,double>& x,
         const tarch::la::Vector<Dimensions,double>& h,
         const double timeStamp) {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %} = 0 {% else %} final {% endif %};

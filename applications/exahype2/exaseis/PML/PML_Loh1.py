@@ -1,12 +1,12 @@
-import peano4
-import exahype2
-import os
+import os, peano4, exahype2
 
 import exahype2.solvers.aderdg
 from exahype2.solvers.aderdg.GlobalAdaptiveTimeStep import (
     GlobalAdaptiveTimeStep,
 )
 from exahype2.solvers.aderdg.ADERDG import Polynomials
+
+import PMLElastic
 
 project = exahype2.Project(["exahype2", "elastic"], "pml", executable="LOH1")
 
@@ -28,6 +28,8 @@ max_depth = 0
 max_h = 1.1 * min(size) / (3.0**min_level)
 min_h = max_h / (3.0**max_depth)
 
+precision = "double"
+use_tracers = True
 
 theSolver = GlobalAdaptiveTimeStep(
     name="ElasticSolver",
@@ -37,57 +39,50 @@ theSolver = GlobalAdaptiveTimeStep(
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_relaxation=0.9,
-    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    material_parameters=exahype2.solvers.PDETerms.User_Defined_Implementation,
     point_source=1,
 )
 
+theSolver._init_point_sources_implementation = PMLElastic.init_point_source()
+theSolver._point_sources_implementation      = PMLElastic.point_source()
+
 theSolver.add_kernel_optimisations(
     is_linear=True,
-    architecture="noarch",
     polynomials=Polynomials.Gauss_Lobatto,
     initialise_patches=True,
-    riemann_solver_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    riemann_solver_implementation = PMLElastic.riemann_solver(),
+    precision = precision
 )
+
+theSolver.set_implementation(
+  initial_conditions    = PMLElastic.initial(),
+  boundary_conditions   = PMLElastic.boundary(),
+  eigenvalues           = PMLElastic.eigenvalue(),
+  refinement_criterion  = PMLElastic.refinement_criterion(),
+  flux                  = PMLElastic.flux(),
+  ncp                   = PMLElastic.ncp(),
+  material_parameters   = PMLElastic.multiplyMaterialParameterMatrix(),
+  source_term           = PMLElastic.algebraic_source()
+)
+
+theSolver._abstract_solver_user_declarations += PMLElastic.abstractDeclarations()
+theSolver._constructor_implementation += PMLElastic.abstractConstructor()
+theSolver.add_user_solver_includes(PMLElastic.userIncludes())
 
 project.add_solver(theSolver)
 
-
-tracer_particles = project.add_tracer(name="Tracer", attribute_count=55)
-
-project.add_action_set_to_initialisation(
-    exahype2.tracer.InsertParticlesByCoordinates(
-        particle_set=tracer_particles,
+if use_tracers:
+    project.add_action_set_to_timestepping(
+      exahype2.tracer.NewDGTracer(
         coordinates=[
           [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
           [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
           [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
         ],
-    )
-)
-
-project.add_action_set_to_timestepping(
-    peano4.toolbox.particles.api.UpdateParallelState(particle_set=tracer_particles)
-)
-
-project.add_action_set_to_timestepping(
-    exahype2.tracer.DiscontinuousGalerkinTracing(
-        tracer_particles, theSolver,
-        project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
-    )
-)
-
-project.add_action_set_to_timestepping(
-    exahype2.tracer.DumpTracerIntoDatabase(
-        particle_set=tracer_particles, solver=theSolver,
-        filename="tracer-PML-d-"+str(min_level)+"-o-"+str(order),
-        data_delta_between_two_snapsots=1e16, time_delta_between_two_snapsots=0.000001,
+        solver=theSolver,
+        filename="PML_level_"+str(min_level)+"-order-"+str(order)+"-precision-"+str(precision),
+        data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
         output_precision=10, clear_database_after_flush=False
-    )
-)
+    ))
 
 project.set_global_simulation_parameters(
     dimensions=3,
@@ -115,4 +110,4 @@ peano4_project.output.makefile.add_library(
     "-fopenmp -lcurvi -leasi -lyaml-cpp -limpalajit -lasagi -lnetcdf -lnuma -lmpi -DUSE_ASAGI"
 )
 
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=32)
+peano4_project.build(make_clean_first=True)

@@ -63,7 +63,7 @@ class SWERestingLake(Scenario):
 
     def analytical_solution(self):
         return """
-  double _Q[4];
+  {{SOLUTION_STORAGE_PRECISION}} _Q[4];
   initialCondition(
       _Q,
       x,

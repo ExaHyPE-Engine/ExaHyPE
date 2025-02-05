@@ -28,13 +28,15 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
-  {{CONSTRUCTOR_IMPLEMENTATION}}
 
   // Initialise nodes, weights and matrices for use of the kernels.
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
   {% endfor %}
+
+  {{CONSTRUCTOR_IMPLEMENTATION}}
+
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){

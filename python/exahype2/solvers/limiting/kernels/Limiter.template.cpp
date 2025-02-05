@@ -20,22 +20,22 @@
 {% import 'Gemms.template.h' as m with context %}{# get template macros #}
 
 void compareWithADERDGSolutionAtGaussLobattoNodes(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  double*                                       min,
-  double*                                       max
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double*                                           min,
+  double*                                           max
 );
 
 void compareWithADERDGSolutionAtFVSubcellCenters(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  double*                                       min,
-  double*                                       max
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double*                                           min,
+  double*                                           max
 );
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
-  const double* const                           luh,
-  double* const                                 lim
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double* const                                     lim
 ) {
   // Compact projection without ghost layer
   // x
@@ -104,8 +104,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
 }
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
-  const double* const                           luh,
-  double* const                                 lim
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double* const                                     lim
 ) {
   // Compact projection without ghost layer
   // x
@@ -157,7 +157,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithoutHalo(
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
   const double* const                           lim,
-  double* const                                 luh
+  {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh
 ) {
   // Ignore and remove ghost layers
   // x
@@ -212,7 +212,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
   const double* const                           lim,
-  double* const                                 luh
+  {{REGULAR_SOLVER_STORAGE_PRECISION}}* const   luh
 ) {
   // Ignore and remove ghost layers
   // x
@@ -301,11 +301,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVSpaceWithoutHaloFromFVWithHalo(
 // For a given DG cell, this checks whether the solver function "isPhysicallyAdmissible"
 // returns false at any of the nodes of that DG cell.
 bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const double                                  timeStamp
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  const tarch::la::Vector<Dimensions, double>&      cellCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const double                                      timeStamp
 ) {
   const tarch::la::Vector<Dimensions, double>& bottomLeftPosition = cellCentre - 0.5 * cellSize;
   bool result = true;
@@ -337,12 +337,12 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
 }
 
 bool {{FULL_QUALIFIED_NAMESPACE}}::discreteMaximumPrincipleAndMinAndMaxSearch(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  const double                                  relaxationParameter,
-  const double                                  differenceScaling,
-  double*                                       boundaryMinPerObservable,
-  double*                                       boundaryMaxPerObservable
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  const double                                      relaxationParameter,
+  const double                                      differenceScaling,
+  double*                                           boundaryMinPerObservable,
+  double*                                           boundaryMaxPerObservable
 ) {
   double localMinPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
   double localMaxPerObservable[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned({{ALIGNMENT}})));
@@ -425,10 +425,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalLimiterMinAndMax(
 }
 
 void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalMinAndMax(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
-  const double* const                         luh,
-  double* const                               localMinPerObservable,
-  double* const                               localMaxPerObservable
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double* const                                     localMinPerObservable,
+  double* const                                     localMaxPerObservable
 ) {
   std::fill_n(localMinPerObservable, {{NUMBER_OF_OBSERVABLES}}, +std::numeric_limits<double>::infinity());
   std::fill_n(localMaxPerObservable, {{NUMBER_OF_OBSERVABLES}}, -std::numeric_limits<double>::infinity());
@@ -453,10 +453,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalMinAndMax(
 
 // Project to GaussLobatto and modify the min/max if required
 void compareWithADERDGSolutionAtGaussLobattoNodes(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  double*                                       min,
-  double*                                       max
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double*                                           min,
+  double*                                           max
 ) {
   // x
   double* tmpX = static_cast<double *>(
@@ -531,10 +531,10 @@ void compareWithADERDGSolutionAtGaussLobattoNodes(
 
 // Project onto FV subcell nodes and modify the min/max if required
 void compareWithADERDGSolutionAtFVSubcellCenters(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* const                           luh,
-  double*                                       min,
-  double*                                       max
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
+  double*                                           min,
+  double*                                           max
 ) {
   // x
   double* tmpX = static_cast<double *>(
