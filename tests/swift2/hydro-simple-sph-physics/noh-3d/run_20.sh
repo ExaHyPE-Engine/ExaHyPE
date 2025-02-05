@@ -13,7 +13,7 @@ END_TIME=0.6
 TIMESTEP_SIZE=0.0001
 CFL_FACTOR=0.2
 PLOT_DELTA=0.05
-CELL_SIZE=0.5
+CELL_SIZE=1.0
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
