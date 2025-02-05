@@ -15,6 +15,10 @@ modes = {
     "debug": peano4.output.CompileMode.Debug,
 }
 
+available_prec = {
+    "bf16", "fp16", "fp32", "fp64"
+}
+
 available_scenarios = {
     "AcousticPlanarWaves": scenarios.AcousticPlanarWaves(dimensions=2),
     "AdvectionLinear": scenarios.AdvectionLinear(),
@@ -54,6 +58,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "-m", "--mode", dest="mode", default="release", help="|".join(modes.keys())
+)
+parser.add_argument(
+    "-pr", "--precision", dest="precision", default="fp64", help="|".join(available_prec)
 )
 parser.add_argument(
     "-s",
@@ -105,16 +112,21 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     max_cell_h=max_h,
     time_step_relaxation=0.9,
     unknowns=scenario._equation.num_unknowns,
-    auxiliary_variables=scenario._equation.num_auxiliary_variables,
+    auxiliary_variables=scenario._equation.num_auxiliary_variables
+)
+
+solver.add_kernel_optimisations(
+    polynomials=polynomials, is_linear=scenario._equation.is_linear,
+    riemann_solver_implementation = scenario._equation.riemann_solver(),
+    precision = args.precision
+)
+
+solver.set_implementation(
     initial_conditions=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
     eigenvalues=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
-)
-
-solver.add_kernel_optimisations(
-    polynomials=polynomials, is_linear=scenario._equation.is_linear
 )
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:

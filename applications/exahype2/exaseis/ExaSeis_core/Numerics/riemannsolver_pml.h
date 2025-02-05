@@ -1,10 +1,14 @@
+#pragma once
+
 #include "./idx.h"
+#include "routines_curvilinear.h"
+#include "riemannsolver_routines.h"
 
 namespace Numerics{
 
     //Getter routines
-  template <class Shortcuts>
-  inline void compute_parameters(const double*Q, double& rho, double& cp, double& cs, double& mu, double& lam){
+  template <class Shortcuts, typename T>
+  inline void compute_parameters(const T*Q, T& rho, T& cp, T& cs, T& mu, T& lam){
     Shortcuts s;
     rho = Q[s.rho];
     cp  = Q[s.cp ];
@@ -13,8 +17,8 @@ namespace Numerics{
     lam = rho* cp * cp - 2.0 * mu;
   }
 
-
-  inline void riemannSolver_boundary(int faceIndex,double r, double vn , double vm , double vl, double Tn , double Tm ,double Tl , double zp, double zs , double& vn_hat , double& vm_hat ,double& vl_hat , double& Tn_hat , double& Tm_hat ,double& Tl_hat)
+  template<typename T>
+  inline void riemannSolver_boundary(int faceIndex,T r, T vn , T vm , T vl, T Tn , T Tm ,T Tl , T zp, T zs , T& vn_hat , T& vm_hat ,T& vl_hat , T& Tn_hat , T& Tm_hat ,T& Tl_hat)
   {
     // if (faceIndex % 2  == 0) { //left face
     if (faceIndex < Dimensions) { //left face
@@ -32,8 +36,8 @@ namespace Numerics{
   }
 
 
-  template<class Shortcuts,int order, int numberOfVariables, int numberOfParameters , int surface = 2>
-  void riemannSolver(double* FL,double* FR,const double* const QL,const double* const QR,const double dt,const int direction, bool isBoundaryFace, int faceIndex){
+  template<class Shortcuts, typename T, int order, int numberOfVariables, int numberOfParameters , int surface = 2>
+  void riemannSolver(T* FL,T* FR,const T* const QL,const T* const QR,const double dt,const int direction, bool isBoundaryFace, int faceIndex){
  
     constexpr int numberOfData       = numberOfVariables+numberOfParameters;
     constexpr int basisSize          = order+1;
@@ -41,89 +45,89 @@ namespace Numerics{
     kernels::idx3 idx_QLR(basisSize,basisSize,numberOfData);
     kernels::idx3 idx_FLR(basisSize,basisSize,numberOfVariables);
 
-    double FLn ,FLm ,FLl ,FRn ,FRm ,FRl;
-    double FLx ,FLy ,FLz ,FRx ,FRy ,FRz;
-    double FL_n,FL_m,FL_l,FR_n,FR_m,FR_l;
-    double FL_x,FL_y,FL_z,FR_x,FR_y,FR_z;
+    T FLn ,FLm ,FLl ,FRn ,FRm ,FRl;
+    T FLx ,FLy ,FLz ,FRx ,FRy ,FRz;
+    T FL_n,FL_m,FL_l,FR_n,FR_m,FR_l;
+    T FL_x,FL_y,FL_z,FR_x,FR_y,FR_z;
 
 
     Shortcuts s;
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
 
-	const double* Q_m = QL+idx_QLR(i,j,0);
-	const double* Q_p = QR+idx_QLR(i,j,0);
+	const T* Q_m = QL+idx_QLR(i,j,0);
+	const T* Q_p = QR+idx_QLR(i,j,0);
         
-        double dmp_pml_x_m = Q_m[s.dmp_pml + 0];
-        double dmp_pml_y_m = Q_m[s.dmp_pml + 1];
-        double dmp_pml_z_m = Q_m[s.dmp_pml + 2];
+        T dmp_pml_x_m = Q_m[s.dmp_pml + 0];
+        T dmp_pml_y_m = Q_m[s.dmp_pml + 1];
+        T dmp_pml_z_m = Q_m[s.dmp_pml + 2];
 
-        double dmp_pml_x_p = Q_p[s.dmp_pml + 0];
-        double dmp_pml_y_p = Q_p[s.dmp_pml + 1];
-        double dmp_pml_z_p = Q_p[s.dmp_pml + 2];
+        T dmp_pml_x_p = Q_p[s.dmp_pml + 0];
+        T dmp_pml_y_p = Q_p[s.dmp_pml + 1];
+        T dmp_pml_z_p = Q_p[s.dmp_pml + 2];
 	
-	double* F_m = FL+idx_FLR(i,j,0);
-	double* F_p = FR+idx_FLR(i,j,0);
-	double rho_m,cp_m,cs_m,mu_m,lam_m;
-	double rho_p,cp_p,cs_p,mu_p,lam_p;
+	T* F_m = FL+idx_FLR(i,j,0);
+	T* F_p = FR+idx_FLR(i,j,0);
+	T rho_m,cp_m,cs_m,mu_m,lam_m;
+	T rho_p,cp_p,cs_p,mu_p,lam_p;
 
 	compute_parameters<Shortcuts>(Q_m,rho_m,cp_m,cs_m,mu_m,lam_m);
 	compute_parameters<Shortcuts>(Q_p,rho_p,cp_p,cs_p,mu_p,lam_p);
 
-	double n_m[3],m_m[3],l_m[3];
-	double n_p[3],m_p[3],l_p[3];
-	double norm_p,norm_m;
+	T n_m[3],m_m[3],l_m[3];
+	T n_p[3],m_p[3],l_p[3];
+	T norm_p,norm_m;
 
 	get_normals<Shortcuts>(Q_m,direction,norm_m,n_m);
 	get_normals<Shortcuts>(Q_p,direction,norm_p,n_p);
 
 
-	double Tx_m,Ty_m,Tz_m;
-	double Tx_p,Ty_p,Tz_p;
+	T Tx_m,Ty_m,Tz_m;
+	T Tx_p,Ty_p,Tz_p;
 	compute_tractions<Shortcuts>(Q_p,n_p,Tx_p,Ty_p,Tz_p);
 	compute_tractions<Shortcuts>(Q_m,n_m,Tx_m,Ty_m,Tz_m);
 
-	double vx_m,vy_m,vz_m;
-	double vx_p,vy_p,vz_p;
+	T vx_m,vy_m,vz_m;
+	T vx_p,vy_p,vz_p;
 	get_velocities<Shortcuts>(Q_p,vx_p,vy_p,vz_p);	
 	get_velocities<Shortcuts>(Q_m,vx_m,vy_m,vz_m); 
       
 	create_local_basis(n_p, m_p, l_p);
 	create_local_basis(n_m, m_m, l_m);
 
-	double Tn_m,Tm_m,Tl_m;
-	double Tn_p,Tm_p,Tl_p;
+	T Tn_m,Tm_m,Tl_m;
+	T Tn_p,Tm_p,Tl_p;
 
 	// rotate fields into l, m, n basis
 	rotate_into_orthogonal_basis(n_m,m_m,l_m,Tx_m,Ty_m,Tz_m,Tn_m,Tm_m,Tl_m);
 	rotate_into_orthogonal_basis(n_p,m_p,l_p,Tx_p,Ty_p,Tz_p,Tn_p,Tm_p,Tl_p);
 
-	double vn_m,vm_m,vl_m;
-	double vn_p,vm_p,vl_p;
+	T vn_m,vm_m,vl_m;
+	T vn_p,vm_p,vl_p;
 	rotate_into_orthogonal_basis(n_m,m_m,l_m,vx_m,vy_m,vz_m,vn_m,vm_m,vl_m);      
 	rotate_into_orthogonal_basis(n_p,m_p,l_p,vx_p,vy_p,vz_p,vn_p,vm_p,vl_p);      
 
   
 	// extract local s-wave and p-wave impedances
-	double zs_m=rho_m*cs_m;
-	double zs_p=rho_p*cs_p;
+	T zs_m=rho_m*cs_m;
+	T zs_p=rho_p*cs_p;
 
-	double zp_m=rho_m*cp_m;
-	double zp_p=rho_p*cp_p;      
+	T zp_m=rho_m*cp_m;
+	T zp_p=rho_p*cp_p;      
       
 	// impedance must be greater than zero !
 	assertion3(!(zp_p <= 0.0 || zp_m <= 0.0),"Impedance must be greater than zero !",zp_p,zs_p);
 
 	// generate interface data preserving the amplitude of the outgoing charactertritics
 	// and satisfying interface conditions exactly.
-	double vn_hat_p,vm_hat_p,vl_hat_p;
-	double Tn_hat_p,Tm_hat_p,Tl_hat_p;        
-	double vn_hat_m,vm_hat_m,vl_hat_m;
-	double Tn_hat_m,Tm_hat_m,Tl_hat_m;    
+	T vn_hat_p,vm_hat_p,vl_hat_p;
+	T Tn_hat_p,Tm_hat_p,Tl_hat_p;        
+	T vn_hat_m,vm_hat_m,vl_hat_m;
+	T Tn_hat_m,Tm_hat_m,Tl_hat_m;    
 
 	if (isBoundaryFace) {
     // 0 absorbing 1 free surface
-	  double r= faceIndex == surface ? 1 : 0;
+	  T r= faceIndex == surface ? 1 : 0;
 	  //	double r=1.;
 	  riemannSolver_boundary(faceIndex,r,
 				 vn_m,vm_m,vl_m,
@@ -245,8 +249,8 @@ namespace Numerics{
 	F_p[s.sigma + 4] = -norm_p*mu_p*(n_p[2]*FR_x + n_p[0]*FR_z);
 	F_p[s.sigma + 5] = -norm_p*mu_p*(n_p[2]*FR_y + n_p[1]*FR_z);
 
-        double norm_p_qr=norm_p;
-        double norm_m_qr=norm_m;
+        T norm_p_qr=norm_p;
+        T norm_m_qr=norm_m;
         kernels::idx2 idx_pml(Dimensions,9);
 
         F_p[s.pml + idx_pml(0,0)] = n_p[0]*dmp_pml_x_p*norm_p*FRx;

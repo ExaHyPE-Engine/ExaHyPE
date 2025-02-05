@@ -29,7 +29,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
   {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %}
     bool isPhysicallyAdmissible(
-      const double* const                         Q,
+      const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,
       const tarch::la::Vector<Dimensions,double>& x,
       const tarch::la::Vector<Dimensions,double>& h,
       const double timeStamp) override;

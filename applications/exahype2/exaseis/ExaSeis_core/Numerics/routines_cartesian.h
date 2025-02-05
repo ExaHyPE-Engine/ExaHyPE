@@ -1,6 +1,8 @@
+#pragma once
+
 namespace Numerics{
-  template <class Shortcuts>
-  inline void get_normals(const double* Q, int direction, double& norm, double* n){
+  template <class Shortcuts, typename T>
+  inline void get_normals(const T* Q, int direction, T& norm, T* n){
     norm = 1;
     n[0] = 0;
     n[1] = 0;

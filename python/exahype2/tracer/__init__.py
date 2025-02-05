@@ -7,3 +7,4 @@ from .InsertParticlesByCoordinates import InsertParticlesByCoordinates
 from .InsertParticlesFromFile import InsertParticlesFromFile
 from .FiniteVolumesTracing import FiniteVolumesTracing
 from .TracerInteraction import perserveCartesianTracerLayout
+from .NewDGTracer import NewDGTracer

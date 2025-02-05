@@ -20,3 +20,7 @@ class Equation:
     @staticmethod
     def ncp():
         return PDETerms.None_Implementation
+
+    @staticmethod
+    def riemann_solver():
+        return PDETerms.None_Implementation

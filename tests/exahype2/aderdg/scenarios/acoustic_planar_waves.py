@@ -11,6 +11,10 @@ from equations import Acoustic
 
 
 class AcousticPlanarWaves(Scenario):
+    """
+    Scenario reproduced from Dumbser & Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x (Chapter 5, p. 328)
+    """
+
     _plot_dt = 0.0
     _offset = -1.0
     _domain_size = 2.0

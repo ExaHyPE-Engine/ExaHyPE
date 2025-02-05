@@ -12,6 +12,7 @@ class SolverDefinitions:
         source_term_implementation,
         material_parameters_implementation,
         point_source_implementation,
+        init_point_source_implementation,
         is_linear,
         computation_precisions,
         pde_terms_without_state,
@@ -22,6 +23,7 @@ class SolverDefinitions:
         self._source_term_implementation = source_term_implementation
         self._material_parameters_implementation = material_parameters_implementation
         self._point_source_implementation = point_source_implementation
+        self._init_point_source_implementation = init_point_source_implementation
         self._is_linear = is_linear
         self._computation_precisions = computation_precisions
         self._pde_terms_without_state = pde_terms_without_state
@@ -108,7 +110,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
 }
 {% endif %}
 
-{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+{% if INIT_POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(
   [[maybe_unused]] double sourceLocation[NumberOfPointSources][Dimensions]
 ) {
@@ -318,6 +320,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["MATERIAL_PARAM_IMPLEMENTATION"] = self._material_parameters_implementation
         d["POINT_SOURCE_IMPLEMENTATION"] = self._point_source_implementation
+        d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation
         d["IS_LINEAR"] = self._is_linear
         d["COMPUTATION_PRECISIONS"] = self._computation_precisions
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state

@@ -164,7 +164,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         /**
         * Only exists for the generated kernels, should never be called
         */
-        void mapDiscreteMaximumPrincipleObservables(double* const observables, const double* const Q) const {
+       template<typename T>
+        void mapDiscreteMaximumPrincipleObservables(double* const observables, const T* const Q) const {
           ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "map discrete maximum principle observables was called, it should never be.", "" );
         }
 
@@ -184,9 +185,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 {% if ADMISSIBILITY_IMPLEMENTATION!="<none>" %}
     virtual bool isPhysicallyAdmissible(
-        const double* const                         Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        const tarch::la::Vector<Dimensions,double>& h,
+        const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const Q,
+        const tarch::la::Vector<Dimensions,double>&       x,
+        const tarch::la::Vector<Dimensions,double>&       h,
         const double timeStamp) {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %} = 0 {% else %} final {% endif %};
 {% endif %}
 

@@ -1,20 +1,19 @@
-#ifndef EXASEIS_TEMPLATE_CURVILINEAR_DERIVATIVES
-#define EXASEIS_TEMPLATE_CURVILINEAR_DERIVATIVES
-// #include "kernels/KernelUtils.h"
-// #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#pragma once
+
+#include "../Numerics/idx.h"
 
 namespace ExaSeis {
-  template <class Shortcuts, int num_nodes>
+  template <class Shortcuts, typename T, int num_nodes, int numberOfData>
   class Derivatives {
   public:
     static void metricDerivatives(
-      double dudx[][num_nodes], const double* const coordinates, const double* const dx, double* derivatives
+      double dudx[][num_nodes], const T* const coordinates, const double* const dx, T* derivatives
     ) {
       Shortcuts s;
 
-      double x_der_x, x_der_y, x_der_z;
-      double y_der_x, y_der_y, y_der_z;
-      double z_der_x, z_der_y, z_der_z;
+      T x_der_x, x_der_y, x_der_z;
+      T y_der_x, y_der_y, y_der_z;
+      T z_der_x, z_der_y, z_der_z;
 
       kernels::idx4 id_der(num_nodes, num_nodes, num_nodes, 10);
 
@@ -32,7 +31,7 @@ namespace ExaSeis {
             computeDerivatives_y_3D(dudx, k, j, i, coordinates, s.curve_grid + 2, z_der_y, dx[1]);
             computeDerivatives_z_3D(dudx, k, j, i, coordinates, s.curve_grid + 2, z_der_z, dx[2]);
 
-            double jacobian = x_der_x * (y_der_y * z_der_z - y_der_z * z_der_y)
+            T jacobian = x_der_x * (y_der_y * z_der_z - y_der_z * z_der_y)
                               - x_der_y * (y_der_x * z_der_z - y_der_z * z_der_x)
                               + x_der_z * (y_der_x * z_der_y - y_der_y * z_der_x);
 
@@ -55,11 +54,10 @@ namespace ExaSeis {
 
   private:
     static void computeDerivatives_x_3D(
-      double dudx[][num_nodes], int k, int j, int i, const double* values, int coordinate, double& der_x, const double dx
+      double dudx[][num_nodes], int k, int j, int i, const T* values, int coordinate, T& der_x, const double dx
     ) {
-      Shortcuts s;
 
-      kernels::idx4 id_xyz(num_nodes, num_nodes, num_nodes, s.Size);
+      kernels::idx4 id_xyz(num_nodes, num_nodes, num_nodes, numberOfData);
       der_x = 0.0;
       for (int n = 0; n < num_nodes; n++) {
         der_x += dudx[i][n] * values[id_xyz(k, j, n, coordinate)] / dx;
@@ -67,10 +65,10 @@ namespace ExaSeis {
     }
 
     static void computeDerivatives_y_3D(
-      double dudx[][num_nodes], int k, int j, int i, const double* values, int coordinate, double& der_y, const double dy
+      double dudx[][num_nodes], int k, int j, int i, const T* values, int coordinate, T& der_y, const double dy
     ) {
-      Shortcuts     s;
-      kernels::idx4 id_xyz(num_nodes, num_nodes, num_nodes, s.Size);
+
+      kernels::idx4 id_xyz(num_nodes, num_nodes, num_nodes, numberOfData);
       der_y = 0.0;
       for (int n = 0; n < num_nodes; n++) {
         der_y += dudx[j][n] * values[id_xyz(k, n, i, coordinate)] / dy;
@@ -78,10 +76,10 @@ namespace ExaSeis {
     }
 
     static void computeDerivatives_z_3D(
-      double dudx[][num_nodes], int k, int j, int i, const double* values, int coordinate, double& der_z, const double dz
+      double dudx[][num_nodes], int k, int j, int i, const T* values, int coordinate, T& der_z, const double dz
     ) {
-      Shortcuts     s;
-      kernels::idx4 id_xyz(num_nodes, num_nodes, num_nodes, s.Size);
+
+      kernels::idx4 id_xyz(num_nodes, num_nodes, num_nodes, numberOfData);
 
       der_z = 0.0;
       for (int n = 0; n < num_nodes; n++) {
@@ -90,5 +88,3 @@ namespace ExaSeis {
     }
   };
 } // namespace ExaSeis
-
-#endif

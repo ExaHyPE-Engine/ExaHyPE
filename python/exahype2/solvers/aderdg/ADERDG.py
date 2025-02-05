@@ -187,12 +187,13 @@ class ADERDG(object):
         C++ code and used as the implementation of this function. The user is trusted to provide code that
         compiles and runs properly, it is never checked.
         """
-        self._flux_implementation           = PDETerms.None_Implementation
-        self._ncp_implementation            = PDETerms.None_Implementation
-        self._source_term_implementation    = PDETerms.None_Implementation
-        self._point_sources_implementation  = PDETerms.None_Implementation
-        self._eigenvalues_implementation    = PDETerms.None_Implementation
-        self._material_param_implementation = PDETerms.None_Implementation
+        self._flux_implementation               = PDETerms.None_Implementation
+        self._ncp_implementation                = PDETerms.None_Implementation
+        self._source_term_implementation        = PDETerms.None_Implementation
+        self._point_sources_implementation      = PDETerms.None_Implementation
+        self._init_point_sources_implementation = PDETerms.None_Implementation
+        self._eigenvalues_implementation        = PDETerms.None_Implementation
+        self._material_param_implementation     = PDETerms.None_Implementation
 
         self._refinement_criterion_implementation = PDETerms.None_Implementation
         self._initial_conditions_implementation   = PDETerms.None_Implementation
@@ -1300,7 +1301,8 @@ Material parameters:    """
             )
 
         if point_source > 0:
-            self._point_sources_implementation = PDETerms.User_Defined_Implementation
+            self._init_point_sources_implementation = PDETerms.User_Defined_Implementation
+            self._point_sources_implementation      = PDETerms.User_Defined_Implementation
             self._number_of_point_sources = point_source
 
         self.user_action_set_includes += additional_action_set_includes

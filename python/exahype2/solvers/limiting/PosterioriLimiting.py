@@ -508,6 +508,8 @@ Type:                   """
         d["REGULAR_SOLVER_UNKNOWN_IDENTIFIER"] = self._regular_solver._unknown_identifier()
         d["LIMITER_SOLVER_UNKNOWN_IDENTIFIER"] = self._limiter_solver._unknown_identifier()
 
+        d["REGULAR_SOLVER_STORAGE_PRECISION"] = self._regular_solver._solution_persistent_storage_precision
+
         d["ALIGNMENT"]          = Architectures.get_alignment(self._regular_solver._architecture)
         d["SIMD_WIDTH"]         = Architectures.get_simd_width(self._regular_solver._architecture)
         d["ORDER"]              = self._regular_solver._order
