@@ -13,7 +13,7 @@ namespace exahype2::fv::rusanov::cpp::internal {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(
+  static inline void timeStepWithRusanovBatchedStateless(
     int                       targetDevice,
     CellData<double, double>& patchData,
     double*                   tempFluxX,

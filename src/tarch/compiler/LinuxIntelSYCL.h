@@ -14,16 +14,12 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+#if !defined(UseManualInlining) && !defined(noUseManualInlining)
 #define UseManualInlining
 #endif
 
 #if !defined(AlignmentOnHeap)
 #define AlignmentOnHeap 64
-#endif
-
-#if !defined(UseManualInlining) && !defined(noUseManualInlining)
-#define UseManualInlining
 #endif
 
 #if PeanoDebug == 0
@@ -33,12 +29,4 @@
 
 #define LittleEndian
 
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
-
-/**
- * This flag had been undefined before.
- *
- * However, I do not understand why SYCL should not support the task group in
- * OpenMP.
- */
 #define OpenMPTaskGroup

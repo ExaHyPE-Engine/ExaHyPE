@@ -3,35 +3,32 @@
 #pragma once
 
 #include "Device.h"
-
-#include "tarch/multicore/multicore.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "MemoryLocation.h"
 
 /**
  * Have to include this header, as we need access to the SYCL header file to prevent conflicts with the Dimensions macro.
  */
-#include "tarch/accelerator/sycl/Device.h"
+#include "sycl/Device.h"
+
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/multicore/multicore.h"
 
 namespace tarch {
   #if defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
     #define GPUCallableMethod __host__ __device__
-    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
     GPUCallableMethod void gpuAbort();
   #elif defined(GPUOffloadingSYCL)
     // SYCL_EXTERNAL is not required in GPUCallableMethod as we define the device kernels typically inline.
     // If a device kernel function is defined in a separate .cpp file, then SYCL_EXTERNAL is explicitly needed.
     #define GPUCallableMethod
-    #define GPUCallableInlineMethod inline
     SYCL_EXTERNAL void gpuAbort();
   #elif defined(GPUOffloadingOMP)
     #define GPUCallableMethod
-    #define GPUCallableInlineMethod inline
     #pragma omp declare target
     void gpuAbort();
     #pragma omp end declare target
   #else
     #define GPUCallableMethod
-    #define GPUCallableInlineMethod // inline
     #define GPUOffloadingOff // No device accelerator chosen
     /**
      * Delegates to std::abort() if no GPU offloading is active. Otherwise it
@@ -42,57 +39,77 @@ namespace tarch {
     void gpuAbort();
   #endif
 
-  enum class MemoryLocation {
-    /**
-     * Create data on the heap of the local device. That is, if you run
-     * on an accelerator, use the accelerator's heap. If you invoke it
-     * on the host, use the host's accelerator.
-     *
-     * The alignment of this routine can be controlled via the compile
-     * time constant AlignmentOnHeap. It is typically set (to a default)
-     * within the corresponding compiler-specific header-file in
-     * tarch/compiler.
-     */
-    Heap,
-    /**
-     * To be used on host only.
-     */
-    ManagedSharedAcceleratorDeviceMemory
-  };
-
-  std::string toString(MemoryLocation value);
-
-  namespace internal {
+  namespace accelerator {
     void* allocateRawData(
-      std::size_t    size,
+      std::size_t    sizeInBytes,
       MemoryLocation location,
       int            device
     );
-  } // namespace internal
+
+    void* reallocateRawData(
+      void*          data,
+      std::size_t    sizeInBytes,
+      MemoryLocation location,
+      int            device
+    );
+
+    void freeRawData(
+      void*          data,
+      MemoryLocation location,
+      int            device
+    );
+
+    void copyTo(
+      void*          target,
+      const void*    source,
+      std::size_t    sizeInBytes,
+      MemoryLocation location,
+      int            device
+    );
+
+    void copyFrom(
+      const void*    source,
+      void*          target,
+      std::size_t    sizeInBytes,
+      MemoryLocation location,
+      int            device
+    );
+  } // namespace accelerator
 
   /**
    * Allocates memory on the specified memory location
    *
    * The device id is an optional argument that is required for
    * memory allocation on an accelerator. Default is -1 (HostDevice).
-   * For memory allocation on accelerators, passing a device id >= 0 is necessary.
+   * For memory allocation on accelerators, passing a device id >= 0 is
+   * necessary.
    *
    *
    * @param count Number of elements to allocate memory for.
    * @param location Location on where to allocate the memory.
    * @param device (Optional) device id for memory allocation on accelerators.
-  */
+   */
   template <class T = double>
   T* allocateMemory(
-    std::size_t count,
+    std::size_t    count,
     MemoryLocation location,
-    int device = accelerator::Device::HostDevice
-) {
-    return reinterpret_cast<T*>(internal::allocateRawData(
-      count * sizeof(T),
-      location,
-      device
-    ));
+    int            device = accelerator::Device::HostDevice
+  ) {
+    return reinterpret_cast<T*>(
+      accelerator::allocateRawData(count * sizeof(T), location, device)
+    );
+  }
+
+  template <class T = double>
+  T* reallocateMemory(
+    void*          memoryPtr,
+    std::size_t    count,
+    MemoryLocation location,
+    int            device = accelerator::Device::HostDevice
+  ) {
+    return reinterpret_cast<T*>(
+      accelerator::reallocateRawData(memoryPtr, count * sizeof(T), location, device)
+    );
   }
 
   /**
@@ -105,10 +122,34 @@ namespace tarch {
    * actually nullptr or not.
    */
   void freeMemory(
-    void* data,
+    void*          memoryPtr,
     MemoryLocation location,
-    int device = accelerator::Device::HostDevice
+    int            device = accelerator::Device::HostDevice
   );
+
+  template <class To, class From>
+  void copyTo(
+    To*            to,
+    const From*    from,
+    std::size_t    count,
+    MemoryLocation location,
+    int            device = accelerator::Device::HostDevice
+  ) {
+    static_assert(sizeof(To) == sizeof(From), "Data type mismatch");
+    accelerator::copyTo(to, from, count * sizeof(To), location, device);
+  }
+
+  template <class From, class To>
+  void copyFrom(
+    const From*    from,
+    To*            to,
+    std::size_t    count,
+    MemoryLocation location,
+    int            device = accelerator::Device::HostDevice
+  ) {
+    static_assert(sizeof(From) == sizeof(To), "Data type mismatch");
+    accelerator::copyFrom(from, to, count * sizeof(From), location, device);
+  }
 
   std::size_t padSizeToAlignment(std::size_t size, std::size_t alignment);
 
@@ -138,11 +179,11 @@ namespace tarch {
    * interface we could think of, but is still compatible.
    *
    * @param count Byte count.
-  */
+   */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  double* memset(double* dest, double ch, size_t byteCount);
+  double* memset(double* dest, double ch, std::size_t byteCount);
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif

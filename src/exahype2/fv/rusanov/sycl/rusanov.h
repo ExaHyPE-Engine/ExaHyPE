@@ -39,7 +39,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /*
@@ -66,7 +66,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /*
@@ -93,7 +93,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /*
@@ -114,7 +114,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /**
@@ -134,7 +134,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /**
@@ -156,7 +156,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /**
@@ -173,7 +173,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphManagedStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovTaskgraphManagedStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /**
@@ -190,7 +190,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /**
@@ -207,7 +207,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseManagedStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
+  static inline void timeStepWithRusanovPatchwiseManagedStateless(int targetDevice, CellData<double, double>& patchData) InlineMethod;
 
 
   /**
@@ -224,7 +224,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
+  static inline void timeStepWithRusanovTaskgraphCopyStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -239,7 +239,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
+  static inline void timeStepWithRusanovBatchedHeapStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -254,7 +254,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
+  static inline void timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -269,7 +269,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
+  static inline void timeStepWithRusanovTaskgraphUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -284,7 +284,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
+  static inline void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -299,7 +299,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
+  static inline void timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -317,7 +317,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphManagedStateless(
+  static inline void timeStepWithRusanovTaskgraphManagedStateless(
     int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement
   ) InlineMethod;
 
@@ -336,7 +336,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedManagedStateless(
+  static inline void timeStepWithRusanovBatchedManagedStateless(
     int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement
   ) InlineMethod;
 
@@ -355,7 +355,7 @@ namespace exahype2::fv::rusanov::sycl {
     bool        EvaluateSource,
     bool        EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseManagedStateless(
+  static inline void timeStepWithRusanovPatchwiseManagedStateless(
     int targetDevice, CellData<double, double>& patchData, ::tarch::timing::Measurement& measurement
   ) InlineMethod;
 
@@ -414,7 +414,7 @@ namespace exahype2::fv::rusanov::sycl {
       bool        EvaluateSource,
       bool        EvaluateMaximumEigenvalueAfterTimeStep,
       class TempDataEnumeratorType>
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovTaskgraphStateless(int targetDevice, auto& patchData) InlineMethod;
+    static inline void timeStepWithRusanovTaskgraphStateless(int targetDevice, auto& patchData) InlineMethod;
 
 
     /**
@@ -489,7 +489,7 @@ namespace exahype2::fv::rusanov::sycl {
       bool        EvaluateSource,
       bool        EvaluateMaximumEigenvalueAfterTimeStep,
       class TempDataEnumeratorType>
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(int targetDevice, auto& patchData) InlineMethod;
+    static inline void timeStepWithRusanovBatchedStateless(int targetDevice, auto& patchData) InlineMethod;
 
 
     /**
@@ -534,7 +534,7 @@ namespace exahype2::fv::rusanov::sycl {
       bool        EvaluateSource,
       bool        EvaluateMaximumEigenvalueAfterTimeStep,
       class TempDataEnumeratorType>
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(int targetDevice, auto& patchData) InlineMethod;
+    static inline void timeStepWithRusanovPatchwiseStateless(int targetDevice, auto& patchData) InlineMethod;
   } // namespace internal
 } // namespace exahype2::fv::rusanov::sycl
 

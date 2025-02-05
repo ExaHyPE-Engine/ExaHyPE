@@ -12,7 +12,7 @@ namespace exahype2::fv::rusanov::internal {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedFunctors(
+  static inline void timeStepWithRusanovBatchedFunctors(
     CellData<double, double>&                      patchData,
     const FluxFunctor&                             fluxFunctor,
     const NonconservativeProductFunctor&           nonconservativeProductFunctor,

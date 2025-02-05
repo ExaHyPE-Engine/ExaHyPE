@@ -1,40 +1,113 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
-
-#include "tarch/Assertions.h"
 
 #if defined(GPUOffloadingCPP)
 
-void* tarch::internal::allocateRawData(
-  std::size_t           size,
-  MemoryLocation        location,
-  int                   device
+#include "tarch/Assertions.h"
+#include "tarch/multicore/Lock.h"
+
+#include <cstring>
+
+namespace {
+  tarch::logging::Log _log("tarch::accelerator::cpp");
+} // namespace
+
+void tarch::gpuAbort() { std::abort(); }
+
+void* tarch::accelerator::allocateRawData(
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
 ) {
   void* data = nullptr;
-  assertion2(size > 0, size, toString(location));
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
   case MemoryLocation::Heap:
+  case MemoryLocation::DeviceHeap:
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     data = std::aligned_alloc(
       AlignmentOnHeap,
-      padSizeToAlignment(size, AlignmentOnHeap)
+      padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
     break;
   }
 
   assertion(data);
+
+  {
+    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
+    Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
+  }
+
   return data;
 }
 
-void tarch::freeMemory(void* data, MemoryLocation location, int device) {
+void tarch::accelerator::freeRawData(
+  void*          data,
+  MemoryLocation location,
+  int            device
+) {
+  if (!data) {
+    return;
+  }
+
+  {
+    tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
+    auto itr = Device::getInstance().getMemoryBlockTable().find(data);
+    if (itr == Device::getInstance().getMemoryBlockTable().end()) {
+      logWarning("freeRawData(...)", "attempt to free invalid pointer")
+      return;
+    }
+    Device::getInstance().getMemoryBlockTable().erase(itr);
+  }
+
   switch (location) {
   case MemoryLocation::Heap:
+  case MemoryLocation::DeviceHeap:
   case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    if (data!=nullptr) {
-      std::free(data);
-    }
+    std::free(data);
     break;
   }
 }
 
-#endif
+void tarch::accelerator::copyTo(
+  void*          target,
+  const void*    source,
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+
+  switch (location) {
+  case MemoryLocation::Heap:
+  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
+    std::memcpy(target, source, sizeInBytes);
+    break;
+  }
+}
+
+void tarch::accelerator::copyFrom(
+  const void*    source,
+  void*          target,
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+
+  switch (location) {
+  case MemoryLocation::Heap:
+  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
+    std::memcpy(target, source, sizeInBytes);
+    break;
+  }
+}
+
+#endif // defined(GPUOffloadingCPP)

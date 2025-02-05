@@ -1,60 +1,71 @@
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/accelerator/Device.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "tarch/mpi/Rank.h"
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "Device.h"
 
-tarch::logging::Log  tarch::accelerator::Device::_log( "tarch::accelerator::Device" );
+#include "accelerator.h"
 
-int tarch::accelerator::Device::_localDeviceId = 0;
+#include "tarch/multicore/Lock.h"
 
-#if defined(GPUOffloadingOff)
+tarch::logging::Log tarch::accelerator::Device::_log(
+  "tarch::accelerator::Device"
+);
 
-tarch::accelerator::Device::Device() {}
-
-tarch::accelerator::Device::~Device() {}
+tarch::accelerator::Device::~Device() {
+  shutdown();
+}
 
 tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   static Device instance;
   return instance;
 }
 
-void tarch::accelerator::Device::configure([[maybe_unused]] const std::set<int>& devicesToUse) {}
-
-void tarch::accelerator::Device::shutdown() {}
-
-bool tarch::accelerator::Device::isInitialised() const {
-  return true;
+std::map<void*, std::size_t>& tarch::accelerator::Device::getMemoryBlockTable() {
+  return _memoryBlockTable;
 }
 
-int tarch::accelerator::Device::getNumberOfDevices() const {
-  return 0;
+const std::map<void*, std::size_t>& tarch::accelerator::Device::getMemoryBlockTable() const {
+  return _memoryBlockTable;
 }
 
-#endif
+tarch::multicore::BooleanSemaphore& tarch::accelerator::Device::getMemoryBlockSemaphore() {
+  return _memoryBlockSemaphore;
+}
 
-int tarch::accelerator::Device::getLocalDeviceId() const {
-/*#ifdef Parallel
-  MPI_Comm nodeLocalComm;
-  int worldRank = tarch::mpi::Rank::getInstance().getRank();
+const tarch::multicore::BooleanSemaphore& tarch::accelerator::Device::getMemoryBlockSemaphore() const {
+  return _memoryBlockSemaphore;
+}
 
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, worldRank, MPI_INFO_NULL, &nodeLocalComm);
+void tarch::accelerator::Device::checkForMemoryLeaks() {
+  tarch::multicore::Lock lock(_memoryBlockSemaphore);
 
-  int nodeLocalRank = -1;
-  MPI_Comm_rank(nodeLocalComm, &nodeLocalRank);
-
-  _localDeviceId = nodeLocalRank;
-
-  int numberOfAcceleratorDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-  int nodeLocalSize = -1;
-  MPI_Comm_size(nodeLocalComm, &nodeLocalSize);
-  if (numberOfAcceleratorDevices != nodeLocalSize) {
-    logWarning("tarch::accelerator::Device::getLocalDeviceId()",
-      "Number of ranks per node " << nodeLocalSize << " is not equal to number of accelerator devices available per node "
-      << numberOfAcceleratorDevices);
+  if (!_memoryBlockTable.empty()) {
+    logWarning("checkForMemoryLeaks()", "WARNING: Detected " << _memoryBlockTable.size() << " memory leaks!");
   }
 
-  MPI_Comm_free(&nodeLocalComm);
-#endif*/
+  auto itr = _memoryBlockTable.begin();
+  auto end = _memoryBlockTable.end();
 
-  return _localDeviceId;
+#if PeanoDebug > 0
+  for (; itr != end; ++itr) {
+    logWarning("checkForMemoryLeaks()", "Block @" << itr->first << " size: " << itr->second);
+  }
+#endif
 }
+
+#if defined(GPUOffloadingOff)
+
+tarch::accelerator::Device::Device() {}
+
+void tarch::accelerator::Device::configure(const std::set<int>&) {}
+
+void tarch::accelerator::Device::shutdown() {
+  checkForMemoryLeaks();
+  tarch::multicore::Lock lock(_memoryBlockSemaphore);
+  _memoryBlockTable.clear();
+}
+
+bool tarch::accelerator::Device::isInitialised() const { return true; }
+
+int tarch::accelerator::Device::getNumberOfDevices() const { return 0; }
+
+#endif // defined(GPUOffloadingOff)

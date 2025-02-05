@@ -28,6 +28,4 @@
 #define assert(...)
 #endif
 
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
-
 #define OpenMPTaskGroup

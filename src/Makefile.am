@@ -49,14 +49,20 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/LUDecompositionDynamic.cpp \
 	tarch/accelerator/accelerator.cpp \
 	tarch/accelerator/Device.cpp \
+	tarch/accelerator/MemoryLocation.cpp \
+	tarch/accelerator/MemoryManager.cpp \
+	tarch/accelerator/tests/MemoryManagerTest.cpp \
 	tarch/accelerator/cpp/accelerator.cpp \
 	tarch/accelerator/cpp/Device.cpp \
 	tarch/accelerator/omp/accelerator.cpp \
 	tarch/accelerator/omp/Device.cpp \
-	tarch/accelerator/omp/GPUMemoryManager.cpp \
 	tarch/accelerator/sycl/accelerator.cpp \
 	tarch/accelerator/sycl/Device.cpp \
-	tarch/accelerator/sycl/GPUMemoryManager.cpp \
+	tarch/accelerator/cuda/accelerator.cpp \
+	tarch/accelerator/cuda/Device.cpp \
+	tarch/accelerator/cuda/DevicePropertiesCache.cpp \
+	tarch/accelerator/cuda/ErrorCheck.cpp \
+	tarch/accelerator/cuda/ExecutionPolicy.cpp \
 	tarch/accelerator/hip/accelerator.cpp \
 	tarch/multicore/BooleanSemaphore.cpp \
 	tarch/multicore/multicore.cpp \
@@ -193,7 +199,6 @@ Peano4Core_SOURCES = \
 	peano4/stacks/STDVectorStack.cpp \
 	peano4/utils/Loop.cpp \
 	peano4/utils/tests/ParallelDForTest.cpp
-	
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
