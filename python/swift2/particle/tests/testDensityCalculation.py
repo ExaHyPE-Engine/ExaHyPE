@@ -35,11 +35,8 @@ class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
             dimensions_hydro = dimensions_hydro,
             cfl_factor = cfl_factor,
             initial_time_step_size=initial_time_step_size,
-            particles_per_cell=particles_per_cell,
             min_h=min_h,
             max_h=max_h,
-            use_optimised_coalesced_memory_access_kernels=False,
-            asserts=False,
         )
 
         # Now overwrite the Algorithm and Init steps.
@@ -67,8 +64,8 @@ class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
         """
 
         steps = [
-            self.algorithm_steps_dict["Density"],
-            self.algorithm_steps_dict["ReduceGlobalQuantities"],
+            self.algorithm_steps_dict["SPH_Density"],
+            self.algorithm_steps_dict["SPH_ReduceGlobalQuantities"],
         ]
 
         self._algorithm_steps = [copy.deepcopy(i) for i in steps]
