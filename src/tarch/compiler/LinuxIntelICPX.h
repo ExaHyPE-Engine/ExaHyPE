@@ -24,15 +24,9 @@
 
 #define LittleEndian
 
-#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
-#define UseManualInlining
-#endif
-
 #if PeanoDebug == 0
 #undef assert
 #define assert(...)
 #endif
-
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup

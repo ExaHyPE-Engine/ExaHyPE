@@ -131,15 +131,15 @@ exahype2::fv::rusanov::sycl::GPUManagedCellData<inType, outType>::GPUManagedCell
   const CellData<inType, outType>& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells           = hostObject.numberOfCells;
-  cellCentre              = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
-  cellSize                = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
-  QIn                     = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<inType*>(numberOfCells, queue);
-  QOut                    = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<outType*>(numberOfCells, queue);
-  QInCopyInOneHugeBuffer  = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<inType>(numberOfCells * inEnumerator.size(), queue);
-  QOutCopyInOneHugeBuffer = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<outType>(numberOfCells * outEnumerator.size(), queue);
-  t                       = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, queue);
-  dt                      = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, queue);
-  maxEigenvalue           = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, queue);
+  cellCentre              = ::tarch::accelerator::MemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
+  cellSize                = ::tarch::accelerator::MemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
+  QIn                     = ::tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(numberOfCells, queue);
+  QOut                    = ::tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(numberOfCells, queue);
+  QInCopyInOneHugeBuffer  = ::tarch::accelerator::MemoryManager::getInstance().allocate<inType>(numberOfCells * inEnumerator.size(), queue);
+  QOutCopyInOneHugeBuffer = ::tarch::accelerator::MemoryManager::getInstance().allocate<outType>(numberOfCells * outEnumerator.size(), queue);
+  t                       = ::tarch::accelerator::MemoryManager::getInstance().allocate<double>(numberOfCells, queue);
+  dt                      = ::tarch::accelerator::MemoryManager::getInstance().allocate<double>(numberOfCells, queue);
+  maxEigenvalue           = ::tarch::accelerator::MemoryManager::getInstance().allocate<double>(numberOfCells, queue);
 
   std::vector<::sycl::event> copyEvent(5);
   copyEvent[0] = queue.memcpy(cellCentre, hostObject.cellCentre, numberOfCells * sizeof(::tarch::la::Vector<Dimensions, double>));
@@ -179,15 +179,15 @@ void exahype2::fv::rusanov::sycl::GPUManagedCellData<inType, outType>::destroy(
   }
 
   delete[] tmpQOut;
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(cellCentre, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(cellSize, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(QIn, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(QOut, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(QInCopyInOneHugeBuffer, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(QOutCopyInOneHugeBuffer, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(t, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(dt, queue);
-  ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(maxEigenvalue, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(cellCentre, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(cellSize, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(QIn, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(QOut, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(QInCopyInOneHugeBuffer, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(QOutCopyInOneHugeBuffer, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(t, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(dt, queue);
+  ::tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, queue);
 }
 
 #endif // GPUOffloadingSYCL

@@ -72,7 +72,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    *   patch. This index refers to the target index.
    */
   template <class QInEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolution(
+  static inline GPUCallableMethod void copySolution(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                    QInEnumerator,
     int                                         patchIndex,
@@ -111,7 +111,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @see exahype2::fv::rusanov::loopbodies::copySolution() for vectorisation details.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void copySolutionAndAddSourceTerm(
+  static inline void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const SourceFunctor&                           sourceFunctor,
@@ -139,7 +139,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @see exahype2::fv::rusanov::loopbodies::copySolution() for vectorisation details.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void copySolutionAndAddSourceTerm(
+  static inline void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const SourceFunctor&                           sourceFunctor,
@@ -159,7 +159,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolutionAndAddSourceTerm(
+  static inline GPUCallableMethod void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -178,7 +178,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolutionAndAddSourceTerm(
+  static inline GPUCallableMethod void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -210,7 +210,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * straightforwardly vectorise.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class MaxEigenvalueEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeMaxEigenvalue(
+  static inline void computeMaxEigenvalue(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
@@ -231,7 +231,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * all of our kernels unless you explicitly reorder the input.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeMaxEigenvalue(
+  static inline void computeMaxEigenvalue(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
@@ -252,7 +252,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class MaxEigenvalueEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeMaxEigenvalue(
+  static inline GPUCallableMethod void computeMaxEigenvalue(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -272,7 +272,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class MaxEigenvalueEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeMaxEigenvalue(
+  static inline GPUCallableMethod void computeMaxEigenvalue(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -299,7 +299,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    *   default data ordering.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue(
+  static inline double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
     const QOutEnumeratorType&                      QOutEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
@@ -318,7 +318,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * to exploit this knowledge performance-wisely.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue(
+  static inline double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
     const enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
@@ -336,7 +336,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double reduceMaxEigenvalue(
+  static inline GPUCallableMethod double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
     const QOutEnumeratorType&                      QOutEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -356,7 +356,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double reduceMaxEigenvalue(
+  static inline GPUCallableMethod double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
     const enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -377,7 +377,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class FluxEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeFlux(
+  static inline void computeFlux(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const FluxFunctor&                             fluxFunctor,
@@ -395,7 +395,7 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 #pragma omp declare simd
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeFlux(
+  static inline void computeFlux(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const FluxFunctor&                             fluxFunctor,
@@ -416,7 +416,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class FluxEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
+  static inline GPUCallableMethod void computeFlux(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -433,7 +433,7 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 #pragma omp declare simd
   template <class SolverType, class FluxEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
+  static inline GPUCallableMethod void computeFlux(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -450,7 +450,7 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 #pragma omp declare simd
   template <class SolverType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
+  static inline GPUCallableMethod void computeFlux(
     const double* __restrict__ QIn,
     const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -475,7 +475,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class FluxEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithFlux(
+  static inline GPUCallableMethod void updateSolutionWithFlux(
     const double* __restrict__ tempFluxX,
     const double* __restrict__ tempFluxY,
     const double* __restrict__ tempFluxZ,
@@ -503,7 +503,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class FluxEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithFlux(
+  static inline GPUCallableMethod void updateSolutionWithFlux(
     const double* __restrict__ fluxL,
     const double* __restrict__ fluxR,
     const FluxEnumeratorType&                      fluxEnumerator,
@@ -551,7 +551,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class QInEnumeratorType, class MaxEigenvalueEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithEigenvalueDamping(
+  static inline GPUCallableMethod void updateSolutionWithEigenvalueDamping(
     const double* __restrict__ QIn,
     const QInEnumeratorType& QInEnumerator,
     const double* __restrict__ tempMaxEigenvalueX,
@@ -575,7 +575,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class QInEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithEigenvalueDamping(
+  static inline GPUCallableMethod void updateSolutionWithEigenvalueDamping(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     double                                         maxEigenvalueL,
@@ -615,7 +615,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * invoke this routine for.
    */
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class NCPFaceEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeNonconservativeFlux(
+  static inline void computeNonconservativeFlux(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const NonconservativeProductFunctor&           ncpFunctor,
@@ -636,7 +636,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class NCPFaceEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeNonconservativeFlux(
+  static inline GPUCallableMethod void computeNonconservativeFlux(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                       QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -715,7 +715,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class NCPFaceEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithNonconservativeFlux(
+  static inline GPUCallableMethod void updateSolutionWithNonconservativeFlux(
     const double* __restrict__ ncpX,
     const double* __restrict__ ncpY,
     const double* __restrict__ ncpZ,
@@ -741,7 +741,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class NCPFaceEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithNonconservativeFlux(
+  static inline GPUCallableMethod void updateSolutionWithNonconservativeFlux(
     const double* __restrict__ ncp,
     const NCPFaceEnumeratorType&                   ncpEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,

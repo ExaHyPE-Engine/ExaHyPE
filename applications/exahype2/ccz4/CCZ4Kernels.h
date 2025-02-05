@@ -21,7 +21,7 @@ namespace applications {
       #if defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
+      static inline void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
         const int CCZ4LapseType,
         const double CCZ4ds,
         const double CCZ4c,
@@ -53,7 +53,7 @@ namespace applications {
       #if defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void source(double* S, const double* const Q,
+      static inline void source(double* S, const double* const Q,
         const int CCZ4LapseType,
         const double CCZ4ds,
         const double CCZ4c,
@@ -73,7 +73,7 @@ namespace applications {
       #if defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalue(
+      static inline double maxEigenvalue(
         const double* const Q,
         int                 normal,
         const double        CCZ4e,
@@ -89,7 +89,7 @@ namespace applications {
       #if defined(SharedOMP)
       #pragma omp declare simd
       #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalue(
+      static inline double maxEigenvalue(
         const double* const Q,
         int                 normal,
         const double        CCZ4e,

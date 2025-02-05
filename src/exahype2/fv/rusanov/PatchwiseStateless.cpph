@@ -13,7 +13,7 @@ namespace exahype2::fv::rusanov::internal {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(
+  static inline void timeStepWithRusanovPatchwiseStateless(
     CellData<double, double>&                     patchData,
     peano4::utils::LoopPlacement                  loopParallelism,
     const enumerator::AoSLexicographicEnumerator& QInEnumerator,
