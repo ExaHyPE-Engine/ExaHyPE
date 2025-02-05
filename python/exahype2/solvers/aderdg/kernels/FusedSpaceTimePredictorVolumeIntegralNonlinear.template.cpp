@@ -83,6 +83,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   {% endif %}
 
   // Assume dx[0] == dx[1] == dx[2]
+  assertionNumericalEquals(cellSize[0], cellSize[1]);
+  #if Dimensions == 3
+  assertionNumericalEquals(cellSize[0], cellSize[2]);
+  #endif
+
   const double invDx = 1.0 / cellSize[0];
 
   const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
@@ -99,7 +104,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if USE_NCP %}
   pCompType dudxT_by_dx[{{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
   // 0: Precompute 1/dx * dudx_T.
-  // Assume dx[0] == dx[1] == dx[2]
   for (int it = 0; it < {{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}; it++) {
     dudxT_by_dx[it] = invDx * DGMatrices<pCompType>::dudx_T[it];
   }
