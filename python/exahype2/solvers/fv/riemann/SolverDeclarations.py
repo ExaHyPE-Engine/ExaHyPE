@@ -36,7 +36,7 @@ class SolverDeclarations:
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] double* const __restrict__                   L,
+      [[maybe_unused]] double* const __restrict__                   L
       Offloadable
     ) InlineMethod {
       // @todo Implement
@@ -47,14 +47,14 @@ class SolverDeclarations:
     {% endif %}
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>"%}
-    virtual double eigenvalues(
+    virtual void eigenvalues(
       const double* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      double* const __restrict__                                    L,
+      double* const __restrict__                                    L
     ) override;
     {% endif %}
 
@@ -70,7 +70,7 @@ class SolverDeclarations:
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] double* const __restrict__                   F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] double* const __restrict__                   F // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     ) InlineMethod {
       // @todo Implement
@@ -88,7 +88,7 @@ class SolverDeclarations:
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      double* const __restrict__                                    F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      double* const __restrict__                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 

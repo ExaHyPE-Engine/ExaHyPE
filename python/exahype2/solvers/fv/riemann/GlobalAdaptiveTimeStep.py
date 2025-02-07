@@ -109,6 +109,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         self._compute_kernel_call = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             evaluate_max_eigenvalue_of_next_time_step=True,
@@ -118,6 +119,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         self._compute_kernel_call_stateless = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             evaluate_max_eigenvalue_of_next_time_step=True,
