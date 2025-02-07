@@ -45,7 +45,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] double* const __restrict__                   F, // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] double* const __restrict__                   F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
