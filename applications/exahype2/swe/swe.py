@@ -327,8 +327,7 @@ class SWE:
             strategy = f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}"
             assume_periodic_boundary_conditions = any([
                 args.periodic_boundary_conditions_x,
-                args.periodic_boundary_conditions_y,
-                args.periodic_boundary_conditions_z,
+                args.periodic_boundary_conditions_y
             ])
             configuration = (
                 f"new ::exahype2::LoadBalancingConfiguration("

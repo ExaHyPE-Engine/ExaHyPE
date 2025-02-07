@@ -405,7 +405,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return _solverState==SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
+  return _solverState==SolverState::Suspended or
+    _solverState==SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
