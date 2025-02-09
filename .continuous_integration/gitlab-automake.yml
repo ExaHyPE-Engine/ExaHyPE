@@ -12,6 +12,28 @@ stages:
 # Define one sub-pipeline per toolchain:
 ########################################################
 
+GCC:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "gcc"
+    CXX: "g++"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w"
+    LDFLAGS: ""
+    IMAGE_TAG: "${IMAGE_GCC}"
+    CONFIGURATION_OPTIONS: "--enable-exahype \
+                            --enable-loadbalancing \
+                            --enable-blockstructured \
+                            --enable-swift \
+                            --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/automake.yml
+    strategy: depend
+
 GCC_SharedOMP:
   extends: .Variables
   stage: Compiler
@@ -30,6 +52,28 @@ GCC_SharedOMP:
                             --enable-mghype \
                             --enable-finiteelements \
                             --with-multithreading=omp"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/automake.yml
+    strategy: depend
+
+Intel:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "icx"
+    CXX: "icpx"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w"
+    LDFLAGS: ""
+    IMAGE_TAG: "${IMAGE_INTEL}"
+    CONFIGURATION_OPTIONS: "--enable-exahype \
+                            --enable-loadbalancing \
+                            --enable-blockstructured \
+                            --enable-swift \
+                            --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -76,6 +120,28 @@ Intel_SharedSYCL:
                             --enable-mghype \
                             --enable-finiteelements \
                             --with-multithreading=sycl"
+  trigger:
+    include:
+      - .continuous_integration/pipelines/automake.yml
+    strategy: depend
+
+LLVM:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "clang"
+    CXX: "clang++"
+    CFLAGS: ""
+    CXXFLAGS: "-O3 -std=c++20 -w"
+    LDFLAGS: ""
+    IMAGE_TAG: "${IMAGE_LLVM}"
+    CONFIGURATION_OPTIONS: "--enable-exahype \
+                            --enable-loadbalancing \
+                            --enable-blockstructured \
+                            --enable-swift \
+                            --enable-particles \
+                            --enable-mghype \
+                            --enable-finiteelements"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
