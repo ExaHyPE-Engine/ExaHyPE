@@ -61,7 +61,7 @@ void tarch::accelerator::freeRawData(
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logWarning("freeRawData(...)", "attempt to free invalid pointer")
+      logDebug("freeRawData(...)", "attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);

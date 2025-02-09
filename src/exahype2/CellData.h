@@ -2,9 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/la/Vector.h"
-#include "peano4/utils/Globals.h"
 #include "config.h"
+
+#include "peano4/utils/Globals.h"
+
+#include "tarch/la/Vector.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/MemoryManager.h"
 
 #include <functional>
 #include <string>
@@ -15,7 +19,7 @@ namespace exahype2 {
    * that's required to process the stored patches or polynomial shape
    * functions (given you know the semantics of the data).
    *
-   * This struct is a mixture of AoS and SoA. All data besides the Qin and
+   * This struct is a mixture of AoS and SoA. All data besides the QIn and
    * result are SoA. The reason for this "inconsistent" model is that we
    * want to transfer the patch data to accelerators quickly, while we also
    * want to avoid to copy too much stuff around. So we leave the big input
@@ -26,20 +30,20 @@ namespace exahype2 {
    *
    * ## Memory responsibility
    *
-   * The PatchData object is a meta object. It does not administer any major
+   * The CellData object is a meta object. It does not administer any major
    * heap data itself. That is, its QIn data has to be redirected to the
    * reconstructed data, i.e. the patch data including the halos, by the user.
    * This happens for example in applyKernelToCell() where we create a
-   * PatchData object over both allocated input and output data.
+   * CellData object over both allocated input and output data.
    *
    *
-   * As the PatchData does maintain some internal tables which are allocated
+   * As the CellData does maintain some internal tables which are allocated
    * in the constructor and freed in the destructor, I do not provide a copy
    * constructor. This one is explicitly deleted. Some backends might require
    * a copy constructor one day
    *
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * exahype2::CellData::CellData( const CellData& copy ):
+   * exahype2::CellData::CellData(const CellData& copy):
    *   CellData(copy.numberOfCells) {
    *   for (int i=0; i<numberOfCells; i++) {
    *     QIn[i]           = copy.QIn[i];
@@ -73,18 +77,19 @@ namespace exahype2 {
    * hence makes the file compile, but in all tests that I ran the code then
    * did crash.
    */
-  template<typename inType=double, typename outType=double>
+  template <typename inType = double, typename outType = double>
   struct CellData {
     /**
      * QIn may not be const, as some kernels delete it straightaway once
      * the input data has been handled.
      */
     inType**                                QIn;
-    tarch::la::Vector<Dimensions,double>*   cellCentre;
-    tarch::la::Vector<Dimensions,double>*   cellSize;
+    tarch::la::Vector<Dimensions, double>*  cellCentre;
+    tarch::la::Vector<Dimensions, double>*  cellSize;
 
     double*    t;
     double*    dt;
+
     /**
      * Id of underlying task. Required when we fuse many enclave tasks
      * and load them off to the GPU, as we have to know afterwards which
@@ -131,30 +136,31 @@ namespace exahype2 {
      * read it later.
      */
     CellData(
-      inType*                                     QIn_,
-      const tarch::la::Vector<Dimensions,double>& cellCentre_,
-      const tarch::la::Vector<Dimensions,double>& cellSize_,
-      double                t_,
-      double                dt_,
-      outType*              QOut_,
-      tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                   targetDevice_   = tarch::accelerator::Device::HostDevice
+      inType*                                       QIn_,
+      const tarch::la::Vector<Dimensions, double>&  cellCentre_,
+      const tarch::la::Vector<Dimensions, double>&  cellSize_,
+      double                                        t_,
+      double                                        dt_,
+      outType*                                      QOut_,
+      tarch::MemoryLocation                         memoryLocation_ = tarch::MemoryLocation::Heap,
+      int                                           targetDevice_   = tarch::accelerator::Device::HostDevice
     );
 
     CellData(
-      int                   numberOfCells_,
-      tarch::MemoryLocation memoryLocation = tarch::MemoryLocation::Heap,
-      int                   targetDevice   = tarch::accelerator::Device::HostDevice
+      int                                           numberOfCells_,
+      tarch::MemoryLocation                         memoryLocation_ = tarch::MemoryLocation::Heap,
+      int                                           targetDevice_   = tarch::accelerator::Device::HostDevice
     );
 
-    CellData(const CellData<inType,outType>& copy) = delete;
+    CellData(const CellData& copy) = delete;
+    CellData& operator=(const CellData&) = delete;
 
     ~CellData();
 
     std::string toString() const;
   };
 
-//  using CellData = CellData<double, double>;
-}
+  // using CellData = CellData<double, double>;
+} // namespace exahype2
 
 #include "CellData.cpph"

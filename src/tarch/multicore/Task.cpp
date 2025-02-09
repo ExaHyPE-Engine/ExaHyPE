@@ -1,8 +1,9 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Task.h"
 
 #include <queue>
 #include <set>
-#include <thread>
 
 #include "BooleanSemaphore.h"
 #include "config.h"
@@ -11,10 +12,6 @@
 #include "multicore.h"
 #include "tarch/Assertions.h"
 #include "tarch/services/ServiceRepository.h"
-
-#ifdef UseSmartMPI
-#include "smartmpi.h"
-#endif
 
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) { return lhs.getPriority() < rhs.getPriority(); }
 

@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "EnclaveBookkeeping.h"
 #include "EnclaveTask.h"
 
@@ -37,39 +39,52 @@ void exahype2::EnclaveBookkeeping::dumpStatistics() {
 }
 
 
-void exahype2::EnclaveBookkeeping::cancelTask(int number) {
+std::size_t exahype2::EnclaveBookkeeping::getNumberOfFinishedTasks() const {
+  return _finishedTasks.size();
+}
+
+
+void exahype2::EnclaveBookkeeping::cancelTask(int taskNumber) {
   tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
 
-  if (_finishedTasks.count(number) > 0) {
-    Entry storedData = _finishedTasks.at(number);
-    _finishedTasks.erase(number);
+  if (_finishedTasks.count(taskNumber) > 0) {
+    Entry storedData = _finishedTasks.at(taskNumber);
+    _finishedTasks.erase(taskNumber);
     tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    exahype2::EnclaveTask::releaseTaskNumber(number);
+    exahype2::EnclaveTask::releaseTaskNumber(taskNumber);
   } else {
-    _tasksThatHaveToBeCancelled.insert(number);
+    _tasksThatHaveToBeCancelled.insert(taskNumber);
   }
 }
 
 
-exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
-  tarch::multicore::waitForTask(number);
+exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int taskNumber) {
+  tarch::multicore::waitForTask(taskNumber);
 
   tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
-  assertionEquals(_finishedTasks.count(number), 1);
-  Entry storedData = _finishedTasks.at(number);
-  _finishedTasks.erase(number);
+  logDebug(
+    "waitForTaskToTerminateAndReturnResult(int)",
+    "release task " << taskNumber <<
+    ", number of finished tasks: " << _finishedTasks.size() <<
+    ", number of active tasks: " << exahype2::EnclaveTask::getNumberOfActiveTasks()
+  );
+
+  assertionEquals3(_finishedTasks.count(taskNumber), 1, taskNumber, _finishedTasks.count(taskNumber), exahype2::EnclaveTask::getNumberOfActiveTasks());
+  Entry storedData = _finishedTasks.at(taskNumber);
+  _finishedTasks.erase(taskNumber);
   finishedTasksLock.free();
 
-  exahype2::EnclaveTask::releaseTaskNumber(number);
+  exahype2::EnclaveTask::releaseTaskNumber(taskNumber);
 
   return storedData;
 }
 
 
-void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int number) {
-  logTraceInWith1Argument("waitForTaskAndDiscardResult(int)", number);
+void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int taskNumber) {
+  logTraceInWith1Argument("waitForTaskAndDiscardResult(int)", taskNumber);
 
-  Entry storedData = waitForTaskToTerminateAndReturnResult(number);
+  Entry storedData = waitForTaskToTerminateAndReturnResult(taskNumber);
+  // TODO: Is the freeMemory below dangerous if we handle target memory and enclave memory regions as the same?
   tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   logTraceOut("waitForTaskAndDiscardResult(int)");
@@ -77,18 +92,22 @@ void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int number) {
 
 
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
-  int number, double* destination, double& maxEigenvalue
+  int taskNumber, double* destination, double& maxEigenvalue
 ) {
-  logTraceInWith1Argument("waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", number);
+  logTraceInWith1Argument("waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", taskNumber);
 
-  Entry storedData = waitForTaskToTerminateAndReturnResult(number);
+  Entry storedData = waitForTaskToTerminateAndReturnResult(taskNumber);
 
-  if ( destination!=storedData.data ) {
+  if (destination != storedData.data) {
+    //#pragma omp taskwait depend(in: storedData.data)
     std::copy_n(storedData.data, storedData.numberOfResultValues, destination);
+    //tarch::accelerator::MemoryManager(storedData.data, 0);
     tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-  }
-  else {
-    logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", "target memory and enclave memory region seem to be the same, so no need to free memory on bookkeeping's side")
+  } else {
+    logDebug(
+      "waitForTaskToTerminateAndCopyResultOver(int,double*,double&)",
+      "target memory and enclave memory region seem to be the same, so no need to free memory on bookkeeping's side"
+    )
   }
 
   maxEigenvalue = storedData.maxEigenvalue;
@@ -99,28 +118,34 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
 }
 
 
-void exahype2::EnclaveBookkeeping::finishedTask(
+void exahype2::EnclaveBookkeeping::bookmarkFinishedTask(
   int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue
 ) {
-  logDebug("finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results");
+  logDebug("bookmarkFinishedTask(...)", "task " << taskNumber << " has terminated or will be terminated soon. Bookkeep results");
 
-  tarch::multicore::Lock lockFinishedTasks(_finishedTasksSemaphore);
+  tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
   assertionEquals1(_finishedTasks.count(taskNumber), 0, taskNumber);
   if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
-    logWarning( "finishedTask(...)", "task entry for task " << taskNumber << " does exist already" );
+    logWarning("bookmarkFinishedTask(...)", "task entry for task " << taskNumber << " does exist already");
     _tasksThatHaveToBeCancelled.erase(taskNumber);
-    delete[] data;
-    lockFinishedTasks.free();
+    tarch::freeMemory(data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    //delete[] data;
+    finishedTasksLock.free();
     exahype2::EnclaveTask::releaseTaskNumber(taskNumber);
   } else {
-    logDebug( "finishedTask(...)", "bookmarked new outcome for task " << taskNumber << " at memory location " << data );
+    logDebug(
+      "bookmarkFinishedTask(...)",
+      "bookmarked new outcome for task " << taskNumber << " at memory location " << data <<
+      ", number of finished tasks: " << _finishedTasks.size() <<
+      ", number of active tasks: " << exahype2::EnclaveTask::getNumberOfActiveTasks()
+    );
     auto  oldBucketCount = _finishedTasks.bucket_count();
     Entry newEntry(numberOfResultValues, data, maxEigenvalue);
     _finishedTasks.insert(std::pair<int, Entry>(taskNumber, newEntry));
     if (_finishedTasks.bucket_count() > oldBucketCount) {
-      ::tarch::logging::Statistics::getInstance().inc(MemoryAllocationsInLookupTableIdentifier);
+      tarch::logging::Statistics::getInstance().inc(MemoryAllocationsInLookupTableIdentifier);
     }
-    lockFinishedTasks.free();
+    finishedTasksLock.free();
   }
 }
 

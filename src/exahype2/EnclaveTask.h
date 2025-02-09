@@ -2,20 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "EnclaveTaskNumberPool.h"
+
+#include "tarch/multicore/Task.h"
+
+#include "peano4/datamanagement/CellMarker.h"
 
 #include <functional>
-
-#include "../tarch/multicore/Task.h"
-#include "config.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "tarch/Enumerator.h"
-
 
 namespace exahype2 {
   class EnclaveTask;
   class EnclaveBookkeeping;
 } // namespace exahype2
-
 
 /**
  * Base class for all enclave tasks
@@ -51,7 +49,7 @@ namespace exahype2 {
  *
  * ...
  *
- * tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId() );
+ * tarch::multicore::spawnTask(newEnclaveTask, tarch::multicore::NoInDependencies, newEnclaveTask->getTaskId());
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  *
@@ -69,7 +67,7 @@ namespace exahype2 {
  * ## SmartMPI
  *
  * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I could
- * realise this through multiple inheritance, but I have to know excactly how big
+ * realise this through multiple inheritance, but I have to know exactly how big
  * the memory footprint behind an enclave task is, so I decided against this.
  * Instead, subclasses of the enclave task do specialise w.r.t. SmartMPI.
  */
@@ -85,8 +83,8 @@ protected:
   /**
    * Each task needs a unique number, so we can look up its output.
    */
-  const int                                  _taskNumber;
-  const ::peano4::datamanagement::CellMarker _marker;
+  const int                                _taskNumber;
+  const peano4::datamanagement::CellMarker _marker;
 
   /**
    * These are the reconstructed values in the Finite Volume sense and the
@@ -94,14 +92,14 @@ protected:
    * will free the memory once it has terminated, so the attribute may not
    * be const here.
    */
-  const double _t;
-  const double _dt;
-  double* __restrict__ _inputValues;
-  double* __restrict__ _outputValues;
-  int     _numberOfInputValues;
-  int     _numberOfResultValues;
-  Functor _functor;
-  double  _maxEigenvalue;
+  const double                _t;
+  const double                _dt;
+  double* __restrict__        _inputValues;
+  double* __restrict__        _outputValues;
+  int                         _numberOfInputValues;
+  int                         _numberOfResultValues;
+  Functor                     _functor;
+  double                      _maxEigenvalue;
 
 public:
   /**
@@ -116,10 +114,10 @@ public:
    * ~~~~~~~~~~~~~~~~~~~~~~~~~
    *
    *
-   * @param inputValues        Has to be created on heap via
+   * @param inputValues Has to be created on heap via
    *   tarch::multicore::allocateMemory().
-   * @param enclaveTaskTypeId  Unique id for this type. If you use task
-   *   merging, only tasks of the same type will be merged.
+   * @param enclaveTaskTypeId Unique id for this type. If you use task
+   *   fusion, only tasks of the same type will be fused.
    * @param outputValues If you pass in nullptr, then the enclave task will
    *   create a new array on the heap for the task output and then move this
    *   one over into the bookkeeping from where it eventually will be copied
@@ -129,20 +127,20 @@ public:
    */
   EnclaveTask(
     int                                         enclaveTaskTypeId,
-    const ::peano4::datamanagement::CellMarker& marker,
+    const peano4::datamanagement::CellMarker&   marker,
     double                                      t,
     double                                      dt,
     double* __restrict__                        inputValues,
     double* __restrict__                        outputValues,
-    int     numberOfInputValues,
-    int     numberOfResultValues,
-    Functor functor
+    int                                         numberOfInputValues,
+    int                                         numberOfResultValues,
+    Functor                                     functor
   );
 
   EnclaveTask(const EnclaveTask& other)  = delete;
   EnclaveTask(const EnclaveTask&& other) = delete;
 
-  virtual ~EnclaveTask() = default;
+  virtual ~EnclaveTask() override = default;
 
   /**
    * Computes a task and bookmarks the outcome
@@ -167,8 +165,6 @@ public:
 
   static int getNumberOfActiveTasks();
 
-  static void releaseTaskNumber(int number);
-
   /**
    * Reserve a new enclave task number
    *
@@ -180,6 +176,9 @@ public:
    * a cell, and hence use this one as additional input constraint.
    */
   static int reserveTaskNumber();
+
+  static void releaseTaskNumber(int number);
+
 private:
-  static tarch::Enumerator                  _enumerator;
+  static EnclaveTaskNumberPool _taskNumberPool;
 };

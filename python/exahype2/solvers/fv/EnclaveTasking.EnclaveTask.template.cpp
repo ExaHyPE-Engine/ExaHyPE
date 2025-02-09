@@ -33,8 +33,8 @@
 #include <string.h>
 #include <memory>
 
-tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
   return _enclaveTaskTypeId;
@@ -67,11 +67,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    0, // halo
+    0, // Halo size
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); // outcome has to be valid
+  ); // Outcome has to be valid
 
-  tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  ::tarch::freeMemory(reconstructedPatch, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];
@@ -179,7 +179,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   ::tarch::mpi::DoubleMessage dtMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  double* inputValues = ::tarch::allocateMemory( NumberOfInputValues, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -207,10 +207,10 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  _outputValues = ::tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
 //  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
-//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+//  ::tarch::freeMemory(_inputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
   _functor();
 
   logInfo(
@@ -248,7 +248,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
     " via tag " << tag
   );
 
-  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  // ::tarch::freeMemory(_outputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 }
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward) {
@@ -313,27 +313,30 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 }
 #endif
 
-
-{% if STATELESS_PDE_TERMS %}
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
+  {% if STATELESS_PDE_TERMS %}
   return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
     _marker.x(),
     _marker.h(),
     _t,
     _dt
   );
+  {% else %}
+  return false;
+  {% endif %}
 }
 
+
+{% if STATELESS_PDE_TERMS %}
 
 /**
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
-  logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
-    << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
+  logInfo("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
+    << " asked to fuse " << (otherTasks.size() + 1) << " tasks of type " << getTaskType() << " into one large GPU task on device " << targetDevice);
 
-  ::exahype2::CellData patchData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  ::exahype2::CellData<double, double> patchData(otherTasks.size() + 1, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
   int currentTask = 0;
   for (auto& p: otherTasks) {
     patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
@@ -342,17 +345,19 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    patchData.QOut[currentTask]        = ::tarch::allocateMemory<double>(_numberOfResultValues, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    //patchData.QOut[currentTask]        = reinterpret_cast<double*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof(double), ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice));
     delete p;
     currentTask++;
   }
-  patchData.QIn[currentTask]         = _inputValues;
-  patchData.cellCentre[currentTask]  = _marker.x();
-  patchData.cellSize[currentTask]    = _marker.h();
-  patchData.t[currentTask]           = _t;
-  patchData.dt[currentTask]          = _dt;
-  patchData.id[currentTask]          = _taskNumber;
-  patchData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  patchData.QIn[currentTask]          = _inputValues;
+  patchData.cellCentre[currentTask]   = _marker.x();
+  patchData.cellSize[currentTask]     = _marker.h();
+  patchData.t[currentTask]            = _t;
+  patchData.dt[currentTask]           = _dt;
+  patchData.id[currentTask]           = _taskNumber;
+  patchData.QOut[currentTask]         = ::tarch::allocateMemory<double>(_numberOfResultValues, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  //patchData.QOut[currentTask]         = reinterpret_cast<double*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof(double), ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice));  
 
   //
   // =========================
@@ -390,7 +395,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
 
   if (not foundOffloadingBranch) {
-    logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
+    logInfo("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
       << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
@@ -402,8 +407,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   //
   for (int i = 0; i < patchData.numberOfCells; i++) {
     // Delete reconstructed data which has been allocated before spawning the tasks.
-    tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+    ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    ::exahype2::EnclaveBookkeeping::getInstance().bookmarkFinishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 
   // Don't rerun, so return false.

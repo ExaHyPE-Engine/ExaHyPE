@@ -106,7 +106,6 @@ void runTests() {
   delete tests;
 #endif
 
-
   if (unitTestsErrors != 0) {
     logError("main()", "unit tests failed. Quit.");
     exit(-2);
@@ -268,7 +267,7 @@ int main(int argc, char** argv) {
 
 #ifdef Parallel
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
-    logWarning(
+    logInfo(
       "main()",
       "it is recommended that you run the unit tests with more than one MPI rank, too"
     );
@@ -277,10 +276,9 @@ int main(int argc, char** argv) {
 
   int cores = tarch::multicore::Core::UseDefaultNumberOfThreads;
   if (argc != 2 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logWarning(
+    logInfo(
       "main()",
-      "usage: ./" + std::string(argv[0])
-        + " core-count (use default core count=1 now)"
+      "usage: ./" + std::string(argv[0]) + " core-count"
     );
   } else if (argc == 2) {
     cores = std::atoi(argv[1]);

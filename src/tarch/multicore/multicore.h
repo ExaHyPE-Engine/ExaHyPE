@@ -196,7 +196,7 @@ namespace tarch {
      *
      * ## Handling tasks without outgoing dependencies
      *
-     * If taskNumber equals NoDependency, we know that noone is (directly)
+     * If taskNumber equals NoDependencies, we know that no one is (directly)
      * waiting for this task, i.e. we won't add dependencies to the task
      * graph afterwards. In this case, the realisation is straightforward:
      *
@@ -217,14 +217,14 @@ namespace tarch {
      * ## Tasks with a task number and incoming dependencies
      *
      * Spawn a task that depends on one other task. Alternatively, pass in
-     * NoDependency. In this case, the task can kick off immediately. You have
+     * NoDependencies. In this case, the task can kick off immediately. You have
      * to specify a task number. This number allows other, follow-up tasks to
      * become dependent on this very task. Please note that the tasks have to
      * be spawned in order, i.e. if B depends on A, then A has to be spawned
      * before B. Otherwise, you introduce a so-called anti-dependency. This is
      * OpenMP jargon which we adopted ruthlessly.
      *
-     * You may pass NoDependency as taskNumber. In this case, you have a
+     * You may pass NoDependencies as taskNumber. In this case, you have a
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
      *
@@ -253,10 +253,15 @@ namespace tarch {
       const TaskNumber&            taskNumber = tarch::multicore::NoOutDependencies
     );
 
+    void spawnTask(
+      Task*                        job,
+      const double*                outData
+    );
+
     /**
      * Wait for set of tasks
      *
-     * Entries in inDependencies can be NoDependency. This is a trivial
+     * Entries in inDependencies can be NoDependencies. This is a trivial
      * implementation, as we basically run through each task in
      * inDependencies and invoke waitForTask() for it. We don't have to rely on
      * some backend-specific implementation.
@@ -271,7 +276,9 @@ namespace tarch {
     /**
      * Wrapper around waitForTasks() with a single-element set.
      */
-    void waitForTask(const int taskNumber);
+    void waitForTask(const TaskNumber& taskNumber);
+
+    void waitForTask(const double* inData);
 
     /**
      * Fork-join task submission pattern
@@ -284,7 +291,7 @@ namespace tarch {
      * - Ask the orchestration which realisation to pick.
      * - Either run through the task set sequentially or invoke the native
      *   parallel implementation.
-     * - If there are task pending and the orchestration instructs us to do so,
+     * - If there are tasks pending and the orchestration instructs us to do so,
      *   map them onto native tasks.
      * - Tell the orchestration that the BSP section has terminated
      * - Tell the orchestration that a BSP section ends.
@@ -326,7 +333,7 @@ namespace tarch {
      * OpenMP, and we haven't studied TBB in this context yet.
      *
      *
-     * ## Implementation flaws in OpenMP and bugs burried within the sketch
+     * ## Implementation flaws in OpenMP and bugs buried within the sketch
      *
      * In OpenMP, the taskwait pragma allows the scheduler to process other
      * tasks as it is a scheduling point. This way, it should keep cores busy
@@ -402,32 +409,6 @@ namespace tarch {
       void spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks);
 
       /**
-       * Process a fused task
-       *
-       * A fused task is a task (which can be fused) and a list of further
-       * tasks which are of the same type and, hence, can be fused, too. The
-       * list can be empty. Efficient implementations should spawn the fused
-       * tasks as a further ready task and return immediately.
-       *
-       * ## No multithreading
-       *
-       * If no multithreading is enabled, then we map it onto a plain task via
-       * a spawnTask(). This spawn has no dependencies.
-       *
-       *
-       *
-       * @param firstTask First task. This is a task which can be fused. The pointer
-       *   is valid. The ownership of firstTask is handed over to the called routine,
-       *   i.e. processFusedTask() has to ensure that it is deleted.
-       * @param otherTasks List of tasks of the same type. The list can be empty.
-       *   processFusedTask() has to ensure that all tasks stored within the list are
-       *   executed and subsequently destroyed.
-       * @param device Target device on which the fused tasks should be executed. Can
-       *   be host if the tasks should end up on the host.
-       */
-      void processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device);
-
-      /**
        * Spawn a new task into the tasking backend
        *
        * This routine is invoked by tarch::multicore::spawnTask(). The invoking
@@ -450,7 +431,7 @@ namespace tarch {
        *
        * 1. We first check if a task with this number is among the submitted
        *    tasks. This is possible if a previous algorithm phase has submitted
-       *    a task with this number which was a sink, but noone ever waited for
+       *    a task with this number which was a sink, but no one ever waited for
        *    it. This should usually not happen and is a sign of bad code
        *    design. We issue a warning, free all locks and wait for the
        *    previous task with the same number to terminate.
@@ -461,7 +442,7 @@ namespace tarch {
        *    - Execute the task object.
        *    - Free its memory.
        * 3. We store the shared_future returned by the task. If the task number
-       *    equals NoOutDependencies, we know that noone will ever be able to wait
+       *    equals NoOutDependencies, we know that no one will ever be able to wait
        *    for this task. In this case, we skip the storing.
        *
        *
@@ -494,9 +475,9 @@ namespace tarch {
        * I originally had
        *
        * ~~~~~~~~~~~~~~~~~~~~~
-  #pragma omp atomic
-  numberOfSpawnedTasks++;
-         ~~~~~~~~~~~~~~~~~~~~~
+        #pragma omp atomic
+        numberOfSpawnedTasks++;
+       * ~~~~~~~~~~~~~~~~~~~~~
        *
        * outside of the if/else cascade. However, that means that the
        * subsequent canServeDependencyEntry() calls will not increase the
@@ -509,17 +490,17 @@ namespace tarch {
        * OpenMP now supports iterators and accessors over arrays. I tried
        *
        * ~~~~~~~~~~~~~~~~~~~~~
-      DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
-      [...]
-      #pragma omp task [...] depend(out: *outDependencyPointer) untied
-         ~~~~~~~~~~~~~~~~~~~~~
+        DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
+        [...]
+        #pragma omp task [...] depend(out: *outDependencyPointer) untied
+       * ~~~~~~~~~~~~~~~~~~~~~
        *
        * but that didn't work. So it seems that OpenMP struggles with the
        * dereferencing. However, it seems that
        *
        * ~~~~~~~~~~~~~~~~~~~~~
-      #pragma omp task [...] depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
-         ~~~~~~~~~~~~~~~~~~~~~
+        #pragma omp task [...] depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+       * ~~~~~~~~~~~~~~~~~~~~~
        *
        * does work.
        *
@@ -559,6 +540,20 @@ namespace tarch {
         const TaskNumber&            taskNumber
       );
 
+      void spawnTask(
+        Task*                        task,
+        const TaskNumber&            taskNumber
+      );
+
+      void spawnTask(
+        Task*                        job,
+        const double*                outData
+      );
+
+      void spawnTask(
+        Task*                        task
+      );
+
       /**
        * Wait for other task
        *
@@ -587,6 +582,10 @@ namespace tarch {
        *    collection to slim down our map of spawned tasks.
        */
       void waitForTasks(const std::set<TaskNumber>& inDependencies);
+
+      void waitForTask(const TaskNumber& taskNumber);
+
+      void waitForTask(const double* inData);
 
       /**
        * Slightly different than the umbrella version in the general namespace.

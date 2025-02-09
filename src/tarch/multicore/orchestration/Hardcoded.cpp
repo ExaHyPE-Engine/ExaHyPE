@@ -1,5 +1,6 @@
 #include "Hardcoded.h"
 
+#include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Task.h"
 
 #include <limits>
@@ -9,7 +10,7 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
     std::numeric_limits<int>::max(), // min tasks to fuse
     0,                               // max tasks to fuse
-    tarch::multicore::Task::Host,    // deviceForFusedTasks
+    tarch::accelerator::Device::HostDevice, // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
     1
   );
@@ -17,11 +18,11 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createNative() {
   return new Hardcoded(
-    0,                               // numberOfTasksToHoldBack
-    std::numeric_limits<int>::max(), // min tasks to fuse
-    0,                               // max tasks to fuse
-    tarch::multicore::Task::Host,    // deviceForFusedTasks
-    false,                           // fuseTasksImmediatelyWhenSpawned
+    0,                                      // numberOfTasksToHoldBack
+    std::numeric_limits<int>::max(),        // min tasks to fuse
+    0,                                      // max tasks to fuse
+    tarch::accelerator::Device::HostDevice, // deviceForFusedTasks
+    false,                                  // fuseTasksImmediatelyWhenSpawned
     1
   );
 }
@@ -31,7 +32,7 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
     std::numeric_limits<int>::max(), // min tasks to fuse
     0,                               // max tasks to fuse
-    tarch::multicore::Task::Host,    // deviceForFusedTasks
+    tarch::accelerator::Device::HostDevice, // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
     1
   );

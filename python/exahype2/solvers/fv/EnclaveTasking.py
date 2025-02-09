@@ -59,7 +59,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     TemplateUpdateCell = jinja2.Template(
         """
-  double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   // Set the following two parameters
   // double timeStepSize
@@ -67,8 +67,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-  assertion2(tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp);
-  assertion2(tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp);
+  assertion2(::tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
+  assertion2(::tarch::la::greaterEquals(timeStamp, 0.0),    timeStepSize, timeStamp);
 
   ::exahype2::fv::validatePatch(
       oldQWithHalo,
@@ -108,20 +108,21 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       newQ
       {% endif %}
     );
-    
-    int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
-    
+    const int newEnclaveTaskNumber = newEnclaveTask->getTaskId();
+
+    const int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
+
     tarch::multicore::spawnTask(
-      newEnclaveTask, 
-      predecessorEnclaveTaskNumber>=0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies, 
-      newEnclaveTask->getTaskId()
+      newEnclaveTask,
+      predecessorEnclaveTaskNumber >= 0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies,
+      newEnclaveTaskNumber
     );
 
-    if (predecessorEnclaveTaskNumber>=0) {
+    if (predecessorEnclaveTaskNumber >= 0) {
       ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
     }
 
-    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTaskNumber);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
   }
   """
@@ -206,7 +207,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
-        
+
         self.functor_implementation = self.TemplateUpdateCell.render(**d)
 
         super(UpdateCell, self)._add_action_set_entries_to_dictionary(d)
@@ -223,8 +224,8 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if (marker.hasBeenEnclaveCell() and taskNumber >= 0) {
-      double maxEigenvalue;
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue );
+      double maxEigenvalue = 0.0;
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver(taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue);
 
       ::exahype2::fv::validatePatch(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
@@ -237,7 +238,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber);
       fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     }
@@ -315,7 +316,7 @@ class EnclaveTasking(FV):
     task. This value can either be a string that C++ can evaluate into a
     priority or a plain numerical value. I set it to
 
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
+           self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
     by default.
     """
@@ -392,7 +393,7 @@ class EnclaveTasking(FV):
             + self.get_name_of_global_instance()
             + ".getSolverState()=="
             + self._name
-            + "::SolverState::PlottingInitialCondition"
+            + "::SolverState::PlottingAfterGridInitialisation"
             + ")"
         )
 
@@ -415,7 +416,7 @@ class EnclaveTasking(FV):
              repositories::{}.getSolverState()=={}::SolverState::Primary
           or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation
           or repositories::{}.getSolverState()=={}::SolverState::Plotting
-          or repositories::{}.getSolverState()=={}::SolverState::PlottingInitialCondition
+          or repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation
           or repositories::{}.getSolverState()=={}::SolverState::Suspended
         )""".format(
             self.get_name_of_global_instance(), self._name,
@@ -490,7 +491,7 @@ class EnclaveTasking(FV):
         self._secondary_sweep_or_grid_initialisation_or_plot_guard = """(
             repositories::{}.getSolverState()=={}::SolverState::Secondary
          or repositories::{}.getSolverState()=={}::SolverState::GridInitialisation
-         or repositories::{}.getSolverState()=={}::SolverState::PlottingInitialCondition
+         or repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation
          or repositories::{}.getSolverState()=={}::SolverState::Plotting
          or repositories::{}.getSolverState()=={}::SolverState::Suspended
         )""".format(

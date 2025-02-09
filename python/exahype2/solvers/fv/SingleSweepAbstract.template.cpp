@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -27,6 +27,7 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _patchUpdates(0) {
+
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -225,78 +226,78 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   int newPatchUpdates = _patchUpdates;
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStamp,
-      &_minTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newMinTimeStamp,
+    &_minTimeStampThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
-      &_maxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newMaxTimeStamp,
+    &_maxTimeStampThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMinVolumeH,
-      &_minVolumeHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newMinVolumeH,
+    &_minVolumeHThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxVolumeH,
-      &_maxVolumeHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newMaxVolumeH,
+    &_maxVolumeHThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStepSize,
-      &_minTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newMinTimeStepSize,
+    &_minTimeStepSizeThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newMaxTimeStepSize,
+    &_maxTimeStepSizeThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMinTimeStamp,
-      &_localMinTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newLocalMinTimeStamp,
+    &_localMinTimeStampThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMaxTimeStamp,
-      &_localMaxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newLocalMaxTimeStamp,
+    &_localMaxTimeStampThisTimeStep,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newPatchUpdates,
-      &_patchUpdates,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    &newPatchUpdates,
+    &_patchUpdates,
+    1, MPI_INT,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
   #endif
 
-  if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+  if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
     _minTimeStampThisTimeStep = 0.0;
   }
-  if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
+  if (_maxTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
     _maxTimeStampThisTimeStep = 0.0;
   }
 
@@ -327,19 +328,23 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::TimeStep:
       return "time-step";
-    case SolverState::Plotting:
-      return "plotting";
     case SolverState::TimeStepAfterGridInitialisation:
       return "time-step-after-grid-initialisation";
+    case SolverState::Plotting:
+      return "plotting";
     case SolverState::PlottingAfterGridInitialisation:
       return "plotting-after-grid-initialisation";
+    case SolverState::Suspended:
+      return "suspended";
   }
   return "<undef>";
 }
 
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return true;
 }
+
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return true;
@@ -349,7 +354,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return _solverState!=SolverState::Suspended;
 }
-
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(

@@ -2,29 +2,25 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
 
 #include <set>
 #include <unordered_map>
 #include <string>
-
 
 namespace exahype2 {
   class EnclaveBookkeeping;
   class EnclaveTask;
 }
 
-
 /**
  * Enclave bookkeeping
  *
- * The enclave bookkeeping is basically a big map which stores results of 
+ * The enclave bookkeeping is basically a big map which stores results of
  * enclave tasks. Most of the documentation around enclave tasks can be
  * found in exahype2::EnclaveTask.
- * 
+ *
  * The bookkeeping can be used in two ways by the underlying enclave task
  * object: The enclave tasks can allocate data for their results on the heap,
  * hand that heap object over to the bookkeeping, and the bookkeeping then
@@ -43,11 +39,12 @@ class exahype2::EnclaveBookkeeping {
       double*  data;
       double   maxEigenvalue;
 
-      Entry( int  numberOfResultValues_, double*  data_, double   maxEigenvalue_ );
+      Entry(int numberOfResultValues_, double* data_, double maxEigenvalue_);
       std::string toString() const;
     };
+
   private:
-    static tarch::logging::Log          _log;
+    static tarch::logging::Log _log;
 
     const static std::string MemoryAllocationsInLookupTableIdentifier;
 
@@ -55,11 +52,11 @@ class exahype2::EnclaveBookkeeping {
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask
      * for details.
      */
-    std::unordered_map<int, Entry >       _finishedTasks;
-    
-    std::set<int>  _tasksThatHaveToBeCancelled;
+    std::unordered_map<int, Entry> _finishedTasks;
 
-    tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
+    std::set<int> _tasksThatHaveToBeCancelled;
+
+    tarch::multicore::BooleanSemaphore _finishedTasksSemaphore;
 
     EnclaveBookkeeping() = default;
 
@@ -72,7 +69,8 @@ class exahype2::EnclaveBookkeeping {
      * @return Entry with all meta data plus a pointer to the actual
      *   task result.
      */
-    Entry waitForTaskToTerminateAndReturnResult(int number);
+    Entry waitForTaskToTerminateAndReturnResult(int taskNumber);
+
   public:
     static constexpr int NoEnclaveTaskNumber = -1;
     /**
@@ -87,6 +85,8 @@ class exahype2::EnclaveBookkeeping {
      * For debugging only. This routine is not thread-safe.
      */
     void dumpStatistics();
+
+    std::size_t getNumberOfFinishedTasks() const;
 
     /**
      * Wait for a task and copy outcome into destination
@@ -103,23 +103,23 @@ class exahype2::EnclaveBookkeeping {
      * task's memory location via
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * tarch::freeMemory( result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+     * tarch::freeMemory(result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue);
+    void waitForTaskToTerminateAndCopyResultOver(int taskNumber, double* destination, double& maxEigenvalue);
 
     /**
      * Wait for a task and copy outcome into destination
      */
-    void waitForTaskAndDiscardResult(int number);
+    void waitForTaskAndDiscardResult(int taskNumber);
 
-    void cancelTask(int number);
+    void cancelTask(int taskNumber);
 
     /**
      * Usually called directly by EnclaveTask.
      *
      * Once this routine is called, the ownership of data passes over into the
-     * enclave bookkeeping. Basically, the enclave bookkeepting stores the
+     * enclave bookkeeping. Basically, the enclave bookkeeping stores the
      * passed pointer into a map and returns.
      *
      * There is one exception to this: If we use optimistic time stepping, then
@@ -129,6 +129,5 @@ class exahype2::EnclaveBookkeeping {
      *
      * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
      */
-    void finishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue);
+    void bookmarkFinishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue);
 };
-

@@ -25,7 +25,6 @@ namespace tarch {
 
     public:
       static constexpr int DefaultPriority = 1024;
-      static constexpr int Host            = -1;
       static constexpr int DontFuse        = -1;
 
       /**
@@ -33,7 +32,7 @@ namespace tarch {
        *
        * ## Task types and task numbers
        *
-       * Eachtask in Peano has to have a task type. All tasks that do the same,
+       * Each task in Peano has to have a task type. All tasks that do the same,
        * i.e. are of the same type, should have the same task type integer
        * marker. Peano's tarch can use multiple tasks of the same type and
        * fuse/batch them into one task call. However, if you don't want Peano
@@ -130,10 +129,10 @@ namespace tarch {
        *         to get these tasks done. So either span some new tasks or handle
        *         them straightaway.
        * @param targetDevice On which device should the task be processed? A
-       *         negative number means local host anything greater or equal to
-       *         zero denotes an accelerator.
+       *         negative number means local host, and anything greater or equal
+       *         to zero denotes an accelerator.
        */
-      virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
+      virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice);
 
       virtual std::string toString() const;
     };
@@ -187,13 +186,12 @@ namespace tarch {
      *     }
      *   );
      *
-     *   tarch::multicore::spawnTask( 
-     *     newTask, 
-     *     tarch::multicore::NoInDependencies, 
-     *     myNumber 
+     *   tarch::multicore::spawnTask(
+     *     newTask,
+     *     tarch::multicore::NoInDependencies,
+     *     myNumber
      *   );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
      *
      */
     class TaskWithCopyOfFunctor: public Task {

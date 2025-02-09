@@ -1,24 +1,24 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "multicore.h"
+
+#include "otter.h"
+#include "BooleanSemaphore.h"
+#include "Core.h"
+#include "Lock.h"
+#include "Task.h"
+#include "taskfusion/taskfusion.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
+
+#include "tarch/logging/Statistics.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
 #include "topology/topologies.h"
 #endif
-
-#include "tarch/multicore/otter.h"
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/multicore/Task.h"
-#include "tarch/multicore/taskfusion/taskfusion.h"
-
-#include "tarch/logging/Statistics.h"
-
 
 namespace {
   tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
@@ -78,13 +78,17 @@ tarch::multicore::orchestration::Strategy& tarch::multicore::getOrchestration() 
 
 
 void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  tarch::multicore::native::waitForTasks(inDependencies);
+  native::waitForTasks(inDependencies);
 }
 
 
-void tarch::multicore::waitForTask(const int taskNumber) {
-  std::set<int> tmp{taskNumber};
-  waitForTasks(tmp);
+void tarch::multicore::waitForTask(const TaskNumber& taskNumber) {
+  native::waitForTask(taskNumber);
+}
+
+
+void tarch::multicore::waitForTask(const double* inData) {
+  native::waitForTask(inData);
 }
 
 
@@ -113,9 +117,9 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
         }
         break;
       case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel:
-        ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true);
+        tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true);
         native::spawnAndWaitAsTaskLoop(tasks);
-        ::tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
+        tarch::logging::Statistics::getInstance().inc(BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true);
         break;
     }
 
@@ -140,12 +144,31 @@ void tarch::multicore::spawnTask(
 ) {
   assertion(task != nullptr);
 
-  tarch::logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
+  logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
   if (task->canFuse()) {
-    taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
+    taskfusion::translateFusableTaskIntoTaskSequence(task /*, inDependencies, taskNumber*/);
   } else {
-    native::spawnTask(task, inDependencies, taskNumber);
+    if (inDependencies.empty() and taskNumber == NoOutDependencies) native::spawnTask(task);
+    else if (inDependencies.empty()) native::spawnTask(task, taskNumber);
+    else native::spawnTask(task, inDependencies, taskNumber);
+  }
+}
+
+
+void tarch::multicore::spawnTask(
+  Task*                        task,
+  const double*                outData
+) {
+  assertion(task != nullptr);
+  assertion(outData);
+
+  logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
+
+  if (task->canFuse()) {
+    taskfusion::translateFusableTaskIntoTaskSequence(task);
+  } else {
+    native::spawnTask(task, outData);
   }
 }
 
@@ -161,16 +184,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& 
 }
 
 
-void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
-  if (stillExecuteLocally) {
-    tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
-  } else {
-    delete myTask;
-  }
-}
-
-
 void tarch::multicore::native::spawnTask(
   Task* job,
   const std::set<TaskNumber>& /*inDependencies*/,
@@ -182,9 +195,44 @@ void tarch::multicore::native::spawnTask(
 }
 
 
+void tarch::multicore::native::spawnTask(
+  Task* job,
+  const TaskNumber& /*taskNumber*/
+) {
+  while (job->run()) {
+  }
+  delete job;
+}
+
+
+void tarch::multicore::native::spawnTask(
+  Task* job,
+  const double* /*outData*/
+) {
+  while (job->run()) {
+  }
+  delete job;
+}
+
+
+void tarch::multicore::native::spawnTask(
+  Task* job
+) {
+  while (job->run()) {
+  }
+  delete job;
+}
+
+
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& /*inDependencies*/) {}
+
+
+void tarch::multicore::native::waitForTask(const TaskNumber& /*taskNumber*/) {}
+
+
+void tarch::multicore::native::waitForTask(const double* /*inData*/) {}
 
 
 void tarch::multicore::native::waitForAllTasks() {}
 
-#endif
+#endif // SharedMemoryParallelisation

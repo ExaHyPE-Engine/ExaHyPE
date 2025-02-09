@@ -29,4 +29,4 @@
 
 #define LittleEndian
 
-#define OpenMPTaskGroup
+#define OpenMPTaskLoop

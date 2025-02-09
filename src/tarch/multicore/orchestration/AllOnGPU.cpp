@@ -43,7 +43,7 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
 
 void tarch::multicore::orchestration::AllOnGPU::toggleDevice() {
   if (tarch::accelerator::Device::getInstance().getNumberOfDevices() == 0) {
-    _deviceToUse = Task::Host;
+    _deviceToUse = tarch::accelerator::Device::HostDevice;
   } else {
     _deviceToUse++;
     _deviceToUse = _deviceToUse % tarch::accelerator::Device::getInstance().getNumberOfDevices();

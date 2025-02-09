@@ -11,10 +11,11 @@
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 
 #include <algorithm>
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -34,6 +35,7 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _patchUpdates(0) {
+
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -45,11 +47,9 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinPatchSize();
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
   return getMinVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
@@ -167,7 +167,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   assertion( _solverState == SolverState::GridConstruction );
   _solverState = SolverState::GridInitialisation;
-  logDebug( "startGridInitialisationStep(...)", "new state is " << toString(_solverState) );
+  logDebug("startGridInitialisationStep()", "new state is " << toString(_solverState));
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
@@ -219,7 +219,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _maxVolumeH = _maxVolumeHThisTimeStep;
 
     _maxVolumeHThisTimeStep      = 0.0;
-    _minVolumeHThisTimeStep      = std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch/2.0;
+    _minVolumeHThisTimeStep      = std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0;
 
     _patchUpdates    = 0;
 
@@ -227,13 +227,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
   }
 
+  {% if STATELESS_PDE_TERMS %}
+  if (_solverState == SolverState::Secondary) {
+    tarch::multicore::taskfusion::processPendingTasksThatCanBeFused();
+  }
+  {% endif %}
+
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logInfo("startTimeStep(...)", "phase " + toString(_solverState));
   }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  if (_solverState==SolverState::Secondary) {
+  if (_solverState == SolverState::Secondary) {
     #ifdef Parallel
     double newMinTimeStamp = _minTimeStampThisTimeStep;
     double newMaxTimeStamp = _maxTimeStampThisTimeStep;
@@ -253,14 +259,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
     tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStamp,
       &_maxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
       &newMinVolumeH,
@@ -268,14 +274,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
     tarch::mpi::Rank::getInstance().allReduce(
       &newMaxVolumeH,
       &_maxVolumeHThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStepSize,
@@ -283,14 +289,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
     tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStepSize,
       &_maxTimeStepSizeThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
       &newLocalMinTimeStamp,
@@ -298,28 +304,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
     tarch::mpi::Rank::getInstance().allReduce(
       &newLocalMaxTimeStamp,
       &_localMaxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &newPatchUpdates,
-        &_patchUpdates,
-        1, MPI_INT,
-        MPI_SUM,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
+      &newPatchUpdates,
+      &_patchUpdates,
+      1, MPI_INT,
+      MPI_SUM,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
     #endif
 
-    if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+    if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
       _minTimeStampThisTimeStep = 0.0;
     }
-    if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
+    if (_maxTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
       _maxTimeStampThisTimeStep = 0.0;
     }
   }
@@ -333,12 +339,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  if ( _solverState == SolverState::GridInitialisation ) {
-    _solverState = SolverState::PlottingInitialCondition;
-  }
-  else {
-    assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );
-
+  if (_solverState == SolverState::GridInitialisation) {
+    _solverState = SolverState::PlottingAfterGridInitialisation;
+  } else {
+    assertion(mayPlot() or ::tarch::hasNonCriticalAssertionBeenViolated());
     _solverState = SolverState::Plotting;
   }
 }
@@ -353,14 +357,16 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Primary:
       return "primary";
-    case SolverState::Secondary:
-      return "secondary";
-    case SolverState::PlottingInitialCondition:
-      return "plotting-initial-condition";
     case SolverState::PrimaryAfterGridInitialisation:
       return "primary-after-grid-initialisation";
+    case SolverState::Secondary:
+      return "secondary";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::PlottingAfterGridInitialisation:
+      return "plotting-after-grid-initialisation";
+    case SolverState::Suspended:
+      return "suspended";
   }
   return "<undef>";
 }
@@ -377,7 +383,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState == SolverState::Secondary;
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
@@ -386,7 +391,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
 ) const {
   return true;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #if defined(UseSmartMPI)
@@ -408,8 +412,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #endif
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
-
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

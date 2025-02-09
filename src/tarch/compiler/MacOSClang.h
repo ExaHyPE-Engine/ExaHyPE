@@ -28,4 +28,4 @@
 #define assert(...)
 #endif
 
-#define OpenMPTaskGroup
+#define OpenMPTaskLoop
