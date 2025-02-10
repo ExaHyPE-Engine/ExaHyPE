@@ -1,4 +1,4 @@
-FROM peanoframework/spack:latest as builder
+FROM peanoframework/spack:latest AS builder
 
 WORKDIR /opt/spack-environment
 

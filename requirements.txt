@@ -7,3 +7,4 @@ sympy
 h5py
 vtk
 VTUinterface
+jupyter
