@@ -12,7 +12,7 @@ stages:
 # Define one sub-pipeline per toolchain:
 ########################################################
 
-GCC_OpenMP:
+GCC_SharedOMP:
   extends: .Variables
   stage: Compiler
   variables:
@@ -35,7 +35,7 @@ GCC_OpenMP:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-Intel_OpenMP:
+Intel_SharedOMP:
   extends: .Variables
   stage: Compiler
   variables:
@@ -58,7 +58,7 @@ Intel_OpenMP:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-LLVM_OpenMP:
+LLVM_SharedOMP:
   extends: .Variables
   stage: Compiler
   variables:
