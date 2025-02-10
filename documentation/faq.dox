@@ -26,12 +26,13 @@ Some frequently asked questions and problems are discussed below.
   ~~~~~~~~~~~~~~~~~~~
   to your configure call seems to be necessary.
 
+
 # CMake
 
-- ***Why am I seeing "Permission Denied" errors when using CCACHE in a Docker container on macOS?***
+- ***Why am I seeing "Permission Denied" errors when using CCACHE in a Docker container on MacOS?***
 
 This error is common when using CCACHE in Docker containers on macOS due to how Docker handles file permissions in mounted volumes.
-CCACHE requires write access to its cache directory, but macOS and Docker can have mismatched UID/GID (user and group IDs),
+CCACHE requires write access to its cache directory, but MacOS and Docker can have mismatched UID/GID (user and group IDs),
 especially when the cache directory is a mounted volume. This mismatch can prevent CCACHE from writing to the directory, causing "Permission Denied" errors.
 
 This can be easily resolve by setting
@@ -41,6 +42,15 @@ This can be easily resolve by setting
   ~~~~~~~~~~~~~~~~~~~
 
 in the CMake configuration.
+
+- ***How can I switch between the different build systems?***
+
+The code generator always favours autotools. I.e. if an autotools build is present, the code generator chooses to use autotools.
+The environment variable `PEANO_CMAKE_BUILD_DIR` can be set to point to a CMake build folder.
+Then, the code generator will favour CMake instead of autotools. If there are multiple CMake build folders present (e.g. a GPU build and a non-GPU build),
+simply setting the flag `PEANO_CMAKE_BUILD_DIR` to one particular build folder tells the code generator which one to use.
+Unsetting the environment variable allows to switch back to autotools.
+If only one of the build systems has been configured, the code generator will choose the one present.
 
 # Compilation
 
@@ -212,6 +222,7 @@ undefined reference to for_write_seq_list
   when compiling with OpenMP multithreading using the icpx compiler,
   you are probably not using the new -fiopenmp flag. Make sure to pass -fiopenmp to your configuration
   instead of -fopenmp.
+
 
 # Runtime
 
