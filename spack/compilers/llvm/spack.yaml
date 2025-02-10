@@ -4,6 +4,7 @@ spack:
     - py-pip@24.3.1 %gcc
     - llvm@18.1.8 +clang +libomptarget +libomptarget_debug +gold %gcc
     - libxsmm@1.17 +generator %gcc
+    - easi@1.5.0 jit=lua %gcc
     - memkind@1.14.0 %gcc
     - openblas@0.3.28 %gcc
     - eigen@3.4.0 %gcc

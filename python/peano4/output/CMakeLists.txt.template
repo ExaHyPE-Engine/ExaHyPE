@@ -7,7 +7,19 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_COMPILER {{CXX}})
 {% endif -%}
 
-project({{EXECUTABLENAME}})
+{% if FC is defined and FC != "" -%}
+set(CMAKE_Fortran_COMPILER {{FC}})
+{% endif -%}
+
+project({{EXECUTABLENAME}}
+  LANGUAGES
+    C
+    CXX
+{% if FC is defined and FC != "" -%}
+    Fortran
+{% endif -%}
+)
+
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 
 list(APPEND CMAKE_PREFIX_PATH {{CMAKE_BUILD_DIR}})
@@ -56,15 +68,17 @@ string(TOLOWER "{{MODE}}" mode_lower)
 
 add_executable({{EXECUTABLENAME}})
 target_sources({{EXECUTABLENAME}} PRIVATE ${SOURCES})
-target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoOptions)
+target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoOptions ${GENERATED_LDFLAGS})
 target_include_directories({{EXECUTABLENAME}} PRIVATE ${CMAKE_SOURCE_DIR} ${GENERATED_INCLUDE_DIRS})
-target_link_options({{EXECUTABLENAME}} PRIVATE ${GENERATED_LDFLAGS})
 target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_CXXFLAGS})
+
+{% for lib in LIBS.split() if lib.startswith('-L') %}
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE {{ lib[2:] }})
+{% endfor %}
 
 target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::Peano4Core{{DIM}}d_${mode_lower})
 
-# Link against additional extension targets, if they exist
-
+# Link against additional extension targets, if they exist.
 if(TARGET Peano::ToolboxLoadBalancing{{DIM}}d_${mode_lower})
   target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::ToolboxLoadBalancing{{DIM}}d_${mode_lower})
 endif()
