@@ -47,6 +47,7 @@ class Solver:
     
     """
 #observer.use_vertex(self._vertex_data)
+# @todo das muss natuerlich weg
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
   
