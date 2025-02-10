@@ -151,11 +151,6 @@ class LeapfrogFixedSearchRadius(Particle):
                                                        ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
                     // end template
                     """,
-                prepare_traversal_kernel=f"""
-                // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
-                ::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});
-                // end template
-                """,
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
@@ -259,9 +254,9 @@ class LeapfrogFixedSearchRadius(Particle):
         """
         return [
             self._algorithm_steps["ForceCalculation"],
+            self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
             self._algorithm_steps["Kick"],
             self._algorithm_steps["Drift"],
-            self._algorithm_steps["ForceCalculation"],
             self._algorithm_steps["Kick"],
             self._algorithm_steps["ReduceGlobalQuantities"],
         ]
