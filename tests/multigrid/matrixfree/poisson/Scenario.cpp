@@ -19,7 +19,7 @@ double tests::multigrid::matrixfree::poisson::getPointWiseRhs(
     for (int i=0; i<Dimensions; i++) {
       sinSquared *= std::sin( 2 * tarch::la::PI * x(i) );
     }
-
+    
     return fourDPiSquared * sinSquared;
 
   } else if (refSolutionType == "twoPeaks") {
