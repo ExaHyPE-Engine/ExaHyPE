@@ -71,12 +71,20 @@ parser.add_argument(
     help="Peano4 directory",
 )
 parser.add_argument(
-    "-asserts",
+    "-a",
     "--asserts",
     dest="asserts",
     action="store_true",
     default=False,
     help="Switch on assertions",
+)
+parser.add_argument(
+    "-d",
+    "--debug",
+    dest="debug",
+    action="store_true",
+    default=False,
+    help="Switch on debug assertions",
 )
 args = parser.parse_args()
 
@@ -109,9 +117,10 @@ particle = swift2.particle.LeapfrogFixedSearchRadius(
 particle_set = project.add_particle_species(particle)
 
 
-if args.asserts:
+if args.debug:
+    build_mode = peano4.output.CompileMode.Debug
+elif args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
-    #  build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
 
