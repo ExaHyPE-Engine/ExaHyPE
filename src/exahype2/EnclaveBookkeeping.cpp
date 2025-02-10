@@ -69,6 +69,14 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
     ", number of active tasks: " << exahype2::EnclaveTask::getNumberOfActiveTasks()
   );
 
+  if (_finishedTasks.count(taskNumber) != 1) {
+    logWarning(
+      "waitForTaskToTerminateAndReturnResult(int)",
+      "trying to fetch result that has already been fetched. Returning without solution."
+    );
+    return Entry(0, nullptr, -1);
+  }
+
   assertionEquals3(_finishedTasks.count(taskNumber), 1, taskNumber, _finishedTasks.count(taskNumber), exahype2::EnclaveTask::getNumberOfActiveTasks());
   Entry storedData = _finishedTasks.at(taskNumber);
   _finishedTasks.erase(taskNumber);
@@ -97,6 +105,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
   logTraceInWith1Argument("waitForTaskToTerminateAndCopyResultOver(int,double*,double&)", taskNumber);
 
   Entry storedData = waitForTaskToTerminateAndReturnResult(taskNumber);
+  if (not storedData.data) return;
 
   if (destination != storedData.data) {
     //#pragma omp taskwait depend(in: storedData.data)
