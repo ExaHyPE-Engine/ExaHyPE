@@ -28,15 +28,20 @@ assignments, movements, and exchanges are indeed respected. For more details,
 see the documentation of toolbox::particles::assignmentchecks in
 src/toolbox/particles/assignmentchecks/TracingAPI.h.
 
-The dependency checks introduce a sizeable overhead and come at a significant
+The assignment checks introduce a sizeable overhead and come at a significant
 run time cost. They can be disabled by passing the `-DnoAssignmentChecks` macro
-definition to the compiler. Alternately,
-you can add that flag in the python project using
+definition to the compiler. Alternately, you can add that flag in the python
+project using
 ```
 peano4_project.output.makefile.add_CXX_flag("-DNoAssignmentChecks")
 ```
 
-
+Additionally, the assignment checks add the further restriction that no particle
+may travel further than the vertex/cell size they are currently assigned to.
+This was added to be able to do a fuzzy search for particles past events in the
+events database, and was necessary to distinguish between particles in
+simulations with periodic boundary conditions, where they get copied over and
+assigned to a different vertex.
 
 
 
