@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_shallow_water ExaHyPE-Shallow
+@page applications_exahype2_shallow_water Shallow Water
 
 \tableofcontents
 
@@ -79,7 +79,7 @@ is implemented as a non-conservative product.
 # How to Build and Run
 
 For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation_home.
-We require the NetCDF library.
+We require the NetCDF library and Git LFS.
 
 ## Using CMake
 
@@ -111,12 +111,22 @@ Where `CC=gcc CXX=g++` can be any set of compilers.
 
 # Scenarios
 
+## Validation Cases
+
 \li \subpage applications_exahype2_shallow_water_radial_dam_break
-\li \subpage applications_exahype2_shallow_water_three_mounds_channel
 \li \subpage applications_exahype2_shallow_water_circular_island
 \li \subpage applications_exahype2_shallow_water_oscillating_lake
+\li \subpage applications_exahype2_shallow_water_three_mounds_channel
+
+## Tsunamis
+
 \li \subpage applications_exahype2_shallow_water_artificial_tsunami
 \li \subpage applications_exahype2_shallow_water_chile_tsunami
 \li \subpage applications_exahype2_shallow_water_tohoku_tsunami
+
+## Landslides
+
+\li \subpage applications_exahype2_shallow_water_dam_break_landslide
+\li \subpage applications_exahype2_shallow_water_tafjord_landslide
 
 */

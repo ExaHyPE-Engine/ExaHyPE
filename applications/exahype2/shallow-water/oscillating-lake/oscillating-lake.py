@@ -11,8 +11,7 @@ sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
 
 initial_conditions = """
-  constexpr double g = 9.81;
-  const double omega = sqrt(0.2 * g);
+  const double omega = sqrt(0.2 * GRAV);
 
   using s = VariableShortcuts;
 
@@ -44,33 +43,32 @@ parser.set_defaults(
     end_time=1.0,
     width=[4.0, 4.0],
     offset=[-2.0, -2.0],
-    min_depth=6,
-    amr_levels=0,
-    dg_order=5,
-    number_of_snapshots=20,
-    peano_dir="../../../../",
 )
 args = parser.parse_args()
 
 max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
+args.patch_size = args.dg_order * 2 + 1
+
+unknowns={"h": 1, "hu": 1, "hv": 1}
+auxiliary_variables={"b": 1}
 
 riemann_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
-    name="HLLEM" + str(args.dg_order * 2 + 1),
-    patch_size=args.dg_order * 2 + 1,
-    unknowns={"h": 1, "hu": 1, "hv": 1},
-    auxiliary_variables={"b": 1},
+    name="HLLEM" + str(args.patch_size),
+    patch_size=args.patch_size,
+    unknowns=unknowns,
+    auxiliary_variables=auxiliary_variables,
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
-    pde_terms_without_state=True,
+    pde_terms_without_state=args.stateless,
     initial_conditions=re.sub(r'\bx\b', 'volumeCentre', initial_conditions),
     boundary_conditions=boundary_conditions,
     refinement_criterion=re.sub(r'\bx\b', 'volumeCentre', refinement_criterion),
     riemann_solver="return applications::exahype2::swe::hllem(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
 )
-riemann_solver.plot_description = ", ".join({"h": 1, "hu": 1, "hv": 1}.keys()) + ", "
-riemann_solver.plot_description += ", ".join({"b": 1}.keys())
+riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
+riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 riemann_solver.add_user_solver_includes(
     """
@@ -123,12 +121,13 @@ if args.load_balancing_strategy != "None":
     project.set_load_balancing(strategy, configuration)
 
 project.set_number_of_threads(args.threads)
-project.set_timeout(args.timeout)
-project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
+project.set_timeout(3600)
+project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=True)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
+project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
 print(args)

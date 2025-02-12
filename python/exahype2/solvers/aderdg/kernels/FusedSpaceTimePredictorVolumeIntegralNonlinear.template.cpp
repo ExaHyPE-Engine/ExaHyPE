@@ -602,7 +602,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     }
   }
 
-  return sqRes;
+  return sqRes; // TODO: Is this the wrong return statement? We expect an integer to be returned. Is this return value used at all?
 }
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}

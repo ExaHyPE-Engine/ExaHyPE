@@ -2,15 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TopologyParser.h"
 
-#include <cstring>
+#include "tarch/la/ScalarOperations.h"
 
-#include "Constants.h"
+#include <cstring>
+#include <stdexcept>
+#include <iostream>
 
 applications::exahype2::swe::TopologyParser::TopologyParser(
   const char* bathymetryFilePath,
   const char* displacementFilePath,
-  double      lengthOfSimulationDomainInY,
   double      lengthOfSimulationDomainInX,
+  double      lengthOfSimulationDomainInY,
+  double      offsetOfSimulationDomainInX,
+  double      offsetOfSimulationDomainInY,
   const char* ncBathymetryKey,
   const char* ncBathymetryKeyX,
   const char* ncBathymetryKeyY,
@@ -25,7 +29,9 @@ applications::exahype2::swe::TopologyParser::TopologyParser(
   _ncDisplacementKeyX(ncDisplacementKeyX),
   _ncDisplacementKeyY(ncDisplacementKeyY),
   _lengthOfSimulationDomainInX(lengthOfSimulationDomainInX),
-  _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY) {
+  _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY),
+  _offsetOfSimulationDomainInX(offsetOfSimulationDomainInX),
+  _offsetOfSimulationDomainInY(offsetOfSimulationDomainInY) {
 
   this->parseBathymetryFile(bathymetryFilePath);
   this->parseDisplacementFile(displacementFilePath);
@@ -36,6 +42,8 @@ applications::exahype2::swe::TopologyParser::TopologyParser(
   const char* bathymetryFilePath,
   double      lengthOfSimulationDomainInX,
   double      lengthOfSimulationDomainInY,
+  double      offsetOfSimulationDomainInX,
+  double      offsetOfSimulationDomainInY,
   const char* ncBathymetryKey,
   const char* ncBathymetryKeyX,
   const char* ncBathymetryKeyY
@@ -44,7 +52,9 @@ applications::exahype2::swe::TopologyParser::TopologyParser(
   _ncBathymetryKeyX(ncBathymetryKeyX),
   _ncBathymetryKeyY(ncBathymetryKeyY),
   _lengthOfSimulationDomainInX(lengthOfSimulationDomainInX),
-  _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY) {
+  _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY),
+  _offsetOfSimulationDomainInX(offsetOfSimulationDomainInX),
+  _offsetOfSimulationDomainInY(offsetOfSimulationDomainInY) {
 
   this->parseBathymetryFile(bathymetryFilePath);
 }
@@ -56,9 +66,9 @@ applications::exahype2::swe::TopologyParser::~TopologyParser() {
 }
 
 
-void applications::exahype2::swe::TopologyParser::parseBathymetryFile(
-  const char* bathymetryFilePath
-) {
+void applications::exahype2::swe::TopologyParser::parseBathymetryFile(const char* bathymetryFilePath) {
+  std::cout << "Sample bathymetry with keys (" << _ncBathymetryKey << ", " << _ncBathymetryKeyX << ", " << _ncBathymetryKeyY << ")" << std::endl;
+
   int ncid = -1;
 
   if ((ncid = _netCDFReader.open(bathymetryFilePath)) == -1) {
@@ -112,9 +122,9 @@ void applications::exahype2::swe::TopologyParser::parseBathymetryFile(
 }
 
 
-void applications::exahype2::swe::TopologyParser::parseDisplacementFile(
-  const char* displacementFilePath
-) {
+void applications::exahype2::swe::TopologyParser::parseDisplacementFile(const char* displacementFilePath) {
+  std::cout << "Sample displacement with keys (" << _ncDisplacementKey << ", " << _ncDisplacementKeyX << ", " << _ncDisplacementKeyY << ")" << std::endl;
+
   int ncid = -1;
 
   if ((ncid = _netCDFReader.open(displacementFilePath)) == -1) {
@@ -156,8 +166,7 @@ void applications::exahype2::swe::TopologyParser::parseDisplacementFile(
   }
 
   // Read displacement
-  _displacement = new double
-    [_lengthOfDisplacementInX * _lengthOfDisplacementInY];
+  _displacement = new double[_lengthOfDisplacementInX * _lengthOfDisplacementInY];
   if (_netCDFReader.readVariable2D(ncid, _ncDisplacementKey, _displacement) == -1) {
     throw std::runtime_error("Displacement could not be read.");
   }
@@ -169,21 +178,20 @@ void applications::exahype2::swe::TopologyParser::parseDisplacementFile(
 }
 
 
-double applications::exahype2::swe::TopologyParser::sampleBathymetry(
-  double x,
-  double y
-) {
+double applications::exahype2::swe::TopologyParser::sampleBathymetry(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
     _minXCoordinateInBathymetry,
-    _maxXCoordinateInBathymetry
+    _maxXCoordinateInBathymetry,
+    _offsetOfSimulationDomainInX
   );
   const auto yCDF = transformIndexSimulationToCDFRange(
     y,
     _lengthOfSimulationDomainInY,
     _minYCoordinateInBathymetry,
-    _maxYCoordinateInBathymetry
+    _maxYCoordinateInBathymetry,
+    _offsetOfSimulationDomainInY
   );
 
   // No defined bathymetry
@@ -209,21 +217,20 @@ double applications::exahype2::swe::TopologyParser::sampleBathymetry(
 }
 
 
-double applications::exahype2::swe::TopologyParser::sampleDisplacement(
-  double x,
-  double y
-) {
+double applications::exahype2::swe::TopologyParser::sampleDisplacement(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
     _minXCoordinateInBathymetry,
-    _maxXCoordinateInBathymetry
+    _maxXCoordinateInBathymetry,
+    _offsetOfSimulationDomainInX
   );
   const auto yCDF = transformIndexSimulationToCDFRange(
     y,
     _lengthOfSimulationDomainInY,
     _minYCoordinateInBathymetry,
-    _maxYCoordinateInBathymetry
+    _maxYCoordinateInBathymetry,
+    _offsetOfSimulationDomainInY
   );
 
   // No defined displacement
@@ -253,11 +260,11 @@ double applications::exahype2::swe::TopologyParser::transformIndexSimulationToCD
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
   double minIndexOfCDFspaceInZDirection,
-  double maxIndexOfCDFspaceInZDirection
+  double maxIndexOfCDFspaceInZDirection,
+  double offsetOfSimulationSpaceInZDirection
 ) {
-  // TODO: with an offset defined, minZ should probably be adjusted.
-  const double minZ = 0.0;
-  const double maxZ = sizeOfSimulationSpaceInZDirection;
+  const double minZ = offsetOfSimulationSpaceInZDirection;
+  const double maxZ = sizeOfSimulationSpaceInZDirection + minZ;
 
   const double m = ((maxIndexOfCDFspaceInZDirection - minIndexOfCDFspaceInZDirection) / (maxZ - minZ));
 
@@ -288,7 +295,7 @@ int applications::exahype2::swe::TopologyParser::transformIndexCDFRangeToArray(
     // f(0) = b
     const double b = minXCoordinateInCDFMesh / dx;
     const double m = maxIndex / (maxXCoordinateInCDFMesh - minXCoordinateInCDFMesh);
-    xIndex = floor(m * xCoordinateInCDFMesh + b);
+    xIndex = std::floor(m * xCoordinateInCDFMesh + b);
   }
 
   {
@@ -298,7 +305,7 @@ int applications::exahype2::swe::TopologyParser::transformIndexCDFRangeToArray(
     // f(0) = b
     const double b = minYCoordinateInCDFMesh / dy;
     const double m = maxIndex / (maxYCoordinateInCDFMesh - minYCoordinateInCDFMesh);
-    yIndex = floor(m * yCoordinateInCDFMesh + b);
+    yIndex = std::floor(m * yCoordinateInCDFMesh + b);
   }
 
   return yIndex * lengthOfXDimensionInCDFMesh + xIndex;

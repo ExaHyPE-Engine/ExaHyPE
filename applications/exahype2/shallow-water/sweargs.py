@@ -8,7 +8,7 @@ import exahype2
 class SWEArgumentParser(argparse.ArgumentParser):
     def __init__(self):
         super(SWEArgumentParser, self).__init__(
-            description="ExaHyPE 2 - SWE Application Argument Parser"
+            description="ExaHyPE 2 - Shallow Water Application Argument Parser"
         )
 
         self.add_argument(
@@ -81,7 +81,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "-ns",
             "--number-of-snapshots",
             type=int,
-            default=10,
+            default=20,
             help="Number of snapshots (plots).",
         )
 
@@ -89,13 +89,21 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "-ps",
             "--patch-size",
             type=int,
+            default=16,
             help="Number of finite volumes per axis (dimension) per patch.",
+        )
+        self.add_argument(
+            "-dg",
+            "--dg-order",
+            type=int,
+            default=5,
+            help="Order of discretisation for Discontinuous Galerkin.",
         )
         self.add_argument(
             "-md",
             "--min-depth",
             type=float,
-            default=1,
+            default=4,
             help="Determines maximum size of a single cell on each axis.",
         )
         self.add_argument(
@@ -110,7 +118,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "--storage",
             type=str,
             choices=[e.name for e in exahype2.solvers.Storage],
-            default="Heap",
+            default="CallStack",
             help="The storage scheme to use."
         )
 
@@ -151,35 +159,15 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Number of threads per rank.",
         )
         self.add_argument(
-            "-fuse",
-            "--fuse",
+            "-stateless",
+            "--stateless",
             action="store_true",
             default=False,
-            help="Fuse enclave tasks on the CPU (requires an enclave solver).",
-        )
-        self.add_argument(
-            "-gpu",
-            "--gpu",
-            action="store_true",
-            default=False,
-            help="Fuse enclave tasks on the GPU (requires an enclave solver).",
-        )
-        self.add_argument(
-            "-timeout",
-            "--timeout",
-            type=int,
-            default=3600,
-            help="MPI timeout in seconds.",
+            help="Use stateless PDE terms (needed for GPU offloading).",
         )
         self.add_argument(
             "-fpe",
             "--fpe",
             action="store_true",
             help="Enable a floating-point exception handler.",
-        )
-
-        self.add_argument(
-            "--peano-dir",
-            default="../../../",
-            help="Peano directory",
         )

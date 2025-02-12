@@ -7,7 +7,7 @@ import peano4
 import exahype2
 
 parser = argparse.ArgumentParser(
-    description="ExaHyPE 2 - SWE Finite Volume Rusanov Kernel Benchmarking Script"
+    description="ExaHyPE 2 - Shallow Water Finite Volume Rusanov Kernel Benchmarking Script"
 )
 parser.add_argument(
     "-m",
@@ -160,6 +160,7 @@ project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True 
 benchmark_main_file = "../../kernel-benchmarks/KernelBenchmarksFVRusanov-main.cpp"
 os.system("cp {} KernelBenchmarksFVRusanov-main.cpp".format(benchmark_main_file))
 
+project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
 print(project)
