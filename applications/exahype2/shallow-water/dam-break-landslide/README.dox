@@ -1,6 +1,6 @@
 /**
 
-@page applications_exahype2_landslide Depth-averaged Shallow Water Equations with Voellmy and Coulomb Friction in Steep Topography
+@page applications_exahype2_shallow_water_dam_break_landslide Landslide Dam Break on an Inclined Plane
 
 In one spatial dimension, the equations takes the form
 
@@ -82,43 +82,24 @@ The derivatives in cell 5 are calculated as follows:
 
 Similarly, derivatives of @f$ h @f$ and @f$ v @f$ are calculated.
 
-# How to Build and Run
+# Masonry Sand
 
-For a general overview and all options on how to retrieve and configure the project, refer to @ref page_installation.
-We require the NetCDF library.
+## With Friction
 
-## Using CMake
+<p align="center">
+  <img src="dam-break-landslide-sand-theta_35.gif" />
+</p>
 
-    cd myPeanoDirectory
-    pip3 install -e .
-    mkdir build && cd build
-    CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp -DWITH_NETCDF=ON
-    make -j && make test
-    cd ../applications/exahype2/landslide/scenario/
-    python3 scenario.py
-    ./Landslide.Release
+## Without Friction
 
-## Using Automake
+<p align="center">
+  <img src="dam-break-landslide-sand-zero-friction-theta_35.gif" />
+</p>
 
-    cd myPeanoDirectory
-    pip3 install -e .
-    export NETCDF_INCLUDE_DIR=$(pkg-config --cflags-only-I netcdf)
-    export NETCDF_LIBRARY_DIR=$(pkg-config --libs-only-L --libs-only-l netcdf)
-    CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp --with-netcdf CXXFLAGS="-std=c++20 -O3 -fopenmp -Wno-attributes $NETCDF_INCLUDE_DIR" LDFLAGS="-fopenmp $NETCDF_LIBRARY_DIR"
-    make -j && make check
-    cd applications/exahype2/landslide/scenario/
-    python3 scenario.py
-    ./Landslide.Release
+# Carborundum
 
-Where `CC=gcc CXX=g++` can be any set of compilers.
-
-# Visualise the Simulation Output
-
-    python3 myPeanoDirectory/python/peano4/visualisation/render.py solution/solution-Landslide.peano-patch-file
-
-# Scenarios
-
-\li \subpage applications_exahype2_landslide_inclined_plane
-\li \subpage applications_exahype2_landslide_tafjord
+<p align="center">
+  <img src="dam-break-landslide-carborundum-theta_35.gif" />
+</p>
 
 */

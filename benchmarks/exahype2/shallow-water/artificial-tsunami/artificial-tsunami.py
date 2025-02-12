@@ -125,6 +125,7 @@ project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mod
 project = project.generate_Peano4_project(verbose=True)
 project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
+project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
 print(project)

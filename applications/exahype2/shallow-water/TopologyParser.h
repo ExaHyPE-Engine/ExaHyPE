@@ -30,6 +30,8 @@ private:
 
   double _lengthOfSimulationDomainInX = -1;
   double _lengthOfSimulationDomainInY = -1;
+  double _offsetOfSimulationDomainInX = -1;
+  double _offsetOfSimulationDomainInY = -1;
 
   double _minXCoordinateInBathymetry = 1;
   double _minYCoordinateInBathymetry = 1;
@@ -54,7 +56,8 @@ private:
     double coordinateOfDimensionZInSimulationSpace,
     double sizeOfSimulationSpaceInZDirection,
     double minIndexOfCDFspaceInZDirection,
-    double maxIndexOfCDFspaceInZDirection
+    double maxIndexOfCDFspaceInZDirection,
+    double offsetOfSimulationSpaceInZDirection
   );
 
   /**
@@ -78,8 +81,10 @@ public:
   TopologyParser(
     const char* bathymetryFilePath,
     const char* displacementFilePath,
-    double      lengthOfSimulationDomainInY,
     double      lengthOfSimulationDomainInX,
+    double      lengthOfSimulationDomainInY,
+    double      offsetOfSimulationDomainInX,
+    double      offsetOfSimulationDomainInY,
     const char* ncBathymetryKey    = "z",
     const char* ncBathymetryKeyX   = "x",
     const char* ncBathymetryKeyY   = "y",
@@ -90,8 +95,10 @@ public:
 
   TopologyParser(
     const char* bathymetryFilePath,
-    double      lengthOfSimulationDomainInY,
     double      lengthOfSimulationDomainInX,
+    double      lengthOfSimulationDomainInY,
+    double      offsetOfSimulationDomainInX,
+    double      offsetOfSimulationDomainInY,
     const char* ncBathymetryKey  = "z",
     const char* ncBathymetryKeyX = "x",
     const char* ncBathymetryKeyY = "y"

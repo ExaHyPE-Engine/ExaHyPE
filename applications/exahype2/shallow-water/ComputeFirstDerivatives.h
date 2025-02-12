@@ -8,7 +8,11 @@
 #include "tarch/la/Vector.h"
 #include "tarch/NonCriticalAssertions.h"
 
-namespace applications::exahype2::landslide {
+namespace applications::exahype2::swe {
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+
   /**
    * Partial derivative calculation:
    *
@@ -26,15 +30,17 @@ namespace applications::exahype2::landslide {
    *  derivatives, only central difference can be used with the variables
    *  defined above.
    */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
   template <int NumberOfDofs, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
   static inline GPUCallableMethod
-  void computePartialDerivatives(double* const __restrict__ oldQWithHalo) InlineMethod;
+  void computeFirstDerivatives(double* const __restrict__ oldQWithHalo) InlineMethod;
+
+  template <int NumberOfDofs, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
+  static inline GPUCallableMethod
+  void extrapolateHalo(double* const __restrict__ oldQWithHalo) InlineMethod;
+
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif
-} // namespace applications::exahype2::landslide
+} // namespace applications::exahype2::swe
 
-#include "ComputePartialDerivatives.cpph"
+#include "ComputeFirstDerivatives.cpph"
