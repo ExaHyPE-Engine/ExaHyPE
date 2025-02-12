@@ -47,7 +47,7 @@ void tarch::accelerator::Device::checkForMemoryLeaks() {
 
 #if PeanoDebug > 0
   for (; itr != end; ++itr) {
-    logWarning("checkForMemoryLeaks()", "Block @" << itr->first << " size: " << itr->second);
+    logDebug("checkForMemoryLeaks()", "Block @" << itr->first << " size: " << itr->second);
   }
 #endif
 }

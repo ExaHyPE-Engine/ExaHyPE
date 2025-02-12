@@ -1,64 +1,88 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "taskfusion.h"
-
-#include <list>
 
 #include "tarch/Assertions.h"
 
-#include "tarch/multicore/Lock.h"
-
+#include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 
-#include "tarch/logging/Log.h"
+#include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Task.h"
+#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
-#include "LogReadyTask.h"
-#include "ProcessReadyTask.h"
-
+#include <map>
+#include <list>
 
 namespace {
   /**
    * We map task types onto lists of tasks
    */
-  std::map<int, tarch::multicore::taskfusion::ReadyFusableTasks*>  pendingTasksThatCanBeFused;
-  tarch::multicore::BooleanSemaphore                               pendingTasksSemaphore;
+  std::map<int, std::list<tarch::multicore::Task*>> pendingTasksThatCanBeFused;
+  tarch::multicore::BooleanSemaphore                pendingTasksSemaphore;
+  static constexpr int FuseThreshold = -1;
 
   tarch::logging::Log _log("tarch::multicore::taskfusion");
 
   const std::string SubmitFusedTaskStatisticsIdentifier("tarch::multicore::taskfusion::submit-fused-tasks");
 }
 
+void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(Task* task) {
+  logging::Statistics::getInstance().inc(SubmitFusedTaskStatisticsIdentifier, 1, false, true);
 
-void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
-  Task*                        task,
-  const std::set<TaskNumber>&  inDependencies,
-  const TaskNumber&            taskNumber
-) {
-  ::tarch::logging::Statistics::getInstance().inc(SubmitFusedTaskStatisticsIdentifier, 1, false, true);
+  assertion1(task->getTaskType() >= 0, task->getTaskType());
 
-  assertion1(task->getTaskType()>=0, task->getTaskType());
+  Lock lock(pendingTasksSemaphore);
 
-  tarch::multicore::Lock lock(pendingTasksSemaphore);
-  if (pendingTasksThatCanBeFused.count(task->getTaskType())==0) {
-    pendingTasksThatCanBeFused.insert(
-      std::pair<int, ReadyFusableTasks*>(
-        task->getTaskType(),
-        new ReadyFusableTasks(task->getTaskType())
-      )
-    );
+  if (pendingTasksThatCanBeFused.count(task->getTaskType()) == 0) {
+    logInfo("translateFusableTaskIntoTaskSequence(...)", "insert new queue for task type " << task->getTaskType() << " into the sequence");
+    pendingTasksThatCanBeFused[task->getTaskType()] = std::list<Task*>();
   }
-  ReadyFusableTasks* taskQueue = pendingTasksThatCanBeFused.at( task->getTaskType() );
-  lock.free();
 
-  logDebug( "translateFusableTaskIntoTaskSequence(...)", "spawn two tasks around " << taskNumber );
+  // TODO: Move orchestration strategies into this namespace here
+  #ifdef UseTargetDART
+  int device = TARGETDART_ANY; // TODO: Use targetDART orchestration strategy
+  #else
+  int device = 0;
+  #endif
+  bool taskHasBeenFused = false;
+  if constexpr (FuseThreshold > 0) {
+    auto& taskList = pendingTasksThatCanBeFused[task->getTaskType()];
+    if (taskList.size() >= FuseThreshold) { // TODO: Use proper orchestration strategy here
+      task->fuse(taskList, device);
+      taskList.clear();
+      delete task;
+      taskHasBeenFused = true;
+    }
+  }
 
-  std::set<TaskNumber>  wrappedTaskNumber = {taskNumber};
-
-  Task* readyTask   = new LogReadyTask(task,taskQueue);
-  Task* processTask = new ProcessReadyTask(taskQueue);
-
-  readyTask->setPriority(task->getPriority());
-  processTask->setPriority(task->getPriority()/2);
-
-  tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
-  tarch::multicore::native::spawnTask( processTask, wrappedTaskNumber, taskNumber);
+  if (not taskHasBeenFused) pendingTasksThatCanBeFused[task->getTaskType()].push_back(task);
 }
 
+void tarch::multicore::taskfusion::processPendingTasksThatCanBeFused() {
+  #ifdef UseTargetDART
+  int device = TARGETDART_ANY; // TODO: Use targetDART orchestration strategy
+  #else
+  int device = 0;
+  #endif
+
+  logDebug("processPendingTasksThatCanBeFused(int)", "process pending tasks that can be fused on device " << device);
+
+  for (auto& [taskType, taskList] : pendingTasksThatCanBeFused) {
+    if (!taskList.empty()) {
+      // Get the first task and remove it from the list
+      Task* firstTask = taskList.front();
+      taskList.pop_front();
+
+      // Fuse the first task with the remaining tasks in the list
+      // The fuse also deletes every task in the list
+      firstTask->fuse(taskList, device);
+
+      // Clear the remaining tasks since they've been fused
+      taskList.clear(); // TODO: This should only be needed after the grid changes due to mesh refinement
+
+      delete firstTask;
+    }
+  }
+}

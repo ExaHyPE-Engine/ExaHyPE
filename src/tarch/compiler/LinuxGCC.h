@@ -1,4 +1,4 @@
-// Default variant of CompilerSpecificSettings.h for Clang on Linux.
+// Default variant of CompilerSpecificSettings.h for GCC on Linux.
 // For a detailed description of the semantics of the settings, please
 // consult LinuxIntel.h which is the most elaborate documentation.
 
@@ -28,4 +28,4 @@
 #define assert(...)
 #endif
 
-#define OpenMPTaskGroup
+#define OpenMPTaskLoop

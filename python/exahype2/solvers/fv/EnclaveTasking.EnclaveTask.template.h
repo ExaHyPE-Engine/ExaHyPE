@@ -35,7 +35,7 @@
  *
  * @author Tobias Weinzierl
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask
 #ifdef UseSmartMPI
 , public smartmpi::Task
 #endif
@@ -68,7 +68,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * This is a unique static id which we use both for task fusion and within
      * SmartMPI to distinguish different task types.
      */
-    static int                                _enclaveTaskTypeId;
+    static int _enclaveTaskTypeId;
 
   public:
     static int getEnclaveTaskTypeId();
@@ -102,7 +102,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * set. As applyKernelToCell() erases the
      * reconstructedPatch argument, we don't have to call a free() in the
      * task constructor of the functor that we pass to the enclave
-     * task (superclass). Likewise, the superclass EnclaveTask tasks
+     * task (superclass). Likewise, the superclass EnclaveTask takes
      * care of the allocation of the output data if no output (nullptr)
      * is specified.
      */
@@ -113,6 +113,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       double* __restrict__                        reconstructedPatch,
       double* __restrict__                        output
     );
+
+    ~{{CLASSNAME}}() override final = default;
 
     #ifdef UseSmartMPI
     bool isSmartMPITask() const;
@@ -126,9 +128,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward);
     #endif
 
-    {% if STATELESS_PDE_TERMS %}
-    virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host) override;
     virtual bool canFuse() const override;
+
+    {% if STATELESS_PDE_TERMS %}
+    virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = tarch::accelerator::Device::HostDevice) override;
     {% endif %}
 };
 

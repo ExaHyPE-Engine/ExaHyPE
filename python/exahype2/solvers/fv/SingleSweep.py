@@ -21,8 +21,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-      assertion2(tarch::la::greaterEquals(timeStamp, 0.0),    timeStamp, timeStepSize);
-      assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
+      assertion2(::tarch::la::greaterEquals(timeStamp, 0.0),    timeStamp, timeStepSize);
+      assertion2(::tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
       ::exahype2::fv::validatePatch(
         oldQWithHalo,
@@ -71,7 +71,11 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
       fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0));
+      repositories::{{SOLVER_INSTANCE}}.update(
+        newTimeStepSize,
+        timeStamp + timeStepSize,
+        marker.h()(0)
+      );
   """)
 
 

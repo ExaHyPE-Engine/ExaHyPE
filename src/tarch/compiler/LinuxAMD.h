@@ -28,7 +28,7 @@
 #define assert(...)
 #endif
 
-#define OpenMPTaskGroup
+#define OpenMPTaskLoop
 
 /**
 * AMD has not annotated their memset with offloading statements.

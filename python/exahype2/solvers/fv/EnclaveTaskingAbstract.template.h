@@ -34,11 +34,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
+
       Primary,
-      Secondary,
-      PlottingInitialCondition,
       PrimaryAfterGridInitialisation,
+      Secondary,
+
       Plotting,
+      PlottingAfterGridInitialisation,
+
       Suspended
     };
 
@@ -86,17 +89,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-      [[maybe_unused]] double                                       t
+      const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& volumeCentre,
+      const tarch::la::Vector<Dimensions, double>& volumeH,
+      double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     virtual void initialCondition(
-      [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-      [[maybe_unused]] bool                                         gridIsConstructed
+      double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& volumeCentre,
+      const tarch::la::Vector<Dimensions, double>& volumeH,
+      bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
@@ -108,12 +111,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-      [[maybe_unused]] double                                       t,
-      [[maybe_unused]] int                                          normal
+      const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& faceCentre,
+      const tarch::la::Vector<Dimensions, double>& volumeH,
+      double                                       t,
+      int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     {% endif %}
 
@@ -205,17 +208,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     void update(double timeStepSize, double timeStamp, double patchSize);
 
-    SolverState  getSolverState() const;
+    SolverState getSolverState() const;
 
-    //#if defined(GPUOffloadingOMP) // HS: note there is a compiler bug in llvm until that is resolved 
-    //#pragma omp declare target       // we need to keep these declarations outside the declare target construct and instead
-    //#endif                           // map them explicitly in Rusanov.h
-    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    //#if defined(GPUOffloadingOMP)
-    //#pragma omp end declare target
-    //#endif
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
     /**
      * It is important that we only plot after the secondary sweep.

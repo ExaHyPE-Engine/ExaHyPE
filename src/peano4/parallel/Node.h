@@ -36,7 +36,7 @@ namespace peano4 {
 class peano4::parallel::Node {
   public:
     static constexpr int        Terminate = -2;
-    static constexpr int        MaxSpacetreesPerRank = 32;
+    static constexpr int        MaxSpacetreesPerRank = 128;
 
     /**
      * Value for _currentProgramStep.

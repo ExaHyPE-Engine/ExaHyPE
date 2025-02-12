@@ -24,7 +24,7 @@ namespace {
   /**
    * See the documentation in tarch/accelerator/sycl/Device.h.
    */
-  sycl::queue  hostSyclQueue( sycl::cpu_selector_v );
+  sycl::queue hostSyclQueue(sycl::cpu_selector_v);
 }
 
 
@@ -53,15 +53,12 @@ tarch::multicore::Core::Core():
   _numberOfThreads = hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>();
   assertion(_numberOfThreads>0);
 
-  #if PeanoDebug > 0
   std::cout << "host (CPU) device queue: " << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
             << " with " << _numberOfThreads << " threads" << std::endl;
-  #endif
 }
 
 
-tarch::multicore::Core::~Core() {
-}
+tarch::multicore::Core::~Core() {}
 
 
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {

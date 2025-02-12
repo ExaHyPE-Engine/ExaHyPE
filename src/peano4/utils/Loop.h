@@ -491,9 +491,9 @@ std::string toString(peano4::utils::LoopPlacement);
 #endif
 
 
-#if defined(SharedOMP) and defined(OpenMPTaskGroup)
+#if defined(SharedOMP) and defined(OpenMPTaskLoop)
 #include "omp/Loop.h"
-#elif defined(SharedOMP) and !defined(OpenMPTaskGroup)
+#elif defined(SharedOMP) and !defined(OpenMPTaskLoop)
 #include "omp/LoopWithoutTaskLoop.h"
 #elif defined(SharedTBB)
 #include "tbb/Loop.h"
