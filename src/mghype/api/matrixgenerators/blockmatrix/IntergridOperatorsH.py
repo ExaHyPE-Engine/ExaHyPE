@@ -32,5 +32,3 @@ class IntergridOperatorsH:
 
 if __name__ == "__main__":
     operators = IntergridOperatorsH(dim=2, refinement_order=1)
-    print(f'{operators.prolongation() = }')
-    print(f'{operators.restriction()  = }')
