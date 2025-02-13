@@ -10,7 +10,6 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 """)
 
-
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../..", help="Peano4 directory" )
@@ -77,7 +76,7 @@ solver = Solver_Type(
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
-  integration_points = [ float(i) / (args.poly_degree) for i in range(args.poly_degree+1) ],
+  integration_points = matrices.get_nodal_points_1d(),
   enable_plotting    = False,
   solver_includes    = """#include "{}/tests/multigrid/matrixfree/poisson/Scenario.h" """.format(args.peanodir)
 )
