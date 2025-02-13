@@ -48,6 +48,20 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
     """
 
     def __init__(self, dof_association_):
+        """!
+    
+        Create the aspect
+        
+        @param includes: C++ expression
+          Typically a full-blown set of include statements, but it can also 
+          hold preprocessor macros or similar.
+        
+        @param implementation_file_includes: C++ expression
+          If you add includes to the includes attribute, they are embedded into
+          the header. This can lead to cyclic dependencies. If you want the 
+          includes only in the implementation file, use this attribute instead.
+    
+        """
         super(MPIAndStorageAspect, self).__init__()
         self.dof_association = dof_association_
         self.merge_implementation = ""
@@ -88,6 +102,7 @@ class MPIAndStorageAspect(dastgen2.aspects.MPI):
             super(MPIAndStorageAspect, self).get_include()
             + """
 #include "tarch/la/Vector.h"
+#include "tarch/la/SmartPointerVector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/LoadStoreComputeFlag.h"
