@@ -47,7 +47,14 @@ class GaussLobatto(MatrixGenerator):
 
     r_press = self.poly_degree # polynomial order for p
     self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press)
-    #self.block_matrix = DGPoisson2dBlockMatrix(r_press)
+
+  def get_nodal_points_1d(self):
+    """
+    Get the nodal points in the interval [-1,1].
+    These are the nodes used for constructing the Lagrangian basis functions.
+    Note, that they might be different from the quadrature points used for integration.
+    """
+    return self.block_matrix.basis.nodal_points(self.poly_degree)
 
   def get_points1d(self):
     """!
@@ -61,7 +68,7 @@ class GaussLobatto(MatrixGenerator):
     We borrow the method from the wikipedia page.
     
     This routine returns the points in the interval [-1,1]. If you 
-    have to rescale them, use the 
+    have to rescale them, use get_points_unit_interval() instead.
     """
     # let p be the poly degree. Then p+1 is the number of points we aim for
     # So we gather the n'th polynomial Pn, then return [-1,1], as well as the roots
