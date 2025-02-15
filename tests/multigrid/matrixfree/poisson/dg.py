@@ -78,7 +78,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
-  integration_points = [ float(i) / (args.poly_degree) for i in range(args.poly_degree+1) ]
+  integration_points = matrices.get_nodal_points_1d()
 )
 
 #! [Instantiate solver]
