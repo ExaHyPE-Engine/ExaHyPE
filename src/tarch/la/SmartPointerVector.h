@@ -7,6 +7,7 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+#include <memory>
 #include <string>
 #include <bitset>
 #include <sstream>
