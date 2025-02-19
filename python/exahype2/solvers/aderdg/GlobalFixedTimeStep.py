@@ -57,15 +57,15 @@ class GlobalFixedTimeStep(SingleSweep):
 
     def set_implementation(
         self,
-        flux=PDETerms.None_Implementation,
-        ncp=PDETerms.None_Implementation,
-        eigenvalues=PDETerms.User_Defined_Implementation,
-        boundary_conditions=PDETerms.User_Defined_Implementation,
-        refinement_criterion=PDETerms.Empty_Implementation,
-        initial_conditions=PDETerms.User_Defined_Implementation,
-        source_term=PDETerms.None_Implementation,
+        flux=None,
+        ncp=None,
+        eigenvalues=None,
+        boundary_conditions=None,
+        refinement_criterion=None,
+        initial_conditions=None,
+        source_term=None,
         point_source=0,
-        material_parameters=PDETerms.None_Implementation,
+        material_parameters=None,
         additional_action_set_includes="",
         additional_user_includes="",
     ):

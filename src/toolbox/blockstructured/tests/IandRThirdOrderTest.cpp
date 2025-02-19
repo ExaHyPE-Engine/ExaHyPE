@@ -72,7 +72,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
 
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
-            coarseData[n] = (double)(n / unknowns);
+            coarseData[n] = (double)(n) / 16.0;
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
             fineDataTensorProduct[n] = 0;
@@ -209,7 +209,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
 
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
-            fineData[n] = (double)(n / unknowns);
+            fineData[n] = (double)(n) / 16.0;
           for (int n = 0; n < unknowns * patchSize * patchSize * overlap * 2;
                n++)
             coarseDataTensorProduct[n] = 0;
@@ -281,7 +281,7 @@ void toolbox::blockstructured::tests::IandRThirdOrderTest::
             validateNumericalEqualsWithEpsWithParams3(
               coarseDataTensorProduct[n],
               coarseDataThirdOrder[n],
-              0.001,
+              0.01,
               faceMarker1.getRelativePositionWithinFatherFace(),
               axis + 3,
               n

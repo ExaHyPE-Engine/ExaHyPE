@@ -1,12 +1,12 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole Single black hole test
+@page benchmarks_exahype2_ccz4_single_black_hole Solver coupling (Single Schwarzschild black hole)
 
 <!-- Add this one for href links to subitems -->
 @tableofcontents
 
 
-Benchmark which solves the single black hole described in a CCZ4 simulation. 
+Benchmark which solves the single black hole described in a ExaGRyPE simulation. 
 While the output is not particularly exciting (the simulation should yield a 
 stationary solution after a while), it is numerically challenging as we have
 sophisticated boundary condition effects, a singularity in the centre which 

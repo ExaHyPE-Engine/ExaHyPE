@@ -75,10 +75,8 @@ class Correction(AbstractADERDGActionSet):
 
       // Negative face
       if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
-
-        // If above a hanging face, the riemann fluxes have been received from the other side and are therefore
-        //   on that side.
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + 
+        // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value +
           (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getAboveHanging() ? 0 : fluxElementsPerFace);
 
         const int orientation = 0;
@@ -88,9 +86,7 @@ class Correction(AbstractADERDGActionSet):
 
       // Positive face
       if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).getIsHanging()) {
-
-        // If above a hanging face, the riemann fluxes have been received from the other side and are therefore
-        //   on that side.
+        // If above hanging face, the Riemann fluxes have been received from the other side and are therefore on that side.
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value +
           (fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getAboveHanging() ? fluxElementsPerFace : 0);
 
