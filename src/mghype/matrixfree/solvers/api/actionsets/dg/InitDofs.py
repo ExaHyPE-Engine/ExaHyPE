@@ -110,9 +110,13 @@ class InitDofs(ActionSet):
       break;
     case facedata::{{SOLVER_NAME}}::Type::Coarse:
     case facedata::{{SOLVER_NAME}}::Type::Undefined:
-      assertionMsg(false, "shhould not be called");
+      assertionMsg(false, "should not be called");
       break;
   }
+
+  fineGridFace{{SOLVER_NAME}}.setLProjection( 0.0 );
+  fineGridFace{{SOLVER_NAME}}.setRProjection( 0.0 );
+  fineGridFace{{SOLVER_NAME}}.setSolution( 0.0 );
   
   logTraceOutWith2Arguments("touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
