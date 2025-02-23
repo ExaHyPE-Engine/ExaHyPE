@@ -76,12 +76,19 @@
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/elastic/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
+.ExaHyPE2_ShallowWater:
+  parallel:
+    matrix:
+    - scenario: [circular-island, dam-break-landslide, oscillating-lake, radial-dam-break, three-mounds-channel]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py;"
+
 .ExaHyPE2_Kernels:
   parallel:
     matrix:
     - kernel: [euler, acoustic, elastic, advection]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks.py -e -fpe -m Release"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks.py -e -m Release"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
 
 .ExaHyPE2_SBH:

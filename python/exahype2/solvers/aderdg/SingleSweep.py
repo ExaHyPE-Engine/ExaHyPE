@@ -13,6 +13,7 @@ class SingleSweep(ADERDG):
         min_cell_h,
         max_cell_h,
         plot_grid_properties=False,
+        split_sweeps=False,
     ):
         super(SingleSweep, self).__init__(
             name,
@@ -29,7 +30,7 @@ class SingleSweep(ADERDG):
         # If turned on it turns the solver from a single sweep to a separate sweeps solver,
         #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
         #   this can be useful for debugging, or for some additional features such as limiting.
-        self._split_sweeps = False
+        self._split_sweeps = split_sweeps
 
         self.create_action_sets()
         self.create_data_structures()

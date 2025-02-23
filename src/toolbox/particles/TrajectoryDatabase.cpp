@@ -51,7 +51,7 @@ toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwo
   _maxPositionDelta(0.0),
   _numberOfDataPointsPerParticle(0),
   _deltaBetweenTwoDatabaseFlushes(growthBetweenTwoDatabaseFlushes),
-  _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : 0),
+  _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : growthBetweenTwoDatabaseFlushes),
   _clearDatabaseAfterFlush(clearDatabaseAfterFlush),
   _deltasAreRelative(deltasAreRelative),
   _rank(-1),

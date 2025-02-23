@@ -1,13 +1,13 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_gauge_wave CCZ4 Gauge wave test
+@page benchmarks_exahype2_ccz4_gauge_wave RKDG Solver (Gauge Wave)
 
 \tableofcontents
 
 
 Very simple benchmark with a time-invariant solution subject to a shift that we can use to assess the convergence order.
 
-The CCZ4 Gauge wave test is a relatively simple setup, where we employ a 
+The ExaGRyPE Gauge wave test is a relatively simple setup, where we employ a 
 regular mesh over the unit square. The computational domain is centered 
 around the origin of the coordinate system. It is supplemented with periodic boundary
 conditions all all sides. In theory, the wave we simulate should be a 
