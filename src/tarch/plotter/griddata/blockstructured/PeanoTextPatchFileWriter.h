@@ -8,16 +8,23 @@
 #include <fstream>
 #include <vector>
 
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <cctype>
+#include <filesystem>
+
 namespace tarch {
   namespace plotter {
     namespace griddata {
       namespace blockstructured {
         class PeanoTextPatchFileWriter;
+
+        int restartPreprocess(const std::string  fileName, double restarTime);
       }
     }
   }
 }
-
 
 /**
  * Plot Peano's mesh data in Peano's text file format

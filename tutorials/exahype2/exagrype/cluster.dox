@@ -1,0 +1,67 @@
+/**
+
+@page tutorials_exahype2_applications_exagrype_clusters Run ExaGRyPE on Clusters
+
+Using ExaGRyPE on clusters is straightforward in principle, the correct configure command will allow
+you run the code in parallel automatically. However, the module you need to load is usually different
+in name as the convention is not unified. We kindly encourage users to contribute to this page by
+sharing their setups if they have successfully run ExaGRyPE on their clusters.
+
+# Compiling on COSMA
+
+the suggest loading module and setup (before compiling the Peano kernel) when you use COSMA or DINE are
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
+export FLAVOUR_NOCONFLICT=1
+module load gsl
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~~
+
+# Compiling on Hamilton
+
+the suggest loading module when you use Hamilton are
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load intel/2023.2 intelmpi/2021.10
+module load python/3.10.8
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~~
+
+# SLURM script
+
+The following script gives an exmaple for submitting ExaGRyPE job to the cluster via SLURM system.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+#!/bin/bash -l
+
+#SBATCH -o %A.out
+#SBATCH -e %A.err
+#SBATCH -p bluefield1
+#SBATCH -A durham
+#SBATCH -t 24:00:00
+#SBATCH --ntasks-per-node=1
+#SBATCH --nodes=2
+#SBATCH -J ExaGRyPE
+
+echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+
+module purge
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
+export FLAVOUR_NOCONFLICT=1
+module load gsl
+
+export UCX_TLS=ud,sm,self
+
+export OMP_NUM_THREADS=32
+
+mpirun ./peano4_test
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+*/
+

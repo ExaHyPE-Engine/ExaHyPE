@@ -7,7 +7,7 @@
 
 #include "{{CLASSNAME}}.h"
 
-
+#include <algorithm>
 #include <cstring>
 
 

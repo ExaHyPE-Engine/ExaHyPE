@@ -58,6 +58,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType* gradQ = memory + getGradQShift();
   {% endif %}
 
+  // Assume dx[0] == dx[1] == dx[2]
+  assertionNumericalEquals(cellSize[0], cellSize[1]);
+  #if Dimensions == 3
+  assertionNumericalEquals(cellSize[0], cellSize[2]);
+  #endif
+
   const pCompType invDt = 1.0 / timeStepSize;
   const pCompType invDx = 1.0 / cellSize[0];
 
@@ -65,7 +71,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType dudxT_by_dx[{{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
 
   // 0: Precompute 1/dx * dudx_T.
-  // Assume dx[0] == dx[1] == dx[2]
   #ifdef SharedOMP
   #pragma omp simd aligned(dudxT_by_dx:{{ALIGNMENT}})
   #endif
