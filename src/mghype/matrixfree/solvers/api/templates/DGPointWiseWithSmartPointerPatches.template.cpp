@@ -17,14 +17,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initCell(
 ) {
 {{CUSTOM_INIT_CELL}}
 }
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initFace(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< FaceUnknownsSolution,   double >&  solution,
-  tarch::la::Vector< FaceUnknownsSolution,   double >&  projection
-) {
-  // @todo insert your code here. For most codes can stay empty
-}
-

@@ -9,7 +9,7 @@ import os
 import jinja2
 
 from .Solver import Solver
-from .actionsets.dg.InitDofs                                   import InitDofs
+from .actionsets.InitHigherOrderDofs                           import InitDofs
 from .actionsets.DGSolver.UpdateResidual                       import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
 from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution

@@ -91,12 +91,13 @@ build_mode = peano4.output.CompileMode.Release
 
 
 cube_size = 1.0
+max_iterations = 40
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_after_each_mesh_sweep       = False,
-  max_iterations                   = 5
+  max_iterations                   = max_iterations
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false)" )

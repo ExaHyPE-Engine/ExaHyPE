@@ -205,16 +205,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     ) {% if CUSTOM_INIT_CELL=="" %} = 0 {% endif %};
 
     /**
-     * Initialise a face degree of freedom
-     */
-    virtual void initFace(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
-      tarch::la::Vector< FaceUnknownsSolution,double >&    projection
-    );
-
-    /**
      * Initialise a cell degree of freedom
      * 
      */

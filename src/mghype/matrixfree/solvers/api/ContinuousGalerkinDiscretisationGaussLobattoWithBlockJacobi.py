@@ -7,7 +7,7 @@ import dastgen2
 import os
 
 from .Solver                                       import Solver
-from .actionsets.dg.InitDofs         import InitDofs
+from .actionsets.InitHigherOrderDofs         import InitDofs
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateCell       import UpdateCell
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateFacets     import UpdateFacets
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.ProjectResidualsAndDiagonalOntoFacets import ProjectResidualsAndDiagonalOntoFacets

@@ -80,16 +80,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       tarch::la::Vector< CellUnknowns, double >&  rhs
     ) = 0;
 
-    /**
-     * Initialise a face degree of freedom
-     */
-    virtual void initFace(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
-      tarch::la::Vector< FaceUnknownsSolution,double >&    projection
-    ) = 0;
-
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h

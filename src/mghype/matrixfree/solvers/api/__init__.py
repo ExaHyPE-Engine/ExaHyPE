@@ -9,7 +9,6 @@ from .ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi   import Conti
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .DiscontinuousGalerkinWithoutFusion                        import DiscontinuousGalerkinWithoutFusion
 from .DGTaskingSolver                                           import DGTaskingSolver
-from .DGPointWiseWithSmartPointerPatches                        import DGPointWiseWithSmartPointerPatches
 from .DiscontinuousGalerkinWithFusionUnshifted                  import DiscontinuousGalerkinWithFusionUnshifted
 from .CollocatedMG                                              import CollocatedMG
 from .CollocatedMGSingleThreaded                                import CollocatedMGSingleThreaded

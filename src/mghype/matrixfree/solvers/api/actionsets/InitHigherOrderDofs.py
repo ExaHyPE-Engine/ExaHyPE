@@ -114,9 +114,9 @@ class InitDofs(ActionSet):
       break;
   }
 
-  fineGridFace{{SOLVER_NAME}}.setLProjection( 0.0 );
-  fineGridFace{{SOLVER_NAME}}.setRProjection( 0.0 );
-  fineGridFace{{SOLVER_NAME}}.setSolution( 0.0 );
+//  fineGridFace{{SOLVER_NAME}}.setLProjection( 0.0 );
+//  fineGridFace{{SOLVER_NAME}}.setRProjection( 0.0 );
+//  fineGridFace{{SOLVER_NAME}}.setSolution( 0.0 );
   
   logTraceOutWith2Arguments("touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
