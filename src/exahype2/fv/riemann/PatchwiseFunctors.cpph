@@ -8,6 +8,7 @@ template <
   int  NumberOfAuxiliaryVariables,
   bool EvaluateFlux,
   bool EvaluateNonconservativeProduct,
+  bool EvaluateEigenvalues,
   bool EvaluateSource,
   bool EvaluateRiemann,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
@@ -107,19 +108,21 @@ void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapFunctors(
           double>(ncpEnumerator.size(), tarch::MemoryLocation::Heap)
         : nullptr;
 
-  double* tempEigenvaluesX = tarch::allocateMemory<double>(
-    eigenvaluesEnumerator.size(),
-    tarch::MemoryLocation::Heap
-  );
-  double* tempEigenvaluesY = tarch::allocateMemory<double>(
-    eigenvaluesEnumerator.size(),
-    tarch::MemoryLocation::Heap
-  );
-  double* tempEigenvaluesZ
-    = (Dimensions == 3)
-        ? tarch::allocateMemory<
-          double>(eigenvaluesEnumerator.size(), tarch::MemoryLocation::Heap)
-        : nullptr;
+  double* tempEigenvaluesX = EvaluateEigenvalues
+    ? tarch::allocateMemory<double>(
+        eigenvaluesEnumerator.size(),
+        tarch::MemoryLocation::Heap
+    ) : nullptr;
+  double* tempEigenvaluesY = EvaluateEigenvalues
+    ? tarch::allocateMemory<double>(
+        eigenvaluesEnumerator.size(),
+        tarch::MemoryLocation::Heap
+    ) : nullptr;
+  double* tempEigenvaluesZ = (EvaluateEigenvalues and Dimensions == 3)
+    ? tarch::allocateMemory<double>(
+        eigenvaluesEnumerator.size(),
+        tarch::MemoryLocation::Heap
+    ) : nullptr;
 
   double* tempMaxEigenvalueX = tarch::allocateMemory<double>(
     maxEigenvalueEnumerator.size(),
@@ -220,9 +223,7 @@ void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapFunctors(
       endParallelDfor
     }
 
-    // ====================================================
-    // Compute damping due to max eigenvalue
-    // ====================================================
+    if constexpr (EvaluateEigenvalues) {
     parallelDforWithSchedulerInstructions(
       volume,
       internal::rangeOverVolumesPlusHaloInXDirection(
@@ -311,6 +312,7 @@ void exahype2::fv::riemann::timeStepWithRiemannPatchwiseHeapFunctors(
     }
     endParallelDfor
 #endif
+    }
 
       // ====================================================
       // Normal (conservative) flux

@@ -2,6 +2,8 @@
 
 #include "tarch/accelerator/accelerator.h"
 
+#include <algorithm>
+
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _dataSmartPointer(

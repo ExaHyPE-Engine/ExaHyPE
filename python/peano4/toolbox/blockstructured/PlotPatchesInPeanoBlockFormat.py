@@ -36,7 +36,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
                additional_includes="", 
                precision=3,
                select_dofs = None,
-               dataType="double"):
+               dataType="double",
+               restart_preprocess=False):
     """!
     
       Construct the block plotter
@@ -119,6 +120,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     self.d[ "PRECISION" ]        = precision
     self.d[ "DATATYPE"  ]        = dataType
     self.d[ "TIMESTAMP" ]        = time_stamp_evaluation
+
+    self._restart_preprocess       = restart_preprocess
 
 
   __Template_Constructor = """
@@ -238,13 +241,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   }
 """
 
-
   __Template_BeginTraversal_Generic = """
-  tarch::mpi::Lock lock( _semaphore );
-  
-  static int counter = -1;
-  counter++;
-
   std::ostringstream snapshotFileName;
   snapshotFileName << "{{FILENAME}}-" << counter;
 
@@ -265,19 +262,49 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   #endif
 """
 
+  __Template_BeginTraversal_Generic_Restart = """
+  tarch::mpi::Lock lock( _semaphore );
+  
+  static int counter = -1;
+  counter++;
+
+  static bool preprocessFinished=false;
+  if (not preprocessFinished){
+      if ( tarch::mpi::Rank::getInstance().isGlobalMaster()){
+            counter=tarch::plotter::griddata::blockstructured::restartPreprocess("{{FILENAME}}", CheckpointTimeStamp);
+      }
+      MPI_Bcast(&counter, 1, MPI_INT, 0, MPI_COMM_WORLD);
+      preprocessFinished=true;
+  }
+
+"""+__Template_BeginTraversal_Generic
+
+  __Template_BeginTraversal_Generic = """
+  tarch::mpi::Lock lock( _semaphore );
+  
+  static int counter = -1;
+  counter++;
+
+"""+__Template_BeginTraversal_Generic
 
 
   __Template_BeginTraversal_CellPlot = __Template_BeginTraversal_Generic + """
   _dataWriter = _writer->createCellDataWriter( "{{NAME}}", {{DOFS_PER_AXIS}}, {{PLOTTED_UNKNOWNS}}, "{{DESCRIPTION}}", "{{METADATA}}", mapping );
   _dataWriter->setPrecision( {{PRECISION}} );
 """
-
+  __Template_BeginTraversal_CellPlot_Restart = __Template_BeginTraversal_Generic_Restart + """
+  _dataWriter = _writer->createCellDataWriter( "{{NAME}}", {{DOFS_PER_AXIS}}, {{PLOTTED_UNKNOWNS}}, "{{DESCRIPTION}}", "{{METADATA}}", mapping );
+  _dataWriter->setPrecision( {{PRECISION}} );
+"""
 
   __Template_BeginTraversal_VertexPlot = __Template_BeginTraversal_Generic + """
   _dataWriter = _writer->createVertexDataWriter( "{{NAME}}", {{DOFS_PER_AXIS}}, {{PLOTTED_UNKNOWNS}}, "{{DESCRIPTION}}", "{{METADATA}}", mapping );
   _dataWriter->setPrecision( {{PRECISION}} );
 """
-
+  __Template_BeginTraversal_VertexPlot_Restart = __Template_BeginTraversal_Generic_Restart + """
+  _dataWriter = _writer->createVertexDataWriter( "{{NAME}}", {{DOFS_PER_AXIS}}, {{PLOTTED_UNKNOWNS}}, "{{DESCRIPTION}}", "{{METADATA}}", mapping );
+  _dataWriter->setPrecision( {{PRECISION}} );
+"""
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
@@ -285,10 +312,19 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       result = jinja2.Template( self.__Template_TouchCellFirstTime_CellPlot ).render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and not self._plot_cell_data:
       result = jinja2.Template( self.__Template_TouchCellFirstTime_VertexPlot ).render(**self.d)
+
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL and self._plot_cell_data:
-      result = jinja2.Template( self.__Template_BeginTraversal_CellPlot ).render(**self.d)             
+      if self._restart_preprocess:
+        result = jinja2.Template( self.__Template_BeginTraversal_CellPlot_Restart ).render(**self.d)
+      else:
+        result = jinja2.Template( self.__Template_BeginTraversal_CellPlot ).render(**self.d)
+
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL and not self._plot_cell_data:
-      result = jinja2.Template( self.__Template_BeginTraversal_VertexPlot ).render(**self.d)             
+      if self._restart_preprocess:
+        result = jinja2.Template( self.__Template_BeginTraversal_VertexPlot_Restart ).render(**self.d)
+      else:
+        result = jinja2.Template( self.__Template_BeginTraversal_VertexPlot ).render(**self.d)
+
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = jinja2.Template( self.__Template_EndTraversal ).render(**self.d)             
     return result

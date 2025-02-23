@@ -207,40 +207,7 @@ bool selectNextAlgorithmicStep() {
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
-  } else if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
-      if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
-        nextMinPlotTimeStamp += TimeInBetweenPlots;
-      }
-      if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
-        nextMaxPlotTimeStamp += TimeInBetweenPlots;
-      }
-
-      if (nextMinPlotTimeStamp < repositories::getMinTimeStamp()) {
-        logWarning(
-          "selectNextAlgorithmicStep()",
-          "code is asked to plot every dt="
-            << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMinTimeStamp() + TimeInBetweenPlots)
-        );
-        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
-      } else if (nextMaxPlotTimeStamp < repositories::getMaxTimeStamp()) {
-        logWarning(
-          "selectNextAlgorithmicStep()",
-          "code is asked to plot every dt="
-            << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenPlots)
-        );
-        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenPlots;
-      }
-
-      nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
-
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
-      );
-      haveJustWrittenSnapshot = true;
-      continueToSolve         = true;
-    } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
+  } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep)
       );

@@ -108,7 +108,7 @@ class StaticLimiting(object):
     def create_action_sets(self):
         self._action_set_save_new_cell_data = SaveNewCellData(self,
             guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
-                + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepping"
+                + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStep"
                 + " and " + "repositories::" + self.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
             transmit_cell_timestamps=True
         )
@@ -125,7 +125,7 @@ class StaticLimiting(object):
 
         self._action_set_copy_convert_and_project_data = CopyAndConvertPatch(self,
             regularToLimiterGuard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
-                + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepping"
+                + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStep"
                 + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()<=celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
                 + " and " + "repositories::" + self.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
             limiterToRegularGuard = ( "not marker.willBeRefined() and not marker.hasBeenRefined()"

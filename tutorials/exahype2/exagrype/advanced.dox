@@ -1,0 +1,170 @@
+/**
+
+@page tutorials_exahype2_applications_exagrype_advanced Advanced Usage of ExaGRyPE
+
+\tableofcontents
+<!-- Add this one for href links to subitems -->
+
+This section is designed to describe more user-defined options to those who are already familar to the basic 
+usage of ExaGRyPE. Users are recommend to read and understand the python/C++ scripts of the code before they
+continue here. 
+
+# Adding New Physics Scenarios
+For no-matter spacetime, different physics scenarios are represent by different initial
+conditions. The initial conditions of ExaGRyPE can be assigned via direct function, e.g., what we do for guage
+wave scenario in \c InitialValues.cpp
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void applications::exahype2::ccz4::newScenario(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double t
+) {
+  Q[0]  = 1.0;
+  Q[1]  = ...... 
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For more complicated initial conditions (e.g. black holes), users can introduce their own calculating library, 
+and include them in before generate and build the Peano project. We also recommend to define a corresponding 
+C++ flag to avoid unnessary include files when other scenario is picked.  
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+peano4_project.output.makefile.add_cpp_file( "MyICCalculators/Calculator1.cpp" )
+peano4_project.output.makefile.add_cpp_file( "MyICCalculators/Calculator2.cpp" )
+......
+peano4_project.output.makefile.add_CXX_flag( "-DIncludeMyCalculator" )
+......
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.......
+#ifdef IncludeMyCalculator
+#include "MyICCalculators/UseMyCalculator.h"
+#endif
+.......
+void applications::exahype2::ccz4::newComplicatedScenario(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double t
+) {
+  MyCalculator(Q, x, t);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Postprocessing on-the-fly
+
+Users can define postprocessing function if they wish to manipulate evolving variables during the 
+timestepping, or to extract more information from the system through the material variables (The material
+variables are additional variables the user can ask the code to output with the evolving system into 
+snapshots to inspection).
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MySolver._auxiliary_variables = 3 #set the number of material variables you need
+
+MySolver._my_user_includes += """
+  #include "../MyPostprocessingfunctions.h"
+"""
+
+MySolver._preprocess_reconstructed_patch = """
+	MyPostprocessingfunction(...);
+	.......
+"""
+
+MySolver.create_data_structures()
+MySolver.create_action_sets()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\c CCZ4.py and \c CCZ4Helper.py contain multiple postprocessing functions that users
+can take as examples to implement their own ones.
+
+# Particles as Probes and Tracers
+
+@image html probes.png
+
+ExaGRyPE can have particles inserted in the domain for multiple features. Those particles
+do not have physics interaction and act as data probes or object tracers. To add particles 
+to the domain, you can create a particle set using
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
+    particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0],[-8.0,-8.0,0]])
+init_action_set.descend_invocation_order = 0
+project.add_action_set_to_initialisation( init_action_set )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     
+
+besides specifying their coordinates directly, you can also import them from a file:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+#init_action_set = exahype2.tracer.InsertParticlesFromFile( 
+    particle_set=tracer_particles, filename="t-design.dat", scale_factor=abs(offset[0])*0.8)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+
+The next step is to associate the particles with your solver using the kernel you specify, for static
+data probes, the kernel only need to specify how you project neighbor field solution to your particle
+location, the most common one would be \c projectAllValuesOntoParticle_piecewiseLinear
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                       my_solver,
+                                                       project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
+                                                       )
+tracer_action_set.descend_invocation_order = my_solver._action_set_update_cell.descend_invocation_order+1
+project.add_action_set_to_timestepping(tracer_action_set)
+project.add_action_set_to_initialisation(tracer_action_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+By switching to a \c projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler kernel, you can ask 
+particle to follow certain vector field in the solution (or any variables as long as the total number equal
+to dimension number), this method can be used to trace the object flowing in the field, i.e., track the black
+holes moving in the mering binaries
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                       my_solver,
+                                                       project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler",
+                                                       projection_kernel_arguments="""marker,
+                                                       {{PATCH_SIZE}},
+                                                       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+                                                       fineGridCell{{SOLVER_NAME}}Q.value,
+                                                       fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+                                                       {17,18,19},
+                                                       {-1,-1,-1},
+                                                       *p
+                                                       """)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+The output of particles would contain two parts: the first part is the usual vtu files shows the locations of particles
+and variables recorded by them, the second part is the csv file that you can control with 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
+    particle_set=tracer_particles,
+    solver=my_solver,
+    filename=args.path+"Tracer-BHTracker",
+    number_of_entries_between_two_db_flushes=1000,
+    output_precision=8,
+    data_delta_between_two_snapsots=1e16,
+    position_delta_between_two_snapsots=1e16,
+    time_delta_between_two_snapsots=0.02,
+    clear_database_after_flush      = True
+    )
+dump_action_set.descend_invocation_order = my_solver._action_set_compute_final_linear_combination.descend_invocation_order+2
+project.add_action_set_to_timestepping(dump_action_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+Each particle ouputs its label, coordinates, time and recorded data as one-line entry each time, and if the dumping criteria
+is satisfied, available criteria including count of entries, data changes, position changes and time changes. If the recorded
+entires exceed the threshold your specified (1000 in the example above), the code will output a csv file for current data 
+and clear the data base. 
+
+We recommended to output csv file every now and them during the simulation, it will help to reduce memory footprint, and it is
+also safer, as a crash does not trigger automatically dumping, i.e., all particle data still in the memory will lost in this case.
+
+# Coupling Multiple Numerical Schemes (Solvers) 
+
+TODO
+
+*/
+

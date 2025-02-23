@@ -17,6 +17,7 @@
 #include "observers/CreateGridButPostponeRefinement.h"
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
+#include "observers/CheckpointSolution.h"
 #include "observers/TimeStep.h"
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
@@ -50,7 +51,7 @@ using namespace applications::exahype2::ccz4;
 tarch::logging::Log _log("::");
 
 
-tarch::timing::Measurement   timePerMeshSwepMeasurement;
+tarch::timing::Measurement   timePerMeshSweepMeasurement;
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
@@ -70,6 +71,8 @@ bool selectNextAlgorithmicStep() {
   static bool                                  gridBalanced                          = false;
   static double                                nextMaxPlotTimeStamp                  = FirstPlotTimeStamp;
   static double                                nextMinPlotTimeStamp                  = FirstPlotTimeStamp;
+  static double                                nextMaxCheckpointTimeStamp            = FirstCheckpointTimeStamp;
+  static double                                nextMinCheckpointTimeStamp            = FirstCheckpointTimeStamp;
   static bool                                  haveJustWrittenSnapshot               = false;
   static bool                                  haveReceivedNoncriticialAssertion     = false;
   static bool                                  addGridSweepWithoutGridRefinementNext = false;
@@ -155,20 +158,6 @@ bool selectNextAlgorithmicStep() {
 
     continueToSolve = true;
   } else {
-    //! [Additional mesh sweep case distinction]
-    #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
-    if (
-      repositories::isLastGridSweepOfTimeStep()
-      and
-      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
-      ) {
-        peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
-      );
-      continueToSolve         = true;
-    } else 
-    #endif
-    //! [Additional mesh sweep case distinction]
     if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += TimeInBetweenPlots;
@@ -199,6 +188,39 @@ bool selectNextAlgorithmicStep() {
 
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+      );
+      haveJustWrittenSnapshot = true;
+      continueToSolve         = true;
+    } else if (TimeInBetweenCheckpoints > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinCheckpointTimeStamp or repositories::getMaxTimeStamp() >= nextMaxCheckpointTimeStamp) and repositories::mayPlot()) {
+      if (repositories::getMinTimeStamp() >= nextMinCheckpointTimeStamp) {
+        nextMinCheckpointTimeStamp += TimeInBetweenCheckpoints;
+      }
+      if (repositories::getMaxTimeStamp() >= nextMaxCheckpointTimeStamp) {
+        nextMaxCheckpointTimeStamp += TimeInBetweenCheckpoints;
+      }
+
+      if (nextMinCheckpointTimeStamp < repositories::getMinTimeStamp()) {
+        logWarning(
+          "selectNextAlgorithmicStep()",
+          "code is asked to Checkpoint every dt="
+            << TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next Checkpoint to t=" << (repositories::getMinTimeStamp() + TimeInBetweenCheckpoints)
+        );
+        nextMinCheckpointTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenCheckpoints;
+      } else if (nextMaxCheckpointTimeStamp < repositories::getMaxTimeStamp()) {
+        logWarning(
+          "selectNextAlgorithmicStep()",
+          "code is asked to Checkpoint every dt="
+            << TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next Checkpoint to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenCheckpoints)
+        );
+        nextMaxCheckpointTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenCheckpoints;
+      }
+
+      nextMaxCheckpointTimeStamp = std::max(nextMaxCheckpointTimeStamp, nextMinCheckpointTimeStamp);
+
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CheckpointSolution)
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
@@ -238,7 +260,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName) << "\t" << applications::exahype2::ccz4::AbstractCCZ4::toString(repositories::instanceOfCCZ4.getSolverState()));
+  logInfo("step()", "Starting AlgorithmicStep [" << repositories::StepRepository::toString(stepName)<<"]" );
 
   static tarch::timing::Watch watch("::", "step()", false);
 
@@ -262,7 +284,7 @@ void step() {
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END();
+    OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
@@ -284,7 +306,7 @@ void step() {
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END();
+    OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
@@ -338,7 +360,7 @@ void step() {
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END();
+    OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridConstructionStep();
@@ -373,13 +395,15 @@ void step() {
     OTTER_TASK_START(step_task);
 
     observers::InitGrid observer;
+    observers::InitGrid::prepareTraversal();
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
+    observers::InitGrid::unprepareTraversal();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END();
+    OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishGridInitialisationStep();
@@ -399,13 +423,43 @@ void step() {
     OTTER_TASK_START(step_task);
 
     observers::PlotSolution observer;
+    observers::PlotSolution::prepareTraversal();
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
+    observers::PlotSolution::unprepareTraversal();
     plotMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END();
+    OTTER_TASK_END(step_task);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
+
+    repositories::finishPlottingStep();
+  } break;
+  case repositories::StepRepository::Steps::CheckpointSolution: {
+    tarch::logging::LogFilter::getInstance().switchProgramPhase("Checkpoint-solution");
+    const double minTimeStamp    = repositories::getMinTimeStamp();
+    const double maxTimeStamp    = repositories::getMaxTimeStamp();
+    const double minTimeStepSize = repositories::getMinTimeStepSize();
+    const double maxTimeStepSize = repositories::getMaxTimeStepSize();
+
+    OTTER_PHASE_SWITCH(otter::phase::plot);
+
+    repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
+
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_TASK_START(step_task);
+
+    observers::CheckpointSolution observer;
+    observers::CheckpointSolution::prepareTraversal();
+    watch.start();
+    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    watch.stop();
+    observers::CheckpointSolution::unprepareTraversal();
+    plotMeasurement.setValue(watch.getCalendarTime());
+
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishPlottingStep();
@@ -424,6 +478,7 @@ void step() {
     const double minMeshSize     = repositories::getMinMeshSize();
     const double maxMeshSize     = repositories::getMaxMeshSize();
 
+
     OTTER_PHASE_SWITCH(otter::phase::timestep);
 
     repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
@@ -432,13 +487,15 @@ void step() {
     OTTER_TASK_START(step_task);
 
     observers::TimeStep observer;
+    observers::TimeStep::prepareTraversal();
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
+    observers::TimeStep::unprepareTraversal();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
-    OTTER_TASK_END();
+    OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     repositories::finishTimeStep();
@@ -451,7 +508,9 @@ void step() {
    
       repositories::suspendSolversForOneGridSweep();
       observers::AdditionalMeshTraversal observer;
+      observers::AdditionalMeshTraversal::prepareTraversal();
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+      observers::AdditionalMeshTraversal::unprepareTraversal();
     }
     break;
   #endif
@@ -460,13 +519,19 @@ void step() {
     assertion(false);
     break;
   }
+
+#if PeanoDebug > 0
+#else
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+#endif
+  logInfo("step()", "Finishing [" << repositories::StepRepository::toString(stepName) << "] Current SolverState [" << AbstractCCZ4::toString(repositories::instanceOfCCZ4.getSolverState())<<"]" );
 }
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
-  const int ExitCodeInvalidArguments = 2;
-  const int ExitCodeInvalidBuild     = 3;
+  constexpr int ExitCodeSuccess          = 0;
+  constexpr int ExitCodeUnitTestsFailed  = 1;
+  constexpr int ExitCodeInvalidArguments = 2;
+  constexpr int ExitCodeInvalidBuild     = 3;
 
   static tarch::timing::Watch watch("::", "main()", false);
 
@@ -531,8 +596,8 @@ int main(int argc, char** argv) {
           step();
           watch.stop();
 
-          timePerMeshSwepMeasurement.setValue(watch.getCalendarTime());
-          logInfo("main()", "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timePerMeshSwepMeasurement.getValue() );
+          timePerMeshSweepMeasurement.setValue(watch.getCalendarTime());
+          logInfo("main()", "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timePerMeshSweepMeasurement.getValue() );
         }
 
         logInfo("main()", "terminated successfully");
@@ -552,7 +617,7 @@ int main(int argc, char** argv) {
         );
         logInfo(
           "main()",
-          "average time per mesh sweep: " << timePerMeshSwepMeasurement.getValue() << "\t" << timePerMeshSwepMeasurement.toString()
+          "average time per mesh sweep: " << timePerMeshSweepMeasurement.getValue() << "\t" << timePerMeshSweepMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {
