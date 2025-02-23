@@ -1,11 +1,11 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole_performance Single black hole performance test
+@page benchmarks_exahype2_ccz4_single_black_hole_performance Performance Test (Single Schwarzschild black hole)
 
 
-Benchmark which solves the static and non-spin single black hole described in a CCZ4 simulation. 
+Benchmark which solves the static and non-spin single black hole described in a ExaGRyPE simulation. 
 All extensions and fancy features are removed for simplicity. This benchmark is specially compacted 
-to be as close as possible to the corresponding application, so reconstruction via addtional step and
+to be as close as possible to the corresponding application, so reconstruction and
 AMR are enabled.
 This benchmark can be used as a starting point to understand the application and examine its performance 
 under various setup and optimization.

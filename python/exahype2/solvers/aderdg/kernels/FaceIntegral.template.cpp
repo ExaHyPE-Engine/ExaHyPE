@@ -35,13 +35,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
         #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
         #endif
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-          lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n]
-            -= Quadrature<cCompType>::iweights3[zy * {{NUMBER_OF_DOF}} + x] *
-              scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+          lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[zy * {{NUMBER_OF_DOF}} + x]
+            * scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         }
       }
     }
-  break;
+    break;
   case 1: // y-faces
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
@@ -51,14 +50,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
           #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
           #endif
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-            lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n]
-              -= Quadrature<cCompType>::iweights3[(z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x] *
-                scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+            lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[(z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x]
+              * scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
           }
         }
       }
     }
-  break;
+    break;
   case 2: // z-faces
     for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[yx];
@@ -67,13 +65,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
         #pragma omp simd aligned(lduh,FCoeff,lFhbnd:{{ALIGNMENT}})
         #endif
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-          lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_DATA}} + n]
-            -= Quadrature<cCompType>::iweights3[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx] *
-              scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+          lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx]
+            * scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         }
       }
     }
-  break;
+    break;
   }
 }
 

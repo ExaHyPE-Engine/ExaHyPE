@@ -271,6 +271,21 @@ ExaHyPE2_Elastic:
     - Build
   retry: 0
 
+ExaHyPE2_ShallowWater:
+  stage: Applications
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .ExaHyPE2_ShallowWater
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 ExaHyPE2_Kernels:
   stage: Benchmarks
   allow_failure: false

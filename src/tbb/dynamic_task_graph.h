@@ -38,13 +38,13 @@ namespace tbb {
  * these attempts will be successful.
  *
  * Therefore, this extension is always shipped with Peano, and it is
- * automatically built and added once you translate Peano with --with-tbb_extension.
- * The outcome will end
+ * automatically built and added once you translate Peano with
+ * ``--with-multithreading=tbb_extension``. The outcome will end
  * up in a library called tbb_extension.a, tbb_extension_debug.a or
  * tbb_extension_trace.a. This means that you have to add
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * --with-tbb LDFLAGS=-Lsrc/tb LIBS=-ltbb_extension
+ * --with-multithreading=tbb LDFLAGS=-Lsrc/tbb LIBS=-ltbb_extension
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * to your build. Peano's autotools configuration will do this for you.

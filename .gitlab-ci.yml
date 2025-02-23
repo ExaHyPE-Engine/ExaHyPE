@@ -5,10 +5,6 @@ stages:
   - Pages
   - BuildSystem
 
-# This one contains everything to publish the online documentation
-include:
-  - .continuous_integration/gitlab-pages.yml
-
 # We define a job within the BuildSystem stage. We use the include statement
 # so that this job does everything in the .yml file linked below.
 Automake:
@@ -26,3 +22,7 @@ CMake:
     include:
       - .continuous_integration/gitlab-cmake.yml
     strategy: depend
+
+# This one contains everything to publish the online documentation
+include:
+  - .continuous_integration/gitlab-pages.yml
