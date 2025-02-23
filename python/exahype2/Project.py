@@ -44,6 +44,8 @@ class Project(object):
         self._max_terminal_time = 0.0
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
+        self._first_checkpoint_time_stamp = 0.0
+        self._time_in_between_checkpoints = 0.0
         self._load_balancer_name      = ""
         self._load_balancer_arguments = ""
         self._log_filter_file         = "exahype.log-filter"
@@ -64,11 +66,18 @@ class Project(object):
         self._tracer_particles = []
         self._tracer_particle_sets = []
 
+        self._restart_from_checkpoint = False
+        self._restart_timestamp = 0
+        self._checkpoint_path="./"
+        self._solvers_file_collection=[]
+
+
         self.create_grid = peano4.solversteps.Step("CreateGrid", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
         self.create_grid_but_postpone_refinement = peano4.solversteps.Step("CreateGridButPostponeRefinement", False)
         self.create_grid_and_converge_lb = peano4.solversteps.Step("CreateGridAndConvergeLoadBalancing", False)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
+        self.checkpoint_solution = peano4.solversteps.Step("CheckpointSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
 
@@ -229,12 +238,49 @@ class Project(object):
             self._project.constants.export(
                 "MaxTerminalTime", "std::numeric_limits<double>::max()"
             )
-        self._project.constants.export(
-            "FirstPlotTimeStamp", str(self._first_plot_time_stamp)
-        )
+
+        if self._restart_from_checkpoint:
+            self._project.constants.export(
+                "FirstPlotTimeStamp", f"{self._restart_timestamp:.{5}g}"
+            )
+            self._project.constants.export(
+                "FirstCheckpointTimeStamp", f"{self._restart_timestamp:.{5}g}"
+            )
+        else:
+            self._project.constants.export(
+                "FirstPlotTimeStamp", str(self._first_plot_time_stamp)
+            )
+            self._project.constants.export(
+                "FirstCheckpointTimeStamp", str(self._first_checkpoint_time_stamp)
+            )
+
         self._project.constants.export(
             "TimeInBetweenPlots", str(self._time_in_between_plots)
         )
+
+        self._project.constants.export(
+            "TimeInBetweenCheckpoints", str(self._time_in_between_checkpoints)
+        )
+
+        if self._restart_from_checkpoint:
+            if self._solvers_file_collection==[] or len(self._solvers_file_collection)<len(self._solvers):
+                error_message = "No checkpoint found for all/part of solvers, please check your path and checkpoint files."
+                sys.stderr.write(error_message + "\n")
+                sys.exit(1)
+            else:
+                for i in range(len(self._solvers)):
+                    file_string = "{" + self._solvers_file_collection[i][0]
+                    for j in range(1, len(self._solvers_file_collection[i])):
+                        file_string += ","
+                        file_string += self._solvers_file_collection[i][j]
+                    file_string += "}"
+                    self._project.constants.export_const_with_type(
+                        "CheckpointFilesOf"+self._solvers[i]._name, file_string, "std::vector<std::string>"
+                    )
+        self._project.constants.export(
+            "CheckpointTimeStamp", str(self._restart_timestamp)
+        )    
+
         self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
 
@@ -300,6 +346,8 @@ thus appreciate any citation of the original release paper
         periodic_BC=[False, False, False],
         plotter_precision=5,
         max_end_time=0.0,
+        first_checkpoint_time_stamp=0.0,
+        time_in_between_checkpoints=0.0
     ):
         """
         ! Set the global simulation parameters
@@ -343,12 +391,58 @@ thus appreciate any citation of the original release paper
         self._min_terminal_time = min_end_time
         self._first_plot_time_stamp = first_plot_time_stamp
         self._time_in_between_plots = time_in_between_plots
+        self._first_checkpoint_time_stamp = first_checkpoint_time_stamp
+        self._time_in_between_checkpoints = time_in_between_checkpoints
+        self._project.constants.export(
+            "TimeInBetweenPlots", str(self._time_in_between_plots)
+        )
+        self._project.constants.export(
+            "TimeInBetweenCheckpoints", str(self._time_in_between_checkpoints)
+        )
+
         self._periodic_BC = []
         self._plotter_precision = plotter_precision
         for d in range(0, dimensions):
             self._periodic_BC.append(periodic_BC[d])
         if plotter_precision <= 0:
             raise Exception("Plotter precision has to be bigger than 0")
+
+    def set_restart_from_checkpoint(self, expected_restart_timestamp=0, checkpoint_path="./"):
+        '''
+        set checkpointing. The function accept the corresponding peano
+        patch file and create corresponding arrays recording the checkpoint
+        file names.
+
+        @param restart_timestamp float
+          targeting restart timestamp, the function will find the first 
+          checkpointed timestamp right after this input time. Thus the final 
+          restarting timestamp may not be equal to this specified time.
+
+        @param checkpoint_file string
+          the location of the checkpoint meta-file
+        '''
+
+        self._restart_from_checkpoint = True
+        self._restart_timestamp = expected_restart_timestamp
+        self._checkpoint_path = checkpoint_path
+
+        for solver in self._solvers:
+            checkpoint_meta_file=checkpoint_path+"checkpoint-"+solver._name+".peano-patch-file"
+            recording_current_snapshot=False
+            solver_file_collection=[]
+            with open(checkpoint_meta_file,'r') as file:
+                for line in file:
+                    if line.strip().split()==[]: continue
+                    if line.strip().split()[0] == "timestamp" and float(line.strip().split()[1])>=self._restart_timestamp:
+                        self._restart_timestamp = float(line.strip().split()[1])
+                        recording_current_snapshot=True
+                    if line.strip().split()[0] == "include" and recording_current_snapshot==True:
+                        solver_file_collection.append( line.strip().split()[1] )
+                    if line.strip().split()[0] == "end" and recording_current_snapshot==True:
+                        break
+            if recording_current_snapshot:
+                self._solvers_file_collection.append(solver_file_collection)
+
 
     def set_output_path(self, path):
         self._output_path = path
@@ -547,6 +641,7 @@ thus appreciate any citation of the original release paper
         self._project.datamodel.add_vertex(particles)
 
         self.plot_solution.use_vertex(particles)
+        self.checkpoint_solution.use_vertex(particles)
         self.init_grid.use_vertex(particles)
         self.perform_time_step.use_vertex(particles)
         self.create_grid.use_vertex(particles)
@@ -603,9 +698,13 @@ thus appreciate any citation of the original release paper
             )
             particle_plotter.descend_invocation_order = plot_descend_invocation_order_within_action_sets
             self.plot_solution.add_action_set(particle_plotter)
+            self.checkpoint_solution.add_action_set(particle_plotter)
 
         self.plot_solution.add_action_set(update_particle_association_action_set)
         self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
+
+        self.checkpoint_solution.add_action_set(update_particle_association_action_set)
+        self.checkpoint_solution.add_action_set(update_particle_parallel_state_action_set)
 
         self._tracer_particles.append(particle)
         self._tracer_particle_sets.append(particles)
@@ -632,6 +731,14 @@ thus appreciate any citation of the original release paper
 
         """
         self.plot_solution.add_action_set(action_set)
+
+    def add_action_set_to_checkpoint_solution(self, action_set):
+        """!
+
+        Add a new action set to the checkpointing
+
+        """
+        self.checkpoint_solution.add_action_set(action_set)
 
     def add_action_set_to_initialisation(self, action_set):
         self.init_grid.add_action_set(action_set)
@@ -676,6 +783,7 @@ thus appreciate any citation of the original release paper
         self._project.solversteps.add_step(self.create_grid_but_postpone_refinement)
         self._project.solversteps.add_step(self.create_grid_and_converge_lb)
         self._project.solversteps.add_step(self.plot_solution)
+        self._project.solversteps.add_step(self.checkpoint_solution)
         self._project.solversteps.add_step(self.perform_time_step)
 
         for solver in self._solvers:
@@ -688,6 +796,7 @@ thus appreciate any citation of the original release paper
 
             solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid)
             solver.add_use_data_statements_to_Peano4_solver_step(self.plot_solution)
+            solver.add_use_data_statements_to_Peano4_solver_step(self.checkpoint_solution)
             solver.add_use_data_statements_to_Peano4_solver_step(self.perform_time_step)
             solver.add_use_data_statements_to_Peano4_solver_step(self.init_grid)
             solver.add_use_data_statements_to_Peano4_solver_step(
@@ -700,7 +809,17 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_create_grid(
                 self.create_grid, evaluate_refinement_criterion=True
             )
-            solver.add_actions_to_init_grid(self.init_grid)
+
+            if self._restart_from_checkpoint: #avoid error when use solver without checkpoint feature
+                solver.add_actions_to_init_grid(self.init_grid, self._restart_from_checkpoint)
+                solver.add_actions_to_plot_solution(self.plot_solution, self._output_path, self._restart_from_checkpoint)
+                solver.add_actions_to_checkpoint_solution(self.checkpoint_solution, self._output_path, self._restart_from_checkpoint)
+            else:
+                solver.add_actions_to_init_grid(self.init_grid)
+                solver.add_actions_to_plot_solution(self.plot_solution, self._output_path)
+                if ( (self._time_in_between_checkpoints != 0) or (self._first_checkpoint_time_stamp != 0) ):
+                    solver.add_actions_to_checkpoint_solution(self.checkpoint_solution, self._output_path)
+
             solver.add_actions_to_create_grid(
                 self.create_grid_but_postpone_refinement,
                 evaluate_refinement_criterion=False,
@@ -708,7 +827,7 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_create_grid(
                 self.create_grid_and_converge_lb, evaluate_refinement_criterion=False
             )
-            solver.add_actions_to_plot_solution(self.plot_solution, self._output_path)
+            
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
             if self._abstract_overwrite==False:

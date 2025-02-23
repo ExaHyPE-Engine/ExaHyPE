@@ -8,20 +8,9 @@ import jinja2
 class PlotPatchesOverFacesInPeanoBlockFormat(ActionSet):
   """!
   
-  Simple patch plotter
-  
-  Very simple plotter that should be used in combination with Patches.
-  Patches with varying datatypes are supported via the "dataType" parameter,
-  but this defaults to doubles. This parameter should contain the C-style-
-  name of the type of the variable in the patch, e.g. float, double, etc.
-  This plotter works only for cell patches, i.e. patches associated with 
-  faces or vertices are not supported.
-  
-  At the moment, I can only plot one dataset (patch type) per plotter.
-  In theory, the underlying Peano plotter however could dump multiple
-  patches at once.
-  
-  Also, this dump expects incoming data to be AoS.
+  Plotter of face structure
+  @TODO have not been implemented yet
+
   """
   
   def __init__(self,

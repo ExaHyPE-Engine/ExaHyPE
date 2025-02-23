@@ -692,9 +692,9 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
           << dest
           << " prior to update: " << coarseGridValues[destLinearised * 5 + 0]
       );
-      assertion(
+      assertionNumericalEquals(
+        coarseGridValues[destLinearised * 5 + 0],
         coarseGridValues[destLinearised * 5 + 0]
-        == coarseGridValues[destLinearised * 5 + 0]
       );
 
       dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {

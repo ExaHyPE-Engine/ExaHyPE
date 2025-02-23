@@ -19,6 +19,7 @@
 #include "{{SUBDIRECTORY}}observers/CreateGridButPostponeRefinement.h"
 #include "{{SUBDIRECTORY}}observers/InitGrid.h"
 #include "{{SUBDIRECTORY}}observers/PlotSolution.h"
+#include "{{SUBDIRECTORY}}observers/CheckpointSolution.h"
 #include "{{SUBDIRECTORY}}observers/TimeStep.h"
 {% if SUBDIRECTORIES -%}
 {% for subdirectory in SUBDIRECTORIES %}
@@ -78,6 +79,8 @@ bool selectNextAlgorithmicStep() {
   static bool                                   gridBalanced                          = false;
   static double                                 nextMaxPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
   static double                                 nextMinPlotTimeStamp                  = {{SUBNAMESPACE}}FirstPlotTimeStamp;
+  static double                                 nextMaxCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
+  static double                                 nextMinCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static bool                                   haveJustWrittenSnapshot               = false;
   static bool                                   haveReceivedNoncriticialAssertion     = false;
   static bool                                   addGridSweepWithoutGridRefinementNext = false;
@@ -194,6 +197,39 @@ bool selectNextAlgorithmicStep() {
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
+    } else if ({{SUBNAMESPACE}}TimeInBetweenCheckpoints > 0.0 and {{SUBNAMESPACE}}repositories::getMinTimeStamp() < {{SUBNAMESPACE}}MinTerminalTime and {{SUBNAMESPACE}}repositories::getMaxTimeStamp() < {{SUBNAMESPACE}}MaxTerminalTime and ({{SUBNAMESPACE}}repositories::getMinTimeStamp() >= nextMinCheckpointTimeStamp or {{SUBNAMESPACE}}repositories::getMaxTimeStamp() >= nextMaxCheckpointTimeStamp) and {{SUBNAMESPACE}}repositories::mayPlot()) {
+      if ({{SUBNAMESPACE}}repositories::getMinTimeStamp() >= nextMinCheckpointTimeStamp) {
+        nextMinCheckpointTimeStamp += {{SUBNAMESPACE}}TimeInBetweenCheckpoints;
+      }
+      if ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() >= nextMaxCheckpointTimeStamp) {
+        nextMaxCheckpointTimeStamp += {{SUBNAMESPACE}}TimeInBetweenCheckpoints;
+      }
+
+      if (nextMinCheckpointTimeStamp < {{SUBNAMESPACE}}repositories::getMinTimeStamp()) {
+        logWarning(
+          "selectNextAlgorithmicStep()",
+          "code is asked to Checkpoint every dt="
+            << {{SUBNAMESPACE}}TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next Checkpoint to t=" << ({{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints)
+        );
+        nextMinCheckpointTimeStamp = {{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints;
+      } else if (nextMaxCheckpointTimeStamp < {{SUBNAMESPACE}}repositories::getMaxTimeStamp()) {
+        logWarning(
+          "selectNextAlgorithmicStep()",
+          "code is asked to Checkpoint every dt="
+            << {{SUBNAMESPACE}}TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
+            << "So postpone next Checkpoint to t=" << ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints)
+        );
+        nextMaxCheckpointTimeStamp = {{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints;
+      }
+
+      nextMaxCheckpointTimeStamp = std::max(nextMaxCheckpointTimeStamp, nextMinCheckpointTimeStamp);
+
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::CheckpointSolution)
+      );
+      haveJustWrittenSnapshot = true;
+      continueToSolve         = true;
     } else if ({{SUBNAMESPACE}}repositories::getMinTimeStamp() < {{SUBNAMESPACE}}MinTerminalTime and {{SUBNAMESPACE}}repositories::getMaxTimeStamp() < {{SUBNAMESPACE}}MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
         {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::TimeStep)
@@ -230,7 +266,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName));
+  logInfo("step()", "Starting AlgorithmicStep [" << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName)<<"]" );
 
   static tarch::timing::Watch watch("::", "step()", false);
 
@@ -398,6 +434,34 @@ void step() {
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     {{SUBNAMESPACE}}observers::PlotSolution::unprepareTraversal();
+    plotMeasurement.setValue(watch.getCalendarTime());
+
+    OTTER_TASK_WAIT_IMPLICIT(children);
+    OTTER_TASK_END(step_task);
+    OTTER_TASK_WAIT_IMPLICIT(descendants);
+
+    {{SUBNAMESPACE}}repositories::finishPlottingStep();
+  } break;
+  case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CheckpointSolution: {
+    tarch::logging::LogFilter::getInstance().switchProgramPhase("Checkpoint-solution");
+    const double minTimeStamp    = {{SUBNAMESPACE}}repositories::getMinTimeStamp();
+    const double maxTimeStamp    = {{SUBNAMESPACE}}repositories::getMaxTimeStamp();
+    const double minTimeStepSize = {{SUBNAMESPACE}}repositories::getMinTimeStepSize();
+    const double maxTimeStepSize = {{SUBNAMESPACE}}repositories::getMaxTimeStepSize();
+
+    OTTER_PHASE_SWITCH(otter::phase::plot);
+
+    {{SUBNAMESPACE}}repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
+
+    OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
+    OTTER_TASK_START(step_task);
+
+    {{SUBNAMESPACE}}observers::CheckpointSolution observer;
+    {{SUBNAMESPACE}}observers::CheckpointSolution::prepareTraversal();
+    watch.start();
+    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    watch.stop();
+    {{SUBNAMESPACE}}observers::CheckpointSolution::unprepareTraversal();
     plotMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);

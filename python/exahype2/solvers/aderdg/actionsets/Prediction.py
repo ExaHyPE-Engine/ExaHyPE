@@ -40,13 +40,14 @@ class Prediction(AbstractADERDGActionSet):
     constexpr int BasisElementsPerFace  = kernels::{{SOLVER_NAME}}::getBndFaceSize();
     constexpr int FluxElementsPerFace   = kernels::{{SOLVER_NAME}}::getBndFluxSize();
 
-    {{CREATE_PREDICTOR_ALLOCATIONS}}
-
+    auto* Q = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     auto* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value;
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), oldQ);
+    {{CREATE_PREDICTOR_ALLOCATIONS}}
+
+    std::copy_n(Q, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), oldQ);
 """
 
     _Template_TouchCellFirstTime_Core = """
@@ -287,7 +288,7 @@ class Prediction(AbstractADERDGActionSet):
     def __init__(self, solver, guard, on_hanging_cells=False):
         """
         guard: String (C++ code)
-          Predicate which controls whether this actionset should run
+          Predicate which controls whether this action set should run
         on_hanging_cells: bool
           Determines whether this is running on hanging cells or not,
           the actions on both differ

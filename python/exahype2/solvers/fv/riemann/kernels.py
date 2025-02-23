@@ -30,6 +30,7 @@ class KernelVariant(Enum):
 def create_compute_Riemann_kernel(
     flux_implementation,
     ncp_implementation,
+    eigenvalues_implementation,
     riemann_solver_implementation,
     source_term_implementation,
     compute_max_eigenvalue_of_next_time_step,
@@ -81,45 +82,46 @@ def create_compute_Riemann_kernel(
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if EIGENVALUES_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if RIEMANN_SOLVER_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
       {{TEMP_DATA_ENUMERATOR}}
     >(patchData,
   [&](
-    [[maybe_unused]] const double* __restrict__                    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  x,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  h,
-    [[maybe_unused]] double                                        t,
-    [[maybe_unused]] double                                        dt,
-    [[maybe_unused]] int                                           normal,
-    [[maybe_unused]] double* __restrict__                          F // F[{{NUMBER_OF_UNKNOWNS}}]
+    const double* __restrict__                    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const tarch::la::Vector<Dimensions, double>&  x,
+    const tarch::la::Vector<Dimensions, double>&  h,
+    double                                        t,
+    double                                        dt,
+    int                                           normal,
+    double* __restrict__                          F // F[{{NUMBER_OF_UNKNOWNS}}]
   )->void {
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.flux(Q, x, h, t, dt, normal, F);
     {% endif %}
   },
   [&](
-    [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-    [[maybe_unused]] double                                       t,
-    [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] int                                          normal,
-    [[maybe_unused]] double* __restrict__                         BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+    const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const double* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double* __restrict__                         BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
   )->void {
     {% if NCP_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
     {% endif %}
   },
   [&](
-    [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-    [[maybe_unused]] double                                       t,
-    [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
+    const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double                                       t,
+    double                                       dt,
+    double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
   )->void {
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q, x, h, t, dt, S);
@@ -134,23 +136,25 @@ def create_compute_Riemann_kernel(
     int                                           normal,
     double* __restrict__                          L
   )->void {
+    {% if EIGENVALUES_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.eigenvalues(Q, x, h, t, dt, normal, L);
+    {% endif %}
   },
   [&](
-    [[maybe_unused]] const double* __restrict__                    QR,
-    [[maybe_unused]] const double* __restrict__                    QL,
-    [[maybe_unused]] const double* __restrict__                    FR,
-    [[maybe_unused]] const double* __restrict__                    FL,
-    [[maybe_unused]] const double* __restrict__                    LR,
-    [[maybe_unused]] const double* __restrict__                    LL,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  xR,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  xL,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  h,
-    [[maybe_unused]] double                                        t,
-    [[maybe_unused]] double                                        dt,
-    [[maybe_unused]] int                                           normal,
-    [[maybe_unused]] double* __restrict__                          APDQ,
-    [[maybe_unused]] double* __restrict__                          AMDQ
+    const double* __restrict__                    QR,
+    const double* __restrict__                    QL,
+    const double* __restrict__                    FR,
+    const double* __restrict__                    FL,
+    const double* __restrict__                    LR,
+    const double* __restrict__                    LL,
+    const tarch::la::Vector<Dimensions, double>&  xR,
+    const tarch::la::Vector<Dimensions, double>&  xL,
+    const tarch::la::Vector<Dimensions, double>&  h,
+    double                                        t,
+    double                                        dt,
+    int                                           normal,
+    double* __restrict__                          APDQ,
+    double* __restrict__                          AMDQ
   )->double {
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     return repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);
@@ -167,6 +171,7 @@ def create_compute_Riemann_kernel(
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if EIGENVALUES_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if RIEMANN_SOLVER_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
@@ -182,6 +187,7 @@ def create_compute_Riemann_kernel(
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if EIGENVALUES_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if RIEMANN_SOLVER_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
@@ -197,6 +203,7 @@ def create_compute_Riemann_kernel(
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if EIGENVALUES_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if RIEMANN_SOLVER_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
@@ -212,6 +219,7 @@ def create_compute_Riemann_kernel(
     d = {}
     d["FLUX_IMPLEMENTATION"] = flux_implementation
     d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
     d["RIEMANN_SOLVER_IMPLEMENTATION"] = riemann_solver_implementation
     d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
     d["COMPUTE_MAX_EIGENVALUE"] = compute_max_eigenvalue_of_next_time_step
@@ -230,10 +238,6 @@ def create_abstract_solver_declarations(
     Template = jinja2.Template(
         """
   public:
-    {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
-    #error Eigenvalue implementation cannot be none
-    {% endif %}
-
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -247,17 +251,13 @@ def create_abstract_solver_declarations(
       int                                          normal,
       double* __restrict__                         L,
       Offloadable
-    )
-    //#if defined(GPUOffloadingSYCL)
-    //{}
-    //#else
-    ;
-    //#endif
+    );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
 
+    {% if EIGENVALUES_IMPLEMENTATION!="<none>" %}
     virtual void eigenvalues(
       const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>& x,
@@ -267,6 +267,7 @@ def create_abstract_solver_declarations(
       int                                          normal,
       double* __restrict__                         L
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final{% endif %};
+    {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(GPUOffloadingOMP)
@@ -465,7 +466,6 @@ def create_abstract_solver_definitions(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-//#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
   [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
@@ -478,7 +478,6 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
-//#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -502,7 +501,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-//#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
@@ -515,7 +513,6 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
-//#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif

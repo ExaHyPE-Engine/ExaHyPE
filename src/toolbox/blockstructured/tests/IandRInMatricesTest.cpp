@@ -926,9 +926,13 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
     faceSize,
     tarch::MemoryLocation::Heap
   );
+  for (int n = 0; n < faceSize; n++)
+            fineDataTensorProduct[n] = 0;
+  for (int n = 0; n < faceSize; n++)
+            fineDataMatrix[n] = 0;
 
   for (int n = 0; n < faceSize; n++)
-    coarseData[n] = static_cast<double>((n + 1) / unknowns);
+    coarseData[n] = static_cast<double>(n + 1) / 16.0;
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
@@ -1379,7 +1383,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
   );
 
   for (int n = 0; n < faceSize; n++)
-    fineData[n] = static_cast<double>((n + 1) / unknowns);
+    fineData[n] = static_cast<double>(n + 1) / 16.0;
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {

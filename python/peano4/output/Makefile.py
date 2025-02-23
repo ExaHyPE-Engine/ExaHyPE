@@ -181,7 +181,6 @@ the SISC paper
         self.d["CXXFLAGS"] += " -I" + path
         self.d["FCFLAGS"] += " -I" + path
 
-
     def add_library(self, library_name, library_path=""):
         """
         If you want to link against a library from Peano, feel free to use
@@ -192,11 +191,10 @@ the SISC paper
 
         A popular invocation including one of Peano's toolboxes is
 
-        project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
+        project.output.makefile.add_library("ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements")
         """
         if library_path != "":
             self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
-        #    self.d["LIBS"] += " -l" + library_name + " "
         self.d["LIBS"] += library_name + " "
 
     def set_mode(self, mode):
@@ -270,10 +268,78 @@ the SISC paper
 
         self.d["CONFIGUREPATH"] = directory
 
-        if 'PEANO_CMAKE_BUILD_DIR' in os.environ:
+        if 'PEANO_CMAKE_BUILD_DIR' in os.environ: # If this environment flag has been set, favour CMake
             self.d["CMAKE_BUILD_DIR"] = os.environ['PEANO_CMAKE_BUILD_DIR']
-        else:
-            self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
+        else: # If not, and an Automake configuration is present, favour this instead
+          try:
+              input_file = directory + "/config.log"
+              input = open(input_file, "r")
+              self.configure_call = ""
+              print("parse configure outcome " + input_file + " to extract configure settings")
+              MakefileDefined = [
+                  "Parallel",
+                  "SharedOMP",
+                  "SharedSYCL",
+                  "SharedCPP",
+              ]
+
+              for line in input:
+                  if "./configure" in line and self.configure_call == "":
+                      print("found the configure call info " + line)
+                      self.configure_call = line.strip()
+                  for define in MakefileDefined:
+                      if re.search("#define " + define, line):
+                          self.d[define] = "1"
+
+              input_file = directory + "/src/Makefile"
+              input = open(input_file, "r")
+              print("parse configure outcome " + input_file + " to extract compile settings")
+              MakefileConstants = [
+                  "CXXFLAGS_PEANO_2D_RELEASE",
+                  "CXXFLAGS_PEANO_2D_STATS",
+                  "CXXFLAGS_PEANO_2D_ASSERTS",
+                  "CXXFLAGS_PEANO_2D_TRACE",
+                  "CXXFLAGS_PEANO_2D_DEBUG",
+                  "CXXFLAGS_PEANO_3D_RELEASE",
+                  "CXXFLAGS_PEANO_3D_STATS",
+                  "CXXFLAGS_PEANO_3D_ASSERTS",
+                  "CXXFLAGS_PEANO_3D_TRACE",
+                  "CXXFLAGS_PEANO_3D_DEBUG",
+                  "LDFLAGS_PEANO_RELEASE",
+                  "LDFLAGS_PEANO_STATS",
+                  "LDFLAGS_PEANO_ASSERTS",
+                  "LDFLAGS_PEANO_TRACE",
+                  "LDFLAGS_PEANO_DEBUG",
+                  "LDADD_PEANO_2D_RELEASE",
+                  "LDADD_PEANO_2D_STATS",
+                  "LDADD_PEANO_2D_ASSERTS",
+                  "LDADD_PEANO_2D_TRACE",
+                  "LDADD_PEANO_2D_DEBUG",
+                  "LDADD_PEANO_3D_RELEASE",
+                  "LDADD_PEANO_3D_STATS",
+                  "LDADD_PEANO_3D_ASSERTS",
+                  "LDADD_PEANO_3D_TRACE",
+                  "LDADD_PEANO_3D_DEBUG",
+                  "CXX",
+                  "FC",
+                  "CXXFLAGS",
+                  "LDFLAGS",
+                  "LIBS",
+              ]
+
+              for line in input:
+                  for constant in MakefileConstants:
+                      if re.search(constant + " *=", line) and line.startswith(constant):
+                          try:
+                              flags = line.split("=", 1)[1].strip()
+                              #print("add " + constant + "=" + flags)
+                              self.d[constant] = flags
+                          except:
+                              print("Error in " + line + " for token " + constant)
+              return
+          except IOError:
+              self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
+              pass # If there is no Automake configuration we try CMake as last attempt
 
         if self.d["CMAKE_BUILD_DIR"] != "":
             cmake_cache_file = self.d["CMAKE_BUILD_DIR"] + "/CMakeCache.txt"
@@ -286,98 +352,13 @@ the SISC paper
                               key = key.split(":")[0].strip()
                               if key == "CMAKE_CXX_COMPILER":
                                   self.d["CXX"] = value.strip()
-                                  break
-            return
-
-        # Continue with Automake-only stuff
-        MakefileDefined = [
-            "Parallel",
-            "SharedOMP",
-            "SharedSYCL",
-            "SharedCPP",
-        ]
-
-        input_file = directory + "/config.log"
-        try:
-            input = open(input_file, "r")
-            self.configure_call = ""
-            print("parse configure outcome " + input_file + " to extract configure settings")
-            for line in input:
-                if "./configure" in line and self.configure_call == "":
-                    print("found the configure call info " + line)
-                    self.configure_call = line.strip()
-                for define in MakefileDefined:
-                    if re.search("#define " + define, line):
-                        self.d[define] = "1"
-        except IOError:
-            raise Exception(
-                """
-Error: if you call parse_configure_script_outcome(), please hand over directory where
-./configure had been called. You passed """
-                + directory
-                + """ and the script therefore
-did search for a file """
-                + input_file
-            )
-
-        input_file = directory + "/src/Makefile"
-        try:
-            input = open(input_file, "r")
-            print("parse configure outcome " + input_file + " to extract compile settings")
-
-            MakefileConstants = [
-                "CXXFLAGS_PEANO_2D_RELEASE",
-                "CXXFLAGS_PEANO_2D_STATS",
-                "CXXFLAGS_PEANO_2D_ASSERTS",
-                "CXXFLAGS_PEANO_2D_TRACE",
-                "CXXFLAGS_PEANO_2D_DEBUG",
-                "CXXFLAGS_PEANO_3D_RELEASE",
-                "CXXFLAGS_PEANO_3D_STATS",
-                "CXXFLAGS_PEANO_3D_ASSERTS",
-                "CXXFLAGS_PEANO_3D_TRACE",
-                "CXXFLAGS_PEANO_3D_DEBUG",
-                "LDFLAGS_PEANO_RELEASE",
-                "LDFLAGS_PEANO_STATS",
-                "LDFLAGS_PEANO_ASSERTS",
-                "LDFLAGS_PEANO_TRACE",
-                "LDFLAGS_PEANO_DEBUG",
-                "LDADD_PEANO_2D_RELEASE",
-                "LDADD_PEANO_2D_STATS",
-                "LDADD_PEANO_2D_ASSERTS",
-                "LDADD_PEANO_2D_TRACE",
-                "LDADD_PEANO_2D_DEBUG",
-                "LDADD_PEANO_3D_RELEASE",
-                "LDADD_PEANO_3D_STATS",
-                "LDADD_PEANO_3D_ASSERTS",
-                "LDADD_PEANO_3D_TRACE",
-                "LDADD_PEANO_3D_DEBUG",
-                "CXX",
-                "FC",
-                "CXXFLAGS",
-                "LDFLAGS",
-                "LIBS",
-            ]
-
-            for line in input:
-                for constant in MakefileConstants:
-                    if re.search(constant + " *=", line) and line.startswith(constant):
-                        try:
-                            flags = line.split("=", 1)[1].strip()
-                            #print("add " + constant + "=" + flags)
-                            self.d[constant] = flags
-                        except:
-                            print("Error in " + line + " for token " + constant)
-
-        except IOError:
-            raise Exception(
-                """
-Error: if you call parse_configure_script_outcome(), please hand over directory where
-./configure had been called. You passed """
-                + directory
-                + """ and the script therefore
-did search for a file """
-                + input_file
-            )
+                              if key == "CMAKE_Fortran_COMPILER":
+                                  self.d["FC"] = value.strip()
+        else: # Nothing has been configured so far
+              raise Exception("""
+  Error: if you call parse_configure_script_outcome(), please hand over directory where
+  ./configure had been called. You passed """ + directory
+                              )
 
     def add_h_file(self, filename, generated=False):
         """

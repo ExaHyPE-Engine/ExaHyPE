@@ -15,6 +15,7 @@ class AdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
 protected:
   double _maxEigenvalue;
   double _admissibleTimeStepSize;
+  double _previousTimeStepSize;
 public:
   void setMaxEigenvalue( double eigenvalue );  
   /**
@@ -45,7 +46,10 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 
 
   def create_abstract_solver_constructor_statements(self):
-    return "_admissibleTimeStepSize = 0.0;"
+    return """
+    _admissibleTimeStepSize = 0.0;
+    _previousTimeStepSize = 0.0;
+"""
   
   
   def create_compute_time_step_size(self):
