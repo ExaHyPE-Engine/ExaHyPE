@@ -91,7 +91,7 @@ build_mode = peano4.output.CompileMode.Release
 
 
 cube_size = 1.0
-max_iterations = 40
+max_iterations = 10
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],

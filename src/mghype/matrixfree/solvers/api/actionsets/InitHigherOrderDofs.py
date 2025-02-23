@@ -6,10 +6,12 @@ import peano4
 import jinja2
 
 
-class InitDofs(ActionSet):
+class InitHigherOrderDofs(ActionSet):
   """!
 
   This documentation is not written yet
+  
+  @todo Use attributes where possible -> delegate to C++ code base
   
   """
 
@@ -114,21 +116,26 @@ class InitDofs(ActionSet):
       break;
   }
 
-//  fineGridFace{{SOLVER_NAME}}.setLProjection( 0.0 );
-//  fineGridFace{{SOLVER_NAME}}.setRProjection( 0.0 );
-//  fineGridFace{{SOLVER_NAME}}.setSolution( 0.0 );
+  fineGridFace{{SOLVER_NAME}}.setLProjection( 0.0 );
+  fineGridFace{{SOLVER_NAME}}.setRProjection( 0.0 );
+  fineGridFace{{SOLVER_NAME}}.setSolution( 0.0 );
   
   logTraceOutWith2Arguments("touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
   
   def __init__(self,
-               solver):
+               solver
+               ):
     """!
     
     Configure the initialisation action set
     
+    @param solver: The underlying higher-order solver
+      We will use it to read out information such as the polynomial degree.
+      See remarks on template realisation.
+      
     """               
-    super( InitDofs, self ).__init__()
+    super( InitHigherOrderDofs, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

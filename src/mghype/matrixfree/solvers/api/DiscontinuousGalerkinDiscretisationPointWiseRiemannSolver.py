@@ -9,7 +9,7 @@ import os
 import jinja2
 
 from .Solver import Solver
-from .actionsets.InitHigherOrderDofs                           import InitDofs
+from .actionsets.InitHigherOrderDofs                           import InitHigherOrderDofs
 from .actionsets.DGSolver.UpdateResidual                       import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
 from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution
@@ -22,7 +22,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   Most efficient solver we have for this type of problem class
 
   You can find each of the action sets here:
-  solvers.api.actionsets.DGSolver.InitDofs.InitDofs
+  solvers.api.actionsets.DGSolver.InitHigherOrderDofs.InitHigherOrderDofs
 
   The text below specifies the semantics and behaviour of this matrix-free
   DG solver. A tutorial running step by step through the steps how to use
@@ -211,8 +211,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   So far we have three non-trivial action sets.
 
-  ###  InitDofs
-  Code for this is in actionsets.InitDofs. So far nothing happens, other than determining which cells/faces are 
+  ###  InitHigherOrderDofs
+  Code for this is in actionsets.InitHigherOrderDofs. So far nothing happens, other than determining which cells/faces are 
   on the boundary and putting in initial guesses for each cell and face dof. We pass over to the implementation
   cpp file which should be left in situ in the directory for the application.
 
@@ -277,7 +277,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               custom_init_cell = "",
               enable_plotting = True, # sometimes we want to disable standard plotting...,
               plot_predicate = "true", # enable custom plotting behaviour
-              solver_includes = ""
+              solver_includes = "",
+              use_smart_pointer = False
               ):
     """!
     
@@ -416,14 +417,14 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     # ignore vertex data
 
     # cell stuff
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell), use_smart_pointer=True ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell), use_smart_pointer=True ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell), use_smart_pointer=True ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
 
     # face stuff
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ), use_smart_pointer=True ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=True ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=True ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
     self._face_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_face_merge_method()
     self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes = """ 
 #include "../{}.h"
@@ -476,7 +477,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     """
     if self._custom_init_actionset is None:
-      observer.add_action_set( InitDofs(self) )
+      observer.add_action_set( InitHigherOrderDofs(self) )
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
 

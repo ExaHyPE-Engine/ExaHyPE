@@ -9,7 +9,7 @@ import os
 
 from .Solver import Solver
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-from .actionsets.InitHigherOrderDofs                            import InitDofs
+from .actionsets.InitHigherOrderDofs                            import InitHigherOrderDofs
 from .actionsets.DGSolver.UpdateResidual                        import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                      import ProjectOntoFaces
 from .actionsets.DGSolverWithFusionUnshifted.UpdateFaceSolution import UpdateFaceSolution

@@ -7,7 +7,7 @@ import dastgen2
 import os
 
 from .Solver                                       import Solver
-from .actionsets.InitHigherOrderDofs         import InitDofs
+from .actionsets.InitHigherOrderDofs         import InitHigherOrderDofs
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateCell       import UpdateCell
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.UpdateFacets     import UpdateFacets
 from .actionsets.ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi.ProjectResidualsAndDiagonalOntoFacets import ProjectResidualsAndDiagonalOntoFacets
@@ -136,7 +136,7 @@ class ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi(Solver):
     
     """
     if self._custom_init_actionset is None:
-      observer.add_action_set( InitDofs(self) )
+      observer.add_action_set( InitHigherOrderDofs(self) )
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
     pass
