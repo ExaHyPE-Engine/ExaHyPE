@@ -378,7 +378,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  assertion( mayPlot() );
+  assertion(mayPlot());
   _solverState = SolverState::Plotting;
 }
 
@@ -403,20 +403,29 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return _solverState==SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
+  return (
+    _solverState == SolverState::Suspended
+    or
+    _solverState == SolverState::GridInitialisation
+    or
+    isLastGridSweepOfTimeStep()
+  );
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
 {% if USE_SEPARATE_SWEEPS is sameas True %}
-  return _solverState==SolverState::InitialPrediction;
+  return _solverState == SolverState::InitialPrediction;
 {% else %}
-  return ( _solverState==SolverState::TimeStep
-        or _solverState==SolverState::InitialPrediction);
+  return (
+    _solverState == SolverState::TimeStep
+    or
+    _solverState == SolverState::InitialPrediction
+  );
 {% endif %}
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::TimeStep;
+  return _solverState == SolverState::TimeStep;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
