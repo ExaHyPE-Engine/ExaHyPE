@@ -241,6 +241,9 @@ void finishTimeStep() {
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.finishStep();
+  {% for item in TRACERS -%}
+  logInfo("finishTimeStep()", vertexdata::{{ item }}Set::printParticleStateStatistics());
+  {%- endfor %}
 
   #ifdef UseSmartMPI
   smartmpi::tick();

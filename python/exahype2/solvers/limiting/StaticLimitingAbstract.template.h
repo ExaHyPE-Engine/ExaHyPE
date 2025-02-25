@@ -38,7 +38,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
       LimiterStatusSpreadingToNeighbours,
-      TimeStepping,
+      TimeStep,
       Plotting,
       PlottingAfterGridInitialisation,
       Suspended

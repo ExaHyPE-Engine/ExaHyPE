@@ -2,8 +2,7 @@ FROM ubuntu:24.10
 
 LABEL peano-framework.org=http://www.peano-framework.org/
 
-ENV \
-    FORCE_UNSAFE_CONFIGURE=1 \
+ENV FORCE_UNSAFE_CONFIGURE=1 \
     DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     DISPLAY=host.docker.internal:0.0 \
@@ -74,7 +73,6 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-r
     libsystemd-dev \
     libcurl4-openssl-dev \
     libgsl-dev \
-    libyaml-cpp-dev \
     nodejs \
     libnuma-dev \
     libnuma1 \

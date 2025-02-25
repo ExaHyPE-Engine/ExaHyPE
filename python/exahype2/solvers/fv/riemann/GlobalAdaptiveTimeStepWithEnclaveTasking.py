@@ -25,9 +25,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         initial_conditions=PDETerms.User_Defined_Implementation,
         boundary_conditions=PDETerms.User_Defined_Implementation,
         refinement_criterion=PDETerms.Empty_Implementation,
-        flux=PDETerms.User_Defined_Implementation,
+        flux=PDETerms.None_Implementation,
         ncp=PDETerms.None_Implementation,
-        eigenvalues=PDETerms.User_Defined_Implementation,
+        eigenvalues=PDETerms.None_Implementation,
         riemann_solver=PDETerms.User_Defined_Implementation,
         source_term=PDETerms.None_Implementation,
         pde_terms_without_state=False,
@@ -110,6 +110,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         self._compute_kernel_call = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             evaluate_max_eigenvalue_of_next_time_step=True,
@@ -119,6 +120,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         self._compute_kernel_call_stateless = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             evaluate_max_eigenvalue_of_next_time_step=True,
@@ -128,6 +130,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         self._fused_compute_kernel_call_stateless_cpu = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             evaluate_max_eigenvalue_of_next_time_step=True,
@@ -137,6 +140,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
         self._fused_compute_kernel_call_stateless_gpu = create_Riemann_kernel(
             flux_implementation=self._flux_implementation,
             ncp_implementation=self._ncp_implementation,
+            eigenvalues_implementation=self._eigenvalues_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
             evaluate_max_eigenvalue_of_next_time_step=True,

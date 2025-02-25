@@ -4,7 +4,284 @@
 
 \tableofcontents
 
-@todo Yet to be written
+The ExaHyPE provide a checkpoint feature in its framework, and allow users to restart from any checkpoint,
+resuming their simulations. This feature is based on the peano-patch-file output (the default grid-plot file
+type of ExaHyPE), no support for particle data yet. 
+
+The checkpoint feature hijack the initial condition stage of ExaHyPE simulation and loads the domain grid data directly
+from existing checkpoint files, therefore, you can change running configuration (rank numbers, thread numbers, 
+etc) freely. On the other hand, the grid strucutre (AMR pattern) need to be identical. This limit will be 
+removed in the future version, when a intepolator for reading domain value is implemented. 
+
+# Using checkpointing and restarting
+
+Every solver in ExaHyPE manages its output seperately, and so does the checkpointing. Currently, the FV (Finite
+Volume) and RKFD (Runge-Kutta Finite Difference) solver have implemented checkpoint infrastructure. Enable 
+checkpointing with these two solvers is therefore quite easy. To ask the code checkpoint at certain timestamps, 
+you can pass arguments to \c set_global_simulation_parameters()
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+project = exahype2.Project( ["applications", "exahype2", "MyApplication"], "MyApplication", executable=exe)
+......
+project.set_global_simulation_parameters(
+  ......,
+  first_checkpoint_time_stamp=5.0,
+  time_in_between_checkpoints=3.0
+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The previous example will ask all solvers supporting checkpointing in this project to checkpoint every 3.0 codetime
+after code timestamp 5.0, i.e., dumping data of the whole domain at those timestamps. Once you have those checkpoint
+files ready, restarting from certain checkpoint can be set via
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.set_restart_from_checkpoint(expected_restart_timestamp=args.restart_timestamp, checkpoint_path=cpath) 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\c checkpoint_path is where your checkpoint files are stored, we recommend to keep the checkpoint files with your regular
+output files under the same folder to avoid unpredicted index file error. \c expected_restart_timestamp is the timestamp you would
+like simulation to resume from. Notice the actual restarting time will be the timestamp recorded by checkpoint files. The code 
+will try to restart from the very first checkpoint after your specified timestamp and is usually not exactly equal to your 
+input time.
+
+If you restart the simulation from non-latest checkpoint, the checkpoints after that one will be erase from index file as they may 
+be not valid anymore (e.g., due to potential change of running configuration or domain solution). The code will record new checkpoints
+after restarting. If you hope to restart from a checkpoint at later timestamp after current restarting, we recommend to duplicate
+the checkpoint files for your interested timestep(both index meta file, with a name of \c checkpoint-MySolver.peano-patch-file,
+and actual patch data files, with names of \c checkpoint-MySolver-X[-rank-Y].peano-patch-file) and use them seperately.
+
+# Add Checkpoint Feature to a Solver
+
+Adding the checkpoint feature to a solver involves two steps: introduce a new checkpoint stage in algorithm steps, and adjust the initial
+condition stage to restart from checkpoints.
+
+## New Checkpoint Stage
+
+The checkpoint stage is actually another plot solution stage, but without any further postprocessing of spatial or solution filter. The whole
+domain data will be dumped onto the disk in this stage. In your solver class, add a function responsible for action set in this new stage
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+ def add_actions_to_checkpoint_solution(self, step, output_path, restart_from_checkpoint=False):
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
+        self.add_entries_to_text_replacement_dictionary(d)
+
+        step.add_action_set(
+            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
+        )
+        step.add_action_set(self._action_set_update_face_label)
+        step.add_action_set(self._action_set_update_cell_label)
+
+        checkpoint_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "checkpoint-" + self._name,
+            patch=self._patch,
+            dataset_name=self._unknown_identifier(),
+            description=self._plot_description,
+            guard=self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            select_dofs=None,
+            restart_preprocess=restart_from_checkpoint
+        )
+        checkpoint_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
+        step.add_action_set(checkpoint_patches_action_set)
+
+        if self._plot_grid_properties:
+            checkpoint_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
+                filename=output_path + "grid-" + self._name,
+                cell_unknown=None,
+                guard=self._load_cell_data_default_guard(),
+                additional_includes="""
+#include "../repositories/SolverRepository.h"
+""",
+            )
+            checkpoint_grid_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
+            step.add_action_set(checkpoint_grid_action_set)
+
+        pass
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once \c first_checkpoint_time_stamp or \c time_in_between_checkpoints in \c project.set_global_simulation_parameters() above
+are set to be non-zero, the code will call this action set function to prepare the ploting code for checkpointing stage. The 
+new argument \c restart_from_checkpoint is required for pre-processing of the existing index meta file to avoid error, and 
+you will need them in your action set function for plotsolution as well (Once the restart is enabled this argument will be set
+True during function call)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+def add_actions_to_plot_solution(self, step, output_path, restart_from_checkpoint=False):
+......
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+    	......
+        restart_preprocess=restart_from_checkpoint
+    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## Tuning Initial Condtion Stage
+
+First we also need to add the \c restart_from_checkpoint argument to corresponding action set function to initial condtion stage:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+def add_actions_to_init_grid(self, step, restart_from_checkpoint=False)
+......
+    if restart_from_checkpoint:
+        self._action_set_initial_conditions = (
+            exahype2.solvers.rkfd.actionsets.InitialCondition(
+                self, self._store_cell_data_default_guard(), "true", restart_from_checkpoint=True)
+        )
+.......
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the initial condition action set, you need to add several pieces of code for restarting process, the first part is the file loading
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_body_of_prepareTraversal(self):
+    result = "\n"
+
+    if self._restart_from_checkpoint:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ]           = self.guard      
+      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed
+      d[ "CHECKPOINTFILELIST"] = "CheckpointFilesOf" + self._solver._name
+      result = jinja2.Template( self.get_template_for_restart_preprocessing() ).render(**d)
+
+    return result
+
+ def get_template_for_restart_preprocessing(self):
+    return """        
+      tarch::reader::readInCheckpointFiles(CheckpointFilesOf{{SOLVER_NAME}}, domainDataFromFiles, offsetIndex,
+                                             {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, Dimensions, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}});
+      #if Dimensions==2
+      domainPatchCount=offsetIndex.size()/2;
+      #elif Dimensions==3
+      domainPatchCount=offsetIndex.size()/3;
+      #endif
+"""
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and related data structure declaration and initialization:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_includes(self):
+    return """
+#include <functional>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+#include "exahype2/fd/PatchUtils.h"
+#include "tarch/reader/PeanoTextPatchFileReader.h"
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes 
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    if self._restart_from_checkpoint:
+      return """
+std::vector<double> """ + full_qualified_classname + """::domainDataFromFiles;
+std::vector<double> """ + full_qualified_classname + """::offsetIndex;
+int """ + full_qualified_classname + """::domainPatchCount=0;
+"""
+    else:
+      return """\n"""
+
+
+  def get_attributes(self):
+    if self._restart_from_checkpoint:
+      return """
+    static std::vector<double> domainDataFromFiles;
+    static std::vector<double> offsetIndex;
+    static int domainPatchCount;
+"""
+    else:
+      return """\n"""
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and finally the restarting kernel, where the code search for corresponding data for current cell according to coordinates.
+We implement an exact comparison of coodinates thus the domain structure must be identical, or there will be NaN in the domain.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+  def get_body_of_operation(self,operation_name):
+    result = ""
+
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ]           = self.guard      
+      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed
+      d[ "CHECKPOINTFILELIST"] = "CheckpointFilesOf" + self._solver._name
+      if self._restart_from_checkpoint:
+        result = jinja2.Template(self.get_template_for_restarting()).render(**d)
+      else:
+        result = jinja2.Template( self.TemplateInitialCondition ).render(**d)
+
+    return result
+
+
+  def get_template_for_restarting(self):
+    return """
+//loading-scheme: global-loading
+if ({{PREDICATE}}) { 
+  logTraceIn( "touchCellFirstTime(...)---RestartingFromCheckpoint" );
+  
+  #if Dimensions==2
+    tarch::la::Vector<2,double> offset;
+    const int totalCellCount={{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}*{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+  #elif Dimensions==3
+    tarch::la::Vector<3,double> offset;
+    const int totalCellCount={{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}*{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}*{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+  #endif
+
+  for (int i=0;i<domainPatchCount;i++) {
+    bool FoundCell = false;
+    #if Dimensions==2
+    offset[0]=offsetIndex[i*2+0];
+    offset[1]=offsetIndex[i*2+1];
+    #elif Dimensions==3
+    offset[0]=offsetIndex[i*3+0];
+    offset[1]=offsetIndex[i*3+1];
+    offset[2]=offsetIndex[i*3+2];
+    #endif
+
+    if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-5) ) { FoundCell=true; }
+    
+    if (FoundCell){
+      parallelDfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+        int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        for (int k=0; k<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); k++){
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalCellCount+index+k];
+        }
+      } endParallelDfor
+      break;
+    }
+  }
+
+  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(CheckpointTimeStamp);
+  fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+  logTraceOut( "touchCellFirstTime(...)---RestartingFromCheckpoint" );
+}
+"""
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Checkpoint Loading Strategy
+
+The current implemented strategy for loading checkpoint files is the \c global-loading. In this strategy, each rank loads
+all files into its memory and let cell search through it. It is the fastest approach but also expensive in memory. For large-scale
+simulation using dozens of nodes, this strategy may also leads to a memory error.
+
+To avoid this potential issue, users can try the other load strategy, called as \c local-loading. In this strategy, the rank only loads
+an index list of coorinates, pointing to the checkpoint subfiles they belong to. The cell first search the index list and load the corresponding
+subfile for reading its data. If the total size of already-opened files exceed a user-defiend limit, the oldest file will be removed from 
+memory to release space for new one. In principle, this strategy will only slightly slower than \c global-loading but significantly reduce
+the memory pressure. Unfortunately this strategy is still buggy and gives segmentation fault from time to time. Further tests are required. 
+Interested users are referred to the implemented code of \c local-loading in \c /src/tarch/reader/PeanoTextPatchFileReader.h, 
+\c /src/tarch/reader/PeanoTextPatchFileReader.cpp and \c /python/exahype2/solvers/rkfd/actionsets/InitialCondition.py. You can change load 
+strategy easily by change the argument in the action set.
+
 
 */
 

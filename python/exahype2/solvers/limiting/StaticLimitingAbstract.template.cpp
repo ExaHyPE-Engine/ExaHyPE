@@ -92,10 +92,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       break;
     case SolverState::LimiterStatusSpreadingToNeighbours:
       repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
-    case SolverState::TimeStepping:
+    case SolverState::TimeStep:
     case SolverState::Plotting:
     case SolverState::Suspended:
-      _solverState = SolverState::TimeStepping;
+      _solverState = SolverState::TimeStep;
       break;
   }
 
@@ -166,8 +166,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting-after-grid-initialisation";
     case SolverState::LimiterStatusSpreadingToNeighbours:
       return "limiter-status-spreading-to-neighbours";
-    case SolverState::TimeStepping:
-      return "timestepping";
+    case SolverState::TimeStep:
+      return "time-step";
     case SolverState::Plotting:
       return "plotting";
     case SolverState::Suspended:

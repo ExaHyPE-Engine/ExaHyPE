@@ -1040,7 +1040,7 @@ The finest mesh width of """
 """
 
 
-    def add_actions_to_init_grid(self, step):
+    def add_actions_to_init_grid(self, step, restart_from_checkpoint=False):
         """!
         Add all the action sets to init grid
 
@@ -1084,6 +1084,13 @@ The finest mesh width of """
             self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order
             < self._action_set_roll_over_update_of_faces.descend_invocation_order
         )
+
+        if restart_from_checkpoint:
+            self._action_set_initial_conditions = (
+                exahype2.solvers.fv.actionsets.InitialCondition(
+                    self, self._store_cell_data_default_guard(), "true", restart_from_checkpoint=True
+                )
+            )
 
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(
@@ -1132,7 +1139,7 @@ The finest mesh width of """
         self._plot_description = description
 
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step, output_path, restart_from_checkpoint=False):
         """!
         Add action sets to plot solution step
 
@@ -1178,6 +1185,7 @@ The finest mesh width of """
             precision="PlotterPrecision",
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             select_dofs=self.select_dofs_to_print,
+            restart_preprocess=restart_from_checkpoint
         )
         plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
@@ -1199,6 +1207,69 @@ The finest mesh width of """
             step.add_action_set(plot_grid_properties_action_set)
         pass
 
+    def add_actions_to_checkpoint_solution(self, step, output_path, restart_from_checkpoint=False):
+        """!
+        Add action sets to plot solution step
+
+        Consult the discussion in add_actions_to_init_grid() around the order
+        of the individual action sets.
+
+        It is important that we have the coupling/dynamic AMR part in here, as
+        there might be pending AMR refinement requests that now are realised.
+        For the same reason, we need the update of the face label and the update
+        of the cell label in here: The AMR might just propagate over into the
+        plotting, i.e. we might create new grid entities throughout the plot.
+        These entities (faces and cells) have to be initialised properly.
+        Otherwise, their un-initialised data will propagate through to the next
+        time step.
+
+        To make the restriction work, we have to project the solutions onto the
+        faces.
+        """
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
+        self.add_entries_to_text_replacement_dictionary(d)
+
+        step.add_action_set(
+            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
+        )
+        step.add_action_set(self._action_set_roll_over_update_of_faces)
+        step.add_action_set(self._action_set_update_face_label)
+        step.add_action_set(self._action_set_update_cell_label)
+        step.add_action_set(self._action_set_project_patch_onto_faces)
+        # step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+
+        plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "checkpoint-" + self._name,
+            patch=self._patch,
+            dataset_name=self._unknown_identifier(),
+            description=self._plot_description,
+            guard=self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            select_dofs=None,
+            restart_preprocess=restart_from_checkpoint
+        )
+        plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
+        step.add_action_set(plot_patches_action_set)
+
+        if self._plot_grid_properties:
+            plot_grid_properties_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
+                filename=output_path + "grid-" + self._name,
+                cell_unknown=None,
+                guard=self._load_cell_data_default_guard(),
+                additional_includes="""
+#include "../repositories/SolverRepository.h"
+""",
+            )
+            plot_grid_properties_action_set.descend_invocation_order = (
+                self._baseline_action_set_descend_invocation_order
+            )
+            step.add_action_set(plot_grid_properties_action_set)
+        pass
 
     def add_actions_to_perform_time_step(self, step):
         """!

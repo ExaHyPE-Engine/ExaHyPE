@@ -171,9 +171,14 @@ def get_body_of_Psi_Calc(patch_size, number_of_output_variable, so_flag):
     } 
 """
 
-def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables):
-	if scenario=="single-puncture":
-		return """
+def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables, restart_time=-1):
+  if restart_time>0:
+    timeStamp="CheckpointTimeStamp"
+  else:
+    timeStamp="-1.0"
+
+  if scenario=="single-puncture":
+    return """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * __restrict__                  Q,
@@ -210,11 +215,12 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables):
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        """+timeStamp+"""
       );
 """
-	else:
-		return """
+  else:
+    return """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * __restrict__                  Q,
@@ -248,6 +254,7 @@ def get_body_of_SommerfeldCondition(scenario, unknowns, auxiliary_variables):
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        """+timeStamp+"""
       );
 """
