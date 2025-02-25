@@ -13,6 +13,17 @@ res_norm = [] # residual norms after each DG iteration in the formal [|r|_max, |
 with open('out.txt', 'r') as file:
     lines = file.readlines()
 
+# Work out mesh size
+n_mesh = None
+for line in lines:
+    match = re.search(r'h_min=([\d.]+)', line)
+    if match:
+        n_mesh = round(1.0/float(match.group(1))) # n_mesh = 3 for 3x3 mesh
+        print(f"Mesh size detected: {n_mesh}x{n_mesh}")
+        break
+if n_mesh is None:
+    print("Mesh size not detected")
+
 # Check each line in the output file for "DG smoother step, disable CG solver"
 for i in range(len(lines)):
     if "run Solve" in lines[i]:
@@ -33,7 +44,12 @@ plt.yscale('log')
 plt.xlabel('DG iterations')
 plt.ylabel('|r|_max')
 
-
 plt.show()
 
-#np.save('../../../../../data***/***.npy', res_norm_array)
+degree = input("Enter polynomial degree: ")
+
+dir = '../../../../../PeanoData/'
+file_name = f'res_norm_dg_mesh_{n_mesh}_p_{degree}.npy'
+
+np.save(f"{dir}{file_name}", res_norm_array)
+print(f"Saved residual norms to {dir}{file_name}")

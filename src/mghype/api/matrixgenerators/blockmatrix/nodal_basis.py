@@ -26,6 +26,29 @@ class NodalBasis(ABC):
 class NodalBasisGaussLegendre(NodalBasis):
     """Concrete implementation for Gauss Legendre nodes"""
 
+    def get_Gauss_Lobatto_nodes(self, poly_degree):
+        """Return Gauss-Lobatto nodes coordinates in [-1, 1] for given polynomial degree"""
+
+        if poly_degree == 0:
+            return np.asarray([0.0])
+        elif poly_degree == 1:
+            return np.asarray([-1.0, 1.0])
+        elif poly_degree == 2:
+            return np.asarray([-1.0, 0.0, 1.0])
+        elif poly_degree == 3:
+            return np.asarray([-1.0, -0.4472135954999579, 0.4472135954999579, 1.0])
+        elif poly_degree == 4:
+            return np.asarray([-1.0, -0.6546536707079771, 0.0, 0.6546536707079771, 1.0])
+        elif poly_degree == 5:
+            return np.asarray([-1.0, -0.7650553239294647, -0.28523151648064504, 0.28523151648064504, 0.7650553239294647, 1.0])
+        elif poly_degree == 6:
+            return np.asarray([-1.0, -0.8302238962785669, -0.4688487934707142, 0.0, 0.4688487934707142, 0.8302238962785669, 1.0])
+        elif poly_degree == 7:
+            return np.asarray([-1.0, -0.87174014850960668, -0.59170018143314218, -0.20929921790247885, 0.20929921790247885, 0.59170018143314218, 0.87174014850960668, 1.0])
+        
+        else:
+            raise ValueError(f"Add Gauss-Lobatto nodes for polynomial degree {poly_degree}")
+
     def nodal_points(self, degree):
         """Set nodal points xi_0, xi_1, ..., xi_p"""
 
@@ -42,21 +65,27 @@ class NodalBasisGaussLegendre(NodalBasis):
         # roots of deriv(P_{n-1}), where P_{n-1} is the Legendre polynomial and n is the number of nodal points; 
         # plus endpoints of the interval
 
-        if degree > 0:
-            poly = legendre(degree) # "n-1" = (degree + 1) - 1
-            deriv = poly.deriv()
-            inter_points = np.sort(np.roots(deriv)) # interior nodal points 
+        # if degree > 0:
+        #     poly = legendre(degree) # "n-1" = (degree + 1) - 1
+        #     deriv = poly.deriv()
+        #     inter_points = np.sort(np.roots(deriv)) # interior nodal points
+        #     if degree == 3:
+        #          inter_points = np.array([-0.4472135954999579, 0.4472135954999579])
 
-            # result = [-1, inter_points, +1]
-            result = np.zeros(len(inter_points) + 2)
-            result[1:-1] = inter_points
-            result[0]  = -1.0
-            result[-1] = +1.0
+        #     # result = [-1, inter_points, +1]
+        #     result = np.zeros(len(inter_points) + 2)
+        #     result[1:-1] = inter_points
+        #     result[0]  = -1.0
+        #     result[-1] = +1.0
 
-        elif degree == 0:
-            result = np.asarray([0.0])
+        # elif degree == 0:
+        #     result = np.asarray([0.0])
 
-        return result
+        return self.get_Gauss_Lobatto_nodes(degree)
+
+        #input(f"Nodal points: {np.array2string(result, precision=20, separator=', ', formatter={'float_kind': lambda x: f'{x:.20f}'})}")
+
+        #return result
 
     def node1d(self, degree, j):
         """Return the j-th nodal point of a Lagrange polynomial of given degree
