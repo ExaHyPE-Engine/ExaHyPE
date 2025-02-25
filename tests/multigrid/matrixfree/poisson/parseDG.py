@@ -38,15 +38,22 @@ for i in range(len(lines)):
 
 res_norm_array = np.array(res_norm)
 
+degree = input("Enter polynomial degree: ")
+
 # Plot max-norm vs DG iterations
 plt.plot(res_norm_array[:,0], label='r_max', marker='o')
+plt.plot(res_norm_array[:,1], label='r_2', marker='o')
 plt.yscale('log')
 plt.xlabel('DG iterations')
 plt.ylabel('|r|_max')
 
-plt.show()
+###  Compare to the stable version output ###
+res_norm_stable = np.load(f"../../../../../PeanoData/res_norm_dg_mesh_{n_mesh}_p_{degree}_STABLE.npy")
+plt.plot(res_norm_stable[:,0], label='r_max stable', marker='x')
+plt.plot(res_norm_stable[:,1], label='r_2 stable', marker='x')
+#############################################
 
-degree = input("Enter polynomial degree: ")
+plt.show()
 
 dir = '../../../../../PeanoData/'
 file_name = f'res_norm_dg_mesh_{n_mesh}_p_{degree}.npy'
