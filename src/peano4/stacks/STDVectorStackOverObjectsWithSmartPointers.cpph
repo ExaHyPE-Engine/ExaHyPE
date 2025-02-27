@@ -52,8 +52,9 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::clone(const 
 
   logDebug("clone()", "copy over stack of size " << data.size());
 
-  for (int stackNumber = 0; stackNumber < size(); stackNumber++) {
-    _data[stackNumber].clone(data._data[stackNumber]);
+  for (int stackElement = 0; stackElement < size(); stackElement++) {
+    typename T::FlattenedType copy = T::flatten( data._data[stackElement] );
+    _data[stackElement] = T::unflatten(copy);
   }
 }
 

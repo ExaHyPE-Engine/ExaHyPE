@@ -54,11 +54,13 @@ private:
    */
   std::vector<T>                 _data;
 
+  using FlattenedContainer = std::vector<typename T::FlattenedType>;
+
   /**
    * We cannot send out _data, as each element in _data hosts at least one
    * smart pointer.
    */
-  std::vector<typename T::FlattenedType>  _flattenedData;
+  FlattenedContainer _flattenedData;
 
   IOMode _ioMode;
   int    _ioRank;
