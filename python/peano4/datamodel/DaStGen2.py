@@ -69,11 +69,11 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
         
 
     def get_stack_container(self):
-        return "peano4::stacks::STDVectorStack< " + self._data.get_full_qualified_type() + " >";
+        return "peano4::stacks::STDVectorStackOverObjectsWithSmartPointers< " + self._data.get_full_qualified_type() + " >";
 
         
     def get_header_file_include(self):
-        return "#include \"peano4/stacks/STDVectorStack.h\" \n \
+        return "#include \"peano4/stacks/STDVectorStackOverObjectsWithSmartPointers.h\" \n \
                 #include \"" + self._data.namespace[-1] + "/" + self._data.name + ".h\""
 
 
@@ -106,56 +106,56 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
           full_qualified_name += "::"
         full_qualified_name += self._data.name
 
-        
-        self._data.data.set_full_qualified_name(full_qualified_name)
-        self._data.data.write_header_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".h" )
-        self._data.data.write_implementation_file(  self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-        output.makefile.add_cpp_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
 
-        # Deep copy object (a shallow one would do as well, but we stay on the
-        # safe side). Then replace all the smart pointer stuff with normal 
-        # pointers.
         flattened_data_object = copy.copy(self._data.data)
         old_attributes        = flattened_data_object._attributes
         flattened_data_object._attributes = []
         copy_statements               = ""
         for attribute in old_attributes:
             if isinstance(attribute,peano4.dastgen2.Peano4SmartPointerDoubleArray):
-                 flattened_data_object._attributes.append( peano4.dastgen2.Peano4DoubleArray( name        = attribute._name,
-                                                                                              cardinality = attribute._cardinality,  
-                                                                                              ifdefs      = attribute.ifdefs
-                                                                                               ))
+                flattened_data_object._attributes.append( peano4.dastgen2.Peano4DoubleArray( name        = attribute._name,
+                                                                                             cardinality = attribute._cardinality,  
+                                                                                             ifdefs      = attribute.ifdefs
+                                                                                             ))
             else:
                 flattened_data_object._attributes.append( attribute )
             if attribute.ifdefs==[]:
-                copy_statements += """
-    result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
+               copy_statements += """
+result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
 """.format(attribute.get_accessor_name(),
            attribute.get_accessor_name(),
            attribute.get_accessor_name()
            )
             else:
                 copy_statements += """
-    {}
-    result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
-    #endif
+{}
+result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
+#endif
 """.format(dastgen2.Utils.construct_ifdef_string(attribute.ifdefs),
            attribute.get_accessor_name(),
            attribute.get_accessor_name(),
            attribute.get_accessor_name(),
            )
-            
-        
-        extension             = "_Flattened"
-        full_qualified_name   = full_qualified_name + extension
-        full_qualified_file_without_extension = self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + extension
+    
 
-        flattened_data_object.additional_includes += """
-#include "{}.h"            
+        extension             = "_Flattened"
+        full_qualified_name_flattened   = full_qualified_name + extension
+        full_qualified_file_without_extension_flattened = self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + extension
+        
+        
+        self._data.data.additional_includes += """
+#include "{}_Flattened.h"            
 """.format(self._data.name)
-        flattened_data_object.public_fields = """
-  using FlattenedType = {};
+
+
+#        flattened_data_object.additional_includes += """
+##include "{}.h"            
+#""".format(self._data.name)
+
             
+        self._data.data.public_fields = """
+  using FlattenedType = {}_Flattened;
+
   static {} flatten(const {}& copy) {{
     {} result;
     
@@ -170,7 +170,7 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
     
     return result;
   }}
-""".format(full_qualified_name,
+""".format(self._data.name,
 #flatten
            self._data.name + extension,
            self._data.name,
@@ -183,16 +183,15 @@ class DaStGen2GeneratorForObjectsWithSmartPointers(object):
            copy_statements,
            )
 
-    
-    
-#    get_accessor_name
-#    self._data.name + extension,
-#    ",".join([ "copy.get" + attribute.get_accessor_name() + "()" for attribute in flattened_data_object._attributes])
+        self._data.data.set_full_qualified_name(full_qualified_name)
+        self._data.data.write_header_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".h" )
+        self._data.data.write_implementation_file(  self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+        output.makefile.add_cpp_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
 
-        flattened_data_object.set_full_qualified_name(full_qualified_name)
-        flattened_data_object.write_header_file( full_qualified_file_without_extension + ".h" )
-        flattened_data_object.write_implementation_file(  full_qualified_file_without_extension + ".cpp" )
-        output.makefile.add_cpp_file( full_qualified_file_without_extension + ".cpp", generated=True )
+        flattened_data_object.set_full_qualified_name(full_qualified_name_flattened)
+        flattened_data_object.write_header_file( full_qualified_file_without_extension_flattened + ".h" )
+        flattened_data_object.write_implementation_file(  full_qualified_file_without_extension_flattened + ".cpp" )
+        output.makefile.add_cpp_file( full_qualified_file_without_extension_flattened + ".cpp", generated=True )
 
         
 class DaStGen2(DoF):
