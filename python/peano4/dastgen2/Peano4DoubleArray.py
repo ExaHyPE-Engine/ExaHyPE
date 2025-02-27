@@ -5,11 +5,14 @@ from dastgen2.Utils import LLVMSymbol
 
 
 class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
-    """
+    """!
+        
+    Specialisation of array using Peano's tarch
 
     Specialisation of dastgen2.attributes.DoubleArray which relies on
     Peano's tarch. Therefore, things alike the vector initialisation
-    in the constructor do work.
+    in the constructor do work. We can also directly use Peano's linear
+    algebra operators.
     
     This routine should include Vector and SmartPointerVector. I'm however
     lazy here and assume that someone else will inject these includes, and
@@ -23,21 +26,19 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
                  cardinality, 
                  valid_mantissa_bits=None, 
                  ifdefs=[], 
-                 use_smart_pointer=False):
+                 ):
         """
         See superclass' constructor.
 
-        cardinality: String
+        @param cardinality: String
           This is important: It is not (necessarily) an integer, but can be
           a string which is defined via a pragma or constexpr later.
-
+          
         """
         super(Peano4DoubleArray, self).__init__(
             name, cardinality, valid_mantissa_bits=valid_mantissa_bits, ifdefs=ifdefs
         )
         self._cardinality       = str(cardinality)
-        self._use_smart_pointer = use_smart_pointer
-        assert use_smart_pointer==False or valid_mantissa_bits==None
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
@@ -79,13 +80,6 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
                     ["!defined(" + LLVMSymbol + ")"],
                 ),
             ]
-        elif self._use_smart_pointer:
-            return [
-                (
-                    "_" + self._name,
-                    "tarch::la::SmartPointerVector<" + self._cardinality + ",double>",
-                )
-            ]
         else:
             return [
                 (
@@ -119,8 +113,6 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
             and self._valid_mantissa_bits == None
         ):
             return name + "(index) = value;\n"
-        elif signature.startswith("get") and self._use_smart_pointer:
-            return "  return " + name + ".toVector();\n"
         elif signature.startswith("get") and self._valid_mantissa_bits == None:
             return "  return " + name + ";\n"
         elif signature.startswith("set") and self._valid_mantissa_bits == None:
@@ -180,8 +172,6 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         """
         if self._valid_mantissa_bits != None:
             return "get" + self._name[0].upper() + self._name[1:] + "()"
-        elif self._use_smart_pointer:
-            return "_" + self._name + ".toVector()"
         elif self.use_data_store:
             return "_dataStore._" + self._name
         else:

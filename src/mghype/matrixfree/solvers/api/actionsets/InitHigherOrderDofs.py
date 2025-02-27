@@ -9,10 +9,31 @@ import jinja2
 class InitHigherOrderDofs(ActionSet):
   """!
 
-  This documentation is not written yet
+  Init the degrees of freedom of a higher order scheme where nodes sit in cells
   
-  @todo Use attributes where possible -> delegate to C++ code base
+  This action set is usually only used throughout the initialisation, i.e. once
+  all mesh cells are in place. However, you we can also use it for dynamic AMR
+  later on (not implemented yet).
   
+  ## Cell initialisation
+  
+  The routine loops over the nodes within the cell, computes the location and 
+  invokes the solver's initialisation routine. As much knowledge (such as 
+  spacing of the integration points) as possible is kept in the C++ code to 
+  keep this routine lightweight.
+  
+  ## Face initialisation
+  
+  The faces do not need an initialisation. It is the job of the very first 
+  projection to assign them valid data. Indeed, they can hold garbage. The 
+  very first compute of the numerical flux then yields garbage, too. But 
+  projecting garbage into the cell just means another initial guess for the
+  cell data, and the solver should converge nevertheless.
+  
+  However, we have encountered situations where the faces' garbage held NaN,
+  and these NaNs then somehow propagated through the solver and polluted all 
+  the outcomes. Therefore, we initialise the faces to zero by default.
+ 
   """
 
 
