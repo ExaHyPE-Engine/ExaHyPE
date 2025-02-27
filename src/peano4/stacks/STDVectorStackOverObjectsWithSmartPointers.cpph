@@ -59,126 +59,6 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::clone(const 
 }
 
 template <class T>
-void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::gatherMetaData() {
-/*
-    prepareMetaDataBuffers();
-
-    assertion( _gatheredMetaData!=nullptr );
-    assertion( _gatheredDebugMetaData!=nullptr );
-    assertion( T::Cardinality>0 );
-
-    for (int i = 0; i < size(); i++) {
-      _gatheredMetaData[i] = _data[i].value==nullptr ? 0 : T::Cardinality;
-    }
-*/
-
-    logDebug( "gatherMetaData()", "gathered meta data which identifies nullptrs vs real data" );
-
-#if PeanoDebug >= 1
-  for (int i = 0; i < size(); i++) {
-    logDebug(
-      "gatherMetaData()",
-      i << "th entry: copy " << (size() * 2 * Dimensions)
-        << " doubles over into temporary local buffer. x=" << _data[i].getDebugX() << ", h=" << _data[i].getDebugH()
-    );
-    for (int d = 0; d < Dimensions; d++) {
-      _gatheredDebugMetaData[i * Dimensions * 2 + d]              = _data[i].getDebugX()(d);
-      _gatheredDebugMetaData[i * Dimensions * 2 + d + Dimensions] = _data[i].getDebugH()(d);
-    }
-  }
-#endif
-}
-
-template <class T>
-void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::prepareMetaDataBuffers() {
-//  _gatheredMetaData = tarch::allocateMemory<int>(size(), tarch::MemoryLocation::Heap);
-#if PeanoDebug >= 1
-  _gatheredDebugMetaData = tarch::allocateMemory(Dimensions * 2 * size(), tarch::MemoryLocation::Heap);
-#endif
-  logDebug( "prepareMetaDataBuffers()", "prepared meta data buffer with " << size() << " entries and debug meta data buffer with " << (Dimensions*2*size()) << " entries (if debug info available)" );
-}
-
-template <class T>
-void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::scatterDebugMetaData() {
-#if PeanoDebug >= 1
-  for (int i = 0; i < size(); i++) {
-#if Dimensions == 2
-    _data[i].setDebugX({_gatheredDebugMetaData[i * Dimensions * 2 + 0], _gatheredDebugMetaData[i * Dimensions * 2 + 1]});
-    _data[i].setDebugH({_gatheredDebugMetaData[i * Dimensions * 2 + 2], _gatheredDebugMetaData[i * Dimensions * 2 + 3]});
-#else
-    _data[i].setDebugX(
-      {_gatheredDebugMetaData[i * Dimensions * 2 + 0],
-       _gatheredDebugMetaData[i * Dimensions * 2 + 1],
-       _gatheredDebugMetaData[i * Dimensions * 2 + 2]}
-    );
-    _data[i].setDebugH(
-      {_gatheredDebugMetaData[i * Dimensions * 2 + 3],
-       _gatheredDebugMetaData[i * Dimensions * 2 + 4],
-       _gatheredDebugMetaData[i * Dimensions * 2 + 5]}
-    );
-#endif
-    logDebug(
-      "scatterDebugMetaData()",
-      "copied "
-        << (size() * 2 * Dimensions) << " doubles over into meta data. x=" << _data[i].getDebugX()
-        << ", h=" << _data[i].getDebugH()
-    );
-  }
-#endif
-}
-
-template <class T>
-void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::scatter() {
-/*
-  logDebug(
-    "scatter()",
-    "copy "
-      << size() << " data entries over into real smart pointer data structure. One entry hosts " << (T::Cardinality)
-      << " unknowns"
-  );
-  assertion( _gatheredMetaData!=nullptr );
-  for (int i = 0; i < size(); i++) {
-    if ( _gatheredMetaData[i]==0 ) {
-      assertion( _data[i].value==nullptr );
-      // Not required, as the object should already accept only such entries
-      _data[i] = T(T::ObjectConstruction::NoData);
-    }
-    else {
-      _data[i] = T();
-      std::copy_n(_gatheredData + T::Cardinality * i, T::Cardinality, _data[i].value);
-    }
-  }
-*/
-}
-
-template <class T>
-void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::gather() {
-/*
-  prepareGatheredDataBuffer();
-
-  assertion(_gatheredMetaData!=nullptr);
-
-  for (int i = 0; i < size(); i++) {
-    if ( _gatheredMetaData[i]!=0 ) {
-      assertion( _data[i].value!=nullptr );
-      logDebug( "gather()", "gather data from " << _data[i].toString() );
-      std::copy_n(_data[i].value, T::Cardinality, _gatheredData + T::Cardinality * i);
-    }
-  }
-*/
-}
-
-template <class T>
-void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::prepareGatheredDataBuffer() {
-  logDebug(
-    "prepareGatheredDataBuffer()",
-    "allocate (temporary) receive of size "
-      << (size() * T::Cardinality) << ". " << size() << " local entries with " << T::Cardinality << " values per entry"
-  );
-//  _gatheredData = tarch::allocateMemory<typename T::DoFType>(size() * T::Cardinality, tarch::MemoryLocation::Heap);
-}
-
-template <class T>
 void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
   peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm
 ) {
@@ -190,37 +70,24 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
   _ioTag  = tag;
   _ioRank = rank;
 
-  gatherMetaData();
-  gather();
-
-  // backup data as clear() below might change this value
-  const int stackEntriesToSend = size();
-  clear();
-
-#if PeanoDebug >= 1
-  _ioDebugMetaDataMPIRequest = new MPI_Request();
-  MPI_Isend(
-    _gatheredDebugMetaData, stackEntriesToSend * 2 * Dimensions, MPI_DOUBLE, _ioRank, _ioTag, comm, _ioDebugMetaDataMPIRequest
-  );
-#endif
-
-  _ioMetaDataMPIRequest = new MPI_Request();
-  MPI_Isend(
-    _gatheredMetaData, stackEntriesToSend, MPI_INT, _ioRank, _ioTag, comm, _ioMetaDataMPIRequest
-  );
-
-  _ioMPIRequest = new MPI_Request;
-  int result    = MPI_Isend(
-    _gatheredData, stackEntriesToSend, translateContextIntoDatatype<T>(context), _ioRank, _ioTag, comm, _ioMPIRequest
-  );
-  if (result != MPI_SUCCESS) {
-    logError(
-      "startSend(int,int,bool)",
-      "was not able to send to node " << rank << " on tag " << tag << ": " << tarch::mpi::MPIReturnValueToString(result)
-    );
+  _flattenedData.resize(size());
+  for (int i=0; i<size(); i++) {
+    _flattenedData[i] = T::flatten( _data[i] );
   }
 
-  logDebug("startSend(...)", "sent out real data with " << stackEntriesToSend << " entries");
+  _ioMPIRequest = new MPI_Request;
+  int result = MPI_Isend(
+    _flattenedData.data(),
+    _currentElement,
+    translateContextIntoDatatype<T::FlattenedType>( context ),
+    _ioRank, _ioTag, comm, _ioMPIRequest
+  );
+  if  (result!=MPI_SUCCESS) {
+    std::ostringstream msg;
+    logError( "startSend(int,int)", "was not able to send to node " << rank << " on tag " << tag
+      << ": " << tarch::mpi::MPIReturnValueToString(result)
+    );
+  }
 #endif
 }
 
@@ -238,38 +105,24 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startReceive
 
   _data.clear();
   _data.resize(numberOfElements, T(T::ObjectConstruction::NoData));
+  _flattenedData.resize(size());
+  _currentElement = numberOfElements;
 
-  prepareMetaDataBuffers();
-  prepareGatheredDataBuffer();
-
-#if PeanoDebug >= 1
-  _ioDebugMetaDataMPIRequest = new MPI_Request();
-  MPI_Irecv(
-    _gatheredDebugMetaData, numberOfElements * 2 * Dimensions, MPI_DOUBLE, _ioRank, _ioTag, comm, _ioDebugMetaDataMPIRequest
-  );
-#endif
-
-  _ioMetaDataMPIRequest = new MPI_Request();
-  MPI_Irecv(
-    _gatheredMetaData, numberOfElements, MPI_INT, _ioRank, _ioTag, comm, _ioMetaDataMPIRequest
-  );
-
-  assertion(_ioMPIRequest == nullptr);
+  assertion3( _ioMPIRequest == nullptr, rank, tag, numberOfElements );
   _ioMPIRequest = new MPI_Request;
-
+  assertion(_data.size()>0);
   int result = MPI_Irecv(
-    _gatheredData, numberOfElements, translateContextIntoDatatype<T>(context), _ioRank, _ioTag, comm, _ioMPIRequest
+    _flattenedData.data(),
+    _data.size(),
+    translateContextIntoDatatype<T::FlattenedType>( context ),
+    _ioRank, _ioTag, comm, _ioMPIRequest
   );
-  if (result != MPI_SUCCESS) {
-    logError(
-      "startReceive(int,int,int)",
-      "was not able to receive "
-        << numberOfElements << " values from node " << rank << " on tag " << tag << ": "
-        << tarch::mpi::MPIReturnValueToString(result)
+  if  (result!=MPI_SUCCESS) {
+    logError( "startReceive(int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
+      << ": " << tarch::mpi::MPIReturnValueToString(result)
     );
   }
-
-  logDebug("startReceive()", toString());
+  logTraceOut( "startReceive(int,int,int)" );
 #endif
 }
 
@@ -278,44 +131,25 @@ bool peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::tryToFinishS
 #ifdef Parallel
   logTraceInWith4Arguments("tryToFinishSendOrReceive()", ::toString(_ioMode), size(), _ioRank, _ioTag);
   bool result = true;
-  if (_ioMode == IOMode::MPISend or _ioMode == IOMode::MPIReceive) {
-    assertion(_ioMPIRequest != nullptr);
+  if ( _ioMode==IOMode::MPISend or _ioMode==IOMode::MPIReceive ) {
+    assertion( _ioMPIRequest!=nullptr );
 
-    int flag = 0;
-    MPI_Test(_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
+    int          flag = 0;
+    MPI_Test( _ioMPIRequest, &flag, MPI_STATUS_IGNORE );
     if (flag) {
       result = true;
-      logDebug("tryToFinishSendOrReceive()", "send/receive complete, free MPI request: " << toString());
-
+      logDebug( "tryToFinishSendOrReceive()", "send/receive complete, free MPI request: " << toString() );
       delete _ioMPIRequest;
       _ioMPIRequest = nullptr;
-
-#if PeanoDebug >= 1
-      MPI_Wait(_ioDebugMetaDataMPIRequest, MPI_STATUS_IGNORE);
-      delete _ioDebugMetaDataMPIRequest;
-      _ioDebugMetaDataMPIRequest = nullptr;
-#endif
-
-      MPI_Wait(_ioMetaDataMPIRequest, MPI_STATUS_IGNORE);
-      delete _ioMetaDataMPIRequest;
-      _ioMetaDataMPIRequest = nullptr;
-
-      if (_ioMode == IOMode::MPIReceive) {
-        scatterDebugMetaData();
-        scatter();
+      if (_ioMode==IOMode::MPISend ) {
+        clear();
       }
-
-      tarch::freeMemory(_gatheredData, tarch::MemoryLocation::Heap);
-      tarch::freeMemory(_gatheredMetaData, tarch::MemoryLocation::Heap);
-#if PeanoDebug >= 1
-      tarch::freeMemory(_gatheredDebugMetaData, tarch::MemoryLocation::Heap);
-#endif
-
       _ioMode = IOMode::None;
     } else {
       result = false;
     }
   }
+  _flattenedData.clear();
   logTraceOutWith1Argument("tryToFinishSendOrReceive()", result);
   return result;
 #else

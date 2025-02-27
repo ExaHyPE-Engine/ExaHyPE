@@ -70,49 +70,6 @@ private:
   MPI_Request* _ioMPIRequest;
 #endif
 
-  /**
-   * Allocate buffer and gather
-   *
-   */
-  void gather();
-
-  /**
-   * Mere alloc. We use the tarch's allocation. Therefore, we can have
-   * aligned data here. Without the tarch, the code call would be
-   *
-   *         _gatheredData     = new typename T::DoFType[ size() * T::Cardinality ];
-   *
-   */
-  void prepareGatheredDataBuffer();
-
-  /**
-   * Scatter received gathered data
-   *
-   * We run over the size keeping in mind that the target has been created over
-   * objects with the constructor argument T::ObjectConstruction::NoData. That
-   * is, each entry hosts a pointer, but this pointer will currently point to
-   * nullptr, as the object is not yet prepared to host any data. We run over
-   * the meta data to find out if this is ok, or if we actually want this stack
-   * entry to host data. If so, we use the "real" constructor and then copy the
-   * raw content over from the gathered data set.
-   */
-  void scatter();
-
-  /**
-   * Allocate buffer and gather
-   */
-  void gatherMetaData();
-
-  /**
-   * Mere alloc. We use the tarch's allocation. Therefore, we can have
-   * aligned data here. Without tarch, the call would be
-   *
-   *         _gatheredDebugMetaData = new double[ Dimensions*2*size() ];
-   *
-   */
-  void prepareMetaDataBuffers();
-  void scatterDebugMetaData();
-
 public:
   STDVectorStackOverObjectsWithSmartPointers();
 
