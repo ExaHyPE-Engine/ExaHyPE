@@ -7,6 +7,10 @@ import dastgen2
 
 import peano4.dastgen2.MPIAndStorageAspect
 
+import copy
+
+
+
 class DaStGen2Generator(object):
   """! 
   
@@ -27,9 +31,14 @@ class DaStGen2Generator(object):
 
 
   def construct_output(self,output):
-    """
-      Pass in a version of output. It is important that external tools are used
-      first before we start any compile or so. So I add them first. 
+    """!
+  
+    Finally construct the output
+  
+    Pass in an instance of the output object. We use this output 
+    object only to register the generated C++ file with the build
+    environment.
+    
     """
     full_qualified_name = ""
     for i in self._data.namespace:
@@ -44,6 +53,148 @@ class DaStGen2Generator(object):
 
 
 
+class DaStGen2GeneratorForObjectsWithSmartPointers(object):
+    """! 
+      
+    Simple generator mapping a DaStGen2 object onto a plain C++ class
+    
+    The generator is very similar to DaStGen2Generator, but it has to take
+    extra care as we assume that some objects host smart pointers. Therefore,
+    we do two things: We dump the smart pointer version, and we create a 
+    flattene version, too.
+      
+    """  
+    def __init__(self,data):
+        self._data = data
+        
+
+    def get_stack_container(self):
+        return "peano4::stacks::STDVectorStack< " + self._data.get_full_qualified_type() + " >";
+
+        
+    def get_header_file_include(self):
+        return "#include \"peano4/stacks/STDVectorStack.h\" \n \
+                #include \"" + self._data.namespace[-1] + "/" + self._data.name + ".h\""
+
+
+    def construct_output(self,output):
+        """!
+      
+        Finally construct the output
+      
+        Pass in an instance of the output object. We use this output 
+        object only to register the generated C++ file with the build
+        environment. This part is exactly the same as for a plain 1:1
+        translation.
+        
+        Further to the default generator, this routine does a little bit
+        more:
+        
+        - Make a deep copy of the data object and replace each instance of
+          a smart pointer with its plain counterpart. This new data object
+          is identified by the extension _Flattened.
+        - Make the new helper data structure include the original class with
+          the smart pointers.
+        - Declare this one as an embedded type via using.
+        - Add a new copy constructor/conversion routine which really just maps 
+          the two data types onto each other by using the setters and getters.
+        
+        """
+        full_qualified_name = ""
+        for i in self._data.namespace:
+          full_qualified_name += i
+          full_qualified_name += "::"
+        full_qualified_name += self._data.name
+
+        
+        self._data.data.set_full_qualified_name(full_qualified_name)
+        self._data.data.write_header_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".h" )
+        self._data.data.write_implementation_file(  self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+        output.makefile.add_cpp_file( self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
+
+        # Deep copy object (a shallow one would do as well, but we stay on the
+        # safe side). Then replace all the smart pointer stuff with normal 
+        # pointers.
+        flattened_data_object = copy.copy(self._data.data)
+        old_attributes        = flattened_data_object._attributes
+        flattened_data_object._attributes = []
+        copy_statements               = ""
+        for attribute in old_attributes:
+            if isinstance(attribute,peano4.dastgen2.Peano4SmartPointerDoubleArray):
+                 flattened_data_object._attributes.append( peano4.dastgen2.Peano4DoubleArray( name        = attribute._name,
+                                                                                              cardinality = attribute._cardinality,  
+                                                                                              ifdefs      = attribute.ifdefs
+                                                                                               ))
+            else:
+                flattened_data_object._attributes.append( attribute )
+            if attribute.ifdefs==[]:
+                copy_statements += """
+    result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
+""".format(attribute.get_accessor_name(),
+           attribute.get_accessor_name(),
+           attribute.get_accessor_name()
+           )
+            else:
+                copy_statements += """
+    {}
+    result.set{}( static_cast<decltype(result.get{}())>( copy.get{}() ) );
+    #endif
+""".format(dastgen2.Utils.construct_ifdef_string(attribute.ifdefs),
+           attribute.get_accessor_name(),
+           attribute.get_accessor_name(),
+           attribute.get_accessor_name(),
+           )
+            
+        
+        extension             = "_Flattened"
+        full_qualified_name   = full_qualified_name + extension
+        full_qualified_file_without_extension = self._data.subdirectory + self._data.namespace[-1] + "/" + self._data.name + extension
+
+        flattened_data_object.additional_includes += """
+#include "{}.h"            
+""".format(self._data.name)
+        flattened_data_object.public_fields = """
+  using FlattenedType = {};
+            
+  static {} flatten(const {}& copy) {{
+    {} result;
+    
+    {}
+    
+    return result;
+  }}
+  static {} unflatten(const {}& copy) {{
+    {} result;
+    
+    {}
+    
+    return result;
+  }}
+""".format(full_qualified_name,
+#flatten
+           self._data.name + extension,
+           self._data.name,
+           self._data.name + extension,
+           copy_statements,
+# unflatten
+           self._data.name,
+           self._data.name + extension,
+           self._data.name,
+           copy_statements,
+           )
+
+    
+    
+#    get_accessor_name
+#    self._data.name + extension,
+#    ",".join([ "copy.get" + attribute.get_accessor_name() + "()" for attribute in flattened_data_object._attributes])
+
+        flattened_data_object.set_full_qualified_name(full_qualified_name)
+        flattened_data_object.write_header_file( full_qualified_file_without_extension + ".h" )
+        flattened_data_object.write_implementation_file(  full_qualified_file_without_extension + ".cpp" )
+        output.makefile.add_cpp_file( full_qualified_file_without_extension + ".cpp", generated=True )
+
+        
 class DaStGen2(DoF):
   """!
   
@@ -130,8 +281,20 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
   
   
   def __init__(self, name):
+    """!
+
+    Construct a DaStGen2 object
+    
+    We hold the data model and a dedicated data generator. By default, the data
+    model is augmented with geometric debug information. Every Peano data 
+    object has an MPI aspect, i.e. can, in principle, be sent and received 
+    through MPI.
+    
+    """  
     super(DaStGen2, self).__init__(name)
-    self.generator        = DaStGen2Generator(self)
+
+    # is set by configure() lazily
+    self.generator        = None
     
     self.data             = dastgen2.DataModel(name)
     
@@ -144,24 +307,28 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
 
 
   def configure(self, namespace, association, subdirectory=""):
-    """
+    """!
+
+    Configure output
     
-      I always need the MPI aspect, but I can't add the right one before I don't 
-      know whether this DaStGen model is used for vertices, faces or cells. To I 
-      hook into this routine. In theory, I could add the DaStGen2 MPI aspect 
-      straightaway (in the constructor), but I decided to do so in one place. 
-      
-      
-      Implementation detail
-      
-      It is important that we add the aspect once when we initialise the code and 
-      then reconfigure it. I had the commented out version before, but that one
-      adds an aspect everytime configure() is called and thus causes issues as 
-      aspects might be added multiple times.
-      
+    Configuring an output means setting the right output directory and
+    taking into account whether we are associated to a vertex, face or
+    cell.
+    
+    I always need the MPI aspect, but I can't add the right one in the 
+    constructor, as I don't know whether this DaStGen model is used for 
+    vertices, faces or cells. Such context however is important to generate
+    the correct merge routines with the correct signature. Therefore, I 
+    hook into this routine. 
+    
     """
     super(DaStGen2, self).configure(namespace,association,subdirectory)
     self.peano4_mpi_and_storage_aspect.dof_association = association
+    
+    if self.hosts_smart_pointer_attribute():
+        self.generator = DaStGen2GeneratorForObjectsWithSmartPointers(self)
+    else:
+        self.generator = DaStGen2Generator(self)
     
         
   @property
@@ -178,3 +345,18 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
 """)
     self._additional_load_and_store_arguments = new_arguments
 
+
+  def hosts_smart_pointer_attribute(self):
+      """!
+  
+      Does class host a smart pointer attribute
+      
+      The context is important when we pick the data generator, as objects with 
+      a smart poiner have to be handled differently compared to plain objects.
+  
+      """
+      for attribute in self.data._attributes:
+          if isinstance(attribute,peano4.dastgen2.Peano4SmartPointerDoubleArray):
+              return True
+      return False
+          

@@ -6,21 +6,22 @@ import dastgen2.attributes.DoubleArray
 class Peano4SmartPointerDoubleArray(dastgen2.attributes.DoubleArray):
     """!
         
-    Specialisation of array using Peano's tarch
+    Specialisation of array using Peano's tarch with a smart pointer
 
-    Specialisation of dastgen2.attributes.DoubleArray which relies on
-    Peano's tarch. Therefore, things alike the vector initialisation
-    in the constructor do work. We can also directly use Peano's linear
-    algebra operators.
+    This routine maps a logical array of fixed size onto a smart pointer class.
+    If you use it, the resulting element tied to a cell, face or vertex might 
+    induce significantly lower memory movement overhead. However, this is not 
+    guaranteed, and requires some careful testing. As you work with smart 
+    pointers, the routine gives you direct access to the underlying vector, 
+    i.e. provides specialised routines that expose the underlying data 
+    structure: There are the standard getters and setters, but there are also
+    variants which give you the start pointer data object, while get and set
+    are compatible with Peano4DoubleArray's signature.
     
-    This routine should include Vector and SmartPointerVector. I'm however
-    lazy here and assume that someone else will inject these includes, and
-    indeed Peano uses this class always in combination with MPIAndStorageAspect
-    which in turn includes the right headers.
-
-    ## Smart pointer variant
+    Using this class is straightforward and doesn't seem to be any different to
+    Peano4DoubleArray. However, under the hood you'll alter the behaviour of 
+    peano4.datamodel.DaStGen2.
     
-    If arrays associated with the datatype are very big, the 
     """
 
     def __init__(self, 
