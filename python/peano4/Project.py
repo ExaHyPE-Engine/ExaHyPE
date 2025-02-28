@@ -305,7 +305,7 @@ class Project (object):
       ), "FC compilers of the projects being merged don't match"
 
       assert(
-          lhs.output.makefile.d["DIM"] == lhs.output.makefile.d["DIM"]
+          lhs.output.makefile.d["DIMENSIONS"] == lhs.output.makefile.d["DIMENSIONS"]
       ), "dimensions of the projects being merged don't match"
 
       assert(
@@ -419,11 +419,11 @@ class Project (object):
     assert (
         self.output.makefile.d["EXECUTABLENAME"]
     ), "the name of the main project is empty"
-    if not self.output.makefile.d["DIM"]:
-      self.output.makefile.set_dimension(subproject.output.makefile.d["DIM"])
+    if not self.output.makefile.d["DIMENSIONS"]:
+      self.output.makefile.set_dimension(subproject.output.makefile.d["DIMENSIONS"])
     else:
       assert (
-          self.output.makefile.d["DIM"] == subproject.output.makefile.d["DIM"]
+          self.output.makefile.d["DIMENSIONS"] == subproject.output.makefile.d["DIMENSIONS"]
       ), "the dimensions of the added subproject doesn't match the current one of the main project"
 
     # ... for filepaths

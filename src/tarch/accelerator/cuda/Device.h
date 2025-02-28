@@ -6,6 +6,8 @@
 
 #if defined(GPUOffloadingCUDA)
 
+#include "ErrorCheck.h"
+
 #include <cuda_runtime.h>
 
 namespace tarch::accelerator {

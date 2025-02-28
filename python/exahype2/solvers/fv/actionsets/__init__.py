@@ -1,6 +1,7 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .AdaptivityCriterion            import AdaptivityCriterion
+
+from .AdaptivityCriterion   import AdaptivityCriterion
 from .HandleBoundary        import HandleBoundary
 from .InitialCondition      import InitialCondition
 from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
@@ -10,5 +11,6 @@ from .PostprocessSolution   import EmptyPostprocessSolution
 from .PostprocessSolution   import VolumeWisePostprocessSolution
 from .PreprocessSolution    import EmptyPreprocessSolution
 from .PreprocessSolution    import VolumeWisePreprocessSolution
-
-
+from .UpdateCell            import UpdateCell
+from .UpdateCellWithEnclaveTasking import UpdateCellWithEnclaveTasking
+from .MergeEnclaveTaskOutcome import MergeEnclaveTaskOutcome

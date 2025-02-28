@@ -2,14 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/RefinementControl.h"
-#include "exahype2/Solver.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
+
+#include "exahype2/RefinementControl.h"
+#include "exahype2/Solver.h"
 
 #include "Constants.h"
 
@@ -47,7 +48,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
-    static constexpr int  NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
 
     /**
      * Maximum mesh size that this solver wants/is allowed to support. Peano 4
@@ -90,15 +91,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      const tarch::la::Vector<Dimensions, double>& volumeH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     virtual void initialCondition(
       double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      const tarch::la::Vector<Dimensions, double>& volumeH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
@@ -113,8 +114,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void boundaryConditions(
       const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& faceCentre,
-      const tarch::la::Vector<Dimensions, double>& volumeH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -242,28 +243,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
-
-    {% if STATELESS_PDE_TERMS %}
-    /**
-     * By default each patch can use stateless PDE terms, i.e. the static
-     * versions of the operators. Therefore, each patch can go to the GPU
-     * or inline aggressively. You can disable this behaviour for selected
-     * patches via this callback.
-     */
-    {% else %}
-    /**
-     * Warning: This operation has no semantics, as you have disabled
-     * stateless PDE terms. The routine is here to allow you to write one
-     * code version for both a GPU-enabled solver and a solver without
-     * GPU support.
-     */
-    {% endif %}
-    virtual bool patchCanUseStatelessPDETerms(
-      const tarch::la::Vector<Dimensions, double>& patchCentre,
-      const tarch::la::Vector<Dimensions, double>& patchH,
-      double                                       t,
-      double                                       dt
-    ) const;
 
     /**
      * Feel free to overwrite in user code, but ensure the superclass

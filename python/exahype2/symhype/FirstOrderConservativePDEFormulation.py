@@ -20,7 +20,7 @@ class FirstOrderConservativePDEFormulation(PDE):
     As a consequence, the solver holds an equation pde which describes the
     PDE's right-hand side in the representation
 
-    \partial Q(t) + div_x F(Q)
+    \\partial Q(t) + div_x F(Q)
 
     Most people prefer not to work with a vector Q but with some symbolic
     names. Feel free to derive them from Q via constructs similar to
@@ -53,7 +53,7 @@ class FirstOrderConservativePDEFormulation(PDE):
               result += "0\n"
         result += "\n"
         for i in range(0, self.unknowns):
-            result += "\lambda_{max," + str(i) + "}(x) = "
+            result += "\\lambda_{max," + str(i) + "}(x) = "
             result += str(self.eigenvalues[i])
             result += "\n"
         return result
@@ -61,7 +61,7 @@ class FirstOrderConservativePDEFormulation(PDE):
     def LaTeX(self):
         result = "\\begin{eqnarray*}"
         for i in range(0, self.unknowns):
-            result += "\partial _t " + str(self.Q[i]) + "(x) + div("
+            result += "\\partial _t " + str(self.Q[i]) + "(x) + div("
             for j in range(0, len(self.F[i])):
                 if j != 0:
                     result += ", "
@@ -113,12 +113,8 @@ class FirstOrderConservativePDEFormulation(PDE):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = "assertion(normal >= 0);\n"
-        result += "assertion(normal < Dimensions);\n"
-        result += self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=False
-        )
-        result += "switch( normal ) {\n"
+        result = self._implementation_of_mapping_onto_named_quantities()
+        result += "switch(normal) {\n"
         for d in range(0, self.dimensions):
             result += "  case " + str(d) + ":\n"
             for i in range(0, self.unknowns):
@@ -135,8 +131,6 @@ class FirstOrderConservativePDEFormulation(PDE):
                         + ";"
                     )
                 result += "\n"
-                result += "assertion(!std::isnan(F[" + str(i) + "]));\n"
-                result += "nonCriticalAssertion(F[" + str(i) + "] == F[" + str(i) + "]);\n"
             result += "  break;\n"
         result += "}\n"
         return result
@@ -149,12 +143,8 @@ class FirstOrderConservativePDEFormulation(PDE):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = "assertion(normal >= 0);\n"
-        result += "assertion(normal < Dimensions);\n"
-        result += self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=False, has_delta=True
-        )
-        result += "switch( normal ) {\n"
+        result = self._implementation_of_mapping_onto_named_quantities(has_delta=True)
+        result += "switch(normal) {\n"
         for d in range(0, self.dimensions):
             result += "  case " + str(d) + ":\n"
             for i in range(0, self.unknowns):
@@ -190,11 +180,7 @@ class FirstOrderConservativePDEFormulation(PDE):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = "assertion(normal >= 0);\n"
-        result += "assertion(normal < Dimensions);\n"
-        result += self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=False
-        )
+        result = self._implementation_of_mapping_onto_named_quantities()
         result += "switch (normal) {\n"
         for d in range(0, self.dimensions):
             result += "  case " + str(d) + ":\n"
@@ -223,11 +209,7 @@ class FirstOrderConservativePDEFormulation(PDE):
         """
         Return maximum eigenvalue
         """
-        result = "assertion(normal >= 0);\n"
-        result += "assertion(normal < Dimensions);\n"
-        result += self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=False
-        )
+        result = self._implementation_of_mapping_onto_named_quantities()
         result += "double lambda[" + str(self.unknowns) + "];\n"
         result += "switch (normal) {\n"
         for d in range(0, self.dimensions):
@@ -247,17 +229,16 @@ class FirstOrderConservativePDEFormulation(PDE):
                         + ";"
                     )
                 result += "\n"
-                result += "assertion(!std::isnan(lambda[" + str(i) + "]));\n"
             result += "  break;\n"
         result += "}\n"
         result += "double result = 0.0;\n"
         for i in range(0, self.unknowns):
             if use_absolute_values:
                 result += (
-                    "result = std::max( result, std::abs(lambda[" + str(i) + "]) );\n"
+                    "result = std::fmax(result, std::fabs(lambda[" + str(i) + "]));\n"
                 )
             else:
-                result += "result = std::max( result, lambda[" + str(i) + "] );\n"
+                result += "result = std::fmax(result, lambda[" + str(i) + "]);\n"
         result += "return result;\n"
         return result
 
@@ -265,11 +246,7 @@ class FirstOrderConservativePDEFormulation(PDE):
         """
         Return implementation for sources as C code.
         """
-        result = "assertion(normal >= 0);\n"
-        result += "assertion(normal < Dimensions);\n"
-        result = self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=True
-        )
+        result = self._implementation_of_mapping_onto_named_quantities()
         for i in range(0, self.unknowns):
             if invoke_evalf_before_output:
                 result += sympy.printing.cxxcode(

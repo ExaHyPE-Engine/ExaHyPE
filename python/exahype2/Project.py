@@ -762,7 +762,6 @@ thus appreciate any citation of the original release paper
 
     def generate_Peano4_project(self, verbose=False):
         """!
-
         Construct a Peano 4 project and return it
 
         Build the Peano 4 project, i.e., all the action sets et al that you require
@@ -778,6 +777,11 @@ thus appreciate any citation of the original release paper
         """
         # self._project.cleanup()
 
+        self.__configure_makefile()
+        self._project.output.makefile.parse_configure_script_outcome(self._Peano_src_directory)
+        self._project.output.makefile.set_mode(self._build_mode)
+        self.__export_constants()
+
         self._project.solversteps.add_step(self.create_grid)
         self._project.solversteps.add_step(self.init_grid)
         self._project.solversteps.add_step(self.create_grid_but_postpone_refinement)
@@ -787,10 +791,11 @@ thus appreciate any citation of the original release paper
         self._project.solversteps.add_step(self.perform_time_step)
 
         for solver in self._solvers:
-            print("---------------------------------------")
-            print("Create data for solver " + solver._name)
-            print("---------------------------------------")
-            print(str(solver))
+            if verbose:
+                print("---------------------------------------")
+                print("Create data for solver " + solver._name)
+                print("---------------------------------------")
+                print(str(solver))
 
             solver.add_to_Peano4_datamodel(self._project.datamodel, verbose)
 
@@ -835,20 +840,11 @@ thus appreciate any citation of the original release paper
                     self._project.namespace, self._project.output, self._dimensions, self._subdirectory, self._abstract_overwrite
                 )
             else:
-                solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._dimensions, self._subdirectory )
+                solver.add_implementation_files_to_project(self._project.namespace, self._project.output, self._dimensions, self._subdirectory)
 
         self.__generate_solver_repository()
 
         self._project.main = exahype2.ExaHyPEMain(self._project)
-
-        self.__configure_makefile()
-        self._project.output.makefile.parse_configure_script_outcome(
-            self._Peano_src_directory
-        )
-        self.__export_constants()
-
-        self._project.output.makefile.set_mode(self._build_mode)
-
         return self._project
 
 

@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
-
 
 namespace tarch {
   /**
@@ -12,4 +10,3 @@ namespace tarch {
    */
   tarch::tests::TestCase* getUnitTests();
 }
-

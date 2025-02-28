@@ -3,6 +3,8 @@
 import os
 import re
 
+from pathlib import Path
+
 from .Helper import write_file
 
 from .Overwrite import Overwrite
@@ -49,6 +51,6 @@ class TemplatedHeaderFile(object):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
-    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
+    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
 
     self.generate_file(overwrite,header_filename,self.headerfile_template)

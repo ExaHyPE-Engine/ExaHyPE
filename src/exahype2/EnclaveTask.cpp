@@ -66,7 +66,7 @@ bool exahype2::EnclaveTask::run() {
 
 void exahype2::EnclaveTask::computeTask() {
   if (!_outputValues) {
-    _outputValues = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    _outputValues = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::Heap);
   } else {
     logDebug(
       "computeTask(...)",

@@ -4,13 +4,6 @@
 print("Peano 4 (C) www.peano-framework.org")
 
 try:
-    import jinja2
-except ImportError:
-    print(
-        "Jinja2 is not available, cannot generate glue code. Most Peano 4 features will be unavailable."
-    )
-
-try:
     import peano4.datamodel
     import peano4.solversteps
     import peano4.output

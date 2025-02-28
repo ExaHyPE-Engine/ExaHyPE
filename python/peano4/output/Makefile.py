@@ -2,9 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import re
-import sys
 import subprocess
 import jinja2
+
+from copy import deepcopy
 
 from .Helper import write_file
 
@@ -25,17 +26,20 @@ class Makefile(object):
             """
 ## Makefile settings
 
-CXX             = {{CXX}}
-CXXFLAGS        = {{CXXFLAGS}}
-FC              = {{FC}}
-FCFLAGS         = {{FCFLAGS}}
-LDFLAGS         = {{LDFLAGS}}
-LIBS            = {{LIBS}}
-DIM             = {{DIM}}
-CONFIGUREPATH   = {{CONFIGUREPATH}}
-EXECUTABLENAME  = {{EXECUTABLENAME}}
-FORTRAN_MODULES = {{FORTRAN_MODULES}}
-MODE            = {{MODE}}
+CXX                     = {{CXX}}
+CXXFLAGS                = {{CXXFLAGS}}
+FC                      = {{FC}}
+FCFLAGS                 = {{FCFLAGS}}
+LDFLAGS                 = {{LDFLAGS}}
+LIBS                    = {{LIBS}}
+DIMENSIONS              = {{DIMENSIONS}}
+CONFIGUREPATH           = {{CONFIGUREPATH}}
+EXECUTABLENAME          = {{EXECUTABLENAME}}
+MULTITHREADING          = {{MULTITHREADING}}
+GPU                     = {{GPU}}
+GPU_ARCH                = {{GPU_ARCH}}
+FORTRAN_MODULES         = {{FORTRAN_MODULES}}
+MODE                    = {{MODE}}
 
 ## Compiler version
 
@@ -129,6 +133,9 @@ the SISC paper
     def executable_name(self):
         return self.d["EXECUTABLENAME"]
 
+    def dictionary(self):
+        return deepcopy(self.d)
+
     def clear(self):
         self.configure_call = ""
         self.d = {}
@@ -138,9 +145,12 @@ the SISC paper
         self.d["FCFLAGS"] = ""
         self.d["LDFLAGS"] = ""
         self.d["LIBS"] = ""
-        self.d["DIM"] = "2"
+        self.d["DIMENSIONS"] = "2"
         self.d["CONFIGUREPATH"] = "."
         self.d["EXECUTABLENAME"] = ""
+        self.d["MULTITHREADING"] = ""
+        self.d["GPU"] = ""
+        self.d["GPU_ARCH"] = ""
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["FORTRAN_MODULES"] = []
         self.d["APP_SUBDIRECTORIES"] = []
@@ -159,7 +169,7 @@ the SISC paper
         self.generated_fortranfiles = []
 
     def set_dimension(self, dimension):
-        self.d["DIM"] = str(dimension)
+        self.d["DIMENSIONS"] = str(dimension)
 
     def get_configure_path(self):
         """
@@ -275,25 +285,16 @@ the SISC paper
               input_file = directory + "/config.log"
               input = open(input_file, "r")
               self.configure_call = ""
-              print("parse configure outcome " + input_file + " to extract configure settings")
-              MakefileDefined = [
-                  "Parallel",
-                  "SharedOMP",
-                  "SharedSYCL",
-                  "SharedCPP",
-              ]
+              print("Parse configure outcome " + input_file + " to extract configure settings")
 
               for line in input:
                   if "./configure" in line and self.configure_call == "":
-                      print("found the configure call info " + line)
+                      print("Found the configure call info " + line)
                       self.configure_call = line.strip()
-                  for define in MakefileDefined:
-                      if re.search("#define " + define, line):
-                          self.d[define] = "1"
 
               input_file = directory + "/src/Makefile"
               input = open(input_file, "r")
-              print("parse configure outcome " + input_file + " to extract compile settings")
+              print("Parse configure outcome " + input_file + " to extract compile settings")
               MakefileConstants = [
                   "CXXFLAGS_PEANO_2D_RELEASE",
                   "CXXFLAGS_PEANO_2D_STATS",
@@ -332,10 +333,13 @@ the SISC paper
                       if re.search(constant + " *=", line) and line.startswith(constant):
                           try:
                               flags = line.split("=", 1)[1].strip()
-                              #print("add " + constant + "=" + flags)
                               self.d[constant] = flags
                           except:
                               print("Error in " + line + " for token " + constant)
+              self.d["MULTITHREADING"] = re.search(r"--with-multithreading=([\w-]+)", self.configure_call).group(1).strip() if "--with-multithreading=" in self.configure_call else "no"
+              self.d["GPU"] = re.search(r"--with-gpu=([\w-]+)", self.configure_call).group(1).strip() if "--with-gpu=" in self.configure_call else "no"
+              print("Found the setting for multithreading: " + self.d["MULTITHREADING"])
+              print("Found the setting for GPU: " + self.d["GPU"])
               return
           except IOError:
               self.d["CMAKE_BUILD_DIR"] = next((path for path in (os.path.join(directory, subdir) for subdir in os.listdir(directory)) if os.path.isfile(os.path.join(path, "PeanoTargets.cmake"))), "")
@@ -354,6 +358,12 @@ the SISC paper
                                   self.d["CXX"] = value.strip()
                               if key == "CMAKE_Fortran_COMPILER":
                                   self.d["FC"] = value.strip()
+                              if key == "WITH_MULTITHREADING":
+                                  self.d["MULTITHREADING"] = value.strip()
+                              if key == "WITH_GPU":
+                                  self.d["GPU"] = value.strip()
+                              if key == "WITH_GPU_ARCH":
+                                  self.d["GPU_ARCH"] = value.strip()
         else: # Nothing has been configured so far
               raise Exception("""
   Error: if you call parse_configure_script_outcome(), please hand over directory where

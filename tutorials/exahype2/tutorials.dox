@@ -33,18 +33,16 @@ instructions!
   - \subpage tutorials_exahype2_exercises_acoustic_Acoustic-advanced
   - \subpage tutorials_exahype2_exercises_swe_SWE-sympy
   - \subpage tutorials_exahype2_exercises_swe_SWE-aderdg
-- Toy problems
-  - \subpage page_exahype2_tutorials_toyproblems_acoustic
-  - \subpage page_exahype2_tutorials_toyproblems_advection
-  - \subpage page_exahype2_tutorials_toyproblems_elastic
-  - \subpage page_exahype2_tutorials_toyproblems_euler
-  - \subpage page_exahype2_tutorials_toyproblems_swe
-- \subpage tutorials_exahype2_applications_exagrype (numerical relativity extension built on top of ExaHyPE) 
-- \subpage tutorials_exahype2_applications_exaseis (seismology extension built on top of ExaHyPE)
+- SymHyPE (symbolic interface)
+  - \subpage page_tutorials_exahype2_symhype_acoustic
+  - \subpage page_tutorials_exahype2_symhype_advection
+  - \subpage page_tutorials_exahype2_symhype_elastic
+  - \subpage page_tutorials_exahype2_symhype_euler
+  - \subpage page_tutorials_exahype2_symhype_swe
+- \subpage tutorials_exahype2_applications_exagrype (numerical relativity extension built on top of ExaHyPE)
 - \subpage tutorials_exahype2_design-patterns
 - Adding features
   - \subpage tutorials_exahype_gpu
-  - Adding your own compute kernels <!-- (Harrison's work) -->
   - \subpage tutorials_exahype2_coupling
   - \subpage tutorials_exahype2_additional_mesh_sweeps
 

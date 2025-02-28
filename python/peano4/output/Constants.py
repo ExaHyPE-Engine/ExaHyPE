@@ -193,7 +193,7 @@ These constants are available to the application within its namespace.
 
       # We first eliminate the precompiled variant, and then we get rid of the
       # postfix in the case where it is a source file
-      with open( os.path.realpath(__file__).replace( ".pyc", ".h.template" ).replace( ".py", ".h.template" ), "r" ) as input:
+      with open( os.path.realpath(__file__).replace( ".pyc", ".template.h" ).replace( ".py", ".template.h" ), "r" ) as input:
         template = input.read()
       with open( filename, "w" ) as output:
         output.write( template.format(**self.d) )

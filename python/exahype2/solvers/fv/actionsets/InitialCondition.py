@@ -1,10 +1,10 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import jinja2
+
+import peano4.solversteps
 
 from .AbstractFVActionSet import AbstractFVActionSet
-
-import peano4
-import jinja2
 
 class InitialCondition(AbstractFVActionSet):
   def __init__(self,solver,guard,grid_is_constructed, restart_from_checkpoint=False, loading_scheme="local-loading"):
@@ -216,10 +216,16 @@ if ({{PREDICATE}}) {
       #elif Dimensions==3
       domainPatchCount=offsetIndex.size()/3;
       #endif
-
 """
     elif self._loading_scheme=="local-loading":
       return """
       tarch::reader::readInCheckpointOffsetIndex(OffsetIndexMap, CheckpointFilesOf{{SOLVER_NAME}});
+"""
 
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+  def get_includes(self):
+    return super(InitialCondition, self).get_includes() + """
+#include "exahype2/fv/PatchUtils.h"
 """

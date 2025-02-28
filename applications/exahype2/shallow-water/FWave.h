@@ -53,20 +53,15 @@ namespace applications::exahype2::swe {
   #endif
   static inline GPUCallableMethod
   double fWave(
-    const double* const __restrict__             QR,
     const double* const __restrict__             QL,
-    const double* const __restrict__             FR,
-    const double* const __restrict__             FL,
-    const double* const __restrict__             LR,
-    const double* const __restrict__             LL,
-    const tarch::la::Vector<Dimensions, double>& xR,
-    const tarch::la::Vector<Dimensions, double>& xL,
+    const double* const __restrict__             QR,
+    const tarch::la::Vector<Dimensions, double>& x,
     const tarch::la::Vector<Dimensions, double>& h,
     const double                                 t,
     const double                                 dt,
     const int                                    normal,
-    double* const __restrict__                   APDQ,
-    double* const __restrict__                   AMDQ
+    double* const __restrict__                   AMDQ,
+    double* const __restrict__                   APDQ
   ) InlineMethod;
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target

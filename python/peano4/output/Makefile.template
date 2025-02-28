@@ -5,15 +5,15 @@
 
 CXX = {{CXX}}
 FC  = {{FC}}
-DIMENSIONS = {{DIM}}
+DIMENSIONS = {{DIMENSIONS}}
 
-{% if MODE=="RELEASE" and DIM=="2" %}
+{% if MODE=="RELEASE" and DIMENSIONS=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="STATS" and DIM=="2" %}
+{% if MODE=="STATS" and DIMENSIONS=="2" %}
 # It is important that Peano's includes are enlisted early, as other 3rd party
 # libraries might have their own config.h (if they use autotools, too) and thus
 # might break the Peano installation.
@@ -22,49 +22,49 @@ LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_STATS}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="ASSERTS" and DIM=="2" %}
+{% if MODE=="ASSERTS" and DIMENSIONS=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_ASSERTS}}
 LDFLAGS  += {{LDFLAGS_PEANO_ASSERTS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_ASSERTS}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="TRACE" and DIM=="2" %}
+{% if MODE=="TRACE" and DIMENSIONS=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_TRACE}}
 LDFLAGS  += {{LDFLAGS_PEANO_TRACE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_TRACE}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="DEBUG" and DIM=="2" %}
+{% if MODE=="DEBUG" and DIMENSIONS=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_DEBUG}}
 LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_DEBUG}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="RELEASE" and DIM=="3" %}
+{% if MODE=="RELEASE" and DIMENSIONS=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_RELEASE}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="STATS" and DIM=="3" %}
+{% if MODE=="STATS" and DIMENSIONS=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_STATS}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="ASSERTS" and DIM=="3" %}
+{% if MODE=="ASSERTS" and DIMENSIONS=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_ASSERTS}}
 LDFLAGS  += {{LDFLAGS_PEANO_ASSERTS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_ASSERTS}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="TRACE" and DIM=="3" %}
+{% if MODE=="TRACE" and DIMENSIONS=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_TRACE}}
 LDFLAGS  += {{LDFLAGS_PEANO_TRACE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_TRACE}} {{LIBS}}
 {% endif %}
 
-{% if MODE=="DEBUG" and DIM=="3" %}
+{% if MODE=="DEBUG" and DIMENSIONS=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_DEBUG}}
 LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_DEBUG}} {{LIBS}}

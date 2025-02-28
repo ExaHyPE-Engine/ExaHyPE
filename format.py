@@ -11,7 +11,7 @@ python_venv_dir = ".formatting_python_env"
 
 # These can be overwritten by optional cmdline arg
 default_clang_format_file_name = ".clang-format"
-target_branch = "p4"
+target_branch = "muc/exahype"
 
 # Formatting tools versions
 black_version = "23.3.0"

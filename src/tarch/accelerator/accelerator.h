@@ -10,11 +10,16 @@
  */
 #include "sycl/Device.h"
 
+/**
+ * Have to include this header, as we need access to the underlying CUDA streams.
+ */
+#include "cuda/Device.h"
+
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
 
 namespace tarch {
-  #if defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
+  #if defined(GPUOffloadingCUDA) or defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
     #define GPUCallableMethod __host__ __device__
     GPUCallableMethod void gpuAbort();
   #elif defined(GPUOffloadingSYCL)

@@ -44,10 +44,6 @@ void applications::exahype2::euler::Euler::boundaryConditions(
   double                                        t,
   int                                           normal
 ) {
-#ifdef GPUOffloadingOff
-  nonCriticalAssertion4(Qinside[s::rho] > 1e-12, x, t, normal, Qinside[s::rho]);
-#endif
-
   // Reflective boundary conditions
   Qoutside[s::rho] = Qinside[s::rho];
   Qoutside[s::u] = -Qinside[s::u];

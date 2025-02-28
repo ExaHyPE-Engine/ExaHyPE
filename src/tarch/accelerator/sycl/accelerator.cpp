@@ -7,6 +7,10 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 
+namespace {
+  tarch::logging::Log _log("tarch::accelerator::sycl");
+} // namespace
+
 void tarch::gpuAbort() {}
 
 void* tarch::accelerator::allocateRawData(
@@ -25,18 +29,18 @@ void* tarch::accelerator::allocateRawData(
       tarch::padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::DeviceHeap: {
     assertion1(device >= 0, device);
     ::sycl::queue& queue = accelerator::getSYCLQueue(device);
     data                 = ::sycl::malloc_device<void*>(sizeInBytes, queue);
     break;
   }
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory: {
     assertion1(device >= 0, device);
     ::sycl::queue& queue = accelerator::getSYCLQueue(device);
     data                 = ::sycl::malloc_shared<void*>(sizeInBytes, queue);
     break;
-  }
+  }}
 
   assertion(data);
 

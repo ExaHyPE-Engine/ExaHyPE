@@ -8,11 +8,11 @@ import exahype2
 
 class Euler:
     _available_solvers = {
-        "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
+        "RusanovGlobalFixedFV": exahype2.solvers.fv.godunov.GlobalFixedTimeStep,
+        "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.godunov.GlobalFixedTimeStepWithEnclaveTasking,
 
-        "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
-        "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
+        "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
+        "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 
         "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
@@ -39,7 +39,7 @@ class Euler:
             "-dt",
             "--time-step-size",
             type=float,
-            default=0.01,
+            default=0.001,
             help="Time step size for fixed time-stepping.",
         )
         parser.add_argument(
@@ -56,6 +56,7 @@ class Euler:
             type=str,
             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]).",
         )
+
         parser.add_argument(
             "-offset",
             "--offset",
@@ -68,9 +69,8 @@ class Euler:
             "--stateless",
             action="store_true",
             default=False,
-            help="Use stateless PDE terms for GPU offloading (requires a GPU enabled Peano build and an enclave solver).",
+            help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
         )
-
         parser.add_argument(
             "-o",
             "--output",
@@ -159,7 +159,7 @@ class Euler:
             "--storage",
             type=str,
             choices=[e.name for e in exahype2.solvers.Storage],
-            default="Heap",
+            default="CallStack",
             help="The storage scheme to use."
         )
 
@@ -278,8 +278,8 @@ class Euler:
                 "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-                "flux": "applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+                "flux": "applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+                "max_eigenvalue": "return applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
             }
         elif "RKDG" in args.solver:
             solver_params.update(
@@ -384,7 +384,7 @@ class Euler:
         project.set_timeout(args.timeout)
 
         project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
-        project = project.generate_Peano4_project(verbose=True)
+        project = project.generate_Peano4_project(verbose=False)
 
         if args.fpe:
             project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

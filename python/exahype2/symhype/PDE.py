@@ -30,7 +30,7 @@ class PDE(object):
         return result
 
     def _implementation_of_mapping_onto_named_quantities(
-        self, is_cell_mapping=True, is_boundary=False, has_delta=False
+        self, is_boundary=False, has_delta=False
     ):
         """
         Return the C code that maps the quantities from Q onto
@@ -38,40 +38,30 @@ class PDE(object):
         """
         result = ""
         for i in range(0, self.unknowns + self.auxiliary_variables):
-            result += "[[maybe_unused]] const "
-            result += "double "
+            result += "[[maybe_unused]] const double "
             result += sympy.printing.cxxcode(self.Q[i])
             if is_boundary:
                 result += " = Qinside[" + str(i) + "];\n"
-                result += "nonCriticalAssertion(Qinside[" + str(i) + "] == Qinside[" + str(i) + "]);\n"
             else:
                 result += " = Q[" + str(i) + "];\n"
-                result += "nonCriticalAssertion(Q[" + str(i) + "] == Q[" + str(i) + "]);\n"
-            result += "assertion(!std::isnan(" + sympy.printing.cxxcode(self.Q[i]) + "));\n"
 
         if has_delta:
             for i in range(0, self.unknowns + self.auxiliary_variables):
-                result += "nonCriticalAssertion(deltaQ[" + str(i) + "] == deltaQ[" + str(i) + "]);\n"
-                result += "[[maybe_unused]] const "
-                result += "double "
+                result += "[[maybe_unused]] const double "
                 result += sympy.printing.cxxcode(self.delta_Q[i])
                 result += " = deltaQ[" + str(i) + "];\n"
-                result += "assertion(!std::isnan(" + sympy.printing.cxxcode(self.delta_Q[i]) + "));\n"
 
         for i in range(0, self.dimensions):
-            result += "const double x_"
+            result += "[[maybe_unused]] const double x_"
             result += str(i)
             result += " = "
-            if is_cell_mapping:
-                result += "volumeCentre"
-            else:
-                result += "faceCentre"
+            result += "x"
             result += "(" + str(i) + ");\n"
         for i in range(0, self.dimensions):
-            result += "const double h_"
+            result += "[[maybe_unused]] const double h_"
             result += str(i)
             result += " = "
-            result += "volumeH"
+            result += "h"
             result += "(" + str(i) + ");\n"
 
         return result
@@ -84,15 +74,15 @@ class PDE(object):
         There's also a dedicated routine for auxiliary variables if you prefer this one.
         @see name_auxiliary_variable
         """
-        self.Q[offset_in_Q] = sympy.symbols(name)
+        self.Q[offset_in_Q] = sympy.symbols("Q_" + name)
         return self.Q[offset_in_Q]
 
-    def name_auxiliary_variable(self,number,name):
-        self.Q[number + self.unknowns] = sympy.symbols(name)
-        return self.Q[number + self.unknowns]
+    def name_auxiliary_variable(self, offset_in_Q, name):
+        self.Q[offset_in_Q + self.unknowns] = sympy.symbols("Q_" + name)
+        return self.Q[offset_in_Q + self.unknowns]
 
     def name_Q_entries(self, offset_in_Q, cardinality, name):
-        new_entry = sympy.symarray(name, cardinality)
+        new_entry = sympy.symarray("Q_" + name, cardinality)
         for i in range(0, cardinality):
             self.Q[offset_in_Q + i] = new_entry[i]
         return new_entry
@@ -114,14 +104,9 @@ class PDE(object):
             return self.delta_Q[offset_in_delta_Q]
 
     def implementation_of_homogeneous_Neumann_BC(self):
-        result = "assertion(normal >= 0);\n"
-        result += "//assertion(normal < Dimensions);\n"
+        result = ""
         for i in range(0, self.unknowns + self.auxiliary_variables):
-            result += "assertion(!std::isnan(Qoutside[" + str(i) + "]));\n"
-            result += "assertion(!std::isnan(Qinside[" + str(i) + "]));\n"
-            result += "nonCriticalAssertion(Qinside[" + str(i) + "] == Qinside[" + str(i) + "]);\n"
             result += "Qoutside[" + str(i) + "] = Qinside[" + str(i) + "];\n"
-            result += "nonCriticalAssertion(Qoutside[" + str(i) + "] == Qoutside[" + str(i) + "]);\n"
         return result
 
     def implementation_of_boundary_conditions(self, invoke_evalf_before_output=False):
@@ -131,11 +116,7 @@ class PDE(object):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = "assertion(normal >= 0);\n"
-        result += "//assertion(normal < Dimensions);\n"
-        result += self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=False, is_boundary=True
-        )
+        result = self._implementation_of_mapping_onto_named_quantities(is_boundary=True)
         for i in range(0, self.unknowns + self.auxiliary_variables):
             if invoke_evalf_before_output:
                 result += sympy.printing.cxxcode(
@@ -159,9 +140,7 @@ class PDE(object):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = self._implementation_of_mapping_onto_named_quantities(
-            is_cell_mapping=True
-        )
+        result = self._implementation_of_mapping_onto_named_quantities()
         for i in range(0, self.unknowns + self.auxiliary_variables):
             if invoke_evalf_before_output:
                 result += sympy.printing.cxxcode(
@@ -176,5 +155,4 @@ class PDE(object):
                     + ";"
                 )
             result += "\n"
-            result += "assertion(!std::isnan(Q[" + str(i) + "]));\n"
         return result

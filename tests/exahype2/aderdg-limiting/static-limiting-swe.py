@@ -20,17 +20,12 @@ max_h = 1.1 * min(size) / (3.0**min_level)
 min_h = max_h / (3.0**max_depth)
 
 
-def initial_conditions(x):
-    return (
-        """
+initial_conditions = """
   Q[0] = 4.0;
   Q[1] = 0.0;
   Q[2] = 0.0;
-  Q[3] = 2.0 - tarch::la::norm2("""
-        + x
-        + """);
+  Q[3] = 2.0 - tarch::la::norm2(x);
 """
-    )
 
 
 boundary_conditions = """
@@ -96,7 +91,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     flux=flux,
     ncp=ncp,
     eigenvalues=max_eval,
-    initial_conditions=initial_conditions("x"),
+    initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
 )
 aderdg_solver.add_kernel_optimisations(
@@ -104,7 +99,7 @@ aderdg_solver.add_kernel_optimisations(
 )
 project.add_solver(aderdg_solver)
 
-fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=2 * order + 1,
     unknowns=4,
@@ -114,8 +109,8 @@ fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     time_step_relaxation=0.9,
     flux=flux,
     ncp=ncp,
-    eigenvalues=max_eval,
-    initial_conditions=initial_conditions("volumeCentre"),
+    max_eigenvalue=max_eval,
+    initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
 )
 project.add_solver(fv_solver)

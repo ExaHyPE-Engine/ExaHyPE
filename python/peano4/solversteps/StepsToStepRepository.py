@@ -48,8 +48,8 @@ class StepsToStepRepository(object):
       templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
       local_d = self.d.copy()
       generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
-        templatefile_prefix+".h.template",
-        templatefile_prefix+".cpp.template",
+        templatefile_prefix+".template.h",
+        templatefile_prefix+".template.cpp",
         class_name, 
         namespace + ["repositories"],
         subdirectory + "repositories",

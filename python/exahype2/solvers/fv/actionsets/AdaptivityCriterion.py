@@ -232,4 +232,5 @@ class AdaptivityCriterion(AbstractFVActionSet):
   def get_includes(self):
     return super( AdaptivityCriterion, self ).get_includes() + """
 #include "exahype2/RefinementControlService.h"
+#include "exahype2/fv/PatchUtils.h"
 """

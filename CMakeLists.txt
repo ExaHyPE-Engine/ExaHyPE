@@ -148,7 +148,7 @@ elseif(WITH_TOOLCHAIN STREQUAL "itac")
 elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
   find_package(CUDAToolkit REQUIRED)
-  target_link_libraries(PeanoOptions INTERFACE CUDA::nvToolsExt)
+  target_link_libraries(PeanoOptions INTERFACE CUDA::nvtx3)
   target_compile_definitions(PeanoOptions INTERFACE UseNVTX UseLogService=NVTXLogger)
 endif()
 
@@ -157,7 +157,7 @@ list(APPEND AVAILABLE_MULTITHREADING
   "omp"
   "sycl"
   "tbb"
-  "cpp"
+#  "cpp"
 )
 set(WITH_MULTITHREADING "no" CACHE STRING "${AVAILABLE_MULTITHREADING}")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${AVAILABLE_MULTITHREADING})
@@ -193,8 +193,9 @@ list(APPEND AVAILABLE_ACCELERATORS
   "no"
   "omp"
   "sycl"
-  "cpp"
   "cuda"
+#  "hip"
+  "cpp"
 )
 set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${AVAILABLE_ACCELERATORS})
@@ -231,12 +232,14 @@ endif()
 
 if(WITH_GPU STREQUAL "omp")
   include(OpenMPTarget)
-elseif(WITH_GPU STREQUAL "cpp")
-  include(StdPar)
 elseif(WITH_GPU STREQUAL "sycl")
   include(SYCL)
 elseif(WITH_GPU STREQUAL "cuda")
   include(CUDA)
+elseif(WITH_GPU STREQUAL "hip")
+  include(HIP)
+elseif(WITH_GPU STREQUAL "cpp")
+  include(StdPar)
 else()
   set(ONLY_IF_GPU_FIND_DEPENDENCY "# GPU not used")
 endif()

@@ -12,11 +12,8 @@ double applications::exahype2::euler::maxEigenvalue(
   using s = VariableShortcuts;
 
   #if defined(GPUOffloadingOff)
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(Q[s::rho] > 0);
-  assertion(!std::isnan(Q[s::rho]));
-  nonCriticalAssertion(Q[s::rho] == Q[s::rho]);
+  assertion1(!std::isnan(Q[s::rho]), Q[s::rho]);
+  assertion1(Q[s::rho] > 0, Q[s::rho]);
   #endif
 
   const double irho = 1.0 / Q[s::rho];
@@ -53,11 +50,8 @@ void applications::exahype2::euler::flux(
   using s = VariableShortcuts;
 
   #if defined(GPUOffloadingOff)
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
   assertion(Q[s::rho] > 0);
   assertion(!std::isnan(Q[s::rho]));
-  nonCriticalAssertion(Q[s::rho] == Q[s::rho]);
   #endif
 
   const double irho = 1.0 / Q[s::rho];

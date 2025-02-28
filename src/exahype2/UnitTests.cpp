@@ -16,9 +16,9 @@
 #include "exahype2/fd/tests/SommerfeldBCTest.h"
 #include "exahype2/fd/tests/CCZ4KernelTest.h"
 
+#include "exahype2/fv/tests/CopyPatchTest.h"
 #include "exahype2/fv/tests/InterpolationRestrictionTest.h"
-#include "exahype2/fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.h"
-#include "exahype2/fv/rusanov/tests/CopyPatchTest.h"
+#include "exahype2/fv/tests/ApplySplit1DRiemannToPatchTest.h"
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
@@ -34,9 +34,9 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new exahype2::fd::tests::SommerfeldBCTest());
   //result->addTestCase(new exahype2::fd::tests::CCZ4KernelTest());
 
-  // result->addTestCase(new exahype2::fv::tests::InterpolationRestrictionTest());
-  result->addTestCase(new exahype2::fv::rusanov::tests::CopyPatchTest());
-  result->addTestCase(new exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest());
+  result->addTestCase(new exahype2::fv::tests::CopyPatchTest());
+  result->addTestCase(new exahype2::fv::tests::InterpolationRestrictionTest());
+  result->addTestCase(new exahype2::fv::tests::ApplySplit1DRiemannToPatchTest());
 
   return result;
 }

@@ -95,7 +95,6 @@ namespace exahype2 {
        * Bringing all these facts together, we conclude that we end up with a
        * 1:1 translation of Finite Volumes into the DG world.
        *
-       * @see exahype2/fv/rusanov/LoopBody.cpph for further information.
        */
       void solveRiemannProblem_pointwise_in_situ(
         ::exahype2::dg::Flux                         flux,

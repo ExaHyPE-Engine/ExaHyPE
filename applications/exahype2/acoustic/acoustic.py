@@ -8,11 +8,11 @@ import exahype2
 
 class Acoustic:
     _available_solvers = {
-        "RusanovGlobalFixedFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
-        "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
+        "RusanovGlobalFixedFV": exahype2.solvers.fv.godunov.GlobalFixedTimeStep,
+        "RusanovGlobalFixedEnclaveFV": exahype2.solvers.fv.godunov.GlobalFixedTimeStepWithEnclaveTasking,
 
-        "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
-        "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
+        "RusanovGlobalAdaptiveFV": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
+        "RusanovGlobalAdaptiveEnclaveFV": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 
         "RusanovGlobalFixedADERDG": exahype2.solvers.aderdg.GlobalFixedTimeStep,
         "RusanovGlobalAdaptiveADERDG": exahype2.solvers.aderdg.GlobalAdaptiveTimeStep,
@@ -39,7 +39,7 @@ class Acoustic:
             "-dt",
             "--time-step-size",
             type=float,
-            default=0.01,
+            default=0.001,
             help="Time step size for fixed time-stepping.",
         )
         parser.add_argument(
@@ -159,7 +159,7 @@ class Acoustic:
             "--storage",
             type=str,
             choices=[e.name for e in exahype2.solvers.Storage],
-            default="Heap",
+            default="CallStack",
             help="The storage scheme to use."
         )
 
@@ -278,9 +278,9 @@ class Acoustic:
                 "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
                 "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
-                "flux": "applications::exahype2::acoustic::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
-                "eigenvalues": "return applications::exahype2::acoustic::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-                "source_term": "applications::exahype2::acoustic::sourceTerm(Q, volumeCentre, volumeH, t, dt, S);",
+                "flux": "applications::exahype2::acoustic::flux(Q, x, h, t, dt, normal, F);",
+                "max_eigenvalue": "return applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal);",
+                "source_term": "applications::exahype2::acoustic::sourceTerm(Q, x, h, t, dt, S);",
             }
         elif "ADERDG" in args.solver:
             solver_params.update(
@@ -370,7 +370,7 @@ class Acoustic:
         project.set_timeout(args.timeout)
 
         project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
-        project = project.generate_Peano4_project(verbose=True)
+        project = project.generate_Peano4_project(verbose=False)
 
         if args.fpe:
             project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

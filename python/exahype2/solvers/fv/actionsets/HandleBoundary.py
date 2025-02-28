@@ -29,23 +29,21 @@ class HandleBoundary(AbstractFVActionSet):
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
       logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
-
 """
-
 
   TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fv::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
           double * __restrict__                        Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal
         ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, x, h, t, normal );
+        },
         marker.x(),
         marker.h(),
         {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
@@ -60,14 +58,14 @@ class HandleBoundary(AbstractFVActionSet):
         [&](
           const double * __restrict__                  Qinside,
           double * __restrict__                        Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal
         ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, x, h, t, normal );
+        },
         marker.x(),
         marker.h(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),

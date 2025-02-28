@@ -47,11 +47,8 @@ ExaHyPE2Sources = \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
   fv/tests/InterpolationRestrictionTest.cpp \
-  fv/riemann/Riemann.cpp \
-  fv/riemann/TimeStepWithRiemann.cpp \
-  fv/rusanov/rusanov.cpp \
-  fv/rusanov/tests/CopyPatchTest.cpp \
-  fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
+  fv/tests/CopyPatchTest.cpp \
+  fv/tests/ApplySplit1DRiemannToPatchTest.cpp
 
 libExaHyPE2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
 libExaHyPE2Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)
