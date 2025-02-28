@@ -172,10 +172,10 @@ class PatchFileParser:
         self.file_contains_patches = False
 
         """
-    Here we expected the keys to be a list of unknown names that we
-    have associated with each cell/vertex, and the values to be 
-    instances of the helper class UnknownAttributes
-    """
+        Here we expected the keys to be a list of unknown names that we
+        have associated with each cell/vertex, and the values to be
+        instances of the helper class UnknownAttributes.
+        """
         self.unknown_attributes = {}
 
     def __repr__(self):

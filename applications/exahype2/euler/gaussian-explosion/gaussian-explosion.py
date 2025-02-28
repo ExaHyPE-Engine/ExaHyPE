@@ -10,12 +10,12 @@ if __name__ == "__main__":
 
     my_parser = euler.setup_parser()
     my_parser.set_defaults(
-        solver="RusanovGlobalAdaptiveADERDG",
+        solver="RusanovGlobalAdaptiveFV",
         dimensions=2,
-        end_time=3.0,
+        end_time=0.5,
         width=[1.0, 1.0, 1.0],
         offset=[0.0, 0.0, 0.0],
-        min_depth=4,
+        min_depth=5,
         amr_levels=0,
         patch_size=16,
         rk_order = 2,

@@ -4,20 +4,15 @@
 // clang-format off
 
 double applications::exahype2::swe::fWave(
-  const double* const __restrict__                  QR,
-  const double* const __restrict__                  QL,
-  [[maybe_unused]] const double* const __restrict__ FR,
-  [[maybe_unused]] const double* const __restrict__ FL,
-  const double* const __restrict__                  /*LR*/, // not used
-  const double* const __restrict__                  /*LL*/, // not used
-  const tarch::la::Vector<Dimensions, double>&      /*xR*/, // not used
-  const tarch::la::Vector<Dimensions, double>&      /*xL*/, // not used
-  const tarch::la::Vector<Dimensions, double>&      /*h*/, // not used
-  const double                                      /*t*/, // not used
-  const double                                      /*dt*/, // not used
-  const int                                         normal,
-  double* const __restrict__                        APDQ,
-  double* const __restrict__                        AMDQ
+  const double* const __restrict__             QL,
+  const double* const __restrict__             QR,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const __restrict__                   AMDQ,
+  double* const __restrict__                   APDQ
 ) {
   using s = VariableShortcuts;
 
@@ -128,12 +123,6 @@ double applications::exahype2::swe::fWave(
   // Right hand side
   const double fluxLeft[2] {huLeft, huLeft * uLeft + 0.5 * GRAV * hLeft * hLeft};
   const double fluxRight[2] {huRight, huRight * uRight + 0.5 * GRAV * hRight * hRight};
-
-  // Alternatively using the input parameters FL and FR gives the same results
-  // Then we need to also call the corresponding flux function in the solver before
-  // However, above we handle dry cells and we make use of a more efficient implementation
-  //const double fluxLeft[2] {FL[s::h], FL[normal + 1]};
-  //const double fluxRight[2] {FR[s::h], FR[normal + 1]};
 
   // Add source term (bathymetry) into the decomposition of the jump in the flux function
   const double deltaxPsi = -GRAV * (bRight - bLeft) * hRoe;

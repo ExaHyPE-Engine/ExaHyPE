@@ -177,6 +177,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
     return """
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/fv/PatchUtils.h"
 """ + AbstractFVActionSet.get_includes(self) 
 
 

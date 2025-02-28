@@ -4,20 +4,15 @@
  // clang-format off
 
 double applications::exahype2::swe::hllem(
-  const double* const __restrict__                  QR,
-  const double* const __restrict__                  QL,
-  const double* const __restrict__                  /*FR*/, // not used
-  const double* const __restrict__                  /*FL*/, // not used
-  const double* const __restrict__                  /*LR*/, // not used
-  const double* const __restrict__                  /*LL*/, // not used
-  const tarch::la::Vector<Dimensions, double>&      /*xR*/, // not used
-  const tarch::la::Vector<Dimensions, double>&      /*xL*/, // not used
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  const double                                      /*t*/, // not used
-  const double                                      /*dt*/, // not used
-  const int                                         normal,
-  double* const __restrict__                        APDQ,
-  double* const __restrict__                        AMDQ
+  const double* const __restrict__             QL,
+  const double* const __restrict__             QR,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const __restrict__                   AMDQ,
+  double* const __restrict__                   APDQ
 ) {
   using s = VariableShortcuts;
 

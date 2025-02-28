@@ -75,7 +75,7 @@ You find the vanilla paper of this idea in
 Alternatively, each lowering into Peano yields a README-xxxxx.md file. In this 
 markup file, you also find all the information of papers that have an influence
 on your chosen solver configuration. Solvers that support enclave tasking 
-typically have a distinct name. exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking is
+typically have a distinct name. exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking is
 for example a solver which yields tasks.
 
 Once you have chosen such a solver and compile the code, there should be a tasks
@@ -178,12 +178,12 @@ into the constructor that tells
 the solver that we have PDE terms which have no side effect which also
 do not need the solver object.
 Consult the documentation of the respective solvers. Again,
-exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking is 
+exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking is 
 a good prototype to study:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
+my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking(
             name= "GPUFVSolver",
             patch_size=18,
             min_volume_h=0.0001,
@@ -234,11 +234,11 @@ In many of our codes, we take a function like
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void examples::exahype2::SSInfall::SSInfall::flux( ... ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal ); 
+  logTraceInWith4Arguments( "flux(...)", x, h, t, normal );
 
-  compute something; 
+  compute something;
 
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  logTraceOutWith4Arguments( "flux(...)", x, h, t, normal );
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -246,11 +246,11 @@ and simply split it into two variants:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void examples::exahype2::SSInfall::SSInfall::flux( ... ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal ); 
-  
-  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes); 
-  
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  logTraceInWith4Arguments( "flux(...)", x, h, t, normal );
+
+  flux(Q,x,h,t,normal,F,Offloadable::Yes);
+
+  logTraceOutWith4Arguments( "flux(...)", x, h, t, normal );
 }
 
 

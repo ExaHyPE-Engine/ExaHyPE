@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
+
 #include "tarch/logging/Log.h"
 
 {% for item in NAMESPACE -%}
@@ -41,8 +42,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      const tarch::la::Vector<Dimensions, double>& volumeH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       double                                       t
     ) override;
     {% endif %}
@@ -50,8 +51,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
       double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      const tarch::la::Vector<Dimensions, double>& volumeH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       bool                                         gridIsConstructed
     ) override;
     {% endif %}
@@ -60,8 +61,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     virtual void boundaryConditions(
       const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& faceCentre,
-      const tarch::la::Vector<Dimensions, double>& volumeH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       double                                       t,
       int                                          normal
     ) override;

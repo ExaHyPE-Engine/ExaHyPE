@@ -50,7 +50,7 @@ void exahype2::EnclaveBookkeeping::cancelTask(int taskNumber) {
   if (_finishedTasks.count(taskNumber) > 0) {
     Entry storedData = _finishedTasks.at(taskNumber);
     _finishedTasks.erase(taskNumber);
-    tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
     exahype2::EnclaveTask::releaseTaskNumber(taskNumber);
   } else {
     _tasksThatHaveToBeCancelled.insert(taskNumber);
@@ -93,7 +93,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int taskNumber) {
 
   Entry storedData = waitForTaskToTerminateAndReturnResult(taskNumber);
   // TODO: Is the freeMemory below dangerous if we handle target memory and enclave memory regions as the same?
-  tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
 
   logTraceOut("waitForTaskAndDiscardResult(int)");
 }
@@ -111,7 +111,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
     //#pragma omp taskwait depend(in: storedData.data)
     std::copy_n(storedData.data, storedData.numberOfResultValues, destination);
     //tarch::accelerator::MemoryManager(storedData.data, 0);
-    tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
   } else {
     logDebug(
       "waitForTaskToTerminateAndCopyResultOver(int,double*,double&)",
@@ -137,7 +137,7 @@ void exahype2::EnclaveBookkeeping::bookmarkFinishedTask(
   if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
     logWarning("bookmarkFinishedTask(...)", "task entry for task " << taskNumber << " does exist already");
     _tasksThatHaveToBeCancelled.erase(taskNumber);
-    tarch::freeMemory(data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(data, tarch::MemoryLocation::Heap);
     //delete[] data;
     finishedTasksLock.free();
     exahype2::EnclaveTask::releaseTaskNumber(taskNumber);

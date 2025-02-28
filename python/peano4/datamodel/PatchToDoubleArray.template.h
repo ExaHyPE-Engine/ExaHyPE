@@ -31,7 +31,7 @@
   namespace {{ item }} {
 {%- endfor %}
 
-  class {{CLASSNAME}};
+  struct {{CLASSNAME}};
 
 {% for item in NAMESPACE -%}
   }

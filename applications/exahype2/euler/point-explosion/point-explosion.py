@@ -10,14 +10,14 @@ if __name__ == "__main__":
 
     my_parser = euler.setup_parser()
     my_parser.set_defaults(
-        solver="RusanovGlobalAdaptiveADERDG",
+        solver="RusanovGlobalAdaptiveEnclaveFV",
         dimensions=2,
-        end_time=3.0,
+        end_time=0.5,
         width=[1.0, 1.0, 1.0],
         offset=[0.0, 0.0, 0.0],
         min_depth=4,
         amr_levels=0,
-        patch_size=16,
+        patch_size=64,
         rk_order = 2,
         dg_order = 3,
         number_of_snapshots = 20,

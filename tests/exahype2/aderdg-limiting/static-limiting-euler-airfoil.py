@@ -121,7 +121,7 @@ aderdg_solver.add_kernel_optimisations(
 )
 project.add_solver(aderdg_solver)
 
-fv_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=2 * order + 1,
     min_volume_h=min_h,
@@ -130,13 +130,8 @@ fv_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
     unknowns=4,
     auxiliary_variables=1,
     flux=flux,
-    boundary_conditions="""
-    tarch::la::Vector<Dimensions, double> x = faceCentre;\n"""
-    + boundaryCondition,
-    initial_conditions="""
-    tarch::la::Vector<Dimensions, double> x = volumeCentre;
-    tarch::la::Vector<Dimensions, double> h = volumeH;\n"""
-    + init,
+    boundary_conditions=boundaryCondition,
+    initial_conditions=init,
     eigenvalues=eigenvalues
     + """
     L[0] = u-c;
@@ -144,7 +139,16 @@ fv_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
     L[2] = u+c;
     L[3] = -u+c;""",
     riemann_solver="""
+    double LL[4];
+    double LR[4];
+    eigenvalues(QL, x, h, t, dt, normal, LL);
+    eigenvalues(QR, x, h, t, dt, normal, LR);
     const double sMax = std::max(*std::max_element(LL, LL+4), *std::max_element(LR, LR+4));
+
+    double fluxLeft[4];
+    double fluxRight[4];
+    flux(QL, x, h, t, dt, normal, fluxLeft);
+    flux(QR, x, h, t, dt, normal, fluxRight);
 
     const double vL = QL[4];
     const double vR = QR[4];
@@ -156,13 +160,13 @@ fv_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
         Rr = vr*Fr + vr*Fr*(1-vl) + vl*Fl*vr
     */
     for(int i=0; i<4; i++){
-      const double FLe = 0.5*vL*(FL[i]+sMax*QL[i]);
-      const double FRe = 0.5*vR*(FR[i]-sMax*QR[i]);
+      const double FLe = 0.5*vL*(fluxLeft[i]+sMax*QL[i]);
+      const double FRe = 0.5*vR*(fluxRight[i]-sMax*QR[i]);
 
       //left going update
-      AMDQ[i] = FLe*(2-vR) + vL*FRe;
+      FL[i] = FLe*(2-vR) + vL*FRe;
       //right going update
-      APDQ[i] = FRe*(2-vL) + vR*FLe;
+      FR[i] = FRe*(2-vL) + vR*FLe;
     }
 
     return sMax;""",

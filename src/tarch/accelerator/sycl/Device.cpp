@@ -18,8 +18,6 @@ namespace {
 
 tarch::accelerator::Device::Device() { listSYCLQueues(); }
 
-tarch::accelerator::Device::~Device() { shutdown(); }
-
 void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
   auto platforms               = sycl::platform::get_platforms();
   int  physicalNumberOfDevices = 0;

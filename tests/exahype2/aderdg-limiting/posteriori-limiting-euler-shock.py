@@ -80,7 +80,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 )
 project.add_solver(aderdg_solver)
 
-fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=2 * order + 1,
     unknowns=4,
@@ -89,9 +89,9 @@ fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     max_volume_h=max_h,
     time_step_relaxation=0.9,
     flux=flux,
-    eigenvalues=max_eval,
-    initial_conditions="const tarch::la::Vector<Dimensions, double>& x = volumeCentre;\n" + initial_conditions,
-    boundary_conditions="const tarch::la::Vector<Dimensions, double>& x = faceCentre;\n" + boundary_conditions,
+    max_eigenvalue=max_eval,
+    initial_conditions=initial_conditions,
+    boundary_conditions=boundary_conditions,
 )
 project.add_solver(fv_solver)
 

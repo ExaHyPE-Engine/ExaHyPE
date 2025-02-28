@@ -4,6 +4,7 @@ import os
 import re
 import jinja2
 
+from pathlib import Path
 from copy import deepcopy
 
 from .Helper import write_file
@@ -60,6 +61,6 @@ class Jinja2TemplatedHeaderFile(object):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
-    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
+    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
 
     self.__generate_file(overwrite,header_filename,self.headerfile_template)

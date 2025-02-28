@@ -103,7 +103,7 @@ class exahype2::EnclaveBookkeeping {
      * task's memory location via
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * tarch::freeMemory(result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+     * tarch::freeMemory(result, tarch::MemoryLocation::Heap);
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
     void waitForTaskToTerminateAndCopyResultOver(int taskNumber, double* destination, double& maxEigenvalue);

@@ -7,10 +7,10 @@ namespace applications::exahype2::swe::frictionlaws {
   #pragma omp declare target
   #endif
 
-  const double Zeta = 35.0 * std::numbers::pi / 180.0; // Conversion of degrees to radians
-  const double Zeta1 = 28.95 * std::numbers::pi / 180.0;
-  const double Zeta2 = 44.09 * std::numbers::pi / 180.0;
-  const double Zeta3 = 31.81 * std::numbers::pi / 180.0;
+  const double Zeta = 35.0 * tarch::la::PI / 180.0; // Conversion of degrees to radians
+  const double Zeta1 = 28.95 * tarch::la::PI / 180.0;
+  const double Zeta2 = 44.09 * tarch::la::PI / 180.0;
+  const double Zeta3 = 31.81 * tarch::la::PI / 180.0;
 
   const double Mu1 = std::tan(Zeta1);
   const double Mu2 = std::tan(Zeta2);

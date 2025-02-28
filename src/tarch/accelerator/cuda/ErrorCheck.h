@@ -9,18 +9,16 @@
 #include <cuda_runtime.h>
 
 namespace tarch::accelerator::cuda {
-  void checkError(cudaError_t code, const char* file, int line);
+  void checkError(cudaError_t code, const char* expr, const char* file, int line);
   void checkLastError(const char* file, int line);
 } // namespace tarch::accelerator::cuda
 
-#define CHECK_CUDA_ERROR(ans) \
-  { tarch::accelerator::cuda::checkError((ans), __FILE__, __LINE__); }
-#define CHECK_CUDA_LAST_ERROR() \
-  { tarch::accelerator::cuda::checkLastError(__FILE__, __LINE__); }
+//#if PeanoDebug > 0
+#define CHECK_CUDA_ERROR(ans) { tarch::accelerator::cuda::checkError((ans), #ans, __FILE__, __LINE__); }
+#define CHECK_CUDA_LAST_ERROR() { tarch::accelerator::cuda::checkLastError(__FILE__, __LINE__); }
+//#else
+//#define CHECK_CUDA_ERROR(ans)
+//#define CHECK_CUDA_LAST_ERROR()
+//#endif
 
-#else
-
-#define CHECK_CUDA_ERROR(ans)
-#define CHECK_CUDA_LAST_ERROR()
-
-#endif
+#endif // defined(GPUOffloadingCUDA)

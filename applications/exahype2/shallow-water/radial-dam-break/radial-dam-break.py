@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 import sys
 
 import peano4
@@ -102,7 +101,7 @@ aderdg_solver.add_user_solver_includes(
 unknowns = {"h": 1, "hu": 1, "hv": 1}
 auxiliary_variables = {"b": 1}
 
-riemann_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
+riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="HLLEM" + str(args.patch_size),
     patch_size=args.patch_size,
     unknowns=unknowns,
@@ -111,9 +110,9 @@ riemann_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
     pde_terms_without_state=args.stateless,
-    initial_conditions=re.sub(r'\bx\b', 'volumeCentre', initial_conditions),
+    initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
-    riemann_solver="return applications::exahype2::swe::hllem(QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ);",
+    riemann_solver="return applications::exahype2::swe::hllem(QL, QR, x, h, t, dt, normal, FL, FR);",
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())

@@ -1,0 +1,247 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+{% import 'Index.template.h' as id with context %}{# get template macros #}
+
+{% macro createMemoryOnStack() %}
+  double QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  double QInGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  double QInGatheredRight[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+
+  double QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+
+  {% if FLUX_IMPLEMENTATION!="<none>" %}
+  double fluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+  double fluxGatheredRight[{{NUMBER_OF_UNKNOWNS}}];
+  {% endif %}
+
+  {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+  double sourceGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {% endif %}
+
+  {% if NCP_IMPLEMENTATION!="<none>" %}
+  double QAverageGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  double QAverageGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  double DeltaQGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  double DeltaQGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+
+  double ncpGathered[{{NUMBER_OF_UNKNOWNS}}];
+  double ncpGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+  {% endif %}
+{% endmacro %}
+
+{% macro gatherQ() %}
+  // Gather data
+  {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QInGathered[unknown] = QIn[indexWithHalo];
+  }
+  {% if STATELESS_PDE_TERMS==True %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered, ::exahype2::Solver::Offloadable::Yes);
+  {% else %}
+  solver.sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
+  {% endif %}
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(sourceGathered[unknown]));
+    #endif
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QOutGathered[unknown] = QIn[indexWithHalo] + timeStepSize * sourceGathered[unknown];
+  } // unknown
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = {{NUMBER_OF_UNKNOWNS}}; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QOutGathered[unknown] = QIn[indexWithHalo];
+  } // unknown
+  {% else %}
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QInGathered[unknown] = QIn[indexWithHalo];
+    QOutGathered[unknown] = QIn[indexWithHalo];
+  } // unknown
+  {% endif %}
+{% endmacro %}
+
+{% macro scatterQ() %}
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Scatter data into QOut
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QOutGathered[unknown]));
+    #endif
+    const int index = {{ id.index('volume', 'unknown') | indent(4) }}{##}
+    QOut[index] = QOutGathered[unknown];
+  } // unknown
+{% endmacro %}
+
+{% macro computeFluxesAndPerformTimeStep() %}
+  const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeLeft);
+  const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeRight);
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Gather neighbor data
+    const int indexWithHaloLeft = {{ id.indexWithHalo('volumeLeft', 'unknown') | indent(6) }}{##}
+    const int indexWithHaloRight = {{ id.indexWithHalo('volumeRight', 'unknown') | indent(6) }}{##}
+
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHaloLeft]));
+    assertion(std::isfinite(QIn[indexWithHaloRight]));
+    #endif
+
+    QInGatheredLeft[unknown] = QIn[indexWithHaloLeft];
+    QInGatheredRight[unknown] = QIn[indexWithHaloRight];
+
+    {% if NCP_IMPLEMENTATION!="<none>" %}
+    /**
+     * We count faces starting with zero: Let the leftmost volume have
+     * the index i. i is typically 0 or -1 (if we have halos).
+     * When we call this routine for the index i, we first take the volume
+     * i and then we average it with i+1. So we look to the right. The
+     * result is stored in i. That means, all the indices are kind of
+     * shifted by 1/2 to the left. Index (4,3,2) is actually the face
+     * located at (4.5, 3, 2).
+     */
+    QAverageGathered[unknown] = 0.5 * QInGathered[unknown] + 0.5 * QInGatheredRight[unknown];
+    QAverageGatheredLeft[unknown] = 0.5 * QInGatheredLeft[unknown] + 0.5 * QInGathered[unknown];
+    DeltaQGathered[unknown] = QInGatheredRight[unknown] - QInGathered[unknown];
+    DeltaQGatheredLeft[unknown] = QInGathered[unknown] - QInGatheredLeft[unknown];
+    {% endif %}
+  } // unknown
+
+  // Retrieve user data
+  {% if STATELESS_PDE_TERMS==True %}
+  const double maxEigenvalueGathered      = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
+  const double maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
+  const double maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
+
+  {% if FLUX_IMPLEMENTATION!="<none>" %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
+  {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredRight, ::exahype2::Solver::Offloadable::Yes);
+  {% endif %}
+
+  {% if NCP_IMPLEMENTATION!="<none>" %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGathered, DeltaQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ncpGathered, ::exahype2::Solver::Offloadable::Yes);
+  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGatheredLeft, DeltaQGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
+  {% endif %}
+  {% else %}
+  const double maxEigenvalueGathered      = solver.maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+  const double maxEigenvalueGatheredLeft  = solver.maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal);
+  const double maxEigenvalueGatheredRight = solver.maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal);
+
+  {% if FLUX_IMPLEMENTATION!="<none>" %}
+  solver.flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft);
+  solver.flux(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredRight);
+  {% endif %}
+
+  {% if NCP_IMPLEMENTATION!="<none>" %}
+  solver.nonconservativeProduct(QAverageGathered, DeltaQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ncpGathered);
+  solver.nonconservativeProduct(QAverageGatheredLeft, DeltaQGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpGatheredLeft);
+  {% endif %}
+  {% endif %}
+
+  #ifdef GPUOffloadingOff
+  assertion(std::isfinite(maxEigenvalueGathered));
+  assertion(std::isfinite(maxEigenvalueGatheredLeft));
+  assertion(std::isfinite(maxEigenvalueGatheredRight));
+  #endif
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) { // Compute fluxes and perform time step
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QInGathered[unknown]));
+    assertion(std::isfinite(QInGatheredLeft[unknown]));
+    assertion(std::isfinite(QInGatheredRight[unknown]));
+
+    assertion(std::isfinite(fluxGatheredLeft[unknown]));
+    assertion(std::isfinite(fluxGatheredRight[unknown]));
+    #endif
+
+    const double maxEigenvalueLeft  = maxEigenvalueGatheredLeft   > maxEigenvalueGathered ? maxEigenvalueGatheredLeft  : maxEigenvalueGathered;
+    const double maxEigenvalueRight = maxEigenvalueGatheredRight  > maxEigenvalueGathered ? maxEigenvalueGatheredRight : maxEigenvalueGathered;
+    double fluxLeft  = -maxEigenvalueLeft  * (QInGathered     [unknown] - QInGatheredLeft[unknown]);
+    double fluxRight = -maxEigenvalueRight * (QInGatheredRight[unknown] - QInGathered    [unknown]);
+    {% if FLUX_IMPLEMENTATION!="<none>" %}
+    fluxLeft += fluxGatheredLeft[unknown];
+    fluxRight += fluxGatheredRight[unknown];
+    {% endif %}
+    {% if NCP_IMPLEMENTATION!="<none>" %}
+    fluxLeft -= ncpGatheredLeft[unknown];
+    fluxRight += ncpGathered[unknown];
+    {% endif %}
+
+    QOutGathered[unknown] += timeStepSize / patchSize(normal) * {{NUMBER_OF_VOLUMES_PER_AXIS}} * 0.5 * (fluxLeft - fluxRight);
+
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(maxEigenvalueLeft));
+    assertion(std::isfinite(maxEigenvalueRight));
+    assertion(std::isfinite(fluxLeft));
+    assertion(std::isfinite(fluxRight));
+    assertion(std::isfinite(QOutGathered[unknown]));
+    nonCriticalAssertion(QOutGathered[unknown] == QOutGathered[unknown]);
+    #endif
+  } // unknown
+{% endmacro %}
+
+{% macro computeMaxEigenvalueAfterTimeStep() %}
+  // Compute max eigenvalue (wave speed) after time step
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int normal = 0; normal < {{DIMENSIONS}}; normal++) {
+    maxEigenvalueAfterTimeStep = std::fmax(
+      maxEigenvalueAfterTimeStep,
+      {% if STATELESS_PDE_TERMS==True %}
+      {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QOutGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes)
+      {% else %}
+      solver.maxEigenvalue(QOutGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal)
+      {% endif %}
+    );
+  } // normal
+{% endmacro %}

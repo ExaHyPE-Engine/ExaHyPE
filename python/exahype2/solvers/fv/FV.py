@@ -5,11 +5,8 @@ from abc import abstractmethod
 
 import jinja2
 
+import peano4.output
 import peano4.datamodel
-import peano4.output.TemplatedHeaderFile
-import peano4.output.TemplatedHeaderImplementationFilePair
-import peano4.output.Jinja2TemplatedHeaderFile
-import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 import exahype2.solvers.fv.actionsets
 
@@ -154,7 +151,6 @@ class FV(object):
         max_volume_h,
         pde_terms_without_state: bool,
         plot_grid_properties: bool,
-        kernel_namespace,
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
@@ -292,7 +288,6 @@ class FV(object):
         self._postprocess_updated_patch = ""
 
         self._compute_kernel_call = "#error Not yet defined"
-        self._compute_kernel_call_stateless = "#error Not yet defined"
         self._pde_terms_without_state = pde_terms_without_state
 
         self._compute_eigenvalue = False
@@ -311,8 +306,6 @@ class FV(object):
 
         self._interpolation = "piecewise_constant"
         self._restriction = "averaging"
-
-        self._kernel_namespace = kernel_namespace
 
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
@@ -364,6 +357,9 @@ Refinement criterion:   """
 Eigenvalues:            """
             + str(self._eigenvalues_implementation)
             + """
+Max eigenvalue:         """
+            + str(self._max_eigenvalue_implementation)
+            + """
 Flux:                   """
             + str(self._flux_implementation)
             + """
@@ -372,6 +368,9 @@ NCP:                    """
             + """
 Source term:            """
             + str(self._source_term_implementation)
+            + """
+Riemann solver:         """
+            + str(self._riemann_solver_implementation)
             + """
 """
         )
@@ -1388,6 +1387,8 @@ The finest mesh width of """
             output.add(generated_shortcut_file)
             output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
 
+        self._generate_kernels(namespace, output, subdirectory, dimensions)
+
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -1414,14 +1415,39 @@ The finest mesh width of """
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
-        d["SOLVER_NUMBER"] = 22
+        d["NUMBER_OF_VARIABLES_IN_VOLUME"] = self._unknowns + self._auxiliary_variables
 
-        d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
-        d["ASSERTION_WITH_2_ARGUMENTS"] = "nonCriticalAssertion2"
-        d["ASSERTION_WITH_3_ARGUMENTS"] = "nonCriticalAssertion3"
-        d["ASSERTION_WITH_4_ARGUMENTS"] = "nonCriticalAssertion4"
-        d["ASSERTION_WITH_5_ARGUMENTS"] = "nonCriticalAssertion5"
-        d["ASSERTION_WITH_6_ARGUMENTS"] = "nonCriticalAssertion6"
+        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PER_AXIS"] = (
+            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
+            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
+        )
+        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D"] = (
+            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
+            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
+            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
+        )
+        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D"] = (
+            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
+            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
+            d["NUMBER_OF_VOLUMES_PER_AXIS"] *
+            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
+        )
+
+        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_PER_AXIS"] = (
+            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
+            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
+        )
+        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D"] = (
+            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
+            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
+            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
+        )
+        d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D"] = (
+            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
+            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
+            (d["NUMBER_OF_VOLUMES_PER_AXIS"] + 2 * d["HALO_SIZE"]) *
+            d["NUMBER_OF_VARIABLES_IN_VOLUME"]
+        )
 
         if self._min_volume_h > self._max_volume_h:
             raise Exception("min/max h are inconsistent")
@@ -1436,9 +1462,6 @@ The finest mesh width of """
 
         d["COMPUTE_KERNEL_CALL"] = jinja2.Template(
             self._compute_kernel_call, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["COMPUTE_KERNEL_CALL_STATELESS"] = jinja2.Template(
-            self._compute_kernel_call_stateless, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
@@ -1478,9 +1501,14 @@ The finest mesh width of """
         ).render(**d)
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
-        d["KERNEL_NAMESPACE"] = self._kernel_namespace
+        d["FLUX_IMPLEMENTATION"] = self._flux_implementation
+        d["NCP_IMPLEMENTATION"] = self._ncp_implementation
+        d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
+        d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
+        d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
+        d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
 
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
         d["VARIABLE_NAMES"] = self._variable_names
         d["VARIABLE_POSITIONS"] = self._variable_pos
@@ -1708,3 +1736,7 @@ The finest mesh width of """
 
         self.create_data_structures()
         self.create_action_sets()
+
+    @abstractmethod
+    def _generate_kernels(self, namespace, output, subdirectory, dimensions):
+        pass

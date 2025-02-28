@@ -3,6 +3,8 @@
 import os
 import re
 
+from pathlib import Path
+
 from .Helper import write_file
 
 from .Overwrite import Overwrite
@@ -52,8 +54,8 @@ class TemplatedHeaderImplementationFilePair(object):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
-    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
-    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"
+    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
+    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.cppfile_template).suffix
 
     self.generate_file(overwrite,header_filename,self.headerfile_template)
     self.generate_file(overwrite,cpp_filename   ,self.cppfile_template)

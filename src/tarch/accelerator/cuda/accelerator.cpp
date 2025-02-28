@@ -5,7 +5,6 @@
 #if defined(GPUOffloadingCUDA)
 
 #include "Device.h"
-#include "ErrorCheck.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
@@ -26,7 +25,7 @@ void* tarch::accelerator::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-    assertion1(device == accelerator::Device::HostDevice, device);
+    //assertion1(device == accelerator::Device::HostDevice, device);
     data = std::aligned_alloc( // cudaMallocHost(flags) -> pinned memory with flags
       AlignmentOnHeap,
       padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
@@ -75,7 +74,7 @@ void tarch::accelerator::freeRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-    assertion1(device == accelerator::Device::HostDevice, device);
+    //assertion1(device == accelerator::Device::HostDevice, device);
     std::free(data); // cudaFreeHost
     break;
   case MemoryLocation::DeviceHeap:
@@ -98,6 +97,8 @@ void tarch::accelerator::copyTo(
   MemoryLocation location,
   int            device
 ) {
+  assertion(source);
+  assertion(target);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
@@ -124,6 +125,8 @@ void tarch::accelerator::copyFrom(
   MemoryLocation location,
   int            device
 ) {
+  assertion(source);
+  assertion(target);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {

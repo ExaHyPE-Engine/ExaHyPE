@@ -50,9 +50,9 @@ def create_postprocessing_kernel_for_error_measurement():
     double solution[{{NUMBER_OF_UNKNOWNS}}];
 
     #if Dimensions==2
-    const double cellVolume = volumeH[0] * volumeH[1];
+    const double cellVolume = h[0] * h[1];
     #else
-    const double cellVolume = volumeH[0] * volumeH[1] * volumeH[2];
+    const double cellVolume = h[0] * h[1] * h[2];
     #endif
 
     repositories::{{SOLVER_INSTANCE}}.analyticalSolution(

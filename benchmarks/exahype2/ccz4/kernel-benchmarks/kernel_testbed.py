@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    class CCZ4Solver( exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking ):
+    class CCZ4Solver( exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking ):
       def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r, KOSig):
         unknowns = {
           "G":6,      #0-5
@@ -73,7 +73,7 @@ if __name__ == "__main__":
           flux=exahype2.solvers.PDETerms.None_Implementation,
           source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
           refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
-          eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation
+          max_eigenvalue = exahype2.solvers.PDETerms.User_Defined_Implementation
         )
 
 
@@ -144,8 +144,8 @@ if __name__ == "__main__":
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       [-0.5,-0.5,-0.5],[1,1,1],
-      0.1,                 # end time
-      0, 0,   # snapshots
+      1.0,                 # end time
+      0, 0.1,   # snapshots
       [True,True,True],
       8  # plotter precision
     )
@@ -163,6 +163,8 @@ if __name__ == "__main__":
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
 
+    peano4_project.output.makefile.add_h_file( "CCZ4.h" )
+    peano4_project.output.makefile.add_cpp_file( "CCZ4.cpp" )
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
 
     peano4_project.generate( throw_away_data_after_generation=False )

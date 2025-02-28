@@ -62,46 +62,41 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
 
     def add_postprocessing_kernel(self, operation_per_point):
         """
-
         Add a code snippet which is applied to each and every point. You have the following
         variables which are well-defined:
 
         - value: Is a pointer to the current finite volume's data
-        - volumeX: A tarch::la::Vector over doubles
-        - volumeH: A tarch::la::Vector over doubles
-
+        - x: A tarch::la::Vector over doubles
+        - h: A tarch::la::Vector over doubles
 
         operation_per_point: String
           C/C++ code snippet
-
         """
         self._compute_kernel += (
             """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
+
   if (
-    not marker.hasBeenRefined() 
-    and 
+    not marker.hasBeenRefined()
+    and
     {{PREDICATE}}
-  ) { 
+  ) {
     logTraceIn( "touchCellFirstTime(...)" );
-    
+
     int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-      auto    volumeX = ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
-      auto    volumeH = ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
-      
+    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+      double* value = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
+      auto x = ::exahype2::fv::getVolumeCentre(marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
+      auto h = ::exahype2::fv::getVolumeSize(marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
       """
             + operation_per_point
             + """
-      
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-    logTraceOut( "touchCellFirstTime(...)" );
-  } 
+    logTraceOut("touchCellFirstTime(...)");
+  }
 }
 """
         )

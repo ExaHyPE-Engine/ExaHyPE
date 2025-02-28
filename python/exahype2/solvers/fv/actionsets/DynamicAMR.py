@@ -314,7 +314,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   logTraceOutWith1Argument( "createPersistentFace(...)", marker.toString() );
 """
 
-    self._Template_CreateCell = """    
+    self._Template_CreateCell = """
   logTraceIn( "createCell(...)" );
 
   ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
@@ -325,14 +325,16 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{FINE_GRID_CELL}}.value
   );
 
+  #if PeanoDebug > 0
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.value,
     {{UNKNOWNS}},
-    0, // auxiliary values. Not known here
+    0, // Auxiliary values. Not known here.
     {{DOFS_PER_AXIS}},
-    0, // no halo
+    0, // No halo
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); 
+  );
+  #endif
 
   fineGridCell""" + solver._cell_label.name + """.setTimeStamp( coarseGridCell""" + solver._cell_label.name + """.getTimeStamp() );
   fineGridCell""" + solver._cell_label.name + """.setTimeStepSize( coarseGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
@@ -351,23 +353,25 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{COARSE_GRID_CELL}}.value
   );
 
-  // exploit the fact that we can "reuse" some FV utils here    
+  #if PeanoDebug > 0
+  // Exploit the fact that we can "reuse" some FV utils here
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.value,
     {{UNKNOWNS}},
-    0, // auxiliary values. Not known here
+    0, // Auxiliary values. Not known here.
     {{DOFS_PER_AXIS}},
-    0, // no halo
+    0, // No halo
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); 
-  
+  );
+  #endif
+
   coarseGridCell""" + solver._cell_label.name + """.setTimeStamp( fineGridCell""" + solver._cell_label.name + """.getTimeStamp() );
   coarseGridCell""" + solver._cell_label.name + """.setTimeStepSize( fineGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
-  
+
   logTraceOut( "destroyCell(...)" );
 """
 
-    
+
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 

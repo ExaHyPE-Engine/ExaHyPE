@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 import sys
 
 import peano4
@@ -64,8 +63,8 @@ auxiliary_variables={
     "by": 1,
 }
 
-riemann_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-    name="Rusanov" + str(args.patch_size),
+riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="Godunov" + str(args.patch_size),
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
@@ -73,10 +72,10 @@ riemann_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
     pde_terms_without_state=args.stateless,
-    initial_conditions=re.sub(r'\bx\b', 'volumeCentre', initial_conditions),
+    initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
-    refinement_criterion=re.sub(r'\bx\b', 'volumeCentre', refinement_criterion),
-    flux="applications::exahype2::swe::frictionlaws::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
+    refinement_criterion=refinement_criterion,
+    flux="applications::exahype2::swe::frictionlaws::flux(Q, x, h, t, dt, normal, F);",
     ncp="""
   using s = VariableShortcuts;
   BTimesDeltaQ[s::h] = 0.0;
@@ -84,8 +83,8 @@ riemann_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   BTimesDeltaQ[s::hv] = 0.0;
   BTimesDeltaQ[s::hu + normal] += GRAV * Q[s::h] * deltaQ[s::b];
 """,
-    eigenvalues="return applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
-    source_term="applications::exahype2::swe::frictionlaws::coulombFriction(Q, volumeCentre, volumeH, t, dt, S);",
+    max_eigenvalue="return applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, x, h, t, dt, normal);",
+    source_term="applications::exahype2::swe::frictionlaws::coulombFriction(Q, x, h, t, dt, S);",
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
