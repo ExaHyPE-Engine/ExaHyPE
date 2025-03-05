@@ -22,7 +22,7 @@ import peano4.datamodel.DaStGen2
 
 
 class ConstrainedPoissonEquationForMarkerOnCells(object):
-  """ 
+  r""" 
     Use Finite Differences Poisson equation system solver to guide cell labels
 
     The most popular application of this solver is to guide limiters: 
