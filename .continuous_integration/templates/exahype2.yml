@@ -1,3 +1,12 @@
+.ExaHyPE2_FV_Tests:
+  parallel:
+    matrix:
+    - dimensions: [2, 3]
+      build_type: [Debug, Release]
+      solver_type: [FVRusanovGlobalAdaptive, FVRusanovGlobalAdaptiveEnclave]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py -s $solver_type -d $dimensions -m $build_type;"
+
 .ExaHyPE2_ADERDG_Tests:
   parallel:
     matrix:
@@ -35,15 +44,6 @@
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/euler/point-explosion; PYTHONPATH=$CI_PROJECT_DIR/python python3 point-explosion.py -s $solver_type -d $dimensions -m $build_type;"
 
-.ExaHyPE2_Advection:
-  parallel:
-    matrix:
-    - dimensions: [2, 3]
-      build_type: [Debug, Release]
-      solver_type: [RusanovGlobalFixedFV, RusanovGlobalFixedEnclaveFV, RusanovGlobalAdaptiveFV, RusanovGlobalAdaptiveEnclaveFV, RusanovGlobalFixedADERDG, RusanovGlobalAdaptiveADERDG]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/advection/smooth-advection; PYTHONPATH=$CI_PROJECT_DIR/python python3 smooth-advection.py -s $solver_type -d $dimensions -m $build_type;"
-
 .ExaHyPE2_Acoustic:
   parallel:
     matrix:
@@ -72,7 +72,7 @@
 .ExaHyPE2_Kernels:
   parallel:
     matrix:
-    - kernel: [euler, acoustic, elastic, advection]
+    - kernel: [euler, acoustic, elastic]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; PYTHONPATH=$CI_PROJECT_DIR/python python3 kernel-benchmarks.py -e -m Release"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$kernel/kernel-benchmarks; ./${kernel^}.Release"
