@@ -688,7 +688,7 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
                  injection_matrix,
                  injection_matrix_scaling,
                  use_fas,
-                 smoothing_steps_DG = 5,
+                 smoothing_steps_DG = 4,
                  smoothing_steps_CG = -1,
                  ):        
         """!
