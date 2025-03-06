@@ -87,7 +87,7 @@ namespace toolbox {
           // default std::less<key>. std::less<> invokes the `<` operator.
           // We want that to be able to use our bespoke `<` operator
           // for different search and ID key identifier objects.
-          std::map<ParticleIdentifier, ParticleEvents, std::less<>> _data;
+          std::map<ParticleSearchIdentifier, ParticleEvents, std::less<>> _data;
 
           /**
            * Of how many previous associations do we want to keep track
@@ -156,8 +156,7 @@ namespace toolbox {
            *
            * Cannot be const as we have a semaphore to be thread-safe.
            */
-          int getTotalParticleEntries(const ParticleSearchIdentifier& identifier
-          );
+          int getTotalParticleEntries(const ParticleSearchIdentifier& identifier);
 
           /**
            * Return number of snapshots

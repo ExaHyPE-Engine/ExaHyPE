@@ -107,7 +107,7 @@ project = swift2.Project(
 
 particle = swift2.particle.LeapfrogFixedSearchRadius(
     name="GenericParticle",
-    cfl_factor=1.0,
+    cfl_factor=0.999,
     initial_time_step_size=args.timestep_size,
     particles_per_cell=0,
     min_h=args.cell_size,
@@ -178,12 +178,12 @@ initialisation_snippet = (
   particle->setSearchRadius("""
     + str(search_radius)
     + """);
-  particle->setA( {0, 0, 0} );
+  particle->setA( {0., 0., 0.} );
 
   if( particle->getX(0) > 0.5 ){
-    particle->setV( {1, 0, 0} );
+    particle->setV( {-1., 0., 0.} );
   } else {
-    particle->setV( {-1, 0, 0} );
+    particle->setV( {1., 0., 0.} );
   }
 
   // hack to get a somewhat flexible, but always unique

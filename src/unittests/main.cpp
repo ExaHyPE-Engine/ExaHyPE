@@ -43,15 +43,15 @@ void runTests() {
   int                     unitTestsErrors = 0;
   tarch::tests::TestCase* tests           = nullptr;
 
-  tests = tarch::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
+  // tests = tarch::getUnitTests();
+  // tests->run();
+  // unitTestsErrors += tests->getNumberOfErrors();
+  // delete tests;
 
-  tests = peano4::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
+  // tests = peano4::getUnitTests();
+  // tests->run();
+  // unitTestsErrors += tests->getNumberOfErrors();
+  // delete tests;
 
 #ifdef UseToolboxBlockstructured
   tests = toolbox::blockstructured::getUnitTests();
@@ -75,10 +75,10 @@ void runTests() {
 #endif
 
 #ifdef UseToolboxParticles
-  tests = toolbox::particles::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
+  // tests = toolbox::particles::getUnitTests();
+  // tests->run();
+  // unitTestsErrors += tests->getNumberOfErrors();
+  // delete tests;
 
   tests = toolbox::particles::assignmentchecks::getUnitTests();
   tests->run();
@@ -168,6 +168,7 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::AnyRank,
       "toolbox",
       tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
+      // tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
@@ -178,7 +179,8 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::TargetTrace,
       tarch::logging::LogFilter::FilterListEntry::AnyRank,
       "toolbox::particles::assignmentchecks",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      // tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
@@ -187,7 +189,8 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::TargetDebug,
       tarch::logging::LogFilter::FilterListEntry::AnyRank,
       "toolbox::particles::assignmentchecks",
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      // tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );

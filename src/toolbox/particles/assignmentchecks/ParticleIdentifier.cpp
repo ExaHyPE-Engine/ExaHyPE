@@ -28,6 +28,12 @@ toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalEquals(const ParticleIdentifier& rhs) const {
 
+// if (this->particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In numericalEquals this=" << this->toString() << " rhs=" << rhs.toString()
+<< " res=" <<
+  ((particleName == rhs.particleName) and (particleID == rhs.particleID) and tarch::la::equals(particleX, rhs.particleX, 0.))
+  << std::endl;
+// }
   return (particleName == rhs.particleName) and (particleID == rhs.particleID)
          and tarch::la::equals(particleX, rhs.particleX, 0.);
 }
@@ -35,6 +41,21 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmaller(const ParticleIdentifier& rhs) const {
+
+// if (particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In numericalSmaller this=" << this->toString() << " rhs=" << rhs.toString();
+  std::cout
+    <<" a=" << (*this == rhs)
+    <<" b=" << (particleName < rhs.particleName)
+    << " c=" << (particleName > rhs.particleName)
+    << " d=" << (particleID < rhs.particleID)
+    << " e=" << (particleID > rhs.particleID)
+    << " f0=" << (particleX(0) < rhs.particleX(0))
+    << " f1=" << (particleX(1) < rhs.particleX(1))
+    << " g0=" << (particleX(0) > rhs.particleX(0))
+    << " g1=" << (particleX(1) > rhs.particleX(1))
+      << std::endl;
+// }
 
   if (*this == rhs) {
     return false;
@@ -68,6 +89,19 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const double              tolerance
   ) const {
 
+// if (particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In NumericalSmallerWIthTolerance this=" << this->toString() << " rhs=" << rhs.toString();
+  std::cout << " a=" << (particleName < rhs.particleName)
+    << " b=" << (particleName > rhs.particleName)
+    << " c=" << (particleID < rhs.particleID)
+    << " d=" << (particleID > rhs.particleID)
+    << " e0=" << (particleX(0) - rhs.particleX(0) < -tolerance)
+    << " e1=" << (particleX(1) - rhs.particleX(1) < tolerance)
+    << " f0=" << (particleX(0) - rhs.particleX(0) > -tolerance)
+    << " f1=" << (particleX(1) - rhs.particleX(1) > tolerance)
+     << std::endl;
+// }
+
   if (particleName < rhs.particleName) {
     return true;
   }
@@ -79,10 +113,10 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   if (particleID > rhs.particleID)
     return false;
   for (int d = 0; d < Dimensions; d++) {
-    if ((particleX(d) - rhs.particleX(d)) < -tolerance) {
+    if ((particleX(d) - rhs.particleX(d)) < -tolerance * 1e-6) {
       return true;
     }
-    if ((particleX(d) - rhs.particleX(d)) > tolerance) {
+    if ((particleX(d) - rhs.particleX(d)) > tolerance * 1e-6) {
       return false;
     }
   }
@@ -104,15 +138,21 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const toolbox::particles::assignmentchecks::internal::ParticleIdentifier&
       rhs
   ) const {
+// if (particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In operator< I/I this=" << this->toString() << " rhs=" << rhs.toString() << std::endl;
+// }
+  // return numericalSmaller(rhs);
   return numericalSmaller(rhs);
 }
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
   operator<(
-    const toolbox::particles::assignmentchecks::internal::ParticleIdentifier&
-      rhs
+    const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
   ) const {
+// if (particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In operator< S/I this=" << this->toString() << " rhs=" << rhs.toString() << std::endl;
+// }
   return numericalSmallerWithTolerance(rhs, positionTolerance);
 }
 
@@ -123,6 +163,9 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const toolbox::particles::assignmentchecks::internal::
       ParticleSearchIdentifier& rhs
   ) const {
+// if (particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In operator< I/S this=" << this->toString() << " rhs=" << rhs.toString() << std::endl;
+// }
   return numericalSmallerWithTolerance(rhs, rhs.positionTolerance);
 }
 
@@ -131,6 +174,9 @@ bool operator==(
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
 ) {
+// if (lhs.particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In operator== I/I this=" << lhs.toString() << " rhs=" << rhs.toString() << std::endl;
+// }
   return lhs.numericalEquals(rhs);
 }
 
@@ -139,5 +185,8 @@ bool operator!=(
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
 ) {
+// if (lhs.particleID == -1 or rhs.particleID == -1 ) {
+std::cout << "In operator!= I/I this=" << lhs.toString() << " rhs=" << rhs.toString() << std::endl;
+// }
   return not lhs.numericalEquals(rhs);
 }

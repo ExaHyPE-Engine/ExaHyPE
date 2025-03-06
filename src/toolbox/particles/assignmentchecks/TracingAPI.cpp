@@ -20,6 +20,9 @@ std::string toolbox::particles::assignmentchecks::sweepHistory() {
 void toolbox::particles::assignmentchecks::startMeshSweep(
   const std::string& meshSweepName
 ) {
+
+std::cerr << std::setprecision(16) << "TRACINGAPI:startMeshSweep," << meshSweepName << std::endl;
+
   internal::Database& d = internal::Database::getInstance();
   d.startMeshSweep(meshSweepName);
 }
@@ -33,6 +36,10 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   int                                          treeId,
   const std::string&                           trace
 ) {
+
+std::cerr << std::setprecision(16) << "TRACINGAPI:eraseParticle," <<
+  particleName << "," << particleX << "," <<  particleID << "," <<  isLocal << "," <<  vertexH << "," <<  treeId << "," <<  trace
+  << std::endl;
 
   logTraceInWith5Arguments(
     "eraseParticle(...)",
@@ -83,6 +90,14 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {
+
+std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToVertex," <<
+  particleName << "," <<  particleX << "," <<  particleID << "," <<  isLocal << "," <<
+  vertexX  << "," << vertexH << "," <<  treeId << "," <<  trace << "," <<  particleIsNew << "," << reassignmentOnSameTreeDepthAllowed
+  << std::endl;
+
+
+
 
   logTraceInWith7Arguments(
     "assignParticleToVertex(...)",
@@ -193,6 +208,10 @@ void toolbox::particles::assignmentchecks::moveParticle(
   const std::string&                           trace
 ) {
 
+std::cerr << std::setprecision(16) << "TRACINGAPI:moveParticle," <<
+  particleName  << "," <<  oldParticleX << "," << newParticleX << "," <<  particleID << "," <<  vertexX << "," <<  vertexH << "," <<  treeId << "," <<  trace
+  << std::endl;
+
   logTraceInWith5Arguments(
     "moveParticle(...)",
     particleName,
@@ -231,18 +250,24 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
   Event previousEvent = database.getPreviousEvent(history, treeId);
 
+if (particleID == 2325473) {
+  std::cout << "==================== IN MOVE: Previous Event" << previousEvent.toString() << "\n";
+  std::cout << "==================== IN MOVE: ID=" << particleID << " dx=" << newParticleX - oldParticleX << "\n";
+  std::cout << database.toString();
+  std::cout << std::endl;
+}
+
   // Can't be sieve event, particle needs to have been assigned to vertex
   // first
-  assertion3(
+  assertion4(
     previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
-      or previousEvent.type
-           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      or previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
     "Invalid previous event type",
     previousEvent.toString(),
-    database.particleHistory(identifier)
+    database.particleHistory(identifier),
+    database.toString()
   );
-
 
   assertion5(
     tarch::la::equals(previousEvent.vertexH, vertexH),
@@ -325,6 +350,11 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           trace
 ) {
 
+
+std::cerr << std::setprecision(16) << "TRACINGAPI:detachParticleFromVertex," <<
+  particleName << "," <<  particleX << "," <<  particleID << "," << isLocal << "," <<  vertexX << "," <<  vertexH << "," <<  treeId << "," <<  trace
+  << std::endl;
+
   logTraceInWith7Arguments(
     "detachParticleFromVertex(...)",
     particleName,
@@ -360,7 +390,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
 
   Event previousEvent = database.addEvent(identifier, event, treeId);
 
-  assertion6(
+  assertion7(
     previousEvent.type == internal::Event::Type::AssignToVertex
       or previousEvent.type
            == internal::Event::Type::MoveWhileAssociatedToVertex
@@ -371,7 +401,8 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     previousEvent.toString(),
     treeId,
     database.getNumberOfSnapshots(),
-    trace
+    trace,
+    database.toString()
   );
   assertion7(
     tarch::la::equals(previousEvent.vertexX, vertexX),
@@ -405,6 +436,11 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   int                                          treeId,
   const std::string&                           trace
 ) {
+
+
+std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToSieveSet," <<
+  particleName << "," <<  particleX << "," <<  particleID << "," << isLocal << "," <<  vertexH << "," <<  treeId << "," <<  trace
+  << std::endl;
 
   logTraceInWith5Arguments(
     "assignParticleToSieveSet(...)",
@@ -445,11 +481,19 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
 void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
 
+std::cerr << std::setprecision(16) << "TRACINGAPI:eliminateExistingParticles"
+  << std::endl;
+
+
   internal::Database& database = internal::Database::getInstance();
   database.eliminateExistingParticles();
 }
 
 void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
+
+std::cerr << std::setprecision(16) << "TRACINGAPI:ensureDatabaseIsEmpty"
+  << std::endl;
+
 
   internal::Database& database = internal::Database::getInstance();
 
