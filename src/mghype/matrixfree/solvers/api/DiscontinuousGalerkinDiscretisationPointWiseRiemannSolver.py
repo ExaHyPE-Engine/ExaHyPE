@@ -278,7 +278,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               enable_plotting = True, # sometimes we want to disable standard plotting...,
               plot_predicate = "true", # enable custom plotting behaviour
               solver_includes = "",
-              use_smart_pointer = False
+              use_smart_pointer = True
               ):
     """!
     
@@ -415,16 +415,26 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._unknowns_per_face_projection = (2 * projections_per_face_node) * ( poly_degree + 1) ** (dimensions-1)
 
     # ignore vertex data
+    
+    if use_smart_pointer:
+        self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "solution", str(self._unknowns_per_cell) ))
+        self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "residual", str(self._unknowns_per_cell) ))
+        self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "rhs",      str(self._unknowns_per_cell) ))
 
-    # cell stuff
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
+        self._face_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
+        self._face_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
+        self._face_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
+    else:
+        self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell) ))
+        self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell) ))
+        self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
 
-    # face stuff
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
+        self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
+        self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
+        self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
+    
+    
+    
     self._face_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_face_merge_method()
     self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes = """ 
 #include "../{}.h"
