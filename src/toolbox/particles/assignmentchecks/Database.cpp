@@ -39,7 +39,6 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
 
   _meshSweepData.push_back(MeshSweepData(meshSweepName));
   _currentMeshSweepIndex++;
-std::cerr << "DATABASE_TRACE:" << "startMeshSweep," << meshSweepName << "\n";
 };
 
 
@@ -69,8 +68,6 @@ int toolbox::particles::assignmentchecks::internal::Database::
 
 void toolbox::particles::assignmentchecks::internal::Database::reset() {
 
-std::cerr << "DATABASE_TRACE:" << "reset\n";
-
   logDebug("reset()", "Resetting database");
 
   _data.clear();
@@ -84,7 +81,7 @@ std::cerr << "DATABASE_TRACE:" << "reset\n";
 
 toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
   particles::assignmentchecks::internal::Database::getParticleHistory(
-    const ParticleSearchIdentifier& identifier
+    const ParticleIdentifier& identifier
   ) {
 
   tarch::multicore::MultiReadSingleWriteLock
@@ -110,8 +107,6 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString(
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
-std::cerr << "DATABASE_TRACE:" << "toString\n";
-
   std::ostringstream msg;
 
   msg << "--------------------------\n";
@@ -119,7 +114,7 @@ std::cerr << "DATABASE_TRACE:" << "toString\n";
   msg << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
-    ParticleSearchIdentifier identifier = entry->first;
+    ParticleIdentifier identifier = entry->first;
     ParticleEvents     history    = entry->second;
 
     msg << "\n" << identifier.toString();
@@ -143,11 +138,10 @@ std::cerr << "DATABASE_TRACE:" << "toString\n";
 
 
 int toolbox::particles::assignmentchecks::internal::Database::
-  getTotalParticleEntries(const ParticleSearchIdentifier& identifier) {
+  getTotalParticleEntries(const ParticleIdentifier& identifier) {
+
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
-
-std::cerr << "DATABASE_TRACE:" << "getTotalParticleEntries," << identifier.toString() << "\n";
 
   auto search = _data.find(identifier);
 
@@ -165,8 +159,6 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
- std::cerr << "DATABASE_TRACE:" << "lastMeshSweepSnapshot\n";
-
   std::ostringstream msg;
   int                cmswi = getCurrentMeshSweepIndex();
 
@@ -176,7 +168,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   msg << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
-    ParticleSearchIdentifier identifier = entry->first;
+    ParticleIdentifier identifier = entry->first;
     ParticleEvents     history    = entry->second;
 
     msg << "\n" << identifier.toString();
@@ -196,8 +188,6 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 std::string toolbox::particles::assignmentchecks::internal::Database::
   sweepHistory() {
 
-std::cerr << "DATABASE_TRACE:" << "sweepHistory\n";
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
@@ -215,9 +205,7 @@ std::cerr << "DATABASE_TRACE:" << "sweepHistory\n";
 
 
 std::string toolbox::particles::assignmentchecks::internal::Database::
-  particleHistory(const ParticleSearchIdentifier& identifier) {
-
-std::cerr << "DATABASE_TRACE:" << "particleHistory"<< identifier.toString() << "\n";
+  particleHistory(const ParticleIdentifier& identifier) {
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
@@ -261,12 +249,10 @@ std::cerr << "DATABASE_TRACE:" << "particleHistory"<< identifier.toString() << "
 
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::Database::addEvent(
-    ParticleSearchIdentifier identifier,
+    ParticleIdentifier identifier,
     Event&                   event,
     const int                treeId
   ) {
-
-std::cerr << "DATABASE_TRACE:" << "addEvent," << identifier.toString() << "," << event.toString() << "," << treeId << "\n";
 
   logDebug("addEvent()", "Adding event for " << identifier.toString());
 
@@ -276,10 +262,6 @@ std::cerr << "DATABASE_TRACE:" << "addEvent," << identifier.toString() << "," <<
   // Take note of the current mesh sweep index.
   event.meshSweepIndex = getCurrentMeshSweepIndex();
 
-if (identifier.particleID == 2325473) {
-  lock.~MultiReadSingleWriteLock();
-  std::cout << "====================== In AddEvent: ID=" << identifier.particleID << " start search\n";
-}
   auto search = _data.find(identifier);
 
   if (search == _data.end()) {
@@ -288,7 +270,7 @@ if (identifier.particleID == 2325473) {
     ParticleEvents newEventHistory = ParticleEvents();
     newEventHistory.push_back(event);
     _data.insert(
-      std::pair<ParticleSearchIdentifier, ParticleEvents>(identifier, newEventHistory)
+      std::pair<ParticleIdentifier, ParticleEvents>(identifier, newEventHistory)
     );
     logDebug(
       "addEvent(...) ",
@@ -296,9 +278,6 @@ if (identifier.particleID == 2325473) {
         + ",Event:" + event.toString()
     );
     // there is no previous event.
-if (identifier.particleID == 2325473) {
-  std::cout << "====================== In AddEvent: NEW PARTICLE ID=" << identifier.particleID << "\n" << toString() << std::endl;
-}
     return Event(Event::Type::NotFound);
 
   } else {
@@ -381,22 +360,16 @@ if (identifier.particleID == 2325473) {
       + identifier.toString()
     );
 
-if (identifier.particleID == 2325473) {
-  lock.~MultiReadSingleWriteLock();
-  std::cout << "====================== In AddEvent: FOUND PARTICLE ID=" << identifier.particleID << "\n" << toString() << std::endl;
-}
     return previousEventOnThisTree;
   }
 }
 
 
 void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
-  ParticleSearchIdentifier identifier,
+  ParticleIdentifier identifier,
   Event&                   oldEvent,
   Event&                   newEvent
 ) {
-
-std::cerr << "DATABASE_TRACE:" << "replaceEvent," << identifier.toString() << "," << oldEvent.toString() << "," << newEvent.toString() << "\n";
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -438,38 +411,14 @@ std::cerr << "DATABASE_TRACE:" << "replaceEvent," << identifier.toString() << ",
 }
 
 
-void toolbox::particles::assignmentchecks::internal::Database::
-  shiftIdentifierCoordinates(
-    toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier
-                                          identifier,
-    tarch::la::Vector<Dimensions, double> newParticleX
-  ) {
 
-std::cerr << "DATABASE_TRACE:" << "shiftIdentifierCoordinates," << identifier.toString() << "," << newParticleX << "\n";
+void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVertexInd(
+            ParticleIdentifier&                 identifier,
+            tarch::la::Vector<Dimensions, long long>& newVertexInd
+          ){
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
-
-  std::vector<tarch::la::Vector<Dimensions, double>> positions;
-  int count = 0;
-  for (auto e = _data.cbegin(); e!= _data.cend(); e++){
-    if (e->first.particleID == 2325473){
-      count += 1;
-      positions.push_back(e->first.particleX);
-    }
-  }
-
-  std::cout << "==================================== BEFORE SHIFT: COUNT ELEMENTS="<< count << "\n";
-  for (auto p: positions){
-    std::cout << p << ",";
-  }
-  std::cout << std::endl;
-
-
-
-
-
-
 
   auto search = _data.find(identifier);
 
@@ -478,81 +427,34 @@ std::cerr << "DATABASE_TRACE:" << "shiftIdentifierCoordinates," << identifier.to
     "Particle not found through its identifier"
   );
 
-  assertion1(search->first.particleID == identifier.particleID, "Identifier IDs not equal");
-
   // Do we need to shift the coordinates of the identifier?  Use the one the
   // search gives you back, because we allow for a fuzzy search.  You need to
   // compare to the actually stored coordinates, not to whatever you think they
   // currently may be.
-  ParticleSearchIdentifier key     = search->first;
+  ParticleIdentifier key     = search->first;
   ParticleEvents&    history = search->second;
 
-// if (identifier.particleID == 2325473) {
-  std::cout << "========================== In SHIFT: ID=" << identifier.particleID <<
-    " x=" << identifier.particleX << " x2=" << newParticleX << " x_key=" << key.particleX <<
-    " dx=" << key.particleX - newParticleX <<
-    " tol:" << ParticleSearchIdentifier::shiftTolerance * identifier.positionTolerance << std::endl;
-// }
-
-  bool shift = tarch::la::oneGreater(
-    tarch::la::abs(key.particleX - newParticleX),
-    // ParticleSearchIdentifier::shiftTolerance * identifier.positionTolerance
-    0.
+  // delete old entry in database and add the new one.
+  logDebug(
+    "shiftIdentifierCoordinates(...) ",
+    "shifting particle identifier from "
+      << key.vertexInd << " to " << newVertexInd;
   );
 
-  if (shift) {
-// if (identifier.particleID == 2325473) {
-//   std::cout << "========================== SHIFTING" << std::endl;
-// }
-    // delete old entry in database and add the new one.
-    logDebug(
-      "shiftIdentifierCoordinates(...) ",
-      "shifting particle identifier " <<
-      key.toString() << " from " << key.particleX << " to " << newParticleX
-    );
+  ParticleEvents historyCopy = history;
+  _data.erase(key);
+  ParticleIdentifier newIdentifier = ParticleIdentifier(
+    identifier.particleName,
+    identifier._particleX,
+    newVertexInd,
+    identifier.particleID
+  );
+  _data.insert(
+    std::pair<ParticleIdentifier, ParticleEvents>(newIdentifier, historyCopy)
+  );
 
-    ParticleEvents historyCopy = history;
-    std::cout << "erase" << std::endl;
-    _data.erase(identifier);
-    ParticleSearchIdentifier newIdentifier = ParticleSearchIdentifier(
-      identifier.particleName,
-      newParticleX,
-      identifier.particleID,
-      identifier.positionTolerance
-    );
-    std::cout << "insert" << std::endl;
-    _data.insert(
-      std::pair<ParticleSearchIdentifier, ParticleEvents>(newIdentifier, historyCopy)
-    );
-
-
-
-if (identifier.particleID == 2325473) {
-  lock.~MultiReadSingleWriteLock();
-  std::cout << "========================== AFTER SHIFTING\n" << toString() << std::endl;
 }
 
-
-  std::vector<tarch::la::Vector<Dimensions, double>> positions2;
-  count = 0;
-  for (auto e = _data.cbegin(); e!= _data.cend(); e++){
-    if (e->first.particleID == 2325473){
-      count += 1;
-      positions2.push_back(e->first.particleX);
-    }
-  }
-
-  std::cout << "==================================== AFTER SHIFT: COUNT ELEMENTS="<< count << "\n";
-  for (auto p: positions2){
-    std::cout << p << ",";
-  }
-  std::cout << std::endl;
-
-
-
-
-  }
-}
 
 
 void toolbox::particles::assignmentchecks::internal::Database::

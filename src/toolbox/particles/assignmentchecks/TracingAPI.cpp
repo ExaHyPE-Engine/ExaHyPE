@@ -21,8 +21,6 @@ void toolbox::particles::assignmentchecks::startMeshSweep(
   const std::string& meshSweepName
 ) {
 
-std::cerr << std::setprecision(16) << "TRACINGAPI:startMeshSweep," << meshSweepName << std::endl;
-
   internal::Database& d = internal::Database::getInstance();
   d.startMeshSweep(meshSweepName);
 }
@@ -32,14 +30,11 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-std::cerr << std::setprecision(16) << "TRACINGAPI:eraseParticle," <<
-  particleName << "," << particleX << "," <<  particleID << "," <<  isLocal << "," <<  vertexH << "," <<  treeId << "," <<  trace
-  << std::endl;
 
   logTraceInWith5Arguments(
     "eraseParticle(...)",
@@ -54,12 +49,7 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:eraseParticle," <<
 
   Database& database = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  auto identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID);
 
   Event event(Event::Type::Erase, isLocal, treeId, trace);
   Event previousEvent = database.addEvent(identifier, event, treeId);
@@ -87,17 +77,11 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace,
+  const tarch::la::Vector<Dimensions, double>& prevVertexX,
+  const tarch::la::Vector<Dimensions, double>& prevVertexH,
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {
-
-std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToVertex," <<
-  particleName << "," <<  particleX << "," <<  particleID << "," <<  isLocal << "," <<
-  vertexX  << "," << vertexH << "," <<  treeId << "," <<  trace << "," <<  particleIsNew << "," << reassignmentOnSameTreeDepthAllowed
-  << std::endl;
-
-
-
 
   logTraceInWith7Arguments(
     "assignParticleToVertex(...)",
@@ -116,12 +100,13 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToVertex," <<
   constexpr bool checkNewParticles = false;
   Database&      database          = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  auto vertexIndNew = ParticleIdentifier::getVertexInd(vertexX, vertexH);
+  auto vertexIndOld = ParticleIdentifier::getVertexInd(prevVertexX, prevVertexH);
+
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, particleID);
+  if (particleIsNew){
+    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, particleID);
+  }
 
   Event event(
     Event::Type::AssignToVertex,
@@ -194,6 +179,20 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToVertex," <<
     }
   }
 
+  // Do we need to shift the identifier?
+  bool shift = not particleIsNew;
+
+  for (int i = 0; i < Dimensions; i++){
+    if (vertexIndNew(i) != vertexIndOld(i)){
+      shift = true;
+      break;
+    }
+  }
+
+  if (shift) {
+    database.shiftIdentifierVertexInd(identifier, vertexIndNew);
+  }
+
   logTraceOut("assignParticleToVertex(...)");
 }
 
@@ -207,10 +206,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-std::cerr << std::setprecision(16) << "TRACINGAPI:moveParticle," <<
-  particleName  << "," <<  oldParticleX << "," << newParticleX << "," <<  particleID << "," <<  vertexX << "," <<  vertexH << "," <<  treeId << "," <<  trace
-  << std::endl;
 
   logTraceInWith5Arguments(
     "moveParticle(...)",
@@ -236,12 +231,7 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:moveParticle," <<
   );
 
   // use old particle position to find history.
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    oldParticleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, oldParticleX, vertexX, vertexH, particleID);
 
   ParticleEvents history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
@@ -249,13 +239,6 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:moveParticle," <<
   assertion(history.size() > 0);
 
   Event previousEvent = database.getPreviousEvent(history, treeId);
-
-if (particleID == 2325473) {
-  std::cout << "==================== IN MOVE: Previous Event" << previousEvent.toString() << "\n";
-  std::cout << "==================== IN MOVE: ID=" << particleID << " dx=" << newParticleX - oldParticleX << "\n";
-  std::cout << database.toString();
-  std::cout << std::endl;
-}
 
   // Can't be sieve event, particle needs to have been assigned to vertex
   // first
@@ -329,11 +312,12 @@ if (particleID == 2325473) {
     database.addEvent(identifier, newEvent, treeId);
   }
 
+  // TODO: REMOVE
   // Finally, since the particle moved, do we need to modify the coordinates
   // of the identifier? We need to use the coordinates as well to ensure the
   // correct particle identity. If the particle has moved too far, we need
   // to update that information.
-  database.shiftIdentifierCoordinates(identifier, newParticleX);
+  // database.shiftIdentifierCoordinates(identifier, newParticleX);
 
   logTraceOut("moveParticle(...)");
 }
@@ -350,11 +334,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           trace
 ) {
 
-
-std::cerr << std::setprecision(16) << "TRACINGAPI:detachParticleFromVertex," <<
-  particleName << "," <<  particleX << "," <<  particleID << "," << isLocal << "," <<  vertexX << "," <<  vertexH << "," <<  treeId << "," <<  trace
-  << std::endl;
-
   logTraceInWith7Arguments(
     "detachParticleFromVertex(...)",
     particleName,
@@ -370,12 +349,7 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:detachParticleFromVertex," <<
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID);
 
   Event event(
     Event::Type::DetachFromVertex,
@@ -432,15 +406,11 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-
-std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToSieveSet," <<
-  particleName << "," <<  particleX << "," <<  particleID << "," << isLocal << "," <<  vertexH << "," <<  treeId << "," <<  trace
-  << std::endl;
 
   logTraceInWith5Arguments(
     "assignParticleToSieveSet(...)",
@@ -455,12 +425,7 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToSieveSet," <<
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID);
 
 
   Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
@@ -481,19 +446,11 @@ std::cerr << std::setprecision(16) << "TRACINGAPI:assignParticleToSieveSet," <<
 
 void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
 
-std::cerr << std::setprecision(16) << "TRACINGAPI:eliminateExistingParticles"
-  << std::endl;
-
-
   internal::Database& database = internal::Database::getInstance();
   database.eliminateExistingParticles();
 }
 
 void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
-
-std::cerr << std::setprecision(16) << "TRACINGAPI:ensureDatabaseIsEmpty"
-  << std::endl;
-
 
   internal::Database& database = internal::Database::getInstance();
 
@@ -519,6 +476,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
@@ -533,6 +491,8 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace,
+  const tarch::la::Vector<Dimensions, double>& prevVertexX,
+  const tarch::la::Vector<Dimensions, double>& prevVertexH,
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {}
@@ -553,6 +513,7 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace

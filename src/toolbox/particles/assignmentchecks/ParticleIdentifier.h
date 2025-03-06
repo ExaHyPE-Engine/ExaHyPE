@@ -23,76 +23,46 @@ namespace toolbox {
          * checks, as it will have an inappropriate history. Therefore, we also
          * need to take into account the particles' positions to ID them.
          *
-         * Luckily, we don't need an exact coordinate match, but we can allow
-         * for big tolerances (order of the simulation box size) and thusly
-         * sidestep many floating point inaccuracies. This tolerance needs to be
-         * specified when constructing a ParticleIdentifier. The recommendation
-         * is to use the 'size' of the vertex (`vertexH`) the particle is
-         * currently assigned to.
+         * Using particle positions as floats, however, turned out to be a bad
+         * idea, even when allowing for fuzzy searches within a reasonable
+         * interval.
          *
-         * A minor complication lies in the fact that a std::map (which is used
-         * as the "database") needs strict comparisons. So we define two very
-         * similar structs: a ParticleIdentifier, which is used as the key in
-         * the map, and a ParticleSearchIdentifier, which is used to search for
-         * a particle in the map and permits for a fuzzy search using the
-         * tolerance mentioned above.
+         * Instead: TODO MLADEN: WRITE DOCU
          */
-        struct ParticleIdentifier;
-
-        /**
-         * @struct ParticleSearchIdentifier defines a struct to be used when
-         * querying the database map for a particle history. See the
-         * documentation of ParticleIdentifier for more details on the
-         * differences between them.
-         */
-        struct ParticleSearchIdentifier;
-
         struct ParticleIdentifier {
 
-          // don't make these functions below virtual: I need to be able to pass
-          // &ParticleSearchIdentifier and have it be treated like
-          // &ParticleIdentifier in function arguments.
-
-          std::string                           particleName;
-          tarch::la::Vector<Dimensions, double> particleX;
-          int                                   particleID;
+          std::string                              particleName;
+          tarch::la::Vector<Dimensions, double>    _particleX;  // TODO: do we still need this?
+          tarch::la::Vector<Dimensions, long long> vertexInd;
+          long long                                particleID;
 
           std::string toString() const;
 
           bool numericalEquals(const ParticleIdentifier& rhs) const;
           bool numericalSmaller(const ParticleIdentifier& rhs) const;
-          bool numericalSmallerWithTolerance(
-            const ParticleIdentifier& rhs,
-            const double              tolerance
-          ) const;
-
 
           bool operator<(const ParticleIdentifier& rhs) const;
-          bool operator<(const ParticleSearchIdentifier& rhs) const;
 
 
           ParticleIdentifier(
-            const std::string&                           particleName__,
-            const tarch::la::Vector<Dimensions, double>& particleX__,
-            const int                                    particleID__
+            const std::string&                              particleName__,
+            const tarch::la::Vector<Dimensions, double>&    particleX__,
+            const tarch::la::Vector<Dimensions, long long>& vertexInd__,
+            const long long                                 particleID__
           );
-        };
 
-
-        struct ParticleSearchIdentifier: ParticleIdentifier {
-
-          static constexpr double shiftTolerance = 0.3;
-
-          double positionTolerance;
-
-          bool operator<(const ParticleIdentifier& rhs) const;
-
-          ParticleSearchIdentifier(
-            const std::string&                           particleName__,
-            const tarch::la::Vector<Dimensions, double>& particleX__,
-            const int                                    particleID__,
-            const double                                 positionTolerance__
+          ParticleIdentifier(
+            const std::string&                              particleName__,
+            const tarch::la::Vector<Dimensions, double>&    particleX__,
+            const tarch::la::Vector<Dimensions, double>&    vertexX,
+            const tarch::la::Vector<Dimensions, double>&    vertexH,
+            const long long                                 particleID__
           );
+
+          static tarch::la::Vector<Dimensions, long long> getVertexInd(
+            const tarch::la::Vector<Dimensions, double>&    vertexX,
+            const tarch::la::Vector<Dimensions, double>&    vertexH
+            );
         };
 
       } // namespace internal

@@ -87,7 +87,7 @@ namespace toolbox {
           // default std::less<key>. std::less<> invokes the `<` operator.
           // We want that to be able to use our bespoke `<` operator
           // for different search and ID key identifier objects.
-          std::map<ParticleSearchIdentifier, ParticleEvents, std::less<>> _data;
+          std::map<ParticleIdentifier, ParticleEvents, std::less<>> _data;
 
           /**
            * Of how many previous associations do we want to keep track
@@ -104,9 +104,7 @@ namespace toolbox {
 
         public:
           // TODO: is this still used?
-          static constexpr int SearchWholeDatabase                    = 0;
           static constexpr int AnyTree                                = -1;
-          static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
 
           /**
            * Sets the number of snapshots to keep in the database.
@@ -135,7 +133,7 @@ namespace toolbox {
            *
            */
           ParticleEvents getParticleHistory(
-            const ParticleSearchIdentifier& identifier
+            const ParticleIdentifier& identifier
           );
 
           /**
@@ -143,7 +141,7 @@ namespace toolbox {
            *
            * Cannot be const as we have a semaphore to be thread-safe.
            */
-          std::string particleHistory(const ParticleSearchIdentifier& identifier
+          std::string particleHistory(const ParticleIdentifier& identifier
           );
 
           /**
@@ -156,7 +154,7 @@ namespace toolbox {
            *
            * Cannot be const as we have a semaphore to be thread-safe.
            */
-          int getTotalParticleEntries(const ParticleSearchIdentifier& identifier);
+          int getTotalParticleEntries(const ParticleIdentifier& identifier);
 
           /**
            * Return number of snapshots
@@ -186,7 +184,7 @@ namespace toolbox {
            * the newly added one.
            */
           Event addEvent(
-            ParticleSearchIdentifier identifier,
+            ParticleIdentifier identifier,
             Event&                   event,
             const int                treeId
           );
@@ -202,20 +200,30 @@ namespace toolbox {
            * the newEvent.
            */
           void replaceEvent(
-            ParticleSearchIdentifier identifier,
+            ParticleIdentifier identifier,
             Event&                   oldEvent,
             Event&                   newEvent
           );
+
+          /**
+           * Change the particle's vertexIndex in the map identifier.
+           * Particle must be findable with the passed identifier.
+           * */
+          void shiftIdentifierVertexInd(
+            ParticleIdentifier&                       identifier,
+            tarch::la::Vector<Dimensions, long long>& newVertexInd
+          );
+
 
           /**
            * Change the particle's coordinates used to identify it if it moved
            * too much compared to the coordinates stored in its identifier in
            * the database.
            */
-          void shiftIdentifierCoordinates(
-            ParticleSearchIdentifier              identifier,
-            tarch::la::Vector<Dimensions, double> newParticleX
-          );
+          /* void shiftIdentifierCoordinates( */
+          /*   ParticleIdentifier              identifier, */
+          /*   tarch::la::Vector<Dimensions, double> newParticleX */
+          /* ); */
 
           /**
            * Dump the whole database
