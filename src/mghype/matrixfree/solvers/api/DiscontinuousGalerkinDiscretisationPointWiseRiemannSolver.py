@@ -1,12 +1,15 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
+""" 
+ This file is part of the MGHyPE project within Peano 4. For conditions of distribution and 
+ use, please see the copyright notice at www.peano-framework.org
+"""
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
+import jinja2
 
 from .Solver import Solver
-from .actionsets.DGSolver.InitDofs                             import InitDofsDG
+from .actionsets.InitHigherOrderDofs                           import InitHigherOrderDofs
 from .actionsets.DGSolver.UpdateResidual                       import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                     import ProjectOntoFaces
 from .actionsets.DGSolver.UpdateFaceSolution                   import UpdateFaceSolution
@@ -16,8 +19,10 @@ from .actionsets.PlotDGDataInPeanoBlockFormat                  import PlotDGData
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
 
+  Most efficient solver we have for this type of problem class
+
   You can find each of the action sets here:
-  solvers.api.actionsets.DGSolver.InitDofs.InitDofsDG
+  solvers.api.actionsets.DGSolver.InitHigherOrderDofs.InitHigherOrderDofs
 
   The text below specifies the semantics and behaviour of this matrix-free
   DG solver. A tutorial running step by step through the steps how to use
@@ -206,8 +211,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   So far we have three non-trivial action sets.
 
-  ###  InitDofs
-  Code for this is in actionsets.InitDofsDG. So far nothing happens, other than determining which cells/faces are 
+  ###  InitHigherOrderDofs
+  Code for this is in actionsets.InitHigherOrderDofs. So far nothing happens, other than determining which cells/faces are 
   on the boundary and putting in initial guesses for each cell and face dof. We pass over to the implementation
   cpp file which should be left in situ in the directory for the application.
 
@@ -231,6 +236,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   Code for this is in actionsets.DGSolver.UpdateResidual. We do something nontrivial in touchCellFirstTime, namely perform the cell update
   rule as above. We set the residual to be \f$ Mb - A^{cc} u^c \f$.
 
+  
+  @param solver_includes C++ code snippet
+    Arbitrary C++ code snippet. Usually used to include additional files 
+    (therefore the name), though you can use it for preprocessing macros
+    or using statements as well. Has to be a valid C++ expression, i.e. 
+    something similar to
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include "myfile.h"
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
   """
   def __init__(self,
@@ -256,13 +270,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               face_relaxation,
               approximate_system_matrix,
               approximate_system_matrix_scaling,
+              integration_points,
               solver_tolerance,
               custom_init_actionset = None,
               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
               custom_init_cell = "",
-              custom_init_face = "",
               enable_plotting = True, # sometimes we want to disable standard plotting...,
-              plot_predicate = "true" # enable custom plotting behaviour
+              plot_predicate = "true", # enable custom plotting behaviour
+              solver_includes = "",
+              use_smart_pointer = False
               ):
     """!
     
@@ -348,6 +364,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     @param approximate_system_matrix_scaling: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       
+    @param integration_points: [Float]
+      Sequence of polynomial_degree+1 entries which identify the position of 
+      the integration points along the unit interval.
+      
     """  
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
 
@@ -374,7 +394,17 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_relaxation           = face_relaxation
 
     self._solver_tolerance          = solver_tolerance
+    self._solver_includes           = solver_includes
 
+    self._custom_init_actionset         = custom_init_actionset
+    self._custom_plot_actionset         = custom_plot_actionset
+
+    self._custom_init_cell              = custom_init_cell
+
+    self._enable_plotting               = enable_plotting
+    self._plot_predicate                = plot_predicate
+
+    self._integration_points            = integration_points
 
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
@@ -387,29 +417,24 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     # ignore vertex data
 
     # cell stuff
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell) ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell) ))
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell), use_smart_pointer=use_smart_pointer ))
 
     # face stuff
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ), use_smart_pointer=use_smart_pointer ))
     self._face_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_face_merge_method()
+    self._face_data.peano4_mpi_and_storage_aspect.implementation_file_includes = """ 
+#include "../{}.h"
+#include "repositories/SolverRepository.h"
+""".format( self.typename() )
 
     self.preprocessing_action_set  = None
     self.postprocessing_action_set = None
     
     self._basic_descend_order           = 0
-
-    self._custom_init_actionset         = custom_init_actionset
-    self._custom_plot_actionset         = custom_plot_actionset
-
-    self._custom_init_cell            = custom_init_cell
-    self._custom_init_face            = custom_init_face
-
-    self._enable_plotting               = enable_plotting
-    self._plot_predicate                = plot_predicate
 
     # assertions for matrix shapes
     # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
@@ -417,7 +442,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
     # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
-
+    
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
@@ -452,7 +477,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     """
     if self._custom_init_actionset is None:
-      observer.add_action_set( InitDofsDG(self) )
+      observer.add_action_set( InitHigherOrderDofs(self) )
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
 
@@ -491,40 +516,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     if(subdirectory):
         subdirectory += "/"
 
-    dictionary = {
-        "SOLVER_INCLUDES": "",
-        "MIN_H": self.min_h,
-        "MAX_H": self.max_h,
-        "SOLVER_NAME":             self.typename(),
-        "CELL_CARDINALITY"            : self._unknowns_per_cell,
-        "FACE_CARDINALITY_SOLUTION"   : self._unknowns_per_face_solution,
-        "FACE_CARDINALITY_PROJECTION" : self._unknowns_per_face_projection,
-        "VERTEX_CARDINALITY"          : 1,
-        "NODES_PER_CELL"              : (self._poly_degree + 1) **  self._dimensions,
-        "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1),
-        "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
-        "SOLUTIONS_PER_FACE_NODE"     : self._solutions_per_face_node,
-        "PROJECTIONS_PER_FACE_NODE"   : self._projections_per_face_node,
-        "MASS_MATRIX"                 : self._mass_matrix,
-        "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
-        "ASSEMBLY_MATRIX"             : self._assembly_matrix,
-        "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
-        "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
-        "FACE_FROM_CELL_PROJECTION_SCALING": self._face_from_cell_projection_scaling,
-        "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
-        "CELL_FROM_FACE_PROJECTION_SCALING"   : self._cell_from_face_projection_scaling,
-        "RIEMANN_MATRIX"              : self._riemann_matrix,
-        "BOUNDARY_MATRIX"             : self._boundary_matrix,
-        "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
-        "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
-        "CELL_RELAXATION"             : self._cell_relaxation,
-        "FACE_RELAXATION"             : self._face_relaxation,
-        "POLY_DEGREE"                 : self._poly_degree,
-        "SOLVER_TOLERANCE"            : self._solver_tolerance,
-        "CUSTOM_INIT_CELL"            : self._custom_init_cell,
-        "CUSTOM_INIT_FACE"            : self._custom_init_face,
-
-        }
+    dictionary = self.create_dictionary()
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
@@ -553,10 +545,18 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
 
   def get_face_merge_method(self):
-    return """
+      """! 
+
+      The actual merge of faces is simple, as we compute the numerical flux
+      redundantly, i.e. we really only have to copy stuff one way or the 
+      other.
+  
+      """
+      return jinja2.Template("""
   if (!marker.willBeRefined()
     and
     context == ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange
+
   ) { //todo change this to use the face's own enum
 
     setLProjection(
@@ -566,7 +566,40 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       getRProjection() + neighbour.getRProjection()
     );
   }
+    """).render(**self.create_dictionary())
 
-
-    """
-
+  def create_dictionary(self):
+    return {
+          "SOLVER_INCLUDES"             : self._solver_includes,
+          "MIN_H": self.min_h,
+          "MAX_H": self.max_h,
+          "SOLVER_NAME":             self.typename(),
+          "SOLVER_INSTANCE":         self.instance_name(),
+          "CELL_CARDINALITY"            : self._unknowns_per_cell,
+          "FACE_CARDINALITY_SOLUTION"   : self._unknowns_per_face_solution,
+          "FACE_CARDINALITY_PROJECTION" : self._unknowns_per_face_projection,
+          "VERTEX_CARDINALITY"          : 1,
+          "NODES_PER_CELL"              : (self._poly_degree + 1) **  self._dimensions,
+          "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1),
+          "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
+          "SOLUTIONS_PER_FACE_NODE"     : self._solutions_per_face_node,
+          "PROJECTIONS_PER_FACE_NODE"   : self._projections_per_face_node,
+          "RHS_MATRIX"                  : self._mass_matrix,
+          "RHS_MATRIX_SCALING"          : self._mass_matrix_scaling,
+          "ASSEMBLY_MATRIX"             : self._assembly_matrix,
+          "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
+          "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
+          "FACE_FROM_CELL_PROJECTION_SCALING": self._face_from_cell_projection_scaling,
+          "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
+          "CELL_FROM_FACE_PROJECTION_SCALING"   : self._cell_from_face_projection_scaling,
+          "RIEMANN_MATRIX"              : self._riemann_matrix,
+          "BOUNDARY_MATRIX"             : self._boundary_matrix,
+          "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
+          "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
+          "CELL_RELAXATION"             : self._cell_relaxation,
+          "FACE_RELAXATION"             : self._face_relaxation,
+          "POLY_DEGREE"                 : self._poly_degree,
+          "SOLVER_TOLERANCE"            : self._solver_tolerance,
+          "CUSTOM_INIT_CELL"            : self._custom_init_cell,
+          "INTEGRATION_POINTS"          : self._integration_points,
+          }

@@ -10,28 +10,21 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 """)
 
-
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pt",   "--plot-sweep",     dest="plot_after_each_mesh_sweep", action="store_true", default=False, help="Plot after each timestep. By default (False) we plot after initialisation and at the end" )
-parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../../../", help="Peano4 directory" )
+parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../..", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
-parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
-parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
-parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
+parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
+parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
+parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
 args = parser.parse_args()
 
-#! [Create project]
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
-                              namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
-                            )
-#! [Create project]
-
-
-#! [Construct matrices]
+                                         namespace = [ "benchmarks", "mghype", "poisson" ],
+                                         executable = args.output
+                                        )
 
 matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
@@ -49,12 +42,17 @@ cell_from_face_projection, \
 cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
 approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
-#! [Construct matrices]
 
 
+Solver_Type = None
+if args.variant == "dg-sweeps":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted
+elif args.variant == "dg-shifted-and-fused":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+elif args.variant == "tasks":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 
-#! [Instantiate solver]
-solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted(
+solver = Solver_Type(
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
@@ -73,43 +71,40 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted(
   cell_from_face_projection_scaling = cell_from_face_projection_scaling,
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
-  cell_relaxation = args.omega_c,
-  face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
+  cell_relaxation = 0.5,
+  face_relaxation = 1.0,
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
+  integration_points = matrices.get_nodal_points_1d(),
+  enable_plotting    = False,
+  solver_includes    = """#include "{}/tests/multigrid/matrixfree/poisson/Scenario.h" """.format(args.peanodir)
 )
-
-#! [Instantiate solver]
 
 project.add_solver(solver)
 
 #
 # Configure build
 #
-if args.mode=="release":
-  build_mode = peano4.output.CompileMode.Release
-if args.mode=="stats":
-  build_mode = peano4.output.CompileMode.Stats
-if args.mode=="asserts":
-  build_mode = peano4.output.CompileMode.Asserts
-if args.mode=="trace":
-  build_mode = peano4.output.CompileMode.Trace
+build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Asserts
 
 
 cube_size = 1.0
+max_iterations = 10
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
-  plot_after_each_mesh_sweep       = args.plot_after_each_mesh_sweep,
-  max_iterations                   = 10000
+  plot_after_each_mesh_sweep       = False,
+  max_iterations                   = max_iterations
 )
 
+project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false)" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
-peano4_project.output.makefile.add_cpp_file( "Scenario.cpp" )
+peano4_project.output.makefile.add_cpp_file( args.peanodir + "/tests/multigrid/matrixfree/poisson/Scenario.cpp" )
 peano4_project.generate()
 
 os.system( "make clean" )

@@ -101,19 +101,10 @@ if (
     currentDoF++;
   }
 
-
-
-  logTraceOut("Plot::touchCellFirstTime");
+  logTraceOut("touchCellFirstTime");
 }
 """
 
-  templateTouchFaceFirstTime="""
-  if (fineGridFace{{SOLVER_NAME}}.getType()!=facedata::{{SOLVER_NAME}}::Type::Coarse)
-  {
-    logTraceInWith3Arguments("touchFaceFirstTimeOutput", marker.x(), fineGridFace{{SOLVER_NAME}}.getSolution(),fineGridFace{{SOLVER_NAME}}.getProjection());
-    logTraceOut("touchFaceFirstTimeOutput");
-  }
-"""
 
   __Template_BeginTraversal = """
   if ({{PLOT_PREDICATE}}) {
@@ -134,13 +125,24 @@ if (
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
       counter
     );
-      
+
+    double spatialArrangementOfIntegrationPoints[repositories::{{SOLVER_INSTANCE}}.NodesPerCell*Dimensions];
+    int k=0;
+    dfor(i,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) {
+      for (int d=0; d<Dimensions; d++) {
+        spatialArrangementOfIntegrationPoints[k] = repositories::{{SOLVER_INSTANCE}}.getIntegrationPoint(i)(d);
+        k++;
+        assertion(k<=repositories::{{SOLVER_INSTANCE}}.NodesPerCell*repositories::{{SOLVER_INSTANCE}}.NodesPerCell*Dimensions);
+      }
+    }
+
     _dataWriter = _writer->createVertexDataWriter( 
       "{{VARIABLE}}", 
       repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
       repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
-      "Solution",
-      "Solution as delivered through MF Solver"
+      "Solution of {{SOLVER_NAME}}",
+      "",
+      spatialArrangementOfIntegrationPoints
     );
 
     _dataWriter->setPrecision(16);
@@ -156,8 +158,6 @@ if (
       result = jinja2.Template( self.__Template_BeginTraversal).render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = jinja2.Template( self.__Template_EndTraversal).render(**self.d)             
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template( self.templateTouchFaceFirstTime).render(**self.d) 
     return result
 
 

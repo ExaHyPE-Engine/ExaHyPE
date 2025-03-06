@@ -4,6 +4,22 @@
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
+const tarch::la::Vector< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PolyDegree+1, double >   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::IntegrationPoints = { {{INTEGRATION_POINTS | join(", ")}} };
+
+
+tarch::la::Vector< Dimensions, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getIntegrationPoint(
+  const tarch::la::Vector< Dimensions, int >& pos
+) {
+  tarch::la::Vector< Dimensions, double > result;
+  for (int d=0; d<Dimensions; d++) {
+    assertion1( pos(d)>=0, pos );
+    assertion1( pos(d)<PolyDegree+1, pos );
+    result(d) = IntegrationPoints( pos(d) );
+  }
+  return result;
+}
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} ),
   _state( State::ProjectOntoFacesOnly )
@@ -40,15 +56,15 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 }
 
 
-{% if MASS_MATRIX is defined %}
+{% if RHS_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
   logTraceInWith2Arguments("getRhsMatrix", cellCentre, cellSize);
   static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
-    {% for MATRIX in MASS_MATRIX %}
-    // {# MASS_MATRIX is an array, possible of length 1 #}
+    {% for MATRIX in RHS_MATRIX %}
+    // {# RHS_MATRIX is an array, possible of length 1 #}
     {
       {{MATRIX[0]| join(", ")}}
         {% for ROW in MATRIX[1:] %}
@@ -58,12 +74,12 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
     {% endfor %}
   };
 
-  {% if MASS_MATRIX_SCALING is not defined %}
+  {% if RHS_MATRIX_SCALING is not defined %}
   #error If matrices are predefined, scaling has to be defined, too
   {% endif %}
 
   static std::vector<int> scaleFactors = {
-      {% for el in MASS_MATRIX_SCALING %}
+      {% for el in RHS_MATRIX_SCALING %}
         {{el}},
       {% endfor %}
   };
@@ -357,4 +373,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspend(bool projectOntoFaces, b
   }
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const { return _state; }
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::State {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getState() const { 
+  return _state; 
+}

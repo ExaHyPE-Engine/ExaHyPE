@@ -53,13 +53,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
-    ) = 0;
+    ) {%if CUSTOM_INIT_VERTEX=="" %} = 0 {% endif %};
 
     virtual void setBoundaryConditions(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value
-    ) = 0;
+    ) {%if CUSTOM_BOUNDARY_CONDITIONS=="" %} = 0 {% endif %};
 
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexType(
       const tarch::la::Vector<Dimensions, double>&  x,
@@ -95,7 +95,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
     bool updateResidual() const;
 
     State getState() const;
-
     {{ABSTRACT_SOLVER_HEADER_EXTRAS}}
     
   protected:

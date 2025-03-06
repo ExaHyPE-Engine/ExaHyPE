@@ -6,15 +6,15 @@ import dastgen2
 import os
 
 from .Solver                                                              import Solver
-from .DGPointWiseWithSmartPointerPatches                                  import DGPointWiseWithSmartPointerPatches
 from .actionsets.PlotDGDataInPeanoBlockFormat                             import PlotDGDataInPeanoBlockFormat
 
+from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .actionsets.DGTaskingSolver.AssignTaskNumbersToCells                 import AssignTaskNumbersToCells
 from .actionsets.DGTaskingSolver.AssignTaskNumbersToCells                 import AssignTaskNumbersToCells
 from .actionsets.DGTaskingSolver.ProjectIntoCellAndUpdateCellSolution     import ProjectIntoCellAndUpdateCellSolution
 from .actionsets.DGTaskingSolver.UpdateFaceSolution                       import UpdateFaceSolution
 
-class DGTaskingSolver(DGPointWiseWithSmartPointerPatches):
+class DGTaskingSolver(DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver):
   """!
   We reintroduce the tasking solver here.
 

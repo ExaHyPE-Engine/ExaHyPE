@@ -34,17 +34,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      */
     virtual ~{{CLASSNAME}}();
 
-    virtual void initCell(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< CellUnknowns, double >&  value,
-      tarch::la::Vector< CellUnknowns, double >&  rhs
+    {% if CUSTOM_INIT_CELL=="" %}
+    virtual void initCellDoF(
+        const tarch::la::Vector<Dimensions, double>&  x,
+        const tarch::la::Vector<Dimensions, double>&  h,
+        tarch::la::Vector< UnknownsPerCellNode, double >&    value,
+        tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
+        tarch::la::Vector< Dimensions, int >&         node
     ) override;
-
-    virtual void initFace(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< FaceUnknownsSolution  , double >&  solution,
-      tarch::la::Vector< FaceUnknownsSolution, double >&    projection
-    ) override;
+    {% endif %}
 };

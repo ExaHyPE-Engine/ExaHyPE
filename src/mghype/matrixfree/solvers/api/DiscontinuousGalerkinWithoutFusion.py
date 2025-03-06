@@ -1,5 +1,7 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
+""" 
+ This file is part of the MGHyPE project within Peano 4. For conditions of distribution and 
+ use, please see the copyright notice at www.peano-framework.org
+"""
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import jinja2
@@ -44,13 +46,14 @@ class DiscontinuousGalerkinWithoutFusion(DiscontinuousGalerkinDiscretisationPoin
               face_relaxation,
               approximate_system_matrix,
               approximate_system_matrix_scaling,
+              integration_points,
               solver_tolerance,
               custom_init_actionset = None,
               custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
               custom_init_cell = "",
-              custom_init_face = "",
               enable_plotting = True, # sometimes we want to disable standard plotting...,
-              plot_predicate = "true" # enable custom plotting behaviour
+              plot_predicate = "true", # enable custom plotting behaviour
+              solver_includes = ""
               ):
     """!
     
@@ -79,13 +82,14 @@ class DiscontinuousGalerkinWithoutFusion(DiscontinuousGalerkinDiscretisationPoin
       face_relaxation,
       approximate_system_matrix,
       approximate_system_matrix_scaling,
+      integration_points,
       solver_tolerance,
-      custom_init_actionset = None,
-      custom_plot_actionset = None, # just pass in a list of tuples, one for the variable name and the other for the getter
-      custom_init_cell = "",
-      custom_init_face = "",
-      enable_plotting = True, # sometimes we want to disable standard plotting...,
-      plot_predicate = "true" # enable custom plotting behaviour
+      custom_init_actionset,
+      custom_plot_actionset, # just pass in a list of tuples, one for the variable name and the other for the getter
+      custom_init_cell,
+      enable_plotting, 
+      plot_predicate,  
+      solver_includes, 
     )
 
     # we also need to make sure that the merge method has the solver repository header available  

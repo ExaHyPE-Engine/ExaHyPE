@@ -134,14 +134,14 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
       counter
     );
-      
+          
     _dataWriter = _writer->createVertexDataWriter( 
       "{{VARIABLE}}", 
       2,  // number of dofs per axis per cell
       repositories::{{SOLVER_INSTANCE}}.VertexUnknowns,
-      "Solution",
-      "Solution as delivered through MF Solver"
+      "Solution of {{SOLVER_NAME}}"
     );
+    
     _dataWriter->setPrecision(16);
   }
 """

@@ -1,3 +1,7 @@
+""" 
+ This file is part of the MGHyPE project within Peano 4. For conditions of distribution and 
+ use, please see the copyright notice at www.peano-framework.org
+"""
 import peano4
 import dastgen2
 from abc import abstractmethod
@@ -43,6 +47,7 @@ class Solver:
     
     """
     observer.use_vertex(self._vertex_data)
+# @todo das muss natuerlich weg
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
   

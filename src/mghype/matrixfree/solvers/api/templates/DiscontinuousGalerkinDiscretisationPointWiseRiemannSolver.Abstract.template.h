@@ -73,8 +73,7 @@
  *
  * 
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
-
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::solvers::Solver {
   public:
     enum class State {
       Solve,                    // for use in middle DG stage
@@ -178,6 +177,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
+    
+    /**
+     * Spacing of integration nodes along unit interval in one dimension
+     *
+     * The position of any point within the reference element can be
+     * constructed through a tensor product approach.
+     */
+    static const tarch::la::Vector< PolyDegree+1, double >   IntegrationPoints;
+
+    static tarch::la::Vector< Dimensions, double > getIntegrationPoint(
+      const tarch::la::Vector< Dimensions, int >& pos
+    );
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -185,22 +196,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     /**
      * Initialise a cell degree of freedom
      */
-    virtual void initCell(
+    virtual void initCellDoF(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< CellUnknowns, double >&  solution,
-      tarch::la::Vector< CellUnknowns, double >&  rhs
-    ) = 0;
-
-    /**
-     * Initialise a face degree of freedom
-     */
-    virtual void initFace(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
-      tarch::la::Vector< FaceUnknownsSolution,double >&    projection
-    ) = 0;
+      tarch::la::Vector< UnknownsPerCellNode, double >&    value,
+      tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
+      tarch::la::Vector< Dimensions, int >&         node
+    ) {% if CUSTOM_INIT_CELL=="" %} = 0 {% endif %};
 
     /**
      * Initialise a cell degree of freedom
@@ -224,7 +226,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    ) {% if MASS_MATRIX is not defined %} = 0 {% endif %};
+    ) {% if RHS_MATRIX is not defined %} = 0 {% endif %};
 
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedApproxSystemMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
