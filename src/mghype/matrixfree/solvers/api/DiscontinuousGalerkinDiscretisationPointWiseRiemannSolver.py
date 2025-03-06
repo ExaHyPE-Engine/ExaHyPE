@@ -566,19 +566,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   if (!marker.willBeRefined()
     and
     context == ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange
-    and
-    repositories::{{SOLVER_INSTANCE}}.updateFace()
-  ) { 
-    if ( tarch::la::oneSmaller(marker.outerNormal(),0.0) ) {
-      setLProjection(
-        neighbour.getLProjection()
-      );
-    }
-    else {
-      setRProjection(
-        neighbour.getRProjection()
-      );
-    }
+
+  ) { //todo change this to use the face's own enum
+
+    setLProjection(
+      getLProjection() + neighbour.getLProjection()
+    );
+    setRProjection(
+      getRProjection() + neighbour.getRProjection()
+    );
   }
     """).render(**self.create_dictionary())
 
