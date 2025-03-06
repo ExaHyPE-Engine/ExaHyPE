@@ -32,7 +32,7 @@ namespace toolbox {
         struct ParticleIdentifier {
 
           std::string                              particleName;
-          tarch::la::Vector<Dimensions, double>    _particleX;  // TODO: do we still need this?
+          tarch::la::Vector<Dimensions, double>    particleX;  // TODO: do we still need this?
           tarch::la::Vector<Dimensions, long long> vertexInd;
           long long                                particleID;
 

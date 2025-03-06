@@ -142,7 +142,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
   """
     __Template_ReassignAndLiftWithinCell = jinja2.Template(
         """
-  // Start template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_Reassign.py]
+  // Start template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_Reassign.py
 
   for (int i=0; i<TwoPowerD; i++) {
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin();

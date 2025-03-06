@@ -2180,7 +2180,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   );
 
 
-  // TODO: Check that vertexX is correct choice here
   ac::internal::ParticleIdentifier identifier = ac::internal::
     ParticleIdentifier(
       "TestParticle",

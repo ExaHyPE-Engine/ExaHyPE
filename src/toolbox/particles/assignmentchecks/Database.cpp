@@ -445,7 +445,7 @@ void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVe
   _data.erase(key);
   ParticleIdentifier newIdentifier = ParticleIdentifier(
     identifier.particleName,
-    identifier._particleX,
+    identifier.particleX,
     newVertexInd,
     identifier.particleID
   );

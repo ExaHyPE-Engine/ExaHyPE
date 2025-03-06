@@ -103,7 +103,6 @@ namespace toolbox {
           size_t _maxParticleSnapshotsToKeepTrackOf;
 
         public:
-          // TODO: is this still used?
           static constexpr int AnyTree                                = -1;
 
           /**

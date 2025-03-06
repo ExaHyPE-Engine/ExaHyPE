@@ -11,7 +11,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const long long                                 particleID__
   ):
   particleName(particleName__),
-  _particleX(particleX__),
+  particleX(particleX__),
   vertexInd(vertexInd__),
   particleID(particleID__) {}
 
@@ -24,7 +24,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const long long                                 particleID__
   ):
   particleName(particleName__),
-  _particleX(particleX__),
+  particleX(particleX__),
   vertexInd(getVertexInd(vertexX, vertexH)),
   particleID(particleID__) {}
 
@@ -92,8 +92,8 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   toString() const {
     // TODO: Add particleX?
-  return "(" + particleName + ",ID=" + std::to_string(particleID) + ","
-         + ::toString(vertexInd) + ")";
+  return "(" + particleName + ",ID=" + std::to_string(particleID) + ",VertexInd="
+         + ::toString(vertexInd) + ",particleX=" + ::toString(particleX) + ")";
 }
 
 
