@@ -51,7 +51,6 @@ void swift2::ParticleSpecies::setRerunPreviousGridSweep() {
 
 void swift2::ParticleSpecies::setTimeStepSize(double dtMin, double dtMax, bool reduceInsteadOfOverwrite) {
   tarch::multicore::Lock lock(_semaphore);
-std::cout << "CALLED setTimeStepSize()";
   if (reduceInsteadOfOverwrite) {
     _minTimeStepSize = std::min(_minTimeStepSize, dtMin);
     _maxTimeStepSize = std::max(_maxTimeStepSize, dtMax);

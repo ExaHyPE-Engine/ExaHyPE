@@ -116,19 +116,19 @@ void toolbox::particles::insertParticleIntoCell(
   int partID = -1;
 #endif
 
+  tarch::la::Vector<Dimensions, double> vertexX = marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents( tarch::la::Vector<Dimensions, double>(targetVertex), marker.h());
+
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
     newParticle->getX(),
     partID,
     true, // is always local, we set that a few lines above
-    marker.x() - 0.5 * marker.h()
-      + tarch::la::multiplyComponents(
-        tarch::la::Vector<Dimensions, double>(targetVertex),
-        marker.h()
-      ),        // vertexX
+    vertexX,
     marker.h(), // vertexH
     spacetreeId,
     "toolbox::particles::insertParticleIntoCell()",
+    vertexX,
+    marker.h(),
     true // particle is new
   );
 }

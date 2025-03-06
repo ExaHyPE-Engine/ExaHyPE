@@ -1,8 +1,6 @@
 #include "repositories/GlobalState.h"
 #include "tarch/mpi/Rank.h"
 
-#include "toolbox/particles/assignmentchecks/Database.h"
-
 template <typename Particle>
 void swift2::statistics::reportSearchRadiusVTDt(const std::string& particleName) {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -18,7 +16,5 @@ void swift2::statistics::reportSearchRadiusVTDt(const std::string& particleName)
     logInfo("reportSearchRadiusVTDt()", "t=" << Particle::getSpecies().getMinTimeStamp());
     logInfo("reportSearchRadiusVTDt()", "dt=" << Particle::getSpecies().getMinTimeStepSize());
 
-auto& db = toolbox::particles::assignmentchecks::internal::Database::getInstance();
-std::cout << db.toString() << std::endl;
   }
 }
