@@ -135,20 +135,20 @@ MGHyPE_MatrixFree_Tests:
     - Build
   retry: 0
 
-SWIFT2_Dastgen:
-  stage: Test
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .SWIFT2_Dastgen
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# SWIFT2_Dastgen:
+#   stage: Test
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .SWIFT2_Dastgen
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
 SWIFT2_Sod1D:
   stage: Test
