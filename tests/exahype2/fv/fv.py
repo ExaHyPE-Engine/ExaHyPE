@@ -10,13 +10,13 @@ parser = argparse.ArgumentParser(
 )
 
 available_solvers = {
-    "FVGodunovGlobalAdaptive": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
-    "FVGodunovGlobalAdaptiveEnclave": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking,
+    "FVRusanovGlobalAdaptive": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
+    "FVRusanovGlobalAdaptiveEnclave": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 parser.add_argument(
     "-s",
     "--solver",
-    default="FVGodunovGlobalAdaptive",
+    default="FVRusanovGlobalAdaptive",
     choices=available_solvers.keys(),
     help="|".join(available_solvers.keys()),
 )
