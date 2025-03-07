@@ -690,7 +690,7 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
                  use_fas,
                  smoothing_steps_DG = 4,
                  smoothing_steps_CG = -1,
-                 vcycles=-1, #toto: move vcycles to the solver input
+                 vcycles=1, #toto: move vcycles to the solver input
                  ):        
         """!
 
