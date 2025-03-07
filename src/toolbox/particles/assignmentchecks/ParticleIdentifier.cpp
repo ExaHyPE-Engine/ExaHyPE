@@ -8,12 +8,14 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const std::string&                           particleName__,
     const tarch::la::Vector<Dimensions, double>&    particleX__,
     const tarch::la::Vector<Dimensions, long long>& vertexInd__,
-    const long long                                 particleID__
+    const int                                       particleID__,
+    const int                                       treeID__
   ):
   particleName(particleName__),
   particleX(particleX__),
   vertexInd(vertexInd__),
-  particleID(particleID__) {}
+  particleID(particleID__),
+  treeID(treeID__) {}
 
 toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
@@ -21,12 +23,14 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     const tarch::la::Vector<Dimensions, double>&    particleX__,
     const tarch::la::Vector<Dimensions, double>&    vertexX,
     const tarch::la::Vector<Dimensions, double>&    vertexH,
-    const long long                                 particleID__
+    const int                                       particleID__,
+    const int                                       treeID__
   ):
   particleName(particleName__),
   particleX(particleX__),
   vertexInd(getVertexInd(vertexX, vertexH)),
-  particleID(particleID__) {}
+  particleID(particleID__),
+  treeID(treeID__) {}
 
 
 
@@ -55,34 +59,43 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
       return false;
   }
 
-  return (particleName == rhs.particleName) and (particleID == rhs.particleID);
+  return (particleName == rhs.particleName) and (particleID == rhs.particleID) and (treeID == rhs.treeID);
 }
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmaller(const ParticleIdentifier& rhs) const {
 
-  if (*this == rhs) {
+  // DO NOT USE EQUALITY CHECKS IN HERE.
+  // That aborts the checks too early.
+  // Only return false at the very end.
+
+  if (*this == rhs)
     return false;
-  }
-  if (particleName < rhs.particleName) {
+
+  if (particleName < rhs.particleName)
     return true;
-  }
-  if (particleName > rhs.particleName) {
+  if (particleName > rhs.particleName)
     return false;
-  }
+
   if (particleID < rhs.particleID)
     return true;
   if (particleID > rhs.particleID)
     return false;
+
+  if (treeID < rhs.treeID)
+    return true;
+  if (treeID > rhs.treeID)
+    return false;
+
   for (int d = 0; d < Dimensions; d++) {
-    if (vertexInd(d) < rhs.vertexInd(d)) {
+
+    if (vertexInd(d) < rhs.vertexInd(d))
       return true;
-    }
-    if (vertexInd(d) > rhs.vertexInd(d)) {
+    if (vertexInd(d) > rhs.vertexInd(d))
       return false;
-    }
   }
+
   // If everthing is equal so far, then one is not smaller than the other.
   return false;
 }
@@ -91,10 +104,17 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 
 std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   toString() const {
-    // TODO: Add particleX?
-  return "(" + particleName + ",ID=" + std::to_string(particleID) + ",VertexInd="
-         + ::toString(vertexInd) + ",particleX=" + ::toString(particleX) + ")";
-}
+
+  std::stringstream sstr;
+  sstr << "(" << particleName <<
+          ",ID=" <<particleID <<
+          ",VertexInd=" << ::toString(vertexInd) <<
+          ",treeID=" << treeID <<
+          ",particleX=" << ::toString(particleX)
+          << ")";
+
+  return sstr.str();
+  }
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::

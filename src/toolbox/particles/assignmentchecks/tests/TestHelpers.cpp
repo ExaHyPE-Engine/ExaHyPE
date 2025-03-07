@@ -140,6 +140,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   tarch::la::Vector<Dimensions, double> particleAX;
   tarch::la::Vector<Dimensions, double> particleBX;
   tarch::la::Vector<Dimensions, long long> vertexInd;
+  int treeId = 1;
 
   for (int i = 0; i < Dimensions; i++) {
     particleAX(i) = 1.;
@@ -149,9 +150,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   // create a key and assign it a value in the map
   ac::internal::ParticleIdentifier a = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, vertexInd, 1);
+    ParticleIdentifier("DummyParticle", particleAX, vertexInd, 1, treeId);
   ac::internal::ParticleIdentifier b = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, vertexInd, 2);
+    ParticleIdentifier("DummyParticle", particleBX, vertexInd, 2, treeId);
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -166,9 +167,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   assert(not(b < a));
 
   ac::internal::ParticleIdentifier A   = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, vertexInd, 1);
+    ParticleIdentifier("DummyParticle", particleAX, vertexInd, 1, treeId);
   ac::internal::ParticleIdentifier B = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, vertexInd, 2);
+    ParticleIdentifier("DummyParticle", particleBX, vertexInd, 2, treeId);
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -347,8 +348,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         ParticleIdentifier(
           "DummyParticle",
           particleX,
+          vertexX,
+          vertexH,
           particleID,
-          positionTolerance
+          treeId
         );
 
       // vertex assignment event
@@ -363,7 +366,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         trace
       );
 
-      eventDatabase.addEvent(identifier, vassEvent, treeId);
+      eventDatabase.addEvent(identifier, vassEvent);
 
       // move event
       trace                         = "Move/sweep:" + *sweep;
@@ -375,7 +378,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId,
         trace
       );
-      eventDatabase.addEvent(identifier, moveEvent, treeId);
+      eventDatabase.addEvent(identifier, moveEvent);
 
       // sieve event
       trace                         = "Sieve/sweep:" + *sweep;
@@ -385,14 +388,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId,
         trace
       );
-      eventDatabase.addEvent(identifier, sievEvent, treeId);
+      eventDatabase.addEvent(identifier, sievEvent);
 
       // invalid event
       trace                            = "NotFound/sweep:" + *sweep;
       ac::internal::Event invalidEvent = ac::internal::Event(
         ac::internal::Event::Type::NotFound
       );
-      eventDatabase.addEvent(identifier, invalidEvent, treeId);
+      eventDatabase.addEvent(identifier, invalidEvent);
     }
 
     sweep++;
@@ -422,8 +425,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       ParticleIdentifier(
         "DummyParticle",
         particleX,
+        vertexX,
+        vertexH,
         particleID,
-        positionTolerance
+        treeId
       );
 
     size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
@@ -508,8 +513,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           ParticleIdentifier(
             "DummyParticle",
             particleX,
+            vertexX,
+            vertexH,
             particleID,
-            positionTolerance
+            treeId
           );
 
         // vertex assignment event
@@ -524,7 +531,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           trace
         );
 
-        eventDatabase.addEvent(identifier, vassEvent, treeId);
+        eventDatabase.addEvent(identifier, vassEvent);
 
         // move event
         trace                         = "Move/sweep:" + *sweep;
@@ -536,7 +543,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           treeId,
           trace
         );
-        eventDatabase.addEvent(identifier, moveEvent, treeId);
+        eventDatabase.addEvent(identifier, moveEvent);
 
         // sieve event
         trace                         = "Sieve/sweep:" + *sweep;
@@ -546,7 +553,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           treeId,
           trace
         );
-        eventDatabase.addEvent(identifier, sievEvent, treeId);
+        eventDatabase.addEvent(identifier, sievEvent);
       }
     }
 
@@ -555,53 +562,13 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // is particle count correct?
+  // nparts particles times nparts trees
   assertion3(
-    eventDatabase.getNumberOfTracedParticles() == static_cast<int>(nparts),
+    eventDatabase.getNumberOfTracedParticles() == nparts * nparts ,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles(),
-    nparts
+    nparts * nparts
   );
-
-  // Is number of trees per particle correct?
-  for (int p = 1; p < nparts + 1; p++) {
-
-    int particleID = p;
-
-    for (int i = 0; i < Dimensions; i++) {
-      particleX(i) = p;
-      vertexX(i)   = p;
-      vertexH(i)   = p;
-    }
-
-    ac::internal::ParticleIdentifier identifier = ac::internal::
-      ParticleIdentifier(
-        "DummyParticle",
-        particleX,
-        particleID,
-        positionTolerance
-      );
-
-    ac::internal::ParticleEvents history = eventDatabase.getParticleHistory(
-      identifier
-    );
-    std::vector<int> treesInHistory;
-
-    for (auto e : history) {
-
-      int thisTree = e.treeId;
-
-      if (std::find(treesInHistory.begin(), treesInHistory.end(), thisTree) == treesInHistory.end()){
-        treesInHistory.push_back(thisTree);
-      }
-    }
-
-    assertion3(
-      treesInHistory.size() == nparts,
-      "Wrong number of trees in particle history",
-      eventDatabase.particleHistory(identifier),
-      eventDatabase.toString()
-    );
-  }
 
   // Clean up after yourself.
   eventDatabase.reset();
@@ -676,7 +643,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         particleX,
         vertexX,
         vertexH,
-        particleID
+        particleID,
+        treeId
       );
 
 
@@ -690,7 +658,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       treeId,
       trace
     );
-    eventDatabase.addEvent(identifier, moveEvent, treeId);
+    eventDatabase.addEvent(identifier, moveEvent);
   }
 
 
@@ -709,7 +677,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       particleX,
       vertexX,
       vertexH,
-      particleID
+      particleID,
+      treeId
     );
 
   int nEntries = eventDatabase.getTotalParticleEntries(identifier);
@@ -905,7 +874,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   );
 
   ac::internal::ParticleIdentifier identifier = ac::internal::
-    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID);
+    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID, spacetreeId);
 
   // 8 is hardcoded here. Modify manually if you change test setup.
   assertion3(
@@ -1076,7 +1045,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   );
 
   ac::internal::ParticleIdentifier identifier = ac::internal::
-    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID);
+    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID, spacetreeId);
 
   // 13 is hardcoded here. Modify manually if you change test setup.
   assertion3(
@@ -2186,7 +2155,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
       localPart->getX(),
       vertexX,
       localPart->getVertexH(),
-      localPart->getPartid()
+      localPart->getPartid(),
+      spacetreeId
     );
 
   size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);

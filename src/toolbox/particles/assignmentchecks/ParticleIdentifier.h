@@ -34,7 +34,8 @@ namespace toolbox {
           std::string                              particleName;
           tarch::la::Vector<Dimensions, double>    particleX;  // TODO: do we still need this?
           tarch::la::Vector<Dimensions, long long> vertexInd;
-          long long                                particleID;
+          int                                      particleID;
+          int                                      treeID;
 
           std::string toString() const;
 
@@ -48,7 +49,8 @@ namespace toolbox {
             const std::string&                              particleName__,
             const tarch::la::Vector<Dimensions, double>&    particleX__,
             const tarch::la::Vector<Dimensions, long long>& vertexInd__,
-            const long long                                 particleID__
+            const int                                       particleID__,
+            const int                                       treeId__
           );
 
           ParticleIdentifier(
@@ -56,7 +58,8 @@ namespace toolbox {
             const tarch::la::Vector<Dimensions, double>&    particleX__,
             const tarch::la::Vector<Dimensions, double>&    vertexX,
             const tarch::la::Vector<Dimensions, double>&    vertexH,
-            const long long                                 particleID__
+            const int                                       particleID__,
+            const int                                       treeId__
           );
 
           static tarch::la::Vector<Dimensions, long long> getVertexInd(

@@ -95,7 +95,29 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
     return *newEventHistory;
   } else {
 
-    assertion1(search->first.particleID == identifier.particleID, "Particle identifier IDs not equal");
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+#endif
+
     ParticleEvents history = search->second;
     return history;
   }
@@ -146,7 +168,30 @@ int toolbox::particles::assignmentchecks::internal::Database::
   auto search = _data.find(identifier);
 
   if (search != _data.end()) {
-    assertion(search->first.particleID == identifier.particleID);
+
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+#endif
+
     int result = search->second.size();
     return result;
   }
@@ -217,7 +262,28 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   auto search = _data.find(identifier);
   if (search != _data.end()) {
 
-    assertion(search->first.particleID == identifier.particleID);
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+#endif
 
     ParticleEvents& history = search->second;
     auto            ev      = history.crbegin();
@@ -250,8 +316,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::Database::addEvent(
     ParticleIdentifier identifier,
-    Event&                   event,
-    const int                treeId
+    Event&                   event
   ) {
 
   logDebug("addEvent()", "Adding event for " << identifier.toString());
@@ -262,6 +327,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   // Take note of the current mesh sweep index.
   event.meshSweepIndex = getCurrentMeshSweepIndex();
 
+  // Try finding existing previous event.
   auto search = _data.find(identifier);
 
   if (search == _data.end()) {
@@ -282,77 +348,66 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
 
   } else {
 
-    assertion(search->first.particleID == identifier.particleID);
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+#endif
+
+
     ParticleEvents& history = search->second;
 
     // First: Do we need to downsize the history?
     if (history.size() >= _maxParticleSnapshotsToKeepTrackOf) {
 
-      ParticleEvents   eventsToKeep;
-      std::vector<int> treesToKeep;
-
-      // Start from the back so we keep the latest event.
-      auto it = history.crbegin();
-      while (it != history.crend()) {
-
-        Event past     = *it;
-        int   thisTree = past.treeId;
+      // make copy, not reference
+      Event lastEvent = history.back();
 
 #if PeanoDebug > 3
-        if (past.type == Event::Type::NotFound) {
-          logDebug(
-            "addEvent(...)",
-            "Particle histroy shouldn't contain an invalid event"
-          );
-        }
+      if (lastEvent.type == Event::Type::NotFound) {
+        logDebug(
+          "addEvent(...)",
+          "Particle histroy shouldn't contain an invalid event"
+        );
+      }
 #endif
 
-        if (std::find(treesToKeep.begin(), treesToKeep.end(), thisTree) == treesToKeep.end()){
-          treesToKeep.push_back(thisTree);
-          // In certain cases, especially for virtual particles, the last saved
-          // event may be a substitution already. We don't want to keep
-          // prepending the string with the notifier, so check for it.
-          if (not past.trace.starts_with("substitute-for-whole-trajectory/")) {
-            past.trace = "substitute-for-whole-trajectory/" + past.trace;
-          }
-          eventsToKeep.push_back(past);
-        }
-
-        it++;
+      // In certain cases, especially for virtual particles, the last saved
+      // event may be a substitution already. We don't want to keep
+      // prepending the string with the notifier, so check for it.
+      if (not lastEvent.trace.starts_with("substitute-for-whole-trajectory/")) {
+        lastEvent.trace = "substitute-for-whole-trajectory/" + lastEvent.trace;
       }
 
       logDebug(
         "addEvent(...) ",
-        "shortening history of " << identifier.toString(
-        ) << " to " << eventsToKeep.size()
+        "shortening history of " << identifier.toString() <<
+        " to " << lastEvent.toString()
       );
 
-      if (eventsToKeep.size() >= _maxParticleSnapshotsToKeepTrackOf) {
-        logError(
-          "addEvent(...)",
-          "There are more trees than events the database is allowed to keep track of."
-        );
-      }
-
       history.clear();
-      for (Event keep : eventsToKeep) {
-        history.push_back(keep);
-      }
-    }
-
-    // Get previous event
-    Event previousEventOnThisTree = Event(Event::Type::NotFound);
-
-    auto it = history.crbegin();
-    while (it != history.crend()) {
-      if (it->treeId == treeId) {
-        previousEventOnThisTree = *it;
-        break;
-      }
-      it++;
+      history.push_back(lastEvent);
     }
 
     // Add the new event now.
+    Event previousEvent = history.back();
     history.push_back(event);
     logDebug(
       "addEvent(...) ",
@@ -360,7 +415,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
       + identifier.toString()
     );
 
-    return previousEventOnThisTree;
+    return previousEvent;
   }
 }
 
@@ -384,7 +439,28 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
     "Trying to replace event of particle with no history"
   );
 
-  assertion1(search->first.particleID == identifier.particleID, "Particle identifier ID not identical");
+#if PeanoDebug > 3
+  assertion3(
+      search->first.particleID == identifier.particleID,
+      "Particle identifier ID not identical",
+      search->first.particleID,
+      identifier.particleID
+      );
+  assertion3(
+      search->first.treeID == identifier.treeID,
+      "Particle treeID not identical",
+      search->first.treeID,
+      identifier.treeID
+      );
+  for (int i = 0; i < Dimensions; i++){
+    assertion3(
+        search->first.vertexInd(i) == identifier.vertexInd(i),
+        "Particle treeID not identical",
+        search->first.vertexInd(i),
+        identifier.vertexInd(i)
+        );
+  }
+#endif
 
   ParticleEvents& history = search->second;
 
@@ -427,6 +503,29 @@ void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVe
     "Particle not found through its identifier"
   );
 
+#if PeanoDebug > 3
+  assertion3(
+      search->first.particleID == identifier.particleID,
+      "Particle identifier ID not identical",
+      search->first.particleID,
+      identifier.particleID
+      );
+  assertion3(
+      search->first.treeID == identifier.treeID,
+      "Particle treeID not identical",
+      search->first.treeID,
+      identifier.treeID
+      );
+  for (int i = 0; i < Dimensions; i++){
+    assertion3(
+        search->first.vertexInd(i) == identifier.vertexInd(i),
+        "Particle treeID not identical",
+        search->first.vertexInd(i),
+        identifier.vertexInd(i)
+        );
+  }
+#endif
+
   // Do we need to shift the coordinates of the identifier?  Use the one the
   // search gives you back, because we allow for a fuzzy search.  You need to
   // compare to the actually stored coordinates, not to whatever you think they
@@ -447,7 +546,8 @@ void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVe
     identifier.particleName,
     identifier.particleX,
     newVertexInd,
-    identifier.particleID
+    identifier.particleID,
+    identifier.treeID
   );
   _data.insert(
     std::pair<ParticleIdentifier, ParticleEvents>(newIdentifier, historyCopy)

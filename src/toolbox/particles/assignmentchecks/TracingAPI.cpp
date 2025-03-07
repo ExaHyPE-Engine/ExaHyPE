@@ -49,10 +49,10 @@ void toolbox::particles::assignmentchecks::eraseParticle(
 
   Database& database = Database::getInstance();
 
-  auto identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID);
+  auto identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
 
   Event event(Event::Type::Erase, isLocal, treeId, trace);
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
 
   assertion5(
@@ -103,9 +103,9 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   auto vertexIndNew = ParticleIdentifier::getVertexInd(vertexX, vertexH);
   auto vertexIndOld = ParticleIdentifier::getVertexInd(prevVertexX, prevVertexH);
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, particleID);
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, particleID, treeId);
   if (particleIsNew){
-    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, particleID);
+    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, particleID, treeId);
   }
 
   Event event(
@@ -118,7 +118,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     trace
   );
 
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
   if (not(particleIsNew and (not checkNewParticles))) {
     // skip the newly added event.
@@ -231,7 +231,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
   );
 
   // use old particle position to find history.
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, oldParticleX, vertexX, vertexH, particleID);
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, oldParticleX, vertexX, vertexH, particleID, treeId);
 
   ParticleEvents history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
@@ -309,15 +309,8 @@ void toolbox::particles::assignmentchecks::moveParticle(
       trace
     );
 
-    database.addEvent(identifier, newEvent, treeId);
+    database.addEvent(identifier, newEvent);
   }
-
-  // TODO: REMOVE
-  // Finally, since the particle moved, do we need to modify the coordinates
-  // of the identifier? We need to use the coordinates as well to ensure the
-  // correct particle identity. If the particle has moved too far, we need
-  // to update that information.
-  // database.shiftIdentifierCoordinates(identifier, newParticleX);
 
   logTraceOut("moveParticle(...)");
 }
@@ -349,7 +342,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID);
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
 
   Event event(
     Event::Type::DetachFromVertex,
@@ -362,7 +355,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   );
 
 
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
   assertion7(
     previousEvent.type == internal::Event::Type::AssignToVertex
@@ -425,12 +418,12 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID);
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
 
 
   Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
 
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
   assertion5(
     previousEvent.type == internal::Event::Type::DetachFromVertex,

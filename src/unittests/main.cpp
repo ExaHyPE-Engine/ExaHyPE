@@ -178,8 +178,8 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::TargetTrace,
       tarch::logging::LogFilter::FilterListEntry::AnyRank,
       "toolbox::particles::assignmentchecks",
-      // tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      // tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
@@ -188,8 +188,8 @@ int main(int argc, char** argv) {
       tarch::logging::LogFilter::FilterListEntry::TargetDebug,
       tarch::logging::LogFilter::FilterListEntry::AnyRank,
       "toolbox::particles::assignmentchecks",
-      // tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
-      tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      // tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
       tarch::logging::LogFilter::FilterListEntry::AlwaysOn
     )
   );
