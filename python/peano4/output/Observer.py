@@ -561,7 +561,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
 """
 
-    TemplateLoadCell_VertexLoad = """
+    TemplateLoadCell_VertexLoad = r"""
   // Load vertex {{logical_type_name}}
   std::function<bool ()> loadVertex{{logical_type_name}} = 
     [&]()->bool {
@@ -660,7 +660,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-    TemplateEnterCell_VertexMappingCall = """
+    TemplateEnterCell_VertexMappingCall = r"""
   // Handle vertex {{logical_type_name}}
   {
     peano4::datamanagement::VertexMarker  marker(event);
@@ -718,7 +718,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-    TemplateLoadCell_FaceLoad = """
+    TemplateLoadCell_FaceLoad = r"""
   // Load face {{logical_type_name}}
   std::function<bool ()> loadFace{{logical_type_name}} = 
     [&]()->bool {
@@ -827,7 +827,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-    TemplateEnterCell_FaceMappingCall = """
+    TemplateEnterCell_FaceMappingCall = r"""
   // Handle face {{logical_type_name}}
   {
     peano4::datamanagement::FaceMarker marker( event );
@@ -891,7 +891,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-    TemplateLoadCell_CellLoad = """
+    TemplateLoadCell_CellLoad = r"""
   // Load cell {{logical_type_name}}
   std::function<bool ()> loadCell{{logical_type_name}} =  
     [&]()->bool {
@@ -981,7 +981,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-    TemplateEnterCell_CellMappingCall = """
+    TemplateEnterCell_CellMappingCall = r"""
   // Invoke creational events on cell {{logical_type_name}}
   {
     peano4::datamanagement::CellMarker marker( event );
@@ -1003,7 +1003,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-    TemplateEnterCell_MappingCall = """
+    TemplateEnterCell_MappingCall = r"""
   {
     peano4::datamanagement::CellMarker marker( event );
     if (

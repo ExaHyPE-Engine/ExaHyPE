@@ -34,7 +34,7 @@ GCC:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-GCC_SharedOMP:
+GCC_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -51,7 +51,8 @@ GCC_SharedOMP:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=omp"
+                            --with-multithreading=omp \
+                            --with-mpi=mpicxx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -79,7 +80,7 @@ Intel:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-Intel_SharedOMP:
+Intel_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -96,13 +97,14 @@ Intel_SharedOMP:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=omp"
+                            --with-multithreading=omp \
+                            --with-mpi=mpiicpx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-Intel_SharedSYCL:
+Intel_SharedSYCL_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -119,7 +121,8 @@ Intel_SharedSYCL:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=sycl"
+                            --with-multithreading=sycl \
+                            --with-mpi=mpiicpx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -147,7 +150,7 @@ LLVM:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-LLVM_SharedOMP:
+LLVM_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -164,7 +167,8 @@ LLVM_SharedOMP:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=omp"
+                            --with-multithreading=omp \
+                            --with-mpi=mpicxx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml

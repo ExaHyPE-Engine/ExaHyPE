@@ -36,7 +36,7 @@ from exahype2.solvers.Storage import Storage
 
 
 class RungeKuttaDG(object):
-    """!
+    r"""!
     An abstract class for any RKDG solver of any order
 
     This is the base class of all Runge-Kutta DG solvers. It defines what kind of action
@@ -532,7 +532,7 @@ We use RK("""
 
     @abstractmethod
     def create_data_structures(self):
-        """
+        r"""
         Recall in subclasses if you wanna change the number of unknowns
         or auxiliary variables. See class description's subsection on
         data flow.

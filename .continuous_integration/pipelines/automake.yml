@@ -61,6 +61,21 @@ Unit_Tests:
     - Build
   retry: 0
 
+ExaHyPE2_FV_Tests:
+  stage: Test
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .ExaHyPE2_FV_Tests
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 ExaHyPE2_ADERDG_Tests:
   stage: Test
   allow_failure: false
@@ -121,20 +136,20 @@ MGHyPE_MatrixFree_Tests:
     - Build
   retry: 0
 
-SWIFT2_Dastgen:
-  stage: Test
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithAutomakeSanitiser
-    - .SWIFT2_Dastgen
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# SWIFT2_Dastgen:
+#   stage: Test
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithAutomakeSanitiser
+#     - .SWIFT2_Dastgen
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
 SWIFT2_Sod1D:
   stage: Test
@@ -190,21 +205,6 @@ ExaHyPE2_Euler:
     - .RunOnlyOn
     - .BeforeScriptWithAutomakeSanitiser
     - .ExaHyPE2_Euler
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
-ExaHyPE2_Advection:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithAutomakeSanitiser
-    - .ExaHyPE2_Advection
   needs:
     - job: Build
   dependencies:

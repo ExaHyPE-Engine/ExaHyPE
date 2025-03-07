@@ -7,7 +7,7 @@ from .PDE import PDE
 
 
 class FirstOrderConservativePDEFormulation(PDE):
-    """
+    r"""
     Helper class to model a hyperbolic PDE in first-order conservative
     formulation.
 
