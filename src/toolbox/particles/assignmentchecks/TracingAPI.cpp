@@ -224,6 +224,9 @@ void toolbox::particles::assignmentchecks::moveParticle(
   Database& database = Database::getInstance();
 
   // If we break this, the particle search will fail.
+  // TODO: This may not fail any more, as we don't use the floating point based
+  // fuzzy search in the map any more. However, needs to be checked. For now, it
+  // won't harm to keep this.
   tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
   assertion5(
     tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
@@ -246,14 +249,13 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
   // Can't be sieve event, particle needs to have been assigned to vertex
   // first
-  assertion4(
+  assertion3(
     previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
       or previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
     "Invalid previous event type",
     previousEvent.toString(),
-    database.particleHistory(identifier),
-    database.toString()
+    database.particleHistory(identifier)
   );
 
   assertion5(

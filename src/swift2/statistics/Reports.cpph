@@ -15,6 +15,5 @@ void swift2::statistics::reportSearchRadiusVTDt(const std::string& particleName)
     logInfo("reportSearchRadiusVTDt()", "v_{max}=" << Particle::getSpecies().getMaxVelocity());
     logInfo("reportSearchRadiusVTDt()", "t=" << Particle::getSpecies().getMinTimeStamp());
     logInfo("reportSearchRadiusVTDt()", "dt=" << Particle::getSpecies().getMinTimeStepSize());
-
   }
 }

@@ -9,7 +9,7 @@ export OMP_NUM_THREADS=1
 END_TIME=1.0
 
 # Run python script to generate the experiment
-python3 test_periodic_BC-2D.py -et $END_TIME -dt 0.001 -cs 0.1 -plot 0.01 --debug
+python3 test_periodic_BC-2D.py -et $END_TIME -dt 0.001 -cs 0.1 -plot 0.01
 
 # run experiment
 echo 'running experiment...'

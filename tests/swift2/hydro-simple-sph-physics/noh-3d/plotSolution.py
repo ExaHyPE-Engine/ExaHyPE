@@ -180,3 +180,4 @@ plt.ylim(-0.05, 0.8)
 plt.tight_layout()
 
 plt.savefig("NohProfile.png", dpi=200)
+print("Saved NohProfile.png")

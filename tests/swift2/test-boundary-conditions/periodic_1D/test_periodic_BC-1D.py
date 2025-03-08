@@ -178,12 +178,12 @@ initialisation_snippet = (
   particle->setSearchRadius("""
     + str(search_radius)
     + """);
-  particle->setA( {0., 0., 0.} );
+  particle->setA( {0.} );
 
   if( particle->getX(0) > 0.5 ){
-    particle->setV( {-1., 0., 0.} );
+    particle->setV( {-1.} );
   } else {
-    particle->setV( {1., 0., 0.} );
+    particle->setV( {1.} );
   }
 
   // hack to get a somewhat flexible, but always unique

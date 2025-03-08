@@ -25,9 +25,13 @@ namespace toolbox {
          *
          * Using particle positions as floats, however, turned out to be a bad
          * idea, even when allowing for fuzzy searches within a reasonable
-         * interval.
+         * interval. Instead, we're using the vertex a particle is attached to
+         * as a proxy for its position. The vertices are assigned an "index"
+         * ("in the box") based on their position and size, as well as a depth
+         * to identify them uniquely.
          *
-         * Instead: TODO MLADEN: WRITE DOCU
+         * Furthermore, note that particles will be distinguished based on the
+         * spacetree they're assigned to.
          */
         struct ParticleIdentifier {
 
