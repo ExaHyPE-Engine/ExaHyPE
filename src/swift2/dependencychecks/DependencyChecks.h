@@ -36,7 +36,9 @@ namespace swift2 {
       TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce,
       TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun,
       TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce,
-      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep
+      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate,
+      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep,
+      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate
     };
 
     std::string toString(Invariant policy);

@@ -8,6 +8,7 @@ import dastgen2
 import peano4.dastgen2
 
 from abc import ABC
+import copy
 
 
 class LeapfrogFixedSearchRadius(Particle):
@@ -77,7 +78,9 @@ class LeapfrogFixedSearchRadius(Particle):
             self.partid = dastgen2.attributes.Integer("partid", initval="0")
             self.data.add_or_replace_attribute(self.partid)
 
-        self.__setup_algorithm_steps()
+        self._setup_algorithm_steps_dict()
+        self._setup_algorithm_steps()
+        self._setup_initialisation_steps()
 
         self.enter_cell_kernel = enter_cell_kernel
         self.touch_particles_of_set_first_time_kernel = (
@@ -86,38 +89,51 @@ class LeapfrogFixedSearchRadius(Particle):
         self.touch_particles_of_set_last_time_kernel = (
             touch_particles_of_set_last_time_kernel
         )
-        pass
+
+        # Raises errors for 1D periodic BC test... leave it for now.
+        #  self._add_dependency_checks()
+
+        return
 
     @property
     def touch_particles_of_set_first_time_kernel(self):
-        return self._algorithm_steps["ForceCalculation"].touch_vertex_first_time_kernel
+        return self._algorithm_steps_dict["ForceCalculation"].touch_vertex_first_time_kernel
 
     @touch_particles_of_set_first_time_kernel.setter
     def touch_particles_of_set_first_time_kernel(self, value):
-        self._algorithm_steps["ForceCalculation"].touch_vertex_first_time_kernel = value
+        self._algorithm_steps_dict["ForceCalculation"].touch_vertex_first_time_kernel = value
 
     @property
     def touch_particles_of_set_last_time_kernel(self):
-        return self._algorithm_steps["ForceCalculation"].touch_vertex_last_time_kernel
+        return self._algorithm_steps_dict["ForceCalculation"].touch_vertex_last_time_kernel
 
-    @touch_particles_of_set_first_time_kernel.setter
+    @touch_particles_of_set_last_time_kernel.setter
     def touch_particles_of_set_last_time_kernel(self, value):
-        self._algorithm_steps["ForceCalculation"].touch_vertex_last_time_kernel = value
+        self._algorithm_steps_dict["ForceCalculation"].touch_vertex_last_time_kernel = value
 
     @property
     def cell_kernel(self):
-        return self._algorithm_steps["ForceCalculation"].cell_kernel
+        return self._algorithm_steps_dict["ForceCalculation"].cell_kernel
 
     @cell_kernel.setter
     def cell_kernel(self, value):
-        self._algorithm_steps["ForceCalculation"].cell_kernel = value
+        self._algorithm_steps_dict["ForceCalculation"].cell_kernel = value
 
     def add_to_reduction(self, value):
-        self._algorithm_steps[
+        self._algorithm_steps_dict[
             "ReduceGlobalQuantities"
         ].unprepare_traversal_kernel += value
 
-    def __setup_algorithm_steps(self):
+
+    def algorithm_steps(self):
+        # function needs to exist for parent class
+        return self._algorithm_steps
+
+    def initialisation_steps(self):
+        # function needs to exist for parent class
+        return self._initialisation_steps
+
+    def _setup_algorithm_steps_dict(self):
         """!
 
         Create a repository of algorithmic steps which are then
@@ -129,7 +145,7 @@ class LeapfrogFixedSearchRadius(Particle):
         CFL_FACTOR = self.cfl_factor
         TIME_STEP_SIZE = self.initial_time_step_size
 
-        self._algorithm_steps = {
+        self._algorithm_steps_dict = {
             "ForceCalculation": AlgorithmStep(
                 name="ForceCalculation",
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
@@ -138,7 +154,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 cell_kernel="",
                 touch_vertex_last_time_kernel="",
             ),
-            "Kick": AlgorithmStep(
+            "Kick1": AlgorithmStep(
                 name="Kick1",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
@@ -174,6 +190,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 touch_vertex_last_time_kernel=f"""
                 // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
+
                 ::swift2::kernels::forAllParticles(
                                                     marker,
                                                     assignedParticles,
@@ -181,6 +198,7 @@ class LeapfrogFixedSearchRadius(Particle):
                                                     ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{PARTICLE}>,
                                                     ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
                                                     );
+
                 ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
                 // end template
                 """,
@@ -189,11 +207,42 @@ class LeapfrogFixedSearchRadius(Particle):
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
                 """,
+                cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate",
+                touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate",
+                touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+            ),
+            "Kick2": AlgorithmStep(
+                name="Kick2",
+                dependencies=AlgorithmStep.Dependencies.SELF,
+                effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+                touch_vertex_first_time_kernel=f"""
+                    // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
+                    ::swift2::kernels::forAllParticles(
+                        marker,
+                        assignedParticles,
+                        numberOfCoalescedAssignedParticles,
+                        ::swift2::timestepping::resetMovedParticleMarker<globaldata::{PARTICLE}>,
+                        ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
+
+                    ::swift2::kernels::forAllParticles(marker,
+                                                       assignedParticles,
+                                                       numberOfCoalescedAssignedParticles,
+                                                       ::swift2::timestepping::leapfrogKickWithGlobalTimeStepSize<globaldata::{PARTICLE}>,
+                                                       ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
+                    // end template
+                    """,
+                includes="""
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                """,
+                touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+                cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
             ),
             "ReduceVelocityAndDetermineTimeStepSize": AlgorithmStep(
                 name="ReduceVelocityAndDetermineTimeStepSize",
                 dependencies=AlgorithmStep.Dependencies.SELF,
-                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+                effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
                 prepare_traversal_kernel=f"""
                     // Template in python/swift2/particle/LeapfrogFixedSearchRadius.py
                     ::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{PARTICLE}>({CFL_FACTOR},{TIME_STEP_SIZE});
@@ -237,9 +286,19 @@ class LeapfrogFixedSearchRadius(Particle):
                     #include "swift2/statistics/Statistics.h"
                 """,
             ),
+            "FirstInitParticle": AlgorithmStep(
+            name="FirstInitParticle",
+            dependencies=AlgorithmStep.Dependencies.SELF,
+            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+            touch_vertex_last_time_kernel="",
+            includes="",
+            cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate",
+            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate",
+            touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+            ),
         }
 
-    def algorithm_steps(self):
+    def _setup_algorithm_steps(self):
         """!
 
         Create algorithm steps behind leapfrog
@@ -252,25 +311,30 @@ class LeapfrogFixedSearchRadius(Particle):
         to avoid a second force loop.
 
         """
-        return [
-            self._algorithm_steps["ForceCalculation"],
-            self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
-            self._algorithm_steps["Kick"],
-            self._algorithm_steps["Drift"],
-            self._algorithm_steps["Kick"],
-            self._algorithm_steps["ReduceGlobalQuantities"],
-        ]
 
-    def initialisation_steps(self):
+
+        steps = [
+            self._algorithm_steps_dict["ForceCalculation"],
+            self._algorithm_steps_dict["ReduceVelocityAndDetermineTimeStepSize"],
+            self._algorithm_steps_dict["Kick1"],
+            self._algorithm_steps_dict["Drift"],
+            self._algorithm_steps_dict["Kick2"],
+            self._algorithm_steps_dict["ReduceGlobalQuantities"],
+        ]
+        # make a copy of the steps, so if you modify them later (e.g. by
+        # adding dependency checks), it won't modify the steps in the dict.
+        self._algorithm_steps = [copy.deepcopy(i) for i in steps]
+        return
+
+    def _setup_initialisation_steps(self):
         """!
 
-        No particular initialisation required, but we reduce once, so we get
-        the initial stats right before we jump into the time stepping.
+        Technically nothing really required, but
 
         """
-        return [
-            self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
-        ]
+
+        steps = [self._algorithm_steps_dict["FirstInitParticle"]]
+        self._initialisation_steps = [copy.deepcopy(i) for i in steps]
 
     @property
     def readme_descriptor(self):

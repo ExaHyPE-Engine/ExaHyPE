@@ -20,6 +20,7 @@ std::string toolbox::particles::assignmentchecks::sweepHistory() {
 void toolbox::particles::assignmentchecks::startMeshSweep(
   const std::string& meshSweepName
 ) {
+
   internal::Database& d = internal::Database::getInstance();
   d.startMeshSweep(meshSweepName);
 }
@@ -29,6 +30,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
@@ -47,15 +49,10 @@ void toolbox::particles::assignmentchecks::eraseParticle(
 
   Database& database = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  auto identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
 
   Event event(Event::Type::Erase, isLocal, treeId, trace);
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
 
   assertion5(
@@ -80,6 +77,8 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace,
+  const tarch::la::Vector<Dimensions, double>& prevVertexX,
+  const tarch::la::Vector<Dimensions, double>& prevVertexH,
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {
@@ -101,12 +100,15 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   constexpr bool checkNewParticles = false;
   Database&      database          = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  auto vertexIndNew = ParticleIdentifier::getVertexInd(vertexX, vertexH);
+  int vertexDepthNew = ParticleIdentifier::getVertexDepth(vertexX, vertexH);
+  auto vertexIndOld = ParticleIdentifier::getVertexInd(prevVertexX, prevVertexH);
+  int vertexDepthOld = ParticleIdentifier::getVertexDepth(prevVertexX, prevVertexH);
+
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, vertexDepthOld, particleID, treeId);
+  if (particleIsNew){
+    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, vertexDepthOld, particleID, treeId);
+  }
 
   Event event(
     Event::Type::AssignToVertex,
@@ -118,7 +120,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     trace
   );
 
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
   if (not(particleIsNew and (not checkNewParticles))) {
     // skip the newly added event.
@@ -135,8 +137,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
                                         == internal::Event::Type::
                                           AssignToSieveSet;
 
-    const bool isDetached
-      = reassignmentOnSameTreeDepthAllowed
+    const bool isDetached = reassignmentOnSameTreeDepthAllowed
           ? (previousEvent.type == internal::Event::Type::DetachFromVertex)
           : (
             previousEvent.type == internal::Event::Type::DetachFromVertex
@@ -179,6 +180,23 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
     }
   }
 
+  // Do we need to shift the identifier?
+
+    bool shift = false;
+
+    for (int i = 0; i < Dimensions; i++){
+      if (vertexIndNew(i) != vertexIndOld(i)){
+        shift = true;
+        break;
+      }
+    }
+
+    if (vertexDepthNew != vertexDepthOld) shift = true;
+
+    if (shift) {
+      database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
+    }
+
   logTraceOut("assignParticleToVertex(...)");
 }
 
@@ -206,6 +224,9 @@ void toolbox::particles::assignmentchecks::moveParticle(
   Database& database = Database::getInstance();
 
   // If we break this, the particle search will fail.
+  // TODO: This may not fail any more, as we don't use the floating point based
+  // fuzzy search in the map any more. However, needs to be checked. For now, it
+  // won't harm to keep this.
   tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
   assertion5(
     tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
@@ -217,12 +238,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
   );
 
   // use old particle position to find history.
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    oldParticleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, oldParticleX, vertexX, vertexH, particleID, treeId);
 
   ParticleEvents history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
@@ -236,13 +252,11 @@ void toolbox::particles::assignmentchecks::moveParticle(
   assertion3(
     previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
-      or previousEvent.type
-           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      or previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
     "Invalid previous event type",
     previousEvent.toString(),
     database.particleHistory(identifier)
   );
-
 
   assertion5(
     tarch::la::equals(previousEvent.vertexH, vertexH),
@@ -301,14 +315,8 @@ void toolbox::particles::assignmentchecks::moveParticle(
       trace
     );
 
-    database.addEvent(identifier, newEvent, treeId);
+    database.addEvent(identifier, newEvent);
   }
-
-  // Finally, since the particle moved, do we need to modify the coordinates
-  // of the identifier? We need to use the coordinates as well to ensure the
-  // correct particle identity. If the particle has moved too far, we need
-  // to update that information.
-  database.shiftIdentifierCoordinates(identifier, newParticleX);
 
   logTraceOut("moveParticle(...)");
 }
@@ -340,12 +348,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
 
   Event event(
     Event::Type::DetachFromVertex,
@@ -358,9 +361,9 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   );
 
 
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
-  assertion6(
+  assertion7(
     previousEvent.type == internal::Event::Type::AssignToVertex
       or previousEvent.type
            == internal::Event::Type::MoveWhileAssociatedToVertex
@@ -371,7 +374,8 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     previousEvent.toString(),
     treeId,
     database.getNumberOfSnapshots(),
-    trace
+    trace,
+    database.toString()
   );
   assertion7(
     tarch::la::equals(previousEvent.vertexX, vertexX),
@@ -401,6 +405,7 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
@@ -419,17 +424,12 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleSearchIdentifier identifier = ParticleSearchIdentifier(
-    particleName,
-    particleX,
-    particleID,
-    tarch::la::max(vertexH)
-  );
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
 
 
   Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
 
-  Event previousEvent = database.addEvent(identifier, event, treeId);
+  Event previousEvent = database.addEvent(identifier, event);
 
   assertion5(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
@@ -475,6 +475,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace
@@ -489,6 +490,8 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace,
+  const tarch::la::Vector<Dimensions, double>& prevVertexX,
+  const tarch::la::Vector<Dimensions, double>& prevVertexH,
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {}
@@ -509,6 +512,7 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const tarch::la::Vector<Dimensions, double>& particleX,
   const int                                    particleID,
   bool                                         isLocal,
+  const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
   int                                          treeId,
   const std::string&                           trace

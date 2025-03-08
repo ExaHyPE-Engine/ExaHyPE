@@ -61,7 +61,7 @@ P = partData.pressure
 rho = partData.density
 
 
-r = np.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2)
+r = np.sqrt((x - 1.0) ** 2 + (y - 1.) ** 2)
 v = -np.sqrt(vx**2 + vy**2)
 
 # Bin the data
@@ -176,3 +176,4 @@ plt.ylim(-0.05, 0.8)
 plt.tight_layout()
 
 plt.savefig("NohProfile.png", dpi=200)
+print("saved NohProfile.png")

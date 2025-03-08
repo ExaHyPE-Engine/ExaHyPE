@@ -21,7 +21,7 @@ namespace {
 
 void toolbox::particles::assignmentchecks::internal::Database::
   setMaxParticleSnapshotsToKeepTrackOf(const size_t n) {
-  _maxParticleSnapshotsToKeepTrackOf = n;
+  _maxParticleEventsToKeepTrackOf = n;
 }
 
 
@@ -68,6 +68,8 @@ int toolbox::particles::assignmentchecks::internal::Database::
 
 void toolbox::particles::assignmentchecks::internal::Database::reset() {
 
+  logDebug("reset()", "Resetting database");
+
   _data.clear();
   _meshSweepData.clear();
 
@@ -79,7 +81,7 @@ void toolbox::particles::assignmentchecks::internal::Database::reset() {
 
 toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
   particles::assignmentchecks::internal::Database::getParticleHistory(
-    const ParticleSearchIdentifier& identifier
+    const ParticleIdentifier& identifier
   ) {
 
   tarch::multicore::MultiReadSingleWriteLock
@@ -92,6 +94,35 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
     newEventHistory->push_back(Event(Event::Type::NotFound));
     return *newEventHistory;
   } else {
+
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
+#endif
 
     ParticleEvents history = search->second;
     return history;
@@ -121,7 +152,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString(
       if (event->meshSweepIndex != meshSweepIndex) {
         std::string sweepname = _meshSweepData.at(event->meshSweepIndex)
                                   .getName();
-        msg << "\n\t[Sweep " << sweepname << "]:";
+        msg << "\n\t[Sweep " << sweepname << ",index="<< event->meshSweepIndex<<"]:";
       }
       meshSweepIndex = event->meshSweepIndex;
       msg << "\n\t\t->" << event->toString();
@@ -135,12 +166,44 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString(
 
 
 int toolbox::particles::assignmentchecks::internal::Database::
-  getTotalParticleEntries(const ParticleSearchIdentifier& identifier) {
+  getTotalParticleEntries(const ParticleIdentifier& identifier) {
+
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   auto search = _data.find(identifier);
+
   if (search != _data.end()) {
+
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
+#endif
+
     int result = search->second.size();
     return result;
   }
@@ -199,7 +262,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
 
 std::string toolbox::particles::assignmentchecks::internal::Database::
-  particleHistory(const ParticleSearchIdentifier& identifier) {
+  particleHistory(const ParticleIdentifier& identifier) {
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
@@ -210,6 +273,35 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
   auto search = _data.find(identifier);
   if (search != _data.end()) {
+
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
+#endif
 
     ParticleEvents& history = search->second;
     auto            ev      = history.crbegin();
@@ -241,10 +333,11 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::Database::addEvent(
-    ParticleSearchIdentifier identifier,
-    Event&                   event,
-    const int                treeId
+    ParticleIdentifier identifier,
+    Event&                   event
   ) {
+
+  logDebug("addEvent()", "Adding event for " << identifier.toString());
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -252,6 +345,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   // Take note of the current mesh sweep index.
   event.meshSweepIndex = getCurrentMeshSweepIndex();
 
+  // Try finding existing previous event.
   auto search = _data.find(identifier);
 
   if (search == _data.end()) {
@@ -272,90 +366,86 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
 
   } else {
 
+#if PeanoDebug > 3
+    assertion3(
+        search->first.particleID == identifier.particleID,
+        "Particle identifier ID not identical",
+        search->first.particleID,
+        identifier.particleID
+        );
+    assertion3(
+        search->first.treeID == identifier.treeID,
+        "Particle treeID not identical",
+        search->first.treeID,
+        identifier.treeID
+        );
+    for (int i = 0; i < Dimensions; i++){
+      assertion3(
+          search->first.vertexInd(i) == identifier.vertexInd(i),
+          "Particle treeID not identical",
+          search->first.vertexInd(i),
+          identifier.vertexInd(i)
+          );
+    }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
+#endif
+
+
     ParticleEvents& history = search->second;
 
     // First: Do we need to downsize the history?
-    if (history.size() >= _maxParticleSnapshotsToKeepTrackOf) {
+    if (history.size() >= _maxParticleEventsToKeepTrackOf) {
 
-      ParticleEvents   eventsToKeep;
-      std::vector<int> treesToKeep;
-
-      // Start from the back so we keep the latest event.
-      auto it = history.crbegin();
-      while (it != history.crend()) {
-
-        Event past     = *it;
-        int   thisTree = past.treeId;
+      // make copy, not reference
+      Event lastEvent = history.back();
 
 #if PeanoDebug > 3
-        if (past.type == Event::Type::NotFound) {
-          logDebug(
-            "addEvent(...)",
-            "Particle histroy shouldn't contain an invalid event"
-          );
-        }
+      if (lastEvent.type == Event::Type::NotFound) {
+        logDebug(
+          "addEvent(...)",
+          "Particle histroy shouldn't contain an invalid event"
+        );
+      }
 #endif
 
-        if (std::find(treesToKeep.begin(), treesToKeep.end(), thisTree) == treesToKeep.end()){
-          treesToKeep.push_back(thisTree);
-          // In certain cases, especially for virtual particles, the last saved
-          // event may be a substitution already. We don't want to keep
-          // prepending the string with the notifier, so check for it.
-          if (not past.trace.starts_with("substitute-for-whole-trajectory/")) {
-            past.trace = "substitute-for-whole-trajectory/" + past.trace;
-          }
-          eventsToKeep.push_back(past);
-        }
-
-        it++;
+      // In certain cases, especially for virtual particles, the last saved
+      // event may be a substitution already. We don't want to keep
+      // prepending the string with the notifier, so check for it.
+      if (not lastEvent.trace.starts_with("substitute-for-whole-trajectory/")) {
+        lastEvent.trace = "substitute-for-whole-trajectory/" + lastEvent.trace;
       }
 
       logDebug(
         "addEvent(...) ",
-        "shortening history of " << identifier.toString(
-        ) << " to " << eventsToKeep.size()
+        "shortening history of " << identifier.toString() <<
+        " to " << lastEvent.toString()
       );
 
-      if (eventsToKeep.size() >= _maxParticleSnapshotsToKeepTrackOf) {
-        logError(
-          "addEvent(...)",
-          "There are more trees than events the database is allowed to keep track of."
-        );
-      }
-
       history.clear();
-      for (Event keep : eventsToKeep) {
-        history.push_back(keep);
-      }
-    }
-
-    // Get previous event
-    Event previousEventOnThisTree = Event(Event::Type::NotFound);
-
-    auto it = history.crbegin();
-    while (it != history.crend()) {
-      if (it->treeId == treeId) {
-        previousEventOnThisTree = *it;
-        break;
-      }
-      it++;
+      history.push_back(lastEvent);
     }
 
     // Add the new event now.
+    Event previousEvent = history.back();
     history.push_back(event);
     logDebug(
       "addEvent(...) ",
       "added event " + event.toString() + " "
-        + ::toString((identifier.particleX));
+      + identifier.toString()
     );
 
-    return previousEventOnThisTree;
+    return previousEvent;
   }
 }
 
 
 void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
-  ParticleSearchIdentifier identifier,
+  ParticleIdentifier identifier,
   Event&                   oldEvent,
   Event&                   newEvent
 ) {
@@ -372,6 +462,35 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
     search != _data.end(),
     "Trying to replace event of particle with no history"
   );
+
+#if PeanoDebug > 3
+  assertion3(
+      search->first.particleID == identifier.particleID,
+      "Particle identifier ID not identical",
+      search->first.particleID,
+      identifier.particleID
+      );
+  assertion3(
+      search->first.treeID == identifier.treeID,
+      "Particle treeID not identical",
+      search->first.treeID,
+      identifier.treeID
+      );
+  for (int i = 0; i < Dimensions; i++){
+    assertion3(
+        search->first.vertexInd(i) == identifier.vertexInd(i),
+        "Particle treeID not identical",
+        search->first.vertexInd(i),
+        identifier.vertexInd(i)
+        );
+  }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
+#endif
 
   ParticleEvents& history = search->second;
 
@@ -398,12 +517,12 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
 }
 
 
-void toolbox::particles::assignmentchecks::internal::Database::
-  shiftIdentifierCoordinates(
-    toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier
-                                          identifier,
-    tarch::la::Vector<Dimensions, double> newParticleX
-  ) {
+
+void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVertexInd(
+            ParticleIdentifier&                 identifier,
+            tarch::la::Vector<Dimensions, long long>& newVertexInd,
+            const int newVertexDepth
+          ){
 
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
@@ -415,6 +534,35 @@ void toolbox::particles::assignmentchecks::internal::Database::
     "Particle not found through its identifier"
   );
 
+#if PeanoDebug > 3
+  assertion3(
+      search->first.particleID == identifier.particleID,
+      "Particle identifier ID not identical",
+      search->first.particleID,
+      identifier.particleID
+      );
+  assertion3(
+      search->first.treeID == identifier.treeID,
+      "Particle treeID not identical",
+      search->first.treeID,
+      identifier.treeID
+      );
+  for (int i = 0; i < Dimensions; i++){
+    assertion3(
+        search->first.vertexInd(i) == identifier.vertexInd(i),
+        "Particle treeID not identical",
+        search->first.vertexInd(i),
+        identifier.vertexInd(i)
+        );
+  }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
+#endif
+
   // Do we need to shift the coordinates of the identifier?  Use the one the
   // search gives you back, because we allow for a fuzzy search.  You need to
   // compare to the actually stored coordinates, not to whatever you think they
@@ -422,31 +570,31 @@ void toolbox::particles::assignmentchecks::internal::Database::
   ParticleIdentifier key     = search->first;
   ParticleEvents&    history = search->second;
 
-  bool shift = tarch::la::oneGreater(
-    tarch::la::abs(key.particleX - newParticleX),
-    ParticleSearchIdentifier::shiftTolerance * identifier.positionTolerance
+  // delete old entry in database and add the new one.
+  logDebug(
+    "shiftIdentifierCoordinates(...) ",
+    "shifting particle identifier from "
+      << key.vertexInd << " to " << newVertexInd;
   );
 
-  if (shift) {
-    // delete old entry in database and add the new one.
-    logDebug(
-      "shiftIdentifierCoordinates(...) ",
-      "shifting particle identifier from "
-        << key.particleX << " to " << newParticleX
-    );
+  ParticleEvents historyCopy = history;
+  _data.erase(key);
+  ParticleIdentifier newIdentifier = ParticleIdentifier(
+    identifier.particleName,
+    identifier.particleX,
+    newVertexInd,
+    newVertexDepth,
+    identifier.particleID,
+    identifier.treeID
+  );
+  // Important: if particle already exists with this identifier (e.g. because
+  // if was on this vertex before), map.insert() will not replace the existing
+  // entry. Use insert_or_assign instead, which replaces it.
+  // TODO: Instead of replacing, append history.
+  _data.insert_or_assign(newIdentifier, historyCopy);
 
-    ParticleEvents historyCopy = history;
-    _data.erase(key);
-    ParticleIdentifier newIdentifier = ParticleIdentifier(
-      identifier.particleName,
-      newParticleX,
-      identifier.particleID
-    );
-    _data.insert(
-      std::pair<ParticleIdentifier, ParticleEvents>(newIdentifier, historyCopy)
-    );
-  }
 }
+
 
 
 void toolbox::particles::assignmentchecks::internal::Database::
