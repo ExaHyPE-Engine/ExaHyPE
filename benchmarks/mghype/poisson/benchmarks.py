@@ -46,7 +46,7 @@ approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 Solver_Type = None
 if args.variant == "dg-sweeps":
-    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
 elif args.variant == "dg-shifted-and-fused":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 elif args.variant == "tasks":
@@ -92,6 +92,8 @@ build_mode = peano4.output.CompileMode.Release
 
 cube_size = 1.0
 max_iterations = 10
+if args.variant == "dg-sweeps":
+    max_iterations = max_iterations * 3
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
