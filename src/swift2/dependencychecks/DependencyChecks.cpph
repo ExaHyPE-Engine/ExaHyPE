@@ -3,9 +3,6 @@
 #include <iomanip>
 #include <iostream>
 
-#define PROBLEMPART_DEP 1441870
-// #define PROBLEMPART_DEP 2330735
-
 #if (PeanoDebug == 0) || defined(NoParticleDependencyChecks)
 template <typename Particle>
 static std::string swift2::dependencychecks::internal::outputParticle(
