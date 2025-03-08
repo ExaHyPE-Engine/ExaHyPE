@@ -17,6 +17,10 @@ std::string swift2::dependencychecks::toString(Invariant policy) {
     return "touch-at-most-once-mask-out-otherwise-all-previous-steps-update-at-least-once-sweep-may-rerun";
   case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce:
     return "touch-at-least-once-all-previous-steps-update-at-least-once";
+  case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate:
+    return "touch-at-least-once-all-previous-steps-update-at-least-once-future-stages-may-update";
+  case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate :
+    return "touch-at-least-once-all-previous-steps-update-at-least-once-may-overwrite-previous-cell-updates-from-same-sweep-future-stages-may-update";
   case Invariant::
     TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep:
     return "touch-at-least-once-all-previous-steps-update-at-least-once-may-overwrite-previous-cell-updates-from-same-sweep";
@@ -52,7 +56,7 @@ bool swift2::dependencychecks::internal::isValid(
         or (not workOnParticle and numberOfUpdates == 1 and numberOfMaskOuts > 0);
   }
 
-  else if (policy == Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce or policy == Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep) {
+  else if (policy == Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce or policy == Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep or (policy == Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate) or (policy ==     Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate)) {
     result = (workOnParticle and numberOfUpdates >= 1)
              or (not workOnParticle and numberOfUpdates >= 0);
   }
@@ -77,6 +81,8 @@ bool swift2::dependencychecks::internal::
   case Invariant::
     TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun:
   case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce:
+  case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate:
+  case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate:
   case Invariant::
     TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep:
     return true;
@@ -105,6 +111,10 @@ int swift2::dependencychecks::internal::firstFutureStepThatHasToBeCleared(
     return 1;
   case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce:
     return 0;
+  case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate:
+    return 1;
+  case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate:
+    return 1;
   case Invariant::
     TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep:
     return numberOfSteps;
