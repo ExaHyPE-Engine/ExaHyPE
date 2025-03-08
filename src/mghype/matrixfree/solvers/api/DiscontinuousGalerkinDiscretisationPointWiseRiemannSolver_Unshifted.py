@@ -6,9 +6,11 @@ import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
+import jinja2
 
 from .Solver import Solver
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+
 from .actionsets.InitHigherOrderDofs                            import InitHigherOrderDofs
 from .actionsets.DGSolver.UpdateResidual                        import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                      import ProjectOntoFaces
@@ -17,7 +19,7 @@ from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution  import ProjectIn
 from .actionsets.PlotDGDataInPeanoBlockFormat                   import PlotDGDataInPeanoBlockFormat
 
 
-class DiscontinuousGalerkinWithFusionUnshifted(DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver):
+class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted(DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver):
   """!
      
   Simple solver which maps the DG steps onto separate mesh traversals
@@ -56,9 +58,10 @@ class DiscontinuousGalerkinWithFusionUnshifted(DiscontinuousGalerkinDiscretisati
               custom_init_cell = "",
               enable_plotting = True, # sometimes we want to disable standard plotting...,
               plot_predicate = "true", # enable custom plotting behaviour
-              solver_includes = ""
+              solver_includes = "",
+              use_smart_pointer = True
               ):
-    super( DiscontinuousGalerkinWithFusionUnshifted, self ).__init__(
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted, self ).__init__(
       name,
       dimensions,
       poly_degree,
@@ -89,23 +92,6 @@ class DiscontinuousGalerkinWithFusionUnshifted(DiscontinuousGalerkinDiscretisati
       enable_plotting,
       plot_predicate,
       solver_includes,
+      use_smart_pointer,
     )
 
-  def add_to_solve(self, observer):
-    """!
-    
-    I ignore the order of the action sets here and instead derive my 
-    own ordering starting from _basic_descend_order.
-    
-    """
-    descend_order = observer.highest_descend_invocation_order()
-    if self.preprocessing_action_set != None:
-      self.preprocessing_action_set.descend_invocation_order = 0
-      observer.add_action_set( self.preprocessing_action_set )
-    observer.add_action_set( ProjectIntoCellAndUpdateCellSolution(self, descend_order+1, False) )
-    observer.add_action_set( ProjectOntoFaces(self, descend_order+2, False) )
-    observer.add_action_set( UpdateResidual(self, descend_order+3, False) )
-    observer.add_action_set( UpdateFaceSolution(self, descend_order+4, False) )
-    if self.postprocessing_action_set != None:
-      self.postprocessing_action_set.descend_invocation_order = descend_order + 5
-      observer.add_action_set( self.postprocessing_action_set )
