@@ -63,7 +63,7 @@ P = partData.pressure
 rho = partData.density
 
 
-r = np.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2 + (z - 0.5) ** 2)
+r = np.sqrt((x - 1.) ** 2 + (y - 1.) ** 2 + (z - 1.) ** 2)
 v = -np.sqrt(vx**2 + vy**2 + vz**2)
 
 # Bin the data
