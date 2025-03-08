@@ -61,7 +61,7 @@ int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::getVerte
   constexpr double boxsize = 243.;
 
   double maxX = tarch::la::normMax(vertexX);
-  assertion3(maxX < boxsize, maxX, boxsize, "Hardcoded bosize too small.");
+  assertion3(maxX < boxsize, maxX, boxsize, "Hardcoded boxsize too small.");
 
   double maxH = tarch::la::normMax(vertexH);
 
@@ -79,19 +79,18 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
       return false;
   }
 
-  return (particleName == rhs.particleName) and (particleID == rhs.particleID) and (treeID == rhs.treeID);
+  return (particleName == rhs.particleName) and (particleID == rhs.particleID) and (treeID == rhs.treeID) and (vertexDepth == rhs.vertexDepth);
 }
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmaller(const ParticleIdentifier& rhs) const {
 
-  // DO NOT USE EQUALITY CHECKS IN HERE.
-  // That aborts the checks too early.
-  // Only return false at the very end.
-
   if (*this == rhs)
     return false;
+
+  // DO NOT USE EQUALITY CHECKS AFTER THIS.
+  // That aborts the checks too early. Only return false at the very end.
 
   if (particleName < rhs.particleName)
     return true;
@@ -109,7 +108,6 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     return false;
 
   for (int d = 0; d < Dimensions; d++) {
-
     if (vertexInd(d) < rhs.vertexInd(d))
       return true;
     if (vertexInd(d) > rhs.vertexInd(d))
@@ -119,7 +117,7 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   if (vertexDepth < rhs.vertexDepth)
     return true;
   if (vertexDepth > rhs.vertexDepth)
-    return true;
+    return false;
 
   // If everthing is equal so far, then one is not smaller than the other.
   return false;
@@ -134,6 +132,7 @@ std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   sstr << "(" << particleName <<
           ",ID=" <<particleID <<
           ",VertexInd=" << ::toString(vertexInd) <<
+          ",VertexDepth=" << vertexDepth <<
           ",treeID=" << treeID <<
           ",particleX=" << ::toString(particleX)
           << ")";

@@ -101,11 +101,13 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   Database&      database          = Database::getInstance();
 
   auto vertexIndNew = ParticleIdentifier::getVertexInd(vertexX, vertexH);
+  int vertexDepthNew = ParticleIdentifier::getVertexDepth(vertexX, vertexH);
   auto vertexIndOld = ParticleIdentifier::getVertexInd(prevVertexX, prevVertexH);
+  int vertexDepthOld = ParticleIdentifier::getVertexDepth(prevVertexX, prevVertexH);
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, particleID, treeId);
+  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, vertexDepthOld, particleID, treeId);
   if (particleIsNew){
-    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, particleID, treeId);
+    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, vertexDepthOld, particleID, treeId);
   }
 
   Event event(
@@ -135,8 +137,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
                                         == internal::Event::Type::
                                           AssignToSieveSet;
 
-    const bool isDetached
-      = reassignmentOnSameTreeDepthAllowed
+    const bool isDetached = reassignmentOnSameTreeDepthAllowed
           ? (previousEvent.type == internal::Event::Type::DetachFromVertex)
           : (
             previousEvent.type == internal::Event::Type::DetachFromVertex
@@ -180,18 +181,21 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   }
 
   // Do we need to shift the identifier?
-  bool shift = not particleIsNew;
 
-  for (int i = 0; i < Dimensions; i++){
-    if (vertexIndNew(i) != vertexIndOld(i)){
-      shift = true;
-      break;
+    bool shift = false;
+
+    for (int i = 0; i < Dimensions; i++){
+      if (vertexIndNew(i) != vertexIndOld(i)){
+        shift = true;
+        break;
+      }
     }
-  }
 
-  if (shift) {
-    database.shiftIdentifierVertexInd(identifier, vertexIndNew);
-  }
+    if (vertexDepthNew != vertexDepthOld) shift = true;
+
+    if (shift) {
+      database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
+    }
 
   logTraceOut("assignParticleToVertex(...)");
 }

@@ -116,6 +116,12 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
           identifier.vertexInd(i)
           );
     }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
 #endif
 
     ParticleEvents history = search->second;
@@ -190,6 +196,12 @@ int toolbox::particles::assignmentchecks::internal::Database::
           identifier.vertexInd(i)
           );
     }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
 #endif
 
     int result = search->second.size();
@@ -283,6 +295,12 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
           identifier.vertexInd(i)
           );
     }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
 #endif
 
     ParticleEvents& history = search->second;
@@ -369,6 +387,12 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
           identifier.vertexInd(i)
           );
     }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
 #endif
 
 
@@ -460,6 +484,12 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
         identifier.vertexInd(i)
         );
   }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
 #endif
 
   ParticleEvents& history = search->second;
@@ -525,6 +555,12 @@ void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVe
         identifier.vertexInd(i)
         );
   }
+  assertion3(
+      search->first.vertexDepth == identifier.vertexDepth,
+      "Particle depth not identical",
+      search->first.vertexDepth,
+      identifier.vertexDepth
+      );
 #endif
 
   // Do we need to shift the coordinates of the identifier?  Use the one the
@@ -551,9 +587,11 @@ void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVe
     identifier.particleID,
     identifier.treeID
   );
-  _data.insert(
-    std::pair<ParticleIdentifier, ParticleEvents>(newIdentifier, historyCopy)
-  );
+  // Important: if particle already exists with this identifier (e.g. because
+  // if was on this vertex before), map.insert() will not replace the existing
+  // entry. Use insert_or_assign instead, which replaces it.
+  // TODO: Instead of replacing, append history.
+  _data.insert_or_assign(newIdentifier, historyCopy);
 
 }
 
