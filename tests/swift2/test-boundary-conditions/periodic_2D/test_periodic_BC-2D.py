@@ -139,10 +139,10 @@ project.set_global_simulation_parameters(
     plotter_precision=8,  # plotter precision
 )
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
-)
+#  project.set_load_balancing(
+#      "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+#      "new toolbox::loadbalancing::DefaultConfiguration()",
+#  )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
@@ -176,7 +176,7 @@ initialisation_snippet = (
   particle->setSearchRadius("""
     + str(search_radius)
     + """);
-  particle->setA( {0., 0., 0.} );
+  particle->setA( {0., 0.} );
 
   const double boxsize_x = """
     + str(domain_size[0])
@@ -190,15 +190,15 @@ initialisation_snippet = (
   const double offset_y = """
     + str(offset[1])
     + """;
-  const double sq2 = std::sqrt(2);
+  const double sq2_inv = std::sqrt(0.5);
 
 
   if( particle->getX(0) < offset_x + 1./ 3. * boxsize_x ) {
 
     if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
       // Low left square
-      particle->setV(0, -sq2);
-      particle->setV(1, -sq2);
+      particle->setV(0, -sq2_inv);
+      particle->setV(1, -sq2_inv);
 
     } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
       // Mid left square
@@ -207,8 +207,8 @@ initialisation_snippet = (
 
     } else {
       // Top left square
-      particle->setV(0, -sq2);
-      particle->setV(1, sq2);
+      particle->setV(0, -sq2_inv);
+      particle->setV(1, sq2_inv);
     }
   } else if( particle->getX(0) < offset_x + 2./ 3. * boxsize_x ) {
 
@@ -232,8 +232,8 @@ initialisation_snippet = (
 
     if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
       // Low right square
-      particle->setV(0, sq2);
-      particle->setV(1, -sq2);
+      particle->setV(0, sq2_inv);
+      particle->setV(1, -sq2_inv);
 
     } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
       // Mid right square
@@ -242,8 +242,8 @@ initialisation_snippet = (
 
     } else {
       // Top right square
-      particle->setV(0,sq2);
-      particle->setV(1,sq2);
+      particle->setV(0,sq2_inv);
+      particle->setV(1,sq2_inv);
     }
   }
 
