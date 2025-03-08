@@ -32,8 +32,9 @@ namespace toolbox {
         struct ParticleIdentifier {
 
           std::string                              particleName;
-          tarch::la::Vector<Dimensions, double>    particleX;  // TODO: do we still need this?
+          tarch::la::Vector<Dimensions, double>    particleX;
           tarch::la::Vector<Dimensions, long long> vertexInd;
+          int                                      vertexDepth;
           int                                      particleID;
           int                                      treeID;
 
@@ -44,15 +45,6 @@ namespace toolbox {
 
           bool operator<(const ParticleIdentifier& rhs) const;
 
-
-          ParticleIdentifier(
-            const std::string&                              particleName__,
-            const tarch::la::Vector<Dimensions, double>&    particleX__,
-            const tarch::la::Vector<Dimensions, long long>& vertexInd__,
-            const int                                       particleID__,
-            const int                                       treeId__
-          );
-
           ParticleIdentifier(
             const std::string&                              particleName__,
             const tarch::la::Vector<Dimensions, double>&    particleX__,
@@ -62,7 +54,30 @@ namespace toolbox {
             const int                                       treeId__
           );
 
+          ParticleIdentifier(
+            const std::string&                              particleName__,
+            const tarch::la::Vector<Dimensions, double>&    particleX__,
+            const tarch::la::Vector<Dimensions, long long>& vertexInd__,
+            const int                                       vertexDepth__,
+            const int                                       particleID__,
+            const int                                       treeID__
+          );
+
+          /**
+           * Compute an integer vertex "index" given its position and size
+           */
           static tarch::la::Vector<Dimensions, long long> getVertexInd(
+            const tarch::la::Vector<Dimensions, double>&    vertexX,
+            const tarch::la::Vector<Dimensions, double>&    vertexH
+            );
+
+          /**
+           * Compute an integer vertex "depth" given its size
+           * We currently guess a domain size for a simulation and just
+           * estimate the depth given the vertex size. The vertexX is
+           * used to raise an error if we're out of the assumed box size.
+           */
+          static int getVertexDepth(
             const tarch::la::Vector<Dimensions, double>&    vertexX,
             const tarch::la::Vector<Dimensions, double>&    vertexH
             );

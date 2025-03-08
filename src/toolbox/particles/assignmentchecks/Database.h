@@ -35,7 +35,7 @@ namespace toolbox {
          *
          * The database will track all events on all spacetrees on this MPI
          * rank. Per particle (and per spacetree), we store up to
-         * _maxParticleSnapshotsToKeepTrackOf particle events. Once that number
+         * _maxParticleEventsToKeepTrackOf particle events. Once that number
          * is exceeded, the past history will be condensed into a single event,
          * signifying that it had been compacted.
          *
@@ -68,7 +68,7 @@ namespace toolbox {
         private:
           // Make constructor private so nobody can make one by accident.
           Database() {
-            setMaxParticleSnapshotsToKeepTrackOf(32);
+            setMaxParticleSnapshotsToKeepTrackOf(8);
             this->reset();
           };
 
@@ -94,7 +94,7 @@ namespace toolbox {
            * Set it to std::numerics<int>::max() to disable this type of
            * garbage collection on the history.
            */
-          size_t _maxParticleSnapshotsToKeepTrackOf;
+          size_t _maxParticleEventsToKeepTrackOf;
 
         public:
           static constexpr int AnyTree                                = -1;
@@ -165,7 +165,7 @@ namespace toolbox {
            * i.e. throw away irrelevant old data.
            *
            * If the number of events for a particle exceeds the limit set
-           * by _maxParticleSnapshotsToKeepTrackOf, this routine will
+           * by _maxParticleEventsToKeepTrackOf, this routine will
            * squash them together into a single event signifying that
            * this compression has occurred, while keeping the event type
            * of the last recorded event. The other events in the history
@@ -201,7 +201,8 @@ namespace toolbox {
            * */
           void shiftIdentifierVertexInd(
             ParticleIdentifier&                       identifier,
-            tarch::la::Vector<Dimensions, long long>& newVertexInd
+            tarch::la::Vector<Dimensions, long long>& newVertexInd,
+            const int newVertexDepth
           );
 
           /**

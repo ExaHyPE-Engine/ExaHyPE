@@ -7,20 +7,6 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
     const std::string&                           particleName__,
     const tarch::la::Vector<Dimensions, double>&    particleX__,
-    const tarch::la::Vector<Dimensions, long long>& vertexInd__,
-    const int                                       particleID__,
-    const int                                       treeID__
-  ):
-  particleName(particleName__),
-  particleX(particleX__),
-  vertexInd(vertexInd__),
-  particleID(particleID__),
-  treeID(treeID__) {}
-
-toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
-  ParticleIdentifier(
-    const std::string&                           particleName__,
-    const tarch::la::Vector<Dimensions, double>&    particleX__,
     const tarch::la::Vector<Dimensions, double>&    vertexX,
     const tarch::la::Vector<Dimensions, double>&    vertexH,
     const int                                       particleID__,
@@ -29,9 +15,25 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   particleName(particleName__),
   particleX(particleX__),
   vertexInd(getVertexInd(vertexX, vertexH)),
+  vertexDepth(getVertexDepth(vertexX, vertexH)),
   particleID(particleID__),
   treeID(treeID__) {}
 
+toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
+  ParticleIdentifier(
+    const std::string&                           particleName__,
+    const tarch::la::Vector<Dimensions, double>&    particleX__,
+    const tarch::la::Vector<Dimensions, long long>& vertexInd__,
+    const int                                       vertexDepth__,
+    const int                                       particleID__,
+    const int                                       treeID__
+  ):
+  particleName(particleName__),
+  particleX(particleX__),
+  vertexInd(vertexInd__),
+  vertexDepth(vertexDepth__),
+  particleID(particleID__),
+  treeID(treeID__) {}
 
 
 tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::internal::ParticleIdentifier::getVertexInd(
@@ -48,6 +50,24 @@ tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::i
   }
 
   return ind;
+}
+
+
+int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::getVertexDepth(
+            const tarch::la::Vector<Dimensions, double>& vertexX,
+            const tarch::la::Vector<Dimensions, double>& vertexH
+            ){
+
+  constexpr double boxsize = 243.;
+
+  double maxX = tarch::la::normMax(vertexX);
+  assertion3(maxX < boxsize, maxX, boxsize, "Hardcoded bosize too small.");
+
+  double maxH = tarch::la::normMax(vertexH);
+
+  int result = static_cast<int>(boxsize / maxH);
+
+  return result;
 }
 
 
@@ -95,6 +115,11 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
     if (vertexInd(d) > rhs.vertexInd(d))
       return false;
   }
+
+  if (vertexDepth < rhs.vertexDepth)
+    return true;
+  if (vertexDepth > rhs.vertexDepth)
+    return true;
 
   // If everthing is equal so far, then one is not smaller than the other.
   return false;

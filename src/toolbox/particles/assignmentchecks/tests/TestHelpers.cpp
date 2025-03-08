@@ -139,20 +139,22 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   tarch::la::Vector<Dimensions, double> particleAX;
   tarch::la::Vector<Dimensions, double> particleBX;
-  tarch::la::Vector<Dimensions, long long> vertexInd;
+  tarch::la::Vector<Dimensions, double> vertexX;
+  tarch::la::Vector<Dimensions, double> vertexH;
   int treeId = 1;
 
   for (int i = 0; i < Dimensions; i++) {
     particleAX(i) = 1.;
     particleBX(i) = 2.;
-    vertexInd(i) = 1;
+    vertexX(i) = 1.;
+    vertexH(i) = 1.;
   }
 
   // create a key and assign it a value in the map
   ac::internal::ParticleIdentifier a = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, vertexInd, 1, treeId);
+    ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
   ac::internal::ParticleIdentifier b = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, vertexInd, 2, treeId);
+    ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -167,9 +169,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   assert(not(b < a));
 
   ac::internal::ParticleIdentifier A   = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, vertexInd, 1, treeId);
+    ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
   ac::internal::ParticleIdentifier B = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, vertexInd, 2, treeId);
+    ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",

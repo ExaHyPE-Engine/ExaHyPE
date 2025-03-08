@@ -21,7 +21,7 @@ namespace {
 
 void toolbox::particles::assignmentchecks::internal::Database::
   setMaxParticleSnapshotsToKeepTrackOf(const size_t n) {
-  _maxParticleSnapshotsToKeepTrackOf = n;
+  _maxParticleEventsToKeepTrackOf = n;
 }
 
 
@@ -146,7 +146,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString(
       if (event->meshSweepIndex != meshSweepIndex) {
         std::string sweepname = _meshSweepData.at(event->meshSweepIndex)
                                   .getName();
-        msg << "\n\t[Sweep " << sweepname << "]:";
+        msg << "\n\t[Sweep " << sweepname << ",index="<< event->meshSweepIndex<<"]:";
       }
       meshSweepIndex = event->meshSweepIndex;
       msg << "\n\t\t->" << event->toString();
@@ -375,7 +375,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
     ParticleEvents& history = search->second;
 
     // First: Do we need to downsize the history?
-    if (history.size() >= _maxParticleSnapshotsToKeepTrackOf) {
+    if (history.size() >= _maxParticleEventsToKeepTrackOf) {
 
       // make copy, not reference
       Event lastEvent = history.back();
@@ -490,7 +490,8 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
 
 void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVertexInd(
             ParticleIdentifier&                 identifier,
-            tarch::la::Vector<Dimensions, long long>& newVertexInd
+            tarch::la::Vector<Dimensions, long long>& newVertexInd,
+            const int newVertexDepth
           ){
 
   tarch::multicore::MultiReadSingleWriteLock
@@ -546,6 +547,7 @@ void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVe
     identifier.particleName,
     identifier.particleX,
     newVertexInd,
+    newVertexDepth,
     identifier.particleID,
     identifier.treeID
   );
