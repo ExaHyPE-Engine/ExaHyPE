@@ -1,103 +1,96 @@
 /**
 
-@page tutorials_multigrid_matrixfree_mixed_DG_poisson Matrix-free mixed DG for the Poisson equation
-
-This simple example discusses the most basic steps behind a matrix-free mixed Discontinuous Galerkin solver for the Poisson equation. 
-
-The standard "benchmark" for this solver (once again solving the Poisson 
-equation on the unit square) can be found in tests/multigrid/matrixfree/poisson/mixed.py.
-Our discussion follows this script, though we omit many technical details such
-as the parsing of the command line) and  focus on key numerical ingredients 
-from a user perspective. Therefore, it is reasonable to study the present text 
-in combination with the actual script. This page is more on the how to use the 
-class to construct a working solver.
+@page tutorials_multigrid_matrixfree_jumping_coefficients_and_optimisation Matrix-free DG with jumping coefficients or precomputed cell operators
 
 
+MGHyPE's DG realisations all support cell-dependent operators, i.e. PDEs where 
+the weak form over each cell differs. Probably the simplest equation of that 
+type is
 
-@include{doc} tutorials/multigrid/generic-mixed-DG.dox
-
-
-# Project setup
- 
-Creating a project is a one-liner:
-
-@snippet tests/multigrid/matrixfree/poisson/dg.py Create project
-
-
-# Create the solver
-
-The solver construction also is a "one-liner" using the following observations:
-
-- We solve a scalar equation system plus a vector-valued PDE in one rush. 
-  Therefore, @f$ K_c=d+1 @f$ (unknowns_per_cell_node).
-- Within each cell, we have to project the solution onto the face plus one of
-  the @f$ p @f$ values. Therefore, projections_per_face_node=2.
-- We solve the numerical flux on the face to obtain both a @f$ \hat u @f$ value
-  and a @f$ \widehat{(n,p)} @f$ value. We set solutions_per_face_node=2.
-
-@snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver
-
-
-## Matrices
-
-We have @f$ (p+1)^d @f$ @ref page_multigrid_terminology nodes in the cell.
-Consequently, the matrix-matrix part of the global assembly is from
-@f$ \mathbb{R}^{ (d+1)(p+1)^d \times (d+1)(p+1)^d } @f$.
-Conceptionally, this matrix resembles
-
-@f$ 
-\begin{bmatrix}
-  X & X & X \\
-  0 & X & 0 \\
-  0 & 0 & X 
-\end{bmatrix}
-\begin{bmatrix}
-  u \\ p_x \\ p_y
-\end{bmatrix}
-=
-\left(
-h^d
-\begin{bmatrix}
-  0 & X & X \\
-  0 & 0 & 0 \\
-  0 & 0 & 0 
-\end{bmatrix}
-+
-h^{d-1}
-\begin{bmatrix}
-  X & 0 & 0 \\
-  0 & X & 0 \\
-  0 & 0 & X 
-\end{bmatrix}
-\right)
-\begin{bmatrix}
-  u \\ p_x \\ p_y
-\end{bmatrix}
-=
-\begin{bmatrix}
-  0 \\ f_x \\ f_y
-\end{bmatrix}
+@f$
+  - \nabla \left( \epsilon(x) \nabla \right) u = f
 @f$ 
 
-but we store the entries as AoS according to @ref page_multigrid_terminology "our storage format".
-The sparsity pattern thus is subject to some permutations.
-The structure discussion above emphasises that the first line of the equation 
-system holds entries with different scaling.
-The @f$ p @f$ entries enter with a @f$ h^d @f$ scaling, while the @f$ u @f$ 
-terms have a scaling of @f$ h^{d-1} @f$.
-The PDE over the secondary variables is structurally simpler:
-All the entries on the left-hand side have a scaling of @f$ h^{d-1} @f$.
+with a space-dependent material parameter @f$ \epsilon @f$. The environments' 
+vanilla configuration is prepared for such setups, even though, by default, it 
+uses an invariant cell operator, i.e. the same operator per cell. The other way 
+round, the code does not exploit any knowledge about invariant operators 
+either, which allows for very simple yet important runtime optimisations.
+
+<img src="https://www.spe.org/web/csp/images/img1.gif" />
+
+(image from the SPE10 benchmark with jumping coefficients; original URL: https://www.spe.org/web/csp/datasets/set02.htm)
 
 
-@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
+## Code architecture
 
+Each run of a DG solver generates two classes: An abstract solver class and the
+particular implementation. The abstract base class is regenerated every time 
+you rerun the Python script, as it mirrors all the entries from the script such
+as polynomial orders or the matrices from the Python class' constructor. The 
+particular subclass is meant to be the place where you tailor the PDE towards
+your needs for all features that are not available directly through the Python
+script.
 
-@todo Tobias and Alex should discuss.
-
-
-## The Riemann problem (numerical flux)
-
-@todo Tobias, please write.
  
- 
+@image html jumping-coefficients-and-optimisation.png
+
+
+By default, the base class befills all interesting assembly routines with the 
+matrices from the Python script, and the only thing the user has to write is
+the function
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+void MySolver::initCellDoF(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  tarch::la::Vector< UnknownsPerCellNode, double >&    value,
+  tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
+  tarch::la::Vector< Dimensions, int >&         node
+) {
+  logTraceInWith4Arguments("initCellDoF(...)", x, h, value, rhs);
+
+  rhs[0]   = // something fancy
+  value[0] = 0;
+
+  logTraceOutWith4Arguments("initCellDoF(...)", x, h, value, rhs);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The two routines that are relevant for the discussion in this chapter
+are however getLocalAssemblyMatrix() and getInvertedApproxSystemMatrix().
+By default, they work with the matrices passed in through the Python 
+script. If the argument there is None, the generated superclass routine
+will be abstract, and you will have to implement these two routines 
+yourself. If you hand in some matrix, you still can overwrite and 
+redefine these routines yourself later on.
+
+
+## Jumping coefficients
+
+Yet to be written.
+
+
+## Precomputed cell operators
+
+By default, MGHyPE takes the cell operator and inverts this one per cell with 
+a LU decomposition. LU might be very slow. If the operator in the cell is known
+beforehand and is the same in all cells, the whole LU business generates a lot
+of MFLOPS without any sense: It is way better to invert the cell operator once,
+to memorise this outcome and then to reuse it.
+
+To do so, we open the header of MySolver and declare that we will overwrite the
+cell operator:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getInvertedApproxSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Next, we provide an implementation. The simplest way to cache the LU 
+decomposition is to make it a static attribute:
+
+
 */

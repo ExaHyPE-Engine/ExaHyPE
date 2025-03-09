@@ -1,5 +1,7 @@
 #include "DGPoissonRediscretise.h"
 
+#include "../../../tests/multigrid/matrixfree/poisson/Scenario.h"
+
 
 benchmarks::mghype::poisson::DGPoissonRediscretise::DGPoissonRediscretise() {
 }

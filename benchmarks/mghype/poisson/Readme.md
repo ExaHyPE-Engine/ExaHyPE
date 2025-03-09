@@ -6,12 +6,9 @@
  For the benchmarks here, we have to set the Python correctly first:
  
        export PYTHONPATH=../../../python:../../../src
-       
-       
- ~~~~~~~~~~~~~~~~~~~~      
- python3 benchmarks.py
- ~~~~~~~~~~~~~~~~~~~~      
 
+ After that, all benchmarks can be directly created through the Python scripts.
+ 
  */
  
  

@@ -1,5 +1,7 @@
 #include "DGPoissonPrecompute.h"
 
+#include "../../../tests/multigrid/matrixfree/poisson/Scenario.h"
+
 
 benchmarks::mghype::poisson::DGPoissonPrecompute::DGPoissonPrecompute() {
 }
@@ -17,5 +19,18 @@ void benchmarks::mghype::poisson::DGPoissonPrecompute::initCellDoF(
   tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
   tarch::la::Vector< Dimensions, int >&         node
 ) {
-  // @todo init your code here
+  logTraceInWith4Arguments("initCellDoF(...)", x, h, value, rhs);
+
+  rhs[0]   = ::tests::multigrid::matrixfree::poisson::getPointWiseRhs(x);
+  value[0] = 0;
+
+  logTraceOutWith4Arguments("initCellDoF(...)", x, h, value, rhs);
+}
+
+
+tarch::la::Matrix< benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, double > benchmarks::mghype::poisson::DGPoissonPrecompute::getInvertedApproxSystemMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+
 }

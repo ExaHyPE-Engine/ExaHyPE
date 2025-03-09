@@ -37,5 +37,10 @@ class benchmarks::mghype::poisson::DGPoissonPrecompute: public benchmarks::mghyp
         tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
         tarch::la::Vector< Dimensions, int >&         node
     ) override;
-    
+
+    virtual tarch::la::Matrix< benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, double > getInvertedApproxSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+
 };

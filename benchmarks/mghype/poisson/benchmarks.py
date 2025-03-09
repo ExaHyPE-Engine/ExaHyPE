@@ -17,7 +17,8 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
-parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+parser.add_argument("-var", "--variant",              dest="variant",        choices=["rediscretise", "precompute"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
 args = parser.parse_args()
 
@@ -45,15 +46,21 @@ approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 
 Solver_Type = None
-if args.variant == "dg-sweeps":
+if args.realisation == "dg-sweeps":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
-elif args.variant == "dg-shifted-and-fused":
+elif args.realisation == "dg-shifted-and-fused":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-elif args.variant == "tasks":
+elif args.realisation == "tasks":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 
+name = "DGPoisson"
+if args.variant == "rediscretise":
+    name = "DGPoissonRediscretise"
+if args.variant == "precompute":
+    name = "DGPoissonPrecompute"
+
 solver = Solver_Type(
-  name = "DGPoisson",
+  name = name,
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
   unknowns_per_cell_node = 1,
@@ -78,7 +85,6 @@ solver = Solver_Type(
   solver_tolerance = 0.01,
   integration_points = matrices.get_nodal_points_1d(),
   enable_plotting    = False,
-  solver_includes    = """#include "{}/tests/multigrid/matrixfree/poisson/Scenario.h" """.format(args.peanodir)
 )
 
 project.add_solver(solver)
@@ -92,7 +98,7 @@ build_mode = peano4.output.CompileMode.Release
 
 cube_size = 1.0
 max_iterations = 10
-if args.variant == "dg-sweeps":
+if args.realisation == "dg-sweeps":
     max_iterations = max_iterations * 3
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
