@@ -688,8 +688,9 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
                  injection_matrix,
                  injection_matrix_scaling,
                  use_fas,
-                 smoothing_steps_DG = 5,
+                 smoothing_steps_DG = 4,
                  smoothing_steps_CG = -1,
+                 vcycles=1, #toto: move vcycles to the solver input
                  ):        
         """!
 
@@ -700,6 +701,13 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         @param smoothing_steps_CG: positive integer or -1
           The -1 indicates that we wait for full convergence on the coarse 
           mesh.
+
+        @param vcycles: positive integer or -1. 
+          Terminate after the given number of full V-cycles.
+          The -1 indicates that we wait for full convergence on the coarse mesh.
+          If a positive integer is set, the correction solver tolerance needs to be set to a small value 
+          to ensure the given number of cycles is completed before the tolerance is reached.
+          @todo: Implement ignoring the tolerance when the number of cycles is set as a stopping criterion.
                  
         """
         super( MultiplicativeDGCGCoupling, self ).__init__(
@@ -743,6 +751,7 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         # we perform the exact number of sweeps that the caller asked for.
         self.smoothing_steps_DG = smoothing_steps_DG + 1
         self.smoothing_steps_CG = smoothing_steps_CG
+        self.vcycles = vcycles
 
         self.cg_solver = cg_solver
           
@@ -753,6 +762,10 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
           Add a new static attribute to the class.
       
         """
+        if self.vcycles==-1:
+          vcycles_string = "std::numeric_limits<int>::max()"
+        else:
+          vcycles_string = self.vcycles
 
         if self.smoothing_steps_CG==-1:
           smoothing_steps_CG_string = "std::numeric_limits<int>::max()"
@@ -765,9 +778,11 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
     static constexpr int DGSmoothingSteps = {};
     static constexpr int CGSmoothingSteps = {};
     static constexpr double CGSolverTolerance = {};
+    static constexpr int VCycles = {};
     static int DGCycleCounter;
     static int CGCycleCounter;
-""".format(self.smoothing_steps_DG, smoothing_steps_CG_string, CG_solver_tolerance)
+    static double initialGlobalResidualMaxNorm;
+""".format(self.smoothing_steps_DG, smoothing_steps_CG_string, CG_solver_tolerance, vcycles_string)
 
       
     def get_static_initialisations(self, full_qualified_classname):
@@ -779,6 +794,7 @@ class MultiplicativeDGCGCoupling(AbstractDGCGCoupling):
         return """
 int """ + full_qualified_classname + """::DGCycleCounter = 0;
 int """ + full_qualified_classname + """::CGCycleCounter = 0;
+double """ + full_qualified_classname + """::initialGlobalResidualMaxNorm = 0;
 """    
 
     def get_body_of_prepareTraversal(self):
@@ -802,17 +818,20 @@ int """ + full_qualified_classname + """::CGCycleCounter = 0;
     else if (
       DGCycleCounter>DGSmoothingSteps 
       and 
-      CGCycleCounter<CGSmoothingSteps
+      repositories::instanceOf{{CG_SOLVER_NAME}}.getVCycleCounter()<VCycles
       and not
       (
         repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() > 0.0
         and
-        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() <= CGSolverTolerance
+        repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm() <= std::max(1E-14,initialGlobalResidualMaxNorm*CGSolverTolerance)
       ) 
     ) {
       /*
       We haven't reached our termination condition for CG solver yet
       */
+      if (CGCycleCounter==1) {
+        initialGlobalResidualMaxNorm = repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm();
+      }
       repositories::instanceOf{{DG_SOLVER_NAME}}.suspend(false, false);
       CGCycleCounter++;
       logInfo( "prepareTraversal(...)", "run CG smoother step, disable DG solver. CG residual="<< repositories::instanceOf{{CG_SOLVER_NAME}}.getGlobalResidualMaxNorm());
