@@ -160,7 +160,7 @@ namespace exahype2 {
       const double* __restrict__ Q,
       double                             timeStepSize,
       tarch::la::Vector<Dimensions, int> indices,
-      tarch::la::Vector<Dimensions, int> factors,
+      tarch::la::Vector<Dimensions, double> factors,
       Particle&                          particle
     );
 

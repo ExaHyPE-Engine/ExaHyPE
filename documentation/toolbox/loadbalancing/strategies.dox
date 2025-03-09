@@ -1,0 +1,197 @@
+/**
+
+@page page_toolbox_loadbalancing_strategies Load balancing strategies
+
+@tableofcontents
+
+# Problem formulation
+
+## Terminology
+
+We have tree @f$ \mathcal{T} @f$ where each node has either 0 or @f$ k^d @f$
+children, and @f$ k,d \in \{2,3\} @f$ are fixed constants.
+The level @f$ \ell(n) @f$ is the distance from the tree's root
+@f$ n_0 @f$ in graph. Let @f$ n_i \sqsubseteq_{\text{child of}} n_j, \  n_i,n_j \in \mathcal{T} @f$
+denote that @f$ n_i @f$ is a child of @f$ n_j @f$, i.e. there's an edge from
+@f$ n_i @f$ to @f$ n_j @f$ and @f$ \ell (n_i) = \ell (n_j) + 1 @f$.
+Nodes @f$ \mathcal{T}_{leaves} = \{ n \in \mathcal{T}: \not \exists j: n_j \sqsubseteq_{\text{child of}} n  \} @f$
+are the leaves of the tree.
+
+We also have a set
+@f$ \mathcal{P} = \{p_0, p_1, \ldots, p_{N_{comp}-1} \} @f$ of compute resources.
+Let @f$ C: \mathcal{T} \mapsto \mathcal{P} @f$ assign each tree node to a compute resource.
+
+
+## Tree manipulation
+
+There is only one operation available: @f$ split(p_i, p_j, n) @f$ operates on @f$ \{ n_k: C(n_k)=p_i \} \neq \emptyset @f$
+and @f$ \{ n_l: C(n_l)=p_j \} = \emptyset @f$.
+It takes @f$ n \leq \hat n @f$ leaf nodes assigned to @f$ p_i @f$ and
+assigns them to @f$ p_j @f$.
+Hereby, @f$ \hat n @f$ is the number of leaf nodes associated to @f$ p_i @f$.
+The split consequently might also reassign some non-leaf nodes.
+
+W.l.g. we may assume that the root @f$ n_0 @f$ is originally assigned to the
+first available compute resource: @f$ C(n_0) = p_0 @f$.
+
+Notice we can not merge subtrees, i.e., split is not allowed to operate if 
+@f$ \{ n_l: C(n_l)=p_j \} \neq \emptyset @f$.
+
+## Tree construction
+
+The tree is not constructed in one rush.
+It originally consists solely of the root node.
+After that, we add one more level per step.
+After @f$ \ell_{max} @f$ steps, the tree is complete.
+We build it up level by level.
+
+The @f$ \ell_{max} @f$ is known a priori.
+So is a @f$ \ell_{min} @f$ which is the minimal distance from any leaf node, i.e. unrefined node to the tree's root in the final tree.
+Throughout the grid construction, @f$ \ell < \ell_{max} @f$ is admissible for an unrefined node, and even @f$ \ell < \ell_{min} \leq \ell_{max} @f$ will occur early throughout the mesh construction.
+Once the tree construction has terminated, we however guarantee @f$ \ell_{min} \leq \ell(n) \leq \ell_{max} @f$ for each leaf.
+
+By default, any new node that is added to the tree is assigned to the
+compute entity its parent has been assigned to.
+@f$ n_i, n_j \in \mathcal{T}: \ n_i \sqsubseteq_{\text{child of}} n_j \Rightarrow C(n_i) = C(n_j) @f$.
+Only the slits can change this transition afterwards.
+Without any split operations, the whole tree would eventually be associated to the root's compute
+resource @f$ C(n_0) = p_0 @f$.
+
+
+## Objective
+
+Due to a sequence of split calls, we want to construct a mapping @f$ C @f$, such that
+
+@f$ \forall p_i,p_j: \ \mathcal{T}_{leaves}(p_i) \approx \mathcal{T}_{leaves}(p_i) @f$
+
+where @f$ \mathcal{T}_{leaves}(p) = \{ n \in \mathcal{T}_{leaves}: C(n)=p \} @f$.
+We want to have a well-balanced assignment of leaves to processing units.
+The @f$ \approx @f$ sign is used, as we work with integers and hence cannot ensure
+exact equality.
+We might also be willing to accept a small, fixed deterioration from the optimum.
+
+For a more advance metric of measuring the quality of the splitting, we introduce the 
+splitting quality score @f$ w=C_2 \cdot \text{SplitCost}+C_1 \cdot \text{Imbalance} @f$,
+where @f$ \text{SplitCost}=\sum split(...) @f$ is the sum up of costmetric output for 
+every split operation, and @f$ \text{Imbalance}=MAX(\mathcal{T}_{leaves}(p_i)+C_3 \text{Surface}(p_i)) - MIN(\mathcal{T}_{leaves}(p_i)+C_3 \text{Surface}(p_i)) @f$.
+@f$\text{Surface}(p_i)@f$ is the spatial boundaries for the subtree associated with @f$ p_i @f$, as the tree 
+represents an adaptive refinement of a spatial domain. The smaller the quality score is, the better the splitting algorithm is.
+
+In the current problem, @f$ C_3 \ll 1 @f$. i.e., for now, we do not care too much about the surface size as long as
+all leaves are spatially connected. We also set @f$ C_2 \ll C_1 @f$ (holds even for the superlinear model of splitting cost),
+i.e., the balance among compute resources is the top priority.
+
+
+## Challenge
+
+This challenge in principle is very simple: We take the whole tree, count the number
+of leaves and issue a series of splitting calls. However, we want to
+make the splitting as cheap as possible:
+There is a cost function @f$ F( split(p_i, p_j, n) ) @f$ which scales (superlinearly)
+in the number @f$ n @f$.
+This parameter from above is the number of leaves moved in this operation.
+Due to the cost function, it consequently might be reasonable to issue splits while
+the tree is constructed and not at the very end.
+In this case, @f$ n @f$ denotes the number of leaves at this point of the tree
+construction.
+If we wait until the tree is constructed, @f$ n @f$ within each split call corresponds to "real"
+leaves of the final tree.
+
+Unfortunately, we do not know what the tree eventually will look like. We have
+guarantees regarding the minimum and maximum level of each node, but no further
+domain knowledge.
+Consequently, the development of an "optimal" splitting strategy is not straightforward.
+We permanently have to balance between an eager decision to split, which is cheap yet
+might introduce the wrong splits that we cannot undo later, or waiting for further
+information which might make future splits more accurate but excessively expensive.
+
+
+# Observations
+
+The topology over @f$ \mathcal{P} @f$ is a tree topology in itself, i.e. the
+way how we split the tree introduces a tree topology over the individual
+compute entities.
+
+
+# Extensions
+
+## Chains on chains
+
+In reality, the set @f$ \mathcal{P} @f$ is hierarchical in itself, i.e. it is
+actually a @f$ \mathcal{P} = \{ p_{0,0}, p_{0,1}, \ldots, p_{0,N_{cores}-1}, p_{1,0}, p_{1,1}, \ldots, p_{N_{nodes}-1,0}, \ldots, p_{N_{nodes}-1,N_{cores}-1} \} @f$.
+A good partition minimises
+
+@f$ n_i \sqsubseteq_{\text{child of}} n_j \ \text{with} \ C(n_i)=p_{a,b} \wedge C(n_j)=p_{c,d}: a \not= c @f$
+
+
+## Weighted graph nodes
+
+In the outline challenge, all leaves are considered to have the same weight.
+However, it is possible that we introduce weights for each individual (interior)
+node.
+
+The notion of leaves changes over time: As we build up the tree level by
+level, a node that has been a leaf at one point (and did feed into a split's cost
+function at this point) might become refined later on.
+While we do not know, in general, what the tree will look like, a lot of
+problems can provide indicators (it is likely that we'll refine up to a level
+@f$ \ell \geq \ell _{\text{min}} @f$ in this area) and consequently can assign
+a tree node which eventually becomes a refined one a weight that's bigger than
+other nodes.
+A lot of application codes can map their domain-specific knowledge about what
+the tree might look like onto a non-uniform cost metric.
+
+
+## Guided refinement
+
+In the vanilla version of the code, we assume that the tree is built up
+level-by-level.
+While the underlying simulation code constructs the tree in this way at the
+moment, we can alter the code such that the splitting algorithm decides where
+the tree is allowed to refine in the next step.
+
+It is not clear if such a degree of freedom is of any use, but in principle
+it allows an algorithm to query more information about the tree before it
+continues, i.e. it can hold back with splitting decisions and instead tell
+the algorithm to continue to construct the tree (in certain areas) before it
+comes to its next decision.
+
+# Example
+
+We provide an example of (online) tree splitting. Below is a tree of four levels, where 
+only the first nodes on levels 2 and 3 have children. The tree is constructed level by
+level, going through stages (I) to (IV). As we only have the split operation, the three good 
+two-split candidates can be 
+
+@image html visualise_tree_split_example0.png
+
+(1) split the first node in stage (II) to the second tree and finish the following 
+construct. The imbalancing would be @f$ |7C_1-3C_1|=4C_1 @f$ (omit the surface term), with a split cost of @f$ 1C_2 @f$
+(assuming linear costmetric). The total quality score would be @f$ 4C_1+C_2 @f$ (the smaller the better).
+
+@image html visualise_tree_split_example1.png
+
+(2) split the first two nodes in stage (III) to the second tree and finish the following
+construct. The imbalancing would be @f$ |5C_1-5C_1|=0 @f$, with a split cost of @f$ 2C_2 @f$.
+The total quality score would be @f$ 2C_2 @f$.
+
+@image html visualise_tree_split_example2.png
+
+(3) Split the first two nodes on level 3 and all in level 4 in stage (IV) to the 
+second tree. The imbalance would be @f$ |5C_1-5C_1|=0 @f$, with a split cost of @f$ 5C_2 @f$ (number of leaves
+moved). The total quality score would be @f$ 5C_2 @f$.
+
+It is quite clear that option (1) is not good as it chooses an early, aggressive tree splitting,
+though the splitting cost is cheap, the heavy imbalance indicates it is not a good strategy. Comparing 
+options (2) and (3) is a little more tricky: (2) has a smaller score, however, it has to 
+"foresee" that the first node is going to be refined to make this clever decision. (3), on the other
+hand, does not have this issue, as at stage (IV) the tree has been constructed completely. Of course, it 
+then has to pay the price for moving more nodes in the split operation. 
+
+To summarise, option (1) is not acceptable, option (3) is acceptable but expensive, and option (2) is best but 
+requires a clever splitting strategy. In code practices we hope to first find an algorithm to achieve (3), and then 
+an algorithm to achieve (2).
+
+
+
+*/
