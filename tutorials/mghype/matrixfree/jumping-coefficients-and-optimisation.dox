@@ -1,0 +1,103 @@
+/**
+
+@page tutorials_multigrid_matrixfree_mixed_DG_poisson Matrix-free mixed DG for the Poisson equation
+
+This simple example discusses the most basic steps behind a matrix-free mixed Discontinuous Galerkin solver for the Poisson equation. 
+
+The standard "benchmark" for this solver (once again solving the Poisson 
+equation on the unit square) can be found in tests/multigrid/matrixfree/poisson/mixed.py.
+Our discussion follows this script, though we omit many technical details such
+as the parsing of the command line) and  focus on key numerical ingredients 
+from a user perspective. Therefore, it is reasonable to study the present text 
+in combination with the actual script. This page is more on the how to use the 
+class to construct a working solver.
+
+
+
+@include{doc} tutorials/multigrid/generic-mixed-DG.dox
+
+
+# Project setup
+ 
+Creating a project is a one-liner:
+
+@snippet tests/multigrid/matrixfree/poisson/dg.py Create project
+
+
+# Create the solver
+
+The solver construction also is a "one-liner" using the following observations:
+
+- We solve a scalar equation system plus a vector-valued PDE in one rush. 
+  Therefore, @f$ K_c=d+1 @f$ (unknowns_per_cell_node).
+- Within each cell, we have to project the solution onto the face plus one of
+  the @f$ p @f$ values. Therefore, projections_per_face_node=2.
+- We solve the numerical flux on the face to obtain both a @f$ \hat u @f$ value
+  and a @f$ \widehat{(n,p)} @f$ value. We set solutions_per_face_node=2.
+
+@snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver
+
+
+## Matrices
+
+We have @f$ (p+1)^d @f$ @ref page_multigrid_terminology nodes in the cell.
+Consequently, the matrix-matrix part of the global assembly is from
+@f$ \mathbb{R}^{ (d+1)(p+1)^d \times (d+1)(p+1)^d } @f$.
+Conceptionally, this matrix resembles
+
+@f$ 
+\begin{bmatrix}
+  X & X & X \\
+  0 & X & 0 \\
+  0 & 0 & X 
+\end{bmatrix}
+\begin{bmatrix}
+  u \\ p_x \\ p_y
+\end{bmatrix}
+=
+\left(
+h^d
+\begin{bmatrix}
+  0 & X & X \\
+  0 & 0 & 0 \\
+  0 & 0 & 0 
+\end{bmatrix}
++
+h^{d-1}
+\begin{bmatrix}
+  X & 0 & 0 \\
+  0 & X & 0 \\
+  0 & 0 & X 
+\end{bmatrix}
+\right)
+\begin{bmatrix}
+  u \\ p_x \\ p_y
+\end{bmatrix}
+=
+\begin{bmatrix}
+  0 \\ f_x \\ f_y
+\end{bmatrix}
+@f$ 
+
+but we store the entries as AoS according to @ref page_multigrid_terminology "our storage format".
+The sparsity pattern thus is subject to some permutations.
+The structure discussion above emphasises that the first line of the equation 
+system holds entries with different scaling.
+The @f$ p @f$ entries enter with a @f$ h^d @f$ scaling, while the @f$ u @f$ 
+terms have a scaling of @f$ h^{d-1} @f$.
+The PDE over the secondary variables is structurally simpler:
+All the entries on the left-hand side have a scaling of @f$ h^{d-1} @f$.
+
+
+@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
+
+
+@todo Tobias and Alex should discuss.
+
+
+## The Riemann problem (numerical flux)
+
+@todo Tobias, please write.
+ 
+ 
+*/
