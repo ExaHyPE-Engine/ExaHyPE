@@ -364,6 +364,8 @@ the SISC paper
                                   self.d["GPU"] = value.strip()
                               if key == "WITH_GPU_ARCH":
                                   self.d["GPU_ARCH"] = value.strip()
+            else:
+                raise Exception("Cannot parse the CMakeCache.txt file: " + cmake_cache_file)
         else: # Nothing has been configured so far
               raise Exception("""
   Error: if you call parse_configure_script_outcome(), please hand over directory where
