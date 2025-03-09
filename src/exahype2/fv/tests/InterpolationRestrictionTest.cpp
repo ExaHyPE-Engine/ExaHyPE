@@ -22,8 +22,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::run() {
   testMethod( testAverageRestrictionWithTensorProduct );
   testMethod( testInjectionExtrapolationRestrictionWithTensorProduct );
 
-  // @todo Han copy in if yuo wanna test more things
-  // testMethod (testPiecewiseConstantInterpolationWithTensorProduct2);
+  testMethod (testPiecewiseConstantInterpolationWithTensorProduct2);
 }
 
 
@@ -377,7 +376,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
   #if Dimensions==2
   dummEvent.setRelativePositionToFather( {0,0} );
 
-  constexpr int NumberOfFaceValues = 3*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
+  constexpr int NumberOfFaceValues = 3*5 * 5 * 2; // three width, five dofs per axis, five unknowns, two sides
 
   double  fineGridFaceValues[] = {
     0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,

@@ -5,20 +5,20 @@
 #include "config.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
-#include "exahype2/tests/EnclaveBookkeepingTest.h"
-#include "exahype2/tests/EnclaveTaskNumberPoolTest.h"
+#include "tests/EnclaveBookkeepingTest.h"
+#include "tests/EnclaveTaskNumberPoolTest.h"
 
-#include "exahype2/dg/rusanov/tests/RiemannTest.h"
-#include "exahype2/dg/tests/CellIntegralTest.h"
-#include "exahype2/dg/tests/DGUtilsTest.h"
-#include "exahype2/dg/tests/RiemannTest.h"
+#include "dg/tests/CellIntegralTest.h"
+#include "dg/tests/DGUtilsTest.h"
+#include "dg/tests/RiemannTest.h"
+#include "dg/rusanov/tests/RiemannTest.h"
 
-#include "exahype2/fd/tests/SommerfeldBCTest.h"
-#include "exahype2/fd/tests/CCZ4KernelTest.h"
+#include "fd/tests/CCZ4KernelTest.h"
+#include "fd/tests/SommerfeldBCTest.h"
 
-#include "exahype2/fv/tests/CopyPatchTest.h"
-#include "exahype2/fv/tests/InterpolationRestrictionTest.h"
-#include "exahype2/fv/tests/ApplySplit1DRiemannToPatchTest.h"
+#include "fv/tests/CopyPatchTest.h"
+#include "fv/tests/InterpolationRestrictionTest.h"
+#include "fv/tests/ApplySplit1DRiemannToPatchTest.h"
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
@@ -26,13 +26,13 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new exahype2::tests::EnclaveBookkeepingTest());
   result->addTestCase(new exahype2::tests::EnclaveTaskNumberPoolTest());
 
-  // result->addTestCase( new exahype2::dg::tests::CellIntegralTest() );
-  // result->addTestCase( new exahype2::dg::tests::DGUtilsTest() );
-  // result->addTestCase( new exahype2::dg::tests::RiemannTest() );
-  // result->addTestCase( new exahype2::dg::rusanov::tests::RiemannTest() );
+  result->addTestCase(new exahype2::dg::tests::CellIntegralTest());
+  result->addTestCase(new exahype2::dg::tests::DGUtilsTest());
+  result->addTestCase(new exahype2::dg::tests::RiemannTest());
+  result->addTestCase(new exahype2::dg::rusanov::tests::RiemannTest());
 
-  result->addTestCase(new exahype2::fd::tests::SommerfeldBCTest());
   //result->addTestCase(new exahype2::fd::tests::CCZ4KernelTest());
+  result->addTestCase(new exahype2::fd::tests::SommerfeldBCTest());
 
   result->addTestCase(new exahype2::fv::tests::CopyPatchTest());
   result->addTestCase(new exahype2::fv::tests::InterpolationRestrictionTest());

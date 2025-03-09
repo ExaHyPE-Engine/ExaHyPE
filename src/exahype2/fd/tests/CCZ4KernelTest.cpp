@@ -49,9 +49,9 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
   const tarch::la::Vector<3, double> cellSize({30.0/29.0, 30.0/29.0, 30.0/29.0});
   tarch::la::Vector<3, int> currentPosition({0,0,0});
   tarch::la::Vector<3, double> volumeCoordinates({0,0,0});
- 
-  double oldQWithHalos[numberOfDoFsPerAxisInCellWithHalos*numberOfDoFsPerAxisInCellWithHalos*numberOfDoFsPerAxisInCellWithHalos*(unknowns+auxiliaryVariables)]={0};
-  double QOut[numberOfDoFsPerAxisInCell*numberOfDoFsPerAxisInCell*numberOfDoFsPerAxisInCell*(unknowns)]={0};
+
+  double* oldQWithHalos = new double[numberOfDoFsPerAxisInCellWithHalos*numberOfDoFsPerAxisInCellWithHalos*numberOfDoFsPerAxisInCellWithHalos*(unknowns+auxiliaryVariables)];
+  double* QOut = new double[numberOfDoFsPerAxisInCell*numberOfDoFsPerAxisInCell*numberOfDoFsPerAxisInCell*(unknowns)];
 
   //random assignment here, keep the same with GRChombo.
   const int scenario=1; // 0-flat spacetime test case, 1-apple with apple test
@@ -301,6 +301,8 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
     );
   }*/
 
+  delete[] oldQWithHalos;
+  delete[] QOut;
 
   #endif
 }

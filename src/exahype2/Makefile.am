@@ -45,6 +45,7 @@ ExaHyPE2Sources = \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PostprocessingKernels.cpp \
+  fv/InterpolationRestriction.cpp \
   fv/Tracer.cpp \
   fv/tests/InterpolationRestrictionTest.cpp \
   fv/tests/CopyPatchTest.cpp \
