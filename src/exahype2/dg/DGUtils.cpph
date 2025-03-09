@@ -42,7 +42,7 @@ tarch::la::Vector<Dimensions,double>  exahype2::dg::getQuadraturePoint(
   result(0) = quadraturePoints[index(0)];
   result(1) = quadraturePoints[index(1)];
 #if Dimensions==3
-  result(Dimensions) = quadraturePoints[index(Dimensions)];
+  result(2) = quadraturePoints[index(2)];
 #endif
 
   return tarch::la::multiplyComponents(result,cellSize) + cellCentre - 0.5*cellSize;
