@@ -115,7 +115,7 @@ if use_tracers:
     std::copy_n(
       kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
       (Order+1),
-      QuadraturePoints1d    
+      QuadraturePoints1d
     );"""
 
 if plot_dt > 0.0:
@@ -133,7 +133,5 @@ project.set_global_simulation_parameters(
 project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
 peano4_project = project.generate_Peano4_project("False")
-peano4_project.output.makefile.add_h_file("elastic.h")
-peano4_project.output.makefile.add_cpp_file("elastic.cpp")
 
 peano4_project.build(make_clean_first=True)

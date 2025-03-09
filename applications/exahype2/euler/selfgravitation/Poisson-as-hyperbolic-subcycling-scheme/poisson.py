@@ -201,10 +201,6 @@ project.set_global_simulation_parameters(
   periodic_BC = [False, False, False]
 )
 
-#
-# So here's the parallel stuff. This is new compared to the serial
-# prototype we did start off with.
-#
 project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation(args.peanodir, modes[args.mode])
 peano4_project = project.generate_Peano4_project(args.verbose)

@@ -321,10 +321,6 @@ poisson_project.set_global_simulation_parameters(
 )
 
 #
-# So here's the parallel stuff. This is new compared to the serial
-# prototype we did start off with.
-#
-#
 # Configure build
 #
 euler_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")

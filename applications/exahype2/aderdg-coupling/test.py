@@ -146,10 +146,6 @@ fuseADERSolvers(theSolver, theSolver2, "marker.x()[0]<=0.0")
 
 scenario.set_global_simulation_parameters(project)
 
-
-# So here's the parallel stuff. This is new compared to the serial
-# prototype we did start off with.
-
 project.set_load_balancing(
   "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
   "new ::exahype2::LoadBalancingConfiguration(0.98)"
