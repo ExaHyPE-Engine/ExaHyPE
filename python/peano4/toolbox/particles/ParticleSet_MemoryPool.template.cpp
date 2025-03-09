@@ -117,6 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       neighbourParticle->getX(),
       neighbourPartID,
       (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+      marker.x(),
       marker.h(),
       spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
@@ -129,7 +130,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       marker.x(),
       marker.h(),
       spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")",
+      marker.x(),
+      marker.h()
     );
 
     // See docu of replace(): it will delete p
@@ -176,7 +179,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       marker.x(),
       marker.h(),
       spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")",
+      marker.x(),
+      marker.h()
     );
   }
 }

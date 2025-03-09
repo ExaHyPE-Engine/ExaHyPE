@@ -26,15 +26,18 @@ bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
   const int                                   depth
 ) {
 
-  if (depth == 0)
+  if (depth == 0) {
     return false;
+  }
 
   tarch::la::Vector<Dimensions, double> dv = vertexX - particleX;
 
-  if (tarch::la::oneSmaller(dv, -1. * vertexH))
+  if (tarch::la::oneSmaller(dv, -1. * vertexH)){
     return true;
-  if (tarch::la::oneGreater(dv, vertexH))
+  }
+  if (tarch::la::oneGreater(dv, vertexH)){
     return true;
+  }
   return false;
 }
 
@@ -46,16 +49,18 @@ bool toolbox::particles::assignmentchecks::tests::internal::dropParticle(
   const int                                   maxVertexDepth
 ) {
 
-  if (depth == maxVertexDepth)
+  if (depth == maxVertexDepth) {
     return false;
+  }
 
   tarch::la::Vector<Dimensions, double> vHnew   = vertexH / 3.;
   tarch::la::Vector<Dimensions, double> vertexX = findVertexX(particleX, vHnew);
 
   tarch::la::Vector<Dimensions, double> dv = vertexX - particleX;
 
-  if (tarch::la::allSmaller(dv, vHnew) and tarch::la::allGreater(dv, -1. * vHnew))
+  if (tarch::la::allSmaller(dv, vHnew) and tarch::la::allGreater(dv, -1. * vHnew)){
     return true;
+  }
   return false;
 }
 
@@ -134,17 +139,22 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   tarch::la::Vector<Dimensions, double> particleAX;
   tarch::la::Vector<Dimensions, double> particleBX;
+  tarch::la::Vector<Dimensions, double> vertexX;
+  tarch::la::Vector<Dimensions, double> vertexH;
+  int treeId = 1;
 
   for (int i = 0; i < Dimensions; i++) {
     particleAX(i) = 1.;
     particleBX(i) = 2.;
+    vertexX(i) = 1.;
+    vertexH(i) = 1.;
   }
 
   // create a key and assign it a value in the map
   ac::internal::ParticleIdentifier a = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, 1);
+    ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
   ac::internal::ParticleIdentifier b = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, 2);
+    ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -158,11 +168,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   assert(not(b == a));
   assert(not(b < a));
 
-  const double                           tol = 0.5;
-  ac::internal::ParticleSearchIdentifier A   = ac::internal::
-    ParticleSearchIdentifier("DummyParticle", particleAX, 1, tol);
-  ac::internal::ParticleSearchIdentifier B = ac::internal::
-    ParticleSearchIdentifier("DummyParticle", particleBX, 2, tol);
+  ac::internal::ParticleIdentifier A   = ac::internal::
+    ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
+  ac::internal::ParticleIdentifier B = ac::internal::
+    ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -337,12 +346,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         vertexH(i)   = p;
       }
 
-      ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-        ParticleSearchIdentifier(
+      ac::internal::ParticleIdentifier identifier = ac::internal::
+        ParticleIdentifier(
           "DummyParticle",
           particleX,
+          vertexX,
+          vertexH,
           particleID,
-          positionTolerance
+          treeId
         );
 
       // vertex assignment event
@@ -357,7 +368,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         trace
       );
 
-      eventDatabase.addEvent(identifier, vassEvent, treeId);
+      eventDatabase.addEvent(identifier, vassEvent);
 
       // move event
       trace                         = "Move/sweep:" + *sweep;
@@ -369,7 +380,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId,
         trace
       );
-      eventDatabase.addEvent(identifier, moveEvent, treeId);
+      eventDatabase.addEvent(identifier, moveEvent);
 
       // sieve event
       trace                         = "Sieve/sweep:" + *sweep;
@@ -379,14 +390,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId,
         trace
       );
-      eventDatabase.addEvent(identifier, sievEvent, treeId);
+      eventDatabase.addEvent(identifier, sievEvent);
 
       // invalid event
       trace                            = "NotFound/sweep:" + *sweep;
       ac::internal::Event invalidEvent = ac::internal::Event(
         ac::internal::Event::Type::NotFound
       );
-      eventDatabase.addEvent(identifier, invalidEvent, treeId);
+      eventDatabase.addEvent(identifier, invalidEvent);
     }
 
     sweep++;
@@ -412,12 +423,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       vertexH(i)   = p;
     }
 
-    ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-      ParticleSearchIdentifier(
+    ac::internal::ParticleIdentifier identifier = ac::internal::
+      ParticleIdentifier(
         "DummyParticle",
         particleX,
+        vertexX,
+        vertexH,
         particleID,
-        positionTolerance
+        treeId
       );
 
     size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
@@ -498,12 +511,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexH(i)   = p;
         }
 
-        ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-          ParticleSearchIdentifier(
+        ac::internal::ParticleIdentifier identifier = ac::internal::
+          ParticleIdentifier(
             "DummyParticle",
             particleX,
+            vertexX,
+            vertexH,
             particleID,
-            positionTolerance
+            treeId
           );
 
         // vertex assignment event
@@ -518,7 +533,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           trace
         );
 
-        eventDatabase.addEvent(identifier, vassEvent, treeId);
+        eventDatabase.addEvent(identifier, vassEvent);
 
         // move event
         trace                         = "Move/sweep:" + *sweep;
@@ -530,7 +545,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           treeId,
           trace
         );
-        eventDatabase.addEvent(identifier, moveEvent, treeId);
+        eventDatabase.addEvent(identifier, moveEvent);
 
         // sieve event
         trace                         = "Sieve/sweep:" + *sweep;
@@ -540,7 +555,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           treeId,
           trace
         );
-        eventDatabase.addEvent(identifier, sievEvent, treeId);
+        eventDatabase.addEvent(identifier, sievEvent);
       }
     }
 
@@ -549,53 +564,13 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // is particle count correct?
+  // nparts particles times nparts trees
   assertion3(
-    eventDatabase.getNumberOfTracedParticles() == static_cast<int>(nparts),
+    eventDatabase.getNumberOfTracedParticles() == nparts * nparts ,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles(),
-    nparts
+    nparts * nparts
   );
-
-  // Is number of trees per particle correct?
-  for (int p = 1; p < nparts + 1; p++) {
-
-    int particleID = p;
-
-    for (int i = 0; i < Dimensions; i++) {
-      particleX(i) = p;
-      vertexX(i)   = p;
-      vertexH(i)   = p;
-    }
-
-    ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-      ParticleSearchIdentifier(
-        "DummyParticle",
-        particleX,
-        particleID,
-        positionTolerance
-      );
-
-    ac::internal::ParticleEvents history = eventDatabase.getParticleHistory(
-      identifier
-    );
-    std::vector<int> treesInHistory;
-
-    for (auto e : history) {
-
-      int thisTree = e.treeId;
-
-      if (std::find(treesInHistory.begin(), treesInHistory.end(), thisTree) == treesInHistory.end()){
-        treesInHistory.push_back(thisTree);
-      }
-    }
-
-    assertion3(
-      treesInHistory.size() == nparts,
-      "Wrong number of trees in particle history",
-      eventDatabase.particleHistory(identifier),
-      eventDatabase.toString()
-    );
-  }
 
   // Clean up after yourself.
   eventDatabase.reset();
@@ -664,12 +639,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     }
 
     // generate new identifier
-    ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-      ParticleSearchIdentifier(
+    ac::internal::ParticleIdentifier identifier = ac::internal::
+      ParticleIdentifier(
         "DummyParticle",
         particleX,
+        vertexX,
+        vertexH,
         particleID,
-        positionTolerance
+        treeId
       );
 
 
@@ -683,10 +660,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       treeId,
       trace
     );
-    eventDatabase.addEvent(identifier, moveEvent, treeId);
-
-    // Do we need to shift the identifier's coordinates?
-    eventDatabase.shiftIdentifierCoordinates(identifier, particleX);
+    eventDatabase.addEvent(identifier, moveEvent);
   }
 
 
@@ -699,12 +673,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // Did we record correct number of events?
-  ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-    ParticleSearchIdentifier(
+  ac::internal::ParticleIdentifier identifier = ac::internal::
+    ParticleIdentifier(
       "DummyParticle",
       particleX,
+      vertexX,
+      vertexH,
       particleID,
-      positionTolerance
+      treeId
     );
 
   int nEntries = eventDatabase.getTotalParticleEntries(identifier);
@@ -794,6 +770,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     vertexH,
     spacetreeId,
     "initialAssign",
+    vertexX,
+    vertexH,
     false, // not a new particle
     true   // particle walks from vertex to vertex on same level
   );
@@ -871,6 +849,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         vertexH,
         spacetreeId,
         "vertexChangeAssign",
+        prevVertexX,
+        vertexH,
         false, // not a new particle
         true   // particle walks from vertex to vertex on same level
       );
@@ -895,8 +875,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     max_sweeps
   );
 
-  ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-    ParticleSearchIdentifier("TestParticle", localPartX, particleID, vertexH(0));
+  ac::internal::ParticleIdentifier identifier = ac::internal::
+    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID, spacetreeId);
 
   // 8 is hardcoded here. Modify manually if you change test setup.
   assertion3(
@@ -966,7 +946,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     vertexX,
     vertexH,
     spacetreeId,
-    "initialAssign"
+    "initialAssign",
+    vertexX,
+    vertexH
   );
 
   logDebug(
@@ -1009,7 +991,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       vertexX,
       vertexH,
       spacetreeId,
-      "vertexAssignLift"
+      "vertexAssignLift",
+      prevVertexX,
+      prevVertexH
     );
   }
 
@@ -1048,7 +1032,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       vertexX,
       vertexH,
       spacetreeId,
-      "vertexAssignDrop"
+      "vertexAssignDrop",
+      prevVertexX,
+      prevVertexH
     );
   }
 
@@ -1060,8 +1046,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     eventDatabase.getNumberOfTracedParticles()
   );
 
-  ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-    ParticleSearchIdentifier("TestParticle", localPartX, particleID, vertexH(0));
+  ac::internal::ParticleIdentifier identifier = ac::internal::
+    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID, spacetreeId);
 
   // 13 is hardcoded here. Modify manually if you change test setup.
   assertion3(
@@ -1136,7 +1122,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
     vertexX,
     vertexH,
     spacetreeId,
-    "initialAssign"
+    "initialAssign",
+    vertexX,
+    vertexH
   );
 
 
@@ -1216,7 +1204,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
         vertexX,
         vertexH,
         spacetreeId,
-        "vertexAssignLift"
+        "vertexAssignLift",
+        prevVertexX,
+        prevVertexH
       );
     }
 
@@ -1252,7 +1242,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
         vertexX,
         vertexH,
         spacetreeId,
-        "vertexAssignDrop"
+        "vertexAssignDrop",
+        prevVertexX,
+        prevVertexH
       );
     }
   }
@@ -1315,8 +1307,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int spacetreeId = 1;
 
   // generate (minimal) particle
-  ac::tests::TestParticle* localPart = new ac::tests::
-    TestParticle(localPartX_init, particleID, true);
+  ac::tests::TestParticle* localPart = new ac::tests::TestParticle(localPartX_init, particleID, true);
   localPart->setVertexH(vertexH_init);
   localPart->setDepth(depth);
 
@@ -1336,7 +1327,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     vertexX,
     localPart->getVertexH(),
     spacetreeId,
-    "initialAssign"
+    "initialAssign",
+    vertexX,
+    localPart->getVertexH()
   );
 
 
@@ -1422,7 +1415,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexX,
           p->getVertexH(),
           spacetreeId,
-          "vertexAssign::Lift"
+          "vertexAssign::Lift",
+          prevVertexX,
+          prevVertexH
         );
       }
 
@@ -1464,7 +1459,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexX,
           p->getVertexH(),
           spacetreeId,
-          "vertexAssign::Drop"
+          "vertexAssign::Drop",
+          prevVertexX,
+          prevVertexH
         );
       }
     } // Drift loop
@@ -1506,7 +1503,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexX,
           replica->getVertexH(),
           spacetreeId, // Say we only have 1 spacetree
-          "createdVirtualParticle"
+          "createdVirtualParticle",
+          vertexX,
+          replica->getVertexH()
         );
       }
     }
@@ -1544,7 +1543,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
             vertexX,
             p->getVertexH(),
             spacetreeId,
-            "vertexAssign::LocalToVirtual"
+            "vertexAssign::LocalToVirtual",
+            vertexX,
+            p->getVertexH()
           );
 
           p->setIsLocal(false);
@@ -1573,7 +1574,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
             vertexX,
             p->getVertexH(),
             spacetreeId,
-            "vertexAssign::VirtualToLocal"
+            "vertexAssign::VirtualToLocal",
+            vertexX,
+            p->getVertexH()
           );
 
           p->setIsLocal(true);
@@ -1607,6 +1610,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           (*p)->getX(),
           (*p)->getPartid(),
           (*p)->isLocal(),
+          vertexX,
           (*p)->getVertexH(),
           spacetreeId,
           "eraseVirtualParticle"
@@ -1702,7 +1706,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     vertexX,
     localPart->getVertexH(),
     spacetreeId,
-    "initialAssign"
+    "initialAssign",
+    vertexX,
+    localPart->getVertexH(),
+    true
   );
 
 
@@ -1788,7 +1795,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexX,
           p->getVertexH(),
           spacetreeId,
-          "vertexAssign::Lift"
+          "vertexAssign::Lift",
+          prevVertexX,
+          prevVertexH
         );
       }
 
@@ -1830,7 +1839,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           vertexX,
           p->getVertexH(),
           spacetreeId,
-          "vertexAssign::Drop"
+          "vertexAssign::Drop",
+          prevVertexX,
+          prevVertexH
         );
       }
     } // Drift loop
@@ -1917,7 +1928,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         vertexX,
         p->getVertexH(),
         spacetreeId, // Say we only have 1 spacetree
-        "createdVirtualParticle"
+        "createdVirtualParticle",
+        vertexX,
+        p->getVertexH()
       );
     }
 
@@ -1959,6 +1972,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
           (*p)->getX(),
           (*p)->getPartid(),
           (*p)->isLocal(),
+          vertexX,
           (*p)->getVertexH(),
           spacetreeId,
           "eraseVirtualParticle"
@@ -2044,7 +2058,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     vertexX,
     localPart->getVertexH(),
     spacetreeId,
-    "initialAssign"
+    "initialAssign",
+    vertexX,
+    localPart->getVertexH(),
+    true
   );
 
 
@@ -2102,7 +2119,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
         p->getX(),
         p->getPartid(),
         p->isLocal(),
-        p->getVertexH(),
+        prevVertexX,
+        prevVertexH,
         spacetreeId,
         "assignToSieveSet"
       );
@@ -2117,7 +2135,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
         vertexX,
         p->getVertexH(),
         spacetreeId,
-        "vertexAssign::Sieve"
+        "vertexAssign::Sieve",
+        prevVertexX,
+        prevVertexH
       );
     } // Drift loop
 
@@ -2131,12 +2151,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   );
 
 
-  ac::internal::ParticleSearchIdentifier identifier = ac::internal::
-    ParticleSearchIdentifier(
+  ac::internal::ParticleIdentifier identifier = ac::internal::
+    ParticleIdentifier(
       "TestParticle",
       localPart->getX(),
+      vertexX,
+      localPart->getVertexH(),
       localPart->getPartid(),
-      vertexH(0)
+      spacetreeId
     );
 
   size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
