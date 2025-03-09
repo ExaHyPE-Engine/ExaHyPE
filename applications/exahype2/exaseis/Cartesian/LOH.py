@@ -24,7 +24,7 @@ auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
 max_h               = 1.1 * min(size) / (3.0**min_level)
 min_h               = max_h / (3.0**max_depth)
 
-project = exahype2.Project( ["applications", "exahype2", "elastic"], ".",
+project = exahype2.Project( ["applications", "exahype2", "exaseis"], ".",
   executable="LOH_level_"+str(min_level)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision) )
 
 theSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
