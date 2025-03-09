@@ -42,5 +42,4 @@ class benchmarks::mghype::poisson::DGPoissonPrecompute: public benchmarks::mghyp
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
-
 };

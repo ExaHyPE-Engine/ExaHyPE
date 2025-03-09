@@ -2,6 +2,8 @@
 
 #include "../../../tests/multigrid/matrixfree/poisson/Scenario.h"
 
+#include "tarch/la/LUDecomposition.h"
+
 
 benchmarks::mghype::poisson::DGPoissonPrecompute::DGPoissonPrecompute() {
 }
@@ -28,9 +30,24 @@ void benchmarks::mghype::poisson::DGPoissonPrecompute::initCellDoF(
 }
 
 
-tarch::la::Matrix< benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, double > benchmarks::mghype::poisson::DGPoissonPrecompute::getInvertedApproxSystemMatrix(
+tarch::la::Matrix< benchmarks::mghype::poisson::DGPoissonPrecompute::CellUnknowns, benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, double > benchmarks::mghype::poisson::DGPoissonPrecompute::getInvertedApproxSystemMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
+  static tarch::la::Vector<Dimensions, double>  unitCellCentre(0.0);
+  static tarch::la::Vector<Dimensions, double>  unitCellSize(1.0);
 
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > matrixOnReferenceCell = AbstractDGPoissonPrecompute::getInvertedApproxSystemMatrix(
+    unitCellCentre,
+    unitCellSize
+  );
+
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > resultOnReferenceCell = tarch::la::invert( matrixOnReferenceCell );
+
+  #if Dimensions==2
+  return resultOnReferenceCell;
+  #else
+  return 1.0/cellSize(0) * resultOnReferenceCell;
+  #endif
 }
+
