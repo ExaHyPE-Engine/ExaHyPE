@@ -1,5 +1,6 @@
 {% include 'DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.Abstract.generic.template.h' %}
 
+
   protected:
     /**
      * Abstract template class for Discontinuous Galerkin solver.

@@ -418,6 +418,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     # ignore vertex data
     
+    self._use_smart_pointer = use_smart_pointer
     if use_smart_pointer:
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "solution", str(self._unknowns_per_cell) ))
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "residual", str(self._unknowns_per_cell) ))
@@ -614,4 +615,5 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
           "SOLVER_TOLERANCE"            : self._solver_tolerance,
           "CUSTOM_INIT_CELL"            : self._custom_init_cell,
           "INTEGRATION_POINTS"          : self._integration_points,
+          "USE_SMART_POINTER"           : self._use_smart_pointer
           }

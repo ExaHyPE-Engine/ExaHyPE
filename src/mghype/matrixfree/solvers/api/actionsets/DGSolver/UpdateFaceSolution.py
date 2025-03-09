@@ -30,8 +30,7 @@ class UpdateFaceSolution(ActionSet):
     }
 
     // multiply by riemann matrix
-    auto faceSolutionUpdate = 
-      repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * projections;
+    auto faceSolutionUpdate = repositories::{{SOLVER_INSTANCE}}.applyRiemannMatrix( projections );
 
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
       fineGridFace{{SOLVER_NAME}}.setSolution(
@@ -60,17 +59,19 @@ class UpdateFaceSolution(ActionSet):
       repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
       0;
 
-    auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
-
     if ( marker.getSelectedFaceNumber() < Dimensions )
       fineGridFace{{SOLVER_NAME}}.setSolution(
-        boundaryMatrix * fineGridFace{{SOLVER_NAME}}.getRProjection()
+        repositories::{{SOLVER_INSTANCE}}.applyBoundaryConditionMatrix(
+          fineGridFace{{SOLVER_NAME}}.getRProjection()
+        )
       );
 
     else
       fineGridFace{{SOLVER_NAME}}.setSolution(
-        boundaryMatrix * fineGridFace{{SOLVER_NAME}}.getLProjection()
-      );
+        repositories::{{SOLVER_INSTANCE}}.applyBoundaryConditionMatrix(
+          fineGridFace{{SOLVER_NAME}}.getLProjection()
+
+        ));
 
     logTraceOut( "updateFaceSolution::InteriorPenalty");
   }

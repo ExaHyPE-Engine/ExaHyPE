@@ -17,3 +17,32 @@ tarch::la::Matrix< Rows, Cols, double > mghype::composeMatrixFromHWeightedLinear
   }
   return output;
 }
+
+
+
+template <int Rows, int Cols>
+tarch::la::Vector< Rows, double > mghype::applyMatrixFromHWeightedLinearCombination(
+  const std::vector< tarch::la::Matrix< Rows, Cols, double > >&   matrices,
+  const std::vector<int>&                                         scaleFactors,
+  const tarch::la::Vector<Dimensions, double>&                    h,
+  const tarch::la::Vector< Cols, double >&                        v
+) {
+  tarch::la::Vector< Rows, double > result(0.0);
+
+  assertionEquals( scaleFactors.size(), matrices.size() );
+
+  auto scaleIter  = scaleFactors.begin();
+  auto matrixIter = matrices.begin();
+  // no need to compare both iterators, as the vectors have same size
+  for (; matrixIter!=matrices.end(); matrixIter++, scaleIter++) {
+    tarch::la::matVec(
+      (*matrixIter),
+      std::pow(h(0), *scaleIter),
+      v,
+      result
+    );
+  }
+
+  return result;
+}
+

@@ -27,7 +27,11 @@ class ProjectOntoFaces(ActionSet):
     // no tricky indexing needed here, since the whole of the cell
     // solution vector is in scope here.
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double > faceProjections = 
-      repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
+      repositories::{{SOLVER_INSTANCE}}. applyFaceFromCellMatrix(
+        marker.x(), 
+        marker.h(),
+        fineGridCell{{SOLVER_NAME}}.getSolution()
+      );
 
     logTraceInWith3Arguments("ProjectOntoFace", marker.toString(), faceProjections, fineGridCell{{SOLVER_NAME}}.getSolution());
     
