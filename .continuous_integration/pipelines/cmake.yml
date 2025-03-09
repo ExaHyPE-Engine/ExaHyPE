@@ -195,51 +195,6 @@ ExaHyPE2_Tutorials:
     - Build
   retry: 0
 
-ExaHyPE2_Euler:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Euler
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
-ExaHyPE2_Acoustic:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Acoustic
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
-ExaHyPE2_Elastic:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Elastic
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
 ExaHyPE2_ShallowWater:
   stage: Applications
   allow_failure: false
