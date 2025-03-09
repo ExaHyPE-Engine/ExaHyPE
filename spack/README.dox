@@ -45,6 +45,8 @@ spack install exahype2 <OPTIONS>
 ### Installation Examples
 
 ```shell
+spack install exahype2
+spack install exahype2+omp+cuda cuda_arch=70 gpu_backend=cuda
 spack install exahype2+omp+cuda cuda_arch=70 gpu_backend=omp % nvhpc
 ```
 

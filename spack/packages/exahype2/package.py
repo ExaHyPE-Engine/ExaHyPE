@@ -27,7 +27,7 @@ class Exahype2(CMakePackage, CudaPackage):
 
     maintainers("hpcsoftware")
 
-    version("p4", branch="p4")
+    version("muc", branch="muc/exahype")
 
     variant("mpi", default=True, description="Build with MPI support")
     variant("tracer", default=True, description="Build with particle tracer support")
@@ -75,7 +75,7 @@ class Exahype2(CMakePackage, CudaPackage):
         "gpu_backend",
         default="omp",
         description="GPU accelerator backend",
-        values=("omp", "cpp", "sycl"),
+        values=("omp", "cpp", "sycl", "cuda"),
         when="+cuda",
     )
 
@@ -124,3 +124,4 @@ class Exahype2(CMakePackage, CudaPackage):
         env.prepend_path("PEANO_SRC_ROOT_DIR", self.spec.prefix)
         env.prepend_path("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")
+        env.prepend_path("PYTHONPATH", join_path(self.spec.prefix, "lib", "python" + str(self.spec["python"].version.up_to(2)), "site-packages"))

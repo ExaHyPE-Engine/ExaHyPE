@@ -355,9 +355,9 @@ the SISC paper
                               key, value = key_value
                               key = key.split(":")[0].strip()
                               if key == "CMAKE_CXX_COMPILER":
-                                  self.d["CXX"] = value.strip()
+                                  self.d["CXX"] = os.path.basename(value.strip())
                               if key == "CMAKE_Fortran_COMPILER":
-                                  self.d["FC"] = value.strip()
+                                  self.d["FC"] = os.path.basename(value.strip())
                               if key == "WITH_MULTITHREADING":
                                   self.d["MULTITHREADING"] = value.strip()
                               if key == "WITH_GPU":
