@@ -37,12 +37,10 @@ tarch::la::Matrix< benchmarks::mghype::poisson::DGPoissonPrecompute::CellUnknown
   static tarch::la::Vector<Dimensions, double>  unitCellCentre(0.0);
   static tarch::la::Vector<Dimensions, double>  unitCellSize(1.0);
 
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > matrixOnReferenceCell = AbstractDGPoissonPrecompute::getInvertedApproxSystemMatrix(
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > resultOnReferenceCell = AbstractDGPoissonPrecompute::getInvertedApproxSystemMatrix(
     unitCellCentre,
     unitCellSize
   );
-
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > resultOnReferenceCell = tarch::la::invert( matrixOnReferenceCell );
 
   #if Dimensions==2
   return resultOnReferenceCell;
