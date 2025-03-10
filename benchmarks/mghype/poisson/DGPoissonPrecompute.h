@@ -42,4 +42,15 @@ class benchmarks::mghype::poisson::DGPoissonPrecompute: public benchmarks::mghyp
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
+
+    virtual tarch::la::Matrix< benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, benchmarks::mghype::poisson::AbstractDGPoissonPrecompute::CellUnknowns, double > getLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+
+    virtual tarch::la::Vector< CellUnknowns, double > applyLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&      cellCentre,
+      const tarch::la::Vector<Dimensions, double>&      cellSize,
+      const tarch::la::Vector< CellUnknowns, double >&  v
+    ) override;
 };

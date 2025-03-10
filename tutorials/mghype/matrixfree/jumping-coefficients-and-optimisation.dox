@@ -81,6 +81,9 @@ beforehand and is the same in all cells, the whole LU business generates a lot
 of MFLOPS without any sense: It is way better to invert the cell operator once,
 to memorise this outcome and then to reuse it.
 
+
+### Cell update operator
+
 To do so, we open the header of MySolver and declare that we will overwrite the
 cell operator:
 
@@ -144,5 +147,99 @@ as long as we work in two dimensions. In three dimensions, we have to rescale.
 This is obvious one of the simplest variants one can think of, but it 
 illustrates the fundamental idea of a very simple opimisation: We intert the 
 operator per cell only once and then apply this one from hereon.
+
+### Cell assembly
+
+We can now do exactly the same "trick" for the cell operator, too. We tell
+MGHyPE that we will overwrite its built-in assembly
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    virtual tarch::la::Matrix< ... > getLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+
+    virtual tarch::la::Vector< CellUnknowns, double > applyLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&      cellCentre,
+      const tarch::la::Vector<Dimensions, double>&      cellSize,
+      const tarch::la::Vector< CellUnknowns, double >&  v
+    ) override;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and then we implement them in our user class:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tarch::la::Matrix< ... > MySolver::getLocalAssemblyMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  static tarch::la::Vector<Dimensions, double>  unitCellCentre(0.0);
+  static tarch::la::Vector<Dimensions, double>  unitCellSize(1.0);
+
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > resultOnReferenceCell = AbstractMySolver::getLocalAssemblyMatrix(
+    unitCellCentre,
+    unitCellSize
+  );
+
+  #if Dimensions==2
+  return resultOnReferenceCell;
+  #else
+  return cellSize(0) * resultOnReferenceCell;
+ #endif
+}
+
+
+tarch::la::Vector< ... > MySolver::applyLocalAssemblyMatrix(
+  const tarch::la::Vector<Dimensions, double>&      cellCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector< CellUnknowns, double >&  v
+) {
+  return getLocalAssemblyMatrix(cellCentre,cellSize) * v;
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The abstract version (study the generated code in there) has an alternative 
+implementation of applyLocalAssemblyMatrix(), where we use the helper routine
+::mghype::applyMatrixFromHWeightedLinearCombination() which accumulates the 
+outcome in-situ. If we can precompute the operator, we can directly call 
+the mat-vec and rely on the compiler to make this thing fast, hoping that the 
+compiler recognises that the matrix is static. Alternatively, we can also 
+cache the outcome in  applyLocalAssemblyMatrix() via an additional static 
+variable.
+In this case, we obtain
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tarch::la::Vector< ... > MySolver::applyLocalAssemblyMatrix(
+  const tarch::la::Vector<Dimensions, double>&      cellCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const tarch::la::Vector< CellUnknowns, double >&  v
+) {
+  static tarch::la::Vector<Dimensions, double>  unitCellCentre(0.0);
+  static tarch::la::Vector<Dimensions, double>  unitCellSize(1.0);
+
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > resultOnReferenceCell = AbstractMySolver::getLocalAssemblyMatrix(
+    unitCellCentre,
+    unitCellSize
+  );
+
+  #if Dimensions==2
+  return resultOnReferenceCell * v;
+  #else
+  return cellSize(0) * resultOnReferenceCell * v;
+  #endif
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+If you have a more complicated operator, where you can pre-assemble parts of 
+the matrices, you effectively end up with a hybrid of this method and the 
+vanilla one. 
+All of our tweaks here rely on the fact that the abstract base class has the
+operator matrices available, so we can build our code using them. 
+If you pass in None into the Python script, the base class routines will be 
+abstract, i.e. you cannot use them in your bespoke code and you have to write
+all operators yourself.
 
 */
