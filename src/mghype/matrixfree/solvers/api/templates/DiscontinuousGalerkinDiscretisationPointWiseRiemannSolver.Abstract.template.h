@@ -218,38 +218,75 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getLocalAssemblyMatrix(
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getLocalAssemblyMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getRhsMatrix(
+    virtual tarch::la::Vector< CellUnknowns, double > applyLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&      cellCentre,
+      const tarch::la::Vector<Dimensions, double>&      cellSize,
+      const tarch::la::Vector< CellUnknowns, double >&  v
+    ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if RHS_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedApproxSystemMatrix(
+    virtual tarch::la::Vector< CellUnknowns, double > applyRhsMatrix(
+      const tarch::la::Vector<Dimensions, double>&      cellCentre,
+      const tarch::la::Vector<Dimensions, double>&      cellSize,
+      const tarch::la::Vector< CellUnknowns, double >&  v
+    ) {% if RHS_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getInvertedApproxSystemMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) {% if APPROX_SYSTEM_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< CellUnknowns, double > applyInvertedApproxSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&     cellCentre,
+      const tarch::la::Vector<Dimensions, double>&     cellSize,
+      const tarch::la::Vector< CellUnknowns, double >& v
     ) {% if APPROX_SYSTEM_MATRIX is not defined %} = 0 {% endif %};
 
     // no arguments needed
     virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getCellFromFaceMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if CELL_FROM_FACE_PROJECTION is not defined %} = 0 {% endif %};
 
-    // no arguments needed
+    virtual tarch::la::Vector< CellUnknowns, double > applyCellFromFaceMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize,
+      const tarch::la::Vector< FaceUnknownsSolution * TwoTimesD, double >& v
+    ) {% if CELL_FROM_FACE_PROJECTION is not defined %} = 0 {% endif %};
+
     virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getFaceFromCellMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if FACE_FROM_CELL_PROJECTION is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< FaceUnknownsProjection * TwoTimesD, double> applyFaceFromCellMatrix(
+      const tarch::la::Vector<Dimensions, double>&     cellCentre,
+      const tarch::la::Vector<Dimensions, double>&     cellSize,
+      const tarch::la::Vector< CellUnknowns, double>&  v
+    ) {% if FACE_FROM_CELL_PROJECTION is not defined %} = 0 {% endif %};
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix()
       {% if RIEMANN_MATRIX is not defined %} = 0 {% endif %};
 
+    virtual tarch::la::Vector< FaceUnknownsSolution, double> applyRiemannMatrix(
+      const tarch::la::Vector< FaceUnknownsProjection, double>& v
+    ) {% if RIEMANN_MATRIX is not defined %} = 0 {% endif %};
+
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< FaceUnknownsSolution, double> applyBoundaryConditionMatrix(
+      const tarch::la::Vector< FaceUnknownsSolution, double>& v
+    ) {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
     virtual void beginMeshSweep() override;
 

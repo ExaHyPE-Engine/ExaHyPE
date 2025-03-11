@@ -17,6 +17,24 @@ tarch::la::Vector<Rows, Scalar> tarch::la::multiply(
 }
 
 
+/**
+ * Compute r = r + alpha * M * v
+ */
+template <int Rows, int Cols, typename Scalar>
+void tarch::la::matVec(
+  const Matrix<Rows, Cols, Scalar>& matrix,
+  Scalar                            alpha,
+  const Vector<Cols, Scalar>&       v,
+  Vector<Rows, Scalar>&             r
+) {
+  for (int i = 0; i < Rows; i++) {
+    for (int j = 0; j < Cols; j++) {
+      r(i) += alpha * matrix(i, j) * v(j);
+    }
+  }
+}
+
+
 template <int Rows, int Cols, typename Scalar>
 tarch::la::Vector<Rows, Scalar> tarch::la::operator*(
   const Matrix<Rows, Cols, Scalar>& matrix,
