@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 #
 # Recreate build environment:
 # ---------------------------
@@ -57,7 +59,7 @@ AC_PREFIX_DEFAULT("libs")
 #
 # This is just a sanity check whether the right files/directories do exist
 #
-AC_CONFIG_SRCDIR([src/peano4/peano.cpp])
+AC_CONFIG_SRCDIR([src/peano4/peano4.cpp])
 
 #
 # Pipe system-specific findings into a file config.h
@@ -108,11 +110,11 @@ CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 # Note: the flag "-g" is essentially a flag for the compiler driver.
 # Given as a linker flag, the linker does not complain but it will be ignored.
 # Taken from GNU ld documentation: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
-LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
-LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src "
-LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src "
-LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
+LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
 
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
 LDADD_PEANO_2D_STATS="   -lPeano4Core2d_stats   -lTarch_stats"
@@ -1351,13 +1353,14 @@ AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
 AC_CONFIG_FILES([Makefile
   src/Makefile
+  src/tarch/Makefile
+  src/peano4/Makefile
   src/toolbox/blockstructured/Makefile
   src/toolbox/multiprecision/Makefile
   src/toolbox/finiteelements/Makefile
   src/toolbox/loadbalancing/Makefile
   src/toolbox/particles/Makefile
   src/tbb/Makefile
-  src/convert/Makefile
   src/exahype2/Makefile
   src/mghype/Makefile
   src/petsc/Makefile

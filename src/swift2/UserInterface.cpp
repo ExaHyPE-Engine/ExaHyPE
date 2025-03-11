@@ -8,7 +8,7 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
 
-#include "peano4/peano.h"
+#include "peano4/peano4.h"
 
 namespace {
   tarch::logging::Log _log( "swift2" );

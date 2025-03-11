@@ -248,14 +248,14 @@ if ({{PREDICATE}}) {
     #endif
 
     if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-5) ) { FoundCell=true; }
-    
+
     if (FoundCell){
-      parallelDfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+      dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
         int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
         for (int k=0; k<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); k++){
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalCellCount+index+k];
         }
-      } endParallelDfor
+      }
       break;
     }
   }

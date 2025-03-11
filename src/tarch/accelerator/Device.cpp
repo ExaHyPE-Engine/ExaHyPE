@@ -42,10 +42,10 @@ void tarch::accelerator::Device::checkForMemoryLeaks() {
     logWarning("checkForMemoryLeaks()", "WARNING: Detected " << _memoryBlockTable.size() << " memory leaks!");
   }
 
+#if PeanoDebug > 0
   auto itr = _memoryBlockTable.begin();
   auto end = _memoryBlockTable.end();
 
-#if PeanoDebug > 0
   for (; itr != end; ++itr) {
     logDebug("checkForMemoryLeaks()", "Block @" << itr->first << " size: " << itr->second);
   }

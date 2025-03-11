@@ -2,68 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <bitset>
-
 #include "config.h"
-#include "peano4/utils/Globals.h"
+#include "Globals.h"
+
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-
-#if defined(SharedTBB)
-  #if defined(SharedTBBExtension) and !defined(TBB_PREVIEW_BLOCKED_RANGE_ND)
-    #include "tbb/blocked_rangeNd.h"
-  #else
-    #include <oneapi/tbb/blocked_range.h>
-  #endif
-
-  #include <oneapi/tbb/blocked_range2d.h>
-  #include <oneapi/tbb/blocked_range3d.h>
-  #include <oneapi/tbb/parallel_for.h>
-#endif
-
-
-#if defined(SharedSYCL)
-#include "tarch/multicore/sycl/Core.h"
-
-/**
- * @see peano4::utils::dLinearised() and @ref tarch_accelerator_SYCL
- */
-#define CPUGPUMethod SYCL_EXTERNAL
-#else
-#define CPUGPUMethod
-#endif
+#include <bitset>
 
 namespace peano4 {
   namespace utils {
-    /**
-     * Guide loop-level parallelism
-     *
-     * Peano's loop macros allow users to define the logical concurrency
-     * of loops: Is it serial (with dependencies), can it run in parallel
-     * (though there might be dependencies/atomics/critical sections) or
-     * is a loop of SIMT/SIMD type, i.e. without any dependencies.
-     *
-     * Further to that, codes can guide the placement of the loops:
-     *
-     * Value  | Semantics for parallel for | Semantics for simt loop
-     * -------|----------------------------|---------------------------
-     * Serial | Keep it on one core.       | Keep it on one GPU thread
-     *        |                            | or don't use AVX.
-     * Nested | If an outer parallel loop  | Stick to one SM or one
-     *        | grabs a core or n cores,   | core's AVX units.
-     *        | stick to these n cores.    |
-     * SpreadOut | Try to grab additional  | Try to use multiple SMs.
-     *        | cores outside of an        |
-     *        | enclosing parallel region. |
-     *
-     * The flags help performance engineers to balance between overheads
-     * and the maximum concurrency that's made available to a parallel
-     * or SIMT loop.
-     */
-    enum class LoopPlacement { Serial, Nested, SpreadOut };
-
     /**
      * Is used by the z-loop. See macro dforz.
      */
@@ -79,7 +28,7 @@ namespace peano4 {
      *
      * @see dLinearised() for a discussion of GPU annotation
      */
-    CPUGPUMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
+    GPUCallableMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * d-dimensional counterpart of decrement operator
@@ -89,7 +38,7 @@ namespace peano4 {
      * smaller than 0, the component is set to max and the next component is
      * decremented by one.
      */
-    void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
+    GPUCallableMethod void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * d-dimensional counterpart of increment, where individual vector components have different max values
@@ -99,7 +48,7 @@ namespace peano4 {
      * greater than max(0)-1, the component is set zero and the next component is
      * incremented by one. This operation is used often by d-dimensional for-loops.
      */
-    void dInc(tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
+    GPUCallableMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
 
     /**
      * Perform a d-dimensional increment by value increment: The first component
@@ -107,26 +56,26 @@ namespace peano4 {
      * checks the first entry: If it exceeds max, its module value is set, the
      * next component is incremented by increment, and the check continues.
      */
-    void dIncByVector(tarch::la::Vector<Dimensions, int>& counter, int max, int increment);
+    GPUCallableMethod void dIncByVector(tarch::la::Vector<Dimensions, int>& counter, int max, int increment);
 
     /**
      * Perform a scalar increment of a vector: The operation equals a sequence of
      * increment calls to dInc().
      */
-    void dIncByScalar(tarch::la::Vector<Dimensions, int>& counter, int max, int increment);
+    GPUCallableMethod void dIncByScalar(tarch::la::Vector<Dimensions, int>& counter, int max, int increment);
 
     /**
      * Same operation as dInc(tarch::la::Vector<Dimensions,int>,int), but now one dimension is not taken
      * into consideration.
      */
-    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, int doNotExamine);
+    GPUCallableMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, int doNotExamine);
 
     /**
      * Operation similar to dInc, but is given a direction bitset that identifies
      * whether the counters has to be incremented or decremented. See the dforz
      * macro for an example how to use dInc.
      */
-    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, LoopDirection& direction);
+    GPUCallableMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, LoopDirection& direction);
 
     /**
      * Element-wise comparison for the for d-dimensional for loops
@@ -137,7 +86,7 @@ namespace peano4 {
      *
      * @return true if all entries of counter are smaller max
      */
-    CPUGPUMethod int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    GPUCallableMethod int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * Element-wise comparison for the for d-dimensional for loops
@@ -149,14 +98,14 @@ namespace peano4 {
      * @return true if all entries of counter are smaller than their corresponding
      *         entries in max
      */
-    int dCmp(const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
+    GPUCallableMethod int dCmp(const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
 
     /**
      * Compares two vectors with regards to their linearised value
      *
      * @returns true, if dLinearised(counter, XXX) < dLinearised(max, XXX)
      */
-    bool dCmpLinearOrder(
+    GPUCallableMethod bool dCmpLinearOrder(
       const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max
     );
 
@@ -179,44 +128,23 @@ namespace peano4 {
      * Although the mapping might be slow, it is still faster than computing the
      * partial sums of a to the power of b.
      *
-     *
-     * ## GPU programming
-     *
-     * The d-linear loops are used mainly on the host, but I provide a SYCL
-     * implementation of d-linear, too. SYCL does not really distinguish the
-     * host queue from the accelerator queue at the moment. I therefore have to
-     * mark the dLinearised() routine as GPU offloadable. See parallelDfor
-     * for a discussion of when this is required.
-     *
-     * Once annotated, we might still get errors if we use SYCL on the host and
-     * have no GPU offloading (via SYCL) enabled: The macro GPUCallableMethod
-     * in this case is not defined. Actually, it is explicitly defined as
-     * empty, so I cannot even overwrite it. Therefore, I introduce the new
-     * macro
-     *
-     *          CPUGPUMethod
-     *
-     * It delegates to SYCL_EXTERNAL, once SYCL is enabled on the CPU.
-     * Consult @ref tarch_accelerator_SYCL as well for further SYCL details.
-     *
-     *
      * @return the linearisation of the counter, i.e. the k-th component is
      *         multiplied by max^k and the results are accumulated.
      */
-    CPUGPUMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
-    CPUGPUMethod int dLinearised(const std::bitset<Dimensions>& counter);
+    GPUCallableMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    GPUCallableMethod int dLinearised(const std::bitset<Dimensions>& counter);
 
     /**
      * Special 2d variant of dLinearised that works also if you compile with other
      * dimensions.
      */
-    int d2Linearised(const tarch::la::Vector<2, int>& counter, int max);
+    GPUCallableMethod int d2Linearised(const tarch::la::Vector<2, int>& counter, int max);
 
     /**
      * Special 3d variant of dLinearised that works also if you compile with other
      * dimensions.
      */
-    int d3Linearised(const tarch::la::Vector<3, int>& counter, int max);
+    GPUCallableMethod int d3Linearised(const tarch::la::Vector<3, int>& counter, int max);
 
     /**
      * Linearisation not Optimised
@@ -225,7 +153,7 @@ namespace peano4 {
      * optimised at all. It thus allows to have arbitrary argument values. Yet,
      * this version is not optimised, i.e. it might become a bottleneck.
      */
-    int dLinearisedWithoutLookup(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    GPUCallableMethod int dLinearisedWithoutLookup(const tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * Counterpart of dLinearised().
@@ -234,12 +162,12 @@ namespace peano4 {
      * optimised at all. It thus allows to have arbitrary argument values. Yet,
      * this version is not optimised, i.e. it might become a bottleneck.
      */
-    tarch::la::Vector<Dimensions, int> dDelinearised(int value, int max);
+    GPUCallableMethod tarch::la::Vector<Dimensions, int> dDelinearised(int value, int max);
 
     /**
      * Delinearization not optimised.
      */
-    tarch::la::Vector<Dimensions, int> dDelinearisedWithoutLookup(int value, int max);
+    GPUCallableMethod tarch::la::Vector<Dimensions, int> dDelinearisedWithoutLookup(int value, int max);
 
 
     void setupLookupTableForDLinearised();
@@ -252,13 +180,13 @@ namespace peano4 {
      *
      * @return a vector containing zero values only.
      */
-    CPUGPUMethod tarch::la::Vector<Dimensions, int> dStartVector();
+    GPUCallableMethod tarch::la::Vector<Dimensions, int> dStartVector();
 
     /**
      * @return a vector containing only zero values besides the dim-th entry. This
      *         entry is set value.
      */
-    tarch::la::Vector<Dimensions, int> dStartVector(int dim, int value);
+    GPUCallableMethod tarch::la::Vector<Dimensions, int> dStartVector(int dim, int value);
 
     /**
      * Creates a start vector. Each component is set either 0 or max-1 depending
@@ -266,13 +194,9 @@ namespace peano4 {
      *
      * @return a start vector for an oscillating loop.
      */
-    tarch::la::Vector<Dimensions, int> dStartVector(int max, const LoopDirection& direction);
+    GPUCallableMethod tarch::la::Vector<Dimensions, int> dStartVector(int max, const LoopDirection& direction);
   }
 }
-
-
-std::string toString(peano4::utils::LoopPlacement);
-
 
 /**
  * d-dimensional Loop
@@ -313,260 +237,6 @@ std::string toString(peano4::utils::LoopPlacement);
 #define dfor(counter, max) \
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max))
-
-
-/**
- * @page peano4_utils_Loop_parallel Parallel version of for loops and dfor
- *
- * We offer two main flavours of parallel for macros: a parallel dfor
- * and a dfor mapping onto SIMT, i.e. bare of internal and external
- * dependencies. The latter is subject to some restrictions:
- *
- * - Don't use virtual function calls.
- * - Take into account that the loop body works with copies of local variables
- *   (you can still use pointers).
- * - Don't use synchronisation primitives.
- *
- * All macros want to have a C++ identifier counter. This counter will be a
- * well-defined integer vector within the loop body. The counters always
- * start at 0, but you can shift them obviously internally to have another
- * offset. The max argument is either an integer, or you can paste in a
- * Vector. The usage for the latter looks similar to
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * parallelDforWithSchedulerInstructions(volume,
- * (tarch::la::Vector<2,int>({numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch})),
- * loopPlacement)
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * By using a vector, you can have rectangular iteration ranges and not only
- * squares/cubes. The syntax with the additional brackets is a little bit
- * annoying, but some LLVM front-ends otherwise get confused. Try without
- * them, but don't be surprised if it doesn't work.
- *
- * The mapping onto your variables of choice is very similar to what we see a
- * lot in CUDA and SYCL kernels. In the simplest case, you write
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * parallelDforWithSchedulerInstructions(volume, ...) {
- *   int firstIndex = volume(0);
- *   int secondIndex = volume(1);
- * } endParallelDfor
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * In this context, it is also interesting to study tarch::la::slice() which
- * allows you to extract whole subvectors from the index vector in one rush.
- *
- *
- * ## Generic realisation remarks
- *
- * - I convert the max argument always into counter##Max and then work against
- *   the vector. This way, I can support both vectors and scalars. In the
- *   former case, the copy constructor is used. In the latter case the
- *   constructor accepting a scalar.
- * - I embed the whole loop into another scope (brackets). Otherwise, I run
- *   into issues if users write things like
- *   ~~~~~~~~~~~~~~~~~~~~~~~~~~
- *   parallelDfor(i,3) {
- *     [...]
- *   } endParallelDfor
- *   parallelDfor(i,3) {
- *     [...]
- *   } endParallelDfor
- *   ~~~~~~~~~~~~~~~~~~~~~~~~~~
- *   as the corresponding vector iMax then would be declared twice.
- *
- *
- * ## OpenMP
- *
- * OpenMP relies on pragmas around the nested for loops, which is tricky as
- * parallelDfor itself is a pragma. I hijack the construct
- *
- *              _Pragma( "my embedded pragma" )
- *
- * which is, to the best of my knowledge, a C99 instruction and not C++17. So I
- * simply assume and hope that this works. Note that the _Pragma statement
- * yields a #pragma, i.e. you are not allowed to write
- *
- *              _Pragma( "#pragma my embedded pragma" )
- *
- * as this would unfold into
- *
- *              #pragma #pragma my embedded pragma
- *
- * Further to that, variables of the pragma are not replaced in the unfolded
- * pragma. Therefore, I have to go this unorthodox way with the helper loop
- * guard.
- *
- * For the available OpenMP variants, it neither makes sense to have parallel
- * fors nor does it work properly:
- *
- * - If we run the kernel within a task (which we typically do), the task
- *   cannot spawn out onto multiple cores.
- * - I found no way to have multiple pragmas in a row where we toggle through
- *   the options via if.
- *
- * If we use a taskloop in OpenMP, the default visibility of all variables
- * will be taskfirst. Furthermore, the created copies will be subject to a
- * copy constructor and their destructor. This means that we alter the
- * visibility when we switch from parallel for or no parallelisation into a
- * taskloop. Therefore, I manually change the default visibility to shared.
- *
- *
- * ## TBB
- *
- * TBB is, in my opinion, the most straightforward implementation, as it
- * supports d-dimensional ranges: It has loop collapsing built-in. I use the
- * TBB ranges, embed a nested for loop into the range, and then puzzle the
- * counter of interest together from the ranges indices again.
- *
- *
- * ## SYCL
- *
- * Different to TBB, SYCL has this accelerator paradigm in mind, even though we
- * submit to the host queue. Therefore, we have to capture the variables via =,
- * we have to ensure all routines (such as dLinearised() are marked as
- * GPU offloadable), we do not have any dynamic scheduling, grain sizes, and so
- * forth. Most importantly, we cannot call virtual functions or functors from
- * SYCL kernels.
- *
- * For all of these reasons, we do not support parallel for for SYCL, and we do
- * not support SIMT parallelism either on the host. In theory, the latter should
- * work straightforwardly, but I got major issues with copy constructors et al
- * trying to go down this route, so I eventually dismissed it as a stupid idea.
- *
- * SIMT loops are always to be embedded into parallel loops. We do not embed
- * the other way round. Codes like the batched kernels will use SIMT loops
- * right from the start. So it would be important that the SIMT loops exploit
- * parallelism. If we make compromises, we have to make compromises on the
- * parallel loop level. Once SYCL abandons the need for call by value in the
- * capture clause of the functors, we should be able to use the SYCLised simt
- * macros for Peano's loops.
- */
-#define parallelFor(counter, max) \
-  parallelForWithSchedulerInstructions(counter, max, ::peano4::utils::LoopPlacement::SpreadOut)
-
-#define simtFor(counter, max) \
-  simtForWithSchedulerInstructions(counter, max, ::peano4::utils::LoopPlacement::SpreadOut)
-
-#define parallelDfor(counter, max) \
-  parallelDforWithSchedulerInstructions(counter, max, ::peano4::utils::LoopPlacement::SpreadOut)
-
-#if Dimensions == 2
-#define parallelDforWithSchedulerInstructions(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions2d(counter, max, loopPlacement)
-
-#define parallelDPlusOneForWithSchedulerInstructions(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions3d(counter, max, loopPlacement)
-
-#define parallelDPlusTwoForWithSchedulerInstructions(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions4d(counter, max, loopPlacement)
-
-#define simtDforWithSchedulerInstructions(counter, max, loopPlacement) \
-  simtDforWithSchedulerInstructions2d(counter, max, loopPlacement)
-
-#define simtDPlusOneForWithSchedulerInstructions(counter, max, loopPlacement) \
-  simtDforWithSchedulerInstructions3d(counter, max, loopPlacement)
-
-#define simtDPlusTwoForWithSchedulerInstructions(counter, max, loopPlacement) \
-  simtDforWithSchedulerInstructions4d(counter, max, loopPlacement)
-#elif Dimensions == 3
-#define parallelDforWithSchedulerInstructions(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions3d(counter, max, loopPlacement)
-
-#define parallelDPlusOneForWithSchedulerInstructions(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions4d(counter, max, loopPlacement)
-
-#define parallelDPlusTwoForWithSchedulerInstructions(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions5d(counter, max, loopPlacement)
-
-#define simtDforWithSchedulerInstructions(counter, max, loopPlacement) \
-  simtDforWithSchedulerInstructions3d(counter, max, loopPlacement)
-
-#define simtDPlusOneForWithSchedulerInstructions(counter, max, loopPlacement) \
-  simtDforWithSchedulerInstructions4d(counter, max, loopPlacement)
-
-#define simtDPlusTwoForWithSchedulerInstructions(counter, max, loopPlacement) \
-  simtDforWithSchedulerInstructions5d(counter, max, loopPlacement)
-#endif
-
-
-#if defined(SharedOMP) and defined(OpenMPTaskLoop)
-#include "omp/Loop.h"
-#elif defined(SharedOMP) and !defined(OpenMPTaskLoop)
-#include "omp/LoopWithoutTaskLoop.h"
-#elif defined(SharedTBB)
-#include "tbb/Loop.h"
-#elif defined(SharedCPP)
-//and __cplusplus >= 202101L
-#include "cpp/Loop.h"
-#elif defined(SharedSYCL)
-#include "sycl/Loop.h"
-#else
-#define parallelForWithSchedulerInstructions(counter, max, loopPlacement) \
-  for (int counter = 0; counter < max; counter++) {
-
-#define parallelDforWithSchedulerInstructions2d(counter, max, loopPlacement) \
-  { \
-    tarch::la::Vector<2, int> counter##Max(max); \
-    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
-      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) { \
-        tarch::la::Vector<2, int> counter = {counter##0, counter##1};
-
-#define parallelDforWithSchedulerInstructions3d(counter, max, loopPlacement) \
-  { \
-    tarch::la::Vector<3, int> counter##Max(max); \
-    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
-      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) \
-        for (int counter##2 = 0; counter##2 < counter##Max(2); counter##2 ++) { \
-          tarch::la::Vector<3, int> counter = {counter##0, counter##1, counter##2};
-
-#define parallelDforWithSchedulerInstructions4d(counter, max, loopPlacement) \
-  { \
-    tarch::la::Vector<4, int> counter##Max(max); \
-    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
-      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) \
-        for (int counter##2 = 0; counter##2 < counter##Max(2); counter##2 ++) \
-          for (int counter##3 = 0; counter##3 < counter##Max(3); counter##3 ++) { \
-            tarch::la::Vector<4, int> counter = {counter##0, counter##1, counter##2, counter##3};
-
-#define parallelDforWithSchedulerInstructions5d(counter, max, loopPlacement) \
-  { \
-    tarch::la::Vector<5, int> counter##Max(max); \
-    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
-      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) \
-        for (int counter##2 = 0; counter##2 < counter##Max(2); counter##2 ++) \
-          for (int counter##3 = 0; counter##3 < counter##Max(3); counter##3 ++) \
-            for (int counter##4 = 0; counter##4 < counter##Max(4); counter##4 ++) { \
-              tarch::la::Vector<5, int> counter = {counter##0, counter##1, counter##2, counter##3, counter##4};
-
-#define endParallelFor }
-#define endParallelDfor \
-  } \
-  }
-
-
-#define simtForWithSchedulerInstructions(counter, max, loopPlacement) \
-  for (int counter = 0; counter < max; counter++) {
-
-#define endSimtFor endParallelFor
-
-#define simtDforWithSchedulerInstructions2d(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions2d(counter, max, loopPlacement)
-
-#define simtDforWithSchedulerInstructions3d(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions3d(counter, max, loopPlacement)
-
-#define simtDforWithSchedulerInstructions4d(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions4d(counter, max, loopPlacement)
-
-#define simtDforWithSchedulerInstructions5d(counter, max, loopPlacement) \
-  parallelDforWithSchedulerInstructions5d(counter, max, loopPlacement)
-
-#define endSimtDfor endParallelDfor
-
-#endif
-
 
 /**
  * Shortcut For dfor(counter,4)
@@ -612,7 +282,6 @@ std::string toString(peano4::utils::LoopPlacement);
         copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
     }
-
 
 /**
  * Shortcut For dfor(counter,3)

@@ -96,25 +96,24 @@ int """ + full_qualified_classname + """::domainPatchCount=0;
       return """\n"""
 
   TemplateInitialCondition = """
-  if ({{PREDICATE}}) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-    parallelDfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+  if ({{PREDICATE}}) {
+    logTraceIn("touchCellFirstTime(...)---InitialCondition");
+    dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
+        ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume),
         ::exahype2::fd::getGridCellSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
         {{GRID_IS_CONSTRUCTED}}
       );
       //index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    } endParallelDfor
-    
-    // relevant for tracing et al which kicks in if and only if cell has been
-    // updated
+    }
+
+    // Relevant for tracing et al which kicks in if and only if cell has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
-  } 
+  }
 """
 
   def get_template_for_restarting(self):
@@ -144,14 +143,14 @@ if ({{PREDICATE}}) {
     #endif
 
     if ( tarch::la::equals( marker.x() - 0.5*marker.h(), offset, 1e-5) ) { FoundCell=true; }
-    
+
     if (FoundCell){
-      parallelDfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+      dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
         int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
         for (int k=0; k<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); k++){
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+k]=domainDataFromFiles[i*({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})*totalCellCount+index+k];
         }
-      } endParallelDfor
+      }
       break;
     }
   }
@@ -202,12 +201,12 @@ if ({{PREDICATE}}) {
     }
   }
 
-  parallelDfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+  dfor(volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) {
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}) ;
       for (int i=0; i<=({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); i++){
             fineGridCell{{UNKNOWN_IDENTIFIER}}.value[index+i]=patchDataFromFile[index+i];
       }
-  } endParallelDfor
+  }
 
   fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(CheckpointTimeStamp);
   fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);

@@ -82,8 +82,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
         destinationHaloSize,
         NumberOfUnknowns,
         sourceData,
-        destinationDataLinear,
-        ::peano4::utils::LoopPlacement::SpreadOut
+        destinationDataLinear
       );
 
       interpolateCellDataAssociatedToVolumesIntoOverlappingCell_matrix(
@@ -96,8 +95,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
         indices[index].data(),
         indptr[index].data(),
         sourceData,
-        destinationDataMatrix,
-        ::peano4::utils::LoopPlacement::SpreadOut
+        destinationDataMatrix
       );
 
       for (int i=0; i<destinationSize; i++) {
@@ -159,8 +157,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
         destinationHaloSize,
         NumberOfUnknowns,
         sourceData,
-        destinationDataLinear,
-        ::peano4::utils::LoopPlacement::SpreadOut
+        destinationDataLinear
       );
 
       interpolateCellDataAssociatedToVolumesIntoOverlappingCell_secondOrder(
@@ -170,8 +167,7 @@ void toolbox::blockstructured::tests::IandRVolumetricTest::
         destinationHaloSize,
         NumberOfUnknowns,
         sourceData,
-        destinationDataSecondOrder,
-        ::peano4::utils::LoopPlacement::SpreadOut
+        destinationDataSecondOrder
       );
 
       int    sourceWidth      = sourcePatchSize + 2 * sourceHaloSize;
