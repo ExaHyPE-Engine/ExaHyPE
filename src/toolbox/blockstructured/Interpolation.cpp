@@ -82,7 +82,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
 #if Dimensions == 3
   tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d, P1d, false);
 #else
-  tarch::la::DynamicMatrix* P               = new tarch::la::DynamicMatrix(P1d);
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix(P1d);
 #endif
 
   int pattern = 0;
@@ -947,8 +947,7 @@ void toolbox::blockstructured::
 #if Dimensions == 2
   const int patchSize = numberOfDoFsPerAxisInPatch * 2 * overlap;
 #else
-  const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch
-                        * 2 * overlap;
+  const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2 * overlap;
 #endif
 
   logDebug(
@@ -1249,95 +1248,71 @@ void toolbox::blockstructured::
     int haloDestinationPatch,
     int unknowns,
     const double* __restrict__ sourceValues,
-    double* __restrict__ destinationValues,
-    ::peano4::utils::LoopPlacement parallelisation
-  ) {
-  assertion(
-    numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch
-  );
+    double* __restrict__ destinationValues
+) {
+  assertion(numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch);
 
-  simtDforWithSchedulerInstructions(
-    destinationVolume,
-    numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch,
-    parallelisation
-  ) const int baseIndexDestination
-    = peano4::utils::dLinearised(
-        destinationVolume,
-        numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
-      )
-      * unknowns;
-  for (int unknown = 0; unknown < unknowns; unknown++) {
-    destinationValues[baseIndexDestination + unknown] = 0.0;
-  }
+  dfor(destinationVolume, numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch) {
+    const int baseIndexDestination = peano4::utils::dLinearised(
+      destinationVolume,
+      numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
+    ) * unknowns;
 
-  dfor(sourceVolume, numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch) {
-    tarch::la::Vector<Dimensions, double>
-      normalisedSourcePosition = tarch::la::multiplyComponents(
-        tarch::la::
-          Vector<Dimensions, double>(1.0 / numberOfDoFsPerAxisInSourcePatch),
-        tarch::la::convertScalar<double>(sourceVolume
-        ) + tarch::la::Vector<Dimensions, double>(0.5 - haloSourcePatch)
-      );
-    tarch::la::Vector<Dimensions, double>
-      normalisedDestinationPosition = tarch::la::multiplyComponents(
-        tarch::la::Vector<Dimensions, double>(
-          1.0 / numberOfDoFsPerAxisInDestinationPatch
-        ),
-        tarch::la::convertScalar<double>(destinationVolume
-        ) + tarch::la::Vector<Dimensions, double>(0.5 - haloDestinationPatch)
-      );
-
-    int outsidePatchAlongCoordinateAxis = 0;
-    for (int d = 0; d < Dimensions; d++) {
-      //        outsidePatchAlongCoordinateAxis +=  ( sourceVolume(d) <
-      //        haloSourcePatch ) ? 1 : 0; outsidePatchAlongCoordinateAxis +=  (
-      //        sourceVolume(d) >=
-      //        haloSourcePatch+numberOfDoFsPerAxisInSourcePatch ) ? 1 : 0;
-      if (sourceVolume(d) < haloSourcePatch)
-        outsidePatchAlongCoordinateAxis++;
-      if (sourceVolume(d) >= haloSourcePatch + numberOfDoFsPerAxisInSourcePatch)
-        outsidePatchAlongCoordinateAxis++;
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      destinationValues[baseIndexDestination + unknown] = 0.0;
     }
-    const bool isFromUnitialisedDiagonal = outsidePatchAlongCoordinateAxis > 1;
 
-    double weight = 1.0;
-    for (int d = 0; d < Dimensions; d++) {
-      double distanceAlongCoordinateAxis = std::abs(
-        normalisedDestinationPosition(d) - normalisedSourcePosition(d)
+    dfor(sourceVolume, numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch) {
+      tarch::la::Vector<Dimensions, double> normalisedSourcePosition = tarch::la::multiplyComponents(
+        tarch::la::Vector<Dimensions, double>(1.0 / numberOfDoFsPerAxisInSourcePatch),
+        tarch::la::convertScalar<double>(sourceVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloSourcePatch)
       );
-      double h = 1.0 / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
-      distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / h;
-      weight *= std::max(0.0, distanceAlongCoordinateAxis);
-    }
-#if !defined(SharedSYCL)
-    assertion(tarch::la::greaterEquals(weight, 0.0));
-    assertion(tarch::la::smallerEquals(weight, 1.0));
-#endif
+      tarch::la::Vector<Dimensions, double> normalisedDestinationPosition = tarch::la::multiplyComponents(
+        tarch::la::Vector<Dimensions, double>(1.0 / numberOfDoFsPerAxisInDestinationPatch),
+        tarch::la::convertScalar<double>(destinationVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloDestinationPatch)
+      );
 
-    tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
-    if (isFromUnitialisedDiagonal) {
-#pragma unroll
+      int outsidePatchAlongCoordinateAxis = 0;
       for (int d = 0; d < Dimensions; d++) {
-        amendedSourceVolume(d
-        ) = std::max(amendedSourceVolume(d), haloSourcePatch);
-        amendedSourceVolume(d) = std::min(
-          amendedSourceVolume(d),
-          haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1
-        );
+        //outsidePatchAlongCoordinateAxis += (sourceVolume(d) < haloSourcePatch) ? 1 : 0;
+        //outsidePatchAlongCoordinateAxis +=  (sourceVolume(d) >= haloSourcePatch + numberOfDoFsPerAxisInSourcePatch) ? 1 : 0;
+        if (sourceVolume(d) < haloSourcePatch)
+          outsidePatchAlongCoordinateAxis++;
+        if (sourceVolume(d) >= haloSourcePatch + numberOfDoFsPerAxisInSourcePatch)
+          outsidePatchAlongCoordinateAxis++;
+      }
+      const bool isFromUnitialisedDiagonal = outsidePatchAlongCoordinateAxis > 1;
+
+      double weight = 1.0;
+      for (int d = 0; d < Dimensions; d++) {
+        double distanceAlongCoordinateAxis = std::abs(normalisedDestinationPosition(d) - normalisedSourcePosition(d));
+        double h = 1.0 / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
+        distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / h;
+        weight *= std::max(0.0, distanceAlongCoordinateAxis);
+      }
+      #if !defined(SharedSYCL)
+      assertion(tarch::la::greaterEquals(weight, 0.0));
+      assertion(tarch::la::smallerEquals(weight, 1.0));
+      #endif
+
+      tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
+      if (isFromUnitialisedDiagonal) {
+        #pragma unroll
+        for (int d = 0; d < Dimensions; d++) {
+          amendedSourceVolume(d) = std::max(amendedSourceVolume(d), haloSourcePatch);
+          amendedSourceVolume(d) = std::min(amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1);
+        }
+      }
+
+      int baseIndexSource = peano4::utils::dLinearised(
+        amendedSourceVolume,
+        numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch
+      ) * unknowns;
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        destinationValues[baseIndexDestination + unknown] += weight * sourceValues[baseIndexSource + unknown];
       }
     }
-
-    int baseIndexSource = peano4::utils::dLinearised(
-                            amendedSourceVolume,
-                            numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch
-                          )
-                          * unknowns;
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      destinationValues[baseIndexDestination + unknown]
-        += weight * sourceValues[baseIndexSource + unknown];
-    }
   }
-  endSimtDfor
 }
 
 
@@ -1352,8 +1327,7 @@ void toolbox::blockstructured::
     const int* __restrict__ columnIndices,
     const int* __restrict__ rowIndices,
     const double* __restrict__ sourceValues,
-    double* __restrict__ destinationValues,
-    ::peano4::utils::LoopPlacement parallelisation
+    double* __restrict__ destinationValues
   ) {
   int destinationSize
     = (numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch)
@@ -1382,10 +1356,8 @@ void toolbox::blockstructured::
     int haloDestinationPatch,
     int unknowns,
     const double* __restrict__ sourceValues,
-    double* __restrict__ destinationValues,
-    ::peano4::utils::LoopPlacement parallelisation
+    double* __restrict__ destinationValues
   ) {
-
   int                                indices[18];
   tarch::la::Vector<Dimensions, int> stencil[18];
   double*                            centerValues = new double[unknowns];
@@ -1600,27 +1572,19 @@ void toolbox::blockstructured::
     int haloDestinationPatch,
     int unknowns,
     const double* __restrict__ sourceValues,
-    double* __restrict__ destinationValues,
-    ::peano4::utils::LoopPlacement parallelisation
+    double* __restrict__ destinationValues
   ) {
-  assertion(
-    numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch
-  );
+  assertion(numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch);
 
-  simtDforWithSchedulerInstructions(
-    destinationVolume,
-    numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch,
-    parallelisation
-  ) const int baseIndexDestination
-    = peano4::utils::dLinearised(
-        destinationVolume,
-        numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
-      )
-      * unknowns;
-  for (int unknown = 0; unknown < unknowns; unknown++) {
-    destinationValues[baseIndexDestination + unknown] = 0.0;
+  dfor(destinationVolume, numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch) {
+    const int baseIndexDestination = peano4::utils::dLinearised(
+      destinationVolume,
+      numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
+    ) * unknowns;
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      destinationValues[baseIndexDestination + unknown] = 0.0;
+    }
   }
-  endSimtDfor
 }
 
 

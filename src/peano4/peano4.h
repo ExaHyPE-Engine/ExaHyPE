@@ -2,9 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/utils/Globals.h"
-#include "tarch/la/Vector.h"
+#include "utils/Globals.h"
 
+#include "tarch/la/Vector.h"
 
 /**
  * @dir src/peano4

@@ -666,8 +666,7 @@ namespace toolbox {
       const int* __restrict__ columnIndices,
       const int* __restrict__ rowIndices,
       const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues,
-      ::peano4::utils::LoopPlacement parallelisation
+      double* __restrict__ destinationValues
     );
 
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_secondOrder(
@@ -677,8 +676,7 @@ namespace toolbox {
       int haloDestinationPatch,
       int unknowns,
       const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues,
-      ::peano4::utils::LoopPlacement parallelisation
+      double* __restrict__ destinationValues
     );
 
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
@@ -688,8 +686,7 @@ namespace toolbox {
       int haloDestinationPatch,
       int unknowns,
       const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues,
-      ::peano4::utils::LoopPlacement parallelisation
+      double* __restrict__ destinationValues
     );
 
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_fourthOrder(
@@ -699,8 +696,7 @@ namespace toolbox {
       int haloDestinationPatch,
       int unknowns,
       const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues,
-      ::peano4::utils::LoopPlacement parallelisation
+      double* __restrict__ destinationValues
     );
 
     namespace internal {

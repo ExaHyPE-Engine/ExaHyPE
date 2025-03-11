@@ -1,3 +1,6 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 bin_PROGRAMS = UnitTests2d UnitTests3d \
                UnitTests2d_debug UnitTests3d_debug \
                UnitTests2d_stats UnitTests3d_stats \

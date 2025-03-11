@@ -146,11 +146,11 @@ void swift2::kernels::forAllParticlesVectoriseWithCheckPreamble(
     const int    currentChunkSize    = std::min(MaxVectorSize,numberOfAssignedParticles-currentFirstParticleInChunk);
     unsigned int evaluatedPredicates = 0;
 
-    simtFor(particleInChunkNumber,currentChunkSize) {
+    for (int particleInChunkNumber = 0; particleInChunkNumber < currentChunkSize; particleInChunkNumber++) {
       const bool evaluate    = predicate(marker,*(pFirstParticle+currentFirstParticleInChunk+particleInChunkNumber));
       int        evaluateBit = evaluate ? 1: 0;
       evaluatedPredicates   |= (evaluateBit << particleInChunkNumber);
-    } endSimtFor
+    }
 
     auto update2 = [&]( unsigned int evaluatedPredicates, int indexOfFirstParticle) -> void {
       const int    currentChunkSize    = std::min(2,numberOfAssignedParticles-indexOfFirstParticle);
@@ -158,9 +158,9 @@ void swift2::kernels::forAllParticlesVectoriseWithCheckPreamble(
         // degenerated, return
       }
       else if (std::popcount(evaluatedPredicates)==2 and currentChunkSize==2) {
-        simtFor(particleInChunkNumber,2) {
+        for (int particleInChunkNumber = 0; particleInChunkNumber < 2; particleInChunkNumber++) {
           f(marker,*(pFirstParticle+indexOfFirstParticle+particleInChunkNumber));
-        } endSimtFor
+        }
       }
       else {
         if (indexOfFirstParticle & 0b01) {
@@ -178,9 +178,9 @@ void swift2::kernels::forAllParticlesVectoriseWithCheckPreamble(
         // degenerated, return
       }
       else if (std::popcount(evaluatedPredicates)>=3 and currentChunkSize==4) {
-        simtFor(particleInChunkNumber,4) {
+        for (int particleInChunkNumber = 0; particleInChunkNumber < 4; particleInChunkNumber++) {
           f(marker,*(pFirstParticle+indexOfFirstParticle+particleInChunkNumber));
-        } endSimtFor
+        }
       }
       else {
         constexpr int LeftMask   = 0b0011;
@@ -198,9 +198,9 @@ void swift2::kernels::forAllParticlesVectoriseWithCheckPreamble(
         // degenerated, return
       }
       else if (std::popcount(evaluatedPredicates)>=6 and currentChunkSize==8) {
-        simtFor(particleInChunkNumber,8) {
+        for (int particleInChunkNumber = 0; particleInChunkNumber < 8; particleInChunkNumber++) {
           f(marker,*(pFirstParticle+indexOfFirstParticle+particleInChunkNumber));
-        } endSimtFor
+        }
       }
       else {
         constexpr int LeftMask   = 0b00001111;
