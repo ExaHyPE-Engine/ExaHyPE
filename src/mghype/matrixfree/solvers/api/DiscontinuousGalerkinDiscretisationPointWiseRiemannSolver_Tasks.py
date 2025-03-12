@@ -19,14 +19,23 @@ from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution  import ProjectIn
 from .actionsets.PlotDGDataInPeanoBlockFormat                   import PlotDGDataInPeanoBlockFormat
 
 
+import peano4
+
+
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks(DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver):
   """!
      
-  Simple solver which maps the DG steps onto separate mesh traversals
+  DG solver adding tasks to baseline code
   
-  Everything inherits from next door, except the add_to_solve method.
 
   See the documentation for solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+  first. The class adds a few simple features:
+  
+  1. We create a cell marker which holds the task numbers. This one is added to
+     the mesh within add_to_Peano4_datamodel().
+
+  
+    
   """
   def __init__(self,
               name,
@@ -59,7 +68,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks(Discontinu
               enable_plotting = True, # sometimes we want to disable standard plotting...,
               plot_predicate = "true", # enable custom plotting behaviour
               solver_includes = "",
-              use_smart_pointer = True
               ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks, self ).__init__(
       name,
@@ -92,6 +100,38 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks(Discontinu
       enable_plotting,
       plot_predicate,
       solver_includes,
-      use_smart_pointer,
+      use_smart_pointer = True,
     )
 
+    self._task_name = "DGTaskMarker"
+    self._cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(self._task_name)
+
+        
+  def add_to_init_solution(self, observer):
+    """!
+        
+    See superclass' constructor
+    
+    We ask the superclass to add all of its action sets to the project's
+    observer. After that, we add our own action set to the algorithm 
+    step.
+    
+    """
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks, self ).add_to_init_solution( observer )
+    observer.add_action_set( peano4.toolbox.api.AssignNumbersToCells(self._task_name) )
+
+    
+  def add_to_solve(self, observer):
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks, self ).add_to_solve( observer )
+    observer.add_action_set( peano4.toolbox.api.AssignNumbersToCells(self._task_name) )
+
+  
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks, self ).add_to_Peano4_datamodel( datamodel, verbose )
+    datamodel.add_cell(self._cell_marker_for_tasks)
+
+    
+  def add_use_statements(self, observer):
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks, self ).add_use_statements( observer )
+    observer.use_cell(  self._cell_marker_for_tasks)
+    

@@ -13,7 +13,7 @@
 #include "peano4/utils/Globals.h"
 
 #include "Constants.h"
-#include "vertexdata/{{SOLVER_NAME}}.h"
+
 #include "celldata/{{SOLVER_NAME}}.h"
 #include "facedata/{{SOLVER_NAME}}.h"
 

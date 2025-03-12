@@ -35,7 +35,6 @@ class Solver:
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-#    datamodel.add_vertex(self._vertex_data)
     datamodel.add_face(self._face_data)
     datamodel.add_cell(self._cell_data)
     
@@ -46,8 +45,6 @@ class Solver:
     in child class.
     
     """
-#    observer.use_vertex(self._vertex_data)
-# @todo das muss natuerlich weg
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
   

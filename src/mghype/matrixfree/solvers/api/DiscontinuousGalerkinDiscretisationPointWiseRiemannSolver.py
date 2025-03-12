@@ -488,6 +488,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
     Solution initialisation
     
+    Is given the project's observer and asks the solver to add all of its 
+    action sets to this one.
+
+    @param observer: Observer
+      Observer object of the underlying project representing its algorithmic
+      step. Routine is asked to add its own action sets to this step.
+      
     """
     if self._custom_init_actionset is None:
       observer.add_action_set( InitHigherOrderDofs(self) )
