@@ -17,7 +17,7 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
-parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "dg-tasks"], required=True, help="Pick variant" )
 parser.add_argument("-var", "--variant",              dest="variant",        choices=["rediscretise", "precompute"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
 args = parser.parse_args()
@@ -50,8 +50,8 @@ if args.realisation == "dg-sweeps":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
 elif args.realisation == "dg-shifted-and-fused":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-elif args.realisation == "tasks":
-    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+elif args.realisation == "dg-tasks":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks
 
 name = "DGPoisson"
 if args.variant == "rediscretise":
