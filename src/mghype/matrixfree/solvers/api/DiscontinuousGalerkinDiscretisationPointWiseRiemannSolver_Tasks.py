@@ -11,12 +11,8 @@ import jinja2
 from .Solver import Solver
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 
-from .actionsets.InitHigherOrderDofs                            import InitHigherOrderDofs
-from .actionsets.DGSolver.UpdateResidual                        import UpdateResidual
-from .actionsets.DGSolver.ProjectOntoFaces                      import ProjectOntoFaces
-from .actionsets.DGSolver.UpdateFaceSolution                    import UpdateFaceSolution
-from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution  import ProjectIntoCellAndUpdateCellSolution
-from .actionsets.PlotDGDataInPeanoBlockFormat                   import PlotDGDataInPeanoBlockFormat
+from .actionsets.DGSolver.UpdateResidualWithTasks                        import UpdateResidualWithTasks
+from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolutionWithTasks  import ProjectIntoCellAndUpdateCellSolutionWithTasks
 
 
 import peano4
@@ -31,10 +27,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks(Discontinu
   See the documentation for solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
   first. The class adds a few simple features:
   
-  1. We create a cell marker which holds the task numbers. This one is added to
-     the mesh within add_to_Peano4_datamodel().
-
-  
+  1. We create a cell marker which holds the task numbers. 
+  2. This one is added to the mesh within add_to_Peano4_datamodel().
+  3. We tell both the mesh initialisation and each solve step to use the data.
+  4. We swap out the residual computation and the cell update with a bespoke
+     task-based implementation
     
   """
   def __init__(self,
@@ -103,10 +100,16 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks(Discontinu
       use_smart_pointer = True,
     )
 
-    self._task_name = "DGTaskMarker"
+    self._task_name = self._name + "DGTaskMarker"
     self._cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(self._task_name)
 
-        
+    # Stays the same
+    #    self._action_set_update_face_solution                        =  UpdateFaceSolution(self, descend_order+1, False) 
+    #    self._action_set_project_onto_faces                          =  ProjectOntoFaces(self, descend_order+3, False) 
+    self._action_set_project_into_cell_and_update_cell_solution  =  ProjectIntoCellAndUpdateCellSolutionWithTasks(self, self._action_set_project_into_cell_and_update_cell_solution.descend_invocation_order, False) 
+    self._action_set_update_residual                             =  UpdateResidualWithTasks(self, self._action_set_update_residual.descend_invocation_order, False) 
+
+    
   def add_to_init_solution(self, observer):
     """!
         

@@ -4,7 +4,7 @@ import peano4
 import jinja2
 
 
-class UpdateResidual(ActionSet):
+class UpdateResidualWithTasks(ActionSet):
   """!
 
   This is for DG solver
@@ -19,23 +19,56 @@ class UpdateResidual(ActionSet):
     // only one condition here - ensures that we don't do this when restricting the residual
     repositories::{{SOLVER_INSTANCE}}.updateResidual()
   ) {
-    logTraceInWith4Arguments("updateResidual", 
+    logTraceInWith4Arguments("touchCellFirstTime(...)", 
       fineGridCell{{SOLVER_NAME}}.getSolution(),
       fineGridCell{{SOLVER_NAME}}.getRhs(),
       marker.toString(),
       repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() )
     );
+    
+    auto rhsPointer      = fineGridCell{{SOLVER_NAME}}.getRhsSmartPointer();
+    auto solutionPointer = fineGridCell{{SOLVER_NAME}}.getSolutionSmartPointer();
+    auto residualPointer = fineGridCell{{SOLVER_NAME}}.getResidualSmartPointer();
+    
+    /**
+     * Without the mutable keyword, the copied four arguments will stay const.
+     * C++ then complains as any assignment to a const copy becomes invalid.
+     * 
+     * @todo There might be a lot of scope for optimisation
+     * 
+     * It remains an open question to which degree these implementations can be
+     * optimised if we avoid copying forth and back into tarch vectors. We 
+     * could set residualPointer to zero and then accumulate the outcome 
+     * directly into this smart pointer.
+     */
+    auto updateResidualFunctor = [rhsPointer, solutionPointer, residualPointer, marker]() mutable -> bool {
+      tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
+        repositories::{{SOLVER_INSTANCE}}.applyRhsMatrix( marker.x(), marker.h(), rhsPointer.toVector() );
+      
+      r = r - repositories::{{SOLVER_INSTANCE}}.applyLocalAssemblyMatrix(marker.x(), marker.h(), solutionPointer.toVector() );
+      
+      residualPointer = r;
+      
+      return false;
+    };
 
-    // write Mb into it, i.e. mass matrix * rhs
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
-      repositories::{{SOLVER_INSTANCE}}.applyRhsMatrix( marker.x(), marker.h(), fineGridCell{{SOLVER_NAME}}.getRhs() );
 
-    // also subtract A^cc u^c
-    r = r - repositories::{{SOLVER_INSTANCE}}.applyLocalAssemblyMatrix(marker.x(), marker.h(), fineGridCell{{SOLVER_NAME}}.getSolution() );
+    // The factor of two takes into account that there are two task types per 
+    // cell. See ProjectIntoCellAndUpdateCellSolutionWithTasks for details.
+    int taskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2;
+    logDebug( "touchCellFirstTime(...)", "spawn task " << taskNumber );
+    tarch::multicore::TaskWithCopyOfFunctor* task = new tarch::multicore::TaskWithCopyOfFunctor(
+      tarch::multicore::Task::DontFuse,
+      tarch::multicore::Task::DefaultPriority,
+      updateResidualFunctor
+    );  
+    tarch::multicore::spawnTask(
+      task,
+      tarch::multicore::NoInDependencies,
+      taskNumber
+    );
 
-    fineGridCell{{SOLVER_NAME}}.setResidual( r );
-
-    logTraceOut("updateResidual");
+    logTraceOut("touchCellFirstTime(...)");
   }
   """
 
@@ -44,13 +77,14 @@ class UpdateResidual(ActionSet):
                solver,
                descend_invocation_order=0,
                parallel=True):
-    super( UpdateResidual, self ).__init__(
+    super( UpdateResidualWithTasks, self ).__init__(
       descend_invocation_order,
       parallel
     )
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["TASK_MARKER"]        = solver._task_name + "MeshNumber"
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -71,7 +105,7 @@ class UpdateResidual(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_UpdateResidual"
+    return __name__.replace(".py", "").replace(".", "_")
     
   def user_should_modify_template(self):
     """!
@@ -93,4 +127,6 @@ class UpdateResidual(ActionSet):
     return """
 #include "../repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
+#include "tarch/multicore/Task.h"
+#include "tarch/multicore/multicore.h"
 """
