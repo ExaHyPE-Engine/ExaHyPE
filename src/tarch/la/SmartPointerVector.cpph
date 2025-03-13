@@ -97,6 +97,22 @@ tarch::la::SmartPointerVector<Size,Scalar>&  tarch::la::SmartPointerVector<Size,
 
 
 template<int Size, typename Scalar>
+tarch::la::SmartPointerVector<Size,Scalar>&  tarch::la::SmartPointerVector<Size,Scalar>::operator= (
+  const Scalar&  value
+) {
+  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
+  assertion(this != &toAssign);
+  #endif
+
+  for (int i=0; i<Size; i++) {
+    _values[i] = value;
+  }
+
+  return *this;
+}
+
+
+template<int Size, typename Scalar>
 tarch::la::SmartPointerVector<Size,Scalar>& tarch::la::SmartPointerVector<Size,Scalar>::operator=( const Vector<Size,Scalar>& vector ) {
   for (int i=0; i<Size; i++) _values[i] = vector(i);
   return *this;

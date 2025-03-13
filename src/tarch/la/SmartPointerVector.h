@@ -127,6 +127,14 @@ struct tarch::la::SmartPointerVector {
     inline SmartPointerVector<Size,Scalar>& operator=( const Vector<Size,Scalar>& vector );
 
     /**
+     * Assign all entries the same value
+     *
+     * As we work with smart pointers, we can return a copy here. Actually, I
+     * got some compiler errors when I tried to return a reference.
+     */
+    inline SmartPointerVector<Size,Scalar>& operator=( const Scalar& vector );
+
+    /**
      * Returns the number of components of the SmartPointerVector.
      */
     int size() const;
