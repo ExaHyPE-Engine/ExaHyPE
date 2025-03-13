@@ -459,8 +459,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     descend_order = 0
     self._action_set_update_face_solution                        =  UpdateFaceSolution(self, descend_order+1, False) 
     self._action_set_project_into_cell_and_update_cell_solution  =  ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) 
-    self._action_set_project_onto_faces                          =  ProjectOntoFaces(self, descend_order+3, False) 
-    self._action_set_update_residual                             =  UpdateResidual(self, descend_order+4, False) 
+    self._action_set_project_onto_faces                          =  ProjectOntoFaces(self, descend_order+3, True) 
+    self._action_set_update_residual                             =  UpdateResidual(self, descend_order+3, True) 
 
     
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
