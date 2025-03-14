@@ -44,7 +44,7 @@ namespace tbb {
  * tbb_extension_trace.a. This means that you have to add
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * --with-multithreading=tbb LDFLAGS=-Lsrc/tbb LIBS=-ltbb_extension
+ * --with-multithreading=tbb_extension LDFLAGS=-Lsrc/tbb LIBS=-ltbb_extension
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * to your build. Peano's autotools configuration will do this for you.
