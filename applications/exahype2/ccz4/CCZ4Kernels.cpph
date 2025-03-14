@@ -1018,6 +1018,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         for (int i = 0; i < 3; i++) BgradQ[55+i] = 0.0;
     }
 }
+/*
 
 //we write the quantities hydrodynamics needs required explicitiy to make stuff more clearly
 //for source term, we need most of the quantities (51 in total)
@@ -1112,3 +1113,5 @@ void applications::exahype2::ccz4::hydro_primitive_reconstruct(
 {
     //todo
 }
+
+*/
