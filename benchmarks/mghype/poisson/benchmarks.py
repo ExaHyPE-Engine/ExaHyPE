@@ -20,6 +20,7 @@ parser.add_argument("-m",   "--meshsize",             dest="meshsize",       req
 parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "dg-tasks"], required=True, help="Pick variant" )
 parser.add_argument("-var", "--variant",              dest="variant",        choices=["rediscretise", "precompute"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
+parser.add_argument("-t",   "--max-trees",            dest="max_trees",      type=int, default=0, help="Number of trees")
 args = parser.parse_args()
 
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
@@ -108,7 +109,12 @@ project.set_global_simulation_parameters(
   max_iterations                   = max_iterations
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false)" )
+if args.max_trees>0:
+    max_trees = args.max_trees
+else:
+    max_trees = "::exahype2::LoadBalancingConfiguration::UseNumberOfThreads"
+
+project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, {}, {})".format(max_trees, max_trees) )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
