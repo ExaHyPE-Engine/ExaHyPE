@@ -1,16 +1,3 @@
 .RunOnlyOn:
   rules:
-    - if: $CI_COMMIT_BRANCH == "p4"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "p4" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == "exahype"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "exahype" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == "muc/exahype"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "muc/exahype" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == "applications"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "applications" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == "infrastructure"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "infrastructure" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == "multigrid"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "multigrid" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == "particles"
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "particles" && $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: '$CI_COMMIT_BRANCH =~ /^muc\//'
