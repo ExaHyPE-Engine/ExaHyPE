@@ -12,4 +12,3 @@
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "multigrid" && $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_COMMIT_BRANCH == "particles"
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "particles" && $CI_PIPELINE_SOURCE == 'merge_request_event'
-

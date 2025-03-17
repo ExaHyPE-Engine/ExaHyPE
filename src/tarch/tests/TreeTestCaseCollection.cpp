@@ -73,8 +73,6 @@ void tarch::tests::TreeTestCaseCollection::run( const std::string& prefix ) {
     _testCases.empty()
   ) {
     logInformation += "... WARNING: no tests defined ... ";
-    double x = 3.0/0.0;
-    logInformation += std::to_string(x);
   }
 
   // run nested test cases recursively

@@ -12,7 +12,7 @@ end_time = 0.1
 polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
 project = exahype2.Project(
-    ["tests", "exahype2", "aderdg"], ".", executable="ADER-DG-AMR-SWE"
+    ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-AMR"
 )
 
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
