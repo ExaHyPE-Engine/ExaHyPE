@@ -26,14 +26,16 @@ Let @f$ C: \mathcal{T} \mapsto \mathcal{P} @f$ assign each tree node to a comput
 
 There is only one operation available: @f$ split(p_i, p_j, n) @f$ operates on @f$ \{ n_k: C(n_k)=p_i \} \neq \emptyset @f$
 and @f$ \{ n_l: C(n_l)=p_j \} = \emptyset @f$.
-It takes @f$ \hat n \geq n @f$ nodes assigned to @f$ p_i @f$ and
+It takes @f$ n \leq \hat n @f$ leaf nodes assigned to @f$ p_i @f$ and
 assigns them to @f$ p_j @f$.
-Hereby, @f$ n @f$ is the number of leaf nodes associated to @f$ p_i @f$.
+Hereby, @f$ \hat n @f$ is the number of leaf nodes associated to @f$ p_i @f$.
 The split consequently might also reassign some non-leaf nodes.
 
 W.l.g. we may assume that the root @f$ n_0 @f$ is originally assigned to the
 first available compute resource: @f$ C(n_0) = p_0 @f$.
 
+Notice we can not merge subtrees, i.e., split is not allowed to operate if 
+@f$ \{ n_l: C(n_l)=p_j \} \neq \emptyset @f$.
 
 ## Tree construction
 
@@ -68,6 +70,18 @@ The @f$ \approx @f$ sign is used, as we work with integers and hence cannot ensu
 exact equality.
 We might also be willing to accept a small, fixed deterioration from the optimum.
 
+For a more advance metric of measuring the quality of the splitting, we introduce the 
+splitting quality score @f$ w=C_2 \cdot \text{SplitCost}+C_1 \cdot \text{Imbalance} @f$,
+where @f$ \text{SplitCost}=\sum split(...) @f$ is the sum up of costmetric output for 
+every split operation, and @f$ \text{Imbalance}=MAX(\mathcal{T}_{leaves}(p_i)+C_3 \text{Surface}(p_i)) - MIN(\mathcal{T}_{leaves}(p_i)+C_3 \text{Surface}(p_i)) @f$.
+@f$\text{Surface}(p_i)@f$ is the spatial boundaries for the subtree associated with @f$ p_i @f$, as the tree 
+represents an adaptive refinement of a spatial domain. The smaller the quality score is, the better the splitting algorithm is.
+
+In the current problem, @f$ C_3 \ll 1 @f$. i.e., for now, we do not care too much about the surface size as long as
+all leaves are spatially connected. We also set @f$ C_2 \ll C_1 @f$ (holds even for the superlinear model of splitting cost),
+i.e., the balance among compute resources is the top priority.
+
+
 ## Challenge
 
 This challenge in principle is very simple: We take the whole tree, count the number
@@ -75,7 +89,7 @@ of leaves and issue a series of splitting calls. However, we want to
 make the splitting as cheap as possible:
 There is a cost function @f$ F( split(p_i, p_j, n) ) @f$ which scales (superlinearly)
 in the number @f$ n @f$.
-This parameter from above is the number of leaves of the tree at this point.
+This parameter from above is the number of leaves moved in this operation.
 Due to the cost function, it consequently might be reasonable to issue splits while
 the tree is constructed and not at the very end.
 In this case, @f$ n @f$ denotes the number of leaves at this point of the tree
@@ -141,5 +155,43 @@ it allows an algorithm to query more information about the tree before it
 continues, i.e. it can hold back with splitting decisions and instead tell
 the algorithm to continue to construct the tree (in certain areas) before it
 comes to its next decision.
+
+# Example
+
+We provide an example of (online) tree splitting. Below is a tree of four levels, where 
+only the first nodes on levels 2 and 3 have children. The tree is constructed level by
+level, going through stages (I) to (IV). As we only have the split operation, the three good 
+two-split candidates can be 
+
+@image html visualise_tree_split_example0.png
+
+(1) split the first node in stage (II) to the second tree and finish the following 
+construct. The imbalancing would be @f$ |7C_1-3C_1|=4C_1 @f$ (omit the surface term), with a split cost of @f$ 1C_2 @f$
+(assuming linear costmetric). The total quality score would be @f$ 4C_1+C_2 @f$ (the smaller the better).
+
+@image html visualise_tree_split_example1.png
+
+(2) split the first two nodes in stage (III) to the second tree and finish the following
+construct. The imbalancing would be @f$ |5C_1-5C_1|=0 @f$, with a split cost of @f$ 2C_2 @f$.
+The total quality score would be @f$ 2C_2 @f$.
+
+@image html visualise_tree_split_example2.png
+
+(3) Split the first two nodes on level 3 and all in level 4 in stage (IV) to the 
+second tree. The imbalance would be @f$ |5C_1-5C_1|=0 @f$, with a split cost of @f$ 5C_2 @f$ (number of leaves
+moved). The total quality score would be @f$ 5C_2 @f$.
+
+It is quite clear that option (1) is not good as it chooses an early, aggressive tree splitting,
+though the splitting cost is cheap, the heavy imbalance indicates it is not a good strategy. Comparing 
+options (2) and (3) is a little more tricky: (2) has a smaller score, however, it has to 
+"foresee" that the first node is going to be refined to make this clever decision. (3), on the other
+hand, does not have this issue, as at stage (IV) the tree has been constructed completely. Of course, it 
+then has to pay the price for moving more nodes in the split operation. 
+
+To summarise, option (1) is not acceptable, option (3) is acceptable but expensive, and option (2) is best but 
+requires a clever splitting strategy. In code practices we hope to first find an algorithm to achieve (3), and then 
+an algorithm to achieve (2).
+
+
 
 */

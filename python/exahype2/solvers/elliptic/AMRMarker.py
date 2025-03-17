@@ -22,7 +22,7 @@ import peano4.datamodel.DaStGen2
 
 
 class AMRMarker(object):
-  """!
+  r"""!
   
     A very simple Poisson equation system solver to identify AMR transitions
     

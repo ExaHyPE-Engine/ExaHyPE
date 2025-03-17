@@ -4,7 +4,7 @@ import peano4
 import exahype2
 
 project = exahype2.Project(
-    ["tests", "exahype2", "aderdg"], ".", executable="ADER-DG-Limiting-Euler-Airfoil"
+    ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-Limiting"
 )
 
 dimensions = 2
@@ -101,8 +101,8 @@ eigenvalues = """
   const double u = Q[normal + 1] * irho;
 """
 
-ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name="ADERSolver",
+aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    name="ADERDGSolver",
     order=order,
     min_cell_h=min_h,
     max_cell_h=max_h,
@@ -116,10 +116,10 @@ ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     + """
     return std::max(std::abs(u-c), std::abs(u+c));""",
 )
-ader_solver.add_kernel_optimisations(
+aderdg_solver.add_kernel_optimisations(
     polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto
 )
-project.add_solver(ader_solver)
+project.add_solver(aderdg_solver)
 
 fv_solver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
     name="FVSolver",
@@ -171,7 +171,7 @@ project.add_solver(fv_solver)
 
 limiter = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
-    regular_solver=ader_solver,
+    regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
     limiting_criterion_implementation="""return (Q[4] == 1.0);""",
 )
@@ -203,6 +203,6 @@ project = project.generate_Peano4_project("False")
 project.build(make_clean_first=True)
 
 print(fv_solver)
-print(ader_solver)
+print(aderdg_solver)
 print(limiter)
 print(project)
