@@ -110,7 +110,6 @@ if __name__ == "__main__":
 ExaHyPE 2 scaling plotter:
 
 A generic script to create speedup plots.
-
 """
     )
     parser.add_argument(
@@ -243,7 +242,7 @@ A generic script to create speedup plots.
                     os.remove(data_file)
 
                 if args.verbose:
-                    print("have successfully parsed {} files".format(len(data_files)))
+                    print("Have successfully parsed {} files".format(len(data_files)))
 
                 if len(data_files) > 0:
                     visualise(data_points, symbol_counter, colour_counter)

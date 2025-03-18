@@ -33,7 +33,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 void tarch::multicore::Core::configure( int numberOfThreads) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
-    logWarning( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take smaller value to avoid overbooking" );
+    logDebug( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take smaller value to avoid overbooking" );
   }
   int maxThreads = std::min(omp_get_num_procs(), omp_get_max_threads());
 

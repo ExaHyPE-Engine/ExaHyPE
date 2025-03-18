@@ -82,7 +82,7 @@ void toolbox::loadbalancing::CostMetrics::updateGlobalView() {
     _minimumOfMaximumOfRankWeights     = _minimumOfMaximumOfRankWeightsIn;
 
     if ( _globalWeight < _localRankWeight ) {
-      logInfo(
+      logDebug(
         "updateGlobalView()",
         "local number of cells (" << _localRankWeight << ") is bigger than global cell count (" << _globalWeight <<
         "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Statistics might have inconsistent view of world"

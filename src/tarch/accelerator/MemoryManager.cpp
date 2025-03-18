@@ -75,7 +75,6 @@ void tarch::accelerator::MemoryManager::free(void* pointer, int device) {
 }
 
 tarch::accelerator::MemoryManager::~MemoryManager() {
-  dumpStatistics();
   clearWithoutLock();
 }
 
@@ -200,7 +199,7 @@ void tarch::accelerator::MemoryManager::dumpStatistics() {
   if (not MemoryManager::getInstance().getMemoryPages().empty()) {
     msg << MemoryManager::getInstance().getNumberOfUsedPages() +
            MemoryManager::getInstance().getNumberOfFreePages()
-        << " page(s): ";
+        << " Page(s): ";
 
     for (const auto& memoryPage : MemoryManager::getInstance().getMemoryPages()) {
       msg << "(#" << memoryPage.first << ":";
@@ -219,7 +218,7 @@ void tarch::accelerator::MemoryManager::dumpStatistics() {
     // TODO: Use memory locations to report device and host memory.
   }
 
-  msg << "system: "
+  msg << "System: "
       << getMemoryUsage(MemoryUsageFormat::MByte) << "/"
       << getFreeMemory(MemoryUsageFormat::MByte) << "/"
       << getTotalMemory(MemoryUsageFormat::MByte);

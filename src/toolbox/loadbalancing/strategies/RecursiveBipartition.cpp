@@ -184,8 +184,6 @@ void toolbox::loadbalancing::strategies::RecursiveBipartition::finishStep() {
   updateState();
 
   _statistics.notifyOfStateChange(_state);
-
-  dumpStatistics();
 }
 
 

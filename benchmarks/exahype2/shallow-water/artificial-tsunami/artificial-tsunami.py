@@ -3,19 +3,21 @@
 import peano4
 import exahype2
 
-end_time=10.0
-width=[10000, 10000]  # [m]
-offset=[-5000, -5000]  # [m]
-min_depth=4
-amr_levels=0
-dg_order=5
-number_of_snapshots=0
-build_mode="Release"
-storage="CallStack"
-output="solutions"
-load_balancing_strategy="SpreadOutOnceGridStagnates"
-load_balancing_quality=0.99
-trees=-2
+end_time = 10.0
+width = [10000, 10000]  # [m]
+offset = [-5000, -5000]  # [m]
+min_depth = 4
+amr_levels = 0
+dg_order = 5
+number_of_snapshots = 0
+build_mode = "Release"
+storage = "CallStack"
+output = "solutions"
+# load_balancing_strategy="SpreadOutOnceGridStagnates"
+load_balancing_strategy = "SpreadOut"
+# load_balancing_strategy = "RecursiveSplit"
+load_balancing_quality = 0.99
+trees = -2
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -57,7 +59,7 @@ refinement_criterion = """
   return result;
 """
 
-max_h = (1.1 * min(width) / (3.0**min_depth))
+max_h = 1.1 * min(width) / (3.0**min_depth)
 min_h = max_h * 3.0 ** (-amr_levels)
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
@@ -76,8 +78,12 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     eigenvalues="return applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal);",
 )
 aderdg_solver.plot_description = ", ".join({"h": 1, "hu": 1, "hv": 1, "b": 1}.keys())
-aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[storage], exahype2.solvers.Storage[storage])
-aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
+aderdg_solver.switch_storage_scheme(
+    exahype2.solvers.Storage[storage], exahype2.solvers.Storage[storage]
+)
+aderdg_solver.add_kernel_optimisations(
+    is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
+)
 aderdg_solver.add_user_solver_includes(
     """
 #include "../../../../applications/exahype2/shallow-water/SWE.h"
@@ -106,7 +112,7 @@ project.set_global_simulation_parameters(
     max_end_time=end_time,
     first_plot_time_stamp=0.0,
     time_in_between_plots=time_in_between_plots,
-    periodic_BC=[False, False]
+    periodic_BC=[False, False],
 )
 
 if load_balancing_strategy != "None":
@@ -121,8 +127,10 @@ if load_balancing_strategy != "None":
     )
     project.set_load_balancing(strategy, configuration)
 
-project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(build_mode))
-project = project.generate_Peano4_project(verbose=True)
+project.set_Peano4_installation(
+    "../../../../", mode=peano4.output.string_to_mode(build_mode)
+)
+project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")

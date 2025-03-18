@@ -262,6 +262,6 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
   // close output file
   file.close();
   #else
-  logWarning( "writeToCSV(string)", "no statistics available. Recompile with -DTrackStatistics for runtime sampling" );
+  logDebug("writeToCSV(string)", "No statistics available. Recompile with -DTrackStatistics for runtime sampling");
   #endif
 }

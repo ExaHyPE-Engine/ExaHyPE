@@ -110,8 +110,6 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
       }
     }
   }
-
-  dumpStatistics();
 }
 
 

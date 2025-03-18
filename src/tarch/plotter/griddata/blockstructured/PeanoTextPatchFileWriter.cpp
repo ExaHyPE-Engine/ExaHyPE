@@ -176,7 +176,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     break;
   case IndexFileMode::AppendNewData:
     if (not std::filesystem::exists(_indexFile)) {
-      logInfo("PeanoTextPatchFileWriter(...)", "no index file " << _indexFile << " found. Create new one");
+      logInfo("PeanoTextPatchFileWriter(...)", "No index file " << _indexFile << " found. Create new one");
       createEmptyIndexFile();
     } else if (tarch::la::smaller(
                  timeStamp,
@@ -187,7 +187,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
                )) {
       logWarning(
         "PeanoTextPatchFileWriter(...)",
-        "there is an index file "
+        "There is an index file "
           << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile()
           << ". Will be overwritten as we dump data for time " << timeStamp
       );
@@ -198,7 +198,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     if (tarch::la::smaller(getLatestTimeStepInIndexFile(), timeStamp, DefaultTimeStampPrecision)) {
       logDebug(
         "PeanoTextPatchFileWriter(...)",
-        "create new dataset for time stamp "
+        "Create new dataset for time stamp "
           << timeStamp << " linking to " << _fileName << " as last time stamp had been " << getLatestTimeStepInIndexFile()
       );
       addNewDatasetToIndexFile(timeStamp);
@@ -206,7 +206,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     addNewFileToCurrentDataSetInIndexFile(_fileName);
     break;
   }
-  logDebug("PeanoTextPatchFileWriter(...)", "index file is ready");
+  logDebug("PeanoTextPatchFileWriter(...)", "Index file is ready");
 
   _snapshotFileOut << std::scientific;
 }

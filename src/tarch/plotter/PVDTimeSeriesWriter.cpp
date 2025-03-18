@@ -20,7 +20,7 @@ double tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile( std::s
 
   std::tuple< double, int, std::vector<std::string> > fileData = parseFile( dataFile );
   double result = std::get<0>(fileData);
-  logDebug( "getLatestTimeStepInIndexFile(string)", "latest timestamp is " << result );
+  logDebug( "getLatestTimeStepInIndexFile(string)", "Latest timestamp is " << result );
   return result;
 }
 
@@ -103,7 +103,7 @@ void tarch::plotter::PVDTimeSeriesWriter::writeFile( const std::string& filename
       out << p << std::endl;
     }
   } else {
-    logError( "createEmptyNewFile(std::string)", "failed to open " << filename );
+    logError( "createEmptyNewFile(std::string)", "Failed to open " << filename );
   }
 }
 
@@ -131,7 +131,7 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snaps
     lines.push_back( createFileEntry(dataFile, timeStamp, 0) );
   }
 
-  logDebug( "appendNewDataSet(...)", "no of lines=" << lines.size() );
+  logDebug( "appendNewDataSet(...)", "No of lines=" << lines.size() );
 
   addFileTail(lines);
   writeFile( filename, lines );

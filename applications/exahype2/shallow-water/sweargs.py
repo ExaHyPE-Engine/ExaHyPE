@@ -5,6 +5,7 @@ import argparse
 import peano4
 import exahype2
 
+
 class SWEArgumentParser(argparse.ArgumentParser):
     def __init__(self):
         super(SWEArgumentParser, self).__init__(
@@ -66,7 +67,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "-m",
             "--build-mode",
             choices=peano4.output.CompileModes,
-            default=peano4.output.CompileModes[0], # Release
+            default=peano4.output.CompileModes[0],  # Release
             help="|".join(peano4.output.CompileModes),
         )
 
@@ -119,7 +120,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             type=str,
             choices=[e.name for e in exahype2.solvers.Storage],
             default="CallStack",
-            help="The storage scheme to use."
+            help="The storage scheme to use.",
         )
 
         available_load_balancing_strategies = [
@@ -127,6 +128,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "SpreadOut",
             "SpreadOutHierarchically",
             "SpreadOutOnceGridStagnates",
+            "RecursiveSplit",
             "RecursiveBipartition",
             "SplitOversizedTree",
             "cascade::SpreadOut_RecursiveBipartition",
@@ -136,7 +138,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "-lbs",
             "--load-balancing-strategy",
             choices=available_load_balancing_strategies,
-            default="SpreadOutOnceGridStagnates",
+            default="SpreadOut",
             help="|".join(available_load_balancing_strategies),
         )
         self.add_argument(
