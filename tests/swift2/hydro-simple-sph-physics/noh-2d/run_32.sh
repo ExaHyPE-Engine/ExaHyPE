@@ -5,7 +5,7 @@ set -e
 # Script to run experiment (Noh 2D)
 
 # set threads number
-export OMP_NUM_THREADS=4
+export OMP_NUM_THREADS=1
 
 # Parameters
 N_PART=32

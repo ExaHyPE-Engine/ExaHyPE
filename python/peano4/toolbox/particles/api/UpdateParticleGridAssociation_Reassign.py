@@ -142,6 +142,8 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
   """
     __Template_ReassignAndLiftWithinCell = jinja2.Template(
         """
+  // Start template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_Reassign.py
+
   for (int i=0; i<TwoPowerD; i++) {
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin();
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
@@ -179,6 +181,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             (*p)->getX(),
             partID,
             (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+            marker.x(),
             marker.h(),
             _spacetreeId,
             "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
@@ -224,7 +227,9 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             ),
             3.0*marker.h(),
             _spacetreeId,
-            "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
+            "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell",
+            marker.x(),
+            marker.h()
           );
           _numberOfParticleReassignmentsOnCurrentLevel++;
           break;
@@ -267,7 +272,9 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             ),
             3.0*marker.h(),
             _spacetreeId,
-            "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
+            "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell",
+            marker.x(),
+            marker.h()
           );
           coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TwoPowerD).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
@@ -280,6 +287,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
     }
   }
 
+  // End template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_Reassign.py]
 """
     )
 

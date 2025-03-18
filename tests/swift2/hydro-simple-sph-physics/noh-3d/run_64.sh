@@ -13,12 +13,13 @@ END_TIME=0.6
 TIMESTEP_SIZE=0.0001
 CFL_FACTOR=0.2
 PLOT_DELTA=0.05
-CELL_SIZE=0.3
+CELL_SIZE_MIN=0.35
+CELL_SIZE_MAX=0.35
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
 echo python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
-python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -csmin $CELL_SIZE_MIN -csmax $CELL_SIZE_MAX
 
 # run experiment
 echo 'running experiment...'

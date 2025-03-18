@@ -16,7 +16,12 @@ import shutil
 
 parser = argparse.ArgumentParser(description="SPH test script")
 parser.add_argument(
-    "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
+    "-j",
+    "--parallel-builds",
+    dest="j",
+    type=int,
+    default=-1,
+    help="Parallel builds",
 )
 parser.add_argument(
     "-v",
@@ -74,9 +79,17 @@ parser.add_argument(
     help="Value of the CFL constant",
 )
 parser.add_argument(
-    "-cs",
-    "--cell-size",
-    dest="cell_size",
+    "-csmax",
+    "--cell-size-max",
+    dest="cell_size_max",
+    type=float,
+    default=0.3,
+    help="Cell size (default 0.3)",
+)
+parser.add_argument(
+    "-csmin",
+    "--cell-size-min",
+    dest="cell_size_min",
     type=float,
     default=0.3,
     help="Cell size (default 0.3)",
@@ -127,47 +140,38 @@ project = swift2.Project(
 )
 
 
-# see also modifications around line 270
-
-#  if (
-#      args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
-#      and args.realisation.split(".")[1] == Storage_Scattered
-#      and args.realisation.split(".")[2] == Sorting_MultiscaleSort
-#  ):
-#  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-#  )
+# MULTISCALE SORT, SCATTERED MEMORY
 #  project.initialisation_steps_task_graph_compiler = (
 #      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
 #  )
-
-#  elif (
-#      args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
-#      and args.realisation.split(".")[1] == Storage_Scattered
-#      and args.realisation.split(".")[2] == Sorting_BucketSort
-#  ):
 #  project.algorithm_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
 #  )
-#  project.initialisation_steps_task_graph_compiler = (
-#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
-#  )
-
-#  elif (
-#      args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
-#      and (
-#          args.realisation.split(".")[1] == Storage_ContinuousPerVertex
-#          or args.realisation.split(".")[1] == Storage_GlobalContinuous
-#      )
-#      and args.realisation.split(".")[2] == Sorting_MultiscaleSort
-#  ):
-
+#
+#  MULTISCALE SORT, COALESCED MEMORY
 project.algorithm_steps_task_graph_compiler = (
     swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
 )
 project.initialisation_steps_task_graph_compiler = (
     swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
 )
+
+# BUCKET SORT, SCATTERED MEMORY
+#  project.algorithm_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+#  )
+#  project.initialisation_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+#  )
+#
+# BUCKET SORT, COALESCED MEMORY
+#  project.algorithm_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
+#  )
+#  project.initialisation_steps_task_graph_compiler = (
+#      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
+#  )
+#
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -186,9 +190,8 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     initial_time_step_size=args.timestep_size,
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
-    particles_per_cell=20,
-    min_h=args.cell_size,
-    max_h=args.cell_size,
+    min_h=args.cell_size_min,
+    max_h=args.cell_size_max,
 )
 
 
@@ -200,8 +203,8 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 ########################################################################################
 
 offset = [0, 0, 0]
-domain_size = [1, 1, 1]
-periodic_boundary_conditions = [False, False, False]
+domain_size = [2, 2, 2]
+periodic_boundary_conditions = [True, True, True]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
@@ -233,7 +236,9 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 10.0 * dx
+hydro_H_max = 0.49999 * args.cell_size_min
+if hydro_H_max < 3.0 * dx:
+    raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
@@ -262,17 +267,15 @@ particle.set_parameters()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-
 #  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
-#  particle_set.generator = (
-#      peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
-#          particle_set
-#      )
-#  )
-#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
-particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
-    particle_set
+particle_set.generator = (
+    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
 )
+#  )
+#  #  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
+#  particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
+#      particle_set
+#  )
 #  else:
 #  particle_set.generator = (
 #      peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
@@ -326,7 +329,9 @@ project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesAlongCartesianGrid(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
-        distance_between_particles_along_one_axis=1.0 / args.particle_number,
+        distance_between_particles_along_one_axis=(
+            domain_size[0] / (args.particle_number)
+        ),
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
 """,
