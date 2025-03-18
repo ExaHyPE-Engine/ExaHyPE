@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
-import re
 import sys
 
 import peano4
@@ -9,13 +8,13 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from SWE import *
 
 initial_conditions = """
   const double bathymetryBeforeEarthquake = topologyParser.sampleBathymetry(x(0), x(1));
   const double displacement               = topologyParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
-  using s  = VariableShortcuts;
   Q[s::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
   Q[s::hu] = 0.0;
   Q[s::hv] = 0.0;
@@ -23,7 +22,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -62,16 +60,15 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux="applications::exahype2::swe::flux(Q, x, h, t, dt, normal, F);",
-    ncp="applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
-    eigenvalues="return applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal);",
+    flux=flux,
+    ncp=nonconservative_product,
+    eigenvalues=max_eigenvalue,
 )
 aderdg_solver.plot_description = ", ".join(unknowns.keys())
 aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 aderdg_solver.add_user_solver_includes(
     """
-#include "../SWE.h"
 #include "../TopologyParser.h"
 """
 )

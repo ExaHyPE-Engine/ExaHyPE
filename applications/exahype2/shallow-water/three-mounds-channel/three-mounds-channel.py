@@ -8,6 +8,7 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from HLLEM import hllem
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -20,13 +21,11 @@ initial_conditions = """
   const double m2 = 1.0 - 0.10 * std::sqrt((x(0) - 15.0) * (x(0) - 15.0) + (x(1) - 7.50) * (x(1) - 7.50));
   const double m3 = 1.0 - 0.28 * std::sqrt((x(0) - 30.0) * (x(0) - 30.0) + (x(1) - 15.0) * (x(1) - 15.0));
 
-  using s = VariableShortcuts;
   Q[s::h] = x[0] <= 5.0 ? INITIAL_WATER_HEIGHT_DAM : 0.0;
   Q[s::b] = std::max({0.0, m1, m2, m3});
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -67,16 +66,11 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    riemann_solver="return applications::exahype2::swe::hllem(QL, QR, x, h, t, dt, normal, FL, FR);",
+    riemann_solver=hllem,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
-riemann_solver.add_user_solver_includes(
-    """
-#include "../HLLEM.h"
-"""
-)
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],

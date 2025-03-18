@@ -24,7 +24,7 @@
 {% endif %}
 
 {% if USE_VARIABLE_SHORTCUT is sameas True %}
-#include "VariableShortcuts.h"
+#include "VariableShortcuts{{SOLVER_NAME}}.h"
 {% endif %}
 
 {{SOLVER_INCLUDES}}

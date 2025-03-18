@@ -1,8 +1,5 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "peano4/utils/Loop.h"
-
-tarch::logging::Log _log( "exahype2::fv" );
 
 template <int SourceIndex, int... SourceIndices, typename Particle>
 void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
@@ -12,9 +9,10 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
   const double* __restrict__ Q,
   Particle& particle
 ) {
-  exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant<Particle, SourceIndex, SourceIndices...>(
-    marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, 0
-  );
+  internal::projectValuesOntoParticle_piecewiseConstant<
+    Particle,
+    SourceIndex,
+    SourceIndices...>(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, 0);
 }
 
 template <int SourceIndex, int... SourceIndices, typename Particle>
@@ -25,9 +23,10 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
   const double* __restrict__ Q,
   Particle& particle
 ) {
-  exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear<Particle, SourceIndex, SourceIndices...>(
-    marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, 0
-  );
+  internal::projectValuesOntoParticle_piecewiseLinear<
+    Particle,
+    SourceIndex,
+    SourceIndices...>(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, 0);
 }
 
 template <typename Particle, int SourceIndex, int... SourceIndices>
@@ -41,13 +40,18 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
 ) {
   particle.setData(
     destinationIndex,
-    ::exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
-      marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), destinationIndex
+    internal::projectValueOntoParticle_piecewiseConstant(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle.getX(),
+      destinationIndex
     )
   );
-  exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant<Particle, SourceIndices...>(
-    marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, destinationIndex + 1
-  );
+  internal::projectValuesOntoParticle_piecewiseConstant<
+    Particle,
+    SourceIndices...>(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, destinationIndex + 1);
 }
 
 template <typename Particle, int SourceIndex, int... SourceIndices>
@@ -61,13 +65,18 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
 ) {
   particle.setData(
     destinationIndex,
-    ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-      marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), destinationIndex
+    internal::projectValueOntoParticle_piecewiseLinear(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle.getX(),
+      destinationIndex
     )
   );
-  exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear<Particle, SourceIndices...>(
-    marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, destinationIndex + 1
-  );
+  internal::projectValuesOntoParticle_piecewiseLinear<
+    Particle,
+    SourceIndices...>(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle, destinationIndex + 1);
 }
 
 template <typename Particle>
@@ -100,8 +109,13 @@ void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
 ) {
   particle.setData(
     DestIndex,
-    ::exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
-      marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), SourceIndex
+    internal::projectValueOntoParticle_piecewiseConstant(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle.getX(),
+      SourceIndex
     )
   );
 }
@@ -117,9 +131,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
     particle.setData(
       unknown,
-      ::exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
-        marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), unknown
-      )
+      internal::projectValueOntoParticle_piecewiseConstant(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), unknown)
     );
   }
 }
@@ -132,9 +144,7 @@ void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
   const double* __restrict__ Q,
   Particle& particle
 ) {
-  particle.setData(DestIndex) = ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-    marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), SourceIndex
-  );
+  particle.setData(DestIndex) = internal::projectValueOntoParticle_piecewiseLinear(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), SourceIndex);
 }
 
 template <typename Particle>
@@ -146,9 +156,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
   Particle& particle
 ) {
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
-    double value = ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-      marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), unknown
-    );
+    double value = internal::projectValueOntoParticle_piecewiseLinear(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), unknown);
 
     assertion(value == value);
     particle.setData(unknown, value);
@@ -161,24 +169,95 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
   const double* __restrict__ Q,
-  double                             timeStepSize,
-  tarch::la::Vector<Dimensions, int> indices,
+  double                                timeStepSize,
+  tarch::la::Vector<Dimensions, int>    indices,
   tarch::la::Vector<Dimensions, double> factors,
-  Particle&                          particle
+  Particle&                             particle
 ) {
   for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
-    double value = ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-      marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), unknown
-    );
+    double value = internal::projectValueOntoParticle_piecewiseLinear(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle.getX(), unknown);
 
-    assertion(value == value);
+    assertion(value == value); // Ensure value is not NaN
     particle.setData(unknown, value);
   }
-  
-  logDebug("projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler()", "particle move from "<< particle.getX());
-  for (int d = 0; d < Dimensions; d++) {
-    particle.setX(d, particle.getX(d) + timeStepSize * factors(d) * particle.getData(indices(d)));
+}
+
+template <int SourceIndex, int... SourceIndices, typename Particle>
+void exahype2::fv::updateParticleState(
+  Particle&                                 particle,
+  double                                    timeStepSize,
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       voxelsPerAxis,
+  int                                       unknownsPerVoxel,
+  const double* __restrict__ Q,
+  tarch::la::Vector<Dimensions, double> DomainSize,
+  tarch::la::Vector<Dimensions, double> DomainOffset,
+  tarch::la::Vector<Dimensions, double> PeriodicBC
+) {
+  // 🔹 Step 1: Interpolation (Store values directly in the particle)
+  projectValuesOntoParticle_piecewiseLinear<
+    SourceIndex,
+    SourceIndices...>(marker, voxelsPerAxis, unknownsPerVoxel, Q, particle);
+
+  // 🔹 Step 2: Compute Forces (e.g., gravity, drag) - To be implemented
+  // Example: Applying only gravity for now
+  particle.setData(5, 0.0);
+  particle.setData(6, -9.81);
+
+  // 🔹 Step 3: Perform Integration
+  tarch::la::Vector<Dimensions, double> newPosition;
+
+  newPosition = explicitEulerIntegration(particle, timeStepSize);
+
+  // 🔹 Step 4: Handle Boundary Collisions (if periodic BC is not active)
+  if (tarch::la::max(PeriodicBC) == 1.0) {
+    handleBoundaryCollisions(particle, newPosition, DomainSize, DomainOffset);
   }
-  logDebug("projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler()", "particle move to "<< particle.getX());
-  
+
+  // 🔹 Step 5: Update Particle Position
+  particle.setX(newPosition);
+}
+
+template <typename Particle>
+tarch::la::Vector<Dimensions, double> exahype2::fv::explicitEulerIntegration(Particle& particle, double timeStepSize) {
+  tarch::la::Vector<Dimensions, double> newPosition;
+  // Set initial acceleration for testing purposes
+  for (int d = 0; d < Dimensions; ++d) {
+    double velocity     = particle.getData(3 + d);
+    double acceleration = particle.getData(5 + d);
+    velocity += acceleration * timeStepSize; // Update velocity
+    velocity = std::min(std::max(velocity, -10.0), 10.0);
+
+    particle.setData(3 + d, velocity);
+
+    newPosition[d] = particle.getX(d) + velocity * timeStepSize + 0.5 * acceleration * timeStepSize * timeStepSize;
+  }
+
+  return newPosition;
+}
+
+template <typename Particle>
+void exahype2::fv::handleBoundaryCollisions(
+  Particle&                              particle,
+  tarch::la::Vector<Dimensions, double>& newPosition,
+  tarch::la::Vector<Dimensions, double>  DomainSize,
+  tarch::la::Vector<Dimensions, double>  DomainOffset
+) {
+  for (int d = 0; d < Dimensions; d++) {
+    double lowerBound = DomainOffset[d];
+    double upperBound = DomainOffset[d] + DomainSize[d];
+
+    double velocity = particle.getData(3 + d);
+
+    if (newPosition[d] < lowerBound) {
+      // Reflect at lower boundary
+      newPosition[d] = lowerBound + (lowerBound - newPosition[d]);
+      particle.setData(3 + d, -velocity * 0.9); // Reverse & damp velocity
+
+    } else if (newPosition[d] > upperBound) {
+      // Reflect at upper boundary
+      newPosition[d] = upperBound - (newPosition[d] - upperBound);
+      particle.setData(3 + d, -velocity * 0.9); // Reverse & damp velocity
+    }
+  }
 }

@@ -1097,8 +1097,8 @@ Material parameters:    """
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
                 os.path.dirname(os.path.realpath(__file__))
                 + "/"
-                + "../VariableShortcuts.template.h",
-                "VariableShortcuts",
+                + "../../VariableShortcuts.template.h",
+                "VariableShortcuts" + self._name,
                 namespace,
                 subdirectory + ".",
                 implementationDictionary,
@@ -1106,7 +1106,7 @@ Material parameters:    """
                 True,
             )
             output.add(generated_shortcut_file)
-            output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
+            output.makefile.add_h_file(subdirectory + "VariableShortcuts" + self._name + ".h", generated=True)
 
         self._generate_kernels(namespace, output, subdirectory, dimensions)
 
@@ -1157,8 +1157,8 @@ Material parameters:    """
     information from the solver or which was specified by the user.
     """
     def _init_dictionary_with_default_parameters(self, d):
-        d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
         d["SOLVER_NAME"]        = self._name
+        d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
 
         d["ALIGNMENT"]          = Architectures.get_alignment(self._architecture)

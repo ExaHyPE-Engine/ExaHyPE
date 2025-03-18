@@ -9,7 +9,6 @@ from .Overwrite  import Overwrite
 
 class Constants(object):
   """!
-
     Representative of generated Constants.h holding all user-defined constants
 
     Represents all constants that a Project exports from the Python
@@ -26,7 +25,6 @@ class Constants(object):
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Constants also allows you to add defines (precompiler statements).
-
   """
   default_overwrite = True
 
@@ -178,9 +176,6 @@ class Constants(object):
 These constants are available to the application within its namespace.
 """
     return result
-
-  def generate(self, overwrite, directory):
-    filename = directory + "/Constants.h"
 
   def generate(self, overwrite, directory, subdirectory=""):
     filename = directory + "/" + subdirectory + "Constants.h"

@@ -9,7 +9,7 @@ double applications::exahype2::euler::maxEigenvalue(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
 ) {
-  using s = VariableShortcuts;
+  using s = VariableShortcutsEuler;
 
   #if defined(GPUOffloadingOff)
   assertion1(!std::isnan(Q[s::rho]), Q[s::rho]);
@@ -47,7 +47,7 @@ void applications::exahype2::euler::flux(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const __restrict__                   F
 ) {
-  using s = VariableShortcuts;
+  using s = VariableShortcutsEuler;
 
   #if defined(GPUOffloadingOff)
   assertion(Q[s::rho] > 0);

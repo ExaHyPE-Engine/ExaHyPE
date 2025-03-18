@@ -6,7 +6,7 @@ tarch::logging::Log applications::exahype2::elastic::Elastic::_log(
   "applications::exahype2::elastic::Elastic"
 );
 
-using s = applications::exahype2::elastic::VariableShortcuts;
+using s = applications::exahype2::elastic::VariableShortcutsElastic;
 
 void applications::exahype2::elastic::Elastic::initialCondition(
   double* __restrict__                          Q,

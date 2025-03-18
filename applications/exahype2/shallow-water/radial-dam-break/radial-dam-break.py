@@ -8,6 +8,8 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from SWE import *
+from HLLEM import hllem
 
 define_radial_dam = """
   constexpr double DAM_RADIUS = 1.0;
@@ -34,8 +36,6 @@ initial_conditions = define_radial_dam + """
     Q[i] = 0.0;
   }
 
-  using s = VariableShortcuts;
-
   Q[s::h] = isInsideDam ? INITIAL_WATER_HEIGHT_INSIDE_DAM : INITIAL_WATER_HEIGHT_OUTSIDE_DAM;
 
   if (isDryRing) {
@@ -46,7 +46,6 @@ initial_conditions = define_radial_dam + """
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -85,18 +84,13 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux="applications::exahype2::swe::flux(Q, x, h, t, dt, normal, F);",
-    ncp="applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
-    eigenvalues="return applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal);",
+    flux=flux,
+    ncp=nonconservative_product,
+    eigenvalues=max_eigenvalue,
 )
 aderdg_solver.plot_description = ", ".join(unknowns.keys())
 aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
-aderdg_solver.add_user_solver_includes(
-    """
-#include "../SWE.h"
-"""
-)
 
 unknowns = {"h": 1, "hu": 1, "hv": 1}
 auxiliary_variables = {"b": 1}
@@ -112,16 +106,11 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     pde_terms_without_state=args.stateless,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
-    riemann_solver="return applications::exahype2::swe::hllem(QL, QR, x, h, t, dt, normal, FL, FR);",
+    riemann_solver=hllem,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
-riemann_solver.add_user_solver_includes(
-    """
-#include "../HLLEM.h"
-"""
-)
 
 limiting_solver = exahype2.solvers.limiting.StaticLimiting(
     name="Limiting",

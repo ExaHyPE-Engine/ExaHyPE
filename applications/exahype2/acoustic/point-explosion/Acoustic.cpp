@@ -6,7 +6,7 @@ tarch::logging::Log applications::exahype2::acoustic::Acoustic::_log(
   "applications::exahype2::acoustic::Acoustic"
 );
 
-using s = applications::exahype2::acoustic::VariableShortcuts;
+using s = applications::exahype2::acoustic::VariableShortcutsAcoustic;
 
 void applications::exahype2::acoustic::Acoustic::initialCondition(
   double* __restrict__                          Q,

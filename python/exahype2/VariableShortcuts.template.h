@@ -5,7 +5,7 @@
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
-  class VariableShortcuts;
+  class VariableShortcuts{{SOLVER_NAME}};
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
@@ -22,7 +22,7 @@
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-class {{NAMESPACE | join("::")}}::VariableShortcuts {
+class {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}} {
 public:
   static constexpr int NumberOfDistinctVariables  = {{VARIABLE_NAMES|length}};
 
@@ -41,5 +41,3 @@ public:
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
-
-using VariableShortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts;

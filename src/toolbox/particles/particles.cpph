@@ -3,23 +3,14 @@
 
 
 template <typename Iterator>
-Iterator toolbox::particles::particleIsDuplicate(
-  const typename Iterator::value_type& particle,
-  Iterator                             begin,
-  const Iterator&                      end
-) {
+Iterator toolbox::particles::
+  particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end) {
   static tarch::logging::Log _log("toolbox::particles");
   while (begin != end) {
-    if (tarch::la::equals(
-          (*begin)->getX(),
-          particle->getX(),
-          SpatialDuplicateTolerance
-        )) {
+    if (tarch::la::equals((*begin)->getX(), particle->getX(), SpatialDuplicateTolerance)) {
       logDebug(
         "particleIsDuplicate(...)",
-        "particles "
-          << particle->toString() << " and " << (*begin)->toString()
-          << " are the same"
+        "particles " << particle->toString() << " and " << (*begin)->toString() << " are the same"
       );
       return begin;
     }
@@ -37,8 +28,7 @@ bool toolbox::particles::particleWillStayWithinComputationalDomain(
 ) {
   return particle.getParallelState() == Particle::ParallelState::Local
          and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
-         and tarch::la::
-           allSmallerEquals(particle.getX(), domainOffset + domainWidth);
+         and tarch::la::allSmallerEquals(particle.getX(), domainOffset + domainWidth);
 }
 
 
@@ -66,20 +56,14 @@ void toolbox::particles::insertParticleIntoCell(
   std::bitset<Dimensions>    targetVertex;
   for (int d = 0; d < Dimensions; d++) {
     assertion4(
-      tarch::la::greaterEquals(
-        newParticle->getX()(d),
-        marker.x()(d) - marker.h()(d) / 2.0
-      ),
+      tarch::la::greaterEquals(newParticle->getX()(d), marker.x()(d) - marker.h()(d) / 2.0),
       marker.toString(),
       newParticle->toString(),
       marker.x()(d) - marker.h()(d) / 2.0,
       d
     );
     assertion4(
-      tarch::la::smallerEquals(
-        newParticle->getX()(d),
-        marker.x()(d) + marker.h()(d) / 2.0
-      ),
+      tarch::la::smallerEquals(newParticle->getX()(d), marker.x()(d) + marker.h()(d) / 2.0),
       marker.toString(),
       newParticle->toString(),
       marker.x()(d) + marker.h()(d) / 2.0,
@@ -89,8 +73,7 @@ void toolbox::particles::insertParticleIntoCell(
   }
 
   assertion3(
-    tarch::la::
-      smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())),
+    tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())),
     marker.toString(),
     newParticle->toString(),
     spacetreeId
@@ -104,17 +87,13 @@ void toolbox::particles::insertParticleIntoCell(
   logDebug(
     "insertParticleIntoCell(...)",
     "assign particle "
-      << newParticle->toString() << " to vertex " << linearisedTargetVertex
-      << " in cell " << marker.toString() << " (vertex="
-      << fineGridVertices(targetVertex.to_ulong()).toString() << ")"
+      << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString()
+      << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")"
   );
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
-
-#if PeanoDebug > 0
-  int partID = newParticle->getPartid();
-#else
   int partID = -1;
-#endif
+  // TODO add a global simulation particle_count that checks particle id for duplicates and if not, it increases the
+  // count.
 
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),

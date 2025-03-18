@@ -8,19 +8,18 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from FrictionLaws import *
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
 
-  using s = VariableShortcuts;
   Q[s::h] = topologyParser.sampleDisplacement(x(0), x(1));
   Q[s::b] = topologyParser.sampleBathymetry(x(0), x(1));
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -64,7 +63,7 @@ auxiliary_variables={
 }
 
 riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="Godunov" + str(args.patch_size),
+    name="Rusanov" + str(args.patch_size),
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
@@ -75,25 +74,21 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux="applications::exahype2::swe::frictionlaws::flux(Q, x, h, t, dt, normal, F);",
+    flux=flux,
     ncp="""
-  using s = VariableShortcuts;
   BTimesDeltaQ[s::h] = 0.0;
   BTimesDeltaQ[s::hu] = 0.0;
   BTimesDeltaQ[s::hv] = 0.0;
   BTimesDeltaQ[s::hu + normal] += GRAV * Q[s::h] * deltaQ[s::b];
 """,
-    max_eigenvalue="return applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, x, h, t, dt, normal);",
-    source_term="applications::exahype2::swe::frictionlaws::coulombFriction(Q, x, h, t, dt, S);",
+    max_eigenvalue=max_eigenvalue,
+    source_term=coulomb_friction,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 riemann_solver.add_user_solver_includes(
     """
-#include "../SWE.h"
-#include "../FrictionLaws.h"
-#include "../ComputeFirstDerivatives.h"
 #include "../TopologyParser.h"
 """
 )
@@ -115,14 +110,6 @@ TopologyParser topologyParser = TopologyParser(
 );
 """
 )
-# riemann_solver._preprocess_reconstructed_patch = """
-#       extrapolateHalo<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
-#       computeFirstDerivatives<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
-# """.format(
-#                 NumberOfDofs=args.patch_size,
-#                 NumberOfUnknowns=sum(unknowns.values()),
-#                 NumberOfAuxiliaryVariables=sum(auxiliary_variables.values()),
-#             )
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],

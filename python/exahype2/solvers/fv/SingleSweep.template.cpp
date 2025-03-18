@@ -3,7 +3,14 @@
 #include "{{CLASSNAME}}.h"
 #include "exahype2/RefinementControl.h"
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+
+{% if USE_VARIABLE_SHORTCUT is sameas True %}
+/*
+ * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+ */
+using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
+{% endif %}
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(

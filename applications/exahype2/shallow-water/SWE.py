@@ -1,19 +1,7 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 
-// clang-format off
-
-void applications::exahype2::swe::eigenvalues(
-  const double* const __restrict__             Q,
-  const tarch::la::Vector<Dimensions, double>& /*x*/,
-  const tarch::la::Vector<Dimensions, double>& /*h*/,
-  const double                                 /*t*/,
-  const double                                 /*dt*/,
-  const int                                    normal,
-  double* const __restrict__                   L
-) {
-  using s = VariableShortcuts;
-
+eigenvalues = r"""
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -34,7 +22,7 @@ void applications::exahype2::swe::eigenvalues(
 
   constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
   if (Q[s::h] <= DRY_TOL) {
-    return;
+    return 0.0;
   }
 
   const double u = Q[s::hu + normal] / Q[s::h];
@@ -48,34 +36,15 @@ void applications::exahype2::swe::eigenvalues(
   assertion(!std::isnan(L[s::hu]));
   assertion(!std::isnan(L[s::hv]));
 #endif
-}
+"""
 
-
-double applications::exahype2::swe::maxEigenvalue(
-  const double* const __restrict__             Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal
-) {
+max_eigenvalue = r"""
   double L[3];
-  eigenvalues(Q, x, h, t, dt, normal, L);
+  {eigenvalues}
   return std::fmax(std::fabs(L[0]), std::fmax(std::fabs(L[1]), std::fabs(L[2])));
-}
+""".format(eigenvalues=eigenvalues)
 
-
-void applications::exahype2::swe::flux(
-  const double* const __restrict__             Q,
-  const tarch::la::Vector<Dimensions, double>& /*x*/,
-  const tarch::la::Vector<Dimensions, double>& /*h*/,
-  const double                                 /*t*/,
-  const double                                 /*dt*/,
-  const int                                    normal,
-  double* const __restrict__                   F
-) {
-  using s = VariableShortcuts;
-
+flux = r"""
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -129,21 +98,9 @@ void applications::exahype2::swe::flux(
   nonCriticalAssertion(F[s::hv] == F[s::hv]);
   nonCriticalAssertion(F[s::b] == F[s::b]);
 #endif
-}
+"""
 
-
-void applications::exahype2::swe::nonconservativeProduct(
-  const double* const __restrict__             Q,
-  const double* const __restrict__             deltaQ,
-  const tarch::la::Vector<Dimensions, double>& /*x*/,
-  const tarch::la::Vector<Dimensions, double>& /*h*/,
-  const double                                 /*t*/,
-  const double                                 /*dt*/,
-  const int                                    normal,
-  double* const __restrict__                   BTimesDeltaQ
-) {
-  using s = VariableShortcuts;
-
+nonconservative_product = r"""
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -186,6 +143,4 @@ void applications::exahype2::swe::nonconservativeProduct(
   nonCriticalAssertion(BTimesDeltaQ[s::hu] == BTimesDeltaQ[s::hu]);
   nonCriticalAssertion(BTimesDeltaQ[s::hv] == BTimesDeltaQ[s::hv]);
 #endif
-}
-
-// clang-format on
+"""

@@ -1,7 +1,13 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import os
+import sys
+
 import peano4
 import exahype2
+
+sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/shallow-water"))
+from SWE import *
 
 end_time = 10.0
 width = [10000, 10000]  # [m]
@@ -27,7 +33,6 @@ initial_conditions = """
   constexpr double INITIAL_WATER_HEIGHT = 100.0;
   constexpr double INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE = -100.0;
 
-  using s = VariableShortcuts;
   Q[s::h] = INITIAL_WATER_HEIGHT;
 
   auto displacementX = [](double x) { return std::sin((x / 500.0 + 1.0) * std::numbers::pi); };
@@ -44,7 +49,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -73,22 +77,13 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux="applications::exahype2::swe::flux(Q, x, h, t, dt, normal, F);",
-    ncp="applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
-    eigenvalues="return applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal);",
+    flux=flux,
+    ncp=nonconservative_product,
+    eigenvalues=max_eigenvalue,
 )
 aderdg_solver.plot_description = ", ".join({"h": 1, "hu": 1, "hv": 1, "b": 1}.keys())
-aderdg_solver.switch_storage_scheme(
-    exahype2.solvers.Storage[storage], exahype2.solvers.Storage[storage]
-)
-aderdg_solver.add_kernel_optimisations(
-    is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
-)
-aderdg_solver.add_user_solver_includes(
-    """
-#include "../../../../applications/exahype2/shallow-water/SWE.h"
-"""
-)
+aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[storage], exahype2.solvers.Storage[storage])
+aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
 project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "swe"],

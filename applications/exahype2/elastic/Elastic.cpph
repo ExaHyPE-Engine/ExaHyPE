@@ -21,7 +21,7 @@ void applications::exahype2::elastic::flux(
   [[maybe_unused]] const int                                    normal,
   [[maybe_unused]] double* const __restrict__                   F
 ) {
-  using s = VariableShortcuts;
+  using s = VariableShortcutsElastic;
 
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
@@ -63,7 +63,7 @@ void applications::exahype2::elastic::sourceTerm(
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] double* const __restrict__                   S
 ) {
-  using s = VariableShortcuts;
+  using s = VariableShortcutsElastic;
 
   S[s::v + 0] = 0.0;
   S[s::v + 1] = 0.0;

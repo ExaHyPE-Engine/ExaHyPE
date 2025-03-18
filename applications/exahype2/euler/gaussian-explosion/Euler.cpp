@@ -6,7 +6,7 @@ tarch::logging::Log applications::exahype2::euler::Euler::_log(
   "applications::exahype2::euler::Euler"
 );
 
-using s = applications::exahype2::euler::VariableShortcuts;
+using s = applications::exahype2::euler::VariableShortcutsEuler;
 
 void applications::exahype2::euler::Euler::initialCondition(
   double* __restrict__                          Q,

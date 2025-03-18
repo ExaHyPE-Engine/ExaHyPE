@@ -72,6 +72,10 @@ class Project(object):
         self._solvers_file_collection=[]
 
 
+        self._particle_unknowns = 0
+        self._particle_variable_names = []
+        self._particle_variable_pos = [0]
+        self._use_particle_var_shortcut = False
         self.create_grid = peano4.solversteps.Step("CreateGrid", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
         self.create_grid_but_postpone_refinement = peano4.solversteps.Step("CreateGridButPostponeRefinement", False)
@@ -279,7 +283,7 @@ class Project(object):
                     )
         self._project.constants.export(
             "CheckpointTimeStamp", str(self._restart_timestamp)
-        )    
+        )
 
         self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
         self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC)
@@ -508,7 +512,7 @@ thus appreciate any citation of the original release paper
     def add_tracer(
         self,
         name,
-        attribute_count=0,
+        particle_attributes,
         plot=True,
         sort_descend_invocation_order_within_action_sets=-1,
         plot_descend_invocation_order_within_action_sets=65536,
@@ -621,12 +625,28 @@ thus appreciate any citation of the original release paper
         Returns the particle set that you can use to modify further
         """
         particle = peano4.toolbox.particles.Particle(name)
+        if isinstance(particle_attributes, dict):
+            self._particle_unknowns = sum(particle_attributes["unknowns"].values())
+            self._particle_variable_names += list(particle_attributes["unknowns"].keys())
 
-        if attribute_count > 0:
-            particle_attr = peano4.dastgen2.Peano4DoubleArray(
-                "data", str(attribute_count)
+            for var in particle_attributes["unknowns"].values():
+                self._particle_variable_pos.append(var + self._particle_variable_pos[-1])
+
+            self._use_particle_var_shortcut = True
+            self._generate_particle_shortcuts(name)
+
+        elif isinstance(particle_attributes, int):
+            self._particle_unknowns = particle_attributes
+
+        else:
+            raise Exception(
+                "Invalid format for 'unknowns'. Must be an integer or a dictionary."
             )
-            particle.data.add_attribute(particle_attr)
+
+        particle_attr = peano4.dastgen2.Peano4DoubleArray(
+            "data", str(self._particle_unknowns)
+        )
+        particle.data.add_attribute(particle_attr)
 
         particle.data.add_attribute(
             dastgen2.attributes.Enumeration("MoveState", ["NotMovedYet", "Moved"])
@@ -685,14 +705,15 @@ thus appreciate any citation of the original release paper
         if plot:
             particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
                 filename=name,
+                output_directory=self._output_path,
                 particle_set=particles,
                 time_stamp_evaluation="repositories::getMinTimeStamp()",
                 additional_includes="""
 #include "repositories/SolverRepository.h"
 """,
             )
-            if attribute_count > 0:
-                particle_plotter.add_attribute_to_plot(particle_attr, attribute_count)
+            if self._particle_unknowns > 0:
+                particle_plotter.add_attribute_to_plot(particle_attr, self._particle_unknowns)
             particle_plotter.add_attribute_to_plot(
                 particle_number, 2, "tarch::la::convertScalar<double>(p->getNumber())"
             )
@@ -710,6 +731,24 @@ thus appreciate any citation of the original release paper
         self._tracer_particle_sets.append(particles)
 
         return particles
+
+    def _generate_particle_shortcuts(self, name):
+        generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), "VariableShortcuts.template.h"),
+            "VariableShortcuts" + name,
+            self._project.namespace,
+            self._subdirectory + ".",
+            {
+                "NUMBER_OF_VARIABLES": len(self._particle_variable_names),  # Standardised naming
+                "VARIABLE_NAMES": self._particle_variable_names,
+                "VARIABLE_POSITIONS": self._particle_variable_pos,
+                "SOLVER_NAME": name,
+            },
+            True,
+            True,
+        )
+        self._project.output.add(generated_shortcut_file)
+        self._project.output.makefile.add_h_file(self._subdirectory + "VariableShortcuts"+ name + ".h", generated=True)
 
     def add_action_set_to_timestepping(self, action_set):
         """!

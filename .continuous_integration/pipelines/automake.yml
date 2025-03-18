@@ -211,6 +211,21 @@ ExaHyPE2_ShallowWater:
     - Build
   retry: 0
 
+ExaHyPE2_ArtificialTsunami:
+  stage: Benchmarks
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithAutomakeSanitiser
+    - .ExaHyPE2_ArtificialTsunami
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 ExaHyPE2_SBH:
   stage: Benchmarks
   allow_failure: false

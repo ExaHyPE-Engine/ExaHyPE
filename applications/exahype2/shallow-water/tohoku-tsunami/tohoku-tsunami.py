@@ -8,13 +8,13 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from FWave import fWave
 
 initial_conditions = """
   const double bathymetryBeforeEarthquake = topologyParser.sampleBathymetry(x(0), x(1));
   const double displacement               = topologyParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
-  using s  = VariableShortcuts;
   Q[s::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
   Q[s::hu] = 0.0;
   Q[s::hv] = 0.0;
@@ -61,14 +61,13 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    riemann_solver="return applications::exahype2::swe::fWave(QL, QR, x, h, t, dt, normal, FL, FR);",
+    riemann_solver=fWave,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 riemann_solver.add_user_solver_includes(
     """
-#include "../FWave.h"
 #include "../TopologyParser.h"
 """
 )
