@@ -1,17 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
-#include <iomanip>
-#include "config.h"
-
 #include "{{MAIN_NAME}}.h"
-
-#include "exahype2/UnitTests.h"
-#include "exahype2/UserInterface.h"
-#include "peano4/peano4.h"
-#include "peano4/UnitTests.h"
-#include "peano4/grid/Spacetree.h"
-#include "peano4/parallel/SpacetreeSet.h"
 
 #include "{{SUBDIRECTORY}}Constants.h"
 #include "{{SUBDIRECTORY}}observers/CreateGrid.h"
@@ -33,20 +22,23 @@
 #include "repositories/StepRepository.h"
 {%- endif %}
 
-#include "tarch/UnitTests.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/otter.h"
-#include "tarch/NonCriticalAssertions.h"
-#include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
-#include "toolbox/blockstructured/UnitTests.h"
+
+#include "peano4/peano4.h"
+#include "peano4/grid/Spacetree.h"
+#include "peano4/parallel/SpacetreeSet.h"
+
 #include "toolbox/loadbalancing/loadbalancing.h"
 
+#include <iomanip>
 
 {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
@@ -58,12 +50,10 @@ using namespace {{NAMESPACE | join("::")}};
 
 tarch::logging::Log _log("::");
 
-
 tarch::timing::Measurement timePerMeshSweepMeasurement;
 tarch::timing::Measurement gridConstructionMeasurement;
 tarch::timing::Measurement timeStepMeasurement;
 tarch::timing::Measurement plotMeasurement;
-
 
 /**
  * Decide which step to run next
@@ -82,7 +72,7 @@ bool selectNextAlgorithmicStep() {
   static double                                 nextMaxCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static double                                 nextMinCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static bool                                   haveJustWrittenSnapshot               = false;
-  static bool                                   haveReceivedNoncriticialAssertion     = false;
+  static bool                                   haveReceivedNonCriticalAssertion     = false;
   static bool                                   addGridSweepWithoutGridRefinementNext = false;
   static tarch::la::Vector<Dimensions, double>  minH                                  = tarch::la::Vector<Dimensions, double>(
                                                                                           std::numeric_limits<double>::max()
@@ -90,24 +80,20 @@ bool selectNextAlgorithmicStep() {
   static int                                    globalNumberOfTrees                   = 0;
   bool                                          continueToSolve                       = true;
 
-  if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
+  if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution)
     );
-    haveReceivedNoncriticialAssertion = true;
-    logError(
-      "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate"
-    );
+    haveReceivedNonCriticalAssertion = true;
+    logError("selectNextAlgorithmicStep()", "Non-critical assertion has been triggered in code. Dump final state and terminate.");
   } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
   } else if (gridConstructed and not gridBalanced) {
     if (not {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(true) and not {{SUBNAMESPACE}}repositories::loadBalancer.hasSplitRecently()) {
-      logInfo("selectNextAlgorithmicStep()", "all ranks have switched off their load balancing");
+      logDebug("selectNextAlgorithmicStep()", "All ranks have switched off their load balancing");
       gridBalanced = true;
     } else {
-      logInfo(
-        "selectNextAlgorithmicStep()", "wait for load balancing to become stable: " << {{SUBNAMESPACE}}repositories::loadBalancer
-      );
+      logDebug("selectNextAlgorithmicStep()", "Wait for load balancing to become stable: " << {{SUBNAMESPACE}}repositories::loadBalancer);
     }
 
     peano4::parallel::Node::getInstance().setNextProgramStep({{SUBNAMESPACE}}repositories::StepRepository::toProgramStep(
@@ -122,29 +108,25 @@ bool selectNextAlgorithmicStep() {
   } else if (not gridConstructed) {
     if (tarch::la::max(peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()) < tarch::la::max(minH)) {
       minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
-      logInfo("selectNextAlgorithmicStep()", "mesh has refined, so reset minH to" << minH << " and postpone further refinement");
+      logDebug("selectNextAlgorithmicStep()", "Mesh has refined, so reset minH to " << minH << " and postpone further refinement.");
       addGridSweepWithoutGridRefinementNext = true;
     } else if ({{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
-      logInfo("selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement");
+      logDebug("selectNextAlgorithmicStep()", "Mesh has rebalanced recently, so postpone further refinement.");
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees                   = {{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees();
-    }
-    else if (
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
+    } else if (
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps() > 5
       and
-      // ensure that a proper creation has been ran before, so the mesh had the opportunity
-      // to refine further if it has not done yet
-      {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid
+      // Ensure that a proper creation has been ran before, so the mesh had the opportunity to refine further if it has not done yet.
+      {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()) == {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid
     ) {
-      logInfo(
-        "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction"
-      );
+      logDebug("selectNextAlgorithmicStep()", "Grid has been stationary for quite some time. Terminate grid construction.");
       addGridSweepWithoutGridRefinementNext = false;
       gridConstructed                       = true;
     } else {
-      logInfo(
+      logDebug(
         "selectNextAlgorithmicStep()",
-        "mesh rebalancing seems to be stationary, so study whether to refine mesh further in next sweep: "
+        "Mesh rebalancing seems to be stationary, so study whether to refine mesh further in next sweep: "
           << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString()
       );
       addGridSweepWithoutGridRefinementNext = false;
@@ -175,7 +157,7 @@ bool selectNextAlgorithmicStep() {
       if (nextMinPlotTimeStamp < {{SUBNAMESPACE}}repositories::getMinTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
-          "code is asked to plot every dt="
+          "Code is asked to plot every dt="
             << {{SUBNAMESPACE}}TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
             << "So postpone next plot to t=" << ({{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenPlots)
         );
@@ -183,7 +165,7 @@ bool selectNextAlgorithmicStep() {
       } else if (nextMaxPlotTimeStamp < {{SUBNAMESPACE}}repositories::getMaxTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
-          "code is asked to plot every dt="
+          "Code is asked to plot every dt="
             << {{SUBNAMESPACE}}TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. "
             << "So postpone next plot to t=" << ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenPlots)
         );
@@ -208,17 +190,17 @@ bool selectNextAlgorithmicStep() {
       if (nextMinCheckpointTimeStamp < {{SUBNAMESPACE}}repositories::getMinTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
-          "code is asked to Checkpoint every dt="
+          "Code is asked to checkpoint every dt="
             << {{SUBNAMESPACE}}TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next Checkpoint to t=" << ({{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints)
+            << "So postpone next checkpoint to t=" << ({{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints)
         );
         nextMinCheckpointTimeStamp = {{SUBNAMESPACE}}repositories::getMinTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints;
       } else if (nextMaxCheckpointTimeStamp < {{SUBNAMESPACE}}repositories::getMaxTimeStamp()) {
         logWarning(
           "selectNextAlgorithmicStep()",
-          "code is asked to Checkpoint every dt="
+          "Code is asked to checkpoint every dt="
             << {{SUBNAMESPACE}}TimeInBetweenCheckpoints << ", but this seems to be less than the time step size of the solvers. "
-            << "So postpone next Checkpoint to t=" << ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints)
+            << "So postpone next checkpoint to t=" << ({{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints)
         );
         nextMaxCheckpointTimeStamp = {{SUBNAMESPACE}}repositories::getMaxTimeStamp() + {{SUBNAMESPACE}}TimeInBetweenCheckpoints;
       }
@@ -258,19 +240,16 @@ bool selectNextAlgorithmicStep() {
 
 
 void step() {
+  static tarch::logging::Log _log("");
+  static tarch::timing::Watch watch("::", "step()", false);
+  static int creepingNumberOfLocalCells = 0;
+
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
-  static tarch::logging::Log _log("");
-#if PeanoDebug > 0
-#else
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster())
-#endif
-  logInfo("step()", "Starting AlgorithmicStep [" << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName)<<"]" );
-
-  static tarch::timing::Watch watch("::", "step()", false);
-
-  static int creepingNumberOfLocalCells = 0;
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("step()", "Starting AlgorithmicStep [" << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName) << "]");
+  }
 
   switch (stepName) {
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridButPostponeRefinement: {
@@ -317,19 +296,16 @@ void step() {
 
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
 
-    // We always overestimate so give the convergence the opportunity to catch up. The constant
-    // here is a magic one.
-    creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
-                                 + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
+    // We always overestimate so give the convergence the opportunity to catch up. The constant here is a magic one.
+    creepingNumberOfLocalCells = toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing: {
-    if (creepingNumberOfLocalCells < ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1) {
+    if (creepingNumberOfLocalCells < toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1) {
       logInfo(
         "step()",
-        "it seems the grid has just refined before we switched to the phase where we make the load balancing converge. Wait for a few iterations more to give load balancing chance to catch up"
+        "It seems the grid has just refined before we switched to the phase where we make the load balancing converge. Wait for a few iterations more to give load balancing chance to catch up."
       );
-      creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
-                                   + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
+      creepingNumberOfLocalCells = toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
     }
 
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-and-converge-load-balancing");
@@ -337,21 +313,22 @@ void step() {
     OTTER_PHASE_SWITCH(otter::phase::create_grid_converge);
 
     // The smaller here corresponds to the -1 below
-    if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)) {
-      logInfo("step()", "rank is degenerated so disable load balancing temporarily");
+    if (toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)) {
+      logInfo("step()", "Rank is degenerated so disable load balancing temporarily");
       {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
     }
     if (
-          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells
-          and
-          {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)
-        ) {
-      logInfo(
+      toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells
+      and
+      {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)
+    ) {
+      logDebug(
         "step()",
-        "grid construction and decomposition on this rank seem to be stable as we have around "
-          << creepingNumberOfLocalCells << " local cells in the heaviest tree. Disable load balancing temporarily"
+        "Grid construction and decomposition on this rank seem to be stable as we have around "
+          << creepingNumberOfLocalCells << " local cells in the heaviest tree. Disable load balancing temporarily."
       );
       {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
+      toolbox::loadbalancing::dumpStatistics();
     }
 
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
@@ -372,21 +349,22 @@ void step() {
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
 
     if (
-          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
-          and
-          not {{SUBNAMESPACE}}repositories::loadBalancer.hasSplitRecently()
-          and
-          {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)
-        ) {
-      logInfo(
+      toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+      and
+      not {{SUBNAMESPACE}}repositories::loadBalancer.hasSplitRecently()
+      and
+      {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)
+    ) {
+      logDebug(
         "step()",
-        "have to decrement local cell counter "
+        "Have to decrement local cell counter "
           << creepingNumberOfLocalCells << " as maximum weight is "
-          << ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
+          << toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
       );
-      creepingNumberOfLocalCells = (creepingNumberOfLocalCells
-                                    + ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree())
-                                   / 2;
+
+      //creepingNumberOfLocalCells = (creepingNumberOfLocalCells + toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()) / 2;
+      // This has been shown to improve grid creation time because it reduces the time needed to wait for the load balancing to converge
+      creepingNumberOfLocalCells = toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree();
     }
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::InitGrid: {
@@ -473,7 +451,7 @@ void step() {
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::TimeStep: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("time-step");
     if ({{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)) {
-      logInfo("step()", "disable load balancing throughout initialisation (to be removed in later releases)");
+      logInfo("step()", "Disable load balancing throughout initialisation (to be removed in later releases)");
       {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
     }
 
@@ -526,12 +504,6 @@ int main(int argc, char** argv) {
   peano4::initSingletons({{SUBNAMESPACE}}DomainOffset, {{SUBNAMESPACE}}DomainSize, {{SUBNAMESPACE}}PeriodicBC);
 
   {{SUBNAMESPACE}}repositories::initSharedMemoryAndGPUEnvironment();
-
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
-    logError("main()", "MPI runs without multithreading are not supported currently.");
-    return EXIT_FAILURE;
-  }
-
   {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
 
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
@@ -566,32 +538,32 @@ int main(int argc, char** argv) {
           watch.stop();
 
           timePerMeshSweepMeasurement.setValue(watch.getCalendarTime());
-          logInfo(
+          logDebug(
             "main()",
-            "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() <<
+            "Time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() <<
             "s / " << timePerMeshSweepMeasurement.getValue() << "s"
           );
         }
 
-        logInfo("main()", "terminated successfully");
+        logInfo("main()", "Terminated successfully");
         logInfo(
           "main()",
-          "initial grid construction:   " << gridConstructionMeasurement.getAccumulatedValue() <<
+          "Initial grid construction:   " << gridConstructionMeasurement.getAccumulatedValue() <<
           "s\t" << gridConstructionMeasurement.toString()
         );
         logInfo(
           "main()",
-          "plotting:                    " << plotMeasurement.getAccumulatedValue() <<
+          "Plotting:                    " << plotMeasurement.getAccumulatedValue() <<
           "s\t" << plotMeasurement.toString()
         );
         logInfo(
           "main()",
-          "time stepping:               " << timeStepMeasurement.getAccumulatedValue() <<
+          "Time stepping:               " << timeStepMeasurement.getAccumulatedValue() <<
           "s\t" << timeStepMeasurement.toString()
         );
         logInfo(
           "main()",
-          "average time per mesh sweep: " << timePerMeshSweepMeasurement.getValue() <<
+          "Average time per mesh sweep: " << timePerMeshSweepMeasurement.getValue() <<
           "s\t" << timePerMeshSweepMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
@@ -612,6 +584,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
+  toolbox::loadbalancing::dumpStatistics();
   tarch::logging::Statistics::getInstance().writeToCSV();
 
   OTTER_FINALISE();

@@ -193,8 +193,6 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::finishStep() {
   updateState();
 
   _statistics.notifyOfStateChange(_state);
-
-  dumpStatistics();
 }
 
 

@@ -28,8 +28,6 @@ void toolbox::loadbalancing::strategies::NoLoadBalancing::finishStep() {
   }
 
   _blacklist.update();
-
-  dumpStatistics();
 }
 
 

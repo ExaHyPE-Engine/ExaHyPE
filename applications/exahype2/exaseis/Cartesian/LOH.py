@@ -130,8 +130,10 @@ project.set_global_simulation_parameters(
   time_in_between_plots = plot_dt,
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration()" )
-project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
-peano4_project = project.generate_Peano4_project("False")
+# project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut", "new ::exahype2::LoadBalancingConfiguration()")
+project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration()")
+
+project.set_Peano4_installation("../../../../", peano4.output.CompileMode.Release)
+peano4_project = project.generate_Peano4_project(verbose=False)
 
 peano4_project.build(make_clean_first=True)

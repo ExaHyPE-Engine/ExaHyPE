@@ -53,9 +53,9 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::hasSplitRecently() const {
 void toolbox::loadbalancing::AbstractLoadBalancing::enable(bool value) {
   if (value and _state == State::SwitchedOff) {
     _state = State::InterRankBalancing;
-    logInfo("enable()", "switched load balancing on (again) and therefore change to state " << ::toString(_state));
+    logDebug("enable()", "Switched load balancing on (again) and therefore change to state " << ::toString(_state));
   } else if (not value and _state != State::SwitchedOff) {
-    logInfo("enable()", "switched load balancing off");
+    logDebug("enable()", "Switched load balancing off");
     _state = State::SwitchedOff;
   }
 

@@ -261,8 +261,6 @@ void toolbox::loadbalancing::strategies::SpreadOutHierarchically::finishStep() {
   updateState();
 
   _statistics.notifyOfStateChange( _state );
-
-  dumpStatistics();
 }
 
 

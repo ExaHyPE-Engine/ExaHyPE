@@ -1,20 +1,25 @@
-#include "../strategies/SpreadOutOnceGridStagnates.h"
-
-#include "toolbox/loadbalancing/loadbalancing.h"
-
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "SpreadOutOnceGridStagnates.h"
 
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/multicore/Core.h"
+#include "toolbox/loadbalancing/loadbalancing.h"
+
+tarch::logging::Log toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::_log(
+  "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates"
+);
 
 
-tarch::logging::Log  toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::_log( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates" );
-
-
-toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(Configuration* configuration, CostMetrics*   costMetrics ):
-  AbstractLoadBalancing( configuration, costMetrics ),
+toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(
+  Configuration* configuration,
+  CostMetrics*   costMetrics
+):
+  AbstractLoadBalancing(configuration, costMetrics),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
-  assertion( configuration!=nullptr );
+
+  assertion(configuration != nullptr);
   _state = State::InterRankDistribution;
   _statistics.notifyOfStateChange(_state);
 }
@@ -23,43 +28,31 @@ toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::SpreadOutOnceGri
 int toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::getNumberOfTreesPerRank() const {
   int result = 0;
 
-  if (
-    _state==State::InterRankDistribution
-    and
-    _statistics.hasConsistentViewOfWorld()
-    and
-    _numberOfStableGridIterations>3
-  ) {
-    int maxPermittedTreesPerRank = _configuration->getMaxLocalTreesPerRank(_state)>=1
-                                 ? _configuration->getMaxLocalTreesPerRank(_state)
-                                 : std::numeric_limits<int>::max();
+  if (_state == State::InterRankDistribution and _statistics.hasConsistentViewOfWorld() and _numberOfStableGridIterations > 3) {
+    const int maxPermittedTreesPerRank = _configuration->getMaxLocalTreesPerRank(_state) >= 1
+                                           ? _configuration->getMaxLocalTreesPerRank(_state)
+                                           : std::numeric_limits<int>::max();
 
-    int treesPerRankToExploitAllThreads = std::min(
-      maxPermittedTreesPerRank,
-      tarch::multicore::Core::getInstance().getNumberOfThreads()
-    );
+    const int treesPerRankToExploitAllThreads = tarch::multicore::Core::getInstance().getNumberOfThreads();
 
-    int minTreeSize = std::max(
-      _configuration->getMinTreeSize(_state),
+    const int minTreeSize = std::max(_configuration->getMinTreeSize(_state), 1);
+
+    const int treesPerRankAccommodatingMinTreeSize = std::max(
+      _statistics.getLocalNumberOfInnerUnrefinedCells() / minTreeSize
+        / tarch::mpi::Rank::getInstance().getNumberOfRanks(),
       1
     );
 
-    int treesPerRankAccommodatingMinTreeSize = std::max(
-      _statistics.getLocalNumberOfInnerUnrefinedCells() / minTreeSize / tarch::mpi::Rank::getInstance().getNumberOfRanks(),
-      1
+    result = std::min({maxPermittedTreesPerRank, treesPerRankAccommodatingMinTreeSize, treesPerRankToExploitAllThreads}
     );
-
-    result = std::min( treesPerRankAccommodatingMinTreeSize, treesPerRankToExploitAllThreads );
 
     logInfo(
       "getNumberOfTreesPerRank()",
-      "mesh has " << _statistics.getLocalNumberOfInnerUnrefinedCells() <<
-      " cells, so split " << result << " times " <<
-      "(maxPermittedTreesPerRank=" << maxPermittedTreesPerRank <<
-      ",treesPerRankToExploitAllThreads=" << treesPerRankToExploitAllThreads <<
-      ",minTreeSize=" << minTreeSize <<
-      ",treesPerRankAccommodatingMinTreeSize" << treesPerRankAccommodatingMinTreeSize <<
-      ")"
+      "Mesh has "
+        << _statistics.getLocalNumberOfInnerUnrefinedCells() << " cells, so split " << result << " times "
+        << "(MaxPermittedTreesPerRank=" << maxPermittedTreesPerRank
+        << ",TreesPerRankToExploitAllThreads=" << treesPerRankToExploitAllThreads << ",minTreeSize=" << minTreeSize
+        << ",TreesPerRankAccommodatingMinTreeSize=" << treesPerRankAccommodatingMinTreeSize << ")"
     );
   }
 
@@ -68,62 +61,44 @@ int toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::getNumberOfT
 
 
 void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::updateLoadBalancing() {
-  if (
-    _statistics.hasConsistentViewOfWorld()
-    and
-    _previousNumberOfCells == _statistics.getGlobalNumberOfInnerUnrefinedCells()
-  ) {
+  if (_statistics.hasConsistentViewOfWorld() and _previousNumberOfCells == _statistics.getGlobalNumberOfInnerUnrefinedCells()) {
     _numberOfStableGridIterations++;
-  }
-  else {
+  } else {
     _numberOfStableGridIterations = 0;
   }
- 
-  if (
-    not tarch::mpi::Rank::getInstance().isGlobalMaster()
-    and
-    _state == State::InterRankDistribution
-  ) {
+
+  if (not tarch::mpi::Rank::getInstance().isGlobalMaster() and _state == State::InterRankDistribution) {
     _state = State::Stagnation;
   }
-  
+
   const int numberOfTreesPerRank = getNumberOfTreesPerRank();
 
-  if ( numberOfTreesPerRank>0 ) {
-    const int ranks   = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  if (numberOfTreesPerRank > 0) {
+    const int ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-    int cellsPerTree = std::max(
-      static_cast<int>(std::round(_statistics.getGlobalNumberOfInnerUnrefinedCells() / ranks / numberOfTreesPerRank )),
+    const int cellsPerTree = std::max(
+      static_cast<int>(std::round(_statistics.getGlobalNumberOfInnerUnrefinedCells() / ranks / numberOfTreesPerRank)),
       1
     );
 
-    logInfo(
-      "updateLoadBalancing()",
-      "try to create " << numberOfTreesPerRank <<
-      " trees per rank with internal state" << toString() <<
-      " to produce " << ranks << "x" << numberOfTreesPerRank << 
-      " trees with approx " << cellsPerTree << " cells per tree"
-    );
-
     int totalSplits = cellsPerTree;
-    for (int targetRank=0; targetRank<ranks;   targetRank++ )
-    for (int treeNumber= targetRank==0 ? 1 : 0; treeNumber<numberOfTreesPerRank; treeNumber++ ) {
-      int thisTreesCells = cellsPerTree;
-      if (static_cast<int>(_statistics.getGlobalNumberOfInnerUnrefinedCells()) % (ranks*numberOfTreesPerRank) >= totalSplits) {
-        thisTreesCells++;
+    for (int targetRank = 0; targetRank < ranks; targetRank++) {
+      for (int treeNumber = targetRank == 0 ? 1 : 0; treeNumber < numberOfTreesPerRank; treeNumber++) {
+        int thisTreesCells = cellsPerTree;
+        if (static_cast<int>(_statistics.getGlobalNumberOfInnerUnrefinedCells()) % (ranks * numberOfTreesPerRank) >= totalSplits) {
+          thisTreesCells++;
+        }
+
+        triggerSplit(thisTreesCells, targetRank);
+
+        totalSplits++;
       }
-
-      triggerSplit(thisTreesCells, targetRank);
-
-      totalSplits++;
     }
 
     _state = State::Stagnation;
-  }
-  else if (not _statistics.hasConsistentViewOfWorld()) {
+  } else if (not _statistics.hasConsistentViewOfWorld()) {
     _previousNumberOfCells = -1;
-  }
-  else {
+  } else {
     _previousNumberOfCells = _statistics.getGlobalNumberOfInnerUnrefinedCells();
   }
 }
@@ -134,27 +109,27 @@ void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::finishStep(
   _costMetrics->updateGlobalView();
   _blacklist.update();
 
-  _statistics.notifyOfStateChange( _state );
+  _statistics.notifyOfStateChange(_state);
 
   updateLoadBalancing();
-  dumpStatistics();
 }
 
 
-void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::triggerSplit( int numberOfCells, int targetRank ) {
-  logInfo( "triggerSplit(int,int,int)", "trigger split from tree 0 into new tree on rank " << targetRank << " with " << numberOfCells << " cell(s)" );
+void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::triggerSplit(int numberOfCells, int targetRank) {
+  assertionEquals(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1);
+  assertion(tarch::mpi::Rank::getInstance().isGlobalMaster());
 
-  assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
-  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
+  const int  sourceTree = 0;
+  const bool success    = peano4::parallel::SpacetreeSet::getInstance().split(
+    sourceTree,
+    peano4::SplitInstruction{numberOfCells, peano4::SplitInstruction::Mode::BottomUp},
+    targetRank
+  );
 
-  const int sourceTree = 0;
-  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,peano4::SplitInstruction::Mode::BottomUp},targetRank);
   if (not success) {
-    logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
+    logError("triggerSplit(...)", "Wanted to split local rank " << sourceTree << " but failed");
   }
 
-  _blacklist.triggeredSplit( sourceTree );
+  _blacklist.triggeredSplit(sourceTree);
   _statistics.incLocalNumberOfSplits();
 }
-
-

@@ -98,7 +98,7 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _maximumTreesPerRank                         = _maximumTreesIn;
 
     if ( _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCells ) {
-      logInfo(
+      logDebug(
         "updateGlobalView()",
         "local number of cells (" << _localNumberOfInnerUnrefinedCells << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells <<
         "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Statistics might have inconsistent view of world"

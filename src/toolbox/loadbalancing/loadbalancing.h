@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "toolbox/loadbalancing/metrics/CellCount.h"
-#include "toolbox/loadbalancing/metrics/CustomCellWeight.h"
+#include "metrics/CellCount.h"
+#include "metrics/CustomCellWeight.h"
 
 /**
  * @page toolbox_loadbalancing Load Balancing (Domain Decomposition)

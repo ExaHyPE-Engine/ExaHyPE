@@ -61,6 +61,7 @@ toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwo
 
 toolbox::particles::TrajectoryDatabase::~TrajectoryDatabase() {
   if (_fileName!="") {
+    // TODO: Should NOT be called in the destructor!
     dumpCSVFile();
   }
   clear();
@@ -116,7 +117,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
 
   tarch::multicore::Lock lock(_semaphore);
   if (not _data.empty()) {
-    logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
+    logDebug( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific;
     #if Dimensions==2
@@ -159,11 +160,8 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
         file << std::endl;
       }
     }
-  }
-  else {
-    #if PeanoDebug>=1
-    logInfo( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
-    #endif
+  } else {
+    logDebug( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
   }
 
   if (_clearDatabaseAfterFlush) {

@@ -2,29 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
-#include "tarch/logging/Log.h"
-
 #include "peano4/parallel/Node.h"
-
-#include <map>
-
+#include "tarch/logging/Log.h"
 #include "toolbox/loadbalancing/AbstractLoadBalancing.h"
-
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 
+#include <map>
 
 namespace toolbox {
   namespace loadbalancing {
     namespace strategies {
       class SpreadOutOnceGridStagnates;
-    }
-  }
-}
-
-
-
+    } // namespace strategies
+  }   // namespace loadbalancing
+} // namespace toolbox
 
 
 /**
@@ -36,32 +27,37 @@ namespace toolbox {
  * The routine tries to get as many cores/ranks in as possible. Therefore, we
  * employ a bottom-up splitting strategy which prioritises fair fine grid
  * splits over an "efficient" tree decomposition. Consult a discussion of
- * splitting variants and constraints in peano4::grid::Spacetree::isCellTopDownSplitCandidate()
- * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
+ * splitting variants and constraints in
+ * peano4::grid::Spacetree::isCellTopDownSplitCandidate() and
+ * peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
  * peano4::grid::Spacetree::splitOrJoinCell() and notably the general
  * @ref peano_domain_decomposition "domain decomposition overview" for the
  * rationale.
  */
-class toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates: public toolbox::loadbalancing::AbstractLoadBalancing {
-  public:
-    SpreadOutOnceGridStagnates(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics = new toolbox::loadbalancing::metrics::CellCount() );
-    virtual ~SpreadOutOnceGridStagnates() override = default;
+class toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates:
+  public toolbox::loadbalancing::AbstractLoadBalancing {
+public:
+  SpreadOutOnceGridStagnates(
+    Configuration* configuration = new DefaultConfiguration(),
+    CostMetrics*   costMetrics   = new toolbox::loadbalancing::metrics::CellCount()
+  );
+  virtual ~SpreadOutOnceGridStagnates() override = default;
 
-    virtual void finishStep() override;
-  private:
-    static tarch::logging::Log  _log;
+  virtual void finishStep() override;
 
-    int _previousNumberOfCells;
-    int _numberOfStableGridIterations;
+private:
+  static tarch::logging::Log _log;
 
-    /**
-     * Return 0 if the load balancing should not split (yet) and otherwise
-     * return number of splits required.
-     */
-    int getNumberOfTreesPerRank() const;
+  int _previousNumberOfCells;
+  int _numberOfStableGridIterations;
 
-    void updateLoadBalancing();
+  /**
+   * Return 0 if the load balancing should not split (yet) and otherwise
+   * return number of splits required.
+   */
+  int getNumberOfTreesPerRank() const;
 
-    void triggerSplit( int numberOfCells, int targetRank );
+  void updateLoadBalancing();
+
+  void triggerSplit(int numberOfCells, int targetRank);
 };
-

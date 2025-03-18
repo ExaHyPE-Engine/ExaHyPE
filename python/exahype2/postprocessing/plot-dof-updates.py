@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     if args.output_file == "output":
         print(
-            "default file name output.{} written. Change file name with -o or --output-file".format(
+            "Default file name output.{} written. Change file name with -o or --output-file".format(
                 args.output_format
             )
         )
