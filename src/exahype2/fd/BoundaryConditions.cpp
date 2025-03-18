@@ -9,6 +9,8 @@
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
+#include <iomanip>
+
 
 void exahype2::fd::applyBoundaryConditions(
   std::function< void(

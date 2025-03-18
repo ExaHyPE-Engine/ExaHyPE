@@ -105,7 +105,7 @@ def plot_time_step_size_per_step(performance_data,label=None,xaxis=XAxis.RealTim
     plt.xlabel( "Simulated time $T$" )
   else:
     raise Exception( "enum value not supported" )
-  plt.ylabel( "Time step size $\Delta T$" )
+  plt.ylabel( "Time step size $\\Delta T$" )
 
 
 
