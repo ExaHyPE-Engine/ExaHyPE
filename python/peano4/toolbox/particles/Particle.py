@@ -65,6 +65,19 @@ class Particle(DaStGen2):
     Details can be found in
       UpdateParallelState.
 
+      
+    ## Debug information
+      
+    If any debug level is active, each particle carries a unique identifier.
+    
+    
+    ## Performance optimisation
+    
+    t.b.d.
+    self.data.add_attribute(
+        dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
+    )
+    
     """
 
     def __init__(self, name):
@@ -82,14 +95,18 @@ class Particle(DaStGen2):
         peano4.datamodel.DaStGen2.__init__(self, name)
 
         self.name = name
+        # Is used in subclases
+        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PeanoDebug > 0"], initval="-1")
 
         self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "Dimensions"))
         self.data.add_attribute(
             peano4.dastgen2.Peano4DoubleArray("cellH", "Dimensions")
         )
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
-        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PeanoDebug > 0"], initval="-1")
         self.data.add_attribute(self.partid)
+        self.data.add_attribute(
+            dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
+        )
 
         #
         # Never manipulate as user
