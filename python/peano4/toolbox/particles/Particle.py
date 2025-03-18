@@ -94,7 +94,18 @@ class Particle(DaStGen2):
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     to the data model which encodes this information. It is to be set properly 
-    by the particle sorting algorithm in use.
+    by the particle sorting algorithm in use. 
+    
+    In the example above, the bitfield would hold 010 (read from right to 
+    left) for the blue particle and 0100 for the red one. The code is read from
+    the vertex's point of view: If we look at the centre vertex and study the 
+    position of particle, it is not in the left bottom adjacent cell. It is 
+    however in the right bottom adjacent cell. So we use a lexicographic 
+    enumeration of the adjacent cells. 
+    
+    As the position of a particle within cells is not unique if a particle
+    resides exactly on the face between two cells, the bitfield can hold
+    more than one entry.
     
     """
 
