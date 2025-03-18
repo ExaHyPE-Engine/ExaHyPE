@@ -8,11 +8,10 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from HLLEM import hllem
 
 initial_conditions = """
   const double omega = sqrt(0.2 * GRAV);
-
-  using s = VariableShortcuts;
 
   Q[s::b] = 0.1 * (std::pow(x[0], 2) + std::pow(x[1], 2));
   Q[s::h] = std::fmax(0.0, 0.05 * (2 * x[0] * std::cos(omega * 0) + 2 * x[1] * std::sin(omega * 0)) + 0.075 - Q[s::b]);
@@ -24,7 +23,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -64,16 +62,11 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    riemann_solver="return applications::exahype2::swe::hllem(QL, QR, x, h, t, dt, normal, FL, FR);",
+    riemann_solver=hllem,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
-riemann_solver.add_user_solver_includes(
-    """
-#include "../HLLEM.h"
-"""
-)
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],

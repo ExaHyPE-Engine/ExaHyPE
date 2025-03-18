@@ -42,6 +42,7 @@ class PlotParticlesInVTKFormat(ActionSet):
         filename,
         particle_set,
         time_stamp_evaluation=NoMetaFile,
+        output_directory="",
         additional_includes="",
     ):
         """
@@ -60,7 +61,9 @@ class PlotParticlesInVTKFormat(ActionSet):
            Pass in prefined constants to use default behaviour.
 
         """
-        super(PlotParticlesInVTKFormat, self).__init__(descend_invocation_order=1, parallel=False)
+        super(PlotParticlesInVTKFormat, self).__init__(
+            descend_invocation_order=1, parallel=False
+        )
 
         self.d = {}
         self.d["FILENAME"] = filename
@@ -73,6 +76,7 @@ class PlotParticlesInVTKFormat(ActionSet):
         self.d["ATTRIBUTE_WRITER_INITIALISERS"] = ""
         self.d["ATTRIBUTE_WRITER_PLOT_CALLS"] = ""
         self.d["TIMESTAMP"] = time_stamp_evaluation
+        self.d["OUTPUT_DIRECTORY"] = output_directory
 
         self._attributes_to_plot = []
 
@@ -217,7 +221,7 @@ class PlotParticlesInVTKFormat(ActionSet):
   counter++;
 
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{{FILENAME}}-" << counter;
+  snapshotFileName << "{{OUTPUT_DIRECTORY}}{{FILENAME}}-" << counter;
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();

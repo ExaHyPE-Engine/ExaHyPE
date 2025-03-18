@@ -1,20 +1,55 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 
-// clang-format off
+fWave = r"""
+  /**
+   ****
+   **** F-Wave Riemann Solver for the Shallow Water Equation
+   ****
+   * Note:
+   * This solver does not support inundation. For dry cells, we assume an infinitely high solid wall
+   * at the shore-line, which is equivalent to reflecting boundary conditions. Thus no water is
+   * able to pass the shoreline, and we have to assure that the particle velocity at the boundary is
+   * zero.
+   *
+   * Literature:
+   *
+   *   @article{bale2002wave,
+   *            title={A wave propagation method for conservation laws and balance laws with spatially varying flux functions},
+   *            author={Bale, D.S. and LeVeque, R.J. and Mitran, S. and Rossmanith, J.A.}, journal={SIAM Journal on Scientific Computing},
+   *            volume={24},
+   *            number={3},
+   *            pages={955--978},
+   *            year={2002},
+   *            publisher={Citeseer}}
+   *
+   *   @book{leveque2002finite,
+   *         Author = {LeVeque, R. J.},
+   *         Date-Added = {2011-09-13 14:09:31 +0000},
+   *         Date-Modified = {2011-10-31 09:46:40 +0000},
+   *         Publisher = {Cambridge University Press},
+   *         Title = {Finite Volume Methods for Hyperbolic Problems},
+   *         Volume = {31},
+   *         Year = {2002}}
+   *
+   *   @webpage{levequeclawpack,
+   *            Author = {LeVeque, R. J.},
+   *            Lastchecked = {January, 05, 2011},
+   *            Title = {Clawpack Sofware},
+   *            Url = {https://github.com/clawpack/clawpack-4.x/blob/master/geoclaw/2d/lib}}
+   ****
+   */
 
-double applications::exahype2::swe::fWave(
-  const double* const __restrict__             QL,
-  const double* const __restrict__             QR,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const __restrict__                   AMDQ,
-  double* const __restrict__                   APDQ
-) {
-  using s = VariableShortcuts;
+  enum class WetDryState {
+    DryDry,               /**< Both cells are dry. */
+    WetWet,               /**< Both cells are wet. */
+    WetDryInundation,     /**< 1st cell: wet, 2nd cell: dry. 1st cell lies higher than the 2nd one. */
+    WetDryWall,           /**< 1st cell: wet, 2nd cell: dry. 1st cell lies lower than the 2nd one. Momentum is not large enough to overcome the difference. */
+    WetDryWallInundation, /**< 1st cell: wet, 2nd cell: dry. 1st cell lies lower than the 2nd one. Momentum is large enough to overcome the difference. */
+    DryWetInundation,     /**< 1st cell: dry, 2nd cell: wet. 1st cell lies lower than the 2nd one. */
+    DryWetWall,           /**< 1st cell: dry, 2nd cell: wet. 1st cell lies higher than the 2nd one. Momentum is not large enough to overcome the difference. */
+    DryWetWallInundation  /**< 1st cell: dry, 2nd cell: wet. 1st cell lies higher than the 2nd one. Momentum is large enough to overcome the difference. */
+  };
 
   // Set speeds to zero (will be determined later)
   double uLeft = 0.0;
@@ -75,8 +110,8 @@ double applications::exahype2::swe::fWave(
 
   // Zero updates in the beginning
   for (int i = 0; i < 3; i++) {
-    AMDQ[i] = 0.0;
-    APDQ[i] = 0.0;
+    FL[i] = 0.0;
+    FR[i] = 0.0;
   }
 
   // Return in the case of dry cells
@@ -197,12 +232,10 @@ double applications::exahype2::swe::fWave(
 #endif
 
   // Set net-updates
-  AMDQ[s::h] = hUpdateLeft;
-  APDQ[s::h] = hUpdateRight;
-  AMDQ[normal + 1] = huUpdateLeft;
-  APDQ[normal + 1] = huUpdateRight;
+  FL[s::h] = hUpdateLeft;
+  FR[s::h] = hUpdateRight;
+  FL[normal + 1] = huUpdateLeft;
+  FR[normal + 1] = huUpdateRight;
 
   return maxWaveSpeed;
-}
-
-// clang-format on
+"""

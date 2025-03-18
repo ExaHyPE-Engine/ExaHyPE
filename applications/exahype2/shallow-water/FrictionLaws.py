@@ -1,18 +1,33 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 
-// clang-format off
+friction_coefficients = r"""
+  const double Zeta = 35.0 * tarch::la::PI / 180.0; // Conversion of degrees to radians
+  const double Zeta1 = 28.95 * tarch::la::PI / 180.0;
+  const double Zeta2 = 44.09 * tarch::la::PI / 180.0;
+  const double Zeta3 = 31.81 * tarch::la::PI / 180.0;
 
-double applications::exahype2::swe::frictionlaws::maxEigenvalue(
-  const double* const __restrict__             Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal
-) {
-  using s = VariableShortcuts;
+  const double Mu1 = std::tan(Zeta1);
+  const double Mu2 = std::tan(Zeta2);
+  const double Mu3 = std::tan(Zeta3);
 
+  constexpr double Beta = 1.07;
+  constexpr double Gamma = 2.01;
+  constexpr double BetaStar = 0.06;
+  // Kappa in the friction law is assumed to be 1 and is just initialised as a
+  // const double here using Kappa. The user can apply std::pow((Fr/BetaStar),
+  // Kappa) for evaluating T here in case the value of Kappa is different
+  // from 1.
+
+  constexpr double Kappa = 1.0;
+  constexpr double FrictionLengthScale = 0.00035;
+
+  const double Nu = (2.0 / 9.0) * (FrictionLengthScale / Beta) * (GRAV * std::sin(Zeta) / std::sqrt(GRAV * std::cos(Zeta))) * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu1)) - 1.0);
+  const double Hstart = FrictionLengthScale * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu3)) - 1.0);
+  const double Hstop = FrictionLengthScale * (((Mu2 - Mu1) / (std::tan(Zeta) - Mu1)) - 1.0);
+"""
+
+max_eigenvalue = friction_coefficients + r"""
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -47,20 +62,9 @@ double applications::exahype2::swe::frictionlaws::maxEigenvalue(
   }
 
   return result;
-}
+"""
 
-
-void applications::exahype2::swe::frictionlaws::flux(
-  const double* const __restrict__             Q,
-  const tarch::la::Vector<Dimensions, double>& /*x*/,
-  const tarch::la::Vector<Dimensions, double>& /*h*/,
-  const double                                 /*t*/,
-  const double                                 /*dt*/,
-  const int                                    normal,
-  double* const __restrict__                   F
-) {
-  using s = VariableShortcuts;
-
+flux = friction_coefficients + r"""
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -113,21 +117,9 @@ void applications::exahype2::swe::frictionlaws::flux(
   nonCriticalAssertion(F[s::hu] == F[s::hu]);
   nonCriticalAssertion(F[s::hv] == F[s::hv]);
 #endif
-}
+"""
 
-
-void applications::exahype2::swe::frictionlaws::nonconservativeProduct(
-  const double* const __restrict__             Q,
-  const double* const __restrict__             deltaQ,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const __restrict__                   BTimesDeltaQ
-) {
-  using s = VariableShortcuts;
-
+nonconservative_product = friction_coefficients + r"""
 #ifdef GPUOffloadingOff
   assertion(normal >= 0);
   assertion(normal < Dimensions);
@@ -212,19 +204,9 @@ void applications::exahype2::swe::frictionlaws::nonconservativeProduct(
   nonCriticalAssertion(BTimesDeltaQ[s::hu] == BTimesDeltaQ[s::hu]);
   nonCriticalAssertion(BTimesDeltaQ[s::hv] == BTimesDeltaQ[s::hv]);
 #endif
-}
+"""
 
-
-void applications::exahype2::swe::frictionlaws::coulombFriction(
-  const double* __restrict__                   Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  double                                       t,
-  double                                       dt,
-  double* __restrict__                         S
-) {
-  using s = VariableShortcuts;
-
+coulomb_friction = friction_coefficients + r"""
 #ifdef GPUOffloadingOff
   assertion(!std::isnan(Q[s::h]));
   assertion(!std::isnan(Q[s::hu]));
@@ -272,19 +254,9 @@ void applications::exahype2::swe::frictionlaws::coulombFriction(
   nonCriticalAssertion(S[s::hu] == S[s::hu]);
   nonCriticalAssertion(S[s::hv] == S[s::hv]);
 #endif
-}
+"""
 
-
-void applications::exahype2::swe::frictionlaws::materialDependentBasalFriction(
-  const double* __restrict__                   Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  double                                       t,
-  double                                       dt,
-  double* __restrict__                         S
-) {
-  using s = VariableShortcuts;
-
+material_dependent_basal_friction = friction_coefficients + r"""
 #ifdef GPUOffloadingOff
   assertion(!std::isnan(Q[s::h]));
   assertion(!std::isnan(Q[s::hu]));
@@ -382,6 +354,4 @@ void applications::exahype2::swe::frictionlaws::materialDependentBasalFriction(
   nonCriticalAssertion(S[s::hu] == S[s::hu]);
   nonCriticalAssertion(S[s::hv] == S[s::hv]);
 #endif
-}
-
-// clang-format on
+"""

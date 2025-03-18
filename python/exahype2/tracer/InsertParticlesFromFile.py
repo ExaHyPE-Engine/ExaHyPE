@@ -1,20 +1,13 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from peano4.solversteps.ActionSet import ActionSet
-
 import jinja2
 
-import peano4.datamodel.DaStGen2
-
-import dastgen2.attributes.Integer
-
-import numpy as np
+from peano4.solversteps.ActionSet import ActionSet
 
 
 class InsertParticlesFromFile(ActionSet):
     def __init__(self, particle_set, filename, scale_factor=1.0):
         """
-
         particle_set: ParticleSet
 
         filename: String
@@ -23,7 +16,6 @@ class InsertParticlesFromFile(ActionSet):
         scale_factor
           scale factor for all coordinates, used for scale up/down the sample table from unit sphere to certain radius.
           set to 1 if your table is exact.
-
         """
 
         self.d = {}
@@ -36,30 +28,31 @@ class InsertParticlesFromFile(ActionSet):
         """
   if (not marker.willBeRefined()) {
     tarch::multicore::Lock lock( _semaphore );
-  
-    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);  
+
+    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);
     std::list< tarch::la::Vector<Dimensions,double> >::iterator p = coords.begin();
     //for (auto* p: coords) {
     while ( p!=coords.end() ) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
-      
+
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
       _particleNumberOnThisTree++;
-      
-      logInfo( "touchVertexFirstTime(...)", "insert particle " << newParticle->toString() << " into " << marker.toString() );
 
-      toolbox::particles::init(*newParticle,*p,0.0);
+      logDebug("touchVertexFirstTime(...)", "insert particle " << newParticle->toString() << " into " << marker.toString());
+
+      toolbox::particles::init(*newParticle, *p, 0.0);
 
       toolbox::particles::insertParticleIntoCell(
         marker,
         newParticle,
-        fineGridVertices{{PARTICLES_CONTAINER}}
+        fineGridVertices{{PARTICLES_CONTAINER}},
+        _spacetreeId
       );
       p++;
     }
-    
-    logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId );
+
+    logDebug("touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId);
   }
 """
     )
@@ -68,10 +61,9 @@ class InsertParticlesFromFile(ActionSet):
         """
   if (_particleNumberOnThisTree==0) {
     logWarning( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId );
-  }
-  else {
+  } else {
     logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
-  }  
+  }
   #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
   assertion( _particleNumberOnThisTree>0 );
   #endif
@@ -130,10 +122,10 @@ toolbox::particles::FileReader     """
             f"""
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
-  
+
   tarch::multicore::Lock lock( _semaphore );
 
-  if ( _fileReader.empty() ) 
+  if (_fileReader.empty())
     _fileReader.readDatFile( \""""
             + self._filename
             + """\", """
@@ -150,7 +142,7 @@ toolbox::particles::FileReader     """
         # return super( InsertParticlesFromFile ).get_attributes() + """
         return """
   static tarch::multicore::BooleanSemaphore _semaphore;
-     
+
   int                                    _particleNumberOnThisTree;
   int                                    _spacetreeId;
   static toolbox::particles::FileReader  _fileReader;

@@ -1,11 +1,24 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 
-// clang-format off
-
-template <int NumberOfDofs, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
-void applications::exahype2::swe::computeFirstDerivatives(double* const __restrict__ oldQWithHalo) {
-  using s = VariableShortcuts;
+compute_first_derivatives = r"""
+  /**
+   * Partial derivative calculation:
+   *
+   *  Backward difference for single derivatives.
+   *  Central difference for double derivatives.
+   *
+   *  Only numerator of the finite difference scheme is calculated here.
+   *
+   *  The division by the denominator takes place in the ncp function after
+   *  retrieval from the average value.
+   *
+   *  For single derivatives, one can change
+   *  the numerical scheme to forward, central or backward by using
+   *  appropriate neighbour cell values defined above. For double
+   *  derivatives, only central difference can be used with the variables
+   *  defined above.
+   */
 
   static constexpr int NumberOfTotalVariables = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
@@ -120,10 +133,9 @@ void applications::exahype2::swe::computeFirstDerivatives(double* const __restri
       oldQWithHalo[currentCellSerialized * NumberOfTotalVariables + s::by] = (zCurrentCell - zYLeftNeighbourCell);
     }
   }
-}
+"""
 
-template <int NumberOfDofs, int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
-void applications::exahype2::swe::extrapolateHalo(double* const __restrict__ oldQWithHalo) {
+extrapolate_halo = r"""
   tarch::la::Vector<Dimensions, int> topLeftCell      = {0, NumberOfDofs + 1};
   tarch::la::Vector<Dimensions, int> topRightCell     = {NumberOfDofs + 1, NumberOfDofs + 1};
   tarch::la::Vector<Dimensions, int> bottomLeftCell   = {0, 0};
@@ -188,6 +200,4 @@ void applications::exahype2::swe::extrapolateHalo(double* const __restrict__ old
       oldQWithHalo[(bottomRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
     );
   }
-}
-
-// clang-format on
+"""

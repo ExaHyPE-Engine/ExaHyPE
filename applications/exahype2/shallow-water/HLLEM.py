@@ -1,20 +1,35 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 
- // clang-format off
-
-double applications::exahype2::swe::hllem(
-  const double* const __restrict__             QL,
-  const double* const __restrict__             QR,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const __restrict__                   AMDQ,
-  double* const __restrict__                   APDQ
-) {
-  using s = VariableShortcuts;
+hllem = r"""
+  /**
+   ****
+   **** An new formulation of the HLLEM Riemann solver for the Shallow Water Equation with support for inundation
+   ****
+   * Literature:
+   *
+   *   @article{DUMBSER2016275,
+   *            title = {A new efficient formulation of the HLLEM Riemann solver for general conservative and non-conservative hyperbolic systems},
+   *            journal = {Journal of Computational Physics},
+   *            volume = {304},
+   *            pages = {275-319},
+   *            year = {2016},
+   *            issn = {0021-9991},
+   *            doi = {https://doi.org/10.1016/j.jcp.2015.10.014},
+   *            url = {https://www.sciencedirect.com/science/article/pii/S0021999115006786},
+   *            author = {Michael Dumbser and Dinshaw S. Balsara}}
+   *
+   *   @article{KURGANOV,
+   *            title = {A Second-Order Well-Balanced Positivity Preserving Central-Upwind Scheme for the Saint-Venant System},
+   *            year = {2007},
+   *            month = {03},
+   *            pages = {},
+   *            volume = {5},
+   *            journal = {Communications in mathematical sciences},
+   *            author = {Kurganov, Alexander and Petrova, G.},
+   *            doi = {10.4310/CMS.2007.v5.n1.a6}}
+   ****
+   */
 
   const double hLeft   = QL[s::h];
   const double hRight  = QR[s::h];
@@ -67,12 +82,12 @@ double applications::exahype2::swe::hllem(
   // const double vCorrectedLeft  = hvLeft  * hLeft  * std::sqrt(2) / std::sqrt(std::pow(hLeft,  4) + std::fmax(std::pow(hLeft,  4), dryTol));
   // const double vCorrectedRight = hvRight * hRight * std::sqrt(2) / std::sqrt(std::pow(hRight, 4) + std::fmax(std::pow(hRight, 4), dryTol));
 
-  const double LL[3] {
+  const double eigenvaluesLeft[3] {
     normal == 0 ? uCorrectedLeft + cLeft : vCorrectedLeft + cLeft,
     normal == 0 ? uCorrectedLeft - cLeft : vCorrectedLeft - cLeft,
     normal == 0 ? uCorrectedLeft         : vCorrectedLeft
   };
-  const double LR[3] {
+  const double eigenvaluesRight[3] {
     normal == 0 ? uCorrectedRight + cRight : vCorrectedRight + cRight,
     normal == 0 ? uCorrectedRight - cRight : vCorrectedRight - cRight,
     normal == 0 ? uCorrectedRight          : vCorrectedRight
@@ -80,21 +95,21 @@ double applications::exahype2::swe::hllem(
 
   double maxWaveSpeed = 0.0;
   for (int i = 0; i < 3; i++) {
-    const double absEigenvalueLeft = std::fabs(LL[i]);
+    const double absEigenvalueLeft = std::fabs(eigenvaluesLeft[i]);
     maxWaveSpeed = std::fmax(absEigenvalueLeft, maxWaveSpeed);
   }
   for (int i = 0; i < 3; i++) {
-    const double absEigenvalueRight = std::fabs(LR[i]);
+    const double absEigenvalueRight = std::fabs(eigenvaluesRight[i]);
     maxWaveSpeed = std::fmax(absEigenvalueRight, maxWaveSpeed);
   }
 
-  const double FL[3] {
+  const double fluxLeft[3] {
     normal == 0 ? hLeft * uCorrectedLeft                  : hLeft * vCorrectedLeft,
     normal == 0 ? hLeft * uCorrectedLeft * uCorrectedLeft : hLeft * vCorrectedLeft * uCorrectedLeft,
     normal == 0 ? hLeft * uCorrectedLeft * vCorrectedLeft : hLeft * vCorrectedLeft * vCorrectedLeft
   };
 
-  const double FR[3] {
+  const double fluxRight[3] {
     normal == 0 ? hRight * uCorrectedRight                   : hRight * vCorrectedRight,
     normal == 0 ? hRight * uCorrectedRight * uCorrectedRight : hRight * vCorrectedRight * uCorrectedRight,
     normal == 0 ? hRight * uCorrectedRight * vCorrectedRight : hRight * vCorrectedRight * vCorrectedRight
@@ -108,24 +123,22 @@ double applications::exahype2::swe::hllem(
   dJump[s::hu + normal] = 0.5 * GRAV * hRoe * deltaEta;
 
   const double netUpdates[3] {
-    0.5 * (FL[s::h]  + FR[s::h])  - 0.5 * maxWaveSpeed * deltaEta,
-    0.5 * (FL[s::hu] + FR[s::hu]) - 0.5 * maxWaveSpeed * (huRight - huLeft),
-    0.5 * (FL[s::hv] + FR[s::hv]) - 0.5 * maxWaveSpeed * (hvRight - hvLeft)
+    0.5 * (fluxLeft[s::h]  + fluxRight[s::h])  - 0.5 * maxWaveSpeed * deltaEta,
+    0.5 * (fluxLeft[s::hu] + fluxRight[s::hu]) - 0.5 * maxWaveSpeed * (huRight - huLeft),
+    0.5 * (fluxLeft[s::hv] + fluxRight[s::hv]) - 0.5 * maxWaveSpeed * (hvRight - hvLeft)
   };
 
   for (int i = 0; i < 3; i++){
-    AMDQ[i] = netUpdates[i] + dJump[i];
-    APDQ[i] = netUpdates[i] - dJump[i];
+    FL[i] = netUpdates[i] + dJump[i];
+    FR[i] = netUpdates[i] - dJump[i];
   }
 
   if (QL[s::h] < dryTol) {
-    AMDQ[s::hu] = AMDQ[s::hv] = 0.0;
+    FL[s::hu] = FL[s::hv] = 0.0;
   }
   if (QR[s::h] < dryTol) {
-    APDQ[s::hu] = APDQ[s::hv] = 0.0;
+    FR[s::hu] = FR[s::hv] = 0.0;
   }
 
   return maxWaveSpeed;
-}
-
-// clang-format on
+"""

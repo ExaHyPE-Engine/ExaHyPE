@@ -8,6 +8,8 @@ import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 from sweargs import SWEArgumentParser
+from FrictionLaws import *
+from ComputeFirstDerivatives import *
 
 # https://arxiv.org/pdf/2106.13572
 # https://brgm.hal.science/hal-03974933/document
@@ -16,14 +18,12 @@ initial_conditions = """
     Q[i] = 0.0;
   }
 
-  using s = VariableShortcuts;
   const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = { 0.15, 0.35 };
   const bool nearCentre = tarch::la::norm2(x - granularMaterialCenter) < 0.10;
   Q[s::h] = (nearCentre ? 0.008 : 0.000); // Granular material height (h)
 """
 
 boundary_conditions = """
-  using s = VariableShortcuts;
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
@@ -84,29 +84,15 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux="applications::exahype2::swe::frictionlaws::flux(Q, x, h, t, dt, normal, F);",
-    ncp="applications::exahype2::swe::frictionlaws::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
-    max_eigenvalue="return applications::exahype2::swe::frictionlaws::maxEigenvalue(Q, x, h, t, dt, normal);",
-    source_term="applications::exahype2::swe::frictionlaws::materialDependentBasalFriction(Q, x, h, t, dt, S);",
+    flux=flux,
+    ncp=nonconservative_product,
+    max_eigenvalue=max_eigenvalue,
+    source_term=material_dependent_basal_friction,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
-riemann_solver.add_user_solver_includes(
-    """
-#include "../SWE.h"
-#include "../FrictionLaws.h"
-#include "../ComputeFirstDerivatives.h"
-"""
-)
-riemann_solver._preprocess_reconstructed_patch = """
-      extrapolateHalo<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
-      computeFirstDerivatives<{NumberOfDofs}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}>(oldQWithHalo);
-""".format(
-                NumberOfDofs=args.patch_size,
-                NumberOfUnknowns=sum(unknowns.values()),
-                NumberOfAuxiliaryVariables=sum(auxiliary_variables.values()),
-            )
+#riemann_solver._preprocess_reconstructed_patch = extrapolate_halo + compute_first_derivatives # TODO: Should be replaced by proper derivative computation within the solver
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "swe"],

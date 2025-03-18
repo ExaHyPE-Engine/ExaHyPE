@@ -1376,8 +1376,8 @@ The finest mesh width of """
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
                 os.path.dirname(os.path.realpath(__file__))
                 + "/"
-                + "../VariableShortcuts.template.h",
-                "VariableShortcuts",
+                + "../../VariableShortcuts.template.h",
+                "VariableShortcuts" + self._name,
                 namespace,
                 subdirectory + ".",
                 implementationDictionary,
@@ -1385,7 +1385,7 @@ The finest mesh width of """
                 True,
             )
             output.add(generated_shortcut_file)
-            output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
+            output.makefile.add_h_file(subdirectory + "VariableShortcuts" + self._name + ".h", generated=True)
 
         self._generate_kernels(namespace, output, subdirectory, dimensions)
 
@@ -1410,8 +1410,8 @@ The finest mesh width of """
         d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
         d["OVERLAP"] = self._overlap
         d["HALO_SIZE"] = int(self._patch_overlap_old.dim[0] / 2)
-        d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
         d["SOLVER_NAME"] = self._name
+        d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables

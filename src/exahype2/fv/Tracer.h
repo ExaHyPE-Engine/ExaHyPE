@@ -158,10 +158,10 @@ namespace exahype2 {
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
       const double* __restrict__ Q,
-      double                             timeStepSize,
-      tarch::la::Vector<Dimensions, int> indices,
+      double                                timeStepSize,
+      tarch::la::Vector<Dimensions, int>    indices,
       tarch::la::Vector<Dimensions, double> factors,
-      Particle&                          particle
+      Particle&                             particle
     );
 
     /**
@@ -196,6 +196,68 @@ namespace exahype2 {
       const double* __restrict__ Q,
       Particle& particle
     );
+    /**
+     * Update the particle's state by applying interpolation, integration, and boundary handling.
+     *
+     * This function serves as a **central hub** for updating the particle's state based on
+     * the selected **integration method** (e.g., Explicit Euler, Midpoint, Runge-Kutta).
+     *
+     * The function **calls interpolation**, updates the velocity and position based on the
+     * chosen numerical scheme, and then **applies boundary collision handling** if necessary.
+     *
+     * @param particle       The particle whose state is being updated.
+     * @param forces         External forces acting on the particle (e.g., gravity).
+     * @param timeStepSize   The time step size used in integration.
+     * @param method         The numerical integration method to use (Explicit Euler, Midpoint, etc.).
+     */
+    template <int SourceIndex, int... SourceIndices, typename Particle>
+    void updateParticleState(
+      Particle&                                 particle,
+      double                                    timeStepSize,
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      tarch::la::Vector<Dimensions, double> DomainSize,
+      tarch::la::Vector<Dimensions, double> DomainOffset,
+      tarch::la::Vector<Dimensions, double> PeriodicBC
+    );
+
+
+    /**
+     * Perform an Explicit Euler integration step.
+     *
+     * This is the simplest integration method, where the **velocity is updated first**,
+     * and then the position is updated using the new velocity.
+     *
+     * @param particle       The particle whose position and velocity are updated.
+     * @param timeStepSize   The time step size used in integration.
+     * @return The updated particle position after one explicit Euler step.
+     */
+    template <typename Particle>
+    tarch::la::Vector<Dimensions, double> explicitEulerIntegration(Particle& particle, double timeStepSize);
+
+    /**
+     * Handle boundary collisions and apply reflection with a damping factor.
+     *
+     * This function **checks whether a particle crosses the domain boundary**
+     * and applies reflection to ensure it remains within the domain.
+     *
+     * - **Reverses the velocity** upon hitting a boundary.
+     * - **Applies damping** to reduce velocity after reflection.
+     *
+     * @param particle       The particle being checked for boundary collisions.
+     * @param newPosition    The computed new position (can be adjusted if out of bounds).
+     * @param dampingFactor  The coefficient for velocity reduction upon collision (0.9 = 90% energy retained).
+     */
+    template <typename Particle>
+    void handleBoundaryCollisions(
+      Particle&                              particle,
+      tarch::la::Vector<Dimensions, double>& newPosition,
+      tarch::la::Vector<Dimensions, double>  DomainSize,
+      tarch::la::Vector<Dimensions, double>  DomainOffset
+    );
+
 
     namespace internal {
       /**
@@ -215,7 +277,6 @@ namespace exahype2 {
         int                                          voxelsPerAxis,
         const tarch::la::Vector<Dimensions, double>& particleX
       );
-
       /**
        * Similar to mapParticleOntoVoxel() but this time, we always take the
        * biased voxel to the left. Let a 1d patch be divided into voxels of
@@ -264,12 +325,12 @@ namespace exahype2 {
        *   affect the particle of interest.
        */
       double projectValueOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker&     marker,
-        int                                           voxelsPerAxis,
-        int                                           unknownsPerVoxel,
-        const double* __restrict__                    Q,
-        const tarch::la::Vector<Dimensions, double>&  particleX,
-        int                                           unknown
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        const tarch::la::Vector<Dimensions, double>& particleX,
+        int                                          unknown
       );
 
       /**

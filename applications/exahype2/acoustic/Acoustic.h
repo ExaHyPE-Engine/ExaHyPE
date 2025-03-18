@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Constants.h"
-#include "VariableShortcuts.h"
+#include "VariableShortcutsAcoustic.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
