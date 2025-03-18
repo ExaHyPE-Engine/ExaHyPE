@@ -73,10 +73,28 @@ class Particle(DaStGen2):
     
     ## Performance optimisation
     
-    t.b.d.
+    Particles in Peano are typically stored in the vertex next to them. This is 
+    the pidt (paricle in dual tree) technique referenced in the Readme.md file 
+    that's automatically generated when you use the particle toolbox.
+    
+    In the illustration below, the blue paricle is associated to the vertex 
+    left above it, the red one belongs to the vertex right of it.
+    
+    @image html Particle.png
+    
+    The logical information where the "owning" vertex of a particle is is easy 
+    to compute at any time from the geometric context. However, we found that 
+    this recomputation is quickly becoming excessively expensive. Therefore, we
+    add the field
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     self.data.add_attribute(
         dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
     )
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    to the data model which encodes this information. It is to be set properly 
+    by the particle sorting algorithm in use.
     
     """
 
