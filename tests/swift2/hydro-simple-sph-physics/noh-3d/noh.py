@@ -262,6 +262,7 @@ particle.h_hydro_max = hydro_h_max
 particle.set_parameters()
 
 
+
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
@@ -269,10 +270,11 @@ particle_set = project.add_particle_species(particle)
 
 #  if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
 particle_set.generator = (
-    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
+        particle_set
+    )
 )
-#  )
-#  #  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
+#  elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
 #  particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
 #      particle_set
 #  )
@@ -282,6 +284,10 @@ particle_set.generator = (
 #          particle_set
 #      )
 #  )
+
+
+
+
 
 
 if args.debug:
@@ -306,10 +312,10 @@ project.set_global_simulation_parameters(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
-)
+#  project.set_load_balancing(
+#      "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+#      "new toolbox::loadbalancing::DefaultConfiguration()",
+#  )
 
 
 ###############################################################################
