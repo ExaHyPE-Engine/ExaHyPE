@@ -2,14 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <functional> // needed for std::less
-#include <map>
-#include <vector>
-
 #include "MeshSweepData.h"
 #include "ParticleIdentifier.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
+
+#include <functional> // needed for std::less
+#include <map>
+#include <vector>
 
 
 #if !defined(AssignmentChecks) and !defined(noAssignmentChecks) \
@@ -97,7 +97,7 @@ namespace toolbox {
           size_t _maxParticleEventsToKeepTrackOf;
 
         public:
-          static constexpr int AnyTree                                = -1;
+          static constexpr int AnyTree = -1;
 
           /**
            * Sets the number of snapshots to keep in the database.
@@ -124,8 +124,7 @@ namespace toolbox {
            *
            * @return The history of the particle.
            */
-          ParticleEvents getParticleHistory(
-            const ParticleIdentifier& identifier
+          ParticleEvents getParticleHistory(const ParticleIdentifier& identifier
           );
 
           /**
@@ -174,10 +173,7 @@ namespace toolbox {
            * @return the last event on the spacetree with id treeId before
            * the newly added one.
            */
-          Event addEvent(
-            ParticleIdentifier identifier,
-            Event&                   event
-          );
+          Event addEvent(ParticleIdentifier identifier, Event& event);
 
           /**
            * Replace an (old) particle event with a new one.
@@ -191,8 +187,8 @@ namespace toolbox {
            */
           void replaceEvent(
             ParticleIdentifier identifier,
-            Event&                   oldEvent,
-            Event&                   newEvent
+            Event&             oldEvent,
+            Event&             newEvent
           );
 
           /**
@@ -202,7 +198,7 @@ namespace toolbox {
           void shiftIdentifierVertexInd(
             ParticleIdentifier&                       identifier,
             tarch::la::Vector<Dimensions, long long>& newVertexInd,
-            const int newVertexDepth
+            const int                                 newVertexDepth
           );
 
           /**

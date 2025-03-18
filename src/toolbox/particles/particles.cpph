@@ -116,7 +116,12 @@ void toolbox::particles::insertParticleIntoCell(
   int partID = -1;
 #endif
 
-  tarch::la::Vector<Dimensions, double> vertexX = marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents( tarch::la::Vector<Dimensions, double>(targetVertex), marker.h());
+  tarch::la::Vector<Dimensions, double>
+    vertexX = marker.x() - 0.5 * marker.h()
+              + tarch::la::multiplyComponents(
+                tarch::la::Vector<Dimensions, double>(targetVertex),
+                marker.h()
+              );
 
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),

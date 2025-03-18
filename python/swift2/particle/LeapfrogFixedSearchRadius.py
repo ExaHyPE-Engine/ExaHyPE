@@ -97,19 +97,27 @@ class LeapfrogFixedSearchRadius(Particle):
 
     @property
     def touch_particles_of_set_first_time_kernel(self):
-        return self._algorithm_steps_dict["ForceCalculation"].touch_vertex_first_time_kernel
+        return self._algorithm_steps_dict[
+            "ForceCalculation"
+        ].touch_vertex_first_time_kernel
 
     @touch_particles_of_set_first_time_kernel.setter
     def touch_particles_of_set_first_time_kernel(self, value):
-        self._algorithm_steps_dict["ForceCalculation"].touch_vertex_first_time_kernel = value
+        self._algorithm_steps_dict[
+            "ForceCalculation"
+        ].touch_vertex_first_time_kernel = value
 
     @property
     def touch_particles_of_set_last_time_kernel(self):
-        return self._algorithm_steps_dict["ForceCalculation"].touch_vertex_last_time_kernel
+        return self._algorithm_steps_dict[
+            "ForceCalculation"
+        ].touch_vertex_last_time_kernel
 
     @touch_particles_of_set_last_time_kernel.setter
     def touch_particles_of_set_last_time_kernel(self, value):
-        self._algorithm_steps_dict["ForceCalculation"].touch_vertex_last_time_kernel = value
+        self._algorithm_steps_dict[
+            "ForceCalculation"
+        ].touch_vertex_last_time_kernel = value
 
     @property
     def cell_kernel(self):
@@ -123,7 +131,6 @@ class LeapfrogFixedSearchRadius(Particle):
         self._algorithm_steps_dict[
             "ReduceGlobalQuantities"
         ].unprepare_traversal_kernel += value
-
 
     def algorithm_steps(self):
         # function needs to exist for parent class
@@ -287,14 +294,14 @@ class LeapfrogFixedSearchRadius(Particle):
                 """,
             ),
             "FirstInitParticle": AlgorithmStep(
-            name="FirstInitParticle",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-            touch_vertex_last_time_kernel="",
-            includes="",
-            cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate",
-            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate",
-            touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+                name="FirstInitParticle",
+                dependencies=AlgorithmStep.Dependencies.SELF,
+                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+                touch_vertex_last_time_kernel="",
+                includes="",
+                cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep_FutureStagesMayUpdate",
+                touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_FutureStagesMayUpdate",
+                touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
             ),
         }
 
@@ -311,7 +318,6 @@ class LeapfrogFixedSearchRadius(Particle):
         to avoid a second force loop.
 
         """
-
 
         steps = [
             self._algorithm_steps_dict["ForceCalculation"],

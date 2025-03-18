@@ -1,9 +1,9 @@
 #pragma once
 
+#include "swift2/kernels/ParticleUpdatePredicates.h"
+
 #include <string>
 #include <type_traits>
-
-#include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
 namespace swift2 {
@@ -45,25 +45,32 @@ namespace swift2 {
 
     // some templates for convenience and code readability.
     template <typename ParticleContainer>
-    using PCParticle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
+    using PCParticle = typename std::remove_pointer<
+      typename ParticleContainer::value_type>::type;
 
     template <typename ParticleContainer>
-    using PCAlgorithmStepEnum = PCParticle<ParticleContainer>::DependencyChecksAlgorithmStepLastUpdated;
+    using PCAlgorithmStepEnum = PCParticle<
+      ParticleContainer>::DependencyChecksAlgorithmStepLastUpdated;
 
     template <typename ParticleContainer>
-    using PCInitStepEnum = PCParticle<ParticleContainer>::DependencyChecksInitStepLastUpdated;
+    using PCInitStepEnum = PCParticle<
+      ParticleContainer>::DependencyChecksInitStepLastUpdated;
 
     template <typename ParticleContainer>
-    using PCSweepStageEnum = PCParticle<ParticleContainer>::DependencyChecksPeanoEventUsedBySwift;
+    using PCSweepStageEnum = PCParticle<
+      ParticleContainer>::DependencyChecksPeanoEventUsedBySwift;
 
     template <typename Particle>
-    using PAlgorithmStepEnum = typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated;
+    using PAlgorithmStepEnum = typename std::remove_pointer<
+      Particle>::type::DependencyChecksAlgorithmStepLastUpdated;
 
     template <typename Particle>
-    using PInitStepEnum = typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated;
+    using PInitStepEnum = typename std::remove_pointer<
+      Particle>::type::DependencyChecksInitStepLastUpdated;
 
     template <typename Particle>
-    using PSweepStageEnum = typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift;
+    using PSweepStageEnum = typename std::remove_pointer<
+      Particle>::type::DependencyChecksPeanoEventUsedBySwift;
 
 
     namespace internal {

@@ -49,7 +49,14 @@ void toolbox::particles::assignmentchecks::eraseParticle(
 
   Database& database = Database::getInstance();
 
-  auto identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
+  auto identifier = ParticleIdentifier(
+    particleName,
+    particleX,
+    vertexX,
+    vertexH,
+    particleID,
+    treeId
+  );
 
   Event event(Event::Type::Erase, isLocal, treeId, trace);
   Event previousEvent = database.addEvent(identifier, event);
@@ -100,14 +107,34 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   constexpr bool checkNewParticles = false;
   Database&      database          = Database::getInstance();
 
-  auto vertexIndNew = ParticleIdentifier::getVertexInd(vertexX, vertexH);
-  int vertexDepthNew = ParticleIdentifier::getVertexDepth(vertexX, vertexH);
-  auto vertexIndOld = ParticleIdentifier::getVertexInd(prevVertexX, prevVertexH);
-  int vertexDepthOld = ParticleIdentifier::getVertexDepth(prevVertexX, prevVertexH);
+  auto vertexIndNew   = ParticleIdentifier::getVertexInd(vertexX, vertexH);
+  int  vertexDepthNew = ParticleIdentifier::getVertexDepth(vertexX, vertexH);
+  auto vertexIndOld   = ParticleIdentifier::getVertexInd(
+    prevVertexX,
+    prevVertexH
+  );
+  int vertexDepthOld = ParticleIdentifier::getVertexDepth(
+    prevVertexX,
+    prevVertexH
+  );
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexIndOld, vertexDepthOld, particleID, treeId);
-  if (particleIsNew){
-    identifier = ParticleIdentifier( particleName, particleX, vertexIndNew, vertexDepthOld, particleID, treeId);
+  ParticleIdentifier identifier = ParticleIdentifier(
+    particleName,
+    particleX,
+    vertexIndOld,
+    vertexDepthOld,
+    particleID,
+    treeId
+  );
+  if (particleIsNew) {
+    identifier = ParticleIdentifier(
+      particleName,
+      particleX,
+      vertexIndNew,
+      vertexDepthOld,
+      particleID,
+      treeId
+    );
   }
 
   Event event(
@@ -137,7 +164,8 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
                                         == internal::Event::Type::
                                           AssignToSieveSet;
 
-    const bool isDetached = reassignmentOnSameTreeDepthAllowed
+    const bool isDetached
+      = reassignmentOnSameTreeDepthAllowed
           ? (previousEvent.type == internal::Event::Type::DetachFromVertex)
           : (
             previousEvent.type == internal::Event::Type::DetachFromVertex
@@ -182,20 +210,21 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
 
   // Do we need to shift the identifier?
 
-    bool shift = false;
+  bool shift = false;
 
-    for (int i = 0; i < Dimensions; i++){
-      if (vertexIndNew(i) != vertexIndOld(i)){
-        shift = true;
-        break;
-      }
+  for (int i = 0; i < Dimensions; i++) {
+    if (vertexIndNew(i) != vertexIndOld(i)) {
+      shift = true;
+      break;
     }
+  }
 
-    if (vertexDepthNew != vertexDepthOld) shift = true;
+  if (vertexDepthNew != vertexDepthOld)
+    shift = true;
 
-    if (shift) {
-      database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
-    }
+  if (shift) {
+    database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
+  }
 
   logTraceOut("assignParticleToVertex(...)");
 }
@@ -238,7 +267,14 @@ void toolbox::particles::assignmentchecks::moveParticle(
   );
 
   // use old particle position to find history.
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, oldParticleX, vertexX, vertexH, particleID, treeId);
+  ParticleIdentifier identifier = ParticleIdentifier(
+    particleName,
+    oldParticleX,
+    vertexX,
+    vertexH,
+    particleID,
+    treeId
+  );
 
   ParticleEvents history = database.getParticleHistory(identifier);
   // We assume that we can't be moving a particle without having done anything
@@ -252,7 +288,8 @@ void toolbox::particles::assignmentchecks::moveParticle(
   assertion3(
     previousEvent.type == Event::Type::AssignToVertex
       or previousEvent.type == Event::Type::MoveWhileAssociatedToVertex
-      or previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+      or previousEvent.type
+           == Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
     "Invalid previous event type",
     previousEvent.toString(),
     database.particleHistory(identifier)
@@ -348,7 +385,14 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
+  ParticleIdentifier identifier = ParticleIdentifier(
+    particleName,
+    particleX,
+    vertexX,
+    vertexH,
+    particleID,
+    treeId
+  );
 
   Event event(
     Event::Type::DetachFromVertex,
@@ -424,7 +468,14 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   using namespace internal;
   Database& database = Database::getInstance();
 
-  ParticleIdentifier identifier = ParticleIdentifier( particleName, particleX, vertexX, vertexH, particleID, treeId);
+  ParticleIdentifier identifier = ParticleIdentifier(
+    particleName,
+    particleX,
+    vertexX,
+    vertexH,
+    particleID,
+    treeId
+  );
 
 
   Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};

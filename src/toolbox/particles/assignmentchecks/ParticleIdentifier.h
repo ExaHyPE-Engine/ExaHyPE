@@ -50,12 +50,12 @@ namespace toolbox {
           bool operator<(const ParticleIdentifier& rhs) const;
 
           ParticleIdentifier(
-            const std::string&                              particleName__,
-            const tarch::la::Vector<Dimensions, double>&    particleX__,
-            const tarch::la::Vector<Dimensions, double>&    vertexX,
-            const tarch::la::Vector<Dimensions, double>&    vertexH,
-            const int                                       particleID__,
-            const int                                       treeId__
+            const std::string&                           particleName__,
+            const tarch::la::Vector<Dimensions, double>& particleX__,
+            const tarch::la::Vector<Dimensions, double>& vertexX,
+            const tarch::la::Vector<Dimensions, double>& vertexH,
+            const int                                    particleID__,
+            const int                                    treeId__
           );
 
           ParticleIdentifier(
@@ -71,9 +71,9 @@ namespace toolbox {
            * Compute an integer vertex "index" given its position and size
            */
           static tarch::la::Vector<Dimensions, long long> getVertexInd(
-            const tarch::la::Vector<Dimensions, double>&    vertexX,
-            const tarch::la::Vector<Dimensions, double>&    vertexH
-            );
+            const tarch::la::Vector<Dimensions, double>& vertexX,
+            const tarch::la::Vector<Dimensions, double>& vertexH
+          );
 
           /**
            * Compute an integer vertex "depth" given its size
@@ -82,9 +82,9 @@ namespace toolbox {
            * used to raise an error if we're out of the assumed box size.
            */
           static int getVertexDepth(
-            const tarch::la::Vector<Dimensions, double>&    vertexX,
-            const tarch::la::Vector<Dimensions, double>&    vertexH
-            );
+            const tarch::la::Vector<Dimensions, double>& vertexX,
+            const tarch::la::Vector<Dimensions, double>& vertexH
+          );
         };
 
       } // namespace internal

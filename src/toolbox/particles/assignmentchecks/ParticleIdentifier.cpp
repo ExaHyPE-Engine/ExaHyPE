@@ -6,11 +6,11 @@
 toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
     const std::string&                           particleName__,
-    const tarch::la::Vector<Dimensions, double>&    particleX__,
-    const tarch::la::Vector<Dimensions, double>&    vertexX,
-    const tarch::la::Vector<Dimensions, double>&    vertexH,
-    const int                                       particleID__,
-    const int                                       treeID__
+    const tarch::la::Vector<Dimensions, double>& particleX__,
+    const tarch::la::Vector<Dimensions, double>& vertexX,
+    const tarch::la::Vector<Dimensions, double>& vertexH,
+    const int                                    particleID__,
+    const int                                    treeID__
   ):
   particleName(particleName__),
   particleX(particleX__),
@@ -21,7 +21,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 
 toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
-    const std::string&                           particleName__,
+    const std::string&                              particleName__,
     const tarch::la::Vector<Dimensions, double>&    particleX__,
     const tarch::la::Vector<Dimensions, long long>& vertexInd__,
     const int                                       vertexDepth__,
@@ -36,27 +36,29 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   treeID(treeID__) {}
 
 
-tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::internal::ParticleIdentifier::getVertexInd(
-            const tarch::la::Vector<Dimensions, double>& vertexX,
-            const tarch::la::Vector<Dimensions, double>& vertexH
-            ){
+tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::
+  internal::ParticleIdentifier::getVertexInd(
+    const tarch::la::Vector<Dimensions, double>& vertexX,
+    const tarch::la::Vector<Dimensions, double>& vertexH
+  ) {
 
-  tarch::la::Vector<Dimensions, long long>  ind;
+  tarch::la::Vector<Dimensions, long long> ind;
 
-  for (size_t i = 0; i<Dimensions; i++){
+  for (size_t i = 0; i < Dimensions; i++) {
     // Round to 12 significant digits
-    double indf = std::round(vertexX(i)/vertexH(i) * 1e12) * 1e-12;
-    ind(i) = static_cast<long long>(indf);
+    double indf = std::round(vertexX(i) / vertexH(i) * 1e12) * 1e-12;
+    ind(i)      = static_cast<long long>(indf);
   }
 
   return ind;
 }
 
 
-int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::getVertexDepth(
-            const tarch::la::Vector<Dimensions, double>& vertexX,
-            const tarch::la::Vector<Dimensions, double>& vertexH
-            ){
+int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
+  getVertexDepth(
+    const tarch::la::Vector<Dimensions, double>& vertexX,
+    const tarch::la::Vector<Dimensions, double>& vertexH
+  ) {
 
   constexpr double boxsize = 243.;
 
@@ -74,12 +76,13 @@ int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::getVerte
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalEquals(const ParticleIdentifier& rhs) const {
 
-  for (size_t i = 0; i < Dimensions; i++){
+  for (size_t i = 0; i < Dimensions; i++) {
     if (vertexInd(i) != rhs.vertexInd(i))
       return false;
   }
 
-  return (particleName == rhs.particleName) and (particleID == rhs.particleID) and (treeID == rhs.treeID) and (vertexDepth == rhs.vertexDepth);
+  return (particleName == rhs.particleName) and (particleID == rhs.particleID)
+         and (treeID == rhs.treeID) and (vertexDepth == rhs.vertexDepth);
 }
 
 
@@ -124,26 +127,23 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 }
 
 
-
 std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   toString() const {
 
   std::stringstream sstr;
-  sstr << "(" << particleName <<
-          ",ID=" <<particleID <<
-          ",VertexInd=" << ::toString(vertexInd) <<
-          ",VertexDepth=" << vertexDepth <<
-          ",treeID=" << treeID <<
-          ",particleX=" << ::toString(particleX)
-          << ")";
+  sstr
+    << "(" << particleName << ",ID=" << particleID
+    << ",VertexInd=" << ::toString(vertexInd) << ",VertexDepth=" << vertexDepth
+    << ",treeID=" << treeID << ",particleX=" << ::toString(particleX) << ")";
 
   return sstr.str();
-  }
+}
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   operator<(
-    const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
+    const toolbox::particles::assignmentchecks::internal::ParticleIdentifier&
+      rhs
   ) const {
   return numericalSmaller(rhs);
 }

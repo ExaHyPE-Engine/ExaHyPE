@@ -32,10 +32,10 @@ bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
 
   tarch::la::Vector<Dimensions, double> dv = vertexX - particleX;
 
-  if (tarch::la::oneSmaller(dv, -1. * vertexH)){
+  if (tarch::la::oneSmaller(dv, -1. * vertexH)) {
     return true;
   }
-  if (tarch::la::oneGreater(dv, vertexH)){
+  if (tarch::la::oneGreater(dv, vertexH)) {
     return true;
   }
   return false;
@@ -58,7 +58,7 @@ bool toolbox::particles::assignmentchecks::tests::internal::dropParticle(
 
   tarch::la::Vector<Dimensions, double> dv = vertexX - particleX;
 
-  if (tarch::la::allSmaller(dv, vHnew) and tarch::la::allGreater(dv, -1. * vHnew)){
+  if (tarch::la::allSmaller(dv, vHnew) and tarch::la::allGreater(dv, -1. * vHnew)) {
     return true;
   }
   return false;
@@ -141,20 +141,32 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   tarch::la::Vector<Dimensions, double> particleBX;
   tarch::la::Vector<Dimensions, double> vertexX;
   tarch::la::Vector<Dimensions, double> vertexH;
-  int treeId = 1;
+  int                                   treeId = 1;
 
   for (int i = 0; i < Dimensions; i++) {
     particleAX(i) = 1.;
     particleBX(i) = 2.;
-    vertexX(i) = 1.;
-    vertexH(i) = 1.;
+    vertexX(i)    = 1.;
+    vertexH(i)    = 1.;
   }
 
   // create a key and assign it a value in the map
-  ac::internal::ParticleIdentifier a = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
-  ac::internal::ParticleIdentifier b = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
+  ac::internal::ParticleIdentifier a = ac::internal::ParticleIdentifier(
+    "DummyParticle",
+    particleAX,
+    vertexX,
+    vertexH,
+    1,
+    treeId
+  );
+  ac::internal::ParticleIdentifier b = ac::internal::ParticleIdentifier(
+    "DummyParticle",
+    particleBX,
+    vertexX,
+    vertexH,
+    2,
+    treeId
+  );
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -168,10 +180,22 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   assert(not(b == a));
   assert(not(b < a));
 
-  ac::internal::ParticleIdentifier A   = ac::internal::
-    ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
-  ac::internal::ParticleIdentifier B = ac::internal::
-    ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
+  ac::internal::ParticleIdentifier A = ac::internal::ParticleIdentifier(
+    "DummyParticle",
+    particleAX,
+    vertexX,
+    vertexH,
+    1,
+    treeId
+  );
+  ac::internal::ParticleIdentifier B = ac::internal::ParticleIdentifier(
+    "DummyParticle",
+    particleBX,
+    vertexX,
+    vertexH,
+    2,
+    treeId
+  );
 
   logDebug(
     "testTruthTableSearchAndIDKeys()",
@@ -566,7 +590,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // is particle count correct?
   // nparts particles times nparts trees
   assertion3(
-    eventDatabase.getNumberOfTracedParticles() == nparts * nparts ,
+    eventDatabase.getNumberOfTracedParticles() == nparts * nparts,
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles(),
     nparts * nparts
@@ -673,15 +697,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 
   // Did we record correct number of events?
-  ac::internal::ParticleIdentifier identifier = ac::internal::
-    ParticleIdentifier(
-      "DummyParticle",
-      particleX,
-      vertexX,
-      vertexH,
-      particleID,
-      treeId
-    );
+  ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
+    "DummyParticle",
+    particleX,
+    vertexX,
+    vertexH,
+    particleID,
+    treeId
+  );
 
   int nEntries = eventDatabase.getTotalParticleEntries(identifier);
   // reduce nEventsToKeep by 1 here, as we always substitute the past
@@ -875,8 +898,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     max_sweeps
   );
 
-  ac::internal::ParticleIdentifier identifier = ac::internal::
-    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID, spacetreeId);
+  ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
+    "TestParticle",
+    localPartX,
+    vertexX,
+    vertexH,
+    particleID,
+    spacetreeId
+  );
 
   // 8 is hardcoded here. Modify manually if you change test setup.
   assertion3(
@@ -1046,8 +1075,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     eventDatabase.getNumberOfTracedParticles()
   );
 
-  ac::internal::ParticleIdentifier identifier = ac::internal::
-    ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleID, spacetreeId);
+  ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
+    "TestParticle",
+    localPartX,
+    vertexX,
+    vertexH,
+    particleID,
+    spacetreeId
+  );
 
   // 13 is hardcoded here. Modify manually if you change test setup.
   assertion3(
@@ -1307,7 +1342,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   int spacetreeId = 1;
 
   // generate (minimal) particle
-  ac::tests::TestParticle* localPart = new ac::tests::TestParticle(localPartX_init, particleID, true);
+  ac::tests::TestParticle* localPart = new ac::tests::
+    TestParticle(localPartX_init, particleID, true);
   localPart->setVertexH(vertexH_init);
   localPart->setDepth(depth);
 
@@ -2151,15 +2187,14 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   );
 
 
-  ac::internal::ParticleIdentifier identifier = ac::internal::
-    ParticleIdentifier(
-      "TestParticle",
-      localPart->getX(),
-      vertexX,
-      localPart->getVertexH(),
-      localPart->getPartid(),
-      spacetreeId
-    );
+  ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
+    "TestParticle",
+    localPart->getX(),
+    vertexX,
+    localPart->getVertexH(),
+    localPart->getPartid(),
+    spacetreeId
+  );
 
   size_t nEntries = eventDatabase.getTotalParticleEntries(identifier);
   // we add 4 events per sweep, and 1 initial one
