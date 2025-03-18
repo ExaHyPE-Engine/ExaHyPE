@@ -16,7 +16,7 @@ from exahype2.solvers.ButcherTableau import ButcherTableau
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-    """!
+    r"""!
 
     Update one cell, i.e. compute Runge-Kutta step on it
 
