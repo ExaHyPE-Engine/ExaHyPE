@@ -13,9 +13,9 @@ namespace Scenario{
     double* Q
   ){
     
-    Q[s.rho] = 2.67;
-    Q[s.cp ] = 6.0;
-    Q[s.cs ] = 3.464;
+    Q[s::rho] = 2.67;
+    Q[s::cp ] = 6.0;
+    Q[s::cs ] = 3.464;
 
   }
 

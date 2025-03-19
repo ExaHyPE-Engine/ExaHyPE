@@ -6,21 +6,20 @@
 // **********************************************************************************************
 #pragma once
 
-#include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
-
-{% if LOAD_BALANCER!="" -%}
-#include "{{LOAD_BALANCER | replace('::', '/') }}.h"
-{% endif -%}
-
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PlotFilter.h"
 #include "peano4/grid/GridStatistics.h"
+
+#ifdef UseToolboxLoadBalancing
+#include "{{LOAD_BALANCER | replace('::', '/') }}.h"
+#else
+#include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
+#endif
 
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
 {# Comment to ensure that jinja2 adds a new line#}
 {% endfor %}
-
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -31,15 +30,14 @@
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
-
   extern ::exahype2::RefinementControl  refinementControl;
   extern ::exahype2::PlotFilter         plotFilter;
 
-  {% if LOAD_BALANCER!="" -%}
-  extern {{LOAD_BALANCER}}              loadBalancer;
-  {% else -%}
-  extern toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
-  {% endif -%}
+#ifdef UseToolboxLoadBalancing
+  extern {{LOAD_BALANCER}} loadBalancer;
+#else
+  extern toolbox::loadbalancing::strategies::NoLoadBalancing loadBalancer;
+#endif
 
   extern peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 

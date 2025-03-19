@@ -622,18 +622,18 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
         }
     */
     if (p->_spacetreeState == peano4::grid::SpacetreeState::Joined) {
-      logInfo("traverse(Observer)", "tree " << p->_id << " has successfully joined");
+      logInfo("traverse(Observer)", "Tree " << p->_id << " has successfully joined");
       deleteAllStacks(observer, p->_id);
       Node::getInstance().deregisterId(p->_id);
       p = _spacetrees.erase(p);
     } else if (p->mayJoinWithMaster() and p->getGridStatistics().getNumberOfLocalUnrefinedCells() == 0) {
-      logInfo("traverse(Observer)", "remove empty tree " << p->_id << " with master " << p->_masterId);
+      logInfo("traverse(Observer)", "Remove empty tree " << p->_id << " with master " << p->_masterId);
       deleteAllStacks(observer, p->_id);
       Node::getInstance().deregisterId(p->_id);
 
       if (Node::getInstance().getRank(p->_masterId) != tarch::mpi::Rank::getInstance().getRank()) {
         logDebug(
-          "traverse(Observer)", "parent tree " << p->_masterId << " is not local on this rank. Remove child reference"
+          "traverse(Observer)", "Parent tree " << p->_masterId << " is not local on this rank. Remove child reference"
         );
 #ifdef Parallel
         TreeManagementMessage message(
@@ -654,11 +654,11 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
         );
         assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 #else
-        assertionMsg(false, "branch may not be entered");
+        assertionMsg(false, "Branch may not be entered");
 #endif
       } else {
         logDebug(
-          "traverse(Observer)", "parent tree " << p->_masterId << " is local on this rank. Remove child reference"
+          "traverse(Observer)", "Parent tree " << p->_masterId << " is local on this rank. Remove child reference"
         );
         getSpacetree(p->_masterId)._childrenIds.erase(p->_id);
         getSpacetree(p->_masterId)._statistics.setRemovedEmptySubtree(true);
@@ -671,17 +671,17 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
         // @todo erste Meldung info
         logError(
           "traverse(Observer)",
-          "join tree "
+          "Join tree "
             << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId
             << " resides on same rank and can't coarsen"
         );
-        logError("traverse(Observer)", "not implemented yet");
+        logError("traverse(Observer)", "Not implemented yet");
         // p->joinWithMaster();
         // getSpacetree(p->_masterId).joinWithWorker(p->_id);
       } else if (localRank == masterRank) {
         logDebug(
           "traverse(Observer)",
-          "tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master"
+          "Tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master"
         );
       } else {
         // @todo: Aber nur, wenn es noch andere Baeume auf diesem Rank gibt
@@ -796,7 +796,7 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const peano4::SplitInstru
         );
       }
 
-      logInfo(
+      logDebug(
         "split()",
         "Trigger split of tree " << treeId << " into tree " << newSpacetreeId << " on rank " << targetRank << " with instruction " << instruction
       );

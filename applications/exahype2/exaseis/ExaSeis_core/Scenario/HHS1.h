@@ -38,7 +38,7 @@ namespace Scenario{
     
     double f = M0*t/(t0*t0)*std::exp(-t/t0);
     
-    forceVector[s.sigma + 4] = f;
+    forceVector[s::sigma + 4] = f;
   }
 
 }

@@ -9,10 +9,10 @@ namespace Numerics{
     //Getter routines
   template <class Shortcuts, typename T>
   inline void compute_parameters(const T*Q, T& rho, T& cp, T& cs, T& mu, T& lam){
-    Shortcuts s;
-    rho = Q[s.rho];
-    cp  = Q[s.cp ];
-    cs  = Q[s.cs ];
+    using s = Shortcuts;
+    rho = Q[s::rho];
+    cp  = Q[s::cp ];
+    cs  = Q[s::cs ];
     mu  = cs * cs * rho;
     lam = rho* cp * cp - 2.0 * mu;
   }
@@ -51,20 +51,20 @@ namespace Numerics{
     T FL_x,FL_y,FL_z,FR_x,FR_y,FR_z;
 
 
-    Shortcuts s;
+    using s = Shortcuts;
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
 
 	const T* Q_m = QL+idx_QLR(i,j,0);
 	const T* Q_p = QR+idx_QLR(i,j,0);
         
-        T dmp_pml_x_m = Q_m[s.dmp_pml + 0];
-        T dmp_pml_y_m = Q_m[s.dmp_pml + 1];
-        T dmp_pml_z_m = Q_m[s.dmp_pml + 2];
+        T dmp_pml_x_m = Q_m[s::dmp_pml + 0];
+        T dmp_pml_y_m = Q_m[s::dmp_pml + 1];
+        T dmp_pml_z_m = Q_m[s::dmp_pml + 2];
 
-        T dmp_pml_x_p = Q_p[s.dmp_pml + 0];
-        T dmp_pml_y_p = Q_p[s.dmp_pml + 1];
-        T dmp_pml_z_p = Q_p[s.dmp_pml + 2];
+        T dmp_pml_x_p = Q_p[s::dmp_pml + 0];
+        T dmp_pml_y_p = Q_p[s::dmp_pml + 1];
+        T dmp_pml_z_p = Q_p[s::dmp_pml + 2];
 	
 	T* F_m = FL+idx_FLR(i,j,0);
 	T* F_p = FR+idx_FLR(i,j,0);
@@ -224,111 +224,111 @@ namespace Numerics{
 	// construct flux fluctuation vectors obeying the eigen structure of the PDE
 	// and choose physically motivated penalties such that we can prove
 	// numerical stability.
-	F_p[s.v + 0] = norm_p/rho_p*FRx;
-	F_m[s.v + 0] = norm_m/rho_m*FLx;
+	F_p[s::v + 0] = norm_p/rho_p*FRx;
+	F_m[s::v + 0] = norm_m/rho_m*FLx;
     
-	F_p[s.v + 1] = norm_p/rho_p*FRy;
-	F_m[s.v + 1] = norm_m/rho_m*FLy;
+	F_p[s::v + 1] = norm_p/rho_p*FRy;
+	F_m[s::v + 1] = norm_m/rho_m*FLy;
 
-	F_p[s.v + 2] = norm_p/rho_p*FRz;
-	F_m[s.v + 2] = norm_m/rho_m*FLz;
+	F_p[s::v + 2] = norm_p/rho_p*FRz;
+	F_m[s::v + 2] = norm_m/rho_m*FLz;
 
-	F_m[s.sigma + 0] =  norm_m*((2*mu_m+lam_m)*n_m[0]*FL_x+lam_m*n_m[1]*FL_y+lam_m*n_m[2]*FL_z);
-	F_m[s.sigma + 1] =  norm_m*((2*mu_m+lam_m)*n_m[1]*FL_y+lam_m*n_m[0]*FL_x+lam_m*n_m[2]*FL_z);
-	F_m[s.sigma + 2] =  norm_m*((2*mu_m+lam_m)*n_m[2]*FL_z+lam_m*n_m[0]*FL_x+lam_m*n_m[1]*FL_y);
+	F_m[s::sigma + 0] =  norm_m*((2*mu_m+lam_m)*n_m[0]*FL_x+lam_m*n_m[1]*FL_y+lam_m*n_m[2]*FL_z);
+	F_m[s::sigma + 1] =  norm_m*((2*mu_m+lam_m)*n_m[1]*FL_y+lam_m*n_m[0]*FL_x+lam_m*n_m[2]*FL_z);
+	F_m[s::sigma + 2] =  norm_m*((2*mu_m+lam_m)*n_m[2]*FL_z+lam_m*n_m[0]*FL_x+lam_m*n_m[1]*FL_y);
 
-	F_p[s.sigma + 0] = -norm_p*((2*mu_p+lam_p)*n_p[0]*FR_x+lam_p*n_p[1]*FR_y+lam_p*n_p[2]*FR_z);
-	F_p[s.sigma + 1] = -norm_p*((2*mu_p+lam_p)*n_p[1]*FR_y+lam_p*n_p[0]*FR_x+lam_p*n_p[2]*FR_z);
-	F_p[s.sigma + 2] = -norm_p*((2*mu_p+lam_p)*n_p[2]*FR_z+lam_p*n_p[0]*FR_x+lam_p*n_p[1]*FR_y);
+	F_p[s::sigma + 0] = -norm_p*((2*mu_p+lam_p)*n_p[0]*FR_x+lam_p*n_p[1]*FR_y+lam_p*n_p[2]*FR_z);
+	F_p[s::sigma + 1] = -norm_p*((2*mu_p+lam_p)*n_p[1]*FR_y+lam_p*n_p[0]*FR_x+lam_p*n_p[2]*FR_z);
+	F_p[s::sigma + 2] = -norm_p*((2*mu_p+lam_p)*n_p[2]*FR_z+lam_p*n_p[0]*FR_x+lam_p*n_p[1]*FR_y);
     
-	F_m[s.sigma + 3] =  norm_m*mu_m*(n_m[1]*FL_x + n_m[0]*FL_y);
-	F_m[s.sigma + 4] =  norm_m*mu_m*(n_m[2]*FL_x + n_m[0]*FL_z);
-	F_m[s.sigma + 5] =  norm_m*mu_m*(n_m[2]*FL_y + n_m[1]*FL_z);
+	F_m[s::sigma + 3] =  norm_m*mu_m*(n_m[1]*FL_x + n_m[0]*FL_y);
+	F_m[s::sigma + 4] =  norm_m*mu_m*(n_m[2]*FL_x + n_m[0]*FL_z);
+	F_m[s::sigma + 5] =  norm_m*mu_m*(n_m[2]*FL_y + n_m[1]*FL_z);
 
-	F_p[s.sigma + 3] = -norm_p*mu_p*(n_p[1]*FR_x + n_p[0]*FR_y);
-	F_p[s.sigma + 4] = -norm_p*mu_p*(n_p[2]*FR_x + n_p[0]*FR_z);
-	F_p[s.sigma + 5] = -norm_p*mu_p*(n_p[2]*FR_y + n_p[1]*FR_z);
+	F_p[s::sigma + 3] = -norm_p*mu_p*(n_p[1]*FR_x + n_p[0]*FR_y);
+	F_p[s::sigma + 4] = -norm_p*mu_p*(n_p[2]*FR_x + n_p[0]*FR_z);
+	F_p[s::sigma + 5] = -norm_p*mu_p*(n_p[2]*FR_y + n_p[1]*FR_z);
 
         T norm_p_qr=norm_p;
         T norm_m_qr=norm_m;
         kernels::idx2 idx_pml(Dimensions,9);
 
-        F_p[s.pml + idx_pml(0,0)] = n_p[0]*dmp_pml_x_p*norm_p*FRx;
-        F_m[s.pml + idx_pml(0,0)] = n_m[0]*dmp_pml_x_m*norm_m*FLx;
+        F_p[s::pml + idx_pml(0,0)] = n_p[0]*dmp_pml_x_p*norm_p*FRx;
+        F_m[s::pml + idx_pml(0,0)] = n_m[0]*dmp_pml_x_m*norm_m*FLx;
 
-        F_p[s.pml + idx_pml(0,1)] = n_p[0]*dmp_pml_x_p*norm_p*FRy;
-        F_m[s.pml + idx_pml(0,1)] = n_m[0]*dmp_pml_x_m*norm_m*FLy;
+        F_p[s::pml + idx_pml(0,1)] = n_p[0]*dmp_pml_x_p*norm_p*FRy;
+        F_m[s::pml + idx_pml(0,1)] = n_m[0]*dmp_pml_x_m*norm_m*FLy;
 
-        F_p[s.pml + idx_pml(0,2)] = n_p[0]*dmp_pml_x_p*norm_p*FRz;
-        F_m[s.pml + idx_pml(0,2)] = n_m[0]*dmp_pml_x_m*norm_m*FLz;
+        F_p[s::pml + idx_pml(0,2)] = n_p[0]*dmp_pml_x_p*norm_p*FRz;
+        F_m[s::pml + idx_pml(0,2)] = n_m[0]*dmp_pml_x_m*norm_m*FLz;
 
-        F_m[s.pml + idx_pml(0,3)] = n_m[0]*dmp_pml_x_m*norm_m*n_m[0]*FL_x;
-        F_m[s.pml + idx_pml(0,4)] = n_m[0]*dmp_pml_x_m*norm_m*n_m[1]*FL_y;
-        F_m[s.pml + idx_pml(0,5)] = n_m[0]*dmp_pml_x_m*norm_m*n_m[2]*FL_z;
+        F_m[s::pml + idx_pml(0,3)] = n_m[0]*dmp_pml_x_m*norm_m*n_m[0]*FL_x;
+        F_m[s::pml + idx_pml(0,4)] = n_m[0]*dmp_pml_x_m*norm_m*n_m[1]*FL_y;
+        F_m[s::pml + idx_pml(0,5)] = n_m[0]*dmp_pml_x_m*norm_m*n_m[2]*FL_z;
 
-        F_p[s.pml + idx_pml(0,3)] = -n_p[0]*dmp_pml_x_p*norm_p*n_p[0]*FR_x;
-        F_p[s.pml + idx_pml(0,4)] = -n_p[0]*dmp_pml_x_p*norm_p*n_p[1]*FR_y;
-        F_p[s.pml + idx_pml(0,5)] = -n_p[0]*dmp_pml_x_p*norm_p*n_p[2]*FR_z;
+        F_p[s::pml + idx_pml(0,3)] = -n_p[0]*dmp_pml_x_p*norm_p*n_p[0]*FR_x;
+        F_p[s::pml + idx_pml(0,4)] = -n_p[0]*dmp_pml_x_p*norm_p*n_p[1]*FR_y;
+        F_p[s::pml + idx_pml(0,5)] = -n_p[0]*dmp_pml_x_p*norm_p*n_p[2]*FR_z;
 
-        F_m[s.pml + idx_pml(0,6)] =  n_m[0]*dmp_pml_x_m*norm_m*(n_m[1]*FL_x + n_m[0]*FL_y);
-        F_m[s.pml + idx_pml(0,7)] =  n_m[0]*dmp_pml_x_m*norm_m*(n_m[2]*FL_x + n_m[0]*FL_z);
-        F_m[s.pml + idx_pml(0,8)] =  n_m[0]*dmp_pml_x_m*norm_m*(n_m[2]*FL_y + n_m[1]*FL_z);
+        F_m[s::pml + idx_pml(0,6)] =  n_m[0]*dmp_pml_x_m*norm_m*(n_m[1]*FL_x + n_m[0]*FL_y);
+        F_m[s::pml + idx_pml(0,7)] =  n_m[0]*dmp_pml_x_m*norm_m*(n_m[2]*FL_x + n_m[0]*FL_z);
+        F_m[s::pml + idx_pml(0,8)] =  n_m[0]*dmp_pml_x_m*norm_m*(n_m[2]*FL_y + n_m[1]*FL_z);
 
-        F_p[s.pml + idx_pml(0,6)] = -n_p[0]*dmp_pml_x_p*norm_p*(n_p[1]*FR_x + n_p[0]*FR_y);
-        F_p[s.pml + idx_pml(0,7)] = -n_p[0]*dmp_pml_x_p*norm_p*(n_p[2]*FR_x + n_p[0]*FR_z);
-        F_p[s.pml + idx_pml(0,8)] = -n_p[0]*dmp_pml_x_p*norm_p*(n_p[2]*FR_y + n_p[1]*FR_z);
+        F_p[s::pml + idx_pml(0,6)] = -n_p[0]*dmp_pml_x_p*norm_p*(n_p[1]*FR_x + n_p[0]*FR_y);
+        F_p[s::pml + idx_pml(0,7)] = -n_p[0]*dmp_pml_x_p*norm_p*(n_p[2]*FR_x + n_p[0]*FR_z);
+        F_p[s::pml + idx_pml(0,8)] = -n_p[0]*dmp_pml_x_p*norm_p*(n_p[2]*FR_y + n_p[1]*FR_z);
 
         // fs.pml + idx_pml(0,0)or y-direction auxiliary variables
-        F_p[s.pml + idx_pml(1,0)] = n_p[1]*dmp_pml_y_p*norm_p*FRx;
-        F_m[s.pml + idx_pml(1,0)] = n_m[1]*dmp_pml_y_m*norm_m*FLx;
+        F_p[s::pml + idx_pml(1,0)] = n_p[1]*dmp_pml_y_p*norm_p*FRx;
+        F_m[s::pml + idx_pml(1,0)] = n_m[1]*dmp_pml_y_m*norm_m*FLx;
 
-        F_p[s.pml + idx_pml(1,1)] = n_p[1]*dmp_pml_y_p*norm_p*FRy;
-        F_m[s.pml + idx_pml(1,1)] = n_m[1]*dmp_pml_y_m*norm_m*FLy;
+        F_p[s::pml + idx_pml(1,1)] = n_p[1]*dmp_pml_y_p*norm_p*FRy;
+        F_m[s::pml + idx_pml(1,1)] = n_m[1]*dmp_pml_y_m*norm_m*FLy;
 
-        F_p[s.pml + idx_pml(1,2)] = n_p[1]*dmp_pml_y_p*norm_p*FRz;
-        F_m[s.pml + idx_pml(1,2)] = n_m[1]*dmp_pml_y_m*norm_m*FLz;
+        F_p[s::pml + idx_pml(1,2)] = n_p[1]*dmp_pml_y_p*norm_p*FRz;
+        F_m[s::pml + idx_pml(1,2)] = n_m[1]*dmp_pml_y_m*norm_m*FLz;
 
-        F_m[s.pml + idx_pml(1,3)] = n_m[1]*dmp_pml_y_m*norm_m*n_m[0]*FL_x;
-        F_m[s.pml + idx_pml(1,4)] = n_m[1]*dmp_pml_y_m*norm_m*n_m[1]*FL_y;
-        F_m[s.pml + idx_pml(1,5)] = n_m[1]*dmp_pml_y_m*norm_m*n_m[2]*FL_z;
+        F_m[s::pml + idx_pml(1,3)] = n_m[1]*dmp_pml_y_m*norm_m*n_m[0]*FL_x;
+        F_m[s::pml + idx_pml(1,4)] = n_m[1]*dmp_pml_y_m*norm_m*n_m[1]*FL_y;
+        F_m[s::pml + idx_pml(1,5)] = n_m[1]*dmp_pml_y_m*norm_m*n_m[2]*FL_z;
 
-        F_p[s.pml + idx_pml(1,3)] = -n_p[1]*dmp_pml_y_p*norm_p*n_p[0]*FR_x;
-        F_p[s.pml + idx_pml(1,4)] = -n_p[1]*dmp_pml_y_p*norm_p*n_p[1]*FR_y;
-        F_p[s.pml + idx_pml(1,5)] = -n_p[1]*dmp_pml_y_p*norm_p*n_p[2]*FR_z;
+        F_p[s::pml + idx_pml(1,3)] = -n_p[1]*dmp_pml_y_p*norm_p*n_p[0]*FR_x;
+        F_p[s::pml + idx_pml(1,4)] = -n_p[1]*dmp_pml_y_p*norm_p*n_p[1]*FR_y;
+        F_p[s::pml + idx_pml(1,5)] = -n_p[1]*dmp_pml_y_p*norm_p*n_p[2]*FR_z;
 
-        F_m[s.pml + idx_pml(1,6)] =  n_m[1]*dmp_pml_y_m*norm_m*(n_m[1]*FL_x + n_m[0]*FL_y);
-        F_m[s.pml + idx_pml(1,7)] =  n_m[1]*dmp_pml_y_m*norm_m*(n_m[2]*FL_x + n_m[0]*FL_z);
-        F_m[s.pml + idx_pml(1,8)] =  n_m[1]*dmp_pml_y_m*norm_m*(n_m[2]*FL_y + n_m[1]*FL_z);
+        F_m[s::pml + idx_pml(1,6)] =  n_m[1]*dmp_pml_y_m*norm_m*(n_m[1]*FL_x + n_m[0]*FL_y);
+        F_m[s::pml + idx_pml(1,7)] =  n_m[1]*dmp_pml_y_m*norm_m*(n_m[2]*FL_x + n_m[0]*FL_z);
+        F_m[s::pml + idx_pml(1,8)] =  n_m[1]*dmp_pml_y_m*norm_m*(n_m[2]*FL_y + n_m[1]*FL_z);
 
-        F_p[s.pml + idx_pml(1,6)] = -n_p[1]*dmp_pml_y_p*norm_p*(n_p[1]*FR_x + n_p[0]*FR_y);
-        F_p[s.pml + idx_pml(1,7)] = -n_p[1]*dmp_pml_y_p*norm_p*(n_p[2]*FR_x + n_p[0]*FR_z);
-        F_p[s.pml + idx_pml(1,8)] = -n_p[1]*dmp_pml_y_p*norm_p*(n_p[2]*FR_y + n_p[1]*FR_z);
+        F_p[s::pml + idx_pml(1,6)] = -n_p[1]*dmp_pml_y_p*norm_p*(n_p[1]*FR_x + n_p[0]*FR_y);
+        F_p[s::pml + idx_pml(1,7)] = -n_p[1]*dmp_pml_y_p*norm_p*(n_p[2]*FR_x + n_p[0]*FR_z);
+        F_p[s::pml + idx_pml(1,8)] = -n_p[1]*dmp_pml_y_p*norm_p*(n_p[2]*FR_y + n_p[1]*FR_z);
 
         // fs.pml + idx_pml(0,0)or z-direction auxiliary variables
-        F_p[s.pml + idx_pml(2,0)] = n_p[2]*dmp_pml_z_p*norm_p*FRx;
-        F_m[s.pml + idx_pml(2,0)] = n_m[2]*dmp_pml_z_m*norm_m*FLx;
+        F_p[s::pml + idx_pml(2,0)] = n_p[2]*dmp_pml_z_p*norm_p*FRx;
+        F_m[s::pml + idx_pml(2,0)] = n_m[2]*dmp_pml_z_m*norm_m*FLx;
 
-        F_p[s.pml + idx_pml(2,1)] = n_p[2]*dmp_pml_z_p*norm_p*FRy;
-        F_m[s.pml + idx_pml(2,1)] = n_m[2]*dmp_pml_z_m*norm_m*FLy;
+        F_p[s::pml + idx_pml(2,1)] = n_p[2]*dmp_pml_z_p*norm_p*FRy;
+        F_m[s::pml + idx_pml(2,1)] = n_m[2]*dmp_pml_z_m*norm_m*FLy;
 
-        F_p[s.pml + idx_pml(2,2)] = n_p[2]*dmp_pml_z_p*norm_p*FRz;
-        F_m[s.pml + idx_pml(2,2)] = n_m[2]*dmp_pml_z_m*norm_m*FLz;
+        F_p[s::pml + idx_pml(2,2)] = n_p[2]*dmp_pml_z_p*norm_p*FRz;
+        F_m[s::pml + idx_pml(2,2)] = n_m[2]*dmp_pml_z_m*norm_m*FLz;
 
-        F_m[s.pml + idx_pml(2,3)] = n_m[2]*dmp_pml_z_m*norm_m*n_m[0]*FL_x;
-        F_m[s.pml + idx_pml(2,4)] = n_m[2]*dmp_pml_z_m*norm_m*n_m[1]*FL_y;
-        F_m[s.pml + idx_pml(2,5)] = n_m[2]*dmp_pml_z_m*norm_m*n_m[2]*FL_z;
+        F_m[s::pml + idx_pml(2,3)] = n_m[2]*dmp_pml_z_m*norm_m*n_m[0]*FL_x;
+        F_m[s::pml + idx_pml(2,4)] = n_m[2]*dmp_pml_z_m*norm_m*n_m[1]*FL_y;
+        F_m[s::pml + idx_pml(2,5)] = n_m[2]*dmp_pml_z_m*norm_m*n_m[2]*FL_z;
 
-        F_p[s.pml + idx_pml(2,3)] = -n_p[2]*dmp_pml_z_p*norm_p*n_p[0]*FR_x;
-        F_p[s.pml + idx_pml(2,4)] = -n_p[2]*dmp_pml_z_p*norm_p*n_p[1]*FR_y;
-        F_p[s.pml + idx_pml(2,5)] = -n_p[2]*dmp_pml_z_p*norm_p*n_p[2]*FR_z;
+        F_p[s::pml + idx_pml(2,3)] = -n_p[2]*dmp_pml_z_p*norm_p*n_p[0]*FR_x;
+        F_p[s::pml + idx_pml(2,4)] = -n_p[2]*dmp_pml_z_p*norm_p*n_p[1]*FR_y;
+        F_p[s::pml + idx_pml(2,5)] = -n_p[2]*dmp_pml_z_p*norm_p*n_p[2]*FR_z;
 
-        F_m[s.pml + idx_pml(2,6)] =  n_m[2]*dmp_pml_z_m*norm_m*(n_m[1]*FL_x + n_m[0]*FL_y);
-        F_m[s.pml + idx_pml(2,7)] =  n_m[2]*dmp_pml_z_m*norm_m*(n_m[2]*FL_x + n_m[0]*FL_z);
-        F_m[s.pml + idx_pml(2,8)] =  n_m[2]*dmp_pml_z_m*norm_m*(n_m[2]*FL_y + n_m[1]*FL_z);
+        F_m[s::pml + idx_pml(2,6)] =  n_m[2]*dmp_pml_z_m*norm_m*(n_m[1]*FL_x + n_m[0]*FL_y);
+        F_m[s::pml + idx_pml(2,7)] =  n_m[2]*dmp_pml_z_m*norm_m*(n_m[2]*FL_x + n_m[0]*FL_z);
+        F_m[s::pml + idx_pml(2,8)] =  n_m[2]*dmp_pml_z_m*norm_m*(n_m[2]*FL_y + n_m[1]*FL_z);
 
-        F_p[s.pml + idx_pml(2,6)] = -n_p[2]*dmp_pml_z_p*norm_p*(n_p[1]*FR_x + n_p[0]*FR_y);
-        F_p[s.pml + idx_pml(2,7)] = -n_p[2]*dmp_pml_z_p*norm_p*(n_p[2]*FR_x + n_p[0]*FR_z);
-        F_p[s.pml + idx_pml(2,8)] = -n_p[2]*dmp_pml_z_p*norm_p*(n_p[2]*FR_y + n_p[1]*FR_z);
+        F_p[s::pml + idx_pml(2,6)] = -n_p[2]*dmp_pml_z_p*norm_p*(n_p[1]*FR_x + n_p[0]*FR_y);
+        F_p[s::pml + idx_pml(2,7)] = -n_p[2]*dmp_pml_z_p*norm_p*(n_p[2]*FR_x + n_p[0]*FR_z);
+        F_p[s::pml + idx_pml(2,8)] = -n_p[2]*dmp_pml_z_p*norm_p*(n_p[2]*FR_y + n_p[1]*FR_z);
       }    
     }
   }

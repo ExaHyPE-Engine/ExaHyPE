@@ -124,15 +124,8 @@ class SWEArgumentParser(argparse.ArgumentParser):
         )
 
         available_load_balancing_strategies = [
-            "None",
             "SpreadOut",
-            "SpreadOutHierarchically",
             "SpreadOutOnceGridStagnates",
-            "RecursiveSplit",
-            "RecursiveBipartition",
-            "SplitOversizedTree",
-            "cascade::SpreadOut_RecursiveBipartition",
-            "cascade::SpreadOut_SplitOversizedTree",
         ]
         self.add_argument(
             "-lbs",

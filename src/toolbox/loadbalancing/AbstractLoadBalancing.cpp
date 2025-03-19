@@ -11,7 +11,8 @@ std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::Abstra
 }
 
 toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(
-  Configuration* configuration, CostMetrics* costMetrics
+  Configuration* configuration,
+  CostMetrics*   costMetrics
 ):
   _blacklist(),
   _statistics(),
@@ -76,6 +77,11 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::hasStagnated() const {
 
 int toolbox::loadbalancing::AbstractLoadBalancing::getGlobalNumberOfTrees() const {
   return _statistics.getGlobalNumberOfTrees();
+}
+
+
+int toolbox::loadbalancing::AbstractLoadBalancing::getGlobalNumberOfInnerUnrefinedCells() const {
+  return _statistics.getGlobalNumberOfInnerUnrefinedCells();
 }
 
 

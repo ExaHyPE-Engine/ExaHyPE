@@ -67,22 +67,18 @@ public:
    */
   virtual ~AbstractLoadBalancing();
 
-
   /**
    * Generic string serialisation. You might want to extend it. Therefore,
    * the routine is labelled as virtual.
    */
   virtual std::string toString() const;
 
-
   /**
    * Switch on/off.
    */
   virtual void enable(bool);
 
-
   virtual bool hasSplitRecently() const;
-
 
   /**
    * Clarifies whether load balancing is, in principle, enabled. Might however
@@ -91,12 +87,12 @@ public:
    */
   bool isEnabled(bool globally) const;
 
-
   /**
    * Delegate to stats.
    */
   virtual int getGlobalNumberOfTrees() const;
 
+  int getGlobalNumberOfInnerUnrefinedCells() const;
 
   /**
    * A load balancing can either be stagnating or be switched off for
@@ -104,9 +100,7 @@ public:
    */
   virtual bool hasStagnated() const;
 
-
   virtual void finishSimulation();
-
 
   /**
    * Finish the step

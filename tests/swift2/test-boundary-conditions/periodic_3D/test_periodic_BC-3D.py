@@ -130,7 +130,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOut",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 

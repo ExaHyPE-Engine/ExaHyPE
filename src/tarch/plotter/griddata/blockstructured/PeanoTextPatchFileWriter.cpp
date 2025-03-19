@@ -110,7 +110,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createEmptyIndexFile() {
-  logInfo("createEmptyIndexFile()", "create empty index file " << _indexFile);
+  logInfo("createEmptyIndexFile()", "Create empty index file " << _indexFile);
 
   std::ofstream indexFileOut;
   indexFileOut.open(_indexFile.c_str(), std::ios::out);
@@ -122,7 +122,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::create
   }
 
   if (!indexFileOut.is_open()) {
-    logError("PeanoTextPatchFileWriter()", "have not been able to open file " << _indexFile);
+    logError("PeanoTextPatchFileWriter()", "Have not been able to open file " << _indexFile);
   } else {
     indexFileOut.close();
   }

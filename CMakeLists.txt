@@ -343,7 +343,7 @@ else()
 endif()
 
 if(ENABLE_LOADBALANCING)
-  target_compile_definitions(PeanoOptions INTERFACE UseToolboxLoadbalancing)
+  target_compile_definitions(PeanoOptions INTERFACE UseToolboxLoadBalancing)
 endif()
 
 if(ENABLE_BLOCKSTRUCTURED)
