@@ -30,9 +30,10 @@ public:
 private:
   static tarch::logging::Log _log;
 
-  int _minTreeSize;
   int _maxPermittedTreesPerRank;
 
-  void updateLoadBalancing();
+  void updateInterRankLoadBalancing();
+  void updateIntraRankLoadBalancing();
+
   void triggerSplit(int numberOfCells, int targetRank);
 };

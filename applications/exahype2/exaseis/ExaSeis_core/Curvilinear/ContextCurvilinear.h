@@ -79,8 +79,8 @@ public:
   ) {
 
     if (tarch::la::equals(t, 0.0)) {
-      Shortcuts     s;
-      // int           numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
+      using s = Shortcuts;
+      // int           numberOfData = s::NumberOfUnknowns + s::NumberOfAuxiliaryVariables;
       kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
       kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
 
@@ -101,13 +101,13 @@ public:
             int e_i = index_offset[Coordinate::X] + i;
 
             // x,y,z
-            luh[id_xyzf(k, j, i, s.curve_grid + 0)] = element(
+            luh[id_xyzf(k, j, i, s::curve_grid + 0)] = element(
               2, Coordinate::Z, e_k, Coordinate::Y, e_j, Coordinate::X, e_i
             );
-            luh[id_xyzf(k, j, i, s.curve_grid + 1)] = element(
+            luh[id_xyzf(k, j, i, s::curve_grid + 1)] = element(
               1, Coordinate::Z, e_k, Coordinate::Y, e_j, Coordinate::X, e_i
             );
-            luh[id_xyzf(k, j, i, s.curve_grid + 2)] = element(
+            luh[id_xyzf(k, j, i, s::curve_grid + 2)] = element(
               0, Coordinate::Z, e_k, Coordinate::Y, e_j, Coordinate::X, e_i
             );
           }
@@ -118,9 +118,9 @@ public:
       for (int k = 0; k < basisSize; k++) {
         for (int j = 0; j < basisSize; j++) {
           for (int i = 0; i < basisSize; i++) {
-            luh[id_xyzf(k, j, i, s.curve_grid + 0)] = nodes[i] * dx[0] + center[0] - dx[0] / 2;
-            luh[id_xyzf(k, j, i, s.curve_grid + 1)] = nodes[j] * dx[1] + center[1] - dx[1] / 2;
-            luh[id_xyzf(k, j, i, s.curve_grid + 2)] = nodes[k] * dx[2] + center[2] - dx[2] / 2;
+            luh[id_xyzf(k, j, i, s::curve_grid + 0)] = nodes[i] * dx[0] + center[0] - dx[0] / 2;
+            luh[id_xyzf(k, j, i, s::curve_grid + 1)] = nodes[j] * dx[1] + center[1] - dx[1] / 2;
+            luh[id_xyzf(k, j, i, s::curve_grid + 2)] = nodes[k] * dx[2] + center[2] - dx[2] / 2;
           }
         }
       }
@@ -150,7 +150,7 @@ public:
       for (int k = 0; k < basisSize; k++) {
         for (int j = 0; j < basisSize; j++) {
           for (int i = 0; i < basisSize; i++) {
-            std::copy_n(derivatives + id_der(k, j, i, 0), 10, luh + id_xyzf(k, j, i, s.jacobian));
+            std::copy_n(derivatives + id_der(k, j, i, 0), 10, luh + id_xyzf(k, j, i, s::jacobian));
           }
         }
       }
@@ -161,9 +161,9 @@ public:
         for (int j = 0; j < basisSize; j++) {
           for (int i = 0; i < basisSize; i++) {
             T coords[3] = {
-              luh[id_xyzf(k, j, i, s.curve_grid + 0)],
-              luh[id_xyzf(k, j, i, s.curve_grid + 1)],
-              luh[id_xyzf(k, j, i, s.curve_grid + 2)]};
+              luh[id_xyzf(k, j, i, s::curve_grid + 0)],
+              luh[id_xyzf(k, j, i, s::curve_grid + 1)],
+              luh[id_xyzf(k, j, i, s::curve_grid + 2)]};
 
               initUnknownsPointwise(
                 coords, curv_center, t, dt, luh + id_xyzf(k, j, i, 0)
@@ -201,7 +201,7 @@ public:
 
   void getElementSize(const T* const luh, tarch::la::Vector<Dimensions, double>& dx) {
     Shortcuts     s;
-    // int           numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
+    // int           numberOfData = s::NumberOfUnknowns + s::NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
     dx[0] = 0;
@@ -211,13 +211,13 @@ public:
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
         dx[0] = std::max(
-          dx[0], luh[id_xyzf(i, j, basisSize - 1, s.curve_grid + 0)] - luh[id_xyzf(i, j, 0, s.curve_grid + 0)]
+          dx[0], luh[id_xyzf(i, j, basisSize - 1, s::curve_grid + 0)] - luh[id_xyzf(i, j, 0, s::curve_grid + 0)]
         );
         dx[1] = std::max(
-          dx[1], luh[id_xyzf(i, basisSize - 1, j, s.curve_grid + 1)] - luh[id_xyzf(i, 0, j, s.curve_grid + 1)]
+          dx[1], luh[id_xyzf(i, basisSize - 1, j, s::curve_grid + 1)] - luh[id_xyzf(i, 0, j, s::curve_grid + 1)]
         );
         dx[2] = std::max(
-          dx[2], luh[id_xyzf(basisSize - 1, i, j, s.curve_grid + 2)] - luh[id_xyzf(0, i, j, s.curve_grid + 2)]
+          dx[2], luh[id_xyzf(basisSize - 1, i, j, s::curve_grid + 2)] - luh[id_xyzf(0, i, j, s::curve_grid + 2)]
         );
       }
     }
@@ -228,17 +228,17 @@ public:
     int center_i2 = int(std::floor(basisSize / 2.0));
 
     Shortcuts     s;
-    // int           numberOfData = s.NumberOfUnknowns + s.NumberOfAuxiliaryVariables;
+    // int           numberOfData = s::NumberOfUnknowns + s::NumberOfAuxiliaryVariables;
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
-    center[0] = (luh[id_xyzf(center_i1, center_i1, center_i1, s.curve_grid + 0)]
-                 + luh[id_xyzf(center_i2, center_i2, center_i2, s.curve_grid + 0)])
+    center[0] = (luh[id_xyzf(center_i1, center_i1, center_i1, s::curve_grid + 0)]
+                 + luh[id_xyzf(center_i2, center_i2, center_i2, s::curve_grid + 0)])
                 / 2.0;
-    center[1] = (luh[id_xyzf(center_i1, center_i1, center_i1, s.curve_grid + 1)]
-                 + luh[id_xyzf(center_i2, center_i2, center_i2, s.curve_grid + 1)])
+    center[1] = (luh[id_xyzf(center_i1, center_i1, center_i1, s::curve_grid + 1)]
+                 + luh[id_xyzf(center_i2, center_i2, center_i2, s::curve_grid + 1)])
                 / 2.0;
-    center[2] = (luh[id_xyzf(center_i1, center_i1, center_i1, s.curve_grid + 2)]
-                 + luh[id_xyzf(center_i2, center_i2, center_i2, s.curve_grid + 2)])
+    center[2] = (luh[id_xyzf(center_i1, center_i1, center_i1, s::curve_grid + 2)]
+                 + luh[id_xyzf(center_i2, center_i2, center_i2, s::curve_grid + 2)])
                 / 2.0;
   }
 

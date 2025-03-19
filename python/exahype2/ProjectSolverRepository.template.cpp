@@ -43,20 +43,16 @@ tarch::logging::Log _log( "{{NAMESPACE | join("::")}}::SolverRepository" );
 ::exahype2::PlotFilter         plotFilter;
 peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
-
-{% if LOAD_BALANCER!="" -%}
-{{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
-{% else -%}
-toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
-{% endif -%}
-
-
+#ifdef UseToolboxLoadBalancing
+{{LOAD_BALANCER}} loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
+#else
+toolbox::loadbalancing::strategies::NoLoadBalancing loadBalancer;
+#endif
 
 {% for item in SOLVERS -%}
 {{ item[0] }} {{ item[1] }};
 {# Comment to ensure that jinja2 adds a new line#}
 {%- endfor %}
-
 
 bool mayPlot() {
   bool result = true;

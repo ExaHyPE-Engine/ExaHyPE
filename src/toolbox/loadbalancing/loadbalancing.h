@@ -59,10 +59,6 @@
  *   the splitting.
  * - toolbox::loadbalancing::strategies::SpreadOut Ensure that, if the problem is large
  *   enough, each thread on each rank gets one partition.
- * - toolbox::loadbalancing::strategies::SpreadOutHierarchically This strategy is very
- *   similar to toolbox::loadbalancing::strategies::SpreadOut, but is spreads out in two
- *   phases. First, the strategy tries to give each rank a partition. From
- *   thereon, each rank tries to give each of its threads one partition.
  * - toolbox::loadbalancing::strategies::RecursiveBipartition As the name suggests, the
  *   load balancing tries to identify oversized partitions and then splits
  *   these guys into two.

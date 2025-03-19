@@ -18,12 +18,10 @@ ToolboxLoadBalancing_SOURCES = \
   Statistics.cpp \
   metrics/CellCount.cpp \
   metrics/CustomCellWeight.cpp \
-  strategies/Hardcoded.cpp \
   strategies/NoLoadBalancing.cpp \
   strategies/RecursiveBipartition.cpp \
   strategies/SplitOversizedTree.cpp \
   strategies/SpreadOut.cpp \
-  strategies/SpreadOutHierarchically.cpp \
   strategies/SpreadOutOnceGridStagnates.cpp \
   strategies/RecursiveSplit.cpp
 

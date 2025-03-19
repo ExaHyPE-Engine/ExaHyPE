@@ -4,13 +4,13 @@ namespace Numerics {
 
   template <class Shortcuts, typename T>
   inline void compute_tractions(const T* Q, const T* n, T& Tx, T& Ty, T& Tz) {
-    Shortcuts s;
-    T    sigma_xx = Q[s.sigma + 0];
-    T    sigma_yy = Q[s.sigma + 1];
-    T    sigma_zz = Q[s.sigma + 2];
-    T    sigma_xy = Q[s.sigma + 3];
-    T    sigma_xz = Q[s.sigma + 4];
-    T    sigma_yz = Q[s.sigma + 5];
+    using s = Shortcuts;
+    T    sigma_xx = Q[s::sigma + 0];
+    T    sigma_yy = Q[s::sigma + 1];
+    T    sigma_zz = Q[s::sigma + 2];
+    T    sigma_xy = Q[s::sigma + 3];
+    T    sigma_xz = Q[s::sigma + 4];
+    T    sigma_yz = Q[s::sigma + 5];
 
     Tx = n[0] * sigma_xx + n[1] * sigma_xy + n[2] * sigma_xz;
     Ty = n[0] * sigma_xy + n[1] * sigma_yy + n[2] * sigma_yz;
@@ -19,10 +19,10 @@ namespace Numerics {
 
   template <class Shortcuts, typename T>
   inline void get_velocities(const T* Q, T& vx, T& vy, T& vz) {
-    Shortcuts s;
-    vx = Q[s.v + 0];
-    vy = Q[s.v + 1];
-    vz = Q[s.v + 2];
+    using s = Shortcuts;
+    vx = Q[s::v + 0];
+    vy = Q[s::v + 1];
+    vz = Q[s::v + 2];
   }
 
   // Transformation routines

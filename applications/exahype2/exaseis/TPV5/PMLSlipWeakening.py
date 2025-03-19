@@ -1,7 +1,5 @@
 def initial():
   return """
-  VariableShortcuts s;
-
   std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
 
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0,
@@ -12,9 +10,9 @@ def initial():
       const double dt, 
       {{SOLUTION_STORAGE_PRECISION}}* Q
     ) -> void {
-      Q[s.rho] = 2.67;
-      Q[s.cp ] = 6.0;
-      Q[s.cs ] = 3.464;
+      Q[s::rho] = 2.67;
+      Q[s::cp ] = 6.0;
+      Q[s::cs ] = 3.464;
     }
   );
 
@@ -54,37 +52,37 @@ def initial():
         if (_TOP != 0) { //  No PML on surface
           if (computational_x < dmp_pml_left_x) {
             Q[idx(
-              k, j, i, s.dmp_pml + 0
+              k, j, i, s::dmp_pml + 0
             )] = dmp_amplitude_x * pow((dmp_pml_left_x - computational_x) / dmp_pml_width_x, pml_power);
           }
         }
         if (_TOP != 1) { //  No PML on surface
           if (computational_y <= dmp_pml_left_y) {
             Q[idx(
-              k, j, i, s.dmp_pml + 1
+              k, j, i, s::dmp_pml + 1
             )] = dmp_amplitude_y * pow((dmp_pml_left_y - computational_y) / dmp_pml_width_y, pml_power);
           }
         }
         if (_TOP != 2) { //  No PML on surface
           if (computational_z <= dmp_pml_left_z) {
             Q[idx(
-              k, j, i, s.dmp_pml + 2
+              k, j, i, s::dmp_pml + 2
             )] = dmp_amplitude_z * pow((dmp_pml_left_z - computational_z) / dmp_pml_width_z, pml_power);
           }
         }
         if (computational_x >= dmp_pml_right_x) {
           Q[idx(
-            k, j, i, s.dmp_pml + 0
+            k, j, i, s::dmp_pml + 0
           )] = dmp_amplitude_x * pow((computational_x - dmp_pml_right_x) / dmp_pml_width_x, pml_power);
         }
         if (computational_y >= dmp_pml_right_y) {
           Q[idx(
-            k, j, i, s.dmp_pml + 1
+            k, j, i, s::dmp_pml + 1
           )] = dmp_amplitude_y * pow((computational_y - dmp_pml_right_y) / dmp_pml_width_y, pml_power);
         }
         if (computational_z >= dmp_pml_right_z) {
           Q[idx(
-            k, j, i, s.dmp_pml + 2
+            k, j, i, s::dmp_pml + 2
           )] = dmp_amplitude_z * pow((computational_z - dmp_pml_right_z) / dmp_pml_width_z, pml_power);
         }
       }
@@ -128,7 +126,7 @@ public:
   double QuadraturePoints1d[Order+1];
   
 private:
-  ContextCurvilinearPMLSlipWeakening<VariableShortcuts, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
+  ContextCurvilinearPMLSlipWeakening<VariableShortcutselastic, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
 
   int                                                              pml_cell_width;
   double                                                           pml_alpha_const;
@@ -187,7 +185,7 @@ def abstractConstructor():
 
   logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
 
-  context = new ContextCurvilinearPMLSlipWeakening<VariableShortcuts, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextCurvilinearPMLSlipWeakening<VariableShortcutselastic, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     // filename_rupture_model,
     coarsestMeshLevel,

@@ -77,20 +77,14 @@ parser.add_argument(
     help="The storage scheme to use."
 )
 available_load_balancing_strategies = [
-    "None",
     "SpreadOut",
-    "SpreadOutHierarchically",
     "SpreadOutOnceGridStagnates",
-    "RecursiveBipartition",
-    "SplitOversizedTree",
-    "cascade::SpreadOut_RecursiveBipartition",
-    "cascade::SpreadOut_SplitOversizedTree",
 ]
 parser.add_argument(
     "-lbs",
     "--load-balancing-strategy",
     choices=available_load_balancing_strategies,
-    default="SpreadOutOnceGridStagnates",
+    default="SpreadOut",
     help="|".join(available_load_balancing_strategies),
 )
 parser.add_argument(

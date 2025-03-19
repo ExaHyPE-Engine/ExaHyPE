@@ -12,7 +12,7 @@ from SWE import *
 end_time = 10.0
 width = [10000, 10000]  # [m]
 offset = [-5000, -5000]  # [m]
-min_depth = 4
+min_depth = 6
 amr_levels = 0
 dg_order = 5
 number_of_snapshots = 0

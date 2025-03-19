@@ -248,7 +248,14 @@ void step() {
   auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("step()", "Starting AlgorithmicStep [" << {{SUBNAMESPACE}}repositories::StepRepository::toString(stepName) << "]");
+    logInfo(
+      "step()",
+      "Starting AlgorithmicStep "
+      << "[" << repositories::StepRepository::toString(stepName)
+      << ", #Trees=" << repositories::loadBalancer.getGlobalNumberOfTrees()
+      << ", #Cells=" << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells()
+      << "]"
+    );
   }
 
   switch (stepName) {
@@ -316,6 +323,7 @@ void step() {
     if (toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(false)) {
       logInfo("step()", "Rank is degenerated so disable load balancing temporarily");
       {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
+      toolbox::loadbalancing::dumpStatistics();
     }
     if (
       toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells

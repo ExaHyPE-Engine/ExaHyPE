@@ -9,38 +9,38 @@ namespace Numerics {
 
   template <class Shortcuts>
     inline void get_stiffness_tensor(const double*Q, double& c11,double& c22,double& c33,double& c44,double& c55,double& c66,double& c12,double& c13,double& c23){
-      Shortcuts s;
-      c11 = Q[s.c + 0];
-      c22 = Q[s.c + 1];
-      c33 = Q[s.c + 2];
-      c44 = Q[s.c + 3];
-      c55 = Q[s.c + 4];
-      c66 = Q[s.c + 5];
+      using s = Shortcuts;
+      c11 = Q[s::c + 0];
+      c22 = Q[s::c + 1];
+      c33 = Q[s::c + 2];
+      c44 = Q[s::c + 3];
+      c55 = Q[s::c + 4];
+      c66 = Q[s::c + 5];
       
-      c12 = Q[s.c + 6];
-      c13 = Q[s.c + 7];
-      c23 = Q[s.c + 8];
+      c12 = Q[s::c + 6];
+      c13 = Q[s::c + 7];
+      c23 = Q[s::c + 8];
     }
 
   template <class Shortcuts>
   inline void compute_parameters(const double* Q, double& rho, double& cp, double cs[], int direction) {
-    Shortcuts s;
-    rho = Q[s.rho];
+    using s = Shortcuts;
+    rho = Q[s::rho];
 
-    cp = std::sqrt(Q[s.c + direction] / rho);
+    cp = std::sqrt(Q[s::c + direction] / rho);
 
     switch (direction) {
     case 0:
-      cs[0] = std::sqrt(Q[s.c + 3] / rho);
-      cs[1] = std::sqrt(Q[s.c + 4] / rho);
+      cs[0] = std::sqrt(Q[s::c + 3] / rho);
+      cs[1] = std::sqrt(Q[s::c + 4] / rho);
       break;
     case 1:
-      cs[0] = std::sqrt(Q[s.c + 5] / rho);
-      cs[1] = std::sqrt(Q[s.c + 3] / rho);
+      cs[0] = std::sqrt(Q[s::c + 5] / rho);
+      cs[1] = std::sqrt(Q[s::c + 3] / rho);
       break;
     case 2:
-      cs[0] = std::sqrt(Q[s.c + 4] / rho);
-      cs[1] = std::sqrt(Q[s.c + 5] / rho);
+      cs[0] = std::sqrt(Q[s::c + 4] / rho);
+      cs[1] = std::sqrt(Q[s::c + 5] / rho);
       break;
     default:
       std::cout << "Direction : " << direction << " not defined" << std::endl;
@@ -104,7 +104,7 @@ namespace Numerics {
     double FL_n, FL_m, FL_l, FR_n, FR_m, FR_l;
     double FL_x, FL_y, FL_z, FR_x, FR_y, FR_z;
 
-    Shortcuts s;
+    using s = Shortcuts;
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
 
@@ -267,30 +267,30 @@ namespace Numerics {
         // construct flux fluctuation vectors obeying the eigen structure of the PDE
         // and choose physically motivated penalties such that we can prove
         // numerical stability.
-        F_p[s.v + 0] = norm_p / rho_p * FRx;
-        F_m[s.v + 0] = norm_m / rho_m * FLx;
+        F_p[s::v + 0] = norm_p / rho_p * FRx;
+        F_m[s::v + 0] = norm_m / rho_m * FLx;
 
-        F_p[s.v + 1] = norm_p / rho_p * FRy;
-        F_m[s.v + 1] = norm_m / rho_m * FLy;
+        F_p[s::v + 1] = norm_p / rho_p * FRy;
+        F_m[s::v + 1] = norm_m / rho_m * FLy;
 
-        F_p[s.v + 2] = norm_p / rho_p * FRz;
-        F_m[s.v + 2] = norm_m / rho_m * FLz;
+        F_p[s::v + 2] = norm_p / rho_p * FRz;
+        F_m[s::v + 2] = norm_m / rho_m * FLz;
 
-        F_m[s.sigma + 0] = norm_m * (c11_m * n_m[0] * FL_x + c12_m * n_m[1] * FL_y + c13_m * n_m[2] * FL_z);
-        F_m[s.sigma + 1] = norm_m * (c12_m * n_m[0] * FL_x + c22_m * n_m[1] * FL_y + c23_m * n_m[2] * FL_z);
-        F_m[s.sigma + 2] = norm_m * (c13_m * n_m[0] * FL_x + c23_m * n_m[1] * FL_y + c33_m * n_m[2] * FL_z);
+        F_m[s::sigma + 0] = norm_m * (c11_m * n_m[0] * FL_x + c12_m * n_m[1] * FL_y + c13_m * n_m[2] * FL_z);
+        F_m[s::sigma + 1] = norm_m * (c12_m * n_m[0] * FL_x + c22_m * n_m[1] * FL_y + c23_m * n_m[2] * FL_z);
+        F_m[s::sigma + 2] = norm_m * (c13_m * n_m[0] * FL_x + c23_m * n_m[1] * FL_y + c33_m * n_m[2] * FL_z);
 
-        F_p[s.sigma + 0] = -norm_p * (c11_p * n_p[0] * FR_x + c12_p * n_p[1] * FR_y + c13_p * n_p[2] * FR_z);
-        F_p[s.sigma + 1] = -norm_p * (c12_p * n_p[0] * FR_x + c22_p * n_p[1] * FR_y + c23_p * n_p[2] * FR_z);
-        F_p[s.sigma + 2] = -norm_p * (c13_p * n_p[0] * FR_x + c23_p * n_p[1] * FR_y + c33_p * n_p[2] * FR_z);
+        F_p[s::sigma + 0] = -norm_p * (c11_p * n_p[0] * FR_x + c12_p * n_p[1] * FR_y + c13_p * n_p[2] * FR_z);
+        F_p[s::sigma + 1] = -norm_p * (c12_p * n_p[0] * FR_x + c22_p * n_p[1] * FR_y + c23_p * n_p[2] * FR_z);
+        F_p[s::sigma + 2] = -norm_p * (c13_p * n_p[0] * FR_x + c23_p * n_p[1] * FR_y + c33_p * n_p[2] * FR_z);
 
-        F_m[s.sigma + 3] = norm_m * c44_m * (n_m[1] * FL_x + n_m[0] * FL_y);
-        F_m[s.sigma + 4] = norm_m * c55_m * (n_m[2] * FL_x + n_m[0] * FL_z);
-        F_m[s.sigma + 5] = norm_m * c66_m * (n_m[2] * FL_y + n_m[1] * FL_z);
+        F_m[s::sigma + 3] = norm_m * c44_m * (n_m[1] * FL_x + n_m[0] * FL_y);
+        F_m[s::sigma + 4] = norm_m * c55_m * (n_m[2] * FL_x + n_m[0] * FL_z);
+        F_m[s::sigma + 5] = norm_m * c66_m * (n_m[2] * FL_y + n_m[1] * FL_z);
 
-        F_p[s.sigma + 3] = -norm_p * c44_p * (n_p[1] * FR_x + n_p[0] * FR_y);
-        F_p[s.sigma + 4] = -norm_p * c55_p * (n_p[2] * FR_x + n_p[0] * FR_z);
-        F_p[s.sigma + 5] = -norm_p * c66_p * (n_p[2] * FR_y + n_p[1] * FR_z);
+        F_p[s::sigma + 3] = -norm_p * c44_p * (n_p[1] * FR_x + n_p[0] * FR_y);
+        F_p[s::sigma + 4] = -norm_p * c55_p * (n_p[2] * FR_x + n_p[0] * FR_z);
+        F_p[s::sigma + 5] = -norm_p * c66_p * (n_p[2] * FR_y + n_p[1] * FR_z);
       }
     }
   }

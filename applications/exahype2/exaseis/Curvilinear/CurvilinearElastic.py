@@ -2,8 +2,6 @@
 
 def initial():
   return """
-  VariableShortcuts s;
-
   std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
   context->initUnknownsPatch(Q, x, h, 0.0, 0.0,
   [&](
@@ -14,13 +12,13 @@ def initial():
       {{SOLUTION_STORAGE_PRECISION}}* Q
     ) -> void {
       if( x[1] <= (1.0 + 1.0e-6) && center[1] < 1.0) {
-        Q[s.rho] = 2.6;
-        Q[s.cp ] = 4.0;
-        Q[s.cs ] = 2.0;
+        Q[s::rho] = 2.6;
+        Q[s::cp ] = 4.0;
+        Q[s::cs ] = 2.0;
       }else if(x[1] >= (1.0 - 1.0e-6) && center[1] > 1.0){
-        Q[s.rho] = 2.7;
-        Q[s.cp ] = 6.0;
-        Q[s.cs ] = 3.464;
+        Q[s::rho] = 2.7;
+        Q[s::cp ] = 6.0;
+        Q[s::cs ] = 3.464;
       }
     }
   );
@@ -34,19 +32,17 @@ def boundary():
 
 def eigenvalue():
   return """
-  VariableShortcuts s;
-
-  auto cp  = Q[s.cp];
-  auto cs  = Q[s.cs];
-  auto q_x = Q[s.metric_derivative + 0];
-  auto q_y = Q[s.metric_derivative + 1];
-  auto q_z = Q[s.metric_derivative + 2];
-  auto r_x = Q[s.metric_derivative + 3];
-  auto r_y = Q[s.metric_derivative + 4];
-  auto r_z = Q[s.metric_derivative + 5];
-  auto s_x = Q[s.metric_derivative + 6];
-  auto s_y = Q[s.metric_derivative + 7];
-  auto s_z = Q[s.metric_derivative + 8];
+  auto cp  = Q[s::cp];
+  auto cs  = Q[s::cs];
+  auto q_x = Q[s::metric_derivative + 0];
+  auto q_y = Q[s::metric_derivative + 1];
+  auto q_z = Q[s::metric_derivative + 2];
+  auto r_x = Q[s::metric_derivative + 3];
+  auto r_y = Q[s::metric_derivative + 4];
+  auto r_z = Q[s::metric_derivative + 5];
+  auto s_x = Q[s::metric_derivative + 6];
+  auto s_y = Q[s::metric_derivative + 7];
+  auto s_z = Q[s::metric_derivative + 8];
 
   double lambda[9] = {0.};
 
@@ -67,22 +63,20 @@ def eigenvalue():
 
 def flux():
   return """
-  VariableShortcuts s;
+  auto sigma_xx = Q[s::sigma + 0];
+  auto sigma_yy = Q[s::sigma + 1];
+  auto sigma_zz = Q[s::sigma + 2];
+  auto sigma_xy = Q[s::sigma + 3];
+  auto sigma_xz = Q[s::sigma + 4];
+  auto sigma_yz = Q[s::sigma + 5];
 
-  auto sigma_xx = Q[s.sigma + 0];
-  auto sigma_yy = Q[s.sigma + 1];
-  auto sigma_zz = Q[s.sigma + 2];
-  auto sigma_xy = Q[s.sigma + 3];
-  auto sigma_xz = Q[s.sigma + 4];
-  auto sigma_yz = Q[s.sigma + 5];
-
-  auto jacobian = Q[s.jacobian];
+  auto jacobian = Q[s::jacobian];
 
   switch (normal) {
     case 0: {
-      auto q_x = Q[s.metric_derivative + 0];
-      auto q_y = Q[s.metric_derivative + 1];
-      auto q_z = Q[s.metric_derivative + 2];
+      auto q_x = Q[s::metric_derivative + 0];
+      auto q_y = Q[s::metric_derivative + 1];
+      auto q_z = Q[s::metric_derivative + 2];
       F[0]       = -jacobian * (q_x * sigma_xx + q_y * sigma_xy + q_z * sigma_xz);
       F[1]       = -jacobian * (q_x * sigma_xy + q_y * sigma_yy + q_z * sigma_yz);
       F[2]       = -jacobian * (q_x * sigma_xz + q_y * sigma_yz + q_z * sigma_zz);
@@ -94,9 +88,9 @@ def flux():
       F[8]       = 0.0;
     } break;
     case 1: {
-      auto r_x = Q[s.metric_derivative + 3];
-      auto r_y = Q[s.metric_derivative + 4];
-      auto r_z = Q[s.metric_derivative + 5];
+      auto r_x = Q[s::metric_derivative + 3];
+      auto r_y = Q[s::metric_derivative + 4];
+      auto r_z = Q[s::metric_derivative + 5];
       F[0]       = -jacobian * (r_x * sigma_xx + r_y * sigma_xy + r_z * sigma_xz);
       F[1]       = -jacobian * (r_x * sigma_xy + r_y * sigma_yy + r_z * sigma_yz);
       F[2]       = -jacobian * (r_x * sigma_xz + r_y * sigma_yz + r_z * sigma_zz);
@@ -108,9 +102,9 @@ def flux():
       F[8]       = 0.0;
     } break;
     case 2: {
-      auto s_x = Q[s.metric_derivative + 6];
-      auto s_y = Q[s.metric_derivative + 7];
-      auto s_z = Q[s.metric_derivative + 8];
+      auto s_x = Q[s::metric_derivative + 6];
+      auto s_y = Q[s::metric_derivative + 7];
+      auto s_z = Q[s::metric_derivative + 8];
       F[0]       = -jacobian * (s_x * sigma_xx + s_y * sigma_xy + s_z * sigma_xz);
       F[1]       = -jacobian * (s_x * sigma_xy + s_y * sigma_yy + s_z * sigma_yz);
       F[2]       = -jacobian * (s_x * sigma_xz + s_y * sigma_yz + s_z * sigma_zz);
@@ -126,16 +120,14 @@ def flux():
 
 def ncp():
   return """
-  VariableShortcuts s;
-
   switch (normal) {
     case 0: {
       auto u_q = deltaQ[0];
       auto v_q = deltaQ[1];
       auto w_q = deltaQ[2];
-      auto q_x = Q[s.metric_derivative + 0];
-      auto q_y = Q[s.metric_derivative + 1];
-      auto q_z = Q[s.metric_derivative + 2];
+      auto q_x = Q[s::metric_derivative + 0];
+      auto q_y = Q[s::metric_derivative + 1];
+      auto q_z = Q[s::metric_derivative + 2];
       BTimesDeltaQ[0]  = 0;
       BTimesDeltaQ[1]  = 0;
       BTimesDeltaQ[2]  = 0;
@@ -150,9 +142,9 @@ def ncp():
       auto u_r = deltaQ[0];
       auto v_r = deltaQ[1];
       auto w_r = deltaQ[2];
-      auto r_x = Q[s.metric_derivative + 3];
-      auto r_y = Q[s.metric_derivative + 4];
-      auto r_z = Q[s.metric_derivative + 5];
+      auto r_x = Q[s::metric_derivative + 3];
+      auto r_y = Q[s::metric_derivative + 4];
+      auto r_z = Q[s::metric_derivative + 5];
       BTimesDeltaQ[0]  = 0;
       BTimesDeltaQ[1]  = 0;
       BTimesDeltaQ[2]  = 0;
@@ -167,9 +159,9 @@ def ncp():
       auto u_s = deltaQ[0];
       auto v_s = deltaQ[1];
       auto w_s = deltaQ[2];
-      auto s_x = Q[s.metric_derivative + 6];
-      auto s_y = Q[s.metric_derivative + 7];
-      auto s_z = Q[s.metric_derivative + 8];
+      auto s_x = Q[s::metric_derivative + 6];
+      auto s_y = Q[s::metric_derivative + 7];
+      auto s_z = Q[s::metric_derivative + 8];
       BTimesDeltaQ[0]  = 0;
       BTimesDeltaQ[1]  = 0;
       BTimesDeltaQ[2]  = 0;
@@ -185,14 +177,12 @@ def ncp():
 
 def multiplyMaterialParameterMatrix():
   return """
-  VariableShortcuts s;
-
-  auto rho      = Q[s.rho];
-  auto c_p      = Q[s.cp];
-  auto c_s      = Q[s.cs];
+  auto rho      = Q[s::rho];
+  auto c_p      = Q[s::cp];
+  auto c_s      = Q[s::cs];
   auto mu       = rho * c_s * c_s;
   auto lambda   = rho * c_p * c_p - 2 * mu;
-  auto jacobian = Q[s.jacobian];
+  auto jacobian = Q[s::jacobian];
   auto rho_inv  = 1.0 / (rho * jacobian);
 
   // identical in all dimensions so no need for switch
@@ -219,11 +209,9 @@ def refinement_criterion():
 
 def point_source():
   return """
-  VariableShortcuts s;
-
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[s.jacobian];
+  auto jacobian = Q[s::jacobian];
 
   assertion2(n == 0, "Only a single pointSource for LOH1",n);
 
@@ -232,7 +220,7 @@ def point_source():
   
   double f = M0*t/(t0*t0)*std::exp(-t/t0);
   
-  forceVector[s.sigma + 4] = f;
+  forceVector[s::sigma + 4] = f;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;
@@ -255,7 +243,7 @@ def riemann_solver():
     std::copy_n(FIn, NumberOfUnknowns+NumberOfAuxiliaryVariables, FOut);
   }
 
-  Numerics::riemannSolver<VariableShortcuts, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
+  Numerics::riemannSolver<VariableShortcutselastic, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """
@@ -277,8 +265,7 @@ def abstractDeclarations():
 public:
   double QuadraturePoints1d[Order+1];
 private:
-  VariableShortcuts s;
-  ContextCurvilinear<VariableShortcuts, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
+  ContextCurvilinear<VariableShortcutselastic, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
 """
 
 def abstractConstructor():
@@ -322,7 +309,7 @@ def abstractConstructor():
     minDSize /= 3.0;
   }
 
-  context = new ContextCurvilinear<VariableShortcuts, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextCurvilinear<VariableShortcutselastic, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     coarsestMeshLevel,
     realCoarsestMeshSize,

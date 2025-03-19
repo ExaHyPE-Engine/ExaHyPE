@@ -155,7 +155,7 @@ def init_point_source():
 
 def riemann_solver():
   return """
-  Numerics::riemannSolver<VariableShortcuts, {{CORRECTOR_COMPUTATION_PRECISION}}, Order+1, NumberOfUnknowns, NumberOfUnknowns+NumberOfAuxiliaryVariables, 1>(
+  Numerics::riemannSolver<VariableShortcutselastic, {{CORRECTOR_COMPUTATION_PRECISION}}, Order+1, NumberOfUnknowns, NumberOfUnknowns+NumberOfAuxiliaryVariables, 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """

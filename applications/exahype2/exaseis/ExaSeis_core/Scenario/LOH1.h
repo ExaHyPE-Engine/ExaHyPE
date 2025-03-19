@@ -12,13 +12,13 @@ namespace Scenario{
   ){
     
     if( x[1] <= (1.0 + 1.0e-6) && center[1] < 1.0) {
-      Q[s.rho] = 2.6;
-      Q[s.cp ] = 4.0;
-      Q[s.cs ] = 2.0;
+      Q[s::rho] = 2.6;
+      Q[s::cp ] = 4.0;
+      Q[s::cs ] = 2.0;
     }else if(x[1] >= (1.0 - 1.0e-6) && center[1] > 1.0){
-      Q[s.rho] = 2.7;
-      Q[s.cp ] = 6.0;
-      Q[s.cs ] = 3.464;
+      Q[s::rho] = 2.7;
+      Q[s::cp ] = 6.0;
+      Q[s::cs ] = 3.464;
     }
 
   }
@@ -44,7 +44,7 @@ namespace Scenario{
     
     double f = M0*t/(t0*t0)*std::exp(-t/t0);
     
-    forceVector[s.sigma + 4] = f;
+    forceVector[s::sigma + 4] = f;
   }
 
 }

@@ -15,7 +15,7 @@ if __name__ == "__main__":
         end_time=0.5,
         width=[1.0, 1.0, 1.0],
         offset=[0.0, 0.0, 0.0],
-        min_depth=4,
+        min_depth=7,
         amr_levels=0,
         patch_size=64,
         rk_order = 2,
