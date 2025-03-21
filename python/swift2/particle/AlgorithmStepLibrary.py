@@ -112,11 +112,9 @@ def _get_particle_iterator_templates(particle_name):
           numberOfCoalescedActiveParticlesPerVertex,
           localParticleIsContainedInCell
         );        
-        ::swift2::kernels::forAllParticlePairs(marker,
+        ::swift2::kernels::forAllParticlePairs(cellMetaData,
                                                localParticles,
                                                activeParticles,
-                                               numberOfCoalescedLocalParticlesPerVertex,
-                                               numberOfCoalescedActiveParticlesPerVertex,
                                                *FUNCTION*<globaldata::{PARTICLE}>,
                                                ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>,
                                                ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> );
