@@ -28,12 +28,15 @@ project = mghype.matrixfree.api.Project( project_name = "DGTwoGrid",
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 
+nodes_distribution = 'GaussLobatto' # 'GaussLobatto' or 'GaussLegendre'
+
 matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
-  2
+  2,
+  nodes_distribution
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
@@ -69,8 +72,8 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 1.0e-6,
-  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval
+  solver_tolerance = 1.0e-10,
+  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval; @todo: rename to nodal_points
 )
 #! [Instantiate solver]
 
@@ -81,7 +84,8 @@ correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   unknowns_per_node = 1
 )
 
-intergridOperators = mghype.api.matrixgenerators.blockmatrix.IntergridOperatorsH()
+# h-intergid operators for correction equation 
+intergridOperatorsH = mghype.api.matrixgenerators.blockmatrix.IntergridOperatorsH()
 
 system_matrix, system_matrix_scaling = correction_equation_matrices.get_cell_system_matrix_for_laplacian()
 mass_matrix,   mass_matrix_scaling   = correction_equation_matrices.get_cell_mass_matrix()
@@ -103,19 +107,22 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMGSingleThr
                                                     mass_matrix_scaling = mass_matrix_scaling,
                                                     correction_matrix = correction_matrix,
                                                     correction_matrix_scaling = correction_matrix_scaling,
-                                                    solver_tolerance=1e-12,
+                                                    solver_tolerance=1e-14,
                                                     pre_smoothing_steps =6,
                                                     post_smoothing_steps=5,
-                                                    restriction_matrix=intergridOperators.restriction(),
-                                                    prolongation_matrix=intergridOperators.prolongation(),
+                                                    restriction_matrix=intergridOperatorsH.restriction(),
+                                                    prolongation_matrix=intergridOperatorsH.prolongation(),
                                                     descend_order=0,
+                                                    plot_predicate = "false" # dont's save patch files for CG steps
                                                     )
 
 #! [Coupling]
+# p-intergrid operators for DG
 intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
   dim = args.dimensions,
   coarse_order = 1,
-  fine_order = args.poly_degree
+  fine_order = args.poly_degree,
+  nodes_distribution = nodes_distribution
   )
 prolongation_matrix = [intergrid_operators.prolongation()]
 prolongation_matrix_scaling = [0]
@@ -133,7 +140,9 @@ solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.Multi
     restriction_matrix_scaling,
     injection_matrix,
     injection_matrix_scaling,
-    args.fas
+    args.fas,
+    smoothing_steps_CG=-1, # @todo: Counting individual CG steps as stopping criterion can be removed. Set -1 to disable
+    vcycles=-1 # -1 means we solve with a specified tolerance
 )
 #! [Coupling]
 
@@ -162,7 +171,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_after_each_mesh_sweep       = args.plot_after_each_mesh_sweep,
-  max_iterations = 2000
+  max_iterations = 20000
 )
 
 project.set_Peano4_installation( args.peanodir, build_mode )

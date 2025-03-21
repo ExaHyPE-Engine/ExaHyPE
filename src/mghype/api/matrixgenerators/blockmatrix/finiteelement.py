@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import itertools
 #from basis import Basis1d
-from .nodal_basis import NodalBasisGaussLegendre
+from .nodal_basis import NodalBasisGaussLobatto
 from .quadrature import GaussianQuadrature, Quadrature2d
 # from nodal_basis import NodalBasisGaussLegendre
 # from quadrature import GaussianQuadrature, Quadrature2d
@@ -64,15 +64,15 @@ class DGScalarElement(FiniteElement):
     Scalar valued Discontinuous Galerkin functions on reference cell [-1,+1] x [-1,+1]
     """
 
-    def __init__(self, dim, degree):
+    def __init__(self, degree, basis):
         """Initialise object
 
         :arg degree: polynomial degree
         """
-        #self.basis = Basis1d(degree)
-        self.dim = dim
+        self.dim = basis.dim
         self.degree = degree
-        self.basis = NodalBasisGaussLegendre(dim)
+        #self.basis = NodalBasisGaussLobatto(dim)
+        self.basis = basis
 
     @property
     def ndof(self):
@@ -142,15 +142,16 @@ class DGFacetElement(FiniteElement):
     Scalar valued Discontinuous Galerkin functions on reference interval [-1,+1]
     """
 
-    def __init__(self, dim, degree):
+    def __init__(self, degree, basis):
         """Initialise object
 
         :arg degree: polynomial degree
         """
         # self.basis = Basis1d(degree)
-        self.dim = dim
+        self.dim = basis.dim
         self.degree = degree
-        self.basis = NodalBasisGaussLegendre(dim)
+        self.basis = basis
+        #self.basis = NodalBasisGaussLobatto(dim)
 
     @property
     def ndof(self):

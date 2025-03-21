@@ -23,8 +23,8 @@ class NodalBasis(ABC):
         """
 
 
-class NodalBasisGaussLegendre(NodalBasis):
-    """Concrete implementation for Gauss Legendre nodes"""
+class NodalBasisGaussLobatto(NodalBasis):
+    """Concrete implementation for given type of nodes"""
 
     def get_Gauss_Lobatto_nodes(self, poly_degree):
         """Return Gauss-Lobatto nodes coordinates in [-1, 1] for given polynomial degree"""
@@ -48,44 +48,27 @@ class NodalBasisGaussLegendre(NodalBasis):
         
         else:
             raise ValueError(f"Add Gauss-Lobatto nodes for polynomial degree {poly_degree}")
+        
+    def get_Gauss_Legendre_nodes(self, poly_degree):
+        """Return Gauss-Legendre nodes coordinates in [-1, 1] for given polynomial degree"""
+
+        return leggauss(poly_degree + 1)[0]
 
     def nodal_points(self, degree):
         """Set nodal points xi_0, xi_1, ..., xi_p"""
 
         assert degree >= 0, "Negative degree"
 
-        # Equidistant points
-        # return np.linspace(-1.0, 1.0, degree + 1)
+        nodes_distribution = 'GaussLobatto'
 
-        # Gauss-Legendre points
-        # print("Gauss-Legendre points are used")
-        # return leggauss(degree + 1)[0]
-
-        # Gauss-Lobatto points: 
-        # roots of deriv(P_{n-1}), where P_{n-1} is the Legendre polynomial and n is the number of nodal points; 
-        # plus endpoints of the interval
-
-        # if degree > 0:
-        #     poly = legendre(degree) # "n-1" = (degree + 1) - 1
-        #     deriv = poly.deriv()
-        #     inter_points = np.sort(np.roots(deriv)) # interior nodal points
-        #     if degree == 3:
-        #          inter_points = np.array([-0.4472135954999579, 0.4472135954999579])
-
-        #     # result = [-1, inter_points, +1]
-        #     result = np.zeros(len(inter_points) + 2)
-        #     result[1:-1] = inter_points
-        #     result[0]  = -1.0
-        #     result[-1] = +1.0
-
-        # elif degree == 0:
-        #     result = np.asarray([0.0])
-
-        return self.get_Gauss_Lobatto_nodes(degree)
-
-        #input(f"Nodal points: {np.array2string(result, precision=20, separator=', ', formatter={'float_kind': lambda x: f'{x:.20f}'})}")
-
-        #return result
+        if nodes_distribution   == 'GaussLobatto':
+            return self.get_Gauss_Lobatto_nodes(degree)
+        elif nodes_distribution == 'GaussLegendre':
+            return self.get_Gauss_Legendre_nodes(degree)
+        elif nodes_distribution == 'Equidistant':
+            return np.linspace(-1.0, 1.0, degree + 1)
+        else:
+            raise ValueError(f"Unknown nodes distribution {nodes_distribution}")
 
     def node1d(self, degree, j):
         """Return the j-th nodal point of a Lagrange polynomial of given degree
@@ -154,3 +137,27 @@ class NodalBasisGaussLegendre(NodalBasis):
         # plt.show()
         # pass
         # ############################
+
+
+class NodalBasisGaussLegendre(NodalBasisGaussLobatto):
+    """
+    @todo: Move particular nodes distributions to a common superclass
+    """
+
+    def nodal_points(self, degree):
+        """Set nodal points xi_0, xi_1, ..., xi_p"""
+
+        assert degree >= 0, "Negative degree"
+
+        nodes_distribution = 'GaussLegendre'
+
+        if nodes_distribution   == 'GaussLobatto':
+            return self.get_Gauss_Lobatto_nodes(degree)
+        elif nodes_distribution == 'GaussLegendre':
+            return self.get_Gauss_Legendre_nodes(degree)
+        elif nodes_distribution == 'Equidistant':
+            return np.linspace(-1.0, 1.0, degree + 1)
+        else:
+            raise ValueError(f"Unknown nodes distribution {nodes_distribution}")
+
+

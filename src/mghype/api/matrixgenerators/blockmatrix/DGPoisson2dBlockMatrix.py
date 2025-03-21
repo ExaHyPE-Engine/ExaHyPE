@@ -5,7 +5,7 @@
 # import numpy as np
 
 from .BlockMatrix import BlockMatrix
-from .nodal_basis import NodalBasisGaussLegendre
+from .nodal_basis import NodalBasisGaussLobatto
 from .finiteelement import DGScalarElement, DGFacetElement
 from .quadrature import GaussianQuadrature, Quadrature2d
 #from ..MatrixGenerator import MatrixGenerator
@@ -19,7 +19,7 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
     p | q^+ q^- q^f
     """
 
-    def __init__(self, r_press, basis=NodalBasisGaussLegendre(2)):
+    def __init__(self, r_press, basis=NodalBasisGaussLobatto(2)):
         """Initialise instance
         :arg r_press: polynomial degree of pressure space
         :arg r_vel: polynomial degree of velocity

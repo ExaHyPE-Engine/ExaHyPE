@@ -9,6 +9,7 @@ import peano4
 import mghype
 
 from .MatrixGenerator import MatrixGenerator
+from .blockmatrix.nodal_basis import NodalBasisGaussLobatto, NodalBasisGaussLegendre
 
 
 class GaussLobatto(MatrixGenerator):
@@ -29,6 +30,7 @@ class GaussLobatto(MatrixGenerator):
                poly_degree,
                unknowns_per_cell_node,
                unknowns_per_face_node,
+               nodes_distribution,
                use_unit_interval=False):
 
     super( GaussLobatto, self ).__init__(dimensions,
@@ -46,7 +48,14 @@ class GaussLobatto(MatrixGenerator):
       self.points1d    = self.get_points_()
 
     r_press = self.poly_degree # polynomial order for p
-    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press)
+
+    if   nodes_distribution == 'GaussLobatto':
+      self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press, basis=NodalBasisGaussLobatto(dim=2))
+    elif nodes_distribution == 'GaussLegendre':
+      self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press, basis=NodalBasisGaussLegendre(dim=2))
+    else:
+      raise ValueError(f"Unknown nodes distribution {nodes_distribution}")
+
 
   def get_nodal_points_1d(self):
     """
@@ -305,12 +314,14 @@ class GLMatrixFree(GaussLobatto):
                poly_degree,
                unknowns_per_cell_node,
                solutions_per_face_node,   # number of solutions   we hold per node.
-               projections_per_face_node # number of projections  we hold per node.
+               projections_per_face_node, # number of projections  we hold per node.
+               nodes_distribution
               ):
     super( GLMatrixFree, self ).__init__(dimensions,
                                          poly_degree,
                                          unknowns_per_cell_node,
-                                         solutions_per_face_node
+                                         solutions_per_face_node,
+                                         nodes_distribution
                                          )
     self._solutions_per_face_node   = solutions_per_face_node
     self._projections_per_face_node = projections_per_face_node
