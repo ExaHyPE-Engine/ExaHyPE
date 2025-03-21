@@ -300,6 +300,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           _numberOfDrops++;
 
           (*p)->setCellH(marker.h());
+          toolbox::particles::updateContainedInAdjacentCellProperty(marker,**p);
+          
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             (*p)->getX(),
@@ -355,6 +357,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   If the parent cell is local, we know that all @f$ 2^d @f$ parent
   vertices are local. However, we have to know if the real parent
   is local, too.
+  
+  As we assume that this routine is called for touchVertexLastTime(), we 
+  do not have to invoke updateContainedInAdjacentCellProperty(). The 
+  relative association to vertices will still be correct at this point.
 
   """
     _Template_LiftAllParticles = jinja2.Template(
@@ -368,9 +374,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
-    for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-      p->setCellH(3.0 * marker.h());
-    }
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
       #if PeanoDebug > 0
@@ -378,6 +381,22 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       #else
       int partID = -1;
       #endif
+      
+      tarch::la::Vector< Dimensions, double > coarseGridVertexX = 
+              marker.x()
+              -
+              tarch::la::multiplyComponents(
+                tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+                marker.h()
+              )
+              +
+              tarch::la::multiplyComponents(
+                tarch::la::Vector<Dimensions,double>(target),
+                3.0*marker.h()
+              );
+              
+      p->setCellH(3.0 * marker.h());
+      toolbox::particles::updateContainedInAdjacentCellProperty(coarseGridVertexX,marker.h()*3.0,*p);
 
       toolbox::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
@@ -394,17 +413,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-        marker.x()
-        -
-        tarch::la::multiplyComponents(
-          tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-          marker.h()
-        )
-        +
-        tarch::la::multiplyComponents(
-          tarch::la::Vector<Dimensions,double>(target),
-          3.0*marker.h()
-        ),
+        coarseGridVertexX,
         3.0*marker.h(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"

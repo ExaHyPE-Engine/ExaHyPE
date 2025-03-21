@@ -2,6 +2,12 @@ from swift2.particle.AlgorithmStep import AlgorithmStep
 from swift2.particle.SPHParticle import SPHParticle
 
 
+DefaultIncludes = """
+#include "swift2/CellMetaData.h"
+"""
+    
+    
+    
 class ParticleIteratorTemplate(str):
     """!
     A mini-wrapper around a string for particle iterator.
@@ -88,7 +94,15 @@ def _get_particle_iterator_templates(particle_name):
 
     iterate_over_particles_assigned_to_vertex_for_move = None
     iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>, numberOfCoalescedAssignedParticles, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
-    iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, numberOfCoalescedLocalParticlesPerVertex, numberOfCoalescedActiveParticlesPerVertex, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> );"
+    iterate_over_particles_assigned_to_cell = f"""
+      ::swift2::CellMetaData cellMetaData(
+        marker,
+        numberOfCoalescedLocalParticlesPerVertex,
+        numberOfCoalescedActiveParticlesPerVertex,
+        localParticleIsContainedInCell
+      );        
+      ::swift2::kernels::forAllParticlePairs( cellMetaData, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> );
+"""
     iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}> );"
 
     #  Set defaults or raise error if there shouldn't be defaults and we missed something.
@@ -156,7 +170,7 @@ def get_algorithm_step_dict(particle):
         touch_vertex_last_time_kernel=v_iter.insert(
             "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
         ),
-        includes="""
+        includes=DefaultIncludes + """
             #include "swift2/kernels/legacy/Leapfrog.h"
         """,
     )
@@ -185,7 +199,7 @@ def get_algorithm_step_dict(particle):
         touch_vertex_last_time_kernel=v_iter_for_move.insert(
             "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize"
         ),
-        includes="""
+        includes=DefaultIncludes + """
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/GlobalTimeStepping.h"
@@ -212,7 +226,7 @@ def get_algorithm_step_dict(particle):
             "::swift2::timestepping::resetMovedParticleMarker"
         )
         + v_iter.insert("::swift2::kernels::legacy::hydroPredictExtra"),
-        includes="""
+        includes=DefaultIncludes + """
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/TimeStepping.h"
@@ -239,7 +253,7 @@ def get_algorithm_step_dict(particle):
                 "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired"
             )
         ),
-        includes="""
+        includes=DefaultIncludes + """
             #include "swift2/kernels/legacy/SmoothingLength.h"
             #include "swift2/kernels/legacy/Density.h"
         """,
@@ -263,7 +277,7 @@ def get_algorithm_step_dict(particle):
         touch_vertex_last_time_kernel=v_iter.insert(
             "::swift2::kernels::legacy::endHydroForceCalculation"
         ),
-        includes="""
+        includes=DefaultIncludes + """
           #include "swift2/kernels/legacy/SmoothingLength.h"
           #include "swift2/kernels/legacy/HydroForce.h"
         """,
@@ -282,7 +296,7 @@ def get_algorithm_step_dict(particle):
             )
             + v_iter.insert("::swift2::kernels::legacy::resetPredictedValues")
         ),
-        includes="""
+        includes=DefaultIncludes + """
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
         """,
@@ -296,7 +310,7 @@ def get_algorithm_step_dict(particle):
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
         touch_vertex_last_time_kernel="::swift2::kernels::legacy::computeNextTimestep(marker, assignedParticles);",
-        includes="""
+        includes=DefaultIncludes + """
             #include "Constants.h"
             #include "swift2/kernels/legacy/Timestep.h"
         """,
@@ -320,7 +334,7 @@ def get_algorithm_step_dict(particle):
                                    globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                    ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
         """,
-        includes="""
+        includes=DefaultIncludes + """
                                    #include "Constants.h"
                                    #include "swift2/statistics/Reports.h"
                                    #include "swift2/statistics/Statistics.h"
@@ -342,7 +356,7 @@ def get_algorithm_step_dict(particle):
         touch_vertex_last_time_kernel=v_iter_for_move.insert(
             "::swift2::kernels::legacy::firstInitParticle"
         ),
-        includes="""
+        includes=DefaultIncludes + """
             #include "Constants.h"
             #include "swift2/kernels/legacy/Swift.h"
         """,

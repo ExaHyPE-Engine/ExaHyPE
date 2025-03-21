@@ -204,6 +204,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  particlesAssociatedWithLocalVertices;
   std::vector< int >                            numberOfLocalParticlesPerVertex( TwoPowerD );
   std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
 
   _numberOfActiveParticlesAdded.push_back(0);
@@ -221,10 +222,16 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     
     // Construct the two local particle sets
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      bool append = marker.isContained( p->getX() );
-      if (append) {
-        localParticles.push_back( p );
-      }
+      std::bitset<TwoPowerD> mask = 0;
+      mask.set(TwoPowerD-i-1);
+      bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
+      assertionEquals4( 
+        isLocal, 
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.toString(), p->toString(), i, mask
+      );
+      localParticleIsContainedInCell.push_back( isLocal );
+      localParticles.push_back( p );
       particlesAssociatedWithLocalVertices.push_back( p );
     }
   }

@@ -147,6 +147,11 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
   This code snippet is used with touchVertexLastTime(). Therefore, the marker
   is a vertex marker.
+  
+  We do not have to recompute
+  
+  // toolbox::particles::updateContainedInAdjacentCellProperty(marker,target,*p);
+
 
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
@@ -207,6 +212,11 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         _numberOfLifts ++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
         (*p)->setCellH(3.0 * marker.h());
+        toolbox::particles::updateContainedInAdjacentCellProperty(
+          peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
+          marker.h()*3.0,
+          **p
+        );
         toolbox::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
           (*p)->getX(),
