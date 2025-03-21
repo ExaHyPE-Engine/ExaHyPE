@@ -7,7 +7,7 @@ from .PDE import PDE
 
 
 class FirstOrderConservativePDEFormulation(PDE):
-    """
+    r"""
     Helper class to model a hyperbolic PDE in first-order conservative
     formulation.
 
@@ -53,7 +53,7 @@ class FirstOrderConservativePDEFormulation(PDE):
               result += "0\n"
         result += "\n"
         for i in range(0, self.unknowns):
-            result += "\lambda_{max," + str(i) + "}(x) = "
+            result += "\\lambda_{max," + str(i) + "}(x) = "
             result += str(self.eigenvalues[i])
             result += "\n"
         return result
@@ -61,7 +61,7 @@ class FirstOrderConservativePDEFormulation(PDE):
     def LaTeX(self):
         result = "\\begin{eqnarray*}"
         for i in range(0, self.unknowns):
-            result += "\partial _t " + str(self.Q[i]) + "(x) + div("
+            result += "\\partial _t " + str(self.Q[i]) + "(x) + div("
             for j in range(0, len(self.F[i])):
                 if j != 0:
                     result += ", "

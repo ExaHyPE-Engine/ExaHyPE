@@ -1,5 +1,7 @@
 #include "GramSchmidt.h"
 
+#include <limits>
+
 void tarch::la::modifiedGramSchmidt (
   DynamicMatrix   A,
   DynamicMatrix&  Q,
@@ -15,11 +17,14 @@ void tarch::la::modifiedGramSchmidt (
     for (int i=0; i < A.rows(); i++){
       R(k,k) += std::pow(A(i,k), 2);
     }
-    R(k,k) = std::sqrt(R(k,k));
-
-    // Normalize k-th column of matrix Q
-    for (int i=0; i < A.rows(); i++){
-      Q(i,k) = A(i,k) / R(k,k);
+    if (tarch::la::greater(R(k, k), 0.0)){
+      
+      R(k,k) = std::sqrt(R(k,k));
+      // Normalize k-th column of matrix Q
+      for (int i=0; i < A.rows(); i++){
+        Q(i,k) = A(i,k) / R(k,k);
+      }
+      
     }
 
     // Compute entries in R and next orthonormal vector

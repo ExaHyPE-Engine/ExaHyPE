@@ -7,90 +7,136 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   ParticleIdentifier(
     const std::string&                           particleName__,
     const tarch::la::Vector<Dimensions, double>& particleX__,
-    const int                                    particleID__
+    const tarch::la::Vector<Dimensions, double>& vertexX,
+    const tarch::la::Vector<Dimensions, double>& vertexH,
+    const int                                    particleID__,
+    const int                                    treeID__
   ):
   particleName(particleName__),
   particleX(particleX__),
-  particleID(particleID__) {}
+  vertexInd(getVertexInd(vertexX, vertexH)),
+  vertexDepth(getVertexDepth(vertexX, vertexH)),
+  particleID(particleID__),
+  treeID(treeID__) {}
 
-
-toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
-  ParticleSearchIdentifier(
-    const std::string&                           particleName__,
-    const tarch::la::Vector<Dimensions, double>& particleX__,
-    const int                                    particleID__,
-    const double                                 positionTolerance__
+toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
+  ParticleIdentifier(
+    const std::string&                              particleName__,
+    const tarch::la::Vector<Dimensions, double>&    particleX__,
+    const tarch::la::Vector<Dimensions, long long>& vertexInd__,
+    const int                                       vertexDepth__,
+    const int                                       particleID__,
+    const int                                       treeID__
   ):
-  ParticleIdentifier(particleName__, particleX__, particleID__),
-  positionTolerance(positionTolerance__) {}
+  particleName(particleName__),
+  particleX(particleX__),
+  vertexInd(vertexInd__),
+  vertexDepth(vertexDepth__),
+  particleID(particleID__),
+  treeID(treeID__) {}
+
+
+tarch::la::Vector<Dimensions, long long> toolbox::particles::assignmentchecks::
+  internal::ParticleIdentifier::getVertexInd(
+    const tarch::la::Vector<Dimensions, double>& vertexX,
+    const tarch::la::Vector<Dimensions, double>& vertexH
+  ) {
+
+  tarch::la::Vector<Dimensions, long long> ind;
+
+  for (size_t i = 0; i < Dimensions; i++) {
+    // Round to 12 significant digits
+    double indf = std::round(vertexX(i) / vertexH(i) * 1e12) * 1e-12;
+    ind(i)      = static_cast<long long>(indf);
+  }
+
+  return ind;
+}
+
+
+int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
+  getVertexDepth(
+    const tarch::la::Vector<Dimensions, double>& vertexX,
+    const tarch::la::Vector<Dimensions, double>& vertexH
+  ) {
+
+  constexpr double boxsize = 243.;
+
+  double maxX = tarch::la::normMax(vertexX);
+  assertion3(maxX < boxsize, maxX, boxsize, "Hardcoded boxsize too small.");
+
+  double maxH = tarch::la::normMax(vertexH);
+
+  int result = static_cast<int>(boxsize / maxH);
+
+  return result;
+}
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalEquals(const ParticleIdentifier& rhs) const {
 
+  for (size_t i = 0; i < Dimensions; i++) {
+    if (vertexInd(i) != rhs.vertexInd(i))
+      return false;
+  }
+
   return (particleName == rhs.particleName) and (particleID == rhs.particleID)
-         and tarch::la::equals(particleX, rhs.particleX, 0.);
+         and (treeID == rhs.treeID) and (vertexDepth == rhs.vertexDepth);
 }
 
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmaller(const ParticleIdentifier& rhs) const {
-  if (*this == rhs) {
+
+  if (*this == rhs)
     return false;
-  }
-  if (particleName < rhs.particleName) {
+
+  // DO NOT USE EQUALITY CHECKS AFTER THIS.
+  // That aborts the checks too early. Only return false at the very end.
+
+  if (particleName < rhs.particleName)
     return true;
-  }
-  if (particleName > rhs.particleName) {
+  if (particleName > rhs.particleName)
     return false;
-  }
+
   if (particleID < rhs.particleID)
     return true;
   if (particleID > rhs.particleID)
     return false;
+
+  if (treeID < rhs.treeID)
+    return true;
+  if (treeID > rhs.treeID)
+    return false;
+
   for (int d = 0; d < Dimensions; d++) {
-    if (particleX(d) < rhs.particleX(d)) {
+    if (vertexInd(d) < rhs.vertexInd(d))
       return true;
-    }
-    if (particleX(d) > rhs.particleX(d)) {
+    if (vertexInd(d) > rhs.vertexInd(d))
       return false;
-    }
   }
-  // If everthing is equal so far, then one is not smaller than the oter.
-  return false;
-}
 
-
-bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
-  numericalSmallerWithTolerance(
-    const ParticleIdentifier& rhs,
-    const double              tolerance
-  ) const {
-
-  if (particleName < rhs.particleName) {
+  if (vertexDepth < rhs.vertexDepth)
     return true;
-  }
-  if (particleName > rhs.particleName) {
+  if (vertexDepth > rhs.vertexDepth)
     return false;
-  }
-  if (particleID < rhs.particleID)
-    return true;
-  if (particleID > rhs.particleID)
-    return false;
-  for (int d = 0; d < Dimensions; d++) {
-    if ((particleX(d) - rhs.particleX(d)) < -tolerance) {
-      return true;
-    }
-  }
-  // If everthing is equal so far, then one is not smaller than the oter.
+
+  // If everthing is equal so far, then one is not smaller than the other.
   return false;
 }
 
 
 std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   toString() const {
-  return "(" + particleName + ",ID=" + std::to_string(particleID) + ","
-         + ::toString(particleX) + ")";
+
+  std::stringstream sstr;
+  sstr
+    << "(" << particleName << ",ID=" << particleID
+    << ",VertexInd=" << ::toString(vertexInd) << ",VertexDepth=" << vertexDepth
+    << ",treeID=" << treeID << ",particleX=" << ::toString(particleX) << ")";
+
+  return sstr.str();
 }
 
 
@@ -100,24 +146,6 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
       rhs
   ) const {
   return numericalSmaller(rhs);
-}
-
-
-bool toolbox::particles::assignmentchecks::internal::ParticleSearchIdentifier::
-  operator<(
-    const toolbox::particles::assignmentchecks::internal::ParticleIdentifier&
-      rhs
-  ) const {
-  return numericalSmallerWithTolerance(rhs, positionTolerance);
-}
-
-
-bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
-  operator<(
-    const toolbox::particles::assignmentchecks::internal::
-      ParticleSearchIdentifier& rhs
-  ) const {
-  return numericalSmallerWithTolerance(rhs, rhs.positionTolerance);
 }
 
 

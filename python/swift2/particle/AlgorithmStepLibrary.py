@@ -93,25 +93,67 @@ def _get_particle_iterator_templates(particle_name):
     PARTICLE = particle_name
 
     iterate_over_particles_assigned_to_vertex_for_move = None
-    iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>, numberOfCoalescedAssignedParticles, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
+    iterate_over_particles_assigned_to_vertex = f"""
+        // Template in python/swift2/particle/AlgorithmStepLibrary.py
+        // iterate_over_particles_assigned_to_vertex
+
+        ::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>,
+                                           numberOfCoalescedAssignedParticles,
+                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
+        // end template
+        """
     iterate_over_particles_assigned_to_cell = f"""
-      ::swift2::CellMetaData cellMetaData(
-        marker,
-        numberOfCoalescedLocalParticlesPerVertex,
-        numberOfCoalescedActiveParticlesPerVertex,
-        localParticleIsContainedInCell
-      );        
-      ::swift2::kernels::forAllParticlePairs( cellMetaData, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> );
+        // Template in python/swift2/particle/AlgorithmStepLibrary.py
+        // iterate_over_particles_assigned_to_cell
+
+        ::swift2::CellMetaData cellMetaData(
+          marker,
+          numberOfCoalescedLocalParticlesPerVertex,
+          numberOfCoalescedActiveParticlesPerVertex,
+          localParticleIsContainedInCell
+        );        
+        ::swift2::kernels::forAllParticlePairs(marker,
+                                               localParticles,
+                                               activeParticles,
+                                               numberOfCoalescedLocalParticlesPerVertex,
+                                               numberOfCoalescedActiveParticlesPerVertex,
+                                               *FUNCTION*<globaldata::{PARTICLE}>,
+                                               ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>,
+                                               ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> );
+        // end template
 """
-    iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}> );"
+    iterate_over_particles_assigned_to_vertex_with_global_reduction = f"""
+        // Template in python/swift2/particle/AlgorithmStepLibrary.py
+        // iterate_over_particles_assigned_to_vertex_with_global_reduction
+
+        ::swift2::kernels::forAllParticles(marker,
+                                           assignedParticles,
+                                           numberOfCoalescedAssignedParticles,
+                                           *FUNCTION*<globaldata::{PARTICLE}>,
+                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}> );
+        // end template
+        """
 
     #  Set defaults or raise error if there shouldn't be defaults and we missed something.
 
     if iterate_over_particles_assigned_to_vertex_for_move is None:
         iterate_over_particles_assigned_to_vertex_for_move = f"""
+            // Template in python/swift2/particle/AlgorithmStepLibrary.py
+            // iterate_over_particles_assigned_to_vertex_for_move
+
             auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-            ::swift2::kernels::forAllParticles( marker, assignedParticles, numberOfCoalescedAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);
-            ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, marker.x(), marker.h(), _spacetreeId);
+            ::swift2::kernels::forAllParticles(marker,
+                                               assignedParticles,
+                                               numberOfCoalescedAssignedParticles,
+                                               *FUNCTION*<globaldata::{PARTICLE}>,
+                                               ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
+                                               );
+            ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles,
+                                                                           oldParticlePositions,
+                                                                           marker.x(),
+                                                                           marker.h(),
+                                                                           _spacetreeId);
+            // end template
             """
         ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
 
@@ -122,7 +164,16 @@ def _get_particle_iterator_templates(particle_name):
         raise ValueError("We shouldn't be here.")
 
     if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = f"""
+        // Template in python/swift2/particle/AlgorithmStepLibrary.py,
+        // iterate_over_particles_assigned_to_vertex_with_global_reduction
+        ::swift2::kernels::forAllParticles(marker,
+                                           assignedParticles,
+                                           *FUNCTION*<globaldata::{PARTICLE}>,
+                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
+                                           );
+        // end template
+        """
 
     #  finally, wrap the templates into ParticleIteratorTemplate objects
     vertex_for_move = ParticleIteratorTemplate(
