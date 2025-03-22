@@ -147,12 +147,9 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
   This code snippet is used with touchVertexLastTime(). Therefore, the marker
   is a vertex marker.
-  
-  We do not have to recompute
-  
-  // toolbox::particles::updateContainedInAdjacentCellProperty(marker,target,*p);
 
-
+  @see toolbox::particles::updateContainedInAdjacentCellProperty()
+  
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
         """
@@ -170,6 +167,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
     #endif
     switch ( instruction ) {
       case toolbox::particles::ParticleReassociationInstruction_Keep:
+        toolbox::particles::updateContainedInAdjacentCellProperty(
+          marker,
+          **p
+        );
         p++;
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:

@@ -142,8 +142,15 @@ namespace toolbox {
      * As we work with a weak ownership, there can be more than two bits (if
      * the particle sits exactly on the face between two adjacent cells).
      *
-     * @see the explanation in toolbox.particles.Particle
      *
+     * ## Particle movement
+     *
+     * We have to call updateContainedInAdjacentCellProperty() after each
+     * particle movement. Even if we don't change the vertex association as a
+     * particle drifts, it might stay with the same vertex and still move from
+     * one cell into another one and hence require an update of the flags.
+     *
+     * @see the explanation in toolbox.particles.Particle
      */
     void updateContainedInAdjacentCellProperty(
       const tarch::la::Vector< Dimensions, double >&  x,

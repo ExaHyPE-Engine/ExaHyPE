@@ -136,7 +136,8 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
     _Template_Sieve = UpdateParticleGridAssociation_LiftDrop._Template_Sieve
 
     """
-
+     
+  @see toolbox::particles::updateContainedInAdjacentCellProperty()
   @see toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
 
   """
@@ -161,6 +162,10 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
 
       switch ( instruction ) {
         case toolbox::particles::ParticleReassociationInstruction_Keep:
+          toolbox::particles::updateContainedInAdjacentCellProperty(
+            marker,
+            **p
+          );
           p++;
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
