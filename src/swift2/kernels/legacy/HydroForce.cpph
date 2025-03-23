@@ -3,8 +3,6 @@
 #include "kernel_hydro.h"
 
 
-
-
 template <typename Particle>
 bool swift2::kernels::legacy::forceKernelUpdateParticlePredicate(
   const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
@@ -13,12 +11,28 @@ bool swift2::kernels::legacy::forceKernelUpdateParticlePredicate(
 }
 
 
-
 template <typename Particle>
 bool swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate(
   const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
 ) {
   return ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<Particle>( marker, localParticle, activeParticle );
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::forceKernel(
+  const peano4::datamanagement::CellMarker& marker,
+  Particle&                                 localParticle,
+  const Particle&                           activeParticle
+) {
+  assertion2(
+    ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
+      marker,
+      localParticle,
+      activeParticle
+    ), localParticle.toString(), activeParticle.toString()
+  );
+  force_kernel(&localParticle, &activeParticle);
 }
 
 

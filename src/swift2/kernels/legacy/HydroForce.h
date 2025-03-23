@@ -202,16 +202,7 @@ namespace swift2 {
         const peano4::datamanagement::CellMarker& marker,
         Particle&                                 localParticle,
         const Particle&                           activeParticle
-      ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
-                marker,
-                localParticle,
-                activeParticle
-              )) {
-          force_kernel(&localParticle, &activeParticle);
-        }
-      }
+      );
 
       /**
        * Predict hydro terms (SWIFT)

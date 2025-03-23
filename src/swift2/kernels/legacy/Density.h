@@ -143,6 +143,10 @@ namespace swift2 {
        *
        * This is an implementation of the concept UpdateParticleAssignedToCellPredicate()
        * for densityKernel(), i.e. should be used in combination with the latter.
+       *
+       * The function delegates to ::swift2::kernels::localParticleCanBeUpdatedInCellKernel()
+       * and combines it with localParticle.getSmoothingLengthConverged(): We only consider
+       * updating a particles if its smoothing length computation has not yet converged.
        */
       template <typename Particle>
       bool densityKernelUpdateParticlePredicate(
