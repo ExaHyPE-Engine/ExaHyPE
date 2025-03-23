@@ -130,9 +130,9 @@ def _get_particle_iterator_templates(particle_name):
 
         ::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>,
                                            numberOfCoalescedAssignedParticles,
+//                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
                                            ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
                                            );
-//                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>);
         // end template
         """
     iterate_over_particles_assigned_to_cell = f"""
@@ -143,11 +143,9 @@ def _get_particle_iterator_templates(particle_name):
                                                localParticles,
                                                activeParticles,
                                                *FUNCTION*<globaldata::{PARTICLE}>,
-                                               ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>,
-                                               ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{PARTICLE}> 
+                                               *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>,
+                                               *FUNCTION*EvaluatePairInteractionPredicate<globaldata::{PARTICLE}>
                                                );
-//                                               *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>,
-//                                               *FUNCTION*EvaluatePairInteractionPredicate<globaldata::{PARTICLE}> );
         // end template
 """
     iterate_over_particles_assigned_to_vertex_with_global_reduction = f"""
@@ -158,9 +156,9 @@ def _get_particle_iterator_templates(particle_name):
                                            assignedParticles,
                                            numberOfCoalescedAssignedParticles,
                                            *FUNCTION*<globaldata::{PARTICLE}>,
+//                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
                                            ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}> 
                                            );
-//                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}> );
         // end template
         """
 

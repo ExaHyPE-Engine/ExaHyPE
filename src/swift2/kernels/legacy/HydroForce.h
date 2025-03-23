@@ -93,17 +93,6 @@ namespace swift2 {
       }
 
       /**
-       * @todo No masking yet
-       */
-      template <typename Particle>
-      void endHydroForceCalculationWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        endHydroForceCalculation(marker, localParticle);
-      }
-
-      /**
        * @brief The actual force kernel, which interacts a local particle and an
        * active particle, and updates the local particle.
        *
@@ -191,6 +180,24 @@ namespace swift2 {
 
 
       template <typename Particle>
+      bool forceKernelUpdateParticlePredicate(
+        const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
+      );
+
+      template <typename Particle>
+      bool forceKernelEvaluatePairInteractionPredicate(
+        const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+      );
+
+      /**
+       * Generic force kernel implementation
+       *
+       * Is to be used in combination with
+       *
+       * - forceKernelUpdateParticlePredicate() and
+       * - forceKernelEvaluatePairInteractionPredicate()
+       */
+      template <typename Particle>
       void forceKernel(
         const peano4::datamanagement::CellMarker& marker,
         Particle&                                 localParticle,
@@ -205,47 +212,6 @@ namespace swift2 {
           force_kernel(&localParticle, &activeParticle);
         }
       }
-
-      /**
-       * Vectorised alternative implementation of forceKernel()
-       *
-       * The file names here are wrong. This is, to the best of my knowledge,
-       * not a legacy code, but new one.
-       *
-       * @todo This assumption is not correct atm (as the iterator is
-       * programmed). We either have to alter the iterator (and then can remove
-       * this additional check) or we have to update the docu.
-       *
-       * This routine is a vectorised variant of forceKernel() which you can use
-       * if and only if you know that localParticle and activeParticle never
-       * ever can point to the same object, i.e. if you know that there is no
-       * aliasing. It is not clear if this operation is faster than forceKernel,
-       * but it delivers more flops due to the excessive vectorisation.
-       *
-       * To make the function vectorisable, we had to apply a few tweaks
-       * compared to the non-vector counterpart. Most of these tweaks are now
-       * @ref swift_particle_new_solver "documented as part of Swift's generic
-       * solver documentation".
-       *
-       *
-       * ## Specific differences to other vector kernel
-       *
-       * As we know a priori that this function is only invoked on distinct
-       * chunks of particles, we know that we'll compare the same particle
-       * against each other. Consequently, we may assume that the radius is
-       * never 0. This additional check can be omitted.
-       *
-       *
-       *
-       * @todo This routine does not support boundary particles. But we wanted
-       * to remove this flag anyway.
-       */
-      template <typename Particle>
-      void forceKernelWithMasking(
-        const peano4::datamanagement::CellMarker& marker,
-        Particle&                                 localParticle,
-        const Particle&                           activeParticle
-      );
 
       /**
        * Predict hydro terms (SWIFT)
@@ -281,90 +247,6 @@ namespace swift2 {
       bool forceKernelDistanceCheck(
         Particle* __restrict__ localParticle,
         const Particle* __restrict__ activeParticle
-      );
-
-      // @todo Tobias: Clean up these variants as well such that they work
-      // within
-      //               a generic setting. After that
-      // - Provide vectorised versions of the unary particle updates
-      // - Provide both a version which uses the distance check and which
-      // doesn't as generic version
-      // - docu
-
-
-      /**
-       * Optimised alternative to computeHydroForce()
-       *
-       * Semantically, this operation does exactly the same as
-       * computeHydroForce(). However, there are a few differences how the
-       * function runs through the particles. The routine can be used if and
-       * only if you use a @ref toolbox_particles_memorypool "memory pool" as it
-       * is also discussed in the @ref page_swift_performance_optimisation
-       * "optimisation guidelines".
-       *
-       * The routine knows way more about the internal ordering of the particles
-       * through the explicit arguments particlesAssociatedWithLocalVertices and
-       * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
-       * are stored through the naming convention/the fact that you have to use
-       * it with a memory pool. The Python class
-       * peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
-       * provides a lot of information how we construct the passed lists over
-       * particles.
-       *
-       * Further to the optimised loops, the function calls
-       * forceKernelVectorised() instead of forceKernel() whenever it knows a
-       * priori that two particle ranges to not overlap. See
-       * forceKernelVectorised() for further remarks how we deliver vectorised
-       * kernels.
-       *
-       * See also @ref swift_particle_new_solver Create new solvers "Swift's
-       * discussion how to vectorise kernels" for further details.
-       *
-       * ## Multiscale relationships
-       *
-       * Consult computeHydroForce() for a discussion of the handling of
-       * multiscale relations. We can exploit the fact here that a set of
-       * continuous active particles all should have the same cut-off
-       * radius.
-       */
-      template <typename ParticleContainer>
-      void computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
-        const peano4::datamanagement::CellMarker& marker,
-        const ParticleContainer&                  localVertices,
-        const std::vector<int>&                   numberOfParticlesPerVertex,
-        const ParticleContainer&                  activeParticles,
-        const std::vector<int>& numberOfActiveParticlesPerVertex
-      );
-
-
-      /**
-       * Two-step, vectorised interaction kernel
-       *
-       * Alternative implementation of the hydro force which splits up the
-       * underlying algorithm into two steps:
-       *
-       * 1. Identify all the particles which actually impose an interaction.
-       *    This is a purely geometric distance check and its result is stored
-       * in a boolean array.
-       * 2. For those interactions which are flagged as interactive, we actually
-       *    evaluate the force.
-       *
-       * In this variant, we assume that the first step is the part
-       * where the majority of the runtime is spent.
-       * After step 1 has completed we have a list of markers. Now we still try
-       * to vectorise over the markers holding a 1/true: We run trough the
-       * particle set once again with a while loop and look ahead N elements
-       * (typically N=8). If a reasonable amount of particles hold a 1 marker
-       * within this chunk, we process all of them with the vectorised kernel,
-       * i.e. accept that some of them might be masked out.
-       */
-      template <typename ParticleContainer>
-      void computeHydroForce_vectoriseDistanceChecks(
-        const peano4::datamanagement::CellMarker& marker,
-        const ParticleContainer&                  localVertices,
-        const std::vector<int>&                   numberOfParticlesPerVertex,
-        const ParticleContainer&                  activeParticles,
-        const std::vector<int>& numberOfActiveParticlesPerVertex
       );
     } // namespace legacy
   }   // namespace kernels

@@ -18,6 +18,12 @@ namespace swift2 {
 
     /**
      * Degenerated predicate which always allows for an update.
+     *
+     * This predicate is a prototype of what predicated look like. It rarely is
+     * used directly as it is. Typically, you have a kernel called ABC and then
+     * you write ABCUpdateParticlePredicate() with the same signature as
+     * alwaysUpdateInVertexKernel() aka
+     * UpdateParticleAssignedToVertexPredicate().
      */
     template <typename Particle>
     bool alwaysUpdateInVertexKernel(const peano4::datamanagement::VertexMarker&  marker, const Particle& localParticle) {
@@ -25,12 +31,24 @@ namespace swift2 {
     }
 
 
+    /**
+     * Degenerated update in cell predicate
+     *
+     * See comment on alwaysUpdateInVertexKernel(), which also holds for this
+     * predicate.
+     */
     template <typename Particle>
     bool alwaysUpdateInCellKernel(const peano4::datamanagement::CellMarker&  marker, const bool& localParticleIsContainedInCell, const Particle& localParticle) {
       return true;
     }
 
 
+    /**
+     * Degenerated update in cell predicate
+     *
+     * See comment on alwaysUpdateInVertexKernel(), which also holds for this
+     * predicate.
+     */
     template <typename Particle>
     bool alwaysUpdateParticlePairs(const peano4::datamanagement::CellMarker&  marker, const Particle& localParticle, const Particle& activeParticle) {
       return true;
@@ -38,7 +56,13 @@ namespace swift2 {
 
 
     /**
+     * Is a particle local
+     *
      * @brief is this localParticle a local particle (in the ParallelState sense)?
+     *
+     * Helper routine which is used by a lot of predicates in their decision
+     * making process. Is usually not used directly and hence could be moved
+     * into an "internal" namespace as well.
      */
     template <typename Particle>
     bool particleIsLocal(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
