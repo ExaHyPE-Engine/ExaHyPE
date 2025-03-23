@@ -25,14 +25,20 @@ namespace swift2 {
       void hydro_prepare_force(Particle* localParticle);
 
       template <typename Particle>
+      bool prepareHydroForceUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
+      template <typename Particle>
       void prepareHydroForce(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_prepare_force(&localParticle);
-        }
+        assertion(prepareHydroForceUpdateParticlePredicate(marker, localParticle));
+        hydro_prepare_force(&localParticle);
       }
 
       /**
@@ -45,26 +51,20 @@ namespace swift2 {
       void hydro_reset_acceleration(Particle* localParticle);
 
       template <typename Particle>
+      bool resetAccelerationUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
+      template <typename Particle>
       void resetAcceleration(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_reset_acceleration(&localParticle);
-        }
-      }
-
-
-      /**
-       * @todo no Masking yet
-       */
-      template <typename Particle>
-      void resetAccelerationWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        resetAcceleration(marker, localParticle);
+        assertion(resetAccelerationUpdateParticlePredicate(marker, localParticle));
+        hydro_reset_acceleration(&localParticle);
       }
 
       /**
@@ -82,14 +82,20 @@ namespace swift2 {
       void hydro_end_force(Particle* localParticle);
 
       template <typename Particle>
+      bool endHydroForceCalculationUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker&  marker,
+        const Particle&                              localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
+      template <typename Particle>
       void endHydroForceCalculation(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_end_force(&localParticle);
-        }
+        assertion(endHydroForceCalculationUpdateParticlePredicate(marker, localParticle));
+        hydro_end_force(&localParticle);
       }
 
       /**
@@ -213,14 +219,21 @@ namespace swift2 {
 
 
       template <typename Particle>
+      bool predictHydroUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker&  marker,
+        const Particle&                              localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
+
+      template <typename Particle>
       void predictHydro(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          predict_hyrdro(&localParticle);
-        }
+        assertion(predictHydroUpdateParticlePredicate(marker, localParticle));
+        predict_hyrdro(&localParticle);
       }
 
 
