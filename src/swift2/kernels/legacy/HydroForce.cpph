@@ -15,7 +15,13 @@ template <typename Particle>
 bool swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate(
   const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
 ) {
-  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<Particle>( marker, localParticle, activeParticle );
+  assertion(marker.isContained(
+      localParticle.getX(),
+      toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+  ));
+  return &localParticle != &activeParticle
+     and not localParticle.getCellHasUpdatedParticle()
+     and localParticle.getParallelState() == Particle::ParallelState::Local;
 }
 
 

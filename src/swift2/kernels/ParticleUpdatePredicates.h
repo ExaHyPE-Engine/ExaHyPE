@@ -125,6 +125,11 @@ namespace swift2 {
      * vertex (which we don't). The file peano4.toolbox.particles.api.AbstractParticleGridAssociation
      * provides some examples on this.
      *
+     * ## Optimisation
+     *
+     * This routine looks if a particle is contained in a cell. This is slow.
+     * Usually, you would do this check once in an outer loop via the is local
+     * flag, and then you can skip it here.
      *
      * @param localParticle: particle to check for
      * @param marker: the cell's CellMarker
