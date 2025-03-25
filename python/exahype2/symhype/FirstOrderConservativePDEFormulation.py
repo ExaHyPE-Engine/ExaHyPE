@@ -35,7 +35,7 @@ class FirstOrderConservativePDEFormulation(PDE):
 
         self.F = sympy.symarray("F", (unknowns, dimensions))
         self.ncp = sympy.symarray("ncp", (unknowns, dimensions))
-        self.eigenvalues = sympy.symarray("alpha", (unknowns, dimensions))
+        self.eigenvalues = sympy.symarray("lambda", (unknowns, dimensions))
         self.sources = sympy.symarray("S", (unknowns))
 
     def __str__(self):
