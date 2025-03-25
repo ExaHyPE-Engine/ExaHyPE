@@ -3,21 +3,23 @@
 from .Attribute import Attribute
 
 
-class Integer(Attribute):
+class DoublePointer(Attribute):
+    """!
+    
+    A double pointer
+    
+    Such a pointer is not initialised by default, i.e. how to handle the 
+    underlying data structure is totally up to the user. This data type
+    also does not support any MPI data exchange.
+    
+    """
     def __init__(
         self,
         name,
-        min_value=None,
-        max_value=None,
         ifdefs=[],
         qualifier=Attribute.Qualifier.NONE,
-        initval=None,
     ):
         """
-
-        min_value: None or integer value
-          Has to be smaller than max_value. Can also be a string if this string
-          is given by the precompiler.
 
         """
 
@@ -30,12 +32,11 @@ class Integer(Attribute):
             name,
             ifdefs,
             qualifier=qualifier,
-            initval=initval,
+            initval="nullptr",
             expose_in_header_file=expose,
         )
-        self._min_value = min_value
-        self._max_value = max_value
-
+        
+        assert not self._is_constexpr, "double pointer cannot be constexpr"
         return
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
@@ -45,58 +46,51 @@ class Integer(Attribute):
         if self._is_static:
             if for_declaration:
                 # No 'const' here: static member function cannot have 'const' qualifier
-                getter = ("get" + accessor_name + "()", "static int")
+                getter = ("get" + accessor_name + "()", "static double*")
             else:
                 # No 'static' here: 'static' can only be specified inside the class definition
-                getter = ("get" + accessor_name + "()", "int")
+                getter = ("get" + accessor_name + "()", "double*")
 
         elif self._is_const_static:
             if for_declaration:
                 # No 'const' here: static member function cannot have 'const' qualifier
-                getter = ("get" + accessor_name + "()", "static int")
+                getter = ("get" + accessor_name + "()", "static double*")
             else:
                 # No 'static' here: 'static' can only be specified inside the class definition
                 # No 'const' here either: function definition will then differ from that in declaration
-                getter = ("get" + accessor_name + "()", "int")
+                getter = ("get" + accessor_name + "()", "double*")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "() const", "const int")
-
-        elif self._is_constexpr:
-            getter = ("get" + accessor_name + "() const", "constexpr int")
+            getter = ("get" + accessor_name + "() const", "const double*")
 
         else:
             # default case.
-            getter = ("get" + accessor_name + "() const", "int")
+            getter = ("get" + accessor_name + "() const", "double*")
 
         methods.append(getter)
 
         # Add a setter method, if it makes sense.
         if not (self._is_const_static or self._is_const or self._is_constexpr):
-            methods.append(("set" + accessor_name + "(int value)", "void"))
+            methods.append(("set" + accessor_name + "(double* value)", "void"))
 
         return methods
 
     def get_plain_C_attributes(self, for_constructor=False):
-        typestring = "int"
+        typestring = "double*"
         namestring = "_" + self._name
 
         # add const/static qualifiers and initialization values, if needed
         if self._is_static:
-            typestring = "inline static int"
+            typestring = "inline static double*"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
 
         elif self._is_const_static:
-            typestring = "inline const static int"
+            typestring = "inline const static double*"
             namestring += " = " + str(self._initval)
 
         elif self._is_const:
-            typestring = "const int"
-            namestring += " = " + str(self._initval)
-
-        elif self._is_constexpr:
-            typestring = "constexpr static int"
+            typestring = "const double*"
             namestring += " = " + str(self._initval)
 
         else:
@@ -108,17 +102,7 @@ class Integer(Attribute):
                 namestring += " = " + str(self._initval)
 
         # Set up compression/packaging
-        if self._min_value is None and self._max_value is None:
-            return [(namestring, typestring, "")]
-        else:
-            packstring = (
-                "[[clang::pack_range("
-                + str(self._min_value)
-                + ","
-                + str(self._max_value)
-                + ")]]"
-            )
-            return [(namestring, typestring, packstring)]
+        return [(namestring, typestring, "")]
 
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:
@@ -134,7 +118,7 @@ class Integer(Attribute):
         return ""
 
     def get_native_MPI_type(self):
-        return [("MPI_INT", 1)]
+        return [("<double pointer should not be used for MPI data exchange>", 1)]
 
     def get_to_string(self):
         """
