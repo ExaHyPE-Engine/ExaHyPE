@@ -7,6 +7,17 @@ namespace tarch {
   namespace la {
     template<int Rows, int Cols, typename Scalar>
     class Matrix;
+
+    /**
+     * Deep copy builder function
+     *
+     * We faced issues with some compiler versions with offering a constructor
+     * that simply takes a pointer to scalars. Further to that, it is not clear
+     * if such a constructor would create a deep copy or a shallow copy.
+     * Therefore, I decided to introduce an explicit builder function.
+     */
+    template<int Rows, int Cols, typename Scalar>
+    Matrix<Rows,Cols,Scalar> buildMatrix(const Scalar* values);
   }
 }
 
@@ -34,6 +45,11 @@ class tarch::la::Matrix {
      * Values of the matrix components.
      */
     Scalar _values[Rows*Cols];
+
+    /**
+     * Become friend of builder mechanism.
+     */
+    friend Matrix<Rows,Cols,Scalar> buildMatrix<Rows,Cols,Scalar>(const Scalar* values);
 
   public:
     /**
