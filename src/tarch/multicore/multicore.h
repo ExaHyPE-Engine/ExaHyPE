@@ -256,6 +256,17 @@ namespace tarch {
      * inDependencies and invoke waitForTask() for it. We don't have to rely on
      * some backend-specific implementation.
      *
+     * ## Usage
+     *
+     * You can obviously construct a task set explicitly. If you know the
+     * number of tasks, you can however directly use the bracket notation
+     * to invoke this function:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *    int taskNumber = ...;
+     *    tarch::multicore::waitForTasks({taskNumber+0,taskNumber+1});
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
      * ## Serial code
      *
      * This routine degenerates to nop, as no task can be pending. spawnTask()
