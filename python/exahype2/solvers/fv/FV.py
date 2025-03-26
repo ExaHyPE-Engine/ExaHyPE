@@ -369,6 +369,9 @@ NCP:                    """
 Source term:            """
             + str(self._source_term_implementation)
             + """
+Adjust solution:        """
+            + str(self._adjust_solution_implementation)
+            + """
 Riemann solver:         """
             + str(self._riemann_solver_implementation)
             + """
@@ -1507,6 +1510,7 @@ The finest mesh width of """
         d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
+        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
 
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut

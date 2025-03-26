@@ -83,8 +83,8 @@ class StaticLimiting(object):
         Variants = ["REGULAR","REGULAR_TO_LIMITER","LIMITER_TO_REGULAR","TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants ) )
-        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants ) )
+        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants, initval="Troubled_Marker::REGULAR" ) )
+        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants, initval="Troubled_Marker::REGULAR" ) )
 
         self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n  _Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
 
@@ -440,6 +440,8 @@ Type:                   """ + self.__class__.__name__
         d["SOLVER_NAME"]         = self._name
         d["REGULAR_SOLVER_NAME"] = self._regular_solver._name
         d["LIMITER_SOLVER_NAME"] = self._limiter_solver._name
+
+        d["LIMITER_USE_ADJUST_SOLUTION"] = self._limiter_solver._adjust_solution_implementation != PDETerms.None_Implementation
 
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["REGULAR_SOLVER_UNKNOWN_IDENTIFIER"] = self._regular_solver._unknown_identifier()

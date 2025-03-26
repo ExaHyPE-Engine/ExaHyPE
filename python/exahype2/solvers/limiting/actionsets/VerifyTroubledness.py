@@ -12,9 +12,10 @@ from .kernels import check_troubledness
 class VerifyTroubledness(AbstractLimiterActionSet):
   TemplateVerifyTroubledness = """
     if ( {{PREDICATE}} ) {
-        const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
+        //[nk] the timeStamp is already updated in the Correction step
         const double timeStepSize  = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize();
-
+        const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
+        
         bool isUnTroubled = true;
 
         auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
@@ -25,7 +26,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
           luh,
           marker.x(),
           marker.h(),
-          timeStamp+timeStepSize
+          timeStamp
         );
         {% endif %}
 
@@ -59,11 +60,6 @@ class VerifyTroubledness(AbstractLimiterActionSet):
             fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
           }
         }
-
-        fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
-        fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-
-        fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }
 """
 

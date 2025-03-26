@@ -10,6 +10,7 @@ class SolverDefinitions:
         ncp_implementation,
         eigenvalues_implementation,
         source_term_implementation,
+        adjust_solution_implementation,
         material_parameters_implementation,
         point_source_implementation,
         init_point_source_implementation,
@@ -21,6 +22,7 @@ class SolverDefinitions:
         self._ncp_implementation = ncp_implementation
         self._eigenvalues_implementation = eigenvalues_implementation
         self._source_term_implementation = source_term_implementation
+        self._adjust_solution_implementation = adjust_solution_implementation
         self._material_parameters_implementation = material_parameters_implementation
         self._point_source_implementation = point_source_implementation
         self._init_point_source_implementation = init_point_source_implementation
@@ -285,6 +287,18 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(
 }
 {% endif %}
 
+{% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" %}
+  virtual void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
+    const tarch::la::Vector<Dimensions, double>&                  x,
+    const tarch::la::Vector<Dimensions, double>&                  h,
+    double                                                        t,
+    double                                                        dt,
+    double* const __restrict__                                    Q,
+  ) {
+    // @todo implement
+  }
+{% endif %}
+
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
@@ -318,6 +332,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
         d["NCP_IMPLEMENTATION"] = self._ncp_implementation
         d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
+        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
         d["MATERIAL_PARAM_IMPLEMENTATION"] = self._material_parameters_implementation
         d["POINT_SOURCE_IMPLEMENTATION"] = self._point_source_implementation
         d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation

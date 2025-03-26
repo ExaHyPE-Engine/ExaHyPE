@@ -86,10 +86,13 @@ class Enumeration(Attribute):
         ]
 
     def get_plain_C_attributes(self, for_constructor=False):
+        namestring = "_" + self._name
+        if self._initval is not None and not for_constructor:
+            namestring += " = " + str(self._initval)
         if self.compress:
-            return [("_" + self._name, self._enum_name(), "[[clang::pack]]")]
+            return [(namestring, self._enum_name(), "[[clang::pack]]")]
         else:
-            return [("_" + self._name, self._enum_name(), "")]
+            return [(namestring, self._enum_name(), "")]
 
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:

@@ -5,6 +5,8 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 #include "CellData.h"
+#include "exahype2/dg/DGUtils.h"
+
 
 {% if USE_LIBXSMM %}
 #include "Gemms.h"
@@ -317,8 +319,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //*****************************
   //****** Volume Integral ******
   //*****************************
-
-  // Define coefficient matrix coeffVolume
+  //[nk] We start accumulate volume terms of the corrector here as soon as the predictor is computed
+  // Here we use that Kxi already consists 1D spatial weights. Two other spatial weights have the same
+  // indexing, therefore they cancel out.
   pCompType coeffVolume[{{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}] __attribute__((aligned({{ALIGNMENT}})));
   for(int i=0; i<{{NUMBER_OF_DOF}}; i++) {
     for(int j=0; j<{{NUMBER_OF_DOF}}; j++) {
@@ -447,18 +450,48 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     pCompType* F[{{DIMENSIONS}}];
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+{% if DIMENSIONS==2 %}
       F[0] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
       F[1] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
-{% if DIMENSIONS==3 %}
-      F[2] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
-{% endif %}
 
+      // [nk] Convert an xyz index into a {indexX, indexY} structure.
+      // Note: In general, the flattened index is constructed from outer to inner dimensions in the following order: time -> z -> y -> x -> variables.
+      const tarch::la::Vector<Dimensions, int> index           = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
+{% endif %}
+{% if DIMENSIONS==3 %}
+      F[0] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}];
+      F[1] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
+      F[2] = &lFi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
+      // [nk] Convert an xyz index into a {indexX, indexY, indexZ} structure.
+      // Note: In general, the flattened index is constructed from outer to inner dimensions in the following order: time -> z -> y -> x -> variables.
+      const tarch::la::Vector<Dimensions, int> index           = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
+{% endif %}
+      // [nk] Calculate the exact time-node position for the flux calculation.
+      // -- Time positions are calculated as: t = tk + dt * tau
+      //    - t (timePosition)        : Time node in the global system.
+      //    - t_{k}                   : Current timestamp.
+      //    - dt = t_{k + 1} - t_{k}  : Current time step size.
+      //    - tau                     : Time node in the reference cell (normalized to [0, 1]).
+      const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
+
+      // [nk] Calculate the exact space-node position for the flux calculation.
+      // -- Space positions are calculated as: x = xc + dx * (r - 0.5)
+      //    - x (nodePosition) : Node coordinates in the global coordinate system.
+      //    - r                : Node coordinates in the reference cell (normalized to [0, 1]^dimensions).
+      //    - dx               : Spatial step size.
+      //    - xc               : Cell center coordinates in the global coordinate system.
+      //    - rc = 0.5         : Cell center coordinates in the reference cell.
+      tarch::la::Vector<Dimensions,double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<double>::nodes);
+
+      // [nk] Measure the flux contribution to the local cell time evaluation.
+      // Note: No connections with neighboring cells are considered during this step (e.g., no Riemann solver is used).
+      //       The numerical fluxes from neighbors (penalty) are considered during the correction stage.
       for(int d = 0; d < Dimensions; d++){
         solver.flux(
           lQi + (t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_DATA_PADDED}},
-          cellCentre, // TODO: Fix to node position
+          nodePosition,
           cellSize,
-          timeStamp, //+ Quadrature<pCompType>::nodes[t] * timeStepSize // Exact timeStamp for node
+          timePosition,
           timeStepSize,
           d,
           F[d]
@@ -467,7 +500,9 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     }
 {% endif %}{# USE_FLUX #}
 
-    // Compute the contribution of the initial condition uh to the right-hand side (rhs)
+    // Compute the contribution of the initial condition (uh) to the right-hand side (rhs).
+    // [nk] ADER-DG allows discontinuities in time as well. Time evaluation ranges from 0 to infinity.
+    // Following the upwinding principle, the "upstream" value of the corrector (luh) from the previous time step is used.
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       const pCompType weight = Quadrature<pCompType>::weights3[xyz] * DGMatrices<pCompType>::FLCoeff[t];
       #ifdef SharedOMP
@@ -479,7 +514,10 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     }
 
 {% if USE_FLUX %}
-    // Compute the "derivatives" (contributions of the stiffness matrix)
+    // Compute the "derivatives" (contributions of the stiffness matrix).
+    // [nk] Note: Kx_i here is not the pure stiffness matrix K itself but a Kronecker product of 1D weights (weights1) with it.
+    // Therefore, weights3 is not a 3D spatial weight but a combination (Kronecker product) of 1D time weights and 2D spatial weights.
+
     // x-direction (independent from the y- and z-derivatives)
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
@@ -526,6 +564,19 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+
+// [nk] Calculate the exact space and time nodes' positions for the source and ncp calculation.
+{% if USE_NCP or USE_SOURCE %}
+{% if DIMENSIONS==2 %}
+      const tarch::la::Vector<Dimensions, int> index           = {xyz % {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF}} };
+{% endif %}
+{% if DIMENSIONS==3 %}
+      const tarch::la::Vector<Dimensions, int> index           = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
+{% endif %}
+      const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
+      tarch::la::Vector<Dimensions,double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<double>::nodes);
+{% endif %}
+
 {% if USE_NCP %}
       std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE);
       std::copy_n(gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}, {{NUMBER_OF_UNKNOWNS}}, gradQ_PDE + {{1*NUMBER_OF_UNKNOWNS}});
@@ -535,11 +586,12 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}
 
 {% if USE_SOURCE %}
+      //[nk] The indexing for the source should be the same as for NCP
       solver.algebraicSource(
-        lQi + (xyz * {{NUMBER_OF_DOF}} + t) * {{NUMBER_OF_DATA_PADDED}},
-        cellCentre,
+        lQi + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_DATA_PADDED}},
+        nodePosition,
         cellSize,
-        timeStamp,
+        timePosition,
         timeStepSize,
         lSi + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}
       );
@@ -549,12 +601,13 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
 {% if USE_NCP %}
       for (int d = 0; d < Dimensions; d++) {
+        // [nk] NCP are computed at nodes positions during the prediction stage, since only local evaluation should be considered
         solver.nonconservativeProduct(
           lQi + (t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_DATA_PADDED}},
           gradQ_PDE + {{NUMBER_OF_UNKNOWNS_PADDED}} * d,
-          cellCentre,
+          nodePosition,
           cellSize,
-          timeStamp,
+          timePosition,
           timeStepSize,
           d,
           tmpNCP
@@ -564,6 +617,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
         #pragma omp simd aligned(lSi,tmpNCP:{{ALIGNMENT}})
         #endif
         for(int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
+          //[nk] NCP are computed as a part of source terms in the predictor
           lSi[n + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}] -= tmpNCP[n];
         }
       }

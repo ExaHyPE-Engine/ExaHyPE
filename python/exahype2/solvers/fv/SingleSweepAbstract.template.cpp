@@ -181,11 +181,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  if (_solverState == SolverState::GridInitialisation) {
-    _solverState = SolverState::TimeStepAfterGridInitialisation;
-  } else {
-    assertion(_solverState!=SolverState::GridConstruction);
+  // [nk] Checks if _solverState is in the Suspended state and return.
+  // Prevents nullification of eigenvalues if the solver is suspended
+  if (_solverState == SolverState::Suspended) {
+    assertion(_solverState != SolverState::GridConstruction);
     _solverState = SolverState::TimeStep;
+    return;
+  } else {
+    if (_solverState == SolverState::GridInitialisation) {
+      _solverState = SolverState::TimeStepAfterGridInitialisation;
+    } else {
+      assertion(_solverState != SolverState::GridConstruction);
+      _solverState = SolverState::TimeStep;
+    }
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}

@@ -33,14 +33,14 @@ class PosterioriLimiting(object):
         self._name = name
 
         # Respectively solver to be used in stable regions and solver to be used in unstable regions
-        self._regular_solver  = regular_solver
+        self._regular_solver = regular_solver
         self._limiter_solver = limiting_solver
 
         """
         All of the following are mostly used for limiting, they are set of but some classes that inherit from this
         may turn them on.
           Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
-            The old value gets overwritten with the new value at the beginning of the predictor step. 
+            The old value gets overwritten with the new value at the beginning of the predictor step.
             This allows rollback of the solution to a previous state if for some reason the computations
             yield incorrect results.
             Used for limiting, where troubled cells are rolled back and recomputed with a more robust
@@ -153,15 +153,19 @@ class PosterioriLimiting(object):
 #include "repositories/SolverRepository.h"
 """
 
-        #TODO: is this the best way to do this?
+        # [nk] The time step is recomputed in limiting solvers' SaveNewData action.
+        # Therefore in regular and limiter solver we should get it from the cell.
+        self._regular_solver._compute_time_step_size = """
+      const double timeStepSize  = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
+  """
         self._limiter_solver._compute_time_step_size = """
-    double timeStepSize = repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize();
+    double timeStepSize = coarseGridCell""" + self._limiter_solver._name + """CellLabel.getTimeStepSize();
 """
 
 
     """
-    Creates the action sets, these are actions tied to the grid that are executed at given points of 
-    grid generation, construction or steps of the ader-dg solver. Peano handles grid structures that
+    Creates the action sets, these are actions tied to the grid that are executed at given points of
+    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures that
     contain data as well as operations that are executed on that data. These are the latter.
     The guard here are the conditions for the execution of the operation, as in they are only executed
     if the guard evaluates to true.
@@ -193,10 +197,10 @@ class PosterioriLimiting(object):
         self._action_set_copy_convert_and_project_data = CopyAndConvertPatch(self,
             regularToLimiterGuard = ("not marker.willBeRefined() and not marker.hasBeenRefined() and" +
                 " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterStatusSpreadingToSecondNeighbours"),
+            # [nk] Regular cells are allowed to enter this step as a part of time-step synchronization between solvers.
             limiterToRegularGuard = ( "not marker.willBeRefined() and not marker.hasBeenRefined() and"
               + " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
-              + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
-              + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR")
+              + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()")
         )
 
         """
@@ -215,6 +219,8 @@ class PosterioriLimiting(object):
         self._action_set_spread_limiter_status.descend_invocation_order         = 1
         self._action_set_copy_convert_and_project_data.descend_invocation_order = 1000
 
+        # [nk] The Limiter Solver should be called to recompute TROUBLED cells and their neighbors LIMITER_TO_REGULAR based on the projections
+        # that are sent from CopyAndConvertPatch action.
         self._limiter_solver._action_set_update_cell.guard += ( 
            " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
          + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR")
@@ -503,6 +509,8 @@ Type:                   """
         d["SOLVER_NAME"]         = self._name
         d["REGULAR_SOLVER_NAME"] = self._regular_solver._name
         d["LIMITER_SOLVER_NAME"] = self._limiter_solver._name
+
+        d["LIMITER_USE_ADJUST_SOLUTION"] = self._limiter_solver._adjust_solution_implementation != PDETerms.None_Implementation
 
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["REGULAR_SOLVER_UNKNOWN_IDENTIFIER"] = self._regular_solver._unknown_identifier()

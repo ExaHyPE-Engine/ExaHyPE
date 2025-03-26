@@ -1,50 +1,73 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
 
 import peano4.solversteps
+
 import jinja2
+
 class SaveNewCellData(AbstractLimiterActionSet):
   TemplateSaveNewCellData = """
-  if ( {{PREDICATE}} ) {
+  if ({{PREDICATE}}) {
+    //[nk] TODO: This logic won't work for the Fixed timestep solvers, since they do not have getAdmissibleTimeStepSize() methods.
+    //[nk] By default we use the Regular solver time step
+    double timeStepSize = repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+    //[nk] However, if we fall to the LimiterSolver layer, all cells will be marked as TROUBLED. Therefore we should use the timeStepSize
+    // from the Limiter Solver
+    // NOTE! It is assumed, that TROUBLED and LIMITER_TO_REGULAR cells have the biggest eigenvalues.
+    // If it is not true, eigenvalues should be recalculated right after the projection from Limiter to Regular
+    if (fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker() == celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR) {
+      timeStepSize = repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+    }
+
+    //[nk] Store the timestep inside the cellLabel
+    fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
+    coarseGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
+    fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
+    coarseGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
+
+    //[nk] Synchronise the timeStamp for all solvers inside the cellLabel
+    const double timeStampSynchronised = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
+    coarseGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
+    fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
+    coarseGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
 
     {% if USE_DMP %}
-      //resetting local min and max
-      constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-      double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
+    // Resetting local min and max
+    constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
+    double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
 
-      kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
-        repositories::{{SOLVER_INSTANCE}},
-        fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.value,
-        localMinPerVariables, localMaxPerVariables
-      );
+    kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
+      repositories::{{SOLVER_INSTANCE}},
+      fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}_old.value,
+      localMinPerVariables, localMaxPerVariables
+    );
 
-      for(int d=0; d<Dimensions; d++){
-          //Projection of cell local min and max
-          std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+numberOfObservables);
-          std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value);
-          std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+3*numberOfObservables);
-          std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+2*numberOfObservables);
-      }
+    for (int d = 0; d < Dimensions; d++) {
+      // Projection of cell local min and max
+      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+numberOfObservables);
+      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value);
+      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+3*numberOfObservables);
+      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+2*numberOfObservables);
+    }
     {% endif %}
 
     {% if RESET_TROUBLED_MARKERS %}
-      //resetting troubled markers
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR);
-      for(int d=0; d<2*Dimensions; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::REGULAR);
-      }
+    // Resetting troubled markers
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR);
+    for (int d = 0; d < 2 * Dimensions; d++) {
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::REGULAR);
+    }
     {% endif %}
 
     {% if TRAMSMIT_CELL_TIMESTAMPS %}
-      //set timestamp for both cells to be the max of the two possible timestamps
-      const double timeStamp = std::max(
-        fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.getTimeStamp(),
-        fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp()
-      );
-      fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
-      fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
+    // Set timestamp for both cells to be the max of the two possible timestamps
+    const double timeStamp = std::max(
+      fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.getTimeStamp(),
+      fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp()
+    );
+    fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
+    fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
     {% endif %}
   }
 """
