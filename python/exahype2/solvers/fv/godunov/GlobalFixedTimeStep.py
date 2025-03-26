@@ -31,6 +31,7 @@ class GlobalFixedTimeStep(SingleSweep):
         max_eigenvalue=PDETerms.None_Implementation,
         riemann_solver=PDETerms.None_Implementation,
         source_term=PDETerms.None_Implementation,
+        adjust_solution=PDETerms.None_Implementation,
         pde_terms_without_state=False,
         plot_grid_properties=False,
         overlap=1,
@@ -54,6 +55,7 @@ class GlobalFixedTimeStep(SingleSweep):
         self._max_eigenvalue_implementation = PDETerms.None_Implementation
         self._riemann_solver_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
+        self._adjust_solution_implementation = PDETerms.None_Implementation
 
         self._compute_eigenvalue = False
 
@@ -67,6 +69,7 @@ class GlobalFixedTimeStep(SingleSweep):
             max_eigenvalue=max_eigenvalue,
             riemann_solver=riemann_solver,
             source_term=source_term,
+            adjust_solution=adjust_solution
         )
 
     def set_implementation(
@@ -80,6 +83,7 @@ class GlobalFixedTimeStep(SingleSweep):
         max_eigenvalue=None,
         riemann_solver=None,
         source_term=None,
+        adjust_solution=None,
         additional_action_set_includes="",
         additional_user_includes="",
     ):
@@ -110,6 +114,8 @@ class GlobalFixedTimeStep(SingleSweep):
             self._riemann_solver_implementation = riemann_solver
         if source_term is not None:
             self._source_term_implementation = source_term
+        if adjust_solution is not None:
+            self._adjust_solution_implementation = adjust_solution
 
         solver_code_snippets = FixedTimeSteppingCodeSnippets(
             self._normalised_time_step_size
@@ -122,6 +128,7 @@ class GlobalFixedTimeStep(SingleSweep):
             max_eigenvalue_implementation=self._max_eigenvalue_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
+            adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
         )
         abstract_solver_definitions = AbstractSolverDefinitions(
@@ -131,6 +138,7 @@ class GlobalFixedTimeStep(SingleSweep):
             max_eigenvalue_implementation=self._max_eigenvalue_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
+            adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
         )
         solver_declarations = SolverDeclarations(
@@ -140,6 +148,7 @@ class GlobalFixedTimeStep(SingleSweep):
             max_eigenvalue_implementation=self._max_eigenvalue_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
+            adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
         )
         solver_definitions = SolverDefinitions(
@@ -149,6 +158,7 @@ class GlobalFixedTimeStep(SingleSweep):
             max_eigenvalue_implementation=self._max_eigenvalue_implementation,
             riemann_solver_implementation=self._riemann_solver_implementation,
             source_term_implementation=self._source_term_implementation,
+            adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
         )
 

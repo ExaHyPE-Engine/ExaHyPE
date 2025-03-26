@@ -188,6 +188,7 @@ class ADERDG(object):
         self._point_sources_implementation      = PDETerms.None_Implementation
         self._init_point_sources_implementation = PDETerms.None_Implementation
         self._eigenvalues_implementation        = PDETerms.None_Implementation
+        self._adjust_solution_implementation    = PDETerms.None_Implementation
         self._material_param_implementation     = PDETerms.None_Implementation
 
         self._refinement_criterion_implementation = PDETerms.None_Implementation
@@ -329,6 +330,9 @@ Point sources:          """
             + """
 Number of point sources:"""
             + str(self._number_of_point_sources)
+            + """
+Adjust solution:        """
+            + str(self._adjust_solution_implementation)
             + """
 Riemann solver:         """
             + str(self._riemann_solver_implementation)
@@ -1255,6 +1259,7 @@ Material parameters:    """
         d["USE_SOURCE"]               = self._source_term_implementation != PDETerms.None_Implementation
         d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation != PDETerms.None_Implementation
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
+        d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation
         d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
 
         d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
@@ -1276,6 +1281,7 @@ Material parameters:    """
         boundary_conditions,
         refinement_criterion,
         initial_conditions,
+        adjust_solution,
         source_term,
         material_parameters,
         point_source,
@@ -1304,6 +1310,8 @@ Material parameters:    """
             self._eigenvalues_implementation = eigenvalues
         if source_term is not None:
             self._source_term_implementation = source_term
+        if adjust_solution is not None:
+            self._adjust_solution_implementation = adjust_solution
         if material_parameters is not None:
             self._material_param_implementation = material_parameters
 

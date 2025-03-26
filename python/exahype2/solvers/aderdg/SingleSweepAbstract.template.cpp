@@ -223,35 +223,41 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMaxTimeStepSize
 ) {
   switch (_solverState) {
-    case SolverState::GridConstruction:
-      _solverState = SolverState::GridInitialisation;
-      break;
-    case SolverState::GridInitialisation:
-      _solverState = SolverState::InitialPrediction;
-      break;
-    case SolverState::Suspended:
-    case SolverState::Plotting:
-{% if USE_SEPARATE_SWEEPS is sameas True %}
-      _solverState = SolverState::InitialPrediction;
-{% else %}
-      _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : _solverState = SolverState::TimeStep;
-{% endif %}
-      break;
-    case SolverState::InitialPrediction:
-      _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
-        SolverState::PredictionOnHangingCells : _solverState = SolverState::TimeStep;
-      break;
-    case SolverState::PredictionOnHangingCells:
-      _solverState = SolverState::TimeStep;
-      break;
-    case SolverState::TimeStep:
-{% if USE_SEPARATE_SWEEPS is sameas True %}
-      _solverState = SolverState::InitialPrediction;
-{% else %}
-      _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
-        SolverState::PredictionOnHangingCells : _solverState = SolverState::TimeStep;
-{% endif %}
-      break;
+  case SolverState::GridConstruction:
+    _solverState = SolverState::GridInitialisation;
+    break;
+  case SolverState::GridInitialisation:
+    _solverState = SolverState::InitialPrediction;
+    break;
+    // [nk] Checks if _solverState is in the Suspended state and return.
+    // Prevents nullification of eigenvalues if the solver is suspended
+  case SolverState::Suspended:
+    {% if USE_SEPARATE_SWEEPS is sameas True %}
+    _solverState = SolverState::InitialPrediction;
+    {% else %}
+    _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : SolverState::TimeStep;
+    {% endif %}
+    return; // [nk] return if suspended
+  case SolverState::Plotting:
+    {% if USE_SEPARATE_SWEEPS is sameas True %}
+    _solverState = SolverState::InitialPrediction;
+    {% else %}
+    _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : SolverState::TimeStep;
+    {% endif %}
+    break;
+  case SolverState::InitialPrediction:
+    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? SolverState::PredictionOnHangingCells : SolverState::TimeStep;
+    break;
+  case SolverState::PredictionOnHangingCells:
+    _solverState = SolverState::TimeStep;
+    break;
+  case SolverState::TimeStep:
+    {% if USE_SEPARATE_SWEEPS is sameas True %}
+    _solverState = SolverState::InitialPrediction;
+    {% else %}
+    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? SolverState::PredictionOnHangingCells : SolverState::TimeStep;
+    {% endif %}
+    break;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}

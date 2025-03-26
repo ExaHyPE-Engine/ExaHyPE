@@ -12,6 +12,7 @@ class AbstractSolverDeclarations:
         max_eigenvalue_implementation,
         riemann_solver_implementation,
         source_term_implementation,
+        adjust_solution_implementation,
         pde_terms_without_state,
     ):
         self._flux_implementation = flux_implementation
@@ -20,6 +21,7 @@ class AbstractSolverDeclarations:
         self._max_eigenvalue_implementation = max_eigenvalue_implementation
         self._riemann_solver_implementation = riemann_solver_implementation
         self._source_term_implementation = source_term_implementation
+        self._adjust_solution_implementation = adjust_solution_implementation
         self._pde_terms_without_state = pde_terms_without_state
 
     def create_abstract_solver_user_declarations(self):
@@ -257,6 +259,40 @@ class AbstractSolverDeclarations:
       double* const __restrict__                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
+
+    {% if ADJUST_SOLUTION_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    void adjustSolution(
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] double* const __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      Offloadable
+    ) InlineMethod {
+      {% if ADJUST_SOLUTION_IMPLEMENTATION=="<none>" %}
+      tarch::gpuAbort();
+      {% else %}
+      {{ADJUST_SOLUTION_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
+    {% if ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
+    virtual void adjustSolution(
+      const tarch::la::Vector<Dimensions, double>&                  x,
+      const tarch::la::Vector<Dimensions, double>&                  h,
+      const double                                                  t,
+      const double                                                  dt,
+      double* const __restrict__                                    Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    ) {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
+    {% endif %}
 """,
             undefined=jinja2.DebugUndefined,
         )
@@ -268,5 +304,6 @@ class AbstractSolverDeclarations:
         d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
+        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         return Template.render(**d)
