@@ -19,6 +19,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
     ):
         self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
 
+        self.d["NAME_SUFFIX"] = ""
+
         if self.d["IS_LINEAR"]:
             # Size of the tmp array
             self.d["TMP_ARRAY_SIZE"] = max(
@@ -33,7 +35,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     else 0
                 ),
             )
-            self.d["NAME_SUFFIX"] = ""
 
             if self.d["USE_POINT_SOURCE"]:
                 # Assembling the basis function for the point source
@@ -45,8 +46,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                 )
 
                 d = deepcopy(self.d)
-                d["USE_POINT_SOURCE"] = False
-                d["NAME_SUFFIX"] = "WithoutPointSources"
+                self.d["USE_POINT_SOURCE"] = False
+                d["NAME_SUFFIX"] = "WithPointSources"
 
                 generated_kernels = (
                     peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
