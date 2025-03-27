@@ -5,7 +5,7 @@
 # import numpy as np
 
 from .BlockMatrix import BlockMatrix
-from .nodal_basis import NodalBasisGaussLobatto, NodalBasisGaussLegendre
+from .nodal_basis import NodalBasisGaussLobatto
 from .finiteelement import DGScalarElement, DGFacetElement
 from .quadrature import GaussianQuadrature, Quadrature2d
 import numpy as np
