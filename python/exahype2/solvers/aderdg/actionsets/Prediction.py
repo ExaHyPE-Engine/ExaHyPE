@@ -104,8 +104,7 @@ class Prediction(AbstractADERDGActionSet):
     int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lQhbnd, lFhbnd, cellData.QIn[0],
-      marker.x(), marker.h(), timeStamp, timeStepSize,
-      std::vector<int>() // Empty vector
+      marker.x(), marker.h(), timeStamp, timeStepSize
     );
 """
 
@@ -118,7 +117,7 @@ class Prediction(AbstractADERDGActionSet):
 
     if (!pointSources.empty()) {
       // Linear, with point sources
-      int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+      int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegralWithPointSources<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
         lQhbnd, lFhbnd, cellData.QIn[0],
         marker.x(), marker.h(), timeStamp, timeStepSize,
@@ -126,11 +125,10 @@ class Prediction(AbstractADERDGActionSet):
       );
     } else {
       // Linear, without point sources
-      int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegralWithoutPointSources<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+      int numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
         lQhbnd, lFhbnd, cellData.QIn[0],
-        marker.x(), marker.h(), timeStamp, timeStepSize,
-        pointSources
+        marker.x(), marker.h(), timeStamp, timeStepSize
       );
     }
 """
@@ -407,7 +405,7 @@ class Prediction(AbstractADERDGActionSet):
                 + """/PointSources.h"
 #include "kernels/"""
                 + self._solver._name
-                + """/FusedSpaceTimePredictorVolumeIntegralWithoutPointSources.h"
+                + """/FusedSpaceTimePredictorVolumeIntegralWithPointSources.h"
 """
             )
         return includes

@@ -40,8 +40,10 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
   const double                                  timeStamp,
-  const double                                  timeStepSize,
-  const std::vector<int>&                       pointSources
+  const double                                  timeStepSize
+{% if USE_POINT_SOURCE %}
+  ,const std::vector<int>&                      pointSources
+{% endif %}
 ) {
   pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
 
@@ -622,7 +624,9 @@ template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral
   const tarch::la::Vector<Dimensions, double>&                      cellCentre,
   const tarch::la::Vector<Dimensions, double>&                      cellSize,
   const double                                                      timeStamp,
-  const double                                                      timeStepSize,
-  const std::vector<int>&                                           pointSources
+  const double                                                      timeStepSize
+{% if USE_POINT_SOURCE %}
+  ,const std::vector<int>&                                          pointSources
+{% endif %}
 );
 {% endfor %}
