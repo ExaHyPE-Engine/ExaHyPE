@@ -11,10 +11,10 @@ Before you start, ensure that you have configured and built Peano as specified f
   - \subpage benchmarks_exahype2_acoustic_kernel_benchmarks
   - \subpage benchmarks_exahype2_elastic_kernel_benchmarks
   - \subpage benchmarks_exahype2_advection_kernel_benchmarks
-  - \subpage benchmarks_exahype2_swe_kernel_benchmarks
+  - \subpage benchmarks_exahype2_shallow_water_kernel_benchmarks
   - \subpage benchmarks_exahype2_ccz4_kernel_benchmarks
 - Shallow water benchmarks
-  - \subpage benchmarks_exahype2_swe_artificial_tsunami
+  - \subpage benchmarks_exahype2_shallow_water_artificial_tsunami
 - ExaGRyPE/Astrophysics
   - \subpage benchmarks_exahype2_ccz4_gauge_wave
   - \subpage benchmarks_exahype2_ccz4_single_black_hole
