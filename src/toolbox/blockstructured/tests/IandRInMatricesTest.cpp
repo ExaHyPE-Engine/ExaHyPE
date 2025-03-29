@@ -1074,6 +1074,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
   tarch::freeMemory(fineDataMatrix, tarch::MemoryLocation::Heap);
 }
 
+
 void toolbox::blockstructured::tests::IandRInMatricesTest::
   compareRestrictLinearCaseToTensorProductPatch() {
   const double data3d[] = {
@@ -1365,7 +1366,7 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
 
   constexpr int patchSize = 5;
   constexpr int overlap   = 3;
-  constexpr int unknowns  = 1;
+  constexpr int unknowns  = 5;
   const int faceSize = unknowns * std::pow(patchSize, Dimensions - 1) * overlap
                        * 2;
 
@@ -1389,11 +1390,18 @@ void toolbox::blockstructured::tests::IandRInMatricesTest::
     for (int j = 0; j < 3; j++) {
       for (int k = 0; k < 3; k++) {
         peano4::grid::GridTraversalEvent dummyEvent;
-        dummyEvent.setRelativePositionToFather(
-          tarch::la::Vector<Dimensions, int>{i, j, k}
-        );
+        if constexpr (Dimensions == 2){
+          dummyEvent.setRelativePositionToFather(
+            tarch::la::Vector<Dimensions, int>{i, j}
+          );
+        }
+        if constexpr (Dimensions == 3){
+          dummyEvent.setRelativePositionToFather(
+            tarch::la::Vector<Dimensions, int>{i, j, k}
+          );
+        }
 
-        for (int axis = 0; axis < 3; axis++) {
+        for (int axis = 0; axis < Dimensions; axis++) {
           peano4::datamanagement::FaceMarker marker1(dummyEvent, axis);
           peano4::datamanagement::FaceMarker
             marker2(dummyEvent, axis + Dimensions);

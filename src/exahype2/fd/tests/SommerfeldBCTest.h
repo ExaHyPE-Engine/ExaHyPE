@@ -18,7 +18,7 @@ namespace exahype2 {
 
 class exahype2::fd::tests::SommerfeldBCTest : public tarch::tests::TestCase {
   private:
-    void flatsolutiontest();
+    void flatSolutionTest();
 
   public:
     SommerfeldBCTest();

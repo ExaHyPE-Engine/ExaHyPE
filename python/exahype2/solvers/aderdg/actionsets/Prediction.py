@@ -63,9 +63,31 @@ class Prediction(AbstractADERDGActionSet):
 """
 
     _Template_PredictorAllocations = """
-    {{CORRECTOR_COMPUTATION_PRECISION}}  boundaryData[kernels::{{SOLVER_NAME}}::getBndFaceTotalSize() + kernels::{{SOLVER_NAME}}::getBndFluxTotalSize()];
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = boundaryData;
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = boundaryData + kernels::{{SOLVER_NAME}}::getBndFaceTotalSize();
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd[2*Dimensions] = {
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + BasisElementsPerFace,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + BasisElementsPerFace,
+#if Dimensions==3
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + BasisElementsPerFace,
+#endif
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0+Dimensions).value,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1+Dimensions).value,
+#if Dimensions==3
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2+Dimensions).value
+#endif
+    };
+
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd[2*Dimensions] = {
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).value + FluxElementsPerFace,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).value + FluxElementsPerFace, 
+#if Dimensions==3
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).value + FluxElementsPerFace,
+#endif
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0+Dimensions).value,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1+Dimensions).value,
+#if Dimensions==3
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2+Dimensions).value
+#endif
+    };
 
     ::exahype2::CellData<{{SOLUTION_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}> cellData(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
@@ -73,7 +95,7 @@ class Prediction(AbstractADERDGActionSet):
       marker.h(),
       timeStamp,
       timeStepSize,
-      boundaryData
+      nullptr
     );
 """
 
@@ -122,7 +144,7 @@ class Prediction(AbstractADERDGActionSet):
     );
 """
 
-    _Template_CopyEstimatesIntoFaces = """
+    _Template_SetFaceTimeStamps = """
     /**
      * Copy the estimates into the face data containers. Note that Peano uses a different ordering of
      * the faces that the kernels, so these are reordered somewhat.
@@ -136,14 +158,6 @@ class Prediction(AbstractADERDGActionSet):
      */
 
     for (int d = 0; d < Dimensions; d++) {
-      // Projected solution estimations
-      std::copy_n(lQhbnd +  2 * d * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace);
-      std::copy_n(lQhbnd + (2 * d + 1) * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value);
-
-      // Projected flux estimations
-      std::copy_n(lFhbnd +  2 * d * FluxElementsPerFace, FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace);
-      std::copy_n(lFhbnd + (2 * d + 1) * FluxElementsPerFace, FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value);
-
       // Timestamp information for boundary handling
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).setNewTimeStamp(0, timeStamp);
@@ -172,7 +186,7 @@ class Prediction(AbstractADERDGActionSet):
     }
 """
 
-    _Template_CopyEstimatesAndPerformRiemannSolutionOnHangingFaces = """
+    _Template_PerformRiemannSolutionOnHangingFacesAndSetFaceTimeStamps = """
     /**
      * Copy the estimates into the face data containers. Note that Peano uses a different ordering of
      * the faces that the kernels, so these are reordered somewhat.
@@ -197,9 +211,9 @@ class Prediction(AbstractADERDGActionSet):
       // Left values
       if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
         {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = lFhbnd + 2 * d * FluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace;
         {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = lQhbnd + 2 * d * BasisElementsPerFace ;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace;
         int orientation = 0;
         int faceNumber  = d;
         bool isBoundary = false;
@@ -208,18 +222,13 @@ class Prediction(AbstractADERDGActionSet):
         {{RIEMANN_SOLVER}}
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = FR;
         {{FACE_INTEGRAL}}
-      } else {
-        // Project to faces and update face timestamp
-        std::copy_n(lQhbnd + 2 * d * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value + BasisElementsPerFace);
-        std::copy_n(lFhbnd + 2 * d * FluxElementsPerFace,  FluxElementsPerFace,  fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value + FluxElementsPerFace);
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
       }
 
       // Right values
       if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()) {
-        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = lFhbnd + (2 * d + 1) * FluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value;
         {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value + FluxElementsPerFace;
-        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = lQhbnd + (2 * d + 1) * BasisElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value;
         {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value + BasisElementsPerFace;
         int orientation = 1;
         int faceNumber  = d + Dimensions;
@@ -229,11 +238,6 @@ class Prediction(AbstractADERDGActionSet):
         {{RIEMANN_SOLVER}}
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIn = FL;
         {{FACE_INTEGRAL}}
-      } else {
-        // Project to faces and update face timestamp
-        std::copy_n(lQhbnd + (2 * d + 1) * BasisElementsPerFace, BasisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + Dimensions).value);
-        std::copy_n(lFhbnd + (2 * d + 1) * FluxElementsPerFace,  FluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + Dimensions).value);
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d + Dimensions).setNewTimeStamp(0, timeStamp);
       }
     }
 """
@@ -343,9 +347,9 @@ class Prediction(AbstractADERDGActionSet):
                 ).render(**d)
                 d[
                     "PROJECT_SOLUTION_TO_FACES"
-                ] = self._Template_CopyEstimatesAndPerformRiemannSolutionOnHangingFaces
+                ] = self._Template_PerformRiemannSolutionOnHangingFacesAndSetFaceTimeStamps
             else:
-                d["PROJECT_SOLUTION_TO_FACES"] = self._Template_CopyEstimatesIntoFaces
+                d["PROJECT_SOLUTION_TO_FACES"] = self._Template_SetFaceTimeStamps
 
             result = jinja2.Template(self._Template_TouchCellFirstTime_Preamble).render(
                 **d

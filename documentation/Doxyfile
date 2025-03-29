@@ -1042,24 +1042,28 @@ EXCLUDE_PATTERNS       = */benchmarks/*/celldata \
                          */benchmarks/*/globaldata \
                          */benchmarks/*/observers \
                          */benchmarks/*/repositories \
+                         */benchmarks/*/kernels \
                          */benchmarks/*/vertexdata \
                          */benchmarks/*/Constants.h \
                          */applications/*/celldata \
                          */applications/*/globaldata \
                          */applications/*/observers \
                          */applications/*/repositories \
+                         */applications/*/kernels \
                          */applications/*/vertexdata \
                          */applications/*/Constants.h \
                          */tutorials/*/celldata \
                          */tutorials/*/globaldata \
                          */tutorials/*/observers \
                          */tutorials/*/repositories \
+                         */tutorials/*/kernels \
                          */tutorials/*/vertexdata \
                          */tutorials/*/Constants.h \
                          */tests/*/celldata \
                          */tests/*/globaldata \
                          */tests/*/observers \
                          */tests/*/repositories \
+                         */tests/*/kernels \
                          */tests/*/vertexdata \
                          */tests/*/Constants.h
 
