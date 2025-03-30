@@ -27,6 +27,4 @@ class tarch::multicore::RecursiveLock {
     bool isLocked() const;
     void lock();
     void free();
-
-    using Lock = tarch::multicore::RecursiveLock;
 };
