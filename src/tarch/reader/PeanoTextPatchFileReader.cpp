@@ -22,7 +22,13 @@ void tarch::reader::readInCheckpointFiles(
         std::istringstream iss(line);
         std::string token;
 
+        #if defined(__cpp_exceptions)
         while (iss >> token) { try {offsetIndex.push_back(std::stod(token)); } catch (...){ } }
+        #else
+        while (iss >> token) {
+          offsetIndex.push_back(std::stod(token));
+        }
+        #endif
         InAPatch=true;
       }
 
@@ -63,7 +69,14 @@ void tarch::reader::readInCheckpointOffsetIndex(
         int i=0;
 
         tarch::la::Vector<3,double> tempOffset;
+        #if defined(__cpp_exceptions)
         while (iss >> token) { try {tempOffset[i]=std::stod(token); i++; } catch (...){ } }
+        #else
+        while (iss >> token) {
+          tempOffset[i]=std::stod(token);
+          i++;
+        }
+        #endif
         offsetIndexMap[tempOffset]=filename;
 
       }
