@@ -53,12 +53,11 @@ exahype2::EnclaveTask::EnclaveTask(
 }
 
 
-bool exahype2::EnclaveTask::run() {
+void exahype2::EnclaveTask::run() {
   logTraceInWith1Argument("run()", getTaskId());
   computeTask();
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(), _numberOfResultValues, _outputValues, _maxEigenvalue);
   logTraceOut("run()");
-  return false;
 }
 
 
