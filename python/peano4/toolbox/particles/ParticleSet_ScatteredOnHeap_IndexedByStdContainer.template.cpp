@@ -78,6 +78,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " replaces existing halo copy but is local, i.e. particle entered subdomain");
     }
 
+    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
@@ -137,6 +138,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       logDebug( "mergeWithParticle(...)", "inflying particle=" << neighbourParticle->toString() << " at vertex " << marker.toString() << " is new and will be remote on tree  " << spacetreeId << " (marker=" << marker.toString() << ")" );
     }
 
+    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),

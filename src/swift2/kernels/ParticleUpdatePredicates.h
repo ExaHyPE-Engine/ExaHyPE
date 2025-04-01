@@ -10,7 +10,7 @@ namespace swift2 {
     using UpdateParticlePairWithinCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle)>;
 
     template <typename Particle>
-    using UpdateParticleAssignedToCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle)>;
+    using UpdateParticleAssignedToCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle)>;
 
     template <typename Particle>
     using UpdateParticleAssignedToVertexPredicate = std::function<bool(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle)>;
@@ -26,7 +26,7 @@ namespace swift2 {
 
 
     template <typename Particle>
-    bool alwaysUpdateInCellKernel(const peano4::datamanagement::CellMarker&  marker, const Particle& localParticle) {
+    bool alwaysUpdateInCellKernel(const peano4::datamanagement::CellMarker&  marker, const bool& localParticleIsContainedInCell, const Particle& localParticle) {
       return true;
     }
 
@@ -135,13 +135,19 @@ namespace swift2 {
 
     template <typename Particle>
     bool localParticleCanBeUpdatedInCellKernel(
-      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle
+      const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
     ) {
+      assertionEquals2(
+        localParticleIsContainedInCell,
+        marker.isContained(
+          localParticle.getX(),
+          toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+        ),
+        marker.toString(), localParticle.toString()
+      );
+
       return not localParticle.getCellHasUpdatedParticle()
-         and marker.isContained(
-           localParticle.getX(),
-           toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-         )
+         and localParticleIsContainedInCell
          and localParticle.getParallelState() == Particle::ParallelState::Local;
     }
 

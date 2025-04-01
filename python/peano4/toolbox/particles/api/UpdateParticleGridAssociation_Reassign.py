@@ -136,7 +136,8 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
     _Template_Sieve = UpdateParticleGridAssociation_LiftDrop._Template_Sieve
 
     """
-
+     
+  @see toolbox::particles::updateContainedInAdjacentCellProperty()
   @see toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
 
   """
@@ -161,6 +162,10 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
 
       switch ( instruction ) {
         case toolbox::particles::ParticleReassociationInstruction_Keep:
+          toolbox::particles::updateContainedInAdjacentCellProperty(
+            marker,
+            **p
+          );
           p++;
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
@@ -199,6 +204,20 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case 7:
         #endif
           p = fineGridVertices{{PARTICLES_CONTAINER}}(instruction).move(p,fineGridVertices{{PARTICLES_CONTAINER}}(i));
+          tarch::la::Vector<Dimensions, double> newVertexPosition = 
+            marker.x()
+            -
+            tarch::la::multiplyComponents(
+              tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+              marker.h()
+            )
+            +
+            tarch::la::multiplyComponents(
+              tarch::la::Vector<Dimensions,double>(target),
+              3.0*marker.h()
+            );
+          toolbox::particles::updateContainedInAdjacentCellProperty(newVertexPosition, marker.h()*3.0, *p );
+          
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             p->getX(),
@@ -214,17 +233,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             (*p)->getX(),
             partID,
             (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-            marker.x()
-            -
-            tarch::la::multiplyComponents(
-              tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-              marker.h()
-            )
-            +
-            tarch::la::multiplyComponents(
-              tarch::la::Vector<Dimensions,double>(target),
-              3.0*marker.h()
-            ),
+            newVertexPosition,
             3.0*marker.h(),
             _spacetreeId,
             "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell",
@@ -244,6 +253,20 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case 7+TwoPowerD:
         #endif
           (*p)->setCellH(3.0 * marker.h());
+          tarch::la::Vector<Dimensions, double> newVertexX = 
+              marker.x()
+              -
+              tarch::la::multiplyComponents(
+                tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+                marker.h()
+              )
+              +
+              tarch::la::multiplyComponents(
+                tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(instruction) ),
+                3.0*marker.h()
+              );
+          toolbox::particles::updateContainedInAdjacentCellProperty(newVertexX, marker.h()*3.0, *p );
+
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             p->getX(),
@@ -259,17 +282,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
             (*p)->getX(),
             partID,
             (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-            marker.x()
-            -
-            tarch::la::multiplyComponents(
-              tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-              marker.h()
-            )
-            +
-            tarch::la::multiplyComponents(
-              tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(instruction) ),
-              3.0*marker.h()
-            ),
+            newVertexX,
             3.0*marker.h(),
             _spacetreeId,
             "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell",

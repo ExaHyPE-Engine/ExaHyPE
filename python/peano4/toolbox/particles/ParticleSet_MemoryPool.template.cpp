@@ -92,7 +92,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
     else {
-
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfAddedLocalParticlesAlongBoundary++;
       logDebug( "mergeWithParticle(...)",
@@ -102,6 +101,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
 
+    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
@@ -170,6 +170,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
           " (marker=" << marker.toString() << ")"
       );
     }
+
+    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
 
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),

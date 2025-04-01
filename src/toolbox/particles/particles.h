@@ -105,6 +105,58 @@ namespace toolbox {
       int                                                    spacetreeId
     );
 
+    /**
+     * Update helper flag per particle for cell
+     *
+     * Each particle is associated with a vertex of a cell. This vertex is
+     * identified by assignedVertex. We now compute a bitset that tells us,
+     * from the vertex' point of view, which of the adjacent cells will
+     * host this particle. This might not be unique, as we work with a
+     * fuzzy geometric ownership.
+     *
+     * @see the explanation in Particle.py
+     */
+    void updateContainedInAdjacentCellProperty(
+      const peano4::datamanagement::CellMarker&  marker,
+      const std::bitset<Dimensions>&             assignedVertex,
+      auto&                                      particle
+    );
+
+    /**
+     * We are
+     */
+    void updateContainedInAdjacentCellProperty(
+      const peano4::datamanagement::VertexMarker&  marker,
+      auto&                                        particle
+    );
+
+    /**
+     * Update internal marker of particle
+     *
+     * Each particle is associated to a vertex. The vertex is identified by
+     * its position x and the surrounding cells with size h. Each vertex has
+     * @f$ 2^d @f$ adjacent cells. The particle's
+     * ContainedInAdjacentCellProperty bitset flags which of these adjacent
+     * cells consider the particle to fall in their area.
+     *
+     * As we work with a weak ownership, there can be more than two bits (if
+     * the particle sits exactly on the face between two adjacent cells).
+     *
+     *
+     * ## Particle movement
+     *
+     * We have to call updateContainedInAdjacentCellProperty() after each
+     * particle movement. Even if we don't change the vertex association as a
+     * particle drifts, it might stay with the same vertex and still move from
+     * one cell into another one and hence require an update of the flags.
+     *
+     * @see the explanation in toolbox.particles.Particle
+     */
+    void updateContainedInAdjacentCellProperty(
+      const tarch::la::Vector< Dimensions, double >&  x,
+      const tarch::la::Vector< Dimensions, double >&  h,
+      auto&                                           particle
+    );
 
     bool particleAssignedToVertexWillBeLocal(
       const tarch::la::Vector<Dimensions, double>& x,

@@ -21,11 +21,8 @@ void swift2::kernels::legacy::densityKernel(
   Particle&                                 localParticle,
   const Particle&                           activeParticle
 ) {
-  if (
-    ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle)
-    and
-    densityKernelPairEvaluationPredicate(marker,localParticle,activeParticle)
-  ) {
+  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,true,localParticle) );
+  if (densityKernelPairEvaluationPredicate(marker,localParticle,activeParticle)) {
     density_kernel(&localParticle, &activeParticle);
   }
 }
@@ -35,7 +32,7 @@ template <typename Particle>
 bool swift2::kernels::legacy::densityKernelPairEvaluationPredicate(
   const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
 ) {
-  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle) );
+  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker, true, localParticle) );
 
   const tarch::la::Vector<Dimensions, double>
                dx = localParticle.getX() - activeParticle.getX();
