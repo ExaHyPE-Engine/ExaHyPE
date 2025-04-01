@@ -11,6 +11,18 @@ def prepare_hydrodynamic_kernel():
 	'''
 	function to created the relativistic hydrodynamic kernel in the conserved formulation
 	We treat the primitive variables and spacetime variables as auxiliary variables
+
+	Variables labeling:
+	for now the default order of the file is following the FV solvers persepective (thus require adjust data arrangement)
+	if we only have current infrastructure, the order here have to be adjusted. We can have 
+	{Q_spacetime, Q_hydro_evo}
+
+	Reconstruction of primitive variables:
+	For RK1 we can naturally insert the reconstruction into the preprocess stage.
+	It becomes tricky when we do higher RK where we need reconstruction for every RK stage
+	(still working but find a better place to insert)
+	The reconstruction function would be (tilde{gamma}_ij, phi, Q_hydro_evo) -> Q_hydro_primitive
+
 	'''
 	hydro_pde= exahype2.symhype.FirstOrderConservativePDEFormulation(
 		unknowns=5, auxiliary_variables=5+51+1, dimensions=3)
@@ -159,6 +171,15 @@ def prepare_hydrodynamic_kernel():
 
 	# no initial condition and boundary condition yet
 
-	print(hydro_pde.implementation_of_eigenvalues())
+	print(hydro_pde.implementation_of_flux())
 
 	return hydro_pde
+
+
+def prepare_Magnetohydrodynamic_kernel():
+	#TODO
+	return None
+
+
+
+prepare_hydrodynamic_kernel()
