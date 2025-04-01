@@ -16,27 +16,21 @@ namespace swift2 {
        * @brief Prepares a particle for the density calculation.
        */
       template <typename Particle>
+      bool prepareDensityUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
+      template <typename Particle>
       void prepareDensity(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_init_particle(&localParticle);
-        }
+        assertion(prepareDensityUpdateParticlePredicate(marker, localParticle));
+        hydro_init_particle(&localParticle);
       }
-
-      /**
-       * @todo No masking yet
-       */
-      template <typename Particle>
-      void prepareDensityWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        prepareDensity(marker, localParticle);
-      }
-
 
       /**
        * @brief Finishes the density calculation.
@@ -53,24 +47,21 @@ namespace swift2 {
       void hydro_end_density(Particle* localParticle);
 
       template <typename Particle>
+      bool endDensityCalculationUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
+      template <typename Particle>
       void endDensityCalculation(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_end_density(&localParticle);
-        }
+        assertion(endDensityCalculationUpdateParticlePredicate(marker, localParticle));
+        hydro_end_density(&localParticle);
       }
-
-      template <typename Particle>
-      void endDensityCalculationWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        endDensityCalculation(marker, localParticle);
-      }
-
 
       /**
        * @brief The actual density kernel, which interacts a local particle and

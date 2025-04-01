@@ -24,6 +24,12 @@ namespace swift2 {
       Particle&                                   localParticle
     );
 
+    template <typename Particle>
+    bool leapfrogDriftWithGlobalTimeStepSizeUpdateParticlePredicate(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
+    );
+
     /**
      *  Kick steps. There are two kick steps in the KDK scheme, in which we
      *  update the particle velocity by a half-timestep using:
@@ -48,6 +54,12 @@ namespace swift2 {
     void leapfrogKickWithGlobalTimeStepSize(
       const peano4::datamanagement::VertexMarker& marker,
       Particle&                                   localParticle
+    );
+
+    template <typename Particle>
+    bool leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle&                             localParticle
     );
   } // namespace timestepping
 } // namespace swift2

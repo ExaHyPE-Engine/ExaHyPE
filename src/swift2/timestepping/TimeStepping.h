@@ -22,29 +22,19 @@ namespace swift2 {
     void reset_moved_particle_marker(Particle&  particle);
 
     template <typename Particle>
+    bool resetMovedParticleMarkerUpdateParticlePredicate(
+      const peano4::datamanagement::VertexMarker&  marker,
+      const Particle&                              particle
+    ) {
+      return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle);
+    }
+
+    template <typename Particle>
     void resetMovedParticleMarker(
       const peano4::datamanagement::VertexMarker&  marker,
       Particle&                                    particle
     ) {
-      if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
-        reset_moved_particle_marker(particle);
-      }
-    }
-
-    /**
-     * Reset moved marker
-     *
-     * This is an alternative to resetMovedParticleMarker. We do not check
-     * any predicate at all.
-     *
-     * @todo Mladen I think we can skip the if here, but I'm not sure.
-     */
-    template <typename Particle>
-    void resetMovedParticleMarkerWithMasking(
-      const peano4::datamanagement::VertexMarker&  marker,
-      Particle&                                    particle
-    ) {
-      reset_moved_particle_marker(particle);
+      assertion2(::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle), marker.toString(), particle.toString());
     }
   }
 }

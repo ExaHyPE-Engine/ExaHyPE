@@ -130,8 +130,7 @@ def _get_particle_iterator_templates(particle_name):
 
         ::swift2::kernels::forAllParticles(*FUNCTION*<globaldata::{PARTICLE}>,
                                            numberOfCoalescedAssignedParticles,
-//                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
-                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
+                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
                                            );
         // end template
         """
@@ -156,8 +155,7 @@ def _get_particle_iterator_templates(particle_name):
                                            assignedParticles,
                                            numberOfCoalescedAssignedParticles,
                                            *FUNCTION*<globaldata::{PARTICLE}>,
-//                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
-                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}> 
+                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
                                            );
         // end template
         """
@@ -174,7 +172,7 @@ def _get_particle_iterator_templates(particle_name):
                                                assignedParticles,
                                                numberOfCoalescedAssignedParticles,
                                                *FUNCTION*<globaldata::{PARTICLE}>,
-                                               ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
+                                               *FUNCTION*ParticleUpdatePredicate<globaldata::{PARTICLE}>
                                                );
             ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles,
                                                                            oldParticlePositions,

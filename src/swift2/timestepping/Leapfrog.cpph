@@ -2,19 +2,36 @@
 
 
 template <typename Particle>
+bool swift2::timestepping::leapfrogDriftWithGlobalTimeStepSizeUpdateParticlePredicate(
+  const peano4::datamanagement::VertexMarker&  marker,
+  const Particle&                              particle
+) {
+  return ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, particle);
+}
+
+
+template <typename Particle>
 void swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize(
   const peano4::datamanagement::VertexMarker&  marker,
   Particle&                                    particle
 ) {
-  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  assertion( leapfrogDriftWithGlobalTimeStepSizeUpdateParticlePredicate(marker, particle) );
 
-  if ( ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, particle) ) {
-    particle.setX( particle.getX() + timeStepSize * particle.getV() );
-    assertion1(tarch::la::isEntryFinite(particle.getX()), particle.toString());
-    particle.setMoveState(Particle::MoveState::Moved);
-  }
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  particle.setX( particle.getX() + timeStepSize * particle.getV() );
+  assertion1(tarch::la::isEntryFinite(particle.getX()), particle.toString());
+  particle.setMoveState(Particle::MoveState::Moved);
 }
 
+
+
+template <typename Particle>
+bool swift2::timestepping::leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(
+  const peano4::datamanagement::VertexMarker&  marker,
+  const Particle&                              particle
+) {
+  return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, particle);
+}
 
 
 template <typename Particle>
@@ -22,10 +39,9 @@ void swift2::timestepping::leapfrogKickWithGlobalTimeStepSize(
   const peano4::datamanagement::VertexMarker&  marker,
   Particle&                                    particle
 ) {
-  double timeStepSize = 0.5 * Particle::getSpecies().getMinTimeStepSize();
+  assertion( leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(marker, particle) );
 
-  if ( ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, particle) ) {
-    particle.setV( particle.getV() + timeStepSize * particle.getA() );
-  }
+  double timeStepSize = 0.5 * Particle::getSpecies().getMinTimeStepSize();
+  particle.setV( particle.getV() + timeStepSize * particle.getA() );
 }
 
