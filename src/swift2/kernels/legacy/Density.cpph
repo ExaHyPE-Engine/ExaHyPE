@@ -10,10 +10,8 @@ void swift2::kernels::legacy::densityKernel(
   Particle&                                 localParticle,
   const Particle&                           activeParticle
 ) {
-  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,true,localParticle) );
-  if (densityKernelEvaluatePairInteractionPredicate(marker,localParticle,activeParticle)) {
-    density_kernel(&localParticle, &activeParticle);
-  }
+  assertion2( densityKernelEvaluatePairInteractionPredicate(marker,localParticle,activeParticle), localParticle.toString(), activeParticle.toString() );
+  density_kernel(&localParticle, &activeParticle);
 }
 
 
@@ -21,7 +19,9 @@ template <typename Particle>
 bool swift2::kernels::legacy::densityKernelUpdateParticlePredicate(
   const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
 ) {
-  return ::swift2::kernels::alwaysUpdateInCellKernel<Particle>(marker, localParticleIsContainedInCell, localParticle);
+  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker, localParticleIsContainedInCell, localParticle)
+    and
+    (not localParticle.getSmoothingLengthConverged());
 }
 
 
@@ -29,8 +29,8 @@ template <typename Particle>
 bool swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate(
   const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
 ) {
-  // @todo This assertion is in principle correct, but requires some further thought
-//  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker, true, localParticle) );
+  assertion1( densityKernelUpdateParticlePredicate(marker, true, localParticle), localParticle.toString() );
+  assertion1( not localParticle.getSmoothingLengthConverged(), localParticle.toString() );
 
   const tarch::la::Vector<Dimensions, double>
                dx = localParticle.getX() - activeParticle.getX();
@@ -47,8 +47,6 @@ bool swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate(
            localParticle,
            activeParticle
          )
-         and
-         (not localParticle.getSmoothingLengthConverged())
          and
          tarch::la::smaller(rSquared, iactRSquared)
          and tarch::la::greater(rSquared, 0.0) // Self-contribution is calculated elsewhere
