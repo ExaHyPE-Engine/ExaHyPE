@@ -80,11 +80,12 @@ if __name__ == "__main__":
         refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
         flux="applications::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, F);",
         ncp="",
-        eigenvalues="return applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal);",
+        eigenvalues="applications::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue);",
         # There is a bug in the code generator: When set to 'None_Implementation', an offloadable function is still generated, also 'Empty_Implementation' does not work.
         # TODO: What is the difference between 'None_Implementation' and 'Empty_Implementation'?
         source_term="",
     )
+
     my_solver.add_user_solver_includes(
         """
     #include "../../../../applications/exahype2/euler/Euler.h"
@@ -93,7 +94,7 @@ if __name__ == "__main__":
 
     my_project = euler.setup_project(my_args, my_solver)
 
-    accuracy = my_args.accuracy
+    accuracy = -1#my_args.accuracy
     if accuracy < 0:
         import numpy
 
@@ -137,6 +138,7 @@ if __name__ == "__main__":
     my_project.constants.define_value("GAMMA", str(1.0))
 
     my_project.output.makefile.add_cpp_file("Euler-main.cpp")
+    my_project.output.makefile.add_cpp_file("EulerDSL-main.cpp")
 
     euler.build(my_args, my_project)
 

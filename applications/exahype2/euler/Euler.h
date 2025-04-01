@@ -10,17 +10,19 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::euler {
+
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
   static inline GPUCallableMethod
-  double maxEigenvalue(
+  void maxEigenvalue(
     const double* const __restrict__             Q,
     const tarch::la::Vector<Dimensions, double>& x,
     const tarch::la::Vector<Dimensions, double>& h,
     const double                                 t,
     const double                                 dt,
-    const int                                    normal
+    const int                                    normal,
+    double* const __restrict__                   maxEigenvalue
   ) InlineMethod;
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
