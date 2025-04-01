@@ -1,0 +1,94 @@
+/**
+
+@page tutorials_exahype2_dsl_syntax DSL Syntax
+
+Exahype uses a domain specific language (DSL) to define its kernels.
+This page provides details its syntax. It is compiled by making modifications
+to a Python abstract syntax tree (AST), so the majority of its syntax matches
+that of Python. The timeStepWithRusanov function is a good reference to look
+at to give context to the following descriptions.
+
+# General Code Structure
+The DSL kernels start with specifying the name and parameters, given in usual
+Python syntax. Parameters types are given using type annotations, which are strings
+if it is not an existing Python type. The first few lines of the function usually 
+access diferent properties of the CellData parameter. In the general case this 
+looks like
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def kernelName(patchData: "CellData<double, double>&") -> "void":
+    N = Integer("patchData.numberOfCells")
+    t = DataBlock([[0, N]], "patchData.t", "double")
+    dt = DataBlock([[0, N]], "patchData.dt", "double")
+    h = DataBlock([[0, N]], "patchData.cellSize", "tarch::la::Vector<3, double>")
+    x = DataBlock([[0, N]], "patchData.cellCentre", "tarch::la::Vector<3, double>")
+    maxEigenvalues = DataBlock([[0, N]], "patchData.maxEigenvalue", "double")
+
+    input = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [-HaloSize, NumberOfVolumesPerAxisInPatch + HaloSize], [0, N]], "patchData.QIn")
+    output = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [0, NumberOfVolumesPerAxisInPatch], [0, NumberOfVolumesPerAxisInPatch], [0, NumberOfVolumesPerAxisInPatch], [0, N]], "patchData.QOut")
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The format of the DataBlock constructor is explained in the next section.
+
+
+# Compiling DSL Code
+The parsing and compilation takes place in the Parser class. Create a default parser
+then call its parse() function. It takes the following parameters:
+- function: the Python function that defines the kernel
+- template_arguments: a list of SyntaxTree.Argument defining the template parameters
+- functor_arguments: a list of SyntaxTree.Argument defining the functor arguments that are used
+  in the non-static function version.
+- namespace: a list of strings defining the different namespaces that should contain the generated
+  code
+- stateless: a boolean that defines whether to use static functions or those passed to the kernel
+
+This function returns the root of an ast, which can be used to generate the kernel using root.print_cpp().
+Functions can be organised in files by calling the print_declaration methods, and versions with
+a timer can also be generated. See kernels.py in the rusanov python code for example usage.
+
+# DataBlock
+A DataBlock is used to represent an array of patches in the DSL code. They are
+constructed using a 2D list specifying its dimensions, which for three dimensions
+looks like 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[[0, NumberOfVariables], [-HaloSize, NumberOfVolumes + HaloSize], [-HaloSize, NumberOfVolumes + HaloSize], [-HaloSize, NumberOfVolumes + HaloSize], [0, NumberOfPatches]]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notice how [-HaloSize, NumberOfVolumes + HaloSize] is repeated for each dimension.
+
+The second parameter specifies where the patch data comes from. It could be a string, indicating that the data already exists, in which case the string should be
+the name of the existing data. Alternatively, it could be a function which is
+performed over the given interval. A string is used mainly to access CellData information.
+Assuming that a CellData object with name patchData is a kernel parameter, the code
+would look like
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+N = Integer("patchData.numberOfCells")
+t = DataBlock([[0, N]], "patchData.t", "double") # Access the time for each patch
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# If Statements
+Should there be any optional code in the kernel that should only be used in
+certain versions of the kernel, template boolean parameters can be passed to
+the parser. Using if statements on these can be used to control code execution.
+Only use if satements with these template parameters as they evaluate to
+if constexpr() to enable more opportunities for optimisation.
+
+
+# Available DataBlock Operations
+DataBlocks operate by matching indices across different objects, based on the
+dimensions given. This is why [-HaloSize, NumberOfVolumes + HaloSize] in a definition
+would lead to different behaviour to [0, NumberOfVolumes + 2 * HaloSize]. All 
+operations between DataBlocks start with an assignment which triggers an iteration
+over the lhs indices. In this way a patch with a halo can be assigned to a patch
+without a halo, but not vice versa.
+
+The same iteration applies when adding or subtracting DataBlocks. Should offset
+values be required (such as when calculating a flux) indexing notation should be
+used. Indices should be given in the order that the dimensions were defined in the
+DataBlock, and they specify the starting index for iteration in the corresponding
+dimensions. For example [0, 1, 0, 0, 0] indicates an offset in the x axis. The 
+remaining zeros could be left out as they would be defaulted to zero. The end point
+of this offset is assumed to be NumberOfVolumes later, which could be explicitly
+stated in the form [0, 1 : NumberOfVolumes + 1, 0, 0, 0]. Both of these versions
+extract a patch without a halo from the original DataBlock.
+
+*/
