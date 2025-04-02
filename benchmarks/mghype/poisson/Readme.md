@@ -15,6 +15,8 @@
  - --with-multithreading=tbb_extension as the OpenMP version of tasking with 
    dependencies still has some bugs.
  - --enable-loadbalancing
+
+ Ensure that you add `LIBS="-ltbb"` in your configure call also.
  
  Three typical runs then are 
  
