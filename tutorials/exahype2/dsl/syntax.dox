@@ -72,23 +72,26 @@ the parser. Using if statements on these can be used to control code execution.
 Only use if satements with these template parameters as they evaluate to
 if constexpr() to enable more opportunities for optimisation.
 
+Conditional evaluation can also be used to generate DataBlocks, by assigning them
+the result of a boolean comparison with another DataBlock.
+e.g. test = (input > 0.0) * 2 - 1
+After this test has the same dimensions as input, but with 1 wherever input is positive,
+and -1 wherever it's negative. It is worth noting that test's underlying type is an
+integer if no floating point operation is performed to it.
 
-# Available DataBlock Operations
-DataBlocks operate by matching indices across different objects, based on the
-dimensions given. This is why [-HaloSize, NumberOfVolumes + HaloSize] in a definition
-would lead to different behaviour to [0, NumberOfVolumes + 2 * HaloSize]. All 
-operations between DataBlocks start with an assignment which triggers an iteration
-over the lhs indices. In this way a patch with a halo can be assigned to a patch
-without a halo, but not vice versa.
 
-The same iteration applies when adding or subtracting DataBlocks. Should offset
-values be required (such as when calculating a flux) indexing notation should be
-used. Indices should be given in the order that the dimensions were defined in the
-DataBlock, and they specify the starting index for iteration in the corresponding
-dimensions. For example [0, 1, 0, 0, 0] indicates an offset in the x axis. The 
-remaining zeros could be left out as they would be defaulted to zero. The end point
-of this offset is assumed to be NumberOfVolumes later, which could be explicitly
-stated in the form [0, 1 : NumberOfVolumes + 1, 0, 0, 0]. Both of these versions
-extract a patch without a halo from the original DataBlock.
+# DataBlock Indexing
+Subsets of a datablock can be specified using indexing, such as input[0, :, :] which 
+selects the first variable of a 2d DataBlock. The order of indices is the same as when
+specifying a DataBlocks dimensions. Each index can either be an individual integer or
+a slice. When a slice is used, if either side isn't specified it is assumed to be the 
+relevant end of the DataBlock's iteration range. For example input[10:] selects variable
+10 onwards, and input[:10] selects up to variable 10.
 
+If any operations are performed between different sizes of datablock indexing should be
+used to select the relevant part of the smaller DataBlock. The only exception is when
+performing an operation with DataBlock with different numbers of variables, and one of 
+them has one variable. In this case the datablock with one variable will act as if it
+contained duplicates of this variable to match the number of variables in the other 
+DataBlock.
 */
