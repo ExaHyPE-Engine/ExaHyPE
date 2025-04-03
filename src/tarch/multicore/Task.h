@@ -55,10 +55,11 @@ namespace tarch {
        * task numbers becomes too expensive. If you should need unique task
        * numbers, I recommend you use reserveTaskNumber().
        *
+       * @see The overview page @ref page_tarch_multicore discusses different
+       *        task types and how they are mapped onto realisations.
        *
        * @param taskType Unique task (type) number for this task.
-       *   Pass in DontFuse if you don't want this task to be fused.
-       *
+       *        Pass in DontFuse if you don't want this task to be fused.
        * @param priority Integer value that indicates what priority you want to
        *        assign a task. Value has to be non-negative. Use
        *        DefaultPriority if there is no bespoke priority.
@@ -83,10 +84,9 @@ namespace tarch {
       virtual bool canFuse() const;
 
       /**
-       * @return This task has to be executed again. In most cases, you should
-       *   return false, to indicate that this task has finished.
+       * Run the task
        */
-      virtual bool run() = 0;
+      virtual void run() = 0;
 
       /**
        * Fuse multiple tasks
@@ -98,43 +98,31 @@ namespace tarch {
        * is called for.
        *
        * This operation is invoked on a task. However, it is also given N=otherTasks.size
-       * further tasks of the same type. You have two options now:
-       *
-       * - You can process the N tasks in one rush. In this case, the original
-       *   task, i.e. the object on which fuse() is called, remains intact and
-       *   has not been processed yet. You have to return true.
-       * - You can process the N+1 tasks in one rush, i.e. all tasks from
-       *   otherTasks and the task represented by the actual object on which
-       *   fuse is called. In this case, you return false, as the task on which
-       *   fuse has been called can be destroyed straightaway by the runtime.
-       *
-       * No matter which route you follow, you always have to delete all the tasks
-       * stores within otherTasks, as these have to be processed by fuse().
+       * further tasks of the same type. In the routine, you have to process
+       * the N+1 tasks in one rush, i.e. all tasks from
+       * otherTasks and the task represented by the actual object on which
+       * fuse is called. In this case, you return false, as the task on which
+       * fuse has been called can be destroyed by the runtime.
        *
        * <h2> Default implementation </h2>
        *
-       * My default implementation executes all the passed tasks and then returns
-       * the original task back, i.e. this one is not executed. This is the first
-       * execution pattern described above.
+       * My default implementation executes all the passed tasks one by one.
        *
        * <h2> Memory ownership </h2>
        *
-       * See above: fuse() has to delete all the instances within otherTasks.
-       * The calling routine does not have to delete anything there anymore.
-       * But it has to destroy the owning object, i.e. the object on which is
-       * has called fuse(), manually no matter whether we return true or false.
+       * fuse() has to complete all the instances within otherTasks, but it
+       * does not have to delete anything. This is done outside, i.e. the
+       * calling routine will delete otherTasks' instances as well as the one
+       * it has called fuse() for.
        *
-       * @return Is the present task still to be executed or can the runtime
-       *         destroy it straightaway?
        * @param otherTasks List of tasks to fuse and process. Will all have the
        *         same type as the present object. It is the tasks responsibility
-       *         to get these tasks done. So either span some new tasks or handle
-       *         them straightaway.
+       *         to get these tasks done.
        * @param targetDevice On which device should the task be processed? A
        *         negative number means local host anything greater or equal to
        *         zero denotes an accelerator.
        */
-      virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
+      virtual void fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
 
       virtual std::string toString() const;
     };
@@ -203,7 +191,7 @@ namespace tarch {
        * See the outer class description for an explanation why this is an
        * attribute, i.e. why we copy the functor here always.
        */
-      std::function<bool()> _taskFunctor;
+      std::function<void()> _taskFunctor;
 
       #if PeanoDebug>0
       std::string           _taskDescription;
@@ -228,7 +216,7 @@ namespace tarch {
         #endif
       );
 
-      virtual bool run() override;
+      virtual void run() override;
 
       virtual std::string toString() const override;
     };
@@ -250,7 +238,7 @@ namespace tarch {
          */
         EmptyTask(int priority);
 
-        virtual bool run() override;
+        virtual void run() override;
 
         virtual std::string toString() const override;
     };
@@ -276,15 +264,15 @@ namespace tarch {
        * See the outer class description for an explanation why this is an
        * attribute, i.e. why we copy the functor here always.
        */
-      std::function<bool()>& _taskFunctor;
+      std::function<void()>& _taskFunctor;
 
     public:
       TaskWithoutCopyOfFunctor()                                = delete;
       TaskWithoutCopyOfFunctor(const TaskWithoutCopyOfFunctor&) = delete;
 
-      TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor);
+      TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<void()>& taskFunctor);
 
-      virtual bool run() override;
+      virtual void run() override;
     };
   }   // namespace multicore
 } // namespace tarch

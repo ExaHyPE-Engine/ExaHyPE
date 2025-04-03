@@ -14,7 +14,7 @@ import jinja2
 
 
 class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
-    """!
+    r"""!
 
     Action set determining the final solution using a linear combination of previous Runge-Kutta guesses
 

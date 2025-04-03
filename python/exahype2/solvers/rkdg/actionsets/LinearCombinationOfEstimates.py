@@ -8,7 +8,7 @@ import peano4
 import jinja2
 
 class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
-  """
+  r"""
   
   Computes a linear combination of all of the estimates according to the
   Butcher Tableau.

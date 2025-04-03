@@ -27,13 +27,12 @@ public:
   /**
    * Provide hint of execution policy
    *
-   * @see tarch::multicore::spawnAndWait() for rationale and details.
-   * @see tarch::multicore for general overview and further design rationale.
-   *
-   * @todo I would like to have a flag which tells the actual multicore
-   *   runtime not (!) to continue with further ready tasks. Such a
-   *   feature does not exist in OpenMP, e.g., and therefore we do not
-   *   use such a flag.
+   * @see tarch::multicore::spawnAndWait() for rationale and details re the BSP
+   *      sections of the code.
+   * @see tarch::multicore::taskfusion for some remarks how the policies
+   *      implemented through a strategy affect the task fusion.
+   * @see The page @ref page_tarch_multicore for generic documentation on the
+   *      design of the whole multicore component.
    */
   enum class ExecutionPolicy {
     RunSerially,

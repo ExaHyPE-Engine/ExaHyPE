@@ -1,5 +1,6 @@
 #include "ProcessReadyTask.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
@@ -9,65 +10,129 @@ const std::string tarch::multicore::taskfusion::ProcessReadyTask::ProcessFusedTa
 tarch::logging::Log tarch::multicore::taskfusion::ProcessReadyTask::_log( "tarch::multicore::taskfusion::ProcessReadyTask" );
 
 
-tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( ReadyFusableTasks* taskQueue ):
+tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber, ReadyFusableTasks* taskQueue ):
   Task(DontFuse,DefaultPriority),
+  _taskNumber( taskNumber ),
   _taskQueue(taskQueue) {
+  assertion( _taskQueue!=nullptr );
 }
 
 
-bool tarch::multicore::taskfusion::ProcessReadyTask::run() {
+bool tarch::multicore::taskfusion::ProcessReadyTask::hasTaskBeenProcessed() const {
   tarch::multicore::Lock lock(_taskQueue->semaphore);
-  const int initialQueueSize = _taskQueue->tasks.size();
-  int processedTasks = 0;
+  return _taskQueue->completedTaskNumbers.find( _taskNumber ) != _taskQueue->completedTaskNumbers.end();
+}
 
-  logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << initialQueueSize << ")" );
 
-  while (
-    not _taskQueue->tasks.empty()
-    and
-    // exploit LIFO
-    processedTasks < initialQueueSize
-  ) {
-    // can change from call to call
-    tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+void tarch::multicore::taskfusion::ProcessReadyTask::removeProcessedTask() {
+  tarch::multicore::Lock lock(_taskQueue->semaphore);
+  ReadyFusableTasks::FinishedTaskNumbers::iterator p = _taskQueue->completedTaskNumbers.find( _taskNumber );
+  if ( p != _taskQueue->completedTaskNumbers.end() ) {
+    _taskQueue->completedTaskNumbers.erase(p);
+  }
+}
 
-    Task* firstTask = *_taskQueue->tasks.begin();
-    _taskQueue->tasks.pop_front();
 
-    int maxTasks = std::min(static_cast<int>(_taskQueue->tasks.size()), instruction.maxTasks-1);
-    ReadyFusableTasks::Tasks::iterator cutIterator = _taskQueue->tasks.begin();
-    std::advance(cutIterator, maxTasks);
-    ReadyFusableTasks::Tasks extractedTasks;
-    extractedTasks.splice(extractedTasks.end(), _taskQueue->tasks, _taskQueue->tasks.begin(), cutIterator);
+void tarch::multicore::taskfusion::ProcessReadyTask::run() {
+  logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << _taskQueue->tasks.size() << ")" );
 
-    logDebug( "run(...)", "max tasks on top of first task=" << maxTasks );
+  while ( not hasTaskBeenProcessed() ) {
+    processTasks(_taskQueue, _taskNumber);
+  }
+  removeProcessedTask();
+}
 
-    lock.free();
 
-    tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
-    processedTasks += extractedTasks.size() + 1;
+void tarch::multicore::taskfusion::ProcessReadyTask::processTasks(
+  ReadyFusableTasks* taskQueue,
+  int                taskNumber
+) {
+  tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(taskQueue->type);
 
-    if (instruction.minTasks > static_cast<int>(_taskQueue->tasks.size()) + 1) {
-      logDebug( "run(...)", "here we go with " << extractedTasks.size() << " task(s) as we have to fuse at least " << instruction.minTasks << " task(s)" );
-      for (auto& task: extractedTasks) {
-        while (task->run()) {
-          tarch::multicore::Core::getInstance().yield();
-        }
-        delete task;
-      }
-      logDebug( "run(...)", "now run first task manually" );
-      while (firstTask->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
-      delete firstTask;
-    }
-    else {
-      logDebug( "run(...)", "fuse them" );
-      native::processFusedTask(firstTask, extractedTasks, instruction.device);
-    }
+  tarch::multicore::Lock lock(taskQueue->semaphore);
+  const int queueSize = static_cast<int>(taskQueue->tasks.size());
+  lock.free();
 
-    lock.lock();
+  if (instruction.minTasks <= queueSize) {
+    assertion( instruction.maxTasks>=1 );
+    fuse(taskQueue, instruction.maxTasks-1, instruction.device);
   }
 
-  return false;
+  tryToProcessOneTask(taskQueue, taskNumber);
+}
+
+
+void tarch::multicore::taskfusion::ProcessReadyTask::tryToProcessOneTask(
+  ReadyFusableTasks* taskQueue,
+  int                taskNumber
+) {
+  Task* task = nullptr;
+
+  tarch::multicore::Lock lock(taskQueue->semaphore);
+  ReadyFusableTasks::Tasks::iterator p = taskQueue->tasks.begin();
+  while (
+    p!=taskQueue->tasks.end()
+    and
+    p->second != taskNumber
+    and
+    taskNumber>=0
+  ) {
+    p++;
+  }
+
+  if (p!=taskQueue->tasks.end()) {
+    task = p->first;
+    taskQueue->tasks.erase(p);
+  }
+  lock.free();
+
+  if (task!=nullptr) {
+    task->run();
+    delete task;
+    tarch::multicore::Lock lock(taskQueue->semaphore);
+    taskQueue->completedTaskNumbers.insert( taskNumber );
+  }
+}
+
+
+
+void tarch::multicore::taskfusion::ProcessReadyTask::fuse(
+  ReadyFusableTasks* taskQueue,
+  int maxTasks,
+  int device
+) {
+  tarch::multicore::Lock lock(taskQueue->semaphore);
+
+  if ( taskQueue->tasks.empty() ) return;
+
+  auto [firstTask, firstTaskNumber] = *taskQueue->tasks.begin();
+  taskQueue->tasks.pop_front();
+
+  std::list< Task* > extractedTasks;
+  std::list< int >   extractedTaskNumbers;
+
+  while (
+    maxTasks>0
+    and
+    not taskQueue->tasks.empty()
+  ) {
+    auto [nextTask, nextTaskNumber] = *taskQueue->tasks.begin();
+    taskQueue->tasks.pop_front();
+    extractedTasks.push_back(nextTask);
+    extractedTaskNumbers.push_back(nextTaskNumber);
+    maxTasks--;
+  }
+  logDebug( "run(...)", "run " << extractedTasks.size() << " tasks on top of first task" );
+
+  lock.free();
+
+  tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
+
+  processFusedTask(firstTask, extractedTasks, device);
+
+  lock.lock();
+  taskQueue->completedTaskNumbers.insert( firstTaskNumber );
+  for (auto& p: extractedTaskNumbers) {
+    taskQueue->completedTaskNumbers.insert( p );
+  }
 }

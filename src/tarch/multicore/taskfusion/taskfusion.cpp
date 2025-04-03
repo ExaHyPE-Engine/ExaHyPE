@@ -50,15 +50,34 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
 
   logDebug( "translateFusableTaskIntoTaskSequence(...)", "spawn two tasks around " << taskNumber );
 
-  std::set<TaskNumber>  wrappedTaskNumber = {taskNumber};
+  std::set<TaskNumber>  processReadTaskInDependencyNumber;
 
-  Task* readyTask   = new LogReadyTask(task,taskQueue);
-  Task* processTask = new ProcessReadyTask(taskQueue);
+  if ( inDependencies.empty() ) {
+    tarch::multicore::taskfusion::LogReadyTask::insertReadyTask(
+      task,
+      taskNumber,
+      taskQueue
+    );
+  }
+  else {
+    Task* readyTask   = new LogReadyTask(task, taskNumber, taskQueue);
+    readyTask->setPriority(task->getPriority());
+    tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
+    processReadTaskInDependencyNumber.insert( taskNumber );
+  }
 
-  readyTask->setPriority(task->getPriority());
-  processTask->setPriority(task->getPriority()/2);
 
-  tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
-  tarch::multicore::native::spawnTask( processTask, wrappedTaskNumber, taskNumber);
+  if ( taskNumber!=tarch::multicore::NoOutDependencies or not inDependencies.empty() ) {
+    Task* processTask = new ProcessReadyTask(taskNumber, taskQueue);
+    processTask->setPriority(task->getPriority()/2);
+    tarch::multicore::native::spawnTask( processTask, processReadTaskInDependencyNumber, taskNumber);
+  }
 }
 
+
+void tarch::multicore::taskfusion::processAllReadyTasks() {
+  tarch::multicore::Lock lock(pendingTasksSemaphore);
+  for (auto& p: pendingTasksThatCanBeFused) {
+    ProcessReadyTask::processTasks(p.second, -1);
+  }
+}
