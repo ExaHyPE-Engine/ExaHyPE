@@ -14,48 +14,6 @@ double toolbox::particles::relativeSpatialOwnershipTolerance(const ::peano4::dat
   return internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 }
 
-double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
-  return ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(marker.h());
-}
-
-
-double toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
-  return ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(marker.h());
-}
-
-
-double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
-  return GrabOwnershipSpatialSortingTolerance * tarch::la::max(marker.h());
-}
-
-
-double toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
-  return GrabOwnershipSpatialSortingTolerance * tarch::la::max(marker.h());
-}
-
-
-bool toolbox::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker) {
-  return tarch::la::greaterEquals(tarch::la::min(marker.h()), 2.0 * searchRadius);
-}
-
-
-bool toolbox::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker) {
-  return tarch::la::greaterEquals(tarch::la::min(marker.h()), 2.0 * searchRadius);
-}
-
-
-std::bitset<Dimensions> toolbox::particles::internal::getParticleAssociationWithinCell(
-  const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre
-) {
-  std::bitset<Dimensions> destAssociation;
-
-  // marker.x() gives me the centre of the cell
-  for (int d = 0; d < Dimensions; d++) {
-    destAssociation[d] = tarch::la::greaterEquals(x(d), cellCentre(d));
-  }
-
-  return destAssociation;
-}
 
 
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftParticleAssociatedWithVertex(

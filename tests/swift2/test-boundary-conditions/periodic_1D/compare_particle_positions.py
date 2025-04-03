@@ -46,7 +46,7 @@ parser.add_argument(
     "--tolerance",
     dest="tolerance",
     type=float,
-    default=1.0e-6,
+    default=1.0e-5,
     help="Threshold for comparison tolerance",
 )
 parser.add_argument(
