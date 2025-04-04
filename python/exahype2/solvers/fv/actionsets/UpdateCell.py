@@ -71,7 +71,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """,
       reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
       guard = "not marker.willBeRefined() and not marker.hasBeenRefined()",
-      add_assertions_to_halo_exchange = False
+      add_assertions_to_halo_exchange = False,
+      precision=solver._storage_precision
     )
     self._solver = solver
 

@@ -116,7 +116,7 @@ class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
                 taskBody
               );
 
-              int newTaskNumber = ::exahype2::EnclaveTask::reserveTaskNumber();
+              int newTaskNumber = ::exahype2::EnclaveTask<double>::reserveTaskNumber();
             
               tarch::multicore::spawnTask( 
                 newTask, 

@@ -31,7 +31,7 @@
  *
  * @author Tobias Weinzierl
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}> {
   private:
     static tarch::logging::Log  _log;
 
@@ -58,8 +58,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
-      double* __restrict__                        reconstructedPatch,
-      double* __restrict__                        targetPatch
+      {{STORAGE_PRECISION}}* __restrict__         reconstructedPatch,
+      {{STORAGE_PRECISION}}* __restrict__         targetPatch
     );
 
     /**
@@ -79,8 +79,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
-      double* __restrict__                        oldQWithHalo,
-      double* __restrict__                        newQ
+      {{STORAGE_PRECISION}}* __restrict__         oldQWithHalo,
+      {{STORAGE_PRECISION}}* __restrict__         newQ
     );
 
     ~{{CLASSNAME}}() override final = default;

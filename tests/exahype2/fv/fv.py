@@ -13,6 +13,18 @@ available_solvers = {
     "FVRusanovGlobalAdaptive": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
     "FVRusanovGlobalAdaptiveEnclave": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
+
+available_precisions = [
+    "float", "double"
+]
+
+parser.add_argument(
+    "-pr",
+    "--precision",
+    default="float",
+    choices=available_precisions,
+    help="|".join(available_precisions),
+)
 parser.add_argument(
     "-s",
     "--solver",
@@ -217,6 +229,11 @@ fv_solver = available_solvers[args.solver](
 )
 fv_solver.plot_description = ", ".join({"v": args.dimensions}.keys())
 fv_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
+
+fv_solver.set_solver_precisions(
+  storage_precision = args.precision,
+  compute_precision = args.precision
+)
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],

@@ -32,10 +32,10 @@ class HandleBoundary(AbstractFVActionSet):
 """
 
   TemplateHandleBoundary_KernelCalls = """
-      ::exahype2::fv::applyBoundaryConditions(
+      ::exahype2::fv::applyBoundaryConditions<{{STORAGE_PRECISION}}>(
         [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                        Qoutside,
+          const {{STORAGE_PRECISION}} * __restrict__   Qinside,
+          {{STORAGE_PRECISION}} * __restrict__         Qoutside,
           const tarch::la::Vector<Dimensions,double>&  x,
           const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
@@ -54,10 +54,10 @@ class HandleBoundary(AbstractFVActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
-      ::exahype2::fv::applyBoundaryConditions(
+      ::exahype2::fv::applyBoundaryConditions<{{STORAGE_PRECISION}}>(
         [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                        Qoutside,
+          const {{STORAGE_PRECISION}} * __restrict__   Qinside,
+          {{STORAGE_PRECISION}} * __restrict__         Qoutside,
           const tarch::la::Vector<Dimensions,double>&  x,
           const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,

@@ -4,17 +4,17 @@
 {% import 'Index.template.h' as id with context %}{# get template macros #}
 
 {% macro createMemoryOnStack() %}
-  double QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double QInGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double QInGatheredRight[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGatheredRight[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
 
-  double QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
 
-  double leftGoingFluxGathered[{{NUMBER_OF_UNKNOWNS}}];
-  double rightGoingFluxGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} leftGoingFluxGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} rightGoingFluxGathered[{{NUMBER_OF_UNKNOWNS}}];
 
-  double leftGoingFluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
-  double rightGoingFluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} leftGoingFluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} rightGoingFluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
 {% endmacro %}
 
 {% macro gatherQ() %}
@@ -72,11 +72,11 @@
 
   // Retrieve user data
   {% if STATELESS_PDE_TERMS==True %}
-  const double maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
-  const double maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered, ::exahype2::Solver::Offloadable::Yes);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered, ::exahype2::Solver::Offloadable::Yes);
   {% else %}
-  const double maxEigenvalueGatheredLeft  = solver.solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
-  const double maxEigenvalueGatheredRight = solver.solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = solver.solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% endif %}
 
   #ifdef GPUOffloadingOff
@@ -105,8 +105,8 @@
     assertion(std::isfinite(rightGoingFluxGatheredLeft[unknown]));
     #endif
 
-    const double fluxLeft  = rightGoingFluxGatheredLeft[unknown];
-    const double fluxRight = leftGoingFluxGathered[unknown];
+    const {{COMPUTE_PRECISION}} fluxLeft  = rightGoingFluxGatheredLeft[unknown];
+    const {{COMPUTE_PRECISION}} fluxRight = leftGoingFluxGathered[unknown];
 
     QOutGathered[unknown] += timeStepSize / patchSize(normal) * {{NUMBER_OF_VOLUMES_PER_AXIS}} * (fluxLeft - fluxRight);
 

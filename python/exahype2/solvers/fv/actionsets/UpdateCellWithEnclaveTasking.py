@@ -89,7 +89,7 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
         // double newTimeStepSize
         {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping::SkeletonTask);
+        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping<{{STORAGE_PRECISION}}>::SkeletonTask);
         fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
         fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
         fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
@@ -120,7 +120,7 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
         );
 
         if (predecessorEnclaveTaskNumber >= 0) {
-          ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+          ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>::releaseTaskNumber(predecessorEnclaveTaskNumber);
         }
 
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTaskNumber);
@@ -151,6 +151,7 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
                   + "::SolverState::PrimaryAfterGridInitialisation"
                   + ")",
             add_assertions_to_halo_exchange=True,
+            precision=solver._storage_precision
         )
 
         self._Template_TouchCellFirstTime_Preamble = (

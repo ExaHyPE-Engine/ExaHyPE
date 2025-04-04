@@ -53,7 +53,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
                functor_implementation,
                reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,
                guard="true", 
-               add_assertions_to_halo_exchange = True
+               add_assertions_to_halo_exchange = True,
+               precision="double"
                ):
     """!
   patch: peano4.datamodel.Patch
@@ -74,7 +75,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     oldQWithHalo
     newQ
 
-    Both are plain double pointers.
+  Both are plain pointers of type "precision", which defaults to double.
 
   ## Data validation
 
@@ -104,6 +105,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.total_overlap  = int(patch_overlap.dim[0])
     self.overlap_name   = patch_overlap.name
     self.patch_name     = patch.name
+    self.precision      = precision
     
     self.functor_implementation              = functor_implementation
     self.add_assertions_to_halo_exchange     = add_assertions_to_halo_exchange
@@ -145,10 +147,11 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     d[ "UNKNOWNS" ]           = str(self.no_of_unknowns)
     d[ "DOFS_PER_AXIS" ]      = str(self.dofs_per_axis)
     d[ "OVERLAP" ]            = str(int(self.total_overlap/2))
-    d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis)
-    d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis * self.dofs_per_axis)
-    d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
-    d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
+    d[ "PRECISION" ]          = self.precision
+    d[ "NUMBER_OF_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis)
+    d[ "NUMBER_OF_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis * self.dofs_per_axis)
+    d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
+    d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
     d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + self.overlap_name
     d[ "CELL_ACCESSOR" ]      = "fineGridCell" + self.patch_name
 
@@ -170,33 +173,33 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    """ + d[ "PRECISION" ] + """* oldQWithHalo = new """ + d[ "PRECISION" ] + """[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-    double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    """ + d[ "PRECISION" ] + """* oldQWithHalo = new """ + d[ "PRECISION" ] + """[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    """ + d[ "PRECISION" ] + """ oldQWithHalo[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-    double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    """ + d[ "PRECISION" ] + """ oldQWithHalo[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
+    """ + d[ "PRECISION" ] + """* oldQWithHalo = ::tarch::allocateMemory<""" + d[ "PRECISION" ] + """>(""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #elif Dimensions==3
-    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
+    """ + d[ "PRECISION" ] + """* oldQWithHalo = ::tarch::allocateMemory<""" + d[ "PRECISION" ] + """>(""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    """ + d[ "PRECISION" ] + """* oldQWithHalo = ::tarch::allocateMemory<""" + d[ "PRECISION" ] + """>(""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #elif Dimensions==3
-    double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    """ + d[ "PRECISION" ] + """* oldQWithHalo = ::tarch::allocateMemory<""" + d[ "PRECISION" ] + """>(""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #endif
 """
     else:
@@ -320,7 +323,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
 
   _Template_TouchCellFirstTime_Core = """
-    double* newQ = {CELL_ACCESSOR}.value;
+    {PRECISION}* newQ = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
     
     {DESTROY_RECONSTRUCTED_PATCH}

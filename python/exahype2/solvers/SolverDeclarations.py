@@ -14,6 +14,7 @@ class SolverDeclarations:
         source_term_implementation,
         adjust_solution_implementation,
         pde_terms_without_state,
+        precision = "double"
     ):
         self._flux_implementation = flux_implementation
         self._ncp_implementation = ncp_implementation
@@ -23,6 +24,7 @@ class SolverDeclarations:
         self._source_term_implementation = source_term_implementation
         self._adjust_solution_implementation = adjust_solution_implementation
         self._pde_terms_without_state = pde_terms_without_state
+        self._precision = precision
 
     def create_solver_user_declarations(self):
         Template = jinja2.Template(
@@ -34,13 +36,13 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void eigenvalues(
-      [[maybe_unused]] const double* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] double* const __restrict__                   L
+      [[maybe_unused]] {{PR}}* const __restrict__                   L
       Offloadable
     ) InlineMethod {
       // @todo Implement
@@ -52,13 +54,13 @@ class SolverDeclarations:
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>"%}
     virtual void eigenvalues(
-      const double* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      double* const __restrict__                                    L
+      {{PR}}* const __restrict__                                    L
     ) override;
     {% endif %}
 
@@ -68,7 +70,7 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     double maxEigenvalue(
-      [[maybe_unused]] const double* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
@@ -89,7 +91,7 @@ class SolverDeclarations:
 
     {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>"%}
     virtual double maxEigenvalue(
-      const double* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
@@ -104,13 +106,13 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void flux(
-      [[maybe_unused]] const double* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] double* const __restrict__                   F // F[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const __restrict__                   F // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     ) InlineMethod {
       // @todo Implement
@@ -122,13 +124,13 @@ class SolverDeclarations:
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
-      const double* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      double* const __restrict__                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const __restrict__                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -138,14 +140,14 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void nonconservativeProduct(
-      [[maybe_unused]] const double* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const double* const __restrict__             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] double* const __restrict__                   BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const __restrict__                   BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     ) InlineMethod {
       @todo Implement
@@ -157,14 +159,14 @@ class SolverDeclarations:
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonconservativeProduct(
-      const double* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double* const __restrict__                              deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      double* const __restrict__                                    BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const __restrict__                                    BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -174,12 +176,12 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void sourceTerm(
-      [[maybe_unused]] const double* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] double* const __restrict__                   S, // S[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const __restrict__                   S, // S[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     ) InlineMethod {
       @todo Implement
@@ -191,12 +193,12 @@ class SolverDeclarations:
 
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void sourceTerm(
-      const double* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
-      double* const __restrict__                                    S // S[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const __restrict__                                    S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -206,15 +208,15 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     double solveRiemannProblem(
-      [[maybe_unused]] const double* const __restrict__             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const double* const __restrict__             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const __restrict__             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] double* const __restrict__                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-      [[maybe_unused]] double* const __restrict__                   FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const __restrict__                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const __restrict__                   FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     ) InlineMethod {
       @todo Implement
@@ -226,15 +228,15 @@ class SolverDeclarations:
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
     virtual double solveRiemannProblem(
-      const double* const __restrict__                              QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double* const __restrict__                              QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const __restrict__                              QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      double* const __restrict__                                    FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-      double* const __restrict__                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const __restrict__                                    FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const __restrict__                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -280,4 +282,5 @@ class SolverDeclarations:
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
+        d["PR"] = self._precision
         return Template.render(**d)

@@ -2,16 +2,23 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/logging/Log.h"
+#include "tarch/logging/Statistics.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/multicore/Task.h"
+#include "tarch/multicore/Lock.h"
 
+#include <algorithm>
 #include <set>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 namespace exahype2 {
-  class EnclaveBookkeeping;
-  class EnclaveTask;
+  template<typename T> class EnclaveBookkeeping;
+  template<typename T> class EnclaveTask;
 }
 
 /**
@@ -32,19 +39,25 @@ namespace exahype2 {
  * which variant is faster. Which is kind of a surprise. Likely it has to
  * do with memory/cache issues.
  */
+template<typename T>
 class exahype2::EnclaveBookkeeping {
   public:
     struct Entry {
       int      numberOfResultValues;
-      double*  data;
+      T*       data;
       double   maxEigenvalue;
 
-      Entry(int numberOfResultValues_, double* data_, double maxEigenvalue_);
+      Entry(int numberOfResultValues_, T* data_, double maxEigenvalue_);
       std::string toString() const;
     };
 
   private:
-    static tarch::logging::Log _log;
+    static tarch::logging::Log& myLog(){
+      static tarch::logging::Log myLog("exahype2::EnclaveBookkeeping");
+      return myLog;
+    }
+
+    tarch::logging::Log& _log = myLog();
 
     const static std::string MemoryAllocationsInLookupTableIdentifier;
 
@@ -79,7 +92,7 @@ class exahype2::EnclaveBookkeeping {
      */
     static constexpr int SkeletonTask        = -2;
 
-    static EnclaveBookkeeping& getInstance();
+    static EnclaveBookkeeping<T>& getInstance();
 
     /**
      * For debugging only. This routine is not thread-safe.
@@ -106,7 +119,7 @@ class exahype2::EnclaveBookkeeping {
      * tarch::freeMemory(result, tarch::MemoryLocation::Heap);
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      */
-    void waitForTaskToTerminateAndCopyResultOver(int taskNumber, double* destination, double& maxEigenvalue);
+    void waitForTaskToTerminateAndCopyResultOver(int taskNumber, T* destination, double& maxEigenvalue);
 
     /**
      * Wait for a task and copy outcome into destination
@@ -129,5 +142,7 @@ class exahype2::EnclaveBookkeeping {
      *
      * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
      */
-    void bookmarkFinishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue);
+    void bookmarkFinishedTask(int taskNumber, int numberOfResultValues, T* data, double maxEigenvalue);
 };
+
+#include "EnclaveBookkeeping.cpph"

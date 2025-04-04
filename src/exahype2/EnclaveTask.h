@@ -11,8 +11,8 @@
 #include <functional>
 
 namespace exahype2 {
-  class EnclaveTask;
-  class EnclaveBookkeeping;
+  template<typename T> class EnclaveTask;
+  template<typename T> class EnclaveBookkeeping;
 } // namespace exahype2
 
 /**
@@ -71,14 +71,20 @@ namespace exahype2 {
  * the memory footprint behind an enclave task is, so I decided against this.
  * Instead, subclasses of the enclave task do specialise w.r.t. SmartMPI.
  */
+template<typename T>
 class exahype2::EnclaveTask: public tarch::multicore::Task {
 public:
   typedef std::function<void()> Functor;
 
 protected:
-  friend class EnclaveBookkeeping;
+  friend class EnclaveBookkeeping<T>;
 
-  static tarch::logging::Log _log;
+  static tarch::logging::Log& myLog(){
+    static tarch::logging::Log myLog("exahype2::EnclaveTask");
+    return myLog;
+  }
+
+  tarch::logging::Log& _log = myLog();
 
   /**
    * Each task needs a unique number, so we can look up its output.
@@ -94,8 +100,8 @@ protected:
    */
   const double                _t;
   const double                _dt;
-  double* __restrict__        _inputValues;
-  double* __restrict__        _outputValues;
+  T* __restrict__             _inputValues;
+  T* __restrict__             _outputValues;
   int                         _numberOfInputValues;
   int                         _numberOfResultValues;
   Functor                     _functor;
@@ -130,8 +136,8 @@ public:
     const peano4::datamanagement::CellMarker&   marker,
     double                                      t,
     double                                      dt,
-    double* __restrict__                        inputValues,
-    double* __restrict__                        outputValues,
+    T* __restrict__                             inputValues,
+    T* __restrict__                             outputValues,
     int                                         numberOfInputValues,
     int                                         numberOfResultValues,
     Functor                                     functor
@@ -180,5 +186,10 @@ public:
   static void releaseTaskNumber(int number);
 
 private:
-  static EnclaveTaskNumberPool _taskNumberPool;
+  static EnclaveTaskNumberPool& _taskNumberPool(){
+    static EnclaveTaskNumberPool myTaskNumberPool;
+    return myTaskNumberPool;
+  }
 };
+
+#include "EnclaveTask.cpph"

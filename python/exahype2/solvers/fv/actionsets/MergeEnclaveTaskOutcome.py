@@ -19,7 +19,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if (marker.hasBeenEnclaveCell() and taskNumber >= 0) {
       double maxEigenvalue = 0.0;
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver(taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue);
+      ::exahype2::EnclaveBookkeeping<{{STORAGE_PRECISION}}>::getInstance().waitForTaskToTerminateAndCopyResultOver(taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue);
 
       #if PeanoDebug > 0
       ::exahype2::fv::validatePatch(
@@ -34,13 +34,13 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber);
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping<{{STORAGE_PRECISION}}>::NoEnclaveTaskNumber);
       fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     }
 
     if (fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated()) {
-      double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+      {{STORAGE_PRECISION}}* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
       {{POSTPROCESS_UPDATED_PATCH}}
 

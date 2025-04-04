@@ -155,9 +155,10 @@ public:
    * offset. The fact that I can use a subset of the matrix requires me to pass
    * in resultSize explicitly.
    */
+  template<typename T=double>
   void batchedMultiplyAoS(
-    double* __restrict__ result,
-    const double* __restrict__ x,
+    T* __restrict__ result,
+    const T* __restrict__ x,
     int batchCount,
     int resultSize,
     int firstRow
@@ -166,9 +167,10 @@ public:
   /**
    * Wrapper around other batch operation. The whole matrix is used.
    */
+  template<typename T=double>
   void batchedMultiplyAoS(
-    double* __restrict__ result,
-    const double* __restrict__ x,
+    T* __restrict__ result,
+    const T* __restrict__ x,
     int batchCount
   );
 
@@ -245,4 +247,4 @@ tarch::la::DynamicMatrix operator*(
   const tarch::la::DynamicMatrix& B
 );
 
-// void multiply( double* result, double* x );
+#include "DynamicMatrix.cpph"

@@ -23,13 +23,13 @@
 {% if STATELESS_PDE_TERMS==False -%}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const double* __restrict__ const              QIn,
-  double* __restrict__ const                    QOut,
-  const double                                  timeStamp,
-  const double                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&  patchCentre,
-  const tarch::la::Vector<Dimensions, double>&  patchSize
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                 solver,
+  const {{STORAGE_PRECISION}}* __restrict__ const QIn,
+  {{STORAGE_PRECISION}}* __restrict__ const       QOut,
+  const double                                    timeStamp,
+  const double                                    timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&    patchCentre,
+  const tarch::la::Vector<Dimensions, double>&    patchSize
 ) {
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double maxEigenvalueAfterTimeStep = 0.0;
@@ -47,12 +47,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
 {% else -%}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
-  const double* __restrict__ const              QIn,
-  double* __restrict__ const                    QOut,
-  const double                                  timeStamp,
-  const double                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&  patchCentre,
-  const tarch::la::Vector<Dimensions, double>&  patchSize
+  const {{STORAGE_PRECISION}}* __restrict__ const QIn,
+  {{STORAGE_PRECISION}}* __restrict__ const       QOut,
+  const double                                    timeStamp,
+  const double                                    timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&    patchCentre,
+  const tarch::la::Vector<Dimensions, double>&    patchSize
 ) {
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double maxEigenvalueAfterTimeStep = 0.0;
@@ -78,8 +78,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
 {% endif %}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
-  ::exahype2::CellData<double, double>&         patchData,
-  const int                                     targetDevice
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData,
+  const int                                                           targetDevice
 ) {
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double maxEigenvalueAfterTimeStep = 0.0;

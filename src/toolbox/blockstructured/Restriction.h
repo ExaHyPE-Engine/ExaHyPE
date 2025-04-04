@@ -2,9 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Enumeration.h"
+#include "Interpolation.h"
+
+#include "tarch/Assertions.h"
+#include "tarch/la/DynamicMatrix.h"
+#include "tarch/la/DynamicMatrixOperations.h"
+#include "tarch/la/GramSchmidt.h"
+#include "tarch/la/LUDecomposition.h"
+
+#include "peano4/utils/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
-#include "tarch/la/DynamicMatrix.h"
 
 namespace toolbox {
   namespace blockstructured {
@@ -36,19 +45,21 @@ namespace toolbox {
      * data. This is then used for interpolation, while the actual data is
      * cleared and used to accumulate the restricted values.
      */
+    template<typename T=double>
     void clearHaloLayerAoS(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   values
+      T*                                        values
     );
 
+    template<typename T=double>
     void clearCell(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   values
+      T*                                        values
     );
 
     /**
@@ -93,13 +104,14 @@ namespace toolbox {
      * This means that the halo data of the coarse cell is potentially
      * incomplete - something to take into account if you use the data.
      */
+    template<typename T=double>
     void restrictInnerHalfOfHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues,
       bool                                      swapInsideOutside = false
     );
 
@@ -109,21 +121,23 @@ namespace toolbox {
      * Required for dynamic AMR only. Invokes the one-sided routine twice:
      * for the inner and the outer half of the face.
      */
+    template<typename T=double>
     void restrictHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
+    template<typename T=double>
     void restrictCell_AoS_inject(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
     /**
@@ -147,12 +161,13 @@ namespace toolbox {
      * you have to search through the provided projection routines to find
      * such a linear scheme.
      */
+    template<typename T=double>
     void restrictCellIntoOverlappingCell_inject(
       int     numberOfDoFsPerAxisInSourcePatch,
       int     numberOfDoFsPerAxisInDestinationPatch,
       int     unknowns,
-      double* sourceValues,
-      double* destinationValues
+      T*      sourceValues,
+      T*      destinationValues
     );
 
     /**
@@ -166,12 +181,13 @@ namespace toolbox {
      * restrictCellIntoOverlappingCell_inject(), i.e. overwrite the value in
      * destinationValues. A value of 0.0 switches the injection off.
      */
+    template<typename T=double>
     void restrictCellIntoOverlappingCell_inject_and_average(
       int     numberOfDoFsPerAxisInSourcePatch,
       int     numberOfDoFsPerAxisInDestinationPatch,
       int     unknowns,
-      double* sourceValues,
-      double* destinationValues,
+      T*      sourceValues,
+      T*      destinationValues,
       double  weightOfInjectedValue = 0.5
     );
 
@@ -179,12 +195,13 @@ namespace toolbox {
     /**
      * This routine is used when we delete a cell due to dynamic AMR
      */
+    template<typename T=double>
     void restrictCell_AoS_averaging(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
     /**
@@ -192,13 +209,14 @@ namespace toolbox {
      * different halo layer restrictions, i.e. one for half of the
      * halo and one for the whole thing.
      */
+    template<typename T=double>
     void restrictHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
     /**
@@ -217,25 +235,28 @@ namespace toolbox {
      * only set the overlap cell 1 on the next coarser mesh.
      *
      */
+    template<typename T=double>
     void restrictInnerHalfOfHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues,
       bool                                      swapInsideOutside = false
     );
 
+    template<typename T=double>
     void restrictCell_AoS_tensor_product(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
       const double* __restrict__ tangentialRestrictionMatrix1d,
-      double* fineGridValues,
-      double* coarseGridValues
+      T*      fineGridValues,
+      T*      coarseGridValues
     );
 
+    template<typename T=double>
     void restrictCell_AoS_matrix(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -243,24 +264,26 @@ namespace toolbox {
       const double* __restrict__ restrictionData,
       const int* __restrict__ columnIndices,
       const int* __restrict__ rowIndices,
-      double* fineGridValues,
-      double* coarseGridValues
+      T*      fineGridValues,
+      T*      coarseGridValues
     );
 
+    template<typename T=double>
     void restrictCell_AoS_second_order(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
+    template<typename T=double>
     void restrictCell_AoS_third_order(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
 
@@ -277,6 +300,7 @@ namespace toolbox {
      *
      * @see restrictInnerHalfOfHaloLayer_AoS_tensor_product()
      */
+    template<typename T=double>
     void restrictHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -284,10 +308,11 @@ namespace toolbox {
       int                                       unknowns,
       const double* __restrict__ normalRestrictionMatrix1d,
       const double* __restrict__ tangentialRestrictionMatrix1d,
-      double* fineGridValues,
-      double* coarseGridValues
+      T*      fineGridValues,
+      T*      coarseGridValues
     );
 
+    template<typename T=double>
     void restrictHaloLayer_AoS_matrix(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -298,26 +323,28 @@ namespace toolbox {
       const int* __restrict__ rowIndices,
       int     dataOffset,
       int     rowIndicesOffset,
-      double* fineGridValues,
-      double* coarseGridValues
+      T*      fineGridValues,
+      T*      coarseGridValues
     );
 
+    template<typename T=double>
     void restrictHaloLayer_AoS_second_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
+    template<typename T=double>
     void restrictHaloLayer_AoS_third_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues
     );
 
     /**
@@ -495,6 +522,7 @@ namespace toolbox {
      *
      *
      */
+    template<typename T=double>
     void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -502,11 +530,12 @@ namespace toolbox {
       int                                       unknowns,
       const double* __restrict__ normalRestrictionMatrix1d,
       const double* __restrict__ tangentialRestrictionMatrix1d,
-      double* fineGridValues,
-      double* coarseGridValues,
+      T*      fineGridValues,
+      T*      coarseGridValues,
       bool    swapInsideOutside = false
     );
 
+    template<typename T=double>
     void restrictInnerHalfOfHaloLayer_AoS_matrix(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -517,28 +546,30 @@ namespace toolbox {
       const int* __restrict__ rowIndices,
       int     dataOffset,
       int     rowIndicesOffset,
-      double* fineGridValues,
-      double* coarseGridValues,
+      T*      fineGridValues,
+      T*      coarseGridValues,
       bool    swapInsideOutside = false
     );
 
+    template<typename T=double>
     void restrictInnerHalfOfHaloLayer_AoS_second_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues,
       bool                                      swapInsideOutside = false
     );
 
+    template<typename T=double>
     void restrictInnerHalfOfHaloLayer_AoS_third_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
+      T*                                        fineGridValues,
+      T*                                        coarseGridValues,
       bool                                      swapInsideOutside = false
     );
 
@@ -569,13 +600,14 @@ namespace toolbox {
        * @param clearOuterPart If this flag is set, we clear the outer half of
        *   the overlap (relative to the normal identified by marker).
        */
+      template<typename T=double>
       void clearHalfOfHaloLayerAoS(
         const peano4::datamanagement::FaceMarker& marker,
         int                                       numberOfDoFsPerAxisInPatch,
         int                                       overlap,
         int                                       unknowns,
         bool                                      clearInnerPart,
-        double*                                   values
+        T*                                        values
       );
 
       /**
@@ -603,3 +635,5 @@ namespace toolbox {
     } // namespace internal
   }   // namespace blockstructured
 } // namespace toolbox
+
+#include "Restriction.cpph"

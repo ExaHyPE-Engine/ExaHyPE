@@ -307,6 +307,9 @@ class FV(object):
         self._interpolation = "piecewise_constant"
         self._restriction = "averaging"
 
+        self._compute_precision = "double"
+        self._storage_precision = "double"
+
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
         self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
@@ -570,38 +573,39 @@ The finest mesh width of """
           accumulation/roll-over data which usually is not stored
           persistently.
         """
+
         self._patch = peano4.datamodel.Patch(
             (self._patch_size, self._patch_size, self._patch_size),
             self._unknowns + self._auxiliary_variables,
-            self._unknown_identifier(),
+            self._unknown_identifier(), self._storage_precision
         )
         self._patch_overlap_old = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
             self._unknowns + self._auxiliary_variables,
-            self._unknown_identifier() + "Old",
+            self._unknown_identifier() + "Old", self._storage_precision
         )
         self._patch_overlap_new = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
             self._unknowns + self._auxiliary_variables,
-            self._unknown_identifier() + "New",
+            self._unknown_identifier() + "New", self._storage_precision
         )
         self._patch_overlap_update = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
             self._unknowns + self._auxiliary_variables,
-            self._unknown_identifier() + "Update",
+            self._unknown_identifier() + "Update", self._storage_precision
         )
 
         if self._cell_data_storage == Storage.CallStack:
             self._patch.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch, "double"
+                self._patch, self._storage_precision
             )
         elif self._cell_data_storage == Storage.Heap:
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
-                self._patch, "double"
+                self._patch, self._storage_precision
             )
         elif self._cell_data_storage == Storage.SmartPointers:
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                self._patch, "double"
+                self._patch, self._storage_precision
             )
         else:
             assert False, "Storage variant {} not supported".format(
@@ -610,44 +614,44 @@ The finest mesh width of """
 
         if self._face_data_storage == Storage.CallStack:
             self._patch_overlap_old.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_old, "double"
+                self._patch_overlap_old, self._storage_precision
             )
             self._patch_overlap_new.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_new, "double"
+                self._patch_overlap_new, self._storage_precision
             )
             self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArray(
-                self._patch_overlap_update, "double"
+                self._patch_overlap_update, self._storage_precision
             )
         elif self._face_data_storage == Storage.Heap:
             self._patch_overlap_old.generator = (
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_old, "double"
+                    self._patch_overlap_old, self._storage_precision
                 )
             )
             self._patch_overlap_new.generator = (
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_new, "double"
+                    self._patch_overlap_new, self._storage_precision
                 )
             )
             self._patch_overlap_update.generator = (
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
-                    self._patch_overlap_update, "double"
+                    self._patch_overlap_update, self._storage_precision
                 )
             )
         elif self._face_data_storage == Storage.SmartPointers:
             self._patch_overlap_old.generator = (
                 peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_old, "double"
+                    self._patch_overlap_old, self._storage_precision
                 )
             )
             self._patch_overlap_new.generator = (
                 peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_new, "double"
+                    self._patch_overlap_new, self._storage_precision
                 )
             )
             self._patch_overlap_update.generator = (
                 peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-                    self._patch_overlap_update, "double"
+                    self._patch_overlap_update, self._storage_precision
                 )
             )
         else:
@@ -1178,6 +1182,7 @@ The finest mesh width of """
             patch=self._patch,
             dataset_name=self._unknown_identifier(),
             description=self._plot_description,
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             guard="repositories::plotFilter.plotPatch(marker) and "
             + self._load_cell_data_default_guard(),
             additional_includes="""
@@ -1185,8 +1190,8 @@ The finest mesh width of """
 #include "../repositories/SolverRepository.h"
 """,
             precision="PlotterPrecision",
-            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             select_dofs=self.select_dofs_to_print,
+            dataType=self._storage_precision,
             restart_preprocess=restart_from_checkpoint
         )
         plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
@@ -1400,6 +1405,11 @@ The finest mesh width of """
     def add_solver_constants(self, datastring):
         self._solver_constants += datastring + "\n"
 
+    def set_solver_precisions(self, storage_precision="double", compute_precision="double"):
+      self._storage_precision = storage_precision
+      self._compute_precision = compute_precision
+      self.set_implementation()
+      self.create_data_structures()
 
     def _init_dictionary_with_default_parameters(self, d):
         """
@@ -1419,6 +1429,9 @@ The finest mesh width of """
         d["NUMBER_OF_UNKNOWNS"] = self._unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
         d["NUMBER_OF_VARIABLES_IN_VOLUME"] = self._unknowns + self._auxiliary_variables
+
+        d["COMPUTE_PRECISION"] = self._compute_precision
+        d["STORAGE_PRECISION"] = self._storage_precision
 
         d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PER_AXIS"] = (
             d["NUMBER_OF_VOLUMES_PER_AXIS"] *

@@ -88,16 +88,16 @@
 
 {% macro loopOverPatches() %}
   const int numberOfPatches                                       = patchData.numberOfCells;
-  double** const QIns                                             = patchData.QIn;
-  double** const QOuts                                            = patchData.QOut;
+  {{STORAGE_PRECISION}}** const QIns                              = patchData.QIn;
+  {{STORAGE_PRECISION}}** const QOuts                             = patchData.QOut;
   const tarch::la::Vector<Dimensions, double>* const patchCentres = patchData.cellCentre;
   const tarch::la::Vector<Dimensions, double>* const patchSizes   = patchData.cellSize;
   const double* const timeStamps                                  = patchData.t;
   const double* const timeStepSizes                               = patchData.dt;
 
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    const double* const QIn                                       = QIns[patchIndex];
-    double* const QOut                                            = QOuts[patchIndex];
+    const {{STORAGE_PRECISION}}* const QIn                        = QIns[patchIndex];
+    {{STORAGE_PRECISION}}* const QOut                             = QOuts[patchIndex];
     const tarch::la::Vector<Dimensions, double>& patchCentre      = patchCentres[patchIndex];
     const tarch::la::Vector<Dimensions, double>& patchSize        = patchSizes[patchIndex];
     const double timeStamp                                        = timeStamps[patchIndex];

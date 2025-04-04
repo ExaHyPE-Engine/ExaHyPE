@@ -2,14 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
+#include "PatchUtils.h"
 
 #include "tarch/la/Vector.h"
+#include "peano4/utils/Loop.h"
 #include "peano4/utils/Globals.h"
 
-
 #include <functional>
-
 
 namespace exahype2 {
   namespace fv {
@@ -21,10 +20,11 @@ namespace exahype2 {
      *  is thus a number between 0 and 2d-1.
      *
      */
+    template<typename T>
     void applyBoundaryConditions(
       std::function< void(
-        const double* __restrict__                   Qinside,
-        double * __restrict__                        Qoutside,
+        const T* __restrict__                        Qinside,
+        T * __restrict__                             Qoutside,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -39,9 +39,9 @@ namespace exahype2 {
       int                                          overlap,
       int                                          unknowns,
       int                                          faceNumber,
-      double* __restrict__                         Q
+      T* __restrict__                              Q
     );
   }
 }
 
-
+#include "BoundaryConditions.cpph"

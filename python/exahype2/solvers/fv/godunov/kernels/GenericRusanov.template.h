@@ -4,29 +4,29 @@
 {% import 'Index.template.h' as id with context %}{# get template macros #}
 
 {% macro createMemoryOnStack() %}
-  double QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double QInGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double QInGatheredRight[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QInGatheredRight[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
 
-  double QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QOutGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
 
   {% if FLUX_IMPLEMENTATION!="<none>" %}
-  double fluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
-  double fluxGatheredRight[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} fluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} fluxGatheredRight[{{NUMBER_OF_UNKNOWNS}}];
   {% endif %}
 
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-  double sourceGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} sourceGathered[{{NUMBER_OF_UNKNOWNS}}];
   {% endif %}
 
   {% if NCP_IMPLEMENTATION!="<none>" %}
-  double QAverageGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double QAverageGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double DeltaQGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-  double DeltaQGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QAverageGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} QAverageGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} DeltaQGathered[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
+  {{COMPUTE_PRECISION}} DeltaQGatheredLeft[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
 
-  double ncpGathered[{{NUMBER_OF_UNKNOWNS}}];
-  double ncpGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} ncpGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {{COMPUTE_PRECISION}} ncpGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
   {% endif %}
 {% endmacro %}
 
@@ -151,9 +151,9 @@
 
   // Retrieve user data
   {% if STATELESS_PDE_TERMS==True %}
-  const double maxEigenvalueGathered      = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
-  const double maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
-  const double maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGathered      = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
 
   {% if FLUX_IMPLEMENTATION!="<none>" %}
   {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
@@ -165,9 +165,9 @@
   {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGatheredLeft, DeltaQGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
   {% endif %}
   {% else %}
-  const double maxEigenvalueGathered      = solver.maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
-  const double maxEigenvalueGatheredLeft  = solver.maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal);
-  const double maxEigenvalueGatheredRight = solver.maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGathered      = solver.maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = solver.maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal);
 
   {% if FLUX_IMPLEMENTATION!="<none>" %}
   solver.flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft);
@@ -201,10 +201,10 @@
     assertion(std::isfinite(fluxGatheredRight[unknown]));
     #endif
 
-    const double maxEigenvalueLeft  = maxEigenvalueGatheredLeft   > maxEigenvalueGathered ? maxEigenvalueGatheredLeft  : maxEigenvalueGathered;
-    const double maxEigenvalueRight = maxEigenvalueGatheredRight  > maxEigenvalueGathered ? maxEigenvalueGatheredRight : maxEigenvalueGathered;
-    double fluxLeft  = -maxEigenvalueLeft  * (QInGathered     [unknown] - QInGatheredLeft[unknown]);
-    double fluxRight = -maxEigenvalueRight * (QInGatheredRight[unknown] - QInGathered    [unknown]);
+    const {{COMPUTE_PRECISION}} maxEigenvalueLeft  = maxEigenvalueGatheredLeft   > maxEigenvalueGathered ? maxEigenvalueGatheredLeft  : maxEigenvalueGathered;
+    const {{COMPUTE_PRECISION}} maxEigenvalueRight = maxEigenvalueGatheredRight  > maxEigenvalueGathered ? maxEigenvalueGatheredRight : maxEigenvalueGathered;
+    {{COMPUTE_PRECISION}} fluxLeft  = -maxEigenvalueLeft  * (QInGathered     [unknown] - QInGatheredLeft[unknown]);
+    {{COMPUTE_PRECISION}} fluxRight = -maxEigenvalueRight * (QInGatheredRight[unknown] - QInGathered    [unknown]);
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     fluxLeft += fluxGatheredLeft[unknown];
     fluxRight += fluxGatheredRight[unknown];

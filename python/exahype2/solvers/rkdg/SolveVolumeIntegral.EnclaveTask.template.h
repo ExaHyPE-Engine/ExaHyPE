@@ -40,7 +40,7 @@
  *
  * @author Tobias Weinzierl
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<double>
 #ifdef UseSmartMPI
 , public smartmpi::Task
 #endif

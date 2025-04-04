@@ -105,7 +105,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       );
       
       if (predecessorEnclaveTaskNumber>=0) {
-        ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+        ::exahype2::EnclaveTask<double>::releaseTaskNumber(predecessorEnclaveTaskNumber);
       }
 
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());

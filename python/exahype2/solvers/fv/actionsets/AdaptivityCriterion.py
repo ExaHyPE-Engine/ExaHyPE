@@ -187,8 +187,8 @@ class AdaptivityCriterion(AbstractFVActionSet):
       d[ "CELL_LABEL_NAME" ]    = self._solver._cell_label.name
       d[ "UNKNOWNS" ]           = str(self._solver._patch.no_of_unknowns)
       d[ "DOFS_PER_AXIS" ]      = str(self._solver._patch.dim[0])
-      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
-      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
+      d[ "NUMBER_OF_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
+      d[ "NUMBER_OF_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
       d[ "PREDICATE" ]          = "not marker.willBeRefined() and not marker.hasBeenRefined() and " + self.guard
       d[ "EVENT_LIFETIME"]      = self._event_lifetime

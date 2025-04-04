@@ -2,12 +2,22 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <map>
+#include "Enumeration.h"
+
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/DynamicMatrix.h"
+#include "tarch/la/DynamicMatrixOperations.h"
+#include "tarch/la/GramSchmidt.h"
+#include "tarch/la/LUDecomposition.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/utils/Loop.h"
-#include "tarch/la/DynamicMatrix.h"
+
+#include <map>
+#include <vector>
 
 /**
  * @page toolbox_blockstructured_interpolation Halo layer interpolation
@@ -187,6 +197,10 @@
  */
 namespace toolbox {
   namespace blockstructured {
+
+    extern tarch::logging::Log _log;
+    extern tarch::multicore::BooleanSemaphore interpolationMapSemaphore;
+
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
      *
@@ -295,145 +309,154 @@ namespace toolbox {
      * matrix. The second entry on the fine grid also holds this value. This is
      * the second line.
      */
+    template<typename T=double>
     void interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ normalInterpolationMatrix1d,
-      const double* __restrict__ tangentialInterpolationMatrix1d,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ normalInterpolationMatrix1d,
+      const T* __restrict__ tangentialInterpolationMatrix1d,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
-
+    template<typename T=double>
     void interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ normalInterpolationMatrix1d,
-      const double* __restrict__ tangentialInterpolationMatrix1d,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ normalInterpolationMatrix1d,
+      const T* __restrict__ tangentialInterpolationMatrix1d,
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_matrix(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ interpolationData,
+      const T*      __restrict__ interpolationData,
       const int* __restrict__ columnIndices,
       const int* __restrict__ rowIndices,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_second_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
-
+    template<typename T=double>
     void interpolateHaloLayer_AoS_second_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_third_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
-
+    template<typename T=double>
     void interpolateHaloLayer_AoS_third_order(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
-
+    template<typename T=double>
     void interpolateHaloLayer_AoS_matrix(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ interpolationData,
+      const T* __restrict__   interpolationData,
       const int* __restrict__ columnIndices,
       const int* __restrict__ rowIndices,
       int dataStart,
       int rowIndicesStart,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_tensor_product(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ interpolationMatrix1d,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ interpolationMatrix1d,
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_matrix(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ interpolationData,
+      const T* __restrict__   interpolationData,
       const int* __restrict__ columnIndices,
       const int* __restrict__ rowIndices,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__   coarseGridCellValues,
+      T* __restrict__         fineGridCellValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_second_order(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_third_order(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
 
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
      */
-    void interpolateHaloLayer_AoS_piecewise_constant(
+    template<typename T=double>
+     void interpolateHaloLayer_AoS_piecewise_constant(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
     /**
@@ -451,16 +474,16 @@ namespace toolbox {
      * interest.
      *
      */
-    void interpolateHaloLayer_AoS_piecewise_constant(
+    template<typename T=double>
+     void interpolateHaloLayer_AoS_piecewise_constant(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
-
 
     /**
      * This routine is called if we create a new cell (dynamic AMR)
@@ -473,126 +496,136 @@ namespace toolbox {
      * use the same interpolation scheme for all unknowns, so we can rely on a
      * batched matrix multiplication.
      */
-    void interpolateCell_AoS_piecewise_constant(
+    template<typename T=double>
+     void interpolateCell_AoS_piecewise_constant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
-
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_constant_extrapolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_constant_extrapolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_linear_with_constant_extrapolation(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
-
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_linear_extrapolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_linear_extrapolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_linear_with_linear_extrapolation(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
-
 
     /**
      * @see createLinearInterpolationMatrix()
      */
+    template<typename T=double>
+     void interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
+    );
+
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
-    void interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
-    );
-
+    template<typename T=double>
     void interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      const double* __restrict__ coarseGridFaceValues,
-      double* __restrict__ fineGridFaceValues
+      const T* __restrict__ coarseGridCellValues,
+      const T* __restrict__ coarseGridFaceValues,
+      T* __restrict__       fineGridFaceValues
     );
 
+    template<typename T=double>
     void interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__ coarseGridCellValues,
-      double* __restrict__ fineGridCellValues
+      const T* __restrict__ coarseGridCellValues,
+      T* __restrict__       fineGridCellValues
     );
 
     /**
@@ -656,47 +689,51 @@ namespace toolbox {
      *   interior of the patch correctly.
      */
 
+     template<typename T=double>
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_matrix(
       int numberOfDoFsPerAxisInSourcePatch,
       int numberOfDoFsPerAxisInDestinationPatch,
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const double* __restrict__ interpolationData,
+      const T* __restrict__   interpolationData,
       const int* __restrict__ columnIndices,
       const int* __restrict__ rowIndices,
-      const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues
+      const T* __restrict__   sourceValues,
+      T* __restrict__         destinationValues
     );
 
+    template<typename T=double>
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_secondOrder(
       int numberOfDoFsPerAxisInSourcePatch,
       int numberOfDoFsPerAxisInDestinationPatch,
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues
+      const T* __restrict__ sourceValues,
+      T* __restrict__       destinationValues
     );
 
+    template<typename T=double>
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
       int numberOfDoFsPerAxisInSourcePatch,
       int numberOfDoFsPerAxisInDestinationPatch,
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues
+      const T* __restrict__ sourceValues,
+      T* __restrict__       destinationValues
     );
 
+    template<typename T=double>
     void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_fourthOrder(
       int numberOfDoFsPerAxisInSourcePatch,
       int numberOfDoFsPerAxisInDestinationPatch,
       int haloSourcePatch,
       int haloDestinationPatch,
       int unknowns,
-      const double* __restrict__ sourceValues,
-      double* __restrict__ destinationValues
+      const T* __restrict__ sourceValues,
+      T* __restrict__       destinationValues
     );
 
     namespace internal {
@@ -944,36 +981,39 @@ namespace toolbox {
        * We identify the overlap with the fine halo layer and copy values over
        * from these two arrays onto the face data.
        */
-      void projectInterpolatedFineCellsOnHaloLayer_AoS(
+      template<typename T=double>
+       void projectInterpolatedFineCellsOnHaloLayer_AoS(
         const peano4::datamanagement::FaceMarker& marker,
         int                                       numberOfDoFsPerAxisInPatch,
         int                                       overlap,
         int                                       unknowns,
-        const double* __restrict__ fineGridCellValuesLeft,
-        const double* __restrict__ fineGridCellValuesRight,
-        double* fineGridFaceValues
+        const T* __restrict__ fineGridCellValuesLeft,
+        const T* __restrict__ fineGridCellValuesRight,
+        T* fineGridFaceValues
       );
 
       /**
        * @see Other interpolateCell_AoS_piecewise_constant() variant which
        * delegates to this one which is also used by the face interpolation.
        */
-      void interpolateCell_AoS_piecewise_constant(
+      template<typename T=double>
+       void interpolateCell_AoS_piecewise_constant(
         const tarch::la::Vector<Dimensions, int>&
             relativePositionWithinFatherCell,
         int numberOfDoFsPerAxisInPatch,
         int unknowns,
-        const double* __restrict__ fineGridValues,
-        double* coarseGridValues
+        const T* __restrict__ fineGridValues,
+        T* coarseGridValues
       );
 
+      template<typename T=double>
       void interpolateCell_AoS_linear(
         const tarch::la::Vector<Dimensions, int>&
             relativePositionWithinFatherCell,
         int numberOfDoFsPerAxisInPatch,
         int unknowns,
-        const double* __restrict__ fineGridValues,
-        double* coarseGridValues,
+        const T* __restrict__ fineGridValues,
+        T* coarseGridValues,
         bool    extrapolateLinearly
       );
 
@@ -1036,3 +1076,5 @@ namespace toolbox {
     } // namespace internal
   }   // namespace blockstructured
 } // namespace toolbox
+
+#include "Interpolation.cpph"
