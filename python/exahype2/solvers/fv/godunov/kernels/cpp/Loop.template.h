@@ -22,7 +22,7 @@
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   maxEigenvalueAfterTimeStep = std::transform_reduce(std::execution::par_unseq, ids.begin(), ids.end(),
-    std::numeric_limits<double>::lowest(), [](double a, double b) { return std::fmax(a, b); },
+    std::numeric_limits<{{COMPUTE_PRECISION}}>::lowest(), []({{COMPUTE_PRECISION}} a, {{COMPUTE_PRECISION}} b) { return std::fmax(a, b); },
   {% else %}
   std::for_each_n(std::execution::par_unseq, ids.begin(), std::ranges::size(ids),
   {% endif %}
@@ -32,8 +32,8 @@
       {% else %}
       auto [patchIndex, x, y]                                       = idx;
       {% endif %}
-      const double* const QIn                                       = QIns[patchIndex];
-      double* const QOut                                            = QOuts[patchIndex];
+      const {{COMPUTE_PRECISION}}* const QIn                        = QIns[patchIndex];
+      {{COMPUTE_PRECISION}}* const QOut                             = QOuts[patchIndex];
       const tarch::la::Vector<Dimensions, double>& patchCentre      = patchCentres[patchIndex];
       const tarch::la::Vector<Dimensions, double>& patchSize        = patchSizes[patchIndex];
       const double timeStamp                                        = timeStamps[patchIndex];
@@ -70,8 +70,8 @@
 
 {% macro loopOverPatches() %}
   const int numberOfPatches                                       = patchData.numberOfCells;
-  double** const QIns                                             = patchData.QIn;
-  double** const QOuts                                            = patchData.QOut;
+  {{STORAGE_PRECISION}}** const QIns                              = patchData.QIn;
+  {{STORAGE_PRECISION}}** const QOuts                             = patchData.QOut;
   const tarch::la::Vector<Dimensions, double>* const patchCentres = patchData.cellCentre;
   const tarch::la::Vector<Dimensions, double>* const patchSizes   = patchData.cellSize;
   const double* const timeStamps                                  = patchData.t;

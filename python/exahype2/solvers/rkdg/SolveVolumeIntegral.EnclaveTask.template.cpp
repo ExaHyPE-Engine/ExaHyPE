@@ -86,7 +86,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double                                      dt,
   const double* __restrict__                  linearCombinationOfPreviousShots
 ):
-  ::exahype2::EnclaveTask(
+  ::exahype2::EnclaveTask<double>(
     _enclaveTaskTypeId,
     marker,
     t,
@@ -132,7 +132,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   std::shared_ptr< double[] >                 linearCombinationOfPreviousShots,
   double* __restrict__                        output
 ):
-  ::exahype2::EnclaveTask(
+  ::exahype2::EnclaveTask<double>(
     _enclaveTaskTypeId,
     marker,
     t,

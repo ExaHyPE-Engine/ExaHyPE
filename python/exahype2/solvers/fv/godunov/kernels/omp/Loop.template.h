@@ -73,13 +73,13 @@
 
   {% if GPU == "omp" %}
   // TODO: We need to get rid of these memory allocations and the memory copies below.
-  double* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
+  {{COMPUTE_PRECISION}}* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
     tarch::MemoryLocation::Heap,
     targetDevice
   );
 
-  double* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
+  {{COMPUTE_PRECISION}}* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
     tarch::MemoryLocation::Heap,
     targetDevice
@@ -93,8 +93,8 @@
     );
   }
   {% else %}
-  double** const QIns = patchData.QIn;
-  double** const QOuts = patchData.QOut;
+  {{COMPUTE_PRECISION}}** const QIns = patchData.QIn;
+  {{COMPUTE_PRECISION}}** const QOuts = patchData.QOut;
   {% endif %}
 
   {% if GPU == "omp" %}
@@ -113,11 +113,11 @@
   {% endif %}
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
     {% if GPU == "omp" %}
-    const double* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
-    double* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
+    const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
+    {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
     {% else %}
-    const double* const QIn = QIns[patchIndex];
-    double* const QOut      = QOuts[patchIndex];
+    const {{COMPUTE_PRECISION}}* const QIn = QIns[patchIndex];
+    {{COMPUTE_PRECISION}}* const QOut      = QOuts[patchIndex];
     {% endif %}
 
     const tarch::la::Vector<Dimensions, double> patchCentre {

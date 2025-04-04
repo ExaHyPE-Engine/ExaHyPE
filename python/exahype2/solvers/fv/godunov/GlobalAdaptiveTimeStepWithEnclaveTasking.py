@@ -130,6 +130,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
             source_term_implementation=self._source_term_implementation,
             adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
+            precision=self._compute_precision
         )
         abstract_solver_definitions = AbstractSolverDefinitions(
             flux_implementation=self._flux_implementation,
@@ -140,6 +141,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
             source_term_implementation=self._source_term_implementation,
             adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
+            precision=self._compute_precision
         )
         solver_declarations = SolverDeclarations(
             flux_implementation=self._flux_implementation,
@@ -150,6 +152,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
             source_term_implementation=self._source_term_implementation,
             adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
+            precision=self._compute_precision
         )
         solver_definitions = SolverDefinitions(
             flux_implementation=self._flux_implementation,
@@ -160,6 +163,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking(EnclaveTasking):
             source_term_implementation=self._source_term_implementation,
             adjust_solution_implementation=self._adjust_solution_implementation,
             pde_terms_without_state=self._pde_terms_without_state,
+            precision=self._compute_precision
         )
 
         self._abstract_solver_user_declarations = (

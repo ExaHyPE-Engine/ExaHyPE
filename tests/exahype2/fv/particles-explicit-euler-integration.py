@@ -98,17 +98,14 @@ project.set_global_simulation_parameters(
         pbc_Z,
     ],
 )
-# Add solver to project
+
 project.add_solver(fvSolver)
 project.set_output_path("solutions")
 
-# Set build mode and Peano4 installation path
 build_mode = peano4.output.CompileMode.Release
 project.set_Peano4_installation(peano_dir_, build_mode)
 
 # Set up Tracer particles
-
-
 particle_attributes_ = {
     "unknowns": {
         "rho": 1,
@@ -169,6 +166,11 @@ tracing_action_set.descend_invocation_order = (
 )
 project.add_action_set_to_timestepping(tracing_action_set)
 project.add_action_set_to_initialisation(tracing_action_set)
+
+project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    "new ::exahype2::LoadBalancingConfiguration()",
+)
 
 project = project.generate_Peano4_project("False")
 project.build(make_clean_first=True)

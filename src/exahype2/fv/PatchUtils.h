@@ -2,11 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/utils/Loop.h"
+
+#include "toolbox/blockstructured/Enumeration.h"
 
 #include <vector>
 
@@ -242,8 +247,9 @@ namespace exahype2 {
      * @param minValues Is either a nullptr or it points to a double array with
      *   exactly unknowns+auxiliaryVariables entries
      */
+    template<typename T>
     void validatePatch(
-      const double* __restrict__ Q,
+      const T* __restrict__ Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
@@ -261,8 +267,9 @@ namespace exahype2 {
      *
      * Assumes all data are held as AoS.
      */
+    template<typename T>
     std::string plotPatch(
-      const double* __restrict__ Q,
+      const T* __restrict__ Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
@@ -270,8 +277,9 @@ namespace exahype2 {
       bool   prettyPrint = false
     );
 
+    template<typename T>
     std::string plotPatchOverlap(
-      const double* __restrict__ Q,
+      const T* __restrict__ Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
@@ -287,14 +295,17 @@ namespace exahype2 {
      *
      * @param isRightLayer
      */
+    template<typename T>
     void copyHalfOfHalo(
       int    unknownsPlusAuxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
       int    haloSize,  // same as overlap
       int    normal,
       bool   isRightLayer,
-      const double* __restrict__   srcQ,
-      double* __restrict__         destQ
+      const T* __restrict__   srcQ,
+      T* __restrict__         destQ
     );
   }
 }
+
+#include "PatchUtils.cpph"

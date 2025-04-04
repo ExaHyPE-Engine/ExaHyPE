@@ -2,39 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PatchUtils.h"
 
-#include "tarch/NonCriticalAssertions.h"
-#include "tarch/Assertions.h"
-#include "tarch/la/la.h"
-
-#include "peano4/utils/Loop.h"
-
-#include "toolbox/blockstructured/Enumeration.h"
-
-
-
-void exahype2::fv::copyHalfOfHalo(
-  int    unknownsPlusAuxiliaryVariables,
-  int    numberOfGridCellsPerPatchPerAxis,
-  int    haloSize,  // same as overlap
-  int    normal,
-  bool   isRightLayer,
-  const double* __restrict__   srcQ,
-  double* __restrict__         destQ
-) {
-  dfore(k,numberOfGridCellsPerPatchPerAxis,normal,0) {
-    for (int i= (isRightLayer ? haloSize : 0); i< (isRightLayer ? 2*haloSize : haloSize); i++) {
-      tarch::la::Vector<Dimensions,int> overlapCell = k;
-      overlapCell(normal) = i;
-      const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfGridCellsPerPatchPerAxis,haloSize,normal);
-      for (int j=0; j<unknownsPlusAuxiliaryVariables; j++) {
-        destQ[index*unknownsPlusAuxiliaryVariables+j] = srcQ[index*unknownsPlusAuxiliaryVariables+j];
-      }
-    }
-  }
-
-}
-
-
 double  exahype2::fv::getVolumeLength(
   const tarch::la::Vector<2,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch
@@ -70,7 +37,8 @@ namespace {
    * inserts the commas. The plotter is not thread-safe and not
    * particularly sophisticated.
    */
-  std::string prettyFormat( double value, bool isFirst ) {
+  template<typename T>
+  std::string prettyFormat( T value, bool isFirst ) {
     static int previousZeroDataEntries = 0;
 
     // first entry equals zero
@@ -104,9 +72,9 @@ namespace {
   }
 }
 
-
+template <typename T>
 std::string exahype2::fv::plotPatch(
-  const double* __restrict__ Q,
+  const T* __restrict__ Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
@@ -174,10 +142,12 @@ std::string exahype2::fv::plotPatch(
   return result.str();
 }
 
+template std::string exahype2::fv::plotPatch<float>(const float* __restrict__, int, int, int, int, bool);
+template std::string exahype2::fv::plotPatch<double>(const double* __restrict__, int, int, int, int, bool);
 
-
+template <typename T>
 std::string exahype2::fv::plotPatchOverlap(
-  const double* __restrict__ Q,
+  const T* __restrict__ Q,
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
@@ -259,62 +229,5 @@ std::string exahype2::fv::plotPatchOverlap(
   return result.str();
 }
 
-
-void exahype2::fv::validatePatch (
-  const double *__restrict__ Q, int unknowns,
-  int auxiliaryVariables,
-  int numberOfVolumesPerAxisInPatch, int haloSize,
-  const std::string &location,
-  bool   triggerNonCriticalAssertion,
-  double* minValues,
-  double* maxValues
-) {
-  #if PeanoDebug>1 && !defined(GPUOffloadingOMP)
-  static tarch::logging::Log _log( "exahype2::fv" );
-  logTraceInWith5Arguments( "validatePatch(...)", unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, location );
-  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
-  dfor (k,PatchSize) {
-    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
-
-    int outsidePatchAlongCoordinateAxis = 0;
-    for (int d=0; d<Dimensions; d++) {
-      if (k(d)<haloSize) outsidePatchAlongCoordinateAxis++;
-      if (k(d)>=haloSize+numberOfVolumesPerAxisInPatch) outsidePatchAlongCoordinateAxis++;
-    }
-    bool isDiagonal = outsidePatchAlongCoordinateAxis>1;
-
-    if (haloSize==0 or not isDiagonal) {
-      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-        const int entry = index+i;
-        bool dataValid = true;
-        if (minValues!=nullptr and minValues[i]>Q[entry]) {
-          dataValid = false;
-        }
-        if (maxValues!=nullptr and maxValues[i]<Q[entry]) {
-          dataValid = false;
-        }
-        if (triggerNonCriticalAssertion) {
-          nonCriticalAssertion11(
-            Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            Q[entry], unknowns,
-            auxiliaryVariables,
-            isDiagonal, haloSize, entry,
-            numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
-          assertion( Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid );
-        }
-        else {
-          assertion12(
-            Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            Q[entry], unknowns,
-            auxiliaryVariables,
-            isDiagonal, haloSize, i,
-            numberOfVolumesPerAxisInPatch, haloSize, k, i, location,
-            plotPatch(Q,unknowns,auxiliaryVariables,numberOfVolumesPerAxisInPatch,haloSize)
-          );
-        }
-      }
-    }
-  }
-  logTraceOut( "validatePatch(...)" );
-  #endif
-}
+template std::string exahype2::fv::plotPatchOverlap<float>(const float* __restrict__, int, int, int, int, int, bool);
+template std::string exahype2::fv::plotPatchOverlap<double>(const double* __restrict__, int, int, int, int, int, bool);

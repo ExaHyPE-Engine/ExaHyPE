@@ -1,0 +1,159 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template<typename T>
+const std::string exahype2::EnclaveBookkeeping<T>::MemoryAllocationsInLookupTableIdentifier(
+  "exahype2::EnclaveBookkeeping<T>::memory-allocations"
+);
+
+template<typename T>
+exahype2::EnclaveBookkeeping<T>& exahype2::EnclaveBookkeeping<T>::getInstance() {
+  static EnclaveBookkeeping singleton;
+  return singleton;
+}
+
+template<typename T>
+void exahype2::EnclaveBookkeeping<T>::dumpStatistics() {
+  logInfo("dumpStatistics()", "active tasks=" << exahype2::EnclaveTask<T>::getNumberOfActiveTasks());
+
+  std::ostringstream finishedTasksMsg;
+  finishedTasksMsg << "(#" << _finishedTasks.size();
+  for (auto& p : _finishedTasks) {
+    finishedTasksMsg << "," << p.first << "->" << p.second.toString();
+  }
+  finishedTasksMsg << ")";
+  logInfo("dumpStatistics()", "finished tasks=" << finishedTasksMsg.str());
+}
+
+template<typename T>
+std::size_t exahype2::EnclaveBookkeeping<T>::getNumberOfFinishedTasks() const {
+  return _finishedTasks.size();
+}
+
+template<typename T>
+void exahype2::EnclaveBookkeeping<T>::cancelTask(int taskNumber) {
+  tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
+
+  if (_finishedTasks.count(taskNumber) > 0) {
+    Entry storedData = _finishedTasks.at(taskNumber);
+    _finishedTasks.erase(taskNumber);
+    tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
+    exahype2::EnclaveTask<T>::releaseTaskNumber(taskNumber);
+  } else {
+    _tasksThatHaveToBeCancelled.insert(taskNumber);
+  }
+}
+
+template<typename T>
+exahype2::EnclaveBookkeeping<T>::Entry exahype2::EnclaveBookkeeping<T>::waitForTaskToTerminateAndReturnResult(int taskNumber) {
+  tarch::multicore::waitForTask(taskNumber);
+
+  tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
+  logDebug(
+    "waitForTaskToTerminateAndReturnResult(int)",
+    "release task " << taskNumber <<
+    ", number of finished tasks: " << _finishedTasks.size() <<
+    ", number of active tasks: " << exahype2::EnclaveTask<T>::getNumberOfActiveTasks()
+  );
+
+  if (_finishedTasks.count(taskNumber) != 1) {
+    logWarning(
+      "waitForTaskToTerminateAndReturnResult(int)",
+      "trying to fetch result that has already been fetched. Returning without solution."
+    );
+    return Entry(0, nullptr, -1);
+  }
+
+  assertionEquals3(_finishedTasks.count(taskNumber), 1, taskNumber, _finishedTasks.count(taskNumber), exahype2::EnclaveTask<T>::getNumberOfActiveTasks());
+  Entry storedData = _finishedTasks.at(taskNumber);
+  _finishedTasks.erase(taskNumber);
+  finishedTasksLock.free();
+
+  exahype2::EnclaveTask<T>::releaseTaskNumber(taskNumber);
+
+  return storedData;
+}
+
+template<typename T>
+void exahype2::EnclaveBookkeeping<T>::waitForTaskAndDiscardResult(int taskNumber) {
+  logTraceInWith1Argument("waitForTaskAndDiscardResult(int)", taskNumber);
+
+  Entry storedData = waitForTaskToTerminateAndReturnResult(taskNumber);
+  // TODO: Is the freeMemory below dangerous if we handle target memory and enclave memory regions as the same?
+  tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
+
+  logTraceOut("waitForTaskAndDiscardResult(int)");
+}
+
+template<typename T>
+void exahype2::EnclaveBookkeeping<T>::waitForTaskToTerminateAndCopyResultOver(
+  int taskNumber, T* destination, double& maxEigenvalue
+) {
+  logTraceInWith1Argument("waitForTaskToTerminateAndCopyResultOver(int,T*,double&)", taskNumber);
+
+  Entry storedData = waitForTaskToTerminateAndReturnResult(taskNumber);
+  if (not storedData.data) return;
+
+  if (destination != storedData.data) {
+    //#pragma omp taskwait depend(in: storedData.data)
+    std::copy_n(storedData.data, storedData.numberOfResultValues, destination);
+    //tarch::accelerator::MemoryManager(storedData.data, 0);
+    tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
+  } else {
+    logDebug(
+      "waitForTaskToTerminateAndCopyResultOver(int,T*,double&)",
+      "target memory and enclave memory region seem to be the same, so no need to free memory on bookkeeping's side"
+    )
+  }
+
+  maxEigenvalue = storedData.maxEigenvalue;
+
+  logTraceOutWith2Arguments(
+    "waitForTaskToTerminateAndCopyResultOver(int,T*,double&)", maxEigenvalue, storedData.toString()
+  );
+}
+
+template<typename T>
+void exahype2::EnclaveBookkeeping<T>::bookmarkFinishedTask(
+  int taskNumber, int numberOfResultValues, T* data, double maxEigenvalue
+) {
+  logDebug("bookmarkFinishedTask(...)", "task " << taskNumber << " has terminated or will be terminated soon. Bookkeep results");
+
+  tarch::multicore::Lock finishedTasksLock(_finishedTasksSemaphore);
+  assertionEquals1(_finishedTasks.count(taskNumber), 0, taskNumber);
+  if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
+    logWarning("bookmarkFinishedTask(...)", "task entry for task " << taskNumber << " does exist already");
+    _tasksThatHaveToBeCancelled.erase(taskNumber);
+    tarch::freeMemory(data, tarch::MemoryLocation::Heap);
+    //delete[] data;
+    finishedTasksLock.free();
+    exahype2::EnclaveTask<T>::releaseTaskNumber(taskNumber);
+  } else {
+    logDebug(
+      "bookmarkFinishedTask(...)",
+      "bookmarked new outcome for task " << taskNumber << " at memory location " << data <<
+      ", number of finished tasks: " << _finishedTasks.size() <<
+      ", number of active tasks: " << exahype2::EnclaveTask<T>::getNumberOfActiveTasks()
+    );
+    auto  oldBucketCount = _finishedTasks.bucket_count();
+    Entry newEntry(numberOfResultValues, data, maxEigenvalue);
+    _finishedTasks.insert(std::pair<int, Entry>(taskNumber, newEntry));
+    if (_finishedTasks.bucket_count() > oldBucketCount) {
+      tarch::logging::Statistics::getInstance().inc(MemoryAllocationsInLookupTableIdentifier);
+    }
+    finishedTasksLock.free();
+  }
+}
+
+template<typename T>
+exahype2::EnclaveBookkeeping<T>::Entry::Entry(int numberOfResultValues_, T* data_, double maxEigenvalue_):
+  numberOfResultValues(numberOfResultValues_),
+  data(data_),
+  maxEigenvalue(maxEigenvalue_) {}
+
+template<typename T>
+std::string exahype2::EnclaveBookkeeping<T>::Entry::toString() const {
+  std::ostringstream msg;
+  msg << "(#" << numberOfResultValues << ",\\lambda_max=" << maxEigenvalue << ")";
+  return msg.str();
+}

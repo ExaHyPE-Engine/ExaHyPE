@@ -57,20 +57,20 @@
   __global__ static void
   {% if DIMENSIONS==3 %} __launch_bounds__(512) {% else %} __launch_bounds__(256) {% endif %}
   kernel(
-    const double* const __restrict__ QIns,
-    double* const __restrict__       QOuts,
-    const double* const __restrict__ patchCentres,
-    const double* const __restrict__ patchSizes,
-    const double* const __restrict__ timeStamps,
-    const double* const __restrict__ timeStepSizes
+    const {{STORAGE_PRECISION}}* const __restrict__ QIns,
+    {{STORAGE_PRECISION}}* const __restrict__       QOuts,
+    const double* const __restrict__                patchCentres,
+    const double* const __restrict__                patchSizes,
+    const double* const __restrict__                timeStamps,
+    const double* const __restrict__                timeStepSizes
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     ,
-    double* const __restrict__     maxEigenvalues
+    {{COMPUTE_PRECISION}}* const __restrict__     maxEigenvalues
     {% endif %}
   ) {
     const int patchIndex    = blockIdx.x;
-    const double* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
-    double* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
+    const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
+    {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
     const tarch::la::Vector<Dimensions, double> patchCentre {
       patchCentres[patchIndex * {{DIMENSIONS}}],
@@ -99,7 +99,7 @@
     {{ loopOverVolumes() | indent(2) }}
 
     {% if COMPUTE_MAX_EIGENVALUE==True %}
-    __shared__ double sdata[{% if DIMENSIONS==3 %} 512 {% else %} 256 {% endif %}];
+    __shared__ {{COMPUTE_PRECISION}} sdata[{% if DIMENSIONS==3 %} 512 {% else %} 256 {% endif %}];
     {% if DIMENSIONS==3 %}
     const int tid = threadIdx.z * (blockDim.x * blockDim.y) + threadIdx.y * blockDim.x + threadIdx.x;
     {% else %}
@@ -123,12 +123,12 @@
   const int numberOfPatches = patchData.numberOfCells;
 
   // TODO: We need to get rid of these memory allocations and the memory copies below.
-  double* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
+  {{COMPUTE_PRECISION}}* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
     tarch::MemoryLocation::DeviceHeap,
     targetDevice
   );
-  double* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
+  {{COMPUTE_PRECISION}}* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
     tarch::MemoryLocation::DeviceHeap,
     targetDevice
@@ -154,7 +154,7 @@
     targetDevice
   );
   {% if COMPUTE_MAX_EIGENVALUE==True %}
-  double* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
+  {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches,
     tarch::MemoryLocation::DeviceHeap,
     targetDevice
@@ -229,7 +229,7 @@
   }
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
-  double* cubMaxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
+  {{COMPUTE_PRECISION}}* cubMaxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     1,
     tarch::MemoryLocation::DeviceHeap,
     targetDevice

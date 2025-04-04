@@ -90,7 +90,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           newQ
         );
         
-        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
+        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping<double>::SkeletonTask );
       }
       else {
         assertion( marker.willBeEnclaveCell() );
@@ -116,7 +116,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         );
         
         if (predecessorEnclaveTaskNumber>=0) {
-          ::exahype2::EnclaveTask::releaseTaskNumber(predecessorEnclaveTaskNumber);
+          ::exahype2::EnclaveTask<double>::releaseTaskNumber(predecessorEnclaveTaskNumber);
         }
   
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
@@ -224,7 +224,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
-      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping<double>::NoEnclaveTaskNumber );
     }
   }
   {% endfor %}

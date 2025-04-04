@@ -12,7 +12,7 @@
 #include <thread>
 #include <chrono>
 
-class NonFusableEnclaveTask : public exahype2::EnclaveTask {
+class NonFusableEnclaveTask : public exahype2::EnclaveTask<double> {
 public:
   static void copyInputToOutput(double* input, double* output) {
     assertion(input);
@@ -60,8 +60,8 @@ void exahype2::tests::EnclaveBookkeepingTest::testSpawnAndMergeNonFusableEnclave
     std::vector<double> results(taskLoopIterations * numberOfNonFusableEnclaveTasksToSpawn, -1.0);
 
     // Ensure bookkeeping assertions are valid at the start
-    validateEquals(EnclaveTask::getNumberOfActiveTasks(), 0);
-    validateEquals(EnclaveBookkeeping::getInstance().getNumberOfFinishedTasks(), 0);
+    validateEquals(EnclaveTask<double>::getNumberOfActiveTasks(), 0);
+    validateEquals(EnclaveBookkeeping<double>::getInstance().getNumberOfFinishedTasks(), 0);
 
     #if defined(SharedOMP)
     #pragma omp parallel
@@ -89,14 +89,14 @@ void exahype2::tests::EnclaveBookkeepingTest::testSpawnAndMergeNonFusableEnclave
         // Merge results
         double result = -1.0;
         double maxEigenvalue = -1.0;
-        EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver(taskNumbers.at(globalIndex), &result, maxEigenvalue);
+        EnclaveBookkeeping<double>::getInstance().waitForTaskToTerminateAndCopyResultOver(taskNumbers.at(globalIndex), &result, maxEigenvalue);
         results.at(globalIndex) = result;
       }
     }
 
     // Ensure bookkeeping assertions are valid at the end, i.e. all tasks have been merged
-    validateEquals(EnclaveTask::getNumberOfActiveTasks(), 0);
-    validateEquals(EnclaveBookkeeping::getInstance().getNumberOfFinishedTasks(), 0);
+    validateEquals(EnclaveTask<double>::getNumberOfActiveTasks(), 0);
+    validateEquals(EnclaveBookkeeping<double>::getInstance().getNumberOfFinishedTasks(), 0);
 
     for (int i = 0; i < results.size(); i++) {
       validateEqualsWithParams2(results.at(i), static_cast<double>(i), i, taskNumbers.at(i));

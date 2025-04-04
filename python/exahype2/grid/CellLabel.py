@@ -62,7 +62,7 @@ class UpdateCellLabel(ActionSet):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
       result += """
-  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping<double>::NoEnclaveTaskNumber );
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setAMDCriterionEvaluatedThroughoutGridConstruction( false );
   if ( tarch::la::equals(repositories::getMinTimeStamp(),0.0) ) {
     fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  0.0 );

@@ -31,8 +31,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      timeStamp,
   double                                      timeStepSize,
-  double* __restrict__                        oldQWithHalo,
-  double* __restrict__                        newQ
+  {{STORAGE_PRECISION}}* __restrict__         oldQWithHalo,
+  {{STORAGE_PRECISION}}* __restrict__         newQ
 ) {
   {% if COMPUTE_MAX_EIGENVALUE %}
   const double maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
@@ -53,10 +53,10 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      timeStamp,
   double                                      timeStepSize,
-  double* __restrict__                        oldQWithHalo,
-  double* __restrict__                        newQ
+  {{STORAGE_PRECISION}}* __restrict__         oldQWithHalo,
+  {{STORAGE_PRECISION}}* __restrict__         newQ
 ):
-  ::exahype2::EnclaveTask(
+  ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
     _enclaveTaskTypeId,
     marker,
     timeStamp,
@@ -101,7 +101,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   logInfo("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks of type " << getTaskType() << " into one large enclave task on device " << targetDevice);
 
-  ::exahype2::CellData<double, double> patchData(otherTasks.size() + 1, ::tarch::MemoryLocation::Heap, targetDevice);
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}> patchData(otherTasks.size() + 1, ::tarch::MemoryLocation::Heap, targetDevice);
 
   int currentTask = 0;
   for (auto& p: otherTasks) {
@@ -111,8 +111,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = ::tarch::allocateMemory<double>(_numberOfResultValues, ::tarch::MemoryLocation::Heap, targetDevice);
-    //patchData.QOut[currentTask]        = reinterpret_cast<double*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof(double), ::tarch::MemoryLocation::Heap, targetDevice));
+    patchData.QOut[currentTask]        = ::tarch::allocateMemory<{{STORAGE_PRECISION}}>(_numberOfResultValues, ::tarch::MemoryLocation::Heap, targetDevice);
+    //patchData.QOut[currentTask]        = reinterpret_cast<{{STORAGE_PRECISION}}*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof({{STORAGE_PRECISION}}), ::tarch::MemoryLocation::Heap, targetDevice));
     delete p;
     currentTask++;
   }
@@ -122,8 +122,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   patchData.t[currentTask]            = _t;
   patchData.dt[currentTask]           = _dt;
   patchData.id[currentTask]           = _taskNumber;
-  patchData.QOut[currentTask]         = ::tarch::allocateMemory<double>(_numberOfResultValues, ::tarch::MemoryLocation::Heap, targetDevice);
-  //patchData.QOut[currentTask]         = reinterpret_cast<double*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof(double), ::tarch::MemoryLocation::Heap, targetDevice));
+  patchData.QOut[currentTask]         = ::tarch::allocateMemory<{{STORAGE_PRECISION}}>(_numberOfResultValues, ::tarch::MemoryLocation::Heap, targetDevice);
+  //patchData.QOut[currentTask]         = reinterpret_cast<{{STORAGE_PRECISION}}*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof({{STORAGE_PRECISION}}), ::tarch::MemoryLocation::Heap, targetDevice));
 
   const double maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
 
@@ -135,7 +135,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   for (int i = 0; i < patchData.numberOfCells; i++) {
     // Delete reconstructed data which has been allocated before spawning the tasks.
     ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::Heap, targetDevice);
-    ::exahype2::EnclaveBookkeeping::getInstance().bookmarkFinishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], maxEigenvalue);
+    ::exahype2::EnclaveBookkeeping<{{STORAGE_PRECISION}}>::getInstance().bookmarkFinishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], maxEigenvalue);
   }
 
   // Don't rerun, so return false.
