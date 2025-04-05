@@ -8,9 +8,11 @@ int peano4::parallel::getTaskType(const std::string&  className) {
   static int taskTypeCounter = -1;
   taskTypeCounter++;
 
+  #if PeanoDebug>0
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
     std::cout << "assign task " << className << " id " << taskTypeCounter  << std::endl;
   }
+  #endif
 
   return taskTypeCounter;
 }

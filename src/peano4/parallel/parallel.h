@@ -20,6 +20,8 @@ namespace peano4 {
      * these types, I use a simple factory mechanism (aka this routine) to hand
      * out integer types.
      *
+     * ## Terminal output
+     *
      * Originally, I worked with logInfo() here to dump some info about the
      * used task types. However, some tasks ask for their id at start-up
      * through static variables. At this point, the logging might not be up,
