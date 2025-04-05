@@ -21,6 +21,7 @@ parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Smoothing parameter for cells")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Smoothing parameter for faces")
+parser.add_argument("-nodes", "--nodes_distribution", dest="nodes_distribution",  default="GaussLobatto", choices=["GaussLobatto","GaussLegendre","Equidistant"], help="Distribution of nodal points")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
@@ -28,15 +29,20 @@ project = mghype.matrixfree.api.Project( project_name = "DGTwoGrid",
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 
-nodes_distribution = 'GaussLobatto' # 'GaussLobatto' or 'GaussLegendre'
+basis_dict = {
+  "GaussLobatto":  mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisGaussLobatto(dim=args.dimensions),
+  "GaussLegendre": mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisGaussLegendre(dim=args.dimensions),
+  "Equidistant":   mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisEquidistant(dim=args.dimensions)
+}
+dg_basis = basis_dict[args.nodes_distribution]
 
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.MatrixFreeDGPoisson2dPenaltyMatrixGenerator(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
   2,
-  nodes_distribution
+  basis=dg_basis
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
@@ -116,13 +122,14 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMGSingleThr
                                                     plot_predicate = "false" # dont's save patch files for CG steps
                                                     )
 
+
 #! [Coupling]
 # p-intergrid operators for DG
 intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
-  dim = args.dimensions,
   coarse_order = 1,
   fine_order = args.poly_degree,
-  nodes_distribution = nodes_distribution
+  coarse_basis = dg_basis,
+  fine_basis   = dg_basis,
   )
 prolongation_matrix = [intergrid_operators.prolongation()]
 prolongation_matrix_scaling = [0]

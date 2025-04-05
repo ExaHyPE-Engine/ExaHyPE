@@ -1,20 +1,14 @@
 import numpy as np
 from .finiteelement import DGScalarElement
-from .nodal_basis import NodalBasisGaussLobatto, NodalBasisGaussLegendre
 
 class IntergridOperators:
 
-    def __init__(self, dim, coarse_order, fine_order, nodes_distribution):
+    def __init__(self, coarse_order, fine_order, coarse_basis, fine_basis):
+        
         self.coarse_order = coarse_order
         self.fine_order = fine_order
-
-        self.coarse_basis = NodalBasisGaussLobatto(dim) # Coarse basis is always Gauss-Lobatto
-        if nodes_distribution == 'GaussLobatto':
-            self.fine_basis = NodalBasisGaussLobatto(dim)
-        elif nodes_distribution == 'GaussLegendre':
-            self.fine_basis = NodalBasisGaussLegendre(dim)
-        else:
-            raise ValueError(f"Unknown nodes distribution {nodes_distribution}")
+        self.coarse_basis = coarse_basis
+        self.fine_basis = fine_basis
         
         self.coarse_element = DGScalarElement(coarse_order, self.coarse_basis)
         self.fine_element   = DGScalarElement(fine_order,   self.fine_basis)
