@@ -143,9 +143,19 @@ void tarch::multicore::spawnTask(
 
   if (task->canFuse()) {
     taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
-  } else {
+  }
+  else {
     native::spawnTask(task, inDependencies, taskNumber);
   }
+}
+
+
+void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+  myTask->fuse(tasksOfSameType, device);
+  for (auto& p: tasksOfSameType) {
+    delete p;
+  }
+  delete myTask;
 }
 
 
@@ -157,15 +167,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& 
     }
     delete p;
   }
-}
-
-
-void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  myTask->fuse(tasksOfSameType, device);
-  for (auto& p: tasksOfSameType) {
-    delete p;
-  }
-  delete myTask;
 }
 
 
