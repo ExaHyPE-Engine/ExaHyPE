@@ -39,6 +39,18 @@ public:
     RunParallel
   };
 
+  /**
+   * Fuse instruction
+   *
+   * Represent if and how to fuse tasks:
+   *
+   * @param device Which device is to be used. Can be Host.
+   * @param minTasks How many tasks are to be used at least. Can be zero, which
+   *   means we always have to fuse, but should not be negative.
+   * @param maxTasks How many tasks are to be fused at most. Has to be bigger
+   *   than zero. If you set it to one however, you disable fusion and tasks go
+   *   straight into the runtime system as proper tasks.
+   */
   struct FuseInstruction {
     int device;
     int minTasks;
