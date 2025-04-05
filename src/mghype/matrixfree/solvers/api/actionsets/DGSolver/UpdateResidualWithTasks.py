@@ -55,22 +55,20 @@ class UpdateResidualWithTasks(ActionSet):
      * could set residualPointer to zero and then accumulate the outcome 
      * directly into this smart pointer.
      */
-    auto updateResidualFunctor = [rhsPointer, solutionPointer, residualPointer, marker]() mutable -> bool {
+    auto updateResidualFunctor = [rhsPointer, solutionPointer, residualPointer, marker]() mutable -> void {
       tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
         repositories::{{SOLVER_INSTANCE}}.applyRhsMatrix( marker.x(), marker.h(), rhsPointer.toVector() );
       
       r = r - repositories::{{SOLVER_INSTANCE}}.applyLocalAssemblyMatrix(marker.x(), marker.h(), solutionPointer.toVector() );
       
       residualPointer = r;
-      
-      return false;
     };
 
 
     /**
      * Issue the calculation of the inverse of the system matrix
      */
-    auto invertMatrixFunctor = [inverseOperator, marker, OperatorSize]() mutable -> bool {
+    auto invertMatrixFunctor = [inverseOperator, marker, OperatorSize]() mutable -> void {
       std::memcpy(
         inverseOperator,
         repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(
@@ -79,17 +77,18 @@ class UpdateResidualWithTasks(ActionSet):
         ).data(),
         sizeof(double)*OperatorSize
       );
-      return false;
     };
 
 
+    static int residualTaskType     = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}::UpdateResidualTask");
+    static int invertMatrixTaskType = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}::InvertTask");
     tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multicore::TaskWithCopyOfFunctor(
-      tarch::multicore::Task::DontFuse,
+      residualTaskType,       // tarch::multicore::Task::DontFuse -> wird net abgefragt bisher
       tarch::multicore::Task::DefaultPriority,
       updateResidualFunctor
     );  
     tarch::multicore::TaskWithCopyOfFunctor* invertMatrixTask = new tarch::multicore::TaskWithCopyOfFunctor(
-      tarch::multicore::Task::DontFuse,
+      invertMatrixTaskType,   // tarch::multicore::Task::DontFuse
       tarch::multicore::Task::DefaultPriority,
       invertMatrixFunctor
     );  
@@ -105,7 +104,7 @@ class UpdateResidualWithTasks(ActionSet):
       invertMatrixTask,
       tarch::multicore::NoInDependencies,
       taskNumber+1
-    );
+    ); 
 
     logTraceOut("touchCellFirstTime(...)");
   }
