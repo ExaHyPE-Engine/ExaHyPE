@@ -55,7 +55,7 @@ std::string tarch::multicore::Task::toString() const {
 tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
     int taskType,
     int priority,
-    const std::function<bool()>& taskFunctor
+    const std::function<void()>& taskFunctor
     #if PeanoDebug>0
     , const std::string&           taskDescription
     #endif

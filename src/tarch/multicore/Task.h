@@ -31,29 +31,52 @@ namespace tarch {
       /**
        * Construct task
        *
-       * ## Task types and task numbers
+       * ## Task types
        *
-       * Eachtask in Peano has to have a task type. All tasks that do the same,
+       * Each task in Peano has to have a task type. All tasks that do the same,
        * i.e. are of the same type, should have the same task type integer
        * marker. Peano's tarch can use multiple tasks of the same type and
        * fuse/batch them into one task call. However, if you don't want Peano
        * to even thing about task fusion, pass in DontFuse as argument for the
+       * type. In this case, the tasking subsystem becomes agnostic of the
        * type.
        *
-       * It is totally up to the user to manage the task type numbers. Peano
-       * for example offers a factory mechanism peano4::parallel::getTaskType()
-       * to create task types, which Peano applications should use. However,
-       * the generation of the task types is not baked into the tarch.
+       * In principle, it is totally up to the user to manage the task type
+       * numbers. However, they have to be unique. This quickly becomes
+       * challenging - notably if you combine multiple solvers. Therefore,
+       * Peano offers a factory mechanism peano4::parallel::getTaskType()
+       * to create task types, which Peano applications should use.
+       *
+       * If you have a proper task class, I recommend that you introduce a
+       * static field for this class and you initialise it with the outcome
+       * of peano4::parallel::getTaskType(). If there's one dedicated code
+       * line in your code which produces exclusively all the tasks of one
+       * type, you can also do
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * static int taskType = peano4::parallel::getTaskType("MyFancyClassName");
+       *
+       * ...
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       *
+       * ## Task numbers
        *
        * Some codes also have task numbers. They need this, if they have to
-       * identify tasks uniquely. Applications for that are task dependencies
-       * or tasks that are offloaded to other ranks. For the latter tasks, we
-       * have to match data sent back by another rank to the task that would
-       * have produced these results locally. Anyway, task numbers are not
-       * baked into the generic interface, as we don't need them for all tasks
-       * all the time, and I want to avoid that the construction of unique
-       * task numbers becomes too expensive. If you should need unique task
-       * numbers, I recommend you use reserveTaskNumber().
+       * identify unique tasks among a set of tasks of the same type.
+       * Applications for that are task that are offloaded to other ranks. For
+       * the latter tasks, we have to match data sent back by another rank to
+       * the task that would have produced these results locally. Anyway, task
+       * numbers are not baked into the generic interface, as we don't need
+       * them for all tasks all the time, and I want to avoid that the
+       * construction of unique task numbers becomes too expensive.
+       *
+       * Some extensions that work with task numbers provide factory methods
+       * for these, which is kind of good practice. ExaHyPE for example
+       * offers exahype2::EnclaveTask::reserveTaskNumber() which ensures that
+       * task numbers are unique among multiple threads and also recycled,
+       * such that they do not overflow.
+       *
        *
        * @see The overview page @ref page_tarch_multicore discusses different
        *        task types and how they are mapped onto realisations.
@@ -202,6 +225,55 @@ namespace tarch {
       TaskWithCopyOfFunctor(const TaskWithCopyOfFunctor&) = delete;
 
       /**
+       * Create new task from a functor
+       *
+       * This is the standard version of a task that should be used with a
+       * functor. Obviously, you can use the version without the copying,
+       * but if and only if you can ensure that the functor remains valid even
+       * once you leave the surrounding scope. This version copies the
+       * functor and hence is fine even if the functor had been created (via
+       * auto) directly before we construct the task. However, we implicitly
+       * assume that the functor's variables all remain available, too, i.e.
+       * we'd expect in most cases that the functor catches all surrounding
+       * variables through copying.
+       *
+       * ## Tasks capturing external data
+       *
+       * If tasks capture and alter external data, constructing them through a
+       * functor that's copied doesn't work, as C++ implicitly assumes that
+       * this functor has to be const. Therefore, you manually have to set
+       * the functor to mutuable. Here is an example from the multigrid
+       * extension:
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *     auto invertMatrixFunctor = [inverseOperator, marker, OperatorSize]() mutable -> void {
+       *      std::memcpy(
+       *         ...
+       *      );
+       *     };
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       *
+       * ## Fusion
+       *
+       * You can have functor tasks with generic  fusion. For this, simply
+       * pass in a proper unique task type, so we can distinguish tasks from
+       * each other. This is best done through a factor method as explained
+       * in the superclass.
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * static int taskType = peano4::parallel::getTaskType("MyFancyClassName");
+       *
+       * tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multicore::TaskWithCopyOfFunctor(
+       *   taskType,
+       *   tarch::multicore::Task::DefaultPriority,
+       *   [=](...) -> void {
+       *     ...
+       *   }
+       * );
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       *
        * @param taskType See superclass documentation
        * @param priority See superclass documentation
        * @param taskFunctor Functor that's then internally copied. Functor
@@ -210,7 +282,7 @@ namespace tarch {
       TaskWithCopyOfFunctor(
         int taskType,
         int priority,
-        const std::function<bool()>& taskFunctor
+        const std::function<void()>& taskFunctor
         #if PeanoDebug>0
         , const std::string&           taskDescription = ""
         #endif
