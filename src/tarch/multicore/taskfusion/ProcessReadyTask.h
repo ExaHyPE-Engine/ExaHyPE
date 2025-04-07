@@ -26,7 +26,13 @@ namespace tarch {
  * which runs before. That is, we know that an instance of LogReadyTask has put
  * the task of interest into the ready queue identified by _taskQueue. We
  * therefore can now lock this queue and start the processing of the fused
- * tasks.
+ * tasks and then pick our particular task that we are responsible for. This way,
+ * we combine the fusion with an urgent return.
+ *
+ * However, it could happen that another process tasks has already grabbed the
+ * task we are responsible for yet has not finished processing this one yet.
+ * In this case, we try again until our key task is finally done.
+ *
  *
  * ## Task that we are responsible has no outgoing dependency
  *
@@ -37,12 +43,14 @@ namespace tarch {
  * ProcessReadyTask, but this is none of our problems.
  *
  *
- * process all tasks from the queue in one rush. The
- * task for which we have originally been created for through
- * tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence() must be
- * among the tasks in the queue, unless some other instance of ProcessReadyTask
- * has already handled it. If this is the case, we are fine. Let's do all the
- * other tasks that are in there and we are done.
+ * ## Statistics
+ *
+ * If we study the task queue and our task of interest is already completed,
+ * we return immediately. If this is not the case, we process tasks as described
+ * above, but we also bookkeep how many tasks we currently see in the queue.
+ *
+ * Such intelligence is used by tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence()
+ * to determine how quickly the task queues should be filled.
  */
 class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::Task {
   private:
@@ -61,25 +69,20 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
     bool hasTaskBeenProcessed() const;
 
     /**
-     * Omnipotent operation, i.e. you can call it as often as you want.
+     * Process tasks from queue
      *
-     * This routine is thread-safe.
+     * Very simple implementation running through a few basic checks:
+     *
+     * - Get the instructions for the task type at this point and also the
+     *   size of the queue.
+     * - Log the stats for the queue size
+     * - If we are ready to fuse, extract all the tasks to be fused from the
+     *   queue and hand them over to the fused routine.
+     * - Bookkeep that these tasks are now completed.
+     *
+     *
      */
-    void removeProcessedTask();
-
-    static void fuse(
-      ReadyFusableTasks* taskQueue,
-      int maxTasks,
-      int device
-    );
-
-    /**
-     * Search for the one task we are waiting for. If you find it, process it.
-     */
-    static void tryToProcessOneTask(
-      ReadyFusableTasks* taskQueue,
-      int                taskNumber
-    );
+    void processTasks();
   public:
     /**
      * Construct process ready task
@@ -94,21 +97,29 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
     /**
      * Run the task
      *
+     * Will return if and only if the task with taskNumber is completed.
+     * We ensure this by calling processTasks() which in turn invokes
+     * tryToProcessOneTask().
      *
+     * The routine checks if there's potential to fuse. If so, we call
+     * processTasks(). The check for potential can be done unsafely,
+     * as processTasks() will check once again, i.e. ensure that noone
+     * has grabbed tasks meanwhile. If we cannot fuse anymore, we'll
+     * only process the one single tasks that we are resonsible for
+     * (and therefore will afterwards terminate the while loop).
      */
     virtual void run() override;
 
     /**
-     * Process tasks from queue
+     * Search for the one task we are waiting for. If you find it, process it.
      *
-     * Very simple case distinction: We check if the queue is ready to fuse
-     * a couple of tasks. If so, we do this. Otherwise, we invoke tryToProcessOneTask(),
-     * i.e. we search for the specific task taskNumber and try to complete
-     * this one.
+     * @param taskNumber Task number that has to be processed. If you pass in
+     *   -1, then the routine simply takes the first task (if there is one) and
+     *   finishes that one.
      */
-    static void processTasks(
+    static void tryToProcessOneTask(
       ReadyFusableTasks* taskQueue,
-      int                taskNumber = -1
+      int                taskNumber
     );
 };
 

@@ -8,6 +8,7 @@
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/timing/GlidingAverageMeasurement.h"
 
 
 namespace tarch {
@@ -77,6 +78,7 @@ namespace tarch {
         FinishedTaskNumbers                        completedTaskNumbers;
         tarch::multicore::BooleanSemaphore         semaphore;
         int                                        type;
+        tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
 
         ReadyFusableTasks(int type_):
           type(type_) {}
@@ -85,8 +87,10 @@ namespace tarch {
       /**
        * Translate a single task into a sequence of (fusable tasks)
        *
-       * First ensure that there's a queue for this task type, and then
-       * create the two helper tasks that will actually handle the queue
+       * This routine makes a decision if to spawn a task as native task
+       * or to treat it as a fused task. The routine therefore contains all
+       * the fusion logic. If we fuse, it first ensure that there's a queue for this task type, and then
+       * creates the two helper tasks that will actually handle the queue
        * insertion and the task progression.
        *
        * ## Algorithmic steps
@@ -96,24 +100,32 @@ namespace tarch {
        * task type. After that, the pointer taskQueue is guaranteed to point
        * to the correct queue.
        *
+       * ### Tasks without task numbers (out-dependencies)
+       *
+       * We cannot split the whole scheduling into two parts, as we do not not
+       * have a dependency number. So we insert the tasks straightforward into
+       * the out queue. After that, we issue a postprocessing task to handle
+       * the fused tasks. This will have no outgoing dependencies either.
+       *
+       * ### Tasks without in-dependencies
+       *
+       * We know that we have out-dependencies (see previous case distinction),
+       * so we can directly insert the task into the queue and then spawn a
+       * ProcessReadyTask which handles this tasks and models the
+       * out-dependency.
+       *
+       * ### Tasks with in-dependencies
+       *
        * If the new fusable task has in-dependencies, we have to create a new
-       * instance of LogReadyTask and spawn it. If this is not the case, we can
-       * insert the task into the respective queue directly.
-       *
-       * If there are no out-dependencies, we can check if we can process all
-       * tasks directly as one fused chunk. If there are not enough tasks there
-       * yet, just skip it (see comments on processAllReadyTasks() which kind
-       * of flushes these type of tasks). If there are out-dependencies, we
-       * have to issue a ProcessReadyTask.
+       * instance of LogReadyTask and spawn it. We then immediately create
+       * a ProcessReadyTask instance with a dependency.
        *
        *
-       * ## Optimisation for tasks without in-dependencies
+       * ## Decision logic
        *
-       * If we have no-dependencies, we can directly insert task into the set
-       * of pending tasks and hence avoid the overhead associated with a
-       * dedicated read task.
-       *
-       * @return New task that is to be submitted instead.
+       * If the max number of tasks that should be fused is smaller one, the
+       * user has, by definition switched off all fusion. We therefore
+       * immediately spawn the task as a native one.
        */
       void translateFusableTaskIntoTaskSequence(
         Task*                        task,

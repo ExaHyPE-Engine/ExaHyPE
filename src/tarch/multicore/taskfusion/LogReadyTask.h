@@ -59,7 +59,12 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
     virtual void run() override;
 
     /**
+     * Insert a new ready task into the local queues
+     *
      * Is used by run() but we might also want to use it externally.
+     * Before we insert the actual task, we also remove the task's
+     * completedTaskNumbers, so noone thinks ahead of time that we are
+     * done already.
      */
     static void insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue );
 };
