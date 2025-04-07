@@ -1,5 +1,6 @@
 #include "ProcessReadyTask.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
@@ -9,65 +10,115 @@ const std::string tarch::multicore::taskfusion::ProcessReadyTask::ProcessFusedTa
 tarch::logging::Log tarch::multicore::taskfusion::ProcessReadyTask::_log( "tarch::multicore::taskfusion::ProcessReadyTask" );
 
 
-tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( ReadyFusableTasks* taskQueue ):
+tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber, ReadyFusableTasks* _taskQueue ):
   Task(DontFuse,DefaultPriority),
-  _taskQueue(taskQueue) {
+  _taskNumber( taskNumber ),
+  _taskQueue(_taskQueue) {
+  assertion( _taskQueue!=nullptr );
 }
 
 
-bool tarch::multicore::taskfusion::ProcessReadyTask::run() {
+bool tarch::multicore::taskfusion::ProcessReadyTask::hasTaskBeenProcessed() const {
   tarch::multicore::Lock lock(_taskQueue->semaphore);
-  const int initialQueueSize = _taskQueue->tasks.size();
-  int processedTasks = 0;
+  return _taskQueue->completedTaskNumbers.find( _taskNumber ) != _taskQueue->completedTaskNumbers.end();
+}
 
-  logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << initialQueueSize << ")" );
 
+void tarch::multicore::taskfusion::ProcessReadyTask::run() {
+  logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << _taskQueue->tasks.size() << ")" );
+
+  const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+
+  while ( not hasTaskBeenProcessed() ) {
+    if (instruction.minTasks>=_taskQueue->tasks.size()) {
+      processTasks();
+    }
+    else {
+      tryToProcessOneTask(_taskQueue, _taskNumber);
+    }
+  }
+}
+
+
+void tarch::multicore::taskfusion::ProcessReadyTask::tryToProcessOneTask(
+  ReadyFusableTasks* taskQueue,
+  int                taskNumber
+) {
+  Task* task = nullptr;
+
+  tarch::multicore::Lock lock(taskQueue->semaphore);
+  ReadyFusableTasks::Tasks::iterator p = taskQueue->tasks.begin();
   while (
-    not _taskQueue->tasks.empty()
+    p!=taskQueue->tasks.end()
     and
-    // exploit LIFO
-    processedTasks < initialQueueSize
+    p->second != taskNumber
+    and
+    taskNumber>=0
   ) {
-    // can change from call to call
-    tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+    p++;
+  }
 
-    Task* firstTask = *_taskQueue->tasks.begin();
+  if (p!=taskQueue->tasks.end()) {
+    task = p->first;
+    taskQueue->tasks.erase(p);
+  }
+  lock.free();
+
+  if (task!=nullptr) {
+    task->run();
+    delete task;
+    tarch::multicore::Lock lock(taskQueue->semaphore);
+    taskQueue->completedTaskNumbers.insert( taskNumber );
+  }
+}
+
+
+
+void tarch::multicore::taskfusion::ProcessReadyTask::processTasks() {
+  tarch::multicore::Lock lock(_taskQueue->semaphore);
+  const int queueSize = static_cast<int>(_taskQueue->tasks.size());
+  const double averageNumberOfPendingReadyTasksPerProcessTaskExecution = _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue();
+
+  _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.setValue(queueSize);
+  if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
+// @todo This will be a new feature likely   ...
+  }
+
+  const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+
+  if (instruction.minTasks <= queueSize and not _taskQueue->tasks.empty()) {
+    assertion( instruction.maxTasks>=1 );
+
+    auto [firstTask, firstTaskNumber] = *_taskQueue->tasks.begin();
     _taskQueue->tasks.pop_front();
 
-    int maxTasks = std::min(static_cast<int>(_taskQueue->tasks.size()), instruction.maxTasks-1);
-    ReadyFusableTasks::Tasks::iterator cutIterator = _taskQueue->tasks.begin();
-    std::advance(cutIterator, maxTasks);
-    ReadyFusableTasks::Tasks extractedTasks;
-    extractedTasks.splice(extractedTasks.end(), _taskQueue->tasks, _taskQueue->tasks.begin(), cutIterator);
+    std::list< Task* > extractedTasks;
+    std::list< int >   extractedTaskNumbers;
+    int                maxTasks = instruction.maxTasks;
 
-    logDebug( "run(...)", "max tasks on top of first task=" << maxTasks );
+    maxTasks--;
+    while (
+      maxTasks>0
+      and
+      not _taskQueue->tasks.empty()
+    ) {
+      auto [nextTask, nextTaskNumber] = *_taskQueue->tasks.begin();
+      _taskQueue->tasks.pop_front();
+      extractedTasks.push_back(nextTask);
+      extractedTaskNumbers.push_back(nextTaskNumber);
+      maxTasks--;
+    }
+    logDebug( "run(...)", "run " << extractedTasks.size() << " tasks on top of first task" );
 
     lock.free();
 
     tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
-    processedTasks += extractedTasks.size() + 1;
-
-    if (instruction.minTasks > static_cast<int>(_taskQueue->tasks.size()) + 1) {
-      logDebug( "run(...)", "here we go with " << extractedTasks.size() << " task(s) as we have to fuse at least " << instruction.minTasks << " task(s)" );
-      for (auto& task: extractedTasks) {
-        while (task->run()) {
-          tarch::multicore::Core::getInstance().yield();
-        }
-        delete task;
-      }
-      logDebug( "run(...)", "now run first task manually" );
-      while (firstTask->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
-      delete firstTask;
-    }
-    else {
-      logDebug( "run(...)", "fuse them" );
-      native::processFusedTask(firstTask, extractedTasks, instruction.device);
-    }
+    processFusedTask(firstTask, extractedTasks, instruction.device);
 
     lock.lock();
+    _taskQueue->completedTaskNumbers.insert( firstTaskNumber );
+    for (auto& p: extractedTaskNumbers) {
+      _taskQueue->completedTaskNumbers.insert( p );
+    }
   }
-
-  return false;
 }

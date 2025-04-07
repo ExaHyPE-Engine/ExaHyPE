@@ -51,4 +51,10 @@ public:
    */
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
     override;
+
+  virtual void updateFuseStatistics(
+    int    taskType,
+    int    queueSize,
+    double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+  ) override;
 };
