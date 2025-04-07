@@ -240,16 +240,13 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  // Administer in-dependencies incl self-dep
+  // Administer in-dependencies
   std::vector<TaskNumber>  iterableExistingInDepencencies;
   iterableExistingInDepencencies.reserve( inDependencies.size()+1 );
   for (auto inTask: inDependencies) {
     if ( canServeDependencyEntry(inTask) ) {
       iterableExistingInDepencencies.push_back(inTask);
     }
-  }
-  if (canServeDependencyEntry(taskNumber)) {
-    iterableExistingInDepencencies.push_back(taskNumber);
   }
 
   if (taskNumber == NoOutDependencies) {
@@ -285,7 +282,7 @@ void tarch::multicore::native::spawnTask(
     // Please consult canServeDependencyEntry() for this critical section
     #pragma omp critical (dependency_checks)
     {
-      #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+      #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(inout: dependencyTrackingBaseAddress[taskNumber]) untied
       {
         OTTER_TASK_START(task);
         job->run();
@@ -294,7 +291,7 @@ void tarch::multicore::native::spawnTask(
         #pragma omp atomic
         numberOfSpawnedTasks--;
         OTTER_TASK_END();
-      } // end of task
+      }
     } // end of critical section, i.e. now memory region might change again
   }
   else {
@@ -307,7 +304,12 @@ void tarch::multicore::native::spawnTask(
       ")"
     );
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
+
+    // @todo There might be a bug in current OpenMP implementations requiring us to switch to the second variant
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+    //#pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) if (0)
+    //{}
+
     OTTER_TASK_WAIT_END();
     job->run();
     delete job;
@@ -328,7 +330,10 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
   if (not iterableExistingInDepencencies.empty()) {
     logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
+    // @todo There might be a bug in current OpenMP versions, so we might have to use the second version
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+    //#pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) if (0)
+    //{}
     OTTER_TASK_WAIT_END();
   }
 }
