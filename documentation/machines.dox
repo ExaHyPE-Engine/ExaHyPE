@@ -11,17 +11,8 @@
 
 Hamilton 8 is Durham's internal supercomputer.
 It is a system powered by AMD EPYC processors.
-I nevertheless prefer the Intel toolchain on the machine:
+I nevertheless prefer the Intel toolchain on the machine.
 
-~~~~~~~~~~~~~~~~~~~~~~
-module purge
-module load oneapi
-export FLAVOUR_NOCONFLICT=1
-module load gcc
-module load intelmpi
-
-export I_MPI_CXX=icpx
-~~~~~~~~~~~~~~~~~~~~~~
 
 Hamilton's default oneapi module is built against a GCC version which is too old and lacks
 important features within its standard library.
@@ -33,9 +24,9 @@ Eventually, I end up with
 
 ~~~~~~~~~~~~~~~~~~~~~~
 module purge
-module load oneapi/2023.2
+module load oneapi/2024.2
 export FLAVOUR_NOCONFLICT=1
-module load gcc/13.xxx
+module load gcc/14.2
 module load intelmpi
 
 export I_MPI_CXX=icpx

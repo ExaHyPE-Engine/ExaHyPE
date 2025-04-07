@@ -77,6 +77,8 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const { return 0; }
 
-void tarch::multicore::Core::yield() {}
+void tarch::multicore::Core::yield() {
+  tarch::multicore::taskfusion::processAllReadyTasks();
+}
 
 #endif

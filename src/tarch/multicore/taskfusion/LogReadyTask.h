@@ -28,14 +28,23 @@ namespace tarch {
  */
 class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task {
   private:
-    Task*  _task;
-    ReadyFusableTasks* _taskQueue;
+    Task*               _task;
+    const int           _taskNumber;
+    ReadyFusableTasks*  _taskQueue;
 
     static const std::string SubmitFusedTasksStatisticsIdentifier;
 
     static tarch::logging::Log _log;
   public:
-    LogReadyTask( Task* task, ReadyFusableTasks* taskQueue );
+    /**
+     * Construct log read task
+     *
+     * @param task Task that is to be inserted into fusable queue as soon as
+     *             this task starts to run
+     * @param taskNumber out dependency (no) of outgoing task
+     * @param taskQueue  Reference to task queue
+     */
+    LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue );
 
     /**
      * Run task
@@ -47,5 +56,15 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * follow-up task of type ProcessReadyTask. Therefore, this is all to be
      * done here. No more work.
      */
-    virtual bool run() override;
+    virtual void run() override;
+
+    /**
+     * Insert a new ready task into the local queues
+     *
+     * Is used by run() but we might also want to use it externally.
+     * Before we insert the actual task, we also remove the task's
+     * completedTaskNumbers, so noone thinks ahead of time that we are
+     * done already.
+     */
+    static void insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue );
 };
