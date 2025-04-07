@@ -10,6 +10,7 @@ import peano4.dastgen2
 from abc import ABC
 import copy
 
+
 class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
     """!
     Test only the density calculation algorithmic step.
@@ -31,15 +32,12 @@ class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
     ):
         # Init the SPH particle
         super(testDensityCalculation, self).__init__(
-            name = name,
-            dimensions_hydro = dimensions_hydro,
-            cfl_factor = cfl_factor,
+            name=name,
+            dimensions_hydro=dimensions_hydro,
+            cfl_factor=cfl_factor,
             initial_time_step_size=initial_time_step_size,
-            particles_per_cell=particles_per_cell,
             min_h=min_h,
             max_h=max_h,
-            use_optimised_coalesced_memory_access_kernels=False,
-            asserts=False,
         )
 
         # Now overwrite the Algorithm and Init steps.
@@ -47,7 +45,6 @@ class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
         self._setup_initialisation_steps()
 
         return
-
 
     def _setup_algorithm_steps(self):
         """
@@ -67,8 +64,8 @@ class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
         """
 
         steps = [
-            self.algorithm_steps_dict["Density"],
-            self.algorithm_steps_dict["ReduceGlobalQuantities"],
+            self.algorithm_steps_dict["SPH_Density"],
+            self.algorithm_steps_dict["SPH_ReduceGlobalQuantities"],
         ]
 
         self._algorithm_steps = [copy.deepcopy(i) for i in steps]
@@ -91,5 +88,3 @@ class testDensityCalculation(SPHLeapfrogFixedSearchRadius):
         self._initialisation_steps = [copy.deepcopy(i) for i in initsteps]
 
         return
-
-

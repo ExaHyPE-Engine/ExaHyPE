@@ -406,6 +406,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
+  std::vector< bool >                           localParticleIsContainedInCell;
   
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
@@ -421,6 +422,15 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     
     // Construct the two local particle sets
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
+      std::bitset<TwoPowerD> mask = 0;
+      mask.set(TwoPowerD-i-1);
+      bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
+      assertionEquals4( 
+        isLocal, 
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.toString(), p->toString(), i, mask
+      );
+      localParticleIsContainedInCell.push_back( isLocal );
       localParticles.push_back( p );
     }
   }

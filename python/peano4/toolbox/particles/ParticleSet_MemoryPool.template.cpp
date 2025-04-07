@@ -9,7 +9,7 @@
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 
-// Template: peano4/toolbox/particles/ParticleSet_MemoryPool.template.cpp
+// Template: python/peano4/toolbox/particles/ParticleSet_MemoryPool.template.cpp
 
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
@@ -92,7 +92,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
     else {
-
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfAddedLocalParticlesAlongBoundary++;
       logDebug( "mergeWithParticle(...)",
@@ -102,6 +101,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
 
+    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
@@ -117,6 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       neighbourParticle->getX(),
       neighbourPartID,
       (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+      marker.x(),
       marker.h(),
       spacetreeId,
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
@@ -129,7 +130,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       marker.x(),
       marker.h(),
       spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")",
+      marker.x(),
+      marker.h()
     );
 
     // See docu of replace(): it will delete p
@@ -168,6 +171,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
 
+    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle );
+
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
@@ -176,7 +181,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       marker.x(),
       marker.h(),
       spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")",
+      marker.x(),
+      marker.h()
     );
   }
 }

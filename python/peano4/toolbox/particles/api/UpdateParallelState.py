@@ -190,7 +190,9 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
       marker.x(),
       marker.h(),
       _treeNumber,
-      "UpdateParallelState::__Template_TouchVertexFirstTime"
+      "UpdateParallelState::__Template_TouchVertexFirstTime",
+      marker.x(),
+      marker.h()
     );
   }
 }
@@ -236,6 +238,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       (*p)->getX(),
       partID,
       false, // particle is virtual
+      marker.x(),
       marker.h(),
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"

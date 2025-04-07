@@ -55,6 +55,12 @@ void toolbox::particles::assignmentchecks::tests::TestParticle::setDepth(
   _depth = depth;
 }
 
+void toolbox::particles::assignmentchecks::tests::TestParticle::setPartid(
+  const int partid
+) {
+  _partid = partid;
+}
+
 void toolbox::particles::assignmentchecks::tests::TestParticle::setIsLocal(
   const bool isLocal
 ) {

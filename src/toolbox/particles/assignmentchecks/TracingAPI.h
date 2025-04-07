@@ -64,6 +64,7 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& particleX,
         const int                                    particleID,
         bool                                         isLocal,
+        const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
@@ -207,6 +208,10 @@ namespace toolbox {
        * After we have dropped it, we will also insert the copy from the
        * global sieve set.
        *
+       * @param prevVertexX vertex coordinates of previous assiciation event.
+       * Needed to find particle in database after a detach event. If particle
+       * is new, it can be junk.
+       * @param prevVertexH same as prevVertexX, but for vertex size.
        * @param particleIsNew If we know that a particle is new, there's no
        *   need to search through the database.
        * @param reassignmentOnSameTreeDepthAllowed If true, assume our
@@ -225,6 +230,8 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace,
+        const tarch::la::Vector<Dimensions, double>& prevVertexX,
+        const tarch::la::Vector<Dimensions, double>& prevVertexH,
         bool                                         particleIsNew = false,
         bool reassignmentOnSameTreeDepthAllowed                    = false
       );
@@ -260,6 +267,7 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& particleX,
         const int                                    particleID,
         bool                                         isLocal,
+        const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
         const std::string&                           trace
