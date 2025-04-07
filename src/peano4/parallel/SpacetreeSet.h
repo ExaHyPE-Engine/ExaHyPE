@@ -66,7 +66,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
          * I create the copy of the observer, run the traversal on my local
          * tree _spacetree and finally destroy the local observer copy.
          */
-        virtual bool run() override;
+        virtual void run() override;
     };
 
   public:

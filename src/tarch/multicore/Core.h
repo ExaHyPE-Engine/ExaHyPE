@@ -132,6 +132,8 @@ public:
    * For most backends, this should not really be a yield(). It should
    * interrupt the current task, not the current thread, and tell the
    * runtime to continue with another task.
+   *
+   * Besides the yield, we should process pending fused tasks.
    */
   void yield();
 };
