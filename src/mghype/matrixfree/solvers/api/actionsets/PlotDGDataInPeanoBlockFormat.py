@@ -82,7 +82,7 @@ if (
 ) {
   tarch::mpi::Lock lock( _semaphore );
 
-  logTraceInWith1Argument("Plot::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
+  logTraceInWith1Argument("touchCellFirstTime(...)", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
   
   int patchIndex = _writer->plotPatch(
     marker.x()-0.5 * marker.h(),
@@ -101,7 +101,7 @@ if (
     currentDoF++;
   }
 
-  logTraceOut("touchCellFirstTime");
+  logTraceOut("touchCellFirstTime(...)");
 }
 """
 
