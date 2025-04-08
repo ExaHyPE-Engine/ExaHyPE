@@ -5,6 +5,7 @@ import peano4
 import mghype
 
 from .MatrixGenerator import MatrixGenerator
+from .blockmatrix.nodal_basis import NodalBasisGaussLobatto
 
 
 class DLinearMassIdentity(MatrixGenerator):
@@ -38,7 +39,9 @@ class DLinearMassIdentity(MatrixGenerator):
     self.unknowns_per_node = unknowns_per_node
     
     # Use matrices for DG Interior Penalty for Poisson equation as we only need the cell-cell and mass matrices, which are identical fro CG
-    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(self.poly_degree)
+    # For the correction equation, we always set Gauss-Lobatto nodes (even if Gauss-Legendre is used for the DG discretisation).
+    # This is because the CG dofs has to be alined with mesh vertices.  
+    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(self.poly_degree, basis=NodalBasisGaussLobatto(dim=dimensions)) # This is needed for CG correction equation
     
   @property
   def _cell_dofs(self):

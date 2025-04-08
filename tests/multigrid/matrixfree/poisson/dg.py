@@ -21,6 +21,7 @@ parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    typ
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
+parser.add_argument("-nodes", "--nodes_distribution", dest="nodes_distribution",  default="GaussLobatto", choices=["GaussLobatto","GaussLegendre","Equidistant"], help="Distribution of nodal points")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
@@ -30,15 +31,21 @@ project = mghype.matrixfree.api.Project( project_name = "DGPointwise",
                             )
 #! [Create project]
 
+basis_dict = {
+  "GaussLobatto":  mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisGaussLobatto(dim=args.dimensions),
+  "GaussLegendre": mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisGaussLegendre(dim=args.dimensions),
+  "Equidistant":   mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisEquidistant(dim=args.dimensions)
+}
+dg_basis = basis_dict[args.nodes_distribution]
 
 #! [Construct matrices]
-
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.MatrixFreeDGPoisson2dPenaltyMatrixGenerator(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
-  2
+  2,
+  basis=dg_basis
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
@@ -77,7 +84,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 0.01,
+  solver_tolerance = 1.0e-3,
   integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval
 )
 

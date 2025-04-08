@@ -3,11 +3,15 @@ from .finiteelement import DGScalarElement
 
 class IntergridOperators:
 
-    def __init__(self, dim, coarse_order, fine_order):
+    def __init__(self, coarse_order, fine_order, coarse_basis, fine_basis):
+        
         self.coarse_order = coarse_order
         self.fine_order = fine_order
-        self.coarse_element = DGScalarElement(dim, coarse_order)
-        self.fine_element = DGScalarElement(dim, fine_order)
+        self.coarse_basis = coarse_basis
+        self.fine_basis = fine_basis
+        
+        self.coarse_element = DGScalarElement(coarse_order, self.coarse_basis)
+        self.fine_element   = DGScalarElement(fine_order,   self.fine_basis)
 
     def prolongation(self):
         """

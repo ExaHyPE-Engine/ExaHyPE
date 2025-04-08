@@ -10,14 +10,15 @@ import mghype
 
 from .MatrixGenerator import MatrixGenerator
 
-
-class GaussLobatto(MatrixGenerator):
+class DGPoisson2dPenaltyMatrixGenerator(MatrixGenerator):
   '''
   
-  Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
+  Matrix generator for the DG Interior Penalty formulation of the Poisson problem.
+  Node distribution (e.g. Gauss-Lobatto or Gauss-Legendre) if defined by the basis
+  passed as an argument.
   
-  If you use this class, you assuem that a cell hosts @f$ (p+1)^d @f$
-  nodes carrying Legendre polynomials. As you use a Gauss Lobatto layout,
+  If you use this class, you assume that a cell hosts @f$ (p+1)^d @f$
+  nodes carrying Legendre polynomials. If you use a Gauss Lobatto layout,
   the "outer" nodes will end up on the cell faces. Each node can hold a
   fixed number of unknowns. If you multiply the number of nodes per cell
   with the corresponding number of unknowns, you get the degrees of freedom
@@ -29,9 +30,10 @@ class GaussLobatto(MatrixGenerator):
                poly_degree,
                unknowns_per_cell_node,
                unknowns_per_face_node,
+               basis,
                use_unit_interval=False):
 
-    super( GaussLobatto, self ).__init__(dimensions,
+    super( DGPoisson2dPenaltyMatrixGenerator, self ).__init__(dimensions,
                                          poly_degree
                                          )
     self.unknowns_per_cell_node = unknowns_per_cell_node
@@ -46,7 +48,9 @@ class GaussLobatto(MatrixGenerator):
       self.points1d    = self.get_points_()
 
     r_press = self.poly_degree # polynomial order for p
-    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press)
+
+    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press, basis=basis)
+
 
   def get_nodal_points_1d(self):
     """
@@ -114,10 +118,10 @@ class GaussLobatto(MatrixGenerator):
     return output
 
   def get_weights1d_legendre(self):
-    return super( GaussLobatto, self ).get_weights1d()
+    return super( DGPoisson2dPenaltyMatrixGenerator, self ).get_weights1d()
 
   def get_points1d_legendre(self):
-    return super( GaussLobatto, self ).get_points1d()
+    return super( DGPoisson2dPenaltyMatrixGenerator, self ).get_points1d()
 
   
   def get_points_unit_interval(self):
@@ -131,7 +135,7 @@ class GaussLobatto(MatrixGenerator):
     else:
       factor = 1
     # no need to re-implement
-    return super( GaussLobatto, self ).eval_integral(functions, dim, factor)
+    return super( DGPoisson2dPenaltyMatrixGenerator, self ).eval_integral(functions, dim, factor)
 
   def get_cell_identity_matrix(self):
     dim    = self.cell_nodes * self.unknowns_per_cell_node
@@ -295,22 +299,25 @@ class GaussLobatto(MatrixGenerator):
     return matrix
   
 
-class GLMatrixFree(GaussLobatto):
-  """!
-  
-  
+class MatrixFreeDGPoisson2dPenaltyMatrixGenerator(DGPoisson2dPenaltyMatrixGenerator):
   """
+  Matrix generator for the DG Interior Penalty formulation of the Poisson problem
+  for the matrix-free solver.  
+  """
+
   def __init__(self,
                dimensions,
                poly_degree,
                unknowns_per_cell_node,
                solutions_per_face_node,   # number of solutions   we hold per node.
-               projections_per_face_node # number of projections  we hold per node.
+               projections_per_face_node, # number of projections  we hold per node.
+               basis
               ):
-    super( GLMatrixFree, self ).__init__(dimensions,
+    super( MatrixFreeDGPoisson2dPenaltyMatrixGenerator, self ).__init__(dimensions,
                                          poly_degree,
                                          unknowns_per_cell_node,
-                                         solutions_per_face_node
+                                         solutions_per_face_node,
+                                         basis
                                          )
     self._solutions_per_face_node   = solutions_per_face_node
     self._projections_per_face_node = projections_per_face_node
@@ -651,15 +658,15 @@ class GLMatrixFree(GaussLobatto):
     Return the superclass's matrix, alongside a array of length
     1 for scale factor. Hardcoding the number
     """
-    return [super(GLMatrixFree,self).get_cell_system_matrix_for_laplacian()], [0]
+    return [super(MatrixFreeDGPoisson2dPenaltyMatrixGenerator,self).get_cell_system_matrix_for_laplacian()], [0]
 
   def get_cell_mass_matrix(self):
     """!
     Return the superclass's matrix, alongside a array of length
     1 for scale factor. Hardcoding the number
     """
-    return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
+    return [super(MatrixFreeDGPoisson2dPenaltyMatrixGenerator,self).get_cell_mass_matrix()], [2]
   
   def get_cell_identity_matrix(self):
-    return [super(GLMatrixFree,self).get_cell_identity_matrix()], [0]
+    return [super(MatrixFreeDGPoisson2dPenaltyMatrixGenerator,self).get_cell_identity_matrix()], [0]
   
