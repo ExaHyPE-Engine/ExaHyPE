@@ -56,17 +56,28 @@ namespace swift2 {
        */
       template <typename Particle> void first_init_particle(Particle* particle);
 
+      /**
+       *
+       *
+       * In principle, we don't need to check for anything here, just
+       * overwrite particle data. In practice, this messes with the
+       * dependency checks.
+       */
+      template <typename Particle>
+      bool firstInitParticleParticleUpdatePredicate(
+        const peano4::datamanagement::VertexMarker&  marker,
+        const Particle&                              particle
+      ) {
+        return localParticleCanBeUpdatedInVertexKernel(marker, particle);
+      }
+
       template <typename Particle>
       void firstInitParticle(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   particle
       ) {
-        // In principle, we don't need to check for anything here, just
-        // overwrite particle data. In practice, this messes with the
-        // dependency checks.
-        if (localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
-          first_init_particle(&particle);
-        }
+        assertion(firstInitParticleParticleUpdatePredicate(marker, particle));
+        first_init_particle(&particle);
       }
 
       /**

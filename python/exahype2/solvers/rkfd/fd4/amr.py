@@ -36,7 +36,7 @@ def linearise_index_reverse(index, dimensions):
 def __compute_interpolation_matrix_nd_csr(
     patch_size, halo_size, patch_index_linear=None, d=3
 ):
-    """
+    r"""
 
     Compute the interpolation matrix, which used to prepare halo layer data for fine cells at the refinement boundary.
     The matrix is an nd mapping, so each axis is interpolated by one matrix.
@@ -282,7 +282,7 @@ def __compute_interpolation_matrix_nd_csr(
 
 
 def __compute_restriction_matrix_nd_csr(patch_size, halo_size, patchIndexLinear, d=3):
-    """
+    r"""
 
     Compute the interpolation matrix, which used to prepare halo layer data for fine cells at the refinement boundary.
     The matrix is an nd mapping, so each axis is interpolated by one matrix.
@@ -408,7 +408,7 @@ def __compute_restriction_matrix_nd_csr(patch_size, halo_size, patchIndexLinear,
 
 
 def __compute_interpolation_matrices_1d(value, patch_size):
-    """
+    r"""
 
     compute the interpolation matrix, which used to prepare halo layer data for fine cells at the refinement boundary.
     the matrix formulation depends on the interpolation scheme.
@@ -494,7 +494,7 @@ def __compute_interpolation_matrices_1d(value, patch_size):
 
 
 def __compute_restriction_matrices_1d(value, patch_size):
-    """
+    r"""
 
     compute the restriction matrix, which used to prepare halo layer data for coarse cells at the refinement boundary.
     the matrix formulation depends on the interpolation scheme.

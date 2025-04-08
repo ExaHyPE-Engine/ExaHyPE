@@ -57,6 +57,12 @@ public:
   double getStandardDeviation() const;
 
   /**
+   * @return Number of setValue() calls has exceeded the maxEntries argument
+   *   from the constructor
+   */
+  bool hasFullSetOfMeasurements() const;
+
+  /**
    * Is value accurate
    *
    * A value is accurate if its standard deviation divided by its mean is smaller than the factor.

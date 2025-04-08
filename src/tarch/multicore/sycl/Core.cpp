@@ -4,6 +4,7 @@
 
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #ifdef CompilerHasSysinfo
@@ -117,6 +118,7 @@ int tarch::multicore::Core::getThreadNumber() const {
 
 
 void tarch::multicore::Core::yield() {
+  tarch::multicore::taskfusion::processAllReadyTasks();
   // @todo It would be nice to have the opportunity to tell the queue to do
   //       only a few tasks and then to return.
   hostSyclQueue.wait();

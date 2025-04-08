@@ -53,11 +53,9 @@ void swift2::kernels::ompoffloading::forAllParticles(
 
 template <typename LocalParticleContainer, typename ActiveParticleContainer>
 void swift2::kernels::ompoffloading::forAllParticlePairs(
-  const peano4::datamanagement::CellMarker&  marker,
+  const swift2::CellMetaData&                cellMetaData,
   LocalParticleContainer&                    localParticles,
   ActiveParticleContainer&                   activeParticles,
-  const std::vector<int>&                    numberOfLocalParticlesPerVertex,
-  const std::vector<int>&                    numberOfActiveParticlesPerVertex,
   ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
   UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
       localParticlePredicate,
@@ -68,11 +66,9 @@ void swift2::kernels::ompoffloading::forAllParticlePairs(
   @todo
   #else
   swift2::kernels::forAllParticlePairs(
-    marker,
+    cellMetaData,
     localParticles,
     activeParticles,
-    numberOfLocalParticlesPerVertex,
-    numberOfActiveParticlesPerVertex,
     f,
     localParticlePredicate,
     particlePairPredicate

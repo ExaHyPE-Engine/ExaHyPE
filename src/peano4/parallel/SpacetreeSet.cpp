@@ -271,13 +271,12 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   _observer(observer),
   _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {}
 
-bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
+void peano4::parallel::SpacetreeSet::TraverseTask::run() {
   _spacetreeSet.createObserverCloneIfRequired(_observer, _spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted(not _spacetree._root.getInverted());
   }
   _spacetree.traverse(*_spacetreeSet._clonedObserver[_spacetree._id], true);
-  return false;
 }
 
 

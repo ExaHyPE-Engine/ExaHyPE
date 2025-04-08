@@ -306,14 +306,14 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     particle_set,
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
-particle_plotter.add_attribute_to_plot(particle.part_id, 1)
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
 particle_plotter.add_attribute_to_plot(particle.mass, 1)
 particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
+if args.asserts:
+    particle_plotter.add_attribute_to_plot(particle.partid, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
 

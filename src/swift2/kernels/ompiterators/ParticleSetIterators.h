@@ -39,11 +39,9 @@ namespace swift2 {
        */
       template <typename LocalParticleContainer, typename ActiveParticleContainer>
       void forAllParticlePairs(
-        const peano4::datamanagement::CellMarker&  marker,
+        const swift2::CellMetaData&                cellMetaData,
         LocalParticleContainer&                    localParticles,
         ActiveParticleContainer&                   activeParticles,
-        const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
-        const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
         ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
         UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>  localParticlePredicate,
         UpdateParticlePairWithinCellPredicate<PCParticle<LocalParticleContainer>>  particlePairPredicate

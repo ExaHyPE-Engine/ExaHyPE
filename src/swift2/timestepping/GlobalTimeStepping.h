@@ -12,6 +12,10 @@ namespace swift2 {
      * admissible time step size, not every species type (time integrator) might
      * use this one.
      *
+     * Ensure you chose your CFL consant in a way such that the particle doesn't
+     * travel further than a vertex size if you intend on using assignment
+     * checks.
+     *
      * If the maximum velocity in the system is zero, I set the time step size
      * to the initial or default time step size. This happens for example in the
      * very first time step, where we don't know the maximum velocity yet.
