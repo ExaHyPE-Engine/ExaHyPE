@@ -91,9 +91,8 @@ void mghype::matrixfree::solvers::Solver::clearGlobalResidualAndSolutionUpdate()
   _globalDeltaUEukledianNormSquared = 0.0;
   _globalDeltaUHNormSquared         = 0.0;
 
-  // Commenting out as we will set this during init and leave it alone...
-  // _minH = std::numeric_limits<double>::max();
-  // _maxH = 0;
+  _minH = std::numeric_limits<double>::max();
+  _maxH = 0;
 }
 
 
