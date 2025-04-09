@@ -5,6 +5,6 @@ import mghype.api.matrixgenerators.blockmatrix
 
 from .DLinear             import DLinear
 from .DLinearMassIdentity import DLinearMassIdentity
-from .DGPoisson2dPenalty  import DGPoisson2dPenaltyMatrixGenerator
-from .DGPoisson2dPenalty  import MatrixFreeDGPoisson2dPenaltyMatrixGenerator
+from .GaussLobatto        import GaussLobatto
+from .GaussLobatto        import GLMatrixFree
 from .StencilToElement    import StencilToElement

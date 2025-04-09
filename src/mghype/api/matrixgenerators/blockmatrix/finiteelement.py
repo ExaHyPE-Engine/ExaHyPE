@@ -14,8 +14,11 @@ We use the following elements:
 from abc import ABC, abstractmethod
 import numpy as np
 import itertools
-from .nodal_basis import NodalBasisGaussLobatto
+#from basis import Basis1d
+from .nodal_basis import NodalBasisGaussLegendre
 from .quadrature import GaussianQuadrature, Quadrature2d
+# from nodal_basis import NodalBasisGaussLegendre
+# from quadrature import GaussianQuadrature, Quadrature2d
 
 class FiniteElement(ABC):
     """Defines a finite element which describes the local function space on a reference element"""
@@ -61,14 +64,15 @@ class DGScalarElement(FiniteElement):
     Scalar valued Discontinuous Galerkin functions on reference cell [-1,+1] x [-1,+1]
     """
 
-    def __init__(self, degree, basis):
+    def __init__(self, dim, degree):
         """Initialise object
 
         :arg degree: polynomial degree
         """
-        self.dim = basis.dim
+        #self.basis = Basis1d(degree)
+        self.dim = dim
         self.degree = degree
-        self.basis = basis
+        self.basis = NodalBasisGaussLegendre(dim)
 
     @property
     def ndof(self):
@@ -94,6 +98,8 @@ class DGScalarElement(FiniteElement):
         """
         i, j = k % (self.degree + 1), k // (self.degree + 1)
         return self.basis.evaluate(self.degree, i, x_local[0]) * self.basis.evaluate(self.degree, j, x_local[1])
+        # i, j = k % (self.basis.degree + 1), k // (self.basis.degree + 1)
+        # return self.basis.evaluate(i, x_local[0]) * self.basis.evaluate(j, x_local[1])
 
     def evaluate_derivative(self, k, direction, x_local):
         """Evaluate the derivative of k-th basis function at the point x_local = (xi,eta) in the
@@ -121,7 +127,7 @@ class DGScalarElement(FiniteElement):
         for index in index_set:
             # reverse (0,1,2) to (2,1,0)
             # required as itertools.product() generates tuples like (0,0), (0,1), (0,2)
-            # -- with the last index advancing faster, but we need  (0,0), (1,0), (2,0)
+            # -- with the last index advancing faster, but we need (0,0), (1,0), (2,0)
             #index = next(index_set)
             reverse_index = tuple(reversed(index))
             node_coordinates = [self.basis.node1d(self.degree, idx) for idx in reverse_index]
@@ -136,14 +142,15 @@ class DGFacetElement(FiniteElement):
     Scalar valued Discontinuous Galerkin functions on reference interval [-1,+1]
     """
 
-    def __init__(self, degree, basis):
+    def __init__(self, dim, degree):
         """Initialise object
 
         :arg degree: polynomial degree
         """
-        self.dim = basis.dim
+        # self.basis = Basis1d(degree)
+        self.dim = dim
         self.degree = degree
-        self.basis = basis
+        self.basis = NodalBasisGaussLegendre(dim)
 
     @property
     def ndof(self):

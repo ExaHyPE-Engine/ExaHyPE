@@ -21,7 +21,6 @@ parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Smoothing parameter for cells")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Smoothing parameter for faces")
-parser.add_argument("-nodes", "--nodes_distribution", dest="nodes_distribution",  default="GaussLobatto", choices=["GaussLobatto","GaussLegendre","Equidistant"], help="Distribution of nodal points")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
@@ -29,20 +28,12 @@ project = mghype.matrixfree.api.Project( project_name = "DGTwoGrid",
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 
-basis_dict = {
-  "GaussLobatto":  mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisGaussLobatto(dim=args.dimensions),
-  "GaussLegendre": mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisGaussLegendre(dim=args.dimensions),
-  "Equidistant":   mghype.api.matrixgenerators.blockmatrix.nodal_basis.NodalBasisEquidistant(dim=args.dimensions)
-}
-dg_basis = basis_dict[args.nodes_distribution]
-
-matrices = mghype.api.matrixgenerators.MatrixFreeDGPoisson2dPenaltyMatrixGenerator(
+matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
-  2,
-  basis=dg_basis
+  2
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
@@ -78,8 +69,8 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
-  solver_tolerance = 1.0e-10,
-  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval; @todo: rename to nodal_points
+  solver_tolerance = 1.0e-6,
+  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval
 )
 #! [Instantiate solver]
 
@@ -90,8 +81,7 @@ correction_equation_matrices = mghype.api.matrixgenerators.DLinearMassIdentity(
   unknowns_per_node = 1
 )
 
-# h-intergid operators for correction equation 
-intergridOperatorsH = mghype.api.matrixgenerators.blockmatrix.IntergridOperatorsH()
+intergridOperators = mghype.api.matrixgenerators.blockmatrix.IntergridOperatorsH()
 
 system_matrix, system_matrix_scaling = correction_equation_matrices.get_cell_system_matrix_for_laplacian()
 mass_matrix,   mass_matrix_scaling   = correction_equation_matrices.get_cell_mass_matrix()
@@ -113,23 +103,19 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMGSingleThr
                                                     mass_matrix_scaling = mass_matrix_scaling,
                                                     correction_matrix = correction_matrix,
                                                     correction_matrix_scaling = correction_matrix_scaling,
-                                                    solver_tolerance=1e-14,
+                                                    solver_tolerance=1e-12,
                                                     pre_smoothing_steps =6,
                                                     post_smoothing_steps=5,
-                                                    restriction_matrix=intergridOperatorsH.restriction(),
-                                                    prolongation_matrix=intergridOperatorsH.prolongation(),
+                                                    restriction_matrix=intergridOperators.restriction(),
+                                                    prolongation_matrix=intergridOperators.prolongation(),
                                                     descend_order=0,
-                                                    plot_predicate = "false" # dont's save patch files for CG steps
                                                     )
 
-
 #! [Coupling]
-# p-intergrid operators for DG
 intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
+  dim = args.dimensions,
   coarse_order = 1,
-  fine_order = args.poly_degree,
-  coarse_basis = dg_basis,
-  fine_basis   = dg_basis,
+  fine_order = args.poly_degree
   )
 prolongation_matrix = [intergrid_operators.prolongation()]
 prolongation_matrix_scaling = [0]
@@ -147,9 +133,7 @@ solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.Multi
     restriction_matrix_scaling,
     injection_matrix,
     injection_matrix_scaling,
-    args.fas,
-    smoothing_steps_CG=-1, # @todo: Counting individual CG steps as stopping criterion can be removed. Set -1 to disable
-    vcycles=-1 # -1 means we solve with a specified tolerance
+    args.fas
 )
 #! [Coupling]
 
@@ -178,7 +162,7 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_after_each_mesh_sweep       = args.plot_after_each_mesh_sweep,
-  max_iterations = 20000
+  max_iterations = 2000
 )
 
 project.set_Peano4_installation( args.peanodir, build_mode )

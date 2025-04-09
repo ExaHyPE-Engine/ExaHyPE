@@ -5,7 +5,7 @@
 # import numpy as np
 
 from .BlockMatrix import BlockMatrix
-from .nodal_basis import NodalBasisGaussLobatto
+from .nodal_basis import NodalBasisGaussLegendre
 from .finiteelement import DGScalarElement, DGFacetElement
 from .quadrature import GaussianQuadrature, Quadrature2d
 import numpy as np
@@ -18,7 +18,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
     u | q^+ q^- q^f u^+ u^- u^f
     """
 
-    def __init__(self, r_press, basis=NodalBasisGaussLobatto(dim=2)):
+    def __init__(self, r_press, basis=NodalBasisGaussLegendre(2)):
         """Initialise instance
         :arg r_press: polynomial degree of pressure space
         :arg r_vel: polynomial degree of velocity
@@ -72,14 +72,14 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         self._fe_C = [None] * len(self._L_C)
         self._Xi_C = [None] * len(self._L_C)
         for i in range(len(self._L_C)):
-            self._fe_C[i] = DGScalarElement(self._L_C[i], self.basis)
+            self._fe_C[i] = DGScalarElement(dim, self._L_C[i])
             self._Xi_C[i] = self._fe_C[i].nodes
 
         # Facet elements
         self._fe_F = [None] * len(self._L_F)
         self._Xi_F = [None] * len(self._L_F)
         for i in range(len(self._L_F)):
-            self._fe_F[i] = DGFacetElement(self._L_F[i], self.basis)
+            self._fe_F[i] = DGFacetElement(dim, self._L_F[i])
             self._Xi_F[i] = self._fe_F[i].nodes
         
 

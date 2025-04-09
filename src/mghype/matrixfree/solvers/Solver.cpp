@@ -4,6 +4,8 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 #include <cmath>
+#include <iomanip>
+#include <array>
 
 
 tarch::logging::Log mghype::matrixfree::solvers::Solver::_log( "mghype::matrixfree::solvers::Solver" );
@@ -24,6 +26,10 @@ mghype::matrixfree::solvers::Solver::Solver(
   _globalDeltaUMaxNorm(0.0),
   _globalDeltaUEukledianNormSquared(0.0),
   _globalDeltaUHNormSquared(0.0),
+
+  _globalPrecondResidualMaxNorm(0.0),
+  _globalPrecondResidualEukledianNormSquared(0.0),
+
   _minH(std::numeric_limits<double>::max()),
   _maxH(0.0) {
   const std::string      prefix = "Abstract";
@@ -36,6 +42,10 @@ mghype::matrixfree::solvers::Solver::Solver(
 
 double mghype::matrixfree::solvers::Solver::getGlobalResidualMaxNorm() const {
   return _globalResidualMaxNorm;
+}
+
+std::array<double, 2> mghype::matrixfree::solvers::Solver::getGlobalPrecondResidualNorms() const {
+  return {_globalPrecondResidualMaxNorm, _globalPrecondResidualEukledianNormSquared};
 }
 
 
@@ -95,6 +105,12 @@ void mghype::matrixfree::solvers::Solver::clearGlobalResidualAndSolutionUpdate()
   _maxH = 0;
 }
 
+void mghype::matrixfree::solvers::Solver::clearGlobalPrecondResidualUpdate() {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalPrecondResidualMaxNorm              = 0.0;
+  _globalPrecondResidualEukledianNormSquared = 0.0;
+}
 
 void mghype::matrixfree::solvers::Solver::updateGlobalResidual(
   double residual,
@@ -105,6 +121,15 @@ void mghype::matrixfree::solvers::Solver::updateGlobalResidual(
   _globalResidualMaxNorm               = std::max( _globalResidualMaxNorm, std::abs(residual) );
   _globalResidualEukledianNormSquared += residual * residual;
   _globalResidualHNormSquared         += residual * residual * tarch::la::volume(h);
+}
+
+void mghype::matrixfree::solvers::Solver::updateGlobalPrecondResidual(
+  double residual
+) {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalPrecondResidualMaxNorm               = std::max( _globalPrecondResidualMaxNorm, std::abs(residual) );
+  _globalPrecondResidualEukledianNormSquared += residual * residual;
 }
 
 
@@ -130,6 +155,7 @@ void mghype::matrixfree::solvers::Solver::updateMinMaxMeshSize(
 
 std::string mghype::matrixfree::solvers::Solver::toString() const {
   std::ostringstream msg;
+  msg << std::scientific << std::setprecision(16);
   msg << _name
       << ": |r|_max=" << _globalResidualMaxNorm
       << ", |r|_2=" << std::sqrt( _globalResidualEukledianNormSquared )
@@ -137,6 +163,17 @@ std::string mghype::matrixfree::solvers::Solver::toString() const {
       << ", |du|_max=" << _globalDeltaUMaxNorm
       << ", |du|_2=" << std::sqrt( _globalDeltaUEukledianNormSquared )
       << ", |du|_h=" << std::sqrt( _globalDeltaUHNormSquared )
+      << ", h_min=" << _minH
+      << ", h_max=" << _maxH;
+  return msg.str();
+}
+
+std::string mghype::matrixfree::solvers::Solver::reportPrecondNorms() const {
+  std::ostringstream msg;
+  msg << std::scientific << std::setprecision(16);
+  msg << _name
+      << ": |du_cycle|_max=" << _globalPrecondResidualMaxNorm
+      << ", |du_cycle|_2=" << std::sqrt( _globalPrecondResidualEukledianNormSquared )
       << ", h_min=" << _minH
       << ", h_max=" << _maxH;
   return msg.str();
