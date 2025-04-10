@@ -49,3 +49,12 @@ void tarch::multicore::orchestration::AllOnGPU::toggleDevice() {
     _deviceToUse = _deviceToUse % tarch::accelerator::Device::getInstance().getNumberOfDevices();
   }
 }
+
+
+void tarch::multicore::orchestration::AllOnGPU::updateFuseStatistics(
+  int    taskType,
+  int    queueSize,
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+) {
+  // empty on purpose
+}

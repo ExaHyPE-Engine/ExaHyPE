@@ -53,7 +53,15 @@ Unsetting the environment variable allows to switch back to autotools.
 If only one of the build systems has been configured, the code generator will choose the one present.
 
 # Compilation
-
+ 
+- ***The translation fails with the error***
+  ~~~~~~~~~~~~~~~~~~~
+  '#pragma float_control(precise, off)' is illegal when except is enabled
+  ~~~~~~~~~~~~~~~~~~~
+  We have seen this error with some LLVM-based compilers. Please re-translate with ```-fno-exceptions```. 
+  Unfortunately, this disables some error checking in the checkpoint and file output routines.
+  If that does not help, you might want to reduce the optimisation level. On 
+  Intel, switching from -fast to -O3 does work in some cases.
 - ***My compiler yields warnings of the type***
   ~~~~~~~~~~~~~~~~~~~
 ./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]

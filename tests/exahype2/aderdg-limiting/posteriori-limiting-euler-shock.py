@@ -4,7 +4,7 @@ import peano4
 import exahype2
 
 project = exahype2.Project(
-    ["tests", "exahype2", "aderdg"], ".", executable="ADER-DG-Limiting-Posteriori"
+    ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-Limiting"
 )
 
 dimensions = 2
@@ -65,8 +65,8 @@ max_eval = """
   return std::max(std::abs(u-c), std::abs(u+c));
 """
 
-ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name="ADERSolver",
+aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    name="ADERDGSolver",
     order=order,
     unknowns=4,
     auxiliary_variables=0,
@@ -78,7 +78,7 @@ ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
 )
-project.add_solver(ader_solver)
+project.add_solver(aderdg_solver)
 
 fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     name="FVSolver",
@@ -90,15 +90,14 @@ fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     time_step_relaxation=0.9,
     flux=flux,
     eigenvalues=max_eval,
-    initial_conditions="",  # Gets set by regular solver
-    boundary_conditions="const tarch::la::Vector<Dimensions, double>& x = faceCentre;\n"
-    + boundary_conditions,
+    initial_conditions="const tarch::la::Vector<Dimensions, double>& x = volumeCentre;\n" + initial_conditions,
+    boundary_conditions="const tarch::la::Vector<Dimensions, double>& x = faceCentre;\n" + boundary_conditions,
 )
 project.add_solver(fv_solver)
 
 limiter = exahype2.solvers.limiting.PosterioriLimiting(
     name="LimitingSolver",
-    regular_solver=ader_solver,
+    regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
     number_of_dmp_observables=4,
     dmp_relaxation_parameter=0.01,  # 0.02 works for depth 2, 0.01 works for depth 3
@@ -133,6 +132,6 @@ project = project.generate_Peano4_project("False")
 project.build(make_clean_first=True)
 
 print(fv_solver)
-print(ader_solver)
+print(aderdg_solver)
 print(limiter)
 print(project)

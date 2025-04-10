@@ -89,3 +89,13 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
     return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   }
 }
+
+
+
+void tarch::multicore::orchestration::Hardcoded::updateFuseStatistics(
+  int    taskType,
+  int    queueSize,
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+) {
+  // empty on purpose
+}

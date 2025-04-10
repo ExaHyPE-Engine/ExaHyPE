@@ -100,7 +100,7 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
     // One of them has to be biased
     if (tarch::la::smaller(leftX, voxelX(d) - 0.5 * voxelH(d)))
       leftParticleNumberAlongAxis++;
-    if (tarch::la::equals(rightX, voxelX(d) + 0.5 * voxelH(d)) and tarch::la::smaller(rightX, domainOffset(d) + domainSize(d)) or tarch::la::greater(rightX, voxelX(d) + 0.5 * voxelH(d)))
+    if (tarch::la::greaterEquals(rightX, voxelX(d) + 0.5 * voxelH(d)) or tarch::la::greaterEquals(rightX, domainOffset(d) + domainSize(d)))
       rightParticleNumberAlongAxis--;
 
     particlesPerAxis(d) = std::max(0, rightParticleNumberAlongAxis - leftParticleNumberAlongAxis + 1);

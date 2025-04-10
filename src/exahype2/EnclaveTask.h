@@ -147,7 +147,7 @@ public:
   /**
    * Computes a task and bookmarks the outcome
    */
-  virtual bool run() override;
+  virtual void run() override;
 
   /**
    * Compute the task

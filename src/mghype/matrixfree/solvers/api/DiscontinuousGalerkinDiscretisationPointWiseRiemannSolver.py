@@ -280,7 +280,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               enable_plotting = True, # sometimes we want to disable standard plotting...,
               plot_predicate = "true", # enable custom plotting behaviour
               solver_includes = "",
-              use_smart_pointer = True
+              use_smart_pointer = True,
+              track_solution_between_cycles = False,
               ):
     """!
     
@@ -408,6 +409,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     self._integration_points            = integration_points
 
+    self._track_solution_between_cycles = track_solution_between_cycles
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
     #(K^f +  2K^c) * (p+1)^(d-1)
@@ -423,6 +425,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "solution", str(self._unknowns_per_cell) ))
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "residual", str(self._unknowns_per_cell) ))
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "rhs",      str(self._unknowns_per_cell) ))
+        
+        if (track_solution_between_cycles):
+            self._cell_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "prevCycleSolution", str(self._unknowns_per_cell) ))
 
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4SmartPointerDoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
@@ -432,6 +437,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "residual", str(self._unknowns_per_cell) ))
         self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
 
+        if (track_solution_between_cycles):
+            self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "prevCycleSolution", str(self._unknowns_per_cell) ))
+            
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "lProjection",   str(self._unknowns_per_face_solution ) ))
         self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rProjection",   str(self._unknowns_per_face_solution ) ))
@@ -632,5 +640,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
           "SOLVER_TOLERANCE"            : self._solver_tolerance,
           "CUSTOM_INIT_CELL"            : self._custom_init_cell,
           "INTEGRATION_POINTS"          : self._integration_points,
-          "USE_SMART_POINTER"           : self._use_smart_pointer
+          "USE_SMART_POINTER"           : self._use_smart_pointer,
+          "TRACK_SOLUTION_BETWEEN_CYCLES": self._track_solution_between_cycles
           }

@@ -561,10 +561,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
 """
 
-    TemplateLoadCell_VertexLoad = """
+    TemplateLoadCell_VertexLoad = r"""
   // Load vertex {{logical_type_name}}
-  std::function<bool ()> loadVertex{{logical_type_name}} = 
-    [&]()->bool {
+  std::function<void ()> loadVertex{{logical_type_name}} = 
+    [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStack          = event.getVertexDataFrom(i);
@@ -649,7 +649,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
       }
     }
-    return false;
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
@@ -660,7 +659,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-    TemplateEnterCell_VertexMappingCall = """
+    TemplateEnterCell_VertexMappingCall = r"""
   // Handle vertex {{logical_type_name}}
   {
     peano4::datamanagement::VertexMarker  marker(event);
@@ -718,10 +717,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-    TemplateLoadCell_FaceLoad = """
+    TemplateLoadCell_FaceLoad = r"""
   // Load face {{logical_type_name}}
-  std::function<bool ()> loadFace{{logical_type_name}} = 
-    [&]()->bool {
+  std::function<void ()> loadFace{{logical_type_name}} = 
+    [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStack          = event.getFaceDataFrom(i);
@@ -815,7 +814,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
       }
     }
-    return false;
   };
   
   
@@ -827,7 +825,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-    TemplateEnterCell_FaceMappingCall = """
+    TemplateEnterCell_FaceMappingCall = r"""
   // Handle face {{logical_type_name}}
   {
     peano4::datamanagement::FaceMarker marker( event );
@@ -891,10 +889,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-    TemplateLoadCell_CellLoad = """
+    TemplateLoadCell_CellLoad = r"""
   // Load cell {{logical_type_name}}
-  std::function<bool ()> loadCell{{logical_type_name}} =  
-    [&]()->bool {
+  std::function<void ()> loadCell{{logical_type_name}} =  
+    [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
     peano4::datamanagement::CellMarker  marker(event);
@@ -970,7 +968,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       view.get(0).setDebugH( marker.h() );
       #endif
     }
-    return false;
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
@@ -981,7 +978,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-    TemplateEnterCell_CellMappingCall = """
+    TemplateEnterCell_CellMappingCall = r"""
   // Invoke creational events on cell {{logical_type_name}}
   {
     peano4::datamanagement::CellMarker marker( event );
@@ -1003,7 +1000,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-    TemplateEnterCell_MappingCall = """
+    TemplateEnterCell_MappingCall = r"""
   {
     peano4::datamanagement::CellMarker marker( event );
     if (
@@ -1237,8 +1234,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     TemplateStoreCell_CellStore = """
   // Handle cell {{logical_type_name}}
-  std::function<bool ()> storeCell{{logical_type_name}} = 
-    [&]()->bool {
+  std::function<void ()> storeCell{{logical_type_name}} = 
+    [&]()->void {
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
     logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
@@ -1273,7 +1270,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         ", is-in/out=" << peano4::grid::PeanoCurve::isInOutStack(outCellStack)
       );
     }
-    return false;
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
@@ -1343,8 +1339,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     TemplateStoreCell_FaceStore = """
   // Store face {{logical_type_name}}
-  std::function<bool ()> storeFace{{logical_type_name}} = 
-    [&]()->bool {
+  std::function<void ()> storeFace{{logical_type_name}} = 
+    [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStackPosition  = event.getFaceDataFrom(i);
@@ -1379,7 +1375,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         logDebug( "storeCell(...)", "do not store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() );
       }
     }
-    return false;
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
@@ -1445,8 +1440,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     TemplateStoreCell_VertexStore = """
   // Store vertex {{logical_type_name}}
-  std::function<bool ()> storeVertex{{logical_type_name}} = 
-    [&]()->bool {
+  std::function<void ()> storeVertex{{logical_type_name}} = 
+    [&]()->void {
     auto view = {{subnamespace}}repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( {{subnamespace}}repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStackPosition  = event.getVertexDataFrom(i);
@@ -1456,7 +1451,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
 
       {{full_qualified_type}}& data = view.get(inVertexStackPosition);
-
 
       bool dataShallBePushedOntoIntermediateStack = 
         not peano4::grid::PeanoCurve::isInOutStack(outVertexStack)
@@ -1482,7 +1476,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         logDebug( "storeCell(...)", "do not store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
       }
     }
-    return false;
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(

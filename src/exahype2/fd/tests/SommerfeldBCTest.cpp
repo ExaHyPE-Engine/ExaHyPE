@@ -15,16 +15,18 @@
 
 
 exahype2::fd::tests::SommerfeldBCTest::SommerfeldBCTest():
-  TestCase ("exahype2::fd::tests::SommerfeldBCTest") {
+  TestCase("exahype2::fd::tests::SommerfeldBCTest") {
 }
 
 
 void exahype2::fd::tests::SommerfeldBCTest::run() {
-  testMethod (flatsolutiontest);
+  #if Dimensions == 3 // This test scenario is only valid for three dimensions
+  testMethod(flatSolutionTest);
+  #endif
 }
 
 
-void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
+void exahype2::fd::tests::SommerfeldBCTest::flatSolutionTest() {
 
   //we consider facenumber 3, i.e. face on the x positive, patch size 2, evolving quantity 2. Thus the array has 2x2x2x6=48 entries 
   double Qold[] = {

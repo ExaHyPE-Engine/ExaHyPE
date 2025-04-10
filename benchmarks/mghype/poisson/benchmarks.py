@@ -17,7 +17,11 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
+<<<<<<< HEAD
 parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "dg-tasks"], required=True, help="Pick variant" )
+=======
+parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+>>>>>>> refs/remotes/origin/multigrid
 parser.add_argument("-var", "--variant",              dest="variant",        choices=["rediscretise", "precompute"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
 parser.add_argument("-t",   "--max-trees",            dest="max_trees",      type=int, default=0, help="Number of trees")
@@ -28,12 +32,12 @@ project = mghype.matrixfree.api.Project( project_name = "DGPointwise",
                                          executable = args.output
                                         )
 
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GaussLobattoMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
-  2
+  2,
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
@@ -51,8 +55,19 @@ if args.realisation == "dg-sweeps":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
 elif args.realisation == "dg-shifted-and-fused":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+<<<<<<< HEAD
 elif args.realisation == "dg-tasks":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks
+
+name = "DGPoisson"
+if args.variant == "rediscretise":
+    name = "DGPoissonRediscretise"
+if args.variant == "precompute":
+    name = "DGPoissonPrecompute"
+=======
+elif args.realisation == "tasks":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+>>>>>>> refs/remotes/origin/multigrid
 
 name = "DGPoisson"
 if args.variant == "rediscretise":

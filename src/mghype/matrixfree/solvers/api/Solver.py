@@ -10,6 +10,11 @@ class Solver:
   """!
 
   Abstract base class for matrix free solvers.
+  
+  ## Data associated with mesh entities
+  
+  We always assign data to vertices, cells and faces, even though your 
+  particular solver subclass might not require those guys. 
 
   """
 
@@ -21,11 +26,11 @@ class Solver:
     self.min_h = min_h
     self.max_h = max_h
     
-#self._vertex_data = peano4.datamodel.DaStGen2( name )
+    self._vertex_data = peano4.datamodel.DaStGen2( name )
     self._face_data   = peano4.datamodel.DaStGen2( name )
     self._cell_data   = peano4.datamodel.DaStGen2( name )
 
-#    self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
+    self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
     self._face_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
     self._cell_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse", "Outside", "Undefined"] ) )
 
@@ -35,6 +40,7 @@ class Solver:
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    datamodel.add_vertex(self._vertex_data)
     datamodel.add_face(self._face_data)
     datamodel.add_cell(self._cell_data)
     
@@ -45,6 +51,7 @@ class Solver:
     in child class.
     
     """
+    observer.use_vertex(self._vertex_data)
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
   

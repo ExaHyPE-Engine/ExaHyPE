@@ -33,7 +33,7 @@ project = mghype.matrixfree.api.Project( project_name = "DGPointwise",
 
 #! [Construct matrices]
 
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GaussLobattoMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here

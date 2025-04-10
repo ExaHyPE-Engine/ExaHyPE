@@ -5,4 +5,8 @@ import mghype.matrixfree.solvers.api.actionsets
 
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver           import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
+<<<<<<< HEAD
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks     import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks
+=======
+
+>>>>>>> refs/remotes/origin/multigrid

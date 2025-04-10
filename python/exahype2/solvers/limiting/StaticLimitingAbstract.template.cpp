@@ -121,7 +121,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
         );
 
-    if(_solverState==LimiterStatusSpreadingToNeighbours){
+    if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
       int newNumberOfTroubleCells = _totalNumberOfTroubledCells;
       tarch::mpi::Rank::getInstance().allReduce(
           &newNumberOfTroubleCells,

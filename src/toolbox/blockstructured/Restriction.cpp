@@ -256,7 +256,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 
   dfor(kCoarse, faceDimensions){
     tarch::la::Vector<Dimensions, int> fineCenter = kCoarse * 3 + tarch::la::Vector<Dimensions, int>(1) + fineDataStart;
-    fineCenter(normal) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside) ? overlap + 1: overlap - 2;
+    fineCenter(normal) = ( (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? overlap + 1: overlap - 2;
 
     int centerIndex = serialiseVoxelIndexInOverlap(
       fineCenter,
@@ -307,10 +307,9 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
 
     tarch::la::DynamicMatrix coarseMatrix(overlap, 2);
     for (int i = 0; i < overlap; i++) {
-      int distance = (marker.getSelectedFaceNumber() < Dimensions
-                      xor swapInsideOutside)
-                       ? i * 3 + 3 - overlap
-                       : overlap - 3 - i * 3;
+      int distance = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
+                   ? i * 3 + 3 - overlap
+                   : overlap - 3 - i * 3;
 
       coarseMatrix(i, 0) = (1.0 / 3.0) * distance;
       coarseMatrix(i, 1) = (1.0 / 18.0) * distance * distance;
@@ -318,8 +317,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
     for (int i = 0; i < overlap; i++) {
       tarch::la::Vector<Dimensions, int> coarseCell = kCoarse + coarseStart;
-      coarseCell(normal
-      ) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside)
+      coarseCell(normal) = ( (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
             ? i + overlap
             : overlap - i - 1;
       int index = serialiseVoxelIndexInOverlap(
@@ -596,8 +594,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
       overlap,
       normal
     );
-    int newIndex = (marker.getSelectedFaceNumber() < Dimensions
-                    xor swapInsideOutside)
+    int newIndex = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
                      ? kFine(normal)
                      : 2 * overlap - kFine(normal) - 1;
     int base     = overlap * 2;
@@ -690,11 +687,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
         "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)",
         "coarse volume/dof "
           << dest
-          << " prior to update: " << coarseGridValues[destLinearised * 5 + 0]
+          << " prior to update: " << coarseGridValues[destLinearised * unknowns + 0]
       );
       assertionNumericalEquals(
-        coarseGridValues[destLinearised * 5 + 0],
-        coarseGridValues[destLinearised * 5 + 0]
+        coarseGridValues[destLinearised * unknowns + 0],
+        coarseGridValues[destLinearised * unknowns + 0]
       );
 
       dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {

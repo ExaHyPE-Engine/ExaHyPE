@@ -120,6 +120,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
   std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   auto& activeParticles                           = _activeParticles;
   
@@ -130,6 +131,15 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
     }
     numberOfCoalescedLocalParticlesPerVertex[i] = fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
+      std::bitset<TwoPowerD> mask = 0;
+      mask.set(TwoPowerD-i-1);
+      bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
+      assertionEquals4( 
+        isLocal, 
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.toString(), p->toString(), i, mask
+      );
+      localParticleIsContainedInCell.push_back( isLocal );
       localParticles.push_front( p );
     }
   }

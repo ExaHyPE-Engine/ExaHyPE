@@ -8,6 +8,7 @@ endif
 
 
 SWIFT2Sources = \
+  CellMetaData.cpp \
   GridControlEvents.cpp \
   ParticleSpecies.cpp \
   swift2.cpp \

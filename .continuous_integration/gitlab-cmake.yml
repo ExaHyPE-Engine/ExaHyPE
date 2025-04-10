@@ -13,7 +13,7 @@ stages:
 # Define one sub-pipeline per toolchain:
 ########################################################
 
-GCC_SharedOMP:
+GCC_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -28,13 +28,14 @@ GCC_SharedOMP:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_MULTITHREADING=omp"
+                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MPI=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
     strategy: depend
 
-Intel_SharedOMP:
+Intel_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -49,13 +50,14 @@ Intel_SharedOMP:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_MULTITHREADING=omp"
+                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MPI=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
     strategy: depend
 
-LLVM_SharedOMP:
+LLVM_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -70,7 +72,8 @@ LLVM_SharedOMP:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_MULTITHREADING=omp"
+                            -DWITH_MULTITHREADING=omp \
+                            -DWITH_MPI=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml

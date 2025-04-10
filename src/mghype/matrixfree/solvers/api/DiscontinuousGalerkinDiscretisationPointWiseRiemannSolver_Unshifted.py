@@ -14,7 +14,11 @@ from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import Discontin
 from .actionsets.InitHigherOrderDofs                            import InitHigherOrderDofs
 from .actionsets.DGSolver.UpdateResidual                        import UpdateResidual
 from .actionsets.DGSolver.ProjectOntoFaces                      import ProjectOntoFaces
+<<<<<<< HEAD
 from .actionsets.DGSolver.UpdateFaceSolution                    import UpdateFaceSolution
+=======
+from .actionsets.DGSolverWithFusionUnshifted.UpdateFaceSolution import UpdateFaceSolution
+>>>>>>> refs/remotes/origin/multigrid
 from .actionsets.DGSolver.ProjectIntoCellAndUpdateCellSolution  import ProjectIntoCellAndUpdateCellSolution
 from .actionsets.PlotDGDataInPeanoBlockFormat                   import PlotDGDataInPeanoBlockFormat
 

@@ -362,6 +362,25 @@ public:
 
 
   /**
+   * One-dimensional version of isContainedInAdjacentCells()
+   *
+   * Same as isContainedInAdjacentCells(), but only checks along
+   * a single dimension provided by `int dim`. This variant is
+   * sometimes way faster, as it only checks the direction of
+   * interest.
+   *
+   * @param dim Positive integer with 0 <= dim < Dimensions which
+   *   indicates the search direction.
+   */
+  bool isContainedInAdjacentCellsByDimension(
+    const tarch::la::Vector<Dimensions, double>& x,
+    const int                                    dim,
+    double                                       scaleAdjacentCells = 1.0,
+    double                                       tolerance          = tarch::la::NUMERICAL_ZERO_DIFFERENCE
+  ) const;
+
+
+  /**
    * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,
    * it might be fewer of them, as we might have to deal with a hanging vertex,
    * but logically we can always assume that there were @f$ 2^d @f$.

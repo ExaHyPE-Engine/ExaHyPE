@@ -4,7 +4,7 @@ import peano4
 import exahype2
 
 project = exahype2.Project(
-    ["tests", "exahype2", "aderdg"], ".", executable="ADER-DG-Limiting-Static"
+    ["tests", "exahype2", "aderdg"], ".", executable="ADERDG-Limiting"
 )
 
 dimensions = 2
@@ -85,8 +85,8 @@ bool isBoundaryCell = (
 return !isBoundaryCell;
 """
 
-ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name="ADERSolver",
+aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    name="ADERDGSolver",
     order=order,
     unknowns=4,
     auxiliary_variables=0,
@@ -99,10 +99,10 @@ ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     initial_conditions=initial_conditions("x"),
     boundary_conditions=boundary_conditions,
 )
-ader_solver.add_kernel_optimisations(
+aderdg_solver.add_kernel_optimisations(
     polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto
 )
-project.add_solver(ader_solver)
+project.add_solver(aderdg_solver)
 
 fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     name="FVSolver",
@@ -122,7 +122,7 @@ project.add_solver(fv_solver)
 
 limiter = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
-    regular_solver=ader_solver,
+    regular_solver=aderdg_solver,
     limiting_solver=fv_solver,
     limiting_criterion_implementation=limiting_criterion,
 )
@@ -154,6 +154,6 @@ project = project.generate_Peano4_project("False")
 project.build(make_clean_first=True)
 
 print(fv_solver)
-print(ader_solver)
+print(aderdg_solver)
 print(limiter)
 print(project)

@@ -12,7 +12,8 @@ class NohProblemIC:
         if dimensions == 2 or dimensions == 3:
             self.initialisation_snippet = """
 
-      /* Code inserted via the python initialisation snippet library.
+      /*
+       * Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
        * Template located in python/swift2/scenario/NohProblem.py
        */
@@ -21,7 +22,6 @@ class NohProblemIC:
        * Initial Conditions: the Noh problem.
        * We give particles an initial velocity towards the centre.
        * Particles will then develop a shock that propagates outwards.
-       *
        */
 
       // Internal search radius used by Peano and with max value R = grid_size/2
@@ -30,22 +30,23 @@ class NohProblemIC:
 
       particle->setSearchRadius( 0.999 * GridSize_x );
 
-      /* Constant density field */
+      // Constant background density field
       particle->setDensity ( 1.0 );
-      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
+
+      particle->setMass( particle->getDensity() * std::pow((DomainSize(0) / (double) HYDRO_PART_NUMBER) , HYDRO_DIMENSIONS) );
 
       const double eta_fac = particle->getEtaFactor();
-      /* Initial estimate for smoothing length */
+      // Initial estimate for smoothing length
       particle->setSmoothingLength( eta_fac * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
 
-      /* Set neglibible internal energy */
-      particle->setU( 1e-6 );
+      // Set neglibible background pressure
+      particle->setPressure( 1e-6 );
 
-      /* Compute the pressure from the EoS */
-      const double pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-      particle->setPressure( pressure );
+      // Compute the internal energy from the EoS
+      const double internal_energy = ::swift2::kernels::legacy::eos::gas_internal_energy_from_pressure( particle->getDensity(), particle->getPressure() );
+      particle->setU( internal_energy );
 
-      /* Compute the sound speed */
+      // Compute the sound speed
       const double soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( particle->getU() );
       particle->setSoundSpeed(soundspeed);
 
@@ -68,7 +69,7 @@ class NohProblemIC:
 
       particle->setV( v_ini );
 
-      /* Initialize remaining fields  */
+      // Initialize remaining fields
 
       // Vectors
       for(int d=0; d<Dimensions; d++){
@@ -76,7 +77,7 @@ class NohProblemIC:
       }
 
       #if Dimensions < 3
-      /* For 2D sims, we only get one component */
+      // For 2D sims, we only get one component
       particle->setRot_v(0.);
       #else
       for(int d=0; d<Dimensions; d++){
@@ -146,23 +147,12 @@ class NohProblemIC:
 
       particle->setPartid(partid);
 
-      // TODO MLADEN: REMOVE THIS ONCE YOU'RE SATISFIED.
-      int max_reasonable;
-      if (HYDRO_DIMENSIONS == 1)
-        max_reasonable = MAX_PART_NUMBER + 1;
-      else if (HYDRO_DIMENSIONS == 2)
-        max_reasonable = (MAX_PART_NUMBER + 1) * (MAX_PART_NUMBER + 1);
-      else
-        max_reasonable = (MAX_PART_NUMBER + 1) * (MAX_PART_NUMBER + 1) * (MAX_PART_NUMBER + 1);
-
-      assertion2(partid <= max_reasonable, partid, max_reasonable);
-      assertion1(partid >= 0, partid);
-
-      #endif
+      #endif // PeanoDebug > 0
 
       logDebug( "Init()", "dist = " << dist );
       logDebug( "Init()", "v_ini = " << v_ini );
       logDebug( "Init()", "Particle: " << particle->toString() );
+
 
       /* End of inserted block from python/swift2/scenario/NohProblem.py */
 
