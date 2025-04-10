@@ -14,30 +14,6 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
     logTraceInWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
 
     /**
-     * Issue the calculation of the inverse of the system matrix
-     */
-    const int invertCellOperatorTaskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2 + 1; 
-    tarch::la::Matrix< {{SOLVER_NAME}}::CellUnknowns, {{SOLVER_NAME}}::CellUnknowns, double > invertedApproxSystemMatrix;
-    auto invertMatrixFunctor = [&invertedApproxSystemMatrix, marker]() mutable -> bool {
-      invertedApproxSystemMatrix = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(
-          marker.x(),
-          marker.h()
-      );          
-      return false;
-    };
-    tarch::multicore::TaskWithCopyOfFunctor* invertMatrixTask = new tarch::multicore::TaskWithCopyOfFunctor(
-      tarch::multicore::Task::DontFuse,
-      tarch::multicore::Task::DefaultPriority,
-      invertMatrixFunctor
-    );  
-    tarch::multicore::spawnTask(
-      invertMatrixTask,
-      tarch::multicore::NoInDependencies,
-      invertCellOperatorTaskNumber
-    );
-
-
-    /**
      * Collect the face data into a face vector and determine the projection 
      * into the cell.
      */
@@ -53,8 +29,15 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
      * Take the cell residual and substract the projected values. Before we do 
      * this, we have to wait for the residual calculation to complete.
      */
-    const int residualComputationTaskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2; 
-    tarch::multicore::waitForTask(residualComputationTaskNumber);
+    int taskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2;
+    tarch::multicore::waitForTasks({taskNumber+0,taskNumber+1});
+    
+
+    /**
+     * Now that the volumetric kernel is used, we know that noone is accessing
+     * the residual anymore, so we can safely substract the projected value
+     * and compute the residual norm.
+     */  
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++) {
       fineGridCell{{SOLVER_NAME}}.setResidual(f,
         fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
@@ -66,13 +49,33 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
       repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
     }
 
+
     /**
-     * Wait for inverted cell operator and then apply it
+     * Take inverted cell operator and then apply it. We already have the 
+     * residual as a smart pointer, so we can apply the inverse in-situ.
      */
-    tarch::multicore::waitForTask(invertCellOperatorTaskNumber);
+    tarch::la::ShallowMatrix< {{SOLVER_NAME}}::CellUnknowns, {{SOLVER_NAME}}::CellUnknowns, double > invertedApproxSystemMatrix
+      = fineGridCell{{SOLVER_NAME}}.getInverseOfSystemMatrix();
+    tarch::la::SmartPointerVector<{{SOLVER_NAME}}::CellUnknowns, double> residual( fineGridCell{{SOLVER_NAME}}.getResidualSmartPointer() );
+
     fineGridCell{{SOLVER_NAME}}.setResidual( 
-      invertedApproxSystemMatrix * fineGridCell{{SOLVER_NAME}}.getResidual()
+      tarch::la::multiply( invertedApproxSystemMatrix, residual )
     );
+    
+    
+
+    /**
+     * Free memory. If we immediately run the next iteration sweep, it is
+     * better to recycle the memory, i.e. to omit any free here. However, the
+     * free is robust, i.e. it does not affect the semantics.
+     */
+    if ( not repositories::{{SOLVER_INSTANCE}}.updateResidual() ) {
+      tarch::freeMemory(
+        fineGridCell{{SOLVER_NAME}}.getInverseOfSystemMatrix(),
+        tarch::MemoryLocation::Heap 
+      );
+      fineGridCell{{SOLVER_NAME}}.setInverseOfSystemMatrix( nullptr );
+    }
 
     /**
      * Finally update the solution
@@ -148,6 +151,7 @@ class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
 #include "peano4/utils/Loop.h"
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/la/ShallowMatrix.h"
 """
 
 

@@ -26,9 +26,23 @@ class UpdateResidualWithTasks(ActionSet):
       repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() )
     );
     
-    auto rhsPointer      = fineGridCell{{SOLVER_NAME}}.getRhsSmartPointer();
-    auto solutionPointer = fineGridCell{{SOLVER_NAME}}.getSolutionSmartPointer();
-    auto residualPointer = fineGridCell{{SOLVER_NAME}}.getResidualSmartPointer();
+    const int OperatorSize = {{SOLVER_NAME}}::CellUnknowns * {{SOLVER_NAME}}::CellUnknowns;
+
+    /**
+     * Lazy allocation of memory. In this particular realisation, it is never
+     * released. In principle, that's a reasonable strategy, although we might
+     * want to re-evaluate it later.
+     */
+    if (fineGridCell{{SOLVER_NAME}}.getInverseOfSystemMatrix()==nullptr) {
+      fineGridCell{{SOLVER_NAME}}.setInverseOfSystemMatrix(
+        tarch::allocateMemory<double>( OperatorSize, tarch::MemoryLocation::Heap )
+      );
+    }
+        
+    auto rhsPointer         = fineGridCell{{SOLVER_NAME}}.getRhsSmartPointer();
+    auto solutionPointer    = fineGridCell{{SOLVER_NAME}}.getSolutionSmartPointer();
+    auto residualPointer    = fineGridCell{{SOLVER_NAME}}.getResidualSmartPointer();
+    double* inverseOperator = fineGridCell{{SOLVER_NAME}}.getInverseOfSystemMatrix();
     
     /**
      * Without the mutable keyword, the copied four arguments will stay const.
@@ -41,32 +55,56 @@ class UpdateResidualWithTasks(ActionSet):
      * could set residualPointer to zero and then accumulate the outcome 
      * directly into this smart pointer.
      */
-    auto updateResidualFunctor = [rhsPointer, solutionPointer, residualPointer, marker]() mutable -> bool {
+    auto updateResidualFunctor = [rhsPointer, solutionPointer, residualPointer, marker]() mutable -> void {
       tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
         repositories::{{SOLVER_INSTANCE}}.applyRhsMatrix( marker.x(), marker.h(), rhsPointer.toVector() );
       
       r = r - repositories::{{SOLVER_INSTANCE}}.applyLocalAssemblyMatrix(marker.x(), marker.h(), solutionPointer.toVector() );
       
       residualPointer = r;
-      
-      return false;
     };
 
 
-    // The factor of two takes into account that there are two task types per 
-    // cell. See ProjectIntoCellAndUpdateCellSolutionWithTasks for details.
-    int taskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2;
-    logDebug( "touchCellFirstTime(...)", "spawn task " << taskNumber );
-    tarch::multicore::TaskWithCopyOfFunctor* task = new tarch::multicore::TaskWithCopyOfFunctor(
-      tarch::multicore::Task::DontFuse,
+    /**
+     * Issue the calculation of the inverse of the system matrix
+     */
+    auto invertMatrixFunctor = [inverseOperator, marker, OperatorSize]() mutable -> void {
+      std::memcpy(
+        inverseOperator,
+        repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(
+          marker.x(),
+          marker.h()
+        ).data(),
+        sizeof(double)*OperatorSize
+      );
+    };
+
+
+    static int residualTaskType     = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}::UpdateResidualTask");
+    static int invertMatrixTaskType = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}::InvertTask");
+    tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multicore::TaskWithCopyOfFunctor(
+      residualTaskType,       // tarch::multicore::Task::DontFuse -> wird net abgefragt bisher
       tarch::multicore::Task::DefaultPriority,
       updateResidualFunctor
     );  
+    tarch::multicore::TaskWithCopyOfFunctor* invertMatrixTask = new tarch::multicore::TaskWithCopyOfFunctor(
+      invertMatrixTaskType,   // tarch::multicore::Task::DontFuse
+      tarch::multicore::Task::DefaultPriority,
+      invertMatrixFunctor
+    );  
+    
+
+    int taskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2;
     tarch::multicore::spawnTask(
-      task,
+      updateResidualTask,
       tarch::multicore::NoInDependencies,
-      taskNumber
+      taskNumber+0
     );
+    tarch::multicore::spawnTask(
+      invertMatrixTask,
+      tarch::multicore::NoInDependencies,
+      taskNumber+1
+    ); 
 
     logTraceOut("touchCellFirstTime(...)");
   }
@@ -126,7 +164,10 @@ class UpdateResidualWithTasks(ActionSet):
     """    
     return """
 #include "../repositories/SolverRepository.h"
+
 #include "peano4/utils/Loop.h"
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
+
+#include <cstring>
 """
