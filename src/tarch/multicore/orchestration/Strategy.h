@@ -54,25 +54,23 @@ public:
    * @param maxTasks How many tasks are to be fused at most. Has to be bigger
    *   than zero. If you set it to one however, you disable fusion and tasks go
    *   straight into the runtime system as proper tasks.
+   * @param timeoutNanoSeconds Timeout, i.e. time to wait for the right number
+   *   of fused tasks to arrive.
    */
   struct FuseInstruction {
     int device;
     int minTasks;
     int maxTasks;
-    int sleepNanoSeconds;
-<<<<<<< HEAD
-    FuseInstruction(int device_, int minTasks_, int maxTasks_):
-=======
-    FuseInstruction(int device_, int minTasks_, int maxTasks_, int sleepNanoSeconds_ = 0):
->>>>>>> refs/remotes/origin/multigrid
+    int timeoutNanoSeconds;
+    FuseInstruction(int device_, int minTasks_, int maxTasks_, int timeoutNanoSeconds_ = 0):
       device(device_),
       minTasks(minTasks_),
       maxTasks(maxTasks_),
-      sleepNanoSeconds(sleepNanoSeconds_) {}
+      timeoutNanoSeconds(timeoutNanoSeconds_) {}
 
     std::string toString() const {
       return "(#device=" + std::to_string(device) + ",min=" + std::to_string(minTasks)
-             + ",max=" + std::to_string(maxTasks) + ",sleep=" + std::to_string(sleepNanoSeconds) + "ns)";
+             + ",max=" + std::to_string(maxTasks) + ",timeout=" + std::to_string(timeoutNanoSeconds) + "ns)";
     }
   };
 
