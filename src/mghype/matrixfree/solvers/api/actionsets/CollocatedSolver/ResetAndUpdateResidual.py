@@ -3,14 +3,31 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class CollocatedMGSolver(ActionSet):
+
+class ResetAndUpdateResidual(ActionSet):
+  """!
+
+  Action set implementing the core of the collocated solver
+  
+  The implementation is relatively straightforward:
+  
+  - We clear diag and the residual when we hit a vertex for the first time.
+  - In each cell, we accumulate the residual. This is the contribution from
+    @f$ Ax = Mb @f$ as it stems from the current cell.
+  - In touchVertexFirstTime(), we can update the unknown.
+  - Eventually, we dump the total residual and the updates.
+
+  @TODO The boundary conditions are manually pinned to 0 during touchVertexLastTime.
+    This isn't good, and should be moved to implementation files.
+
+  """
   templateTouchVertexFirstTime = """ 
   if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Boundary
     and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridVertex{{SOLVER_NAME}}.getLevel() )
+    repositories::{{SOLVER_INSTANCE}}.updateResidual()
   ) {
-    logTraceInWith1Argument("TouchVertexFirstTimeBoundary", fineGridVertex{{SOLVER_NAME}}.toString());
+    logTraceInWith2Arguments("TouchVertexFirstTime", marker.x(), fineGridVertex{{SOLVER_NAME}}.toString());
     auto value = fineGridVertex{{SOLVER_NAME}}.getU();
     repositories::{{SOLVER_INSTANCE}}.setBoundaryConditions(
       marker.x(),
@@ -18,15 +35,14 @@ class CollocatedMGSolver(ActionSet):
       value
     );
     fineGridVertex{{SOLVER_NAME}}.setU(value);
-    logTraceOutWith1Argument("TouchVertexFirstTimeBoundary", fineGridVertex{{SOLVER_NAME}}.toString());
+    logTraceOutWith2Arguments("TouchVertexFirstTime", marker.x(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   else if (
     fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
     and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridVertex{{SOLVER_NAME}}.getLevel() )
-  )
-  {
-    logTraceInWith3Arguments("TouchVertexFirstTimeInterior", fineGridVertex{{SOLVER_NAME}}.toString(), marker.x(), marker.h());
+    repositories::{{SOLVER_INSTANCE}}.updateResidual()
+  ) {
+    logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++) {
       // set residual to 0
@@ -37,39 +53,7 @@ class CollocatedMGSolver(ActionSet):
       fineGridVertex{{SOLVER_NAME}}.setDiag(unknown, 0.0);
     }
     
-    logTraceOutWith2Arguments("TouchVertexFirstTimeInterior", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
-  }
-  """
-
-  templateTouchVertexLastTime = """
-  if (
-    fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Interior
-    and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridVertex{{SOLVER_NAME}}.getLevel() )
-  ) {
-    logTraceInWith3Arguments("TouchVertexLastTime", fineGridVertex{{SOLVER_NAME}}.toString(), marker.x(), marker.h());
-
-    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
-    {
-      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown), fineGridVertex{{SOLVER_NAME}}.getDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
-      assertion( fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) > 0 );
-      
-      double r   = fineGridVertex{{SOLVER_NAME}}.getResidual(unknown);
-      double du  = repositories::{{SOLVER_INSTANCE}}.Omega 
-                 * 1.0 / fineGridVertex{{SOLVER_NAME}}.getDiag(unknown) * r;
-
-      // only care about solution on finest level...
-      if (
-        fineGridVertex{{SOLVER_NAME}}.getLevel() == repositories::{{SOLVER_INSTANCE}}.getFinestLevel()
-      ) {
-        repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(r, marker.h());
-        repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
-      }
-      
-      fineGridVertex{{SOLVER_NAME}}.setU(unknown, fineGridVertex{{SOLVER_NAME}}.getU(unknown) + du);
-      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getU(unknown));
-    }
-    logTraceOutWith1Argument("TouchVertexLastTime", fineGridVertex{{SOLVER_NAME}}.toString());
+    logTraceOutWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   """
 
@@ -77,9 +61,10 @@ class CollocatedMGSolver(ActionSet):
   if ( 
     fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior 
     and
-    repositories::{{SOLVER_INSTANCE}}.update( fineGridCell{{SOLVER_NAME}}.getLevel() )
+    repositories::{{SOLVER_INSTANCE}}.updateResidual()
   ) {
-    logTraceInWith3Arguments("Solve::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.toString(), marker.x(), marker.h());
+    logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
     for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
       // Mass and assembly matrix should be block diagonal, 
@@ -90,7 +75,7 @@ class CollocatedMGSolver(ActionSet):
       int startIndex = TwoPowerD * unknown;
       
       auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
-      auto M       = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h(), fineGridCell{{SOLVER_NAME}}.getLevel());
+      auto M       = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(), marker.h());
 
       // collect all of the vertex values into one vector - apply the appropriate
       // part of the matrix as we go.
@@ -105,7 +90,7 @@ class CollocatedMGSolver(ActionSet):
           rhsColSum += M(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getRhs(unknown);
         }
       
-        vertexValues(i)   = solColSum;
+        vertexValues(i)   = solColSum;        
         rhsValues(i)      = rhsColSum;
         residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
       }
@@ -132,14 +117,16 @@ class CollocatedMGSolver(ActionSet):
       }
 
     }
-    logTraceOutWith1Argument("Solve::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.toString());
+    logTraceOutWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
   }
   """
+  
   def __init__(self,
                solver,
-               descend_invocation_order=0,
-               parallel=False):
-    super( CollocatedMGSolver, self ).__init__(
+               descend_invocation_order=1,
+               parallel=False
+               ):
+    super( ResetAndUpdateResidual, self ).__init__(
       descend_invocation_order,
       parallel
     )
@@ -156,10 +143,21 @@ class CollocatedMGSolver(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
-      pass
     return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
     
   def user_should_modify_template(self):
     """!
@@ -179,21 +177,6 @@ class CollocatedMGSolver(ActionSet):
          
     """    
     return """
-#include "repositories/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
-#include "mghype/matrixfree/solvers/CGMultigrid.h"
 """
-
-  def get_action_set_name(self):
-    """!
-    
-    Configure name of generated C++ action set
-    
-    This action set will end up in the directory observers with a name that
-    reflects how the observer (initialisation) is mapped onto this action 
-    set. The name pattern is ObserverName2ActionSetIdentifier where this
-    routine co-determines the ActionSetIdentifier. We make is reflect the
-    Python class name.
-     
-    """
-    return __name__.replace(".py", "").replace(".", "_") + "_Solve"

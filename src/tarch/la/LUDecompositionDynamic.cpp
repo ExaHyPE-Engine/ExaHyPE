@@ -6,18 +6,17 @@ void tarch::la::backSubstitution(
   const DynamicMatrix& R,
   const double* f,
   double* x
-){
+) {
   for(int k = R.cols()-1; k >= 0; k--){
     x[k] = f[k];
     for(int i = k+1; i < R.cols(); i++){
       x[k] -= R(k, i)*x[i];
     }
-    if (tarch::la::smaller(R(k, k), 0.0) or tarch::la::greater(R(k, k), 0.0)){
-      x[k] = x[k]/R(k, k);
-    }
+    assertion2( not tarch::la::equals( R(k,k), 0.0 ), R.toString(), k );
+    x[k] = x[k]/R(k, k);
   }
-
 }
+
 
 tarch::la::DynamicMatrix tarch::la::invertUpperTriangular(
   const tarch::la::DynamicMatrix& R

@@ -33,7 +33,7 @@ project = mghype.matrixfree.api.Project( project_name = "DGPointwise",
 
 #! [Construct matrices]
 
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GaussLobattoMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
@@ -78,6 +78,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
+  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval
 )
 
 #! [Instantiate solver]
@@ -103,9 +104,10 @@ project.set_global_simulation_parameters(
   offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
   plot_after_each_mesh_sweep       = args.plot_after_each_mesh_sweep,
+  max_iterations                   = 10000
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)

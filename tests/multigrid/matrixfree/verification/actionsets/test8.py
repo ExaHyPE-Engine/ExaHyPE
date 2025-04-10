@@ -46,7 +46,7 @@ class InitDofsTest8(ActionSet):
 
   logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -114,7 +114,7 @@ class InitDofsTest8(ActionSet):
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -155,7 +155,7 @@ class InitDofsTest8(ActionSet):
         // multiply vu by A_cg
         vu_values = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * vu_values;
         // multiply vb by M
-        vb_values = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h()) * vb_values;
+        vb_values = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(), marker.h()) * vb_values;
 
         // place this into rhs
         for (int i=0; i<TwoPowerD; i++){

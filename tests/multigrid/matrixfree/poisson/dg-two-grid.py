@@ -31,7 +31,7 @@ project = mghype.matrixfree.api.Project( project_name = "DGTwoGrid",
                             )
 
 
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GaussLobattoMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
@@ -160,7 +160,7 @@ project.set_global_simulation_parameters(
   max_iterations = 2000
 )
 
-# project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)

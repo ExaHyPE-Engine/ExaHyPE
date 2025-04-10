@@ -73,8 +73,7 @@
  *
  * 
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
-
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::solvers::Solver {
   public:
     enum class State {
       Solve,                    // for use in middle DG stage
@@ -86,21 +85,110 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
+    /**
+     * During solution updates, we update the solution via
+     * \f$ u = u + \omega * du \f$. Its value is passed in to the python class
+     * and is in the range [0,1]. A value 0 will mean that no updates are performed. 
+     * 0.5 is a typical value.
+     * 
+     */
     static constexpr double     OmegaCell              = {{CELL_RELAXATION}};
+
+    /**
+     * During solution updates, we update the solution via
+     * \f$ u = (1-\omega)*u + \omega * du \f$. Its value is passed in to the DG Solver class
+     * and is in the range [0,1]. A value 0 will mean that no updates are performed. 
+     * 1.0 is a typical value.
+     * 
+     */  
     static constexpr double     OmegaFace              = {{FACE_RELAXATION}};
-    static constexpr int        VertexUnknowns         = {{VERTEX_CARDINALITY}};
+
+    /**
+     * This is the total number of unknowns we store in the cell, taking into account
+     * dimension, polynomial degree and the number of variables that we care about in
+     * this setup.
+     * 
+     * This is set in the python script and sent over via a template. Its value
+     * is equal to UnknownsPerCellNode * ( PolyDegree + 1 ) ^ Dimensions, which
+     * is in turn equal to UnknownsPerCellNode * NodesPerCell.
+     */
     static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
+
+    /**
+     * This is the total number of unknowns we store in the face's solution vector, taking
+     * into account dimension, polynomial degree and the number of variables that we care
+     * about in this setup.
+     * 
+     * Its value is equal to SolutionsPerFaceNode * NodesPerFace.
+     * 
+     */
     static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};
+
+    /**
+     * This is the total number of unknowns we store in the face's projection vector, taking
+     * into account dimension, polynomial degree and the number of variables that we care
+     * about in this setup.
+     * 
+     * Its value is equal to ProjectionsPerFaceNode * NodesPerFace, which is twice as long
+     * as the solution vector. This is to take into account projections from the left and
+     * right sides of a face.
+     */
     static constexpr int        FaceUnknownsProjection = {{FACE_CARDINALITY_PROJECTION}};
 
+    /**
+     * This is the total number of nodes we store logically in the cell, taking into account
+     * polynomial degree and dimensions.
+     * 
+     * Its value is set in the DG Solver class, and is equal to (PolyDegree+1)^Dimensions
+     * 
+     */
     static constexpr int        NodesPerCell           = {{NODES_PER_CELL}};
+
+    /**
+     * This is the total number of nodes we store logically in the face, taking into account
+     * polynomial degree and dimensions.
+     * 
+     * Its value is set in the DG Solver class, and is equal to (PolyDegree+1)^(Dimensions-1)
+     * 
+     */  
     static constexpr int        NodesPerFace           = {{NODES_PER_FACE}};
 
+    /**
+     * This is the number of unknowns we store per cell node. For almost all purposes, 
+     * this number is 1 (ie the solution of the poisson problem in the cell).
+     * 
+     */
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
+
+    /**
+     * This is the number of unknowns we store per face node for the solution. This
+     * is typically 2, ie the true solution as well as its gradient.
+     */
     static constexpr int        SolutionsPerFaceNode   = {{SOLUTIONS_PER_FACE_NODE}};
+
+    /**
+     * This is the number of unknowns we store per face node for the solution. This
+     * is typically 2, ie the true solution as well as its gradient. 
+     *
+     * @todo Kick this out and replace it with SolutionsPerFaceNode, since it doesn't
+     *  make sense if these two numbers differ.
+     * 
+     */
     static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
+    
+    /**
+     * Spacing of integration nodes along unit interval in one dimension
+     *
+     * The position of any point within the reference element can be
+     * constructed through a tensor product approach.
+     */
+    static const tarch::la::Vector< PolyDegree+1, double >   IntegrationPoints;
+
+    static tarch::la::Vector< Dimensions, double > getIntegrationPoint(
+      const tarch::la::Vector< Dimensions, int >& pos
+    );
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -108,70 +196,97 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
     /**
      * Initialise a cell degree of freedom
      */
-    virtual void initCell(
+    virtual void initCellDoF(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< CellUnknowns, double >&  solution,
-      tarch::la::Vector< CellUnknowns, double >&  rhs
-    ) = 0;
+      tarch::la::Vector< UnknownsPerCellNode, double >&    value,
+      tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
+      tarch::la::Vector< Dimensions, int >&         node
+    ) {% if CUSTOM_INIT_CELL=="" %} = 0 {% endif %};
 
     /**
-     * Initialise a face degree of freedom
+     * Initialise a cell degree of freedom
+     * 
      */
-    virtual void initFace(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
-      tarch::la::Vector< FaceUnknownsProjection,double >& projection
-    ) = 0;
-
-    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h
-    ) final;
-
-    virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
+    virtual celldata::{{SOLVER_NAME}}::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    virtual facedata::{{SOLVER_NAME}}::Type getFaceDoFType(
+    virtual facedata::{{SOLVER_NAME}}::Type getFaceType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getLocalAssemblyMatrix(
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getLocalAssemblyMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getMassMatrix(
-      const tarch::la::Vector<Dimensions, double>&  cellCentre,
-      const tarch::la::Vector<Dimensions, double>&  cellSize
-    ) {% if MASS_MATRIX is not defined %} = 0 {% endif %};
+    virtual tarch::la::Vector< CellUnknowns, double > applyLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&      cellCentre,
+      const tarch::la::Vector<Dimensions, double>&      cellSize,
+      const tarch::la::Vector< CellUnknowns, double >&  v
+    ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedApproxSystemMatrix(
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) {% if RHS_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< CellUnknowns, double > applyRhsMatrix(
+      const tarch::la::Vector<Dimensions, double>&      cellCentre,
+      const tarch::la::Vector<Dimensions, double>&      cellSize,
+      const tarch::la::Vector< CellUnknowns, double >&  v
+    ) {% if RHS_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Matrix< CellUnknowns, CellUnknowns, double > getInvertedApproxSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) {% if APPROX_SYSTEM_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< CellUnknowns, double > applyInvertedApproxSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&     cellCentre,
+      const tarch::la::Vector<Dimensions, double>&     cellSize,
+      const tarch::la::Vector< CellUnknowns, double >& v
     ) {% if APPROX_SYSTEM_MATRIX is not defined %} = 0 {% endif %};
 
     // no arguments needed
     virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getCellFromFaceMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if CELL_FROM_FACE_PROJECTION is not defined %} = 0 {% endif %};
 
-    // no arguments needed
+    virtual tarch::la::Vector< CellUnknowns, double > applyCellFromFaceMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize,
+      const tarch::la::Vector< FaceUnknownsSolution * TwoTimesD, double >& v
+    ) {% if CELL_FROM_FACE_PROJECTION is not defined %} = 0 {% endif %};
+
     virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getFaceFromCellMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if FACE_FROM_CELL_PROJECTION is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< FaceUnknownsProjection * TwoTimesD, double> applyFaceFromCellMatrix(
+      const tarch::la::Vector<Dimensions, double>&     cellCentre,
+      const tarch::la::Vector<Dimensions, double>&     cellSize,
+      const tarch::la::Vector< CellUnknowns, double>&  v
+    ) {% if FACE_FROM_CELL_PROJECTION is not defined %} = 0 {% endif %};
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix()
       {% if RIEMANN_MATRIX is not defined %} = 0 {% endif %};
 
+    virtual tarch::la::Vector< FaceUnknownsSolution, double> applyRiemannMatrix(
+      const tarch::la::Vector< FaceUnknownsProjection, double>& v
+    ) {% if RIEMANN_MATRIX is not defined %} = 0 {% endif %};
+
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Vector< FaceUnknownsSolution, double> applyBoundaryConditionMatrix(
+      const tarch::la::Vector< FaceUnknownsSolution, double>& v
+    ) {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
     virtual void beginMeshSweep() override;
 

@@ -105,10 +105,29 @@ namespace swift2 {
        *
        * Returns 0 if \f$u > \gamma = H/h\f$
        *
+       * ## Implementation
+       *
+       * We originally had
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *       static void kernel_eval(double u, double& W) InlineMethod {
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * but that gives us
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * static void kernel_eval(double u, double& W) InlineMethod {
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * Is also not required, as the implementation is in the header, so the
+       * compiler will inline (and we therefore have to mark the routine as
+       * static).
+       *
+       *
        * @param u The ratio of the distance to the smoothing length \f$u = x/h\f$.
        * @param W (return) The value of the kernel function \f$W(x,h)\f$.
        */
-      static void kernel_eval(double u, double& W) InlineMethod {
+      static void kernel_eval(double u, double& W) {
 
         /* Go to the range [0,1[ from [0,H[ */
         const double x = u * kernel_gamma_inv;
@@ -188,12 +207,21 @@ namespace swift2 {
        * which we then have rewritten into Horner's scheme again.
        *
        *
+       * ## Implementation
+       *
+       * We originally had marked this routine with InlineMethod, but that
+       * yields
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * kernels/legacy/kernel_hydro.h:196:68: warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
        *
        * @param u The ratio of the distance to the smoothing length \f$u = x/h\f$.
        * @param W (return) The value of the kernel function \f$W(x,h)\f$.
        * @param dW_dx (return) The norm of the gradient of \f$|\nabla W(x,h)|\f$.
        */
-      static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
+      static void kernel_deval(double u, double& W, double& dW_dx) {
         /* Go to the range [0,1[ from [0,H[ */
         const double x = u * kernel_gamma_inv;
 

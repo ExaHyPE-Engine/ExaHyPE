@@ -190,7 +190,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAM
 
 
 
-{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
+{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -198,7 +198,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAM
 }
 
 
-{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceDoFType(
+{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -215,7 +215,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAM
 }
 
 
-{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
