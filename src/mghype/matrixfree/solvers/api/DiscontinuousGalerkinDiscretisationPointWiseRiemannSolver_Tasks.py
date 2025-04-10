@@ -108,7 +108,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks(Discontinu
     #    self._action_set_project_onto_faces                          =  ProjectOntoFaces(self, descend_order+3, False) 
     self._action_set_project_into_cell_and_update_cell_solution  =  ProjectIntoCellAndUpdateCellSolutionWithTasks(self, self._action_set_project_into_cell_and_update_cell_solution.descend_invocation_order, False) 
     self._action_set_update_residual                             =  UpdateResidualWithTasks(self, self._action_set_update_residual.descend_invocation_order, False) 
-
+ 
+    self._cell_data.data.add_attribute(dastgen2.attributes.DoublePointer( "inverseOfSystemMatrix" ))
+ 
     
   def add_to_init_solution(self, observer):
     """!
