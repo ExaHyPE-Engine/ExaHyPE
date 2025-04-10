@@ -27,7 +27,8 @@ GCC:
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON"
+                            -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_NETCDF=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -48,6 +49,7 @@ GCC_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -69,7 +71,8 @@ Intel:
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON"
+                            -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_NETCDF=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -90,6 +93,7 @@ Intel_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -112,6 +116,7 @@ Intel_SharedOMP_MPI:
 #                             -DENABLE_PARTICLES=ON \
 #                             -DENABLE_MGHYPE=ON \
 #                             -DENABLE_FINITEELEMENTS=ON \
+#                             -DWITH_NETCDF=ON \
 #                             -DWITH_MULTITHREADING=sycl \
 #                             -DWITH_MPI=ON"
 #   trigger:
@@ -133,7 +138,8 @@ LLVM:
                             -DENABLE_SWIFT=ON \
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
-                            -DENABLE_FINITEELEMENTS=ON"
+                            -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_NETCDF=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -154,6 +160,7 @@ LLVM_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
   trigger:
@@ -173,9 +180,10 @@ NVIDIA:
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
+                            -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DENABLE_PARTICLES=ON"
+                            -DWITH_NETCDF=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -193,9 +201,10 @@ AMD:
                             -DENABLE_LOADBALANCING=ON \
                             -DENABLE_BLOCKSTRUCTURED=ON \
                             -DENABLE_SWIFT=ON \
+                            -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DENABLE_PARTICLES=ON"
+                            -DWITH_NETCDF=ON"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml

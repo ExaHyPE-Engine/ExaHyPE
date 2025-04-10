@@ -2,14 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#ifdef UseNetCDF
+
 #include "NetCDFReader.h"
 
-namespace applications::exahype2::swe {
-  class TopologyParser;
-} // namespace applications::exahype2::swe
+#include "tarch/logging/Log.h"
 
-class applications::exahype2::swe::TopologyParser {
+namespace tarch::reader {
+  class TopologyParser;
+} // namespace tarch::reader
+
+class tarch::reader::TopologyParser {
 private:
+  static tarch::logging::Log _log;
+
   NetCDFReader _netCDFReader;
 
   double* _bathymetry   = nullptr;
@@ -109,3 +115,5 @@ public:
   double sampleBathymetry(double x, double y);
   double sampleDisplacement(double x, double y);
 };
+
+#endif
