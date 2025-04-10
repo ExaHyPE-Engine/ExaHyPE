@@ -362,8 +362,15 @@ public:
 
 
   /**
+   * One-dimensional version of isContainedInAdjacentCells()
+   *
    * Same as isContainedInAdjacentCells(), but only checks along
-   * a single dimension provided by `int dim`.
+   * a single dimension provided by `int dim`. This variant is
+   * sometimes way faster, as it only checks the direction of
+   * interest.
+   *
+   * @param dim Positive integer with 0 <= dim < Dimensions which
+   *   indicates the search direction.
    */
   bool isContainedInAdjacentCellsByDimension(
     const tarch::la::Vector<Dimensions, double>& x,

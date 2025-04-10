@@ -318,8 +318,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_second_order(
     tarch::la::DynamicMatrix coarseValues = coarseMatrix * derivatives;
     for (int i = 0; i < overlap; i++) {
       tarch::la::Vector<Dimensions, int> coarseCell = kCoarse + coarseStart;
-      coarseCell(normal
-      ) = (marker.getSelectedFaceNumber() < Dimensions xor swapInsideOutside)
+      coarseCell(normal) = ( (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
             ? i + overlap
             : overlap - i - 1;
       int index = serialiseVoxelIndexInOverlap(
@@ -596,8 +595,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_matrix(
       overlap,
       normal
     );
-    int newIndex = (marker.getSelectedFaceNumber() < Dimensions
-                    xor swapInsideOutside)
+    int newIndex = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside)
                      ? kFine(normal)
                      : 2 * overlap - kFine(normal) - 1;
     int base     = overlap * 2;
