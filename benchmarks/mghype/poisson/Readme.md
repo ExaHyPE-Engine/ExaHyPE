@@ -5,14 +5,8 @@
 
  For the benchmarks here, we have to set the Python correctly first:
  
-<<<<<<< HEAD
-       export PYTHONPATH=../../../python:../../../src
-=======
        export PYTHONPATH=~/git/Peano/python:~/git/Peano/src
->>>>>>> refs/remotes/origin/multigrid
 
- After that, all benchmarks can be directly created through the Python scripts.
-<<<<<<< HEAD
  You will need the following extensions:
  
  - --enable-mghype 
@@ -39,13 +33,6 @@
  optimised one. Both employ solely domain decomposition. The third variant
  adds tasks on top.
  
- 
-=======
-
-       python3 benchmarks.py -p 6 -m 0.005 -rea dg-sweeps -var rediscretise -o profile 
-       
-       
->>>>>>> refs/remotes/origin/multigrid
- */
+*/
  
  
