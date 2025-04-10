@@ -1,68 +1,93 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/accelerator/Device.h"
+#include "Device.h"
 
 #if defined(GPUOffloadingSYCL)
 
-#include "Device.h"
-
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Lock.h"
 
 #include <map>
 
+#pragma push_macro("Dimensions")
+#undef Dimensions
+#include <sycl/sycl.hpp>
+#pragma pop_macro("Dimensions")
+
 namespace {
   std::map<int, sycl::queue> syclQueues;
+
+  void listSYCLQueues() {
+    auto platforms = sycl::platform::get_platforms();
+    std::cout << "SYCL system overview:" << std::endl;
+    int deviceIndex = 0;
+    for (const auto &platform : platforms) {
+      std::string platformName = platform.get_info<sycl::info::platform::name>();
+      for (const auto &device : platform.get_devices()) {
+        std::string deviceName = device.get_info<sycl::info::device::name>();
+        std::cout << "  Device #" << deviceIndex
+                  << " | Platform: " << platformName
+                  << " | Device: " << deviceName << std::endl;
+        ++deviceIndex;
+      }
+    }
+  }
 } // namespace
 
-tarch::accelerator::Device::Device() { listSYCLQueues(); }
+tarch::accelerator::Device::Device() {}
 
 void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
-  auto platforms               = sycl::platform::get_platforms();
-  int  physicalNumberOfDevices = 0;
-  int  logicalNumberOfDevices  = 0;
+  auto platforms                    = sycl::platform::get_platforms();
+  unsigned int physicalDeviceIndex  = 0;
+  unsigned int logicalDeviceIndex   = 0;
 
   syclQueues.clear();
 
-  for (auto& platform : platforms) {
-    auto devices = platform.get_devices();
-    for (auto& device : devices) {
-      if (syclQueues.count(physicalNumberOfDevices) > 0) {
-        logInfo(
-          "initSYCLQueues(...)",
-          "skip device #"
-            << physicalNumberOfDevices << " (SYCL queue already set up)"
-        );
-      } else if (syclQueues.count(physicalNumberOfDevices) == 0 and (devicesToUse.empty() or devicesToUse.count(physicalNumberOfDevices) > 0)) {
-        logInfo(
-          "initSYCLQueues(...)",
-          "init physical device #"
-            << physicalNumberOfDevices << " as logical device "
-            << logicalNumberOfDevices
-            << ". Device numbers from hereon refer to logical devices"
-        );
-        syclQueues.insert(std::pair<int, sycl::queue>(
-          logicalNumberOfDevices,
-          sycl::queue(device)
-        ));
-        logicalNumberOfDevices++;
-      } else {
-        logInfo(
-          "initSYCLQueues(...)",
-          "skip device #" << physicalNumberOfDevices << " (masked out)"
-        );
+  for (const auto& platform : platforms) {
+    std::string platformName = platform.get_info<sycl::info::platform::name>();
+    for (const auto &device : platform.get_devices()) {
+      std::string deviceName = device.get_info<sycl::info::device::name>();
+
+       // Skip devices that are not GPUs.
+       if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
+        logInfo("configure()",
+                "Skipping physical device #" + std::to_string(physicalDeviceIndex) +
+                " (" + platformName + " / " + deviceName +
+                ") because it is not an accelerator");
+        ++physicalDeviceIndex;
+        continue;
       }
-      physicalNumberOfDevices++;
+
+      if (devicesToUse.empty() || devicesToUse.count(physicalDeviceIndex) > 0) {
+        logInfo("configure()",
+                "Initialising physical device #" + std::to_string(physicalDeviceIndex) +
+                " (" + platformName + " / " + deviceName +
+                ") as logical device #" + std::to_string(logicalDeviceIndex));
+        syclQueues.insert({logicalDeviceIndex, sycl::queue(device)});
+        ++logicalDeviceIndex;
+      } else {
+        logInfo("configure()",
+                "Skipping physical device #" + std::to_string(physicalDeviceIndex) +
+                " (masked out)");
+      }
+      ++physicalDeviceIndex;
     }
   }
+
+  if (syclQueues.empty()) {
+    throw std::runtime_error("No accelerator devices found. Please check your driver installation.");
+  }
+
+  // listSYCLQueues();
 }
 
 void tarch::accelerator::Device::shutdown() {
-  syclQueues.clear();
   checkForMemoryLeaks();
   tarch::multicore::Lock lock(_memoryBlockSemaphore);
   _memoryBlockTable.clear();
+  syclQueues.clear();
 }
 
 bool tarch::accelerator::Device::isInitialised() const {
@@ -73,25 +98,9 @@ int tarch::accelerator::Device::getNumberOfDevices() const {
   return syclQueues.size();
 }
 
-sycl::queue& tarch::accelerator::getSYCLQueue(int number) {
+void* tarch::accelerator::getSYCLQueue(int number) {
   assertion1(syclQueues.count(number) == 1, number);
-  return syclQueues[number];
-}
-
-void tarch::accelerator::listSYCLQueues() {
-  auto platforms       = sycl::platform::get_platforms();
-  int  numberOfDevices = 0;
-  std::cout << "SYCL system overview:" << std::endl;
-  for (auto& platform : platforms) {
-    auto devices = platform.get_devices();
-    for (auto& device : devices) {
-      std::cout
-        << "device #" << numberOfDevices << ":  platform "
-        << platform.get_info<sycl::info::platform::name>() << " / "
-        << device.get_info<sycl::info::device::name>() << std::endl;
-      numberOfDevices++;
-    }
-  }
+  return &syclQueues[number];
 }
 
 #endif // defined(GPUOffloadingSYCL)

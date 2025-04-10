@@ -5,28 +5,19 @@
 #include "Device.h"
 #include "MemoryLocation.h"
 
-/**
- * Have to include this header, as we need access to the SYCL header file to prevent conflicts with the Dimensions macro.
- */
-#include "sycl/Device.h"
-
-/**
- * Have to include this header, as we need access to the underlying CUDA streams.
- */
-#include "cuda/Device.h"
+#if defined(GPUOffloadingCUDA)
+#include "cuda/Device.h" // To get access to the __device__ keyword
+#endif
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
-#include "tarch/multicore/multicore.h"
 
 namespace tarch {
   #if defined(GPUOffloadingCUDA) or defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
     #define GPUCallableMethod __host__ __device__
     GPUCallableMethod void gpuAbort();
   #elif defined(GPUOffloadingSYCL)
-    // SYCL_EXTERNAL is not required in GPUCallableMethod as we define the device kernels typically inline.
-    // If a device kernel function is defined in a separate .cpp file, then SYCL_EXTERNAL is explicitly needed.
     #define GPUCallableMethod
-    SYCL_EXTERNAL void gpuAbort();
+    void gpuAbort();
   #elif defined(GPUOffloadingOMP)
     #define GPUCallableMethod
     #pragma omp declare target
@@ -88,7 +79,6 @@ namespace tarch {
    * memory allocation on an accelerator. Default is -1 (HostDevice).
    * For memory allocation on accelerators, passing a device id >= 0 is
    * necessary.
-   *
    *
    * @param count Number of elements to allocate memory for.
    * @param location Location on where to allocate the memory.

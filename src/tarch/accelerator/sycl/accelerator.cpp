@@ -4,8 +4,17 @@
 
 #if defined(GPUOffloadingSYCL)
 
+#include "Device.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
+
+#pragma push_macro("Dimensions")
+#undef Dimensions
+#include <sycl/sycl.hpp>
+#pragma pop_macro("Dimensions")
+
+#include <cstring>
 
 namespace {
   tarch::logging::Log _log("tarch::accelerator::sycl");
@@ -23,22 +32,20 @@ void* tarch::accelerator::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-    assertion1(device == accelerator::Device::HostDevice, device);
-    data = std::aligned_alloc( // ::sycl::malloc_host
+    assertion1(device == Device::HostDevice, device);
+    data = std::aligned_alloc( // sycl::malloc_host
       AlignmentOnHeap,
       tarch::padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
     break;
-  case MemoryLocation::DeviceHeap: {
+  case MemoryLocation::Device: {
     assertion1(device >= 0, device);
-    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-    data                 = ::sycl::malloc_device<void*>(sizeInBytes, queue);
-    break;
-  }
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory: {
-    assertion1(device >= 0, device);
-    ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-    data                 = ::sycl::malloc_shared<void*>(sizeInBytes, queue);
+    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+#ifdef UseUSM
+    data = sycl::malloc_shared(sizeInBytes, queue);
+#else
+    data = sycl::malloc_device(sizeInBytes, queue);
+#endif
     break;
   }}
 
@@ -65,7 +72,7 @@ void tarch::accelerator::freeRawData(
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "attempt to free invalid pointer")
+      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
@@ -73,16 +80,75 @@ void tarch::accelerator::freeRawData(
 
   switch (location) {
     case MemoryLocation::Heap:
-      assertion1(device == accelerator::Device::HostDevice, device);
-      std::free(data); // ::sycl::free
+      assertion1(device == Device::HostDevice, device);
+      std::free(data); // sycl::free
       break;
-    case MemoryLocation::DeviceHeap:
-    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    case MemoryLocation::Device:
       assertion1(device >= 0, device);
-      ::sycl::queue& queue = accelerator::getSYCLQueue(device);
-      ::sycl::free(data, queue);
+      sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+      sycl::free(data, queue);
       break;
   }
+}
+
+void tarch::accelerator::copyTo(
+  void*          target,
+  const void*    source,
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
+  assertion(source);
+  assertion(target);
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+
+  switch (location) {
+  case MemoryLocation::Heap:
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    std::memcpy(target, source, sizeInBytes);
+    break;
+  case MemoryLocation::Device: {
+#ifdef UseUSM
+    std::memcpy(target, source, sizeInBytes);
+#else
+    assertion1(device >= 0, device);
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to device");
+    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+    queue.memcpy(target, source, sizeInBytes).wait();
+    //queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();
+#endif
+    break;
+  }}
+}
+
+void tarch::accelerator::copyFrom(
+  const void*    source,
+  void*          target,
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
+  assertion(source);
+  assertion(target);
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+
+  switch (location) {
+  case MemoryLocation::Heap:
+    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    std::memcpy(target, source, sizeInBytes);
+    break;
+  case MemoryLocation::Device: {
+#ifdef UseUSM
+    std::memcpy(target, source, sizeInBytes);
+#else
+    assertion1(device >= 0, device);
+    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from device to host");
+    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+    queue.memcpy(target, source, sizeInBytes).wait();
+    //queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();
+#endif
+    break;
+  }}
 }
 
 #endif // defined(GPUOffloadingSYCL)

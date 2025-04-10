@@ -261,10 +261,10 @@ def create_solver_user_definitions():
       const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
     ) {
-      logTraceInWith2Arguments("analyticalSolution(...)", x, t);
+      logTraceInWith2Arguments("analyticalSolution()", x, t);
 
       // @todo Implement your stuff here
 
-      logTraceOut("analyticalSolution(...)");
+      logTraceOut("analyticalSolution()");
     }
 """

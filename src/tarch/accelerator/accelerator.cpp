@@ -90,8 +90,8 @@ void tarch::freeMemory(void* memoryPtr, MemoryLocation location, int device) {
 }
 
 std::size_t tarch::padSizeToAlignment(std::size_t size, std::size_t alignment) {
-  assertion(size > 0);
-  assertion(alignment > 0);
+  assertion1(size > 0, size);
+  assertion1(alignment > 0, alignment);
   // Aligned alloc requires size to be a multiple of alignment, therefore we
   // need to check it. Also see:
   // https://en.cppreference.com/w/c/memory/aligned_alloc

@@ -57,7 +57,7 @@
         {{ loopOverDimensions() | indent(4) }}
 
         {% if COMPUTE_MAX_EIGENVALUE==True %}
-        {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }};
+        {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }}
         {% endif %}
 
         {{ riemann.scatterQ() | indent(4) }}
@@ -77,7 +77,7 @@
       {{ loopOverDimensions() | indent(4) }}
 
       {% if COMPUTE_MAX_EIGENVALUE==True %}
-      {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }};
+      {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }}
       {% endif %}
 
       {{ riemann.scatterQ() | indent(4) }}

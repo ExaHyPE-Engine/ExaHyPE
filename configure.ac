@@ -793,25 +793,6 @@ AM_CONDITIONAL([UseToolboxBlockstructured],[test "x$toolbox_blockstructured" = x
 
 
 #
-# Delta
-#
-AC_ARG_WITH(delta,
-  AS_HELP_STRING([--with-delta],[enable Delta [default=no]]),
-  [ AC_MSG_CHECKING(for delta)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);   toolbox_delta=false ;;
-      *)     AC_MSG_RESULT(yes);  toolbox_delta=${withval}  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); toolbox_delta=false ])
-# This whole autotools thing is not very nice: If I wanna use an if ... endif (
-# note the syntax which is different to the present file, then I have to declare
-# the variable as I do in the line below. Otherwise, the if thing is not
-# "exported". Seems the autoconf and the makefile generator are completely
-# separate with inconsistent syntax.
-AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
-
-
-#
 # ===============================================================
 # Setup toolboxes and extensions
 #

@@ -10,6 +10,12 @@ Tarch_SOURCES = \
 	Enumerator.cpp \
 	NonCriticalAssertions.cpp \
 	UnitTests.cpp \
+	la/Scalar.cpp \
+	la/Vector.cpp \
+	la/DynamicMatrix.cpp \
+	la/DynamicMatrixOperations.cpp \
+	la/GramSchmidt.cpp \
+	la/LUDecompositionDynamic.cpp \
 	la/tests/DynamicMatrixTest.cpp \
 	la/tests/MatrixVectorTest.cpp \
 	la/tests/MatrixTest.cpp \
@@ -17,11 +23,6 @@ Tarch_SOURCES = \
 	la/tests/GramSchmidtTest.cpp \
 	la/tests/LUDecompositionTest.cpp \
 	la/tests/VectorTest.cpp \
-	la/Scalar.cpp \
-	la/DynamicMatrix.cpp \
-	la/DynamicMatrixOperations.cpp \
-	la/GramSchmidt.cpp \
-	la/LUDecompositionDynamic.cpp \
 	accelerator/accelerator.cpp \
 	accelerator/Device.cpp \
 	accelerator/MemoryLocation.cpp \

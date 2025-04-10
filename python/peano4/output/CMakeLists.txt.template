@@ -75,7 +75,12 @@ set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH})
 
 enable_language(CUDA)
 
-set_source_files_properties(${GENERATED_CXX_SOURCES} PROPERTIES LANGUAGE CUDA)
+foreach(src IN LISTS GENERATED_CXX_SOURCES)
+  if(${src} MATCHES "kernels/.*Fused\\.[^.]+$")
+    message(STATUS "Setting CUDA language for file: ${src}")
+    set_source_files_properties(${src} PROPERTIES LANGUAGE CUDA)
+  endif()
+endforeach()
 {% endif %}
 
 add_executable({{EXECUTABLENAME}})
@@ -83,6 +88,14 @@ target_sources({{EXECUTABLENAME}} PRIVATE ${SOURCES})
 target_link_libraries({{EXECUTABLENAME}} PRIVATE Peano::PeanoOptions ${GENERATED_LDFLAGS})
 target_include_directories({{EXECUTABLENAME}} PRIVATE ${CMAKE_SOURCE_DIR} ${GENERATED_INCLUDE_DIRS})
 target_compile_definitions({{EXECUTABLENAME}} PRIVATE ${GENERATED_CXXFLAGS})
+
+{% if ACPP_TARGETS is defined and ACPP_TARGETS != "" %}
+  set(ACPP_TARGETS {{ACPP_TARGETS}} CACHE STRING "")
+  set(ACPP_DEBUG_LEVEL {{ACPP_DEBUG_LEVEL}} CACHE STRING "")
+  set(CMAKE_PREFIX_PATH {{ACPP_DIR}})
+  find_package(AdaptiveCpp CONFIG REQUIRED)
+  add_sycl_to_target(TARGET {{EXECUTABLENAME}} SOURCES ${SOURCES})
+{% endif %}
 
 {% for lib in LIBS.split() if lib.startswith('-L') %}
   target_link_libraries({{EXECUTABLENAME}} PRIVATE {{ lib[2:] }})

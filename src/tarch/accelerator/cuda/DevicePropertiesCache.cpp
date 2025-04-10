@@ -10,7 +10,7 @@
 cudaDeviceProp& tarch::accelerator::cuda::DevicePropertiesCache::get() {
   static DevicePropertiesCache instance;
 
-  int         devId  = -1;
+  int devId  = -1;
   CHECK_CUDA_ERROR(cudaGetDevice(&devId));
   assertion(devId >= 0);
 

@@ -66,10 +66,10 @@ This is the way you can add further PDE terms.
 This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
 """
 my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="Godunov",
+    name="FVSolver",
     patch_size=patch_size,
     unknowns=dimensions + 2,  # [rho, u, v, (w), e]
-    auxiliary_variables=0,  # This could be something alike material parameters. Not required for Euler.
+    auxiliary_variables=0,
     min_volume_h=(1.1 * min(size[0:dimensions]) / (3.0**depth)),
     max_volume_h=(1.1 * min(size[0:dimensions]) / (3.0**depth)),
     time_step_relaxation=0.5,

@@ -19,12 +19,12 @@ using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] double                                       t
 ) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
+  logTraceInWith3Arguments( "refinementCriterion()", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
   // see comments in header file
 
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
+  logTraceOutWith1Argument( "refinementCriterion()", ::toString(result) );
   return result;
 }
 {% endif %}
@@ -36,7 +36,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", x, h, gridIsConstructed );
+  logTraceInWith3Arguments( "initialCondition()", x, h, gridIsConstructed );
 
   // @todo Implement your stuff here, but ensure all entries are
   //       initialised incl all auxiliary variables. The snippet below
@@ -45,7 +45,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
     Q[i] = 0.0;
   }
 
-  logTraceOut( "initialCondition(...)" );
+  logTraceOut( "initialCondition()" );
 }
 {% endif %}
 
@@ -58,9 +58,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] int                                          normal
 ) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", x, h, t, normal );
+  logTraceInWith4Arguments( "boundaryConditions()", x, h, t, normal );
   // @todo Implement
-  logTraceOut( "boundaryConditions(...)" );
+  logTraceOut( "boundaryConditions()" );
 }
 {% endif %}
 

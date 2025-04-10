@@ -251,45 +251,6 @@ struct tarch::la::Vector {
 #pragma omp end declare target
 #endif
 
-static_assert(
-  std::is_trivially_copyable<tarch::la::Vector<1, int>>::value,
-  "Vector should be trivially copyable!"
-);
-
-static_assert(
-  std::is_trivially_copyable<tarch::la::Vector<2, int>>::value,
-  "Vector should be trivially copyable!"
-);
-
-static_assert(
-  std::is_trivially_copyable<tarch::la::Vector<1, double>>::value,
-  "Vector should be trivially copyable!"
-);
-
-static_assert(
-  std::is_trivially_copyable<tarch::la::Vector<2, double>>::value,
-  "Vector should be trivially copyable!"
-);
-
-#if defined(SharedSYCL) or defined(GPUOffloadingSYCL)
-static_assert(
-  sycl::is_device_copyable<tarch::la::Vector<1, int>>::value,
-  "Vector should be SYCL device copyable!"
-);
-static_assert(
-  sycl::is_device_copyable<tarch::la::Vector<2, int>>::value,
-  "Vector should be SYCL device copyable!"
-);
-static_assert(
-  sycl::is_device_copyable<tarch::la::Vector<1, double>>::value,
-  "Vector should be SYCL device copyable!"
-);
-static_assert(
-  sycl::is_device_copyable<tarch::la::Vector<2, double>>::value,
-  "Vector should be SYCL device copyable!"
-);
-#endif
-
 #include "tarch/la/Vector.cpph"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorScalarOperations.h"

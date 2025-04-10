@@ -13,7 +13,7 @@
   // Loop over volumes
   {% if DIMENSIONS == 3 %}
   {% if GPU == "omp" %}
-  #pragma omp parallel for simd collapse(3) reduction(max : maxEigenvalueAfterTimeStep)
+  #pragma omp parallel for simd collapse(3) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
   {% else %}
   #pragma omp simd collapse(3)
   {% endif %}
@@ -30,7 +30,7 @@
         {{ loop.loopOverDimensions() | indent(4) }}
 
         {% if COMPUTE_MAX_EIGENVALUE==True %}
-        {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }};
+        {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }}
         {% endif %}
 
         {{ riemann.scatterQ() | indent(4) }}
@@ -39,7 +39,7 @@
   } // z
   {% else %}
   {% if GPU == "omp" %}
-  #pragma omp parallel for simd collapse(2) reduction(max : maxEigenvalueAfterTimeStep)
+  #pragma omp parallel for simd collapse(2) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
   {% else %}
   #pragma omp simd collapse(2)
   {% endif %}
@@ -55,7 +55,7 @@
       {{ loop.loopOverDimensions() | indent(4) }}
 
       {% if COMPUTE_MAX_EIGENVALUE==True %}
-      {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }};
+      {{ riemann.computeMaxEigenvalueAfterTimeStep() | indent(4) }}
       {% endif %}
 
       {{ riemann.scatterQ() | indent(4) }}
@@ -98,7 +98,7 @@
   {% endif %}
 
   {% if GPU == "omp" %}
-  #pragma omp target teams distribute device(targetDevice) reduction(max : maxEigenvalueAfterTimeStep) nowait depend(out: patchData.QOut) \
+  #pragma omp target teams distribute device(targetDevice) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %} nowait depend(out: patchData.QOut) \
     map(to: \
       numberOfPatches, \
       QIns[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \

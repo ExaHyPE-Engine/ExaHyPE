@@ -98,7 +98,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
-  logInfo("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
+  logDebug("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks of type " << getTaskType() << " into one large enclave task on device " << targetDevice);
 
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}> patchData(otherTasks.size() + 1, ::tarch::MemoryLocation::Heap, targetDevice);

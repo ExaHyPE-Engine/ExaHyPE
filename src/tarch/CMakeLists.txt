@@ -17,6 +17,10 @@ foreach(mode IN LISTS PEANO_BUILD_TYPES)
   target_compile_definitions(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
   target_compile_options(Tarch_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
 
+  if(${AdaptiveCpp_FOUND})
+    add_sycl_to_target(TARGET Tarch_${mode_lower} SOURCES ${SOURCES})
+  endif()
+
   install(TARGETS Tarch_${mode_lower}
     EXPORT                      ${PROJECT_NAME}Targets
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

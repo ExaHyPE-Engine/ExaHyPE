@@ -121,7 +121,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
     
 #  set_time_step_size = """    
 #    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
-#      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
+#      logDebug( "touchCellFirstTime()", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
 #      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
 #    }
 #    else {

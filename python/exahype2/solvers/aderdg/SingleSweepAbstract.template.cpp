@@ -288,7 +288,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logDebug("startTimeStep(...)", "phase " + toString(_solverState));
+    logDebug("startTimeStep()", "phase " + toString(_solverState));
   }
 }
 

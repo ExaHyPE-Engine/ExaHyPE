@@ -2,14 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
 
+#if defined(SharedSYCL)
+
 #include "Core.h"
 
 #include "tarch/Assertions.h"
-
 #include "tarch/multicore/Task.h"
-#include "tarch/multicore/Core.h"
 
-#if defined(SharedSYCL)
+#pragma push_macro("Dimensions")
+#undef Dimensions
+#include <sycl/sycl.hpp>
+#pragma pop_macro("Dimensions")
 
 /**
  * Native mapping of a task loop onto a SYCL loop
@@ -21,14 +24,14 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   assertion(not tasks.empty());
 
   for (auto& p : tasks) {
-    tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
+    static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
       while (p->run()) {
       }
       delete p;
     });
   }
 
-  tarch::multicore::getHostSYCLQueue().wait();
+  static_cast<sycl::queue*>(getHostSYCLQueue())->wait();
 }
 
 
@@ -53,7 +56,7 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>& /*inDependencies*/,
   const TaskNumber&           /*taskNumber*/
 ) {
-  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
+  sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
       while (job->run()) {
       }
@@ -67,7 +70,7 @@ void tarch::multicore::native::spawnTask(
   Task*                       job,
   const TaskNumber&           /*taskNumber*/
 ) {
-  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
+  sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
       while (job->run()) {
       }
@@ -83,7 +86,7 @@ void tarch::multicore::native::spawnTask(
 ) {
   assert(outData);
 
-  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
+  sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
       while (job->run()) {
       }
@@ -94,7 +97,7 @@ void tarch::multicore::native::spawnTask(
 
 
 void tarch::multicore::native::spawnTask(Task* job) {
-  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
+  sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
       while (job->run()) {
       }
@@ -104,15 +107,15 @@ void tarch::multicore::native::spawnTask(Task* job) {
 }
 
 
-void tarch::multicore::native::waitForTasks(const std::set<int>& /*inDependencies*/) {}
+void tarch::multicore::native::waitForTasks(const std::set<int>& /*inDependencies*/) { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
 
 
-void tarch::multicore::native::waitForTask(const TaskNumber& /*taskNumber*/) {}
+void tarch::multicore::native::waitForTask(const TaskNumber& /*taskNumber*/) { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
 
 
-void tarch::multicore::native::waitForTask(const double* /*inData*/) {}
+void tarch::multicore::native::waitForTask(const double* /*inData*/) { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
 
 
-void tarch::multicore::native::waitForAllTasks() { tarch::multicore::getHostSYCLQueue().wait(); }
+void tarch::multicore::native::waitForAllTasks() { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
 
 #endif // defined(SharedSYCL)

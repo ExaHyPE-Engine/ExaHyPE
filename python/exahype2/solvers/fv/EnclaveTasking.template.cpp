@@ -5,13 +5,6 @@
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
-{% if USE_VARIABLE_SHORTCUT is sameas True %}
-/*
- * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
- */
-using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
-{% endif %}
-
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   [[maybe_unused]] const {{STORAGE_PRECISION}}* __restrict__    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -19,12 +12,12 @@ using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] double                                       t
 ) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
+  logTraceInWith3Arguments( "refinementCriterion()", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
   // see comments in header file
 
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
+  logTraceOutWith1Argument( "refinementCriterion()", ::toString(result) );
   return result;
 }
 {% endif %}
@@ -36,7 +29,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", x, h, gridIsConstructed );
+  logTraceInWith3Arguments( "initialCondition()", x, h, gridIsConstructed );
 
   // @todo Implement your stuff here, but ensure all entries are
   //       initialised incl all auxiliary variables. The snippet below
@@ -45,7 +38,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
     Q[i] = 0.0;
   }
 
-  logTraceOut( "initialCondition(...)" );
+  logTraceOut( "initialCondition()" );
 }
 {% endif %}
 
@@ -58,9 +51,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] int                                          normal
 ) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", x, h, t, normal );
+  logTraceInWith4Arguments( "boundaryConditions()", x, h, t, normal );
   // @todo Implement
-  logTraceOut( "boundaryConditions(...)" );
+  logTraceOut( "boundaryConditions()" );
 }
 {% endif %}
 

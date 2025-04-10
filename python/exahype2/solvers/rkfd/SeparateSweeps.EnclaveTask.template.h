@@ -87,8 +87,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask<
      * anything but we have to free stuff after the run. This is done here
      * analogously to the Finite Volume solver. We assume that the input
      * data has been allocated through tarch::allocateMemory() with the
-     * flag ManagedSharedAcceleratorDeviceMemory. As we have to free data,
-     * reconstructedPatch is not const.
+     * flag Heap. As we have to free data, reconstructedPatch is not const.
      *
      * @return Max eigenvalue over cell
      */

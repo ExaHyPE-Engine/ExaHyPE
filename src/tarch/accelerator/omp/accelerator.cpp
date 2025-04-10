@@ -31,16 +31,16 @@ void* tarch::accelerator::allocateRawData(
       tarch::padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
     break;
-  case MemoryLocation::DeviceHeap:
-    assertion1(device >= 0, device);
-    data = omp_target_alloc(sizeInBytes, device);
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    // OpenMP does not support explicit USM allocations, therefore we allocate heap memory on the host.
+  case MemoryLocation::Device:
+#ifdef UseUSM
     data = std::aligned_alloc( //omp_aligned_alloc(
       AlignmentOnHeap,
       padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
+#else
+    assertion1(device >= 0, device);
+    data = omp_target_alloc(sizeInBytes, device);
+#endif
     break;
   }
 
@@ -67,7 +67,7 @@ void tarch::accelerator::freeRawData(
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "attempt to free invalid pointer")
+      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
@@ -77,12 +77,13 @@ void tarch::accelerator::freeRawData(
   case MemoryLocation::Heap:
     std::free(data); //omp_free(data);
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
+#ifdef UseUSM
+    std::free(data); //omp_free(data);
+#else
     assertion1(device >= 0, device);
     omp_target_free(data, device);
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    std::free(data); //omp_free(data);
+#endif
     break;
   }
 }
@@ -98,17 +99,17 @@ void tarch::accelerator::copyTo(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to device");
+#ifdef UseUSM
+    std::memcpy(target, source, sizeInBytes);
+#else
     assertion1(device >= 0, device);
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to device");
     omp_target_memcpy(target, source, sizeInBytes, 0, 0, device, omp_get_initial_device());
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
-    std::memcpy(target, source, sizeInBytes);
+#endif
     break;
   }
 }
@@ -124,17 +125,17 @@ void tarch::accelerator::copyFrom(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
+    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from device to host");
+#ifdef UseUSM
+    std::memcpy(target, source, sizeInBytes);
+#else
     assertion1(device >= 0, device);
-    logDebug("copyFrom(...)", "copy " << sizeInBytes << " bytes from device to host");
     omp_target_memcpy(target, source, sizeInBytes, 0, 0, omp_get_initial_device(), device);
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
-    std::memcpy(target, source, sizeInBytes);
+#endif
     break;
   }
 }

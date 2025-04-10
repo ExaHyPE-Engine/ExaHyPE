@@ -1,6 +1,10 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
+if(WITH_GPU_ARCH STREQUAL "none")
+  message(FATAL_ERROR "No GPU architecture chosen. Make sure to also set WITH_GPU_ARCH")
+endif()
+
 if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang")
   if(PEANO_NVIDIA_GPU)
     if(WITH_TARGETDART)
@@ -33,7 +37,8 @@ if(OFFLOADING_FLAGS)
   target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
   target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
   target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS} ${OpenMP_CXX_FLAGS})
-  target_compile_definitions(PeanoOptions INTERFACE GPUOffloadingOMP)
   set(ONLY_IF_GPU_FIND_DEPENDENCY "find_dependency(OpenMP)")
   message(STATUS "Using OpenMP offloading flags: ${OFFLOADING_FLAGS}")
 endif()
+
+target_compile_definitions(PeanoOptions INTERFACE GPUOffloadingOMP)

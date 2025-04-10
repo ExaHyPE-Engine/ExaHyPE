@@ -212,5 +212,4 @@ class GlobalFixedTimeStep(SingleSweep):
             output=output,
             subdirectory=subdirectory,
             dimensions=dimensions,
-            use_riemann_solver=self._riemann_solver_implementation != PDETerms.None_Implementation
         )

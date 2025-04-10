@@ -212,6 +212,12 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
             output=output,
             subdirectory=subdirectory,
             dimensions=dimensions,
-            use_riemann_solver=self._riemann_solver_implementation != PDETerms.None_Implementation,
-            is_enclave_solver=True
         )
+        if self._pde_terms_without_state:
+            generate_fused_kernels(
+                solver=self,
+                namespace=namespace,
+                output=output,
+                subdirectory=subdirectory,
+                dimensions=dimensions,
+            )
