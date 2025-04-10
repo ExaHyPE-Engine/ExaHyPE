@@ -3,17 +3,18 @@
 
 
 void tarch::reader::readInCheckpointFiles(
-      std::vector<std::string> CheckpointFilesOfSolver,
-      std::vector<double>& domainDataFromFiles,
-      std::vector<double>& offsetIndex,
-      int numberOfUnknowns,
-      int numberOfAuxiliaries,
-      int dimension,
-      int patchSize){
-  domainDataFromFiles.empty();
-  offsetIndex.empty();
-  //int a=0;
-  for (const auto& filename : CheckpointFilesOfSolver) {
+  const std::vector<std::string>&  checkpointFilesOfSolver,
+  std::vector<double>&             domainDataFromFiles,
+  std::vector<double>&             offsetIndex,
+  int numberOfUnknowns,
+  int numberOfAuxiliaries,
+  int dimension,
+  int patchSize
+) {
+  domainDataFromFiles.clear();
+  offsetIndex.clear();
+
+  for (const auto& filename : checkpointFilesOfSolver) {
     std::ifstream file(filename);
     std::string line;
     bool InAPatch=false;
@@ -55,10 +56,10 @@ void tarch::reader::readInCheckpointFiles(
 //      tarch::reader::readInCheckpointOffsetIndex(OffsetIndexMap, CheckpointFilesOfCCZ4);
 void tarch::reader::readInCheckpointOffsetIndex(
       std::map< tarch::la::Vector<3,double> , std::string, tarch::la::VectorCompare<3> >& offsetIndexMap,
-      std::vector<std::string> CheckpointFilesOfSolver){
+      std::vector<std::string> checkpointFilesOfSolver){
   //do nothing yet
   //std::cout<<"print sth as it is called."<<std::endl;
-  for (const auto& filename : CheckpointFilesOfSolver) {
+  for (const auto& filename : checkpointFilesOfSolver) {
     std::ifstream file(filename);
     std::string line;
 

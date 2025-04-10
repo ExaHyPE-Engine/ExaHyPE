@@ -60,14 +60,19 @@ public:
     int minTasks;
     int maxTasks;
     int sleepNanoSeconds;
+<<<<<<< HEAD
     FuseInstruction(int device_, int minTasks_, int maxTasks_):
+=======
+    FuseInstruction(int device_, int minTasks_, int maxTasks_, int sleepNanoSeconds_ = 0):
+>>>>>>> refs/remotes/origin/multigrid
       device(device_),
       minTasks(minTasks_),
-      maxTasks(maxTasks_) {}
+      maxTasks(maxTasks_),
+      sleepNanoSeconds(sleepNanoSeconds_) {}
 
     std::string toString() const {
       return "(#device=" + std::to_string(device) + ",min=" + std::to_string(minTasks)
-             + ",max=" + std::to_string(maxTasks) + ")";
+             + ",max=" + std::to_string(maxTasks) + ",sleep=" + std::to_string(sleepNanoSeconds) + "ns)";
     }
   };
 

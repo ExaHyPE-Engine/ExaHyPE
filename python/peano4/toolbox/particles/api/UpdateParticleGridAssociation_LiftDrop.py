@@ -148,6 +148,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
   This code snippet is used with touchVertexLastTime(). Therefore, the marker
   is a vertex marker.
 
+  @see toolbox::particles::updateContainedInAdjacentCellProperty()
+  
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
         """
@@ -165,6 +167,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
     #endif
     switch ( instruction ) {
       case toolbox::particles::ParticleReassociationInstruction_Keep:
+        toolbox::particles::updateContainedInAdjacentCellProperty(
+          marker,
+          **p
+        );
         p++;
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
@@ -186,6 +192,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+          marker.x(),
           marker.h(),
           _spacetreeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
@@ -207,6 +214,11 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         _numberOfLifts ++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
         (*p)->setCellH(3.0 * marker.h());
+        toolbox::particles::updateContainedInAdjacentCellProperty(
+          peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
+          marker.h()*3.0,
+          **p
+        );
         toolbox::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
           (*p)->getX(),
@@ -225,7 +237,9 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
           3.0*marker.h(),
           _spacetreeId,
-          "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
+          "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles",
+          marker.x(),
+          marker.h()
         );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).grabParticle( p, fineGridVertex{{PARTICLES_CONTAINER}} );
         assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );

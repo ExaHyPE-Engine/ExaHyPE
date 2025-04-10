@@ -1452,7 +1452,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
       {{full_qualified_type}}& data = view.get(inVertexStackPosition);
 
-
       bool dataShallBePushedOntoIntermediateStack = 
         not peano4::grid::PeanoCurve::isInOutStack(outVertexStack)
         and

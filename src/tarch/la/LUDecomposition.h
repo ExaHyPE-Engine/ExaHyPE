@@ -50,7 +50,11 @@ namespace tarch {
     /**
      * Invert matrix with LU decomposition
      *
-     * We first invoke the LU decomposition without
+     * We first invoke the LU decomposition through a call to lu(). After
+     * that, we compute the mat vec and return the result. This is not an
+     * optimised version in any way. For small matrices, it should be pretty
+     * fast. For larger matrices, you might want to consider the Lapack
+     * version available through the alternative invert() version.
      */
     template <int Rows, typename Scalar>
     Matrix<Rows, Rows, Scalar> invert(const Matrix<Rows, Rows, Scalar>& M);

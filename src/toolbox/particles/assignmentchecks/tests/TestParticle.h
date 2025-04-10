@@ -43,6 +43,7 @@ public:
   TestParticle::ParallelState           getParallelState() const;
 
   void setDepth(const int depth);
+  void setPartid(const int partid);
   void setIsLocal(const bool isLocal);
   void setVertexH(const tarch::la::Vector<Dimensions, double>& x);
   void setX(const tarch::la::Vector<Dimensions, double>& x);

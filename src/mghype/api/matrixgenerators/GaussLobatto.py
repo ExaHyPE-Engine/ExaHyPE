@@ -279,7 +279,7 @@ class GaussLobatto(MatrixGenerator):
   def get_face_face_riemann_problem_matrix(self):
     """
     Averaging matrix.
-    Implement separately for GLMatrixFree class, taking into account solutions_per_face_node and projections_per_face_node.
+    Implement separately for GaussLobattoMatrixFree class, taking into account solutions_per_face_node and projections_per_face_node.
     Now assume there are 2 "solutions" (i.e. f-variables: q^f and u^f) and two sets of projections: q^pm an.
     """
 
@@ -295,7 +295,7 @@ class GaussLobatto(MatrixGenerator):
     return matrix
   
 
-class GLMatrixFree(GaussLobatto):
+class GaussLobattoMatrixFree(GaussLobatto):
   """!
   
   
@@ -307,7 +307,7 @@ class GLMatrixFree(GaussLobatto):
                solutions_per_face_node,   # number of solutions   we hold per node.
                projections_per_face_node # number of projections  we hold per node.
               ):
-    super( GLMatrixFree, self ).__init__(dimensions,
+    super( GaussLobattoMatrixFree, self ).__init__(dimensions,
                                          poly_degree,
                                          unknowns_per_cell_node,
                                          solutions_per_face_node
@@ -651,15 +651,15 @@ class GLMatrixFree(GaussLobatto):
     Return the superclass's matrix, alongside a array of length
     1 for scale factor. Hardcoding the number
     """
-    return [super(GLMatrixFree,self).get_cell_system_matrix_for_laplacian()], [0]
+    return [super(GaussLobattoMatrixFree,self).get_cell_system_matrix_for_laplacian()], [0]
 
   def get_cell_mass_matrix(self):
     """!
     Return the superclass's matrix, alongside a array of length
     1 for scale factor. Hardcoding the number
     """
-    return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
+    return [super(GaussLobattoMatrixFree,self).get_cell_mass_matrix()], [2]
   
   def get_cell_identity_matrix(self):
-    return [super(GLMatrixFree,self).get_cell_identity_matrix()], [0]
+    return [super(GaussLobattoMatrixFree,self).get_cell_identity_matrix()], [0]
   
