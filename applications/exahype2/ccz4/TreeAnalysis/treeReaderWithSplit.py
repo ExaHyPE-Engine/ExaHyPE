@@ -162,3 +162,5 @@ for j in range(len(datafiles)):
 
 # Show the 3D plot
 plt.show()
+plt.savefig("TreeStructure.pdf")
+plt.savefig("TreeStrucutre.png")
