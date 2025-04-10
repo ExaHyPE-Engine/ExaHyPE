@@ -13,11 +13,7 @@
 #include "peano4/utils/Globals.h"
 
 #include "Constants.h"
-<<<<<<< HEAD
-
-=======
 #include "vertexdata/{{SOLVER_NAME}}.h"
->>>>>>> refs/remotes/origin/multigrid
 #include "celldata/{{SOLVER_NAME}}.h"
 #include "facedata/{{SOLVER_NAME}}.h"
 

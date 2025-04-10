@@ -100,10 +100,6 @@ template<int Size, typename Scalar>
 tarch::la::SmartPointerVector<Size,Scalar>&  tarch::la::SmartPointerVector<Size,Scalar>::operator= (
   const Scalar&  value
 ) {
-  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-  assertion(this != &toAssign);
-  #endif
-
   for (int i=0; i<Size; i++) {
     _values[i] = value;
   }

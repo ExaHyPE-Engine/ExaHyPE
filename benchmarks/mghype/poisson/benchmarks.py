@@ -55,19 +55,14 @@ if args.realisation == "dg-sweeps":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
 elif args.realisation == "dg-shifted-and-fused":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-<<<<<<< HEAD
 elif args.realisation == "dg-tasks":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks
-
+ 
 name = "DGPoisson"
 if args.variant == "rediscretise":
     name = "DGPoissonRediscretise"
 if args.variant == "precompute":
     name = "DGPoissonPrecompute"
-=======
-elif args.realisation == "tasks":
-    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
->>>>>>> refs/remotes/origin/multigrid
 
 name = "DGPoisson"
 if args.variant == "rediscretise":
