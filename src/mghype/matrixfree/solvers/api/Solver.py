@@ -10,6 +10,11 @@ class Solver:
   """!
 
   Abstract base class for matrix free solvers.
+  
+  ## Data associated with mesh entities
+  
+  We always assign data to vertices, cells and faces, even though your 
+  particular solver subclass might not require those guys. 
 
   """
 
@@ -47,7 +52,6 @@ class Solver:
     
     """
     observer.use_vertex(self._vertex_data)
-# @todo das muss natuerlich weg
     observer.use_face(  self._face_data)
     observer.use_cell(  self._cell_data)
   
