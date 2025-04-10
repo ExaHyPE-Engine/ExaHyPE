@@ -463,6 +463,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
     # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
+
+    descend_order = 0
+    self._action_set_update_face_solution                        =  UpdateFaceSolution(self, descend_order+1, False) 
+    self._action_set_project_into_cell_and_update_cell_solution  =  ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) 
+    self._action_set_project_onto_faces                          =  ProjectOntoFaces(self, descend_order+3, True) 
+    self._action_set_update_residual                             =  UpdateResidual(self, descend_order+3, True) 
+
     
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -487,21 +494,31 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       for name, getter in self._custom_plot_actionset:
         observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, name, getter, plot_predicate=self._plot_predicate) )
 
+        
   def add_to_create_grid(self, observer):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
+    
   def add_to_init_solution(self, observer):
     """!
     
     Solution initialisation
     
+    Is given the project's observer and asks the solver to add all of its 
+    action sets to this one.
+
+    @param observer: Observer
+      Observer object of the underlying project representing its algorithmic
+      step. Routine is asked to add its own action sets to this step.
+      
     """
     if self._custom_init_actionset is None:
       observer.add_action_set( InitHigherOrderDofs(self) )
     else:
       observer.add_action_set( self._custom_init_actionset(self) )
 
+      
   def add_to_solve(self, observer):
     """!
     
@@ -513,10 +530,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     if self.preprocessing_action_set != None:
       self.preprocessing_action_set.descend_invocation_order = 0
       observer.add_action_set( self.preprocessing_action_set )
-    observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
-    observer.add_action_set( ProjectIntoCellAndUpdateCellSolution(self, descend_order+2, False) )
-    observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
-    observer.add_action_set( UpdateResidual(self, descend_order+4, False) )
+    observer.add_action_set( self._action_set_update_face_solution )
+    observer.add_action_set( self._action_set_project_into_cell_and_update_cell_solution )
+    observer.add_action_set( self._action_set_project_onto_faces )
+    observer.add_action_set( self._action_set_update_residual )
     if self.postprocessing_action_set != None:
       self.postprocessing_action_set.descend_invocation_order = descend_order + 5
       observer.add_action_set( self.postprocessing_action_set )

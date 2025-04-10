@@ -1,0 +1,153 @@
+from peano4.solversteps.ActionSet import ActionSet
+
+import peano4
+import jinja2
+
+
+class ProjectIntoCellAndUpdateCellSolutionWithTasks(ActionSet):
+  templateTouchCellFirstTime="""
+  if ( 
+    fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse 
+    and
+    repositories::{{SOLVER_INSTANCE}}.projectOntoCells()
+  ) {
+    logTraceInWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
+
+    /**
+     * Issue the calculation of the inverse of the system matrix
+     */
+    const int invertCellOperatorTaskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2 + 1; 
+    tarch::la::Matrix< {{SOLVER_NAME}}::CellUnknowns, {{SOLVER_NAME}}::CellUnknowns, double > invertedApproxSystemMatrix;
+    auto invertMatrixFunctor = [&invertedApproxSystemMatrix, marker]() mutable -> bool {
+      invertedApproxSystemMatrix = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(
+          marker.x(),
+          marker.h()
+      );          
+      return false;
+    };
+    tarch::multicore::TaskWithCopyOfFunctor* invertMatrixTask = new tarch::multicore::TaskWithCopyOfFunctor(
+      tarch::multicore::Task::DontFuse,
+      tarch::multicore::Task::DefaultPriority,
+      invertMatrixFunctor
+    );  
+    tarch::multicore::spawnTask(
+      invertMatrixTask,
+      tarch::multicore::NoInDependencies,
+      invertCellOperatorTaskNumber
+    );
+
+
+    /**
+     * Collect the face data into a face vector and determine the projection 
+     * into the cell.
+     */
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
+    for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+
+    auto projection = repositories::{{SOLVER_INSTANCE}}.applyCellFromFaceMatrix(marker.x(), marker.h(), faceSol);
+
+    
+    /**
+     * Take the cell residual and substract the projected values. Before we do 
+     * this, we have to wait for the residual calculation to complete.
+     */
+    const int residualComputationTaskNumber = fineGridCell{{TASK_MARKER}}.getNumber() * 2; 
+    tarch::multicore::waitForTask(residualComputationTaskNumber);
+    for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++) {
+      fineGridCell{{SOLVER_NAME}}.setResidual(f,
+        fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
+    }
+
+    // update global residual before multiplying by the preconditioner
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
+      double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
+    }
+
+    /**
+     * Wait for inverted cell operator and then apply it
+     */
+    tarch::multicore::waitForTask(invertCellOperatorTaskNumber);
+    fineGridCell{{SOLVER_NAME}}.setResidual( 
+      invertedApproxSystemMatrix * fineGridCell{{SOLVER_NAME}}.getResidual()
+    );
+
+    /**
+     * Finally update the solution
+     */
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
+      double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
+      double du  = repositories::{{SOLVER_INSTANCE}}.OmegaCell * res;
+      fineGridCell{{SOLVER_NAME}}.setSolution( i,
+        fineGridCell{{SOLVER_NAME}}.getSolution( i ) + du
+      );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
+      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
+    }
+
+    logTraceOutWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
+  }
+
+  """
+  def __init__(self,
+               solver,
+               descend_invocation_order=0,
+               parallel=True):
+    super( ProjectIntoCellAndUpdateCellSolutionWithTasks, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["TASK_MARKER"]        = solver._task_name + "MeshNumber"
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      pass
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+        
+    
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+    We need the solver repository in this action set, as we directly access
+    the solver object. We also need access to Peano's d-dimensional loops.
+         
+    """    
+    return """
+#include "../repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
+#include "tarch/multicore/Task.h"
+#include "tarch/multicore/multicore.h"
+"""
+
+

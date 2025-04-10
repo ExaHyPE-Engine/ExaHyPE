@@ -12,7 +12,7 @@ class UpdateFaceSolution(ActionSet):
   """
 
 
-  templatetouchFaceFirstTime="""
+  templateTouchFaceFirstTime="""
   if ( 
     fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior 
     and
@@ -95,7 +95,7 @@ class UpdateFaceSolution(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.templatetouchFaceFirstTime).render(**self.d)
+      result = jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
       pass
     return result
 
