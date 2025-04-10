@@ -9,6 +9,8 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 
+#include <cstring>
+
 namespace {
   tarch::logging::Log _log("tarch::accelerator::cuda");
 } // namespace
@@ -31,15 +33,14 @@ void* tarch::accelerator::allocateRawData(
       padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
     assertion1(device >= 0, device);
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaMalloc(&data, sizeInBytes));
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    assertion1(device >= 0, device);
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
+#ifdef UseUSM
     CHECK_CUDA_ERROR(cudaMallocManaged(&data, sizeInBytes));
+#else
+    CHECK_CUDA_ERROR(cudaMalloc(&data, sizeInBytes));
+#endif
     break;
   }
 
@@ -66,7 +67,7 @@ void tarch::accelerator::freeRawData(
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "attempt to free invalid pointer")
+      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
@@ -77,14 +78,8 @@ void tarch::accelerator::freeRawData(
     //assertion1(device == accelerator::Device::HostDevice, device);
     std::free(data); // cudaFreeHost
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
     assertion1(device >= 0, device);
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaFree(data));
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    assertion1(device >= 0, device);
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));
     break;
   }
@@ -103,17 +98,18 @@ void tarch::accelerator::copyTo(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
+#ifdef UseUSM
+    std::memcpy(target, source, sizeInBytes);
+#else
     assertion1(device >= 0, device);
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    logDebug("copyTo(...)", "copy " << sizeInBytes << " bytes from host to device");
+    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to device");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, deviceStreamGet()));
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    // Do nothing
+#endif
     break;
   }
 }
@@ -131,17 +127,18 @@ void tarch::accelerator::copyFrom(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom(...)", "copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from host to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
     break;
-  case MemoryLocation::DeviceHeap:
+  case MemoryLocation::Device:
+#ifdef UseUSM
+    std::memcpy(target, source, sizeInBytes);
+#else
     assertion1(device >= 0, device);
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    logDebug("copyFrom(...)", "copy " << sizeInBytes << " bytes from device to host");
+    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from device to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, deviceStreamGet()));
-    break;
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    // Do nothing
+#endif
     break;
   }
 }

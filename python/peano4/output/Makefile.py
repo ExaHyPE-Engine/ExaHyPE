@@ -364,6 +364,12 @@ the SISC paper
                                   self.d["GPU"] = value.strip()
                               if key == "WITH_GPU_ARCH":
                                   self.d["GPU_ARCH"] = value.strip()
+                              if key == "ACPP_DEBUG_LEVEL":
+                                  self.d["ACPP_DEBUG_LEVEL"] = value.strip()
+                              if key == "ACPP_TARGETS":
+                                  self.d["ACPP_TARGETS"] = value.strip()
+                              if key == "AdaptiveCpp_DIR":
+                                  self.d["ACPP_DIR"] = value.strip()
             else:
                 raise Exception("Cannot parse the CMakeCache.txt file: " + cmake_cache_file)
         else: # Nothing has been configured so far

@@ -80,7 +80,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // outcome has to be valid
 
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
 
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];
@@ -193,7 +193,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   ::tarch::mpi::DoubleMessage dtMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::Heap );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -222,10 +222,10 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
 //  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
-//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
   _functor();
 
   logInfo(
@@ -264,7 +264,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
     " via tag " << tag
   );
 
-  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
 
 
@@ -283,7 +283,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   ::tarch::mpi::DoubleMessage eValueMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::Heap );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -348,7 +348,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
-  ::exahype2::CellData patchData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  ::exahype2::CellData patchData(otherTasks.size() + 1, tarch::MemoryLocation::Heap, targetDevice);
   int currentTask = 0;
   for (auto& p: otherTasks) {
     patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
@@ -357,7 +357,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    patchData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::Heap, targetDevice);
     delete p;
     currentTask++;
   }
@@ -367,7 +367,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _taskNumber;
-  patchData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  patchData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::Heap, targetDevice);
 
 
   //
@@ -411,7 +411,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::Heap, targetDevice);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 

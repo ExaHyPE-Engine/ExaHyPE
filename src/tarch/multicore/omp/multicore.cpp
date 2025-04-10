@@ -73,7 +73,7 @@ namespace {
       ) {
         delete[] dependencyTrackingBaseAddress;
         dependencyTrackingBaseAddress = nullptr;
-        logInfo("canServeDependencyEntry(int)", "free preallocated memory for task dependency management");
+        logDebug("canServeDependencyEntry(int)", "Free preallocated memory for task dependency management");
       }
 
       if (dependencyTrackingBaseAddress == nullptr) {
@@ -81,7 +81,7 @@ namespace {
           sizeOfMemoryRegionUsedForDependencyTracking *= 2; // Try to increase the management region a bit more to avoid too much blocking
         }
         dependencyTrackingBaseAddress = new DependencyTrackingDataType[sizeOfMemoryRegionUsedForDependencyTracking];
-        logInfo("canServeDependencyEntry(int)", "allocated memory for task dependency management for up to " << sizeOfMemoryRegionUsedForDependencyTracking << " tasks");
+        logDebug("canServeDependencyEntry(int)", "Allocated memory for task dependency management for up to " << sizeOfMemoryRegionUsedForDependencyTracking << " tasks");
       }
 
       result = taskNumber < sizeOfMemoryRegionUsedForDependencyTracking;

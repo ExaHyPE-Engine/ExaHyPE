@@ -17,11 +17,6 @@
 #define SharedMemoryParallelisation
 #endif
 
-/**
- * Have to include this header, as we need access to the SYCL header file to prevent conflicts with the Dimensions macro.
- */
-#include "tarch/multicore/sycl/Core.h"
-
 namespace tarch {
   /**
 

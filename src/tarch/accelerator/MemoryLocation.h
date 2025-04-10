@@ -17,18 +17,9 @@ namespace tarch {
     Heap,
 
     /**
-     * Create data on the heap of the device.
+     * Create data on the device.
      */
-    DeviceHeap,
-
-    /**
-     * Create data on the device using USM (if available).
-     * If USM is not available or not supported,
-     * this mode returns the same memory as the
-     * MemoryLocation::Heap and the user needs
-     * to take care of memory transfers explicitly.
-     */
-    ManagedSharedAcceleratorDeviceMemory
+    Device,
   };
 
   std::string toString(MemoryLocation value);

@@ -22,12 +22,12 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:");
-    logInfo("startTimeStep(...)", "t            = " << _minTimeStampThisTimeStep);
-    logInfo("startTimeStep(...)", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("startTimeStep(...)", "h_{min}      = " << _minVolumeHThisTimeStep << " (volume size)");
-    logInfo("startTimeStep(...)", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)");
-    logInfo("startTimeStep(...)", "lambda_{max} = " << _maxEigenvalue);
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep()", "t            = " << _minTimeStampThisTimeStep);
+    logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("startTimeStep()", "h_{min}      = " << _minVolumeHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep()", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
   }
 
   if (isFirstGridSweepOfTimeStep()) {

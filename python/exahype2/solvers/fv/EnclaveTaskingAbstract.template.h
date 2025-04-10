@@ -22,12 +22,17 @@
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
-
 {%- endfor %}
   class {{CLASSNAME}};
 
+  {% if USE_VARIABLE_SHORTCUT is sameas True %}
+  /*
+   * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+   */
+  using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
+  {% endif %}
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {

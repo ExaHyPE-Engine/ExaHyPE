@@ -6,8 +6,6 @@
 
 #include "tarch/la/Vector.h"
 
-#include "exahype2/CellData.h"
-
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}
@@ -33,11 +31,6 @@ double updateSolutionWithRiemann(
   const double                                    timeStepSize,
   const tarch::la::Vector<Dimensions, double>&    patchCentre,
   const tarch::la::Vector<Dimensions, double>&    patchSize
-);
-
-double updateSolutionWithRiemann(
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData,
-  const int                                                           targetDevice
 );
 
 {%- endif %}

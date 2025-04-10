@@ -25,8 +25,7 @@ void* tarch::internal::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-  case MemoryLocation::DeviceHeap:
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case MemoryLocation::Device:
     data = std::aligned_alloc(
       AlignmentOnHeap,
       padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
@@ -57,7 +56,7 @@ void tarch::accelerator::freeRawData(
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "attempt to free invalid pointer")
+      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
@@ -65,8 +64,7 @@ void tarch::accelerator::freeRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-  case MemoryLocation::DeviceHeap:
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case MemoryLocation::Device:
     std::free(data);
     break;
   }

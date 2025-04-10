@@ -14,13 +14,6 @@ tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-{% if USE_VARIABLE_SHORTCUT is sameas True %}
-/*
- * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
- */
-using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
-{% endif %}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
@@ -180,7 +173,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  logDebug("startTimeStep(...)", "old state is " << toString(_solverState));
+  logDebug("startTimeStep()", "old state is " << toString(_solverState));
 
   if (
     _solverState == SolverState::GridInitialisation
@@ -203,7 +196,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
-    logDebug("startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState));
+    logDebug("startTimeStep()", "Reset t and dt as state had been " << toString(_solverState));
 
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -236,7 +229,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   {% endif %}
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logDebug("startTimeStep(...)", "phase " + toString(_solverState));
+    logDebug("startTimeStep()", "phase " + toString(_solverState));
   }
 }
 

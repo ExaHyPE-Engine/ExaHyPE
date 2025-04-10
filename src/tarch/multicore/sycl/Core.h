@@ -4,25 +4,14 @@
 
 #include "config.h"
 
-/**
- * @see tarch_accelerator_SYCL in Device.h
- */
 #if defined(SharedSYCL)
-
-#pragma push_macro("Dimensions")
-#pragma push_macro("assertion")
-#undef Dimensions
-#undef assertion
-#include <sycl/sycl.hpp>
-#pragma pop_macro("Dimensions")
-#pragma pop_macro("assertion")
 
 namespace tarch {
   namespace multicore {
     /**
      * @return SYCL queue for the host
      */
-    sycl::queue& getHostSYCLQueue();
+    void* getHostSYCLQueue();
   }
 }
 

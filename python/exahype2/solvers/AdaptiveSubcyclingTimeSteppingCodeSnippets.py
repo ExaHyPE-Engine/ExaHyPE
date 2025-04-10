@@ -132,7 +132,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
     }
     else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-      logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
+      logWarning( "finishTimeStep()", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
       _admissibleTimeStepSize = 0.0;
     }
   }

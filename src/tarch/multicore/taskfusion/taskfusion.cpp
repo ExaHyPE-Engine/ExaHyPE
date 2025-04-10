@@ -36,7 +36,7 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(Task* ta
   Lock lock(pendingTasksSemaphore);
 
   if (pendingTasksThatCanBeFused.count(task->getTaskType()) == 0) {
-    logInfo("translateFusableTaskIntoTaskSequence(...)", "insert new queue for task type " << task->getTaskType() << " into the sequence");
+    logDebug("translateFusableTaskIntoTaskSequence(...)", "insert new queue for task type " << task->getTaskType() << " into the sequence");
     pendingTasksThatCanBeFused[task->getTaskType()] = std::list<Task*>();
   }
 

@@ -66,7 +66,7 @@ This is the way you can add further PDE terms.
 This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
 """
 my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="Godunov",
+    name="FVSolver",
     patch_size=patch_size,
     unknowns=dimensions + (3 if dimensions == 2 else 6),  # 3 (v_x, v_y, v_z) + 6 (σ_xx, σ_yy, σ_zz, σ_xy, σ_xz, σ_yz)
     auxiliary_variables=0,

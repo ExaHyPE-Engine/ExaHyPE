@@ -198,6 +198,7 @@ list(APPEND AVAILABLE_ACCELERATORS
   "cpp"
 )
 set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
+option(WITH_USM "Build with unified shared memory support" OFF)
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${AVAILABLE_ACCELERATORS})
 
 list(APPEND AVAILABLE_ACCELERATOR_ARCHITECTURES
@@ -224,10 +225,6 @@ elseif(WITH_GPU_ARCH MATCHES "^gfx")
   set(PEANO_AMD_GPU TRUE)
 elseif(WITH_GPU_ARCH MATCHES "^spir")
   set(PEANO_INTEL_GPU TRUE)
-endif()
-
-if(NOT WITH_GPU STREQUAL "no" AND WITH_GPU_ARCH STREQUAL "none")
-  message(FATAL_ERROR "No GPU architecture chosen. Make sure to also set WITH_GPU_ARCH")
 endif()
 
 if(WITH_GPU STREQUAL "omp")
@@ -340,6 +337,10 @@ if(WITH_ASAGI)
   set(ONLY_IF_ASAGI_FIND_DEPENDENCY "find_dependency(easi)")
 else()
   set(ONLY_IF_ASAGI_FIND_DEPENDENCY "# ASAGI not used")
+endif()
+
+if(WITH_USM)
+  target_compile_definitions(PeanoOptions INTERFACE UseUSM)
 endif()
 
 if(ENABLE_LOADBALANCING)

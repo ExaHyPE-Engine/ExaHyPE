@@ -8,7 +8,12 @@
 #include "tarch/accelerator/accelerator.h"
 
 #include <cmath>
+
+// Workaround for SYCL
+#pragma push_macro("Dimensions")
+#undef Dimensions
 #include <complex>
+#pragma pop_macro("Dimensions")
 
 namespace tarch {
   namespace la {

@@ -50,7 +50,6 @@ using namespace {{NAMESPACE | join("::")}};
 
 tarch::logging::Log _log("::");
 
-tarch::timing::Measurement timePerMeshSweepMeasurement;
 tarch::timing::Measurement gridConstructionMeasurement;
 tarch::timing::Measurement timeStepMeasurement;
 tarch::timing::Measurement plotMeasurement;
@@ -264,44 +263,44 @@ void step() {
 
     OTTER_PHASE_SWITCH(otter::phase::create_grid_no_refine);
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
+    watch.stop();
+    gridConstructionMeasurement.setValue(watch.getCalendarTime());
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
 
     OTTER_PHASE_SWITCH(otter::phase::create_grid);
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     {{SUBNAMESPACE}}observers::CreateGrid observer;
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
+    watch.stop();
+    gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     // We always overestimate so give the convergence the opportunity to catch up. The constant here is a magic one.
     creepingNumberOfLocalCells = toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
@@ -339,22 +338,22 @@ void step() {
       toolbox::loadbalancing::dumpStatistics();
     }
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
+    watch.stop();
+    gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     if (
       toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
@@ -381,6 +380,7 @@ void step() {
 
     OTTER_PHASE_SWITCH(otter::phase::init);
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startGridInitialisationStep();
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
@@ -388,17 +388,16 @@ void step() {
 
     {{SUBNAMESPACE}}observers::InitGrid observer;
     {{SUBNAMESPACE}}observers::InitGrid::prepareTraversal();
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
     {{SUBNAMESPACE}}observers::InitGrid::unprepareTraversal();
-    gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishGridInitialisationStep();
+    watch.stop();
+    gridConstructionMeasurement.setValue(watch.getCalendarTime());
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("plot-solution");
@@ -409,6 +408,7 @@ void step() {
 
     OTTER_PHASE_SWITCH(otter::phase::plot);
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
@@ -416,17 +416,16 @@ void step() {
 
     {{SUBNAMESPACE}}observers::PlotSolution observer;
     {{SUBNAMESPACE}}observers::PlotSolution::prepareTraversal();
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
     {{SUBNAMESPACE}}observers::PlotSolution::unprepareTraversal();
-    plotMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishPlottingStep();
+    watch.stop();
+    plotMeasurement.setValue(watch.getCalendarTime());
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CheckpointSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("Checkpoint-solution");
@@ -437,6 +436,7 @@ void step() {
 
     OTTER_PHASE_SWITCH(otter::phase::plot);
 
+    watch.start();
     {{SUBNAMESPACE}}repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_no_add_to_pool, otter::label::step);
@@ -444,17 +444,16 @@ void step() {
 
     {{SUBNAMESPACE}}observers::CheckpointSolution observer;
     {{SUBNAMESPACE}}observers::CheckpointSolution::prepareTraversal();
-    watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
     {{SUBNAMESPACE}}observers::CheckpointSolution::unprepareTraversal();
-    plotMeasurement.setValue(watch.getCalendarTime());
 
     OTTER_TASK_WAIT_IMPLICIT(children);
     OTTER_TASK_END(step_task);
     OTTER_TASK_WAIT_IMPLICIT(descendants);
 
     {{SUBNAMESPACE}}repositories::finishPlottingStep();
+    watch.stop();
+    plotMeasurement.setValue(watch.getCalendarTime());
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::TimeStep: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("time-step");
@@ -490,6 +489,13 @@ void step() {
     {{SUBNAMESPACE}}repositories::finishTimeStep();
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logInfo(
+        "step()",
+        "Cell updates per second: "
+        << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue()
+      );
+    }
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::Undef:
     assertion(false);
@@ -541,16 +547,7 @@ int main(int argc, char** argv) {
 
       if (isGlobalMaster) {
         while (selectNextAlgorithmicStep()) {
-          watch.start();
           step();
-          watch.stop();
-
-          timePerMeshSweepMeasurement.setValue(watch.getCalendarTime());
-          logDebug(
-            "main()",
-            "Time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() <<
-            "s / " << timePerMeshSweepMeasurement.getValue() << "s"
-          );
         }
 
         logInfo("main()", "Terminated successfully");
@@ -569,11 +566,14 @@ int main(int argc, char** argv) {
           "Time stepping:               " << timeStepMeasurement.getAccumulatedValue() <<
           "s\t" << timeStepMeasurement.toString()
         );
-        logInfo(
-          "main()",
-          "Average time per mesh sweep: " << timePerMeshSweepMeasurement.getValue() <<
-          "s\t" << timePerMeshSweepMeasurement.toString()
-        );
+        // logInfo(
+        //   "main()",
+        //   "Average time per mesh sweep: " << timeStepMeasurement.getValue()
+        // );
+        // logInfo(
+        //   "main()",
+        //   "Cell updates per second:     " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue()
+        // );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {
           step();

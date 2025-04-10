@@ -10,10 +10,6 @@
 
 #include "config.h"
 
-#if GPUOffloadingSYCL>0
-#include "tarch/multicore/sycl/SYCL.h"
-#endif
-
 #include "exahype2/dg/CellIntegral.h"
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
@@ -92,12 +88,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     t,
     dt,
     #if Dimensions==2
-    tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
+    tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::Heap),
     nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
     #else
-    tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
+    tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::Heap),
     nullptr,
     {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
@@ -111,7 +107,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
         _outputValues
       );
 
-      tarch::freeMemory( _inputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+      tarch::freeMemory( _inputValues, tarch::MemoryLocation::Heap );
     }
   ),
 #ifdef UseSmartMPI
@@ -228,7 +224,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   ::tarch::mpi::DoubleMessage dtMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::Heap );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -257,10 +253,10 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
 //  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
-//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
   _functor();
 
   logInfo(
@@ -299,7 +295,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
     " via tag " << tag
   );
 
-  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
 
 
@@ -318,7 +314,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   ::tarch::mpi::DoubleMessage eValueMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::Heap );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -385,7 +381,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   logDebug("fuse(...)", "rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
-  ::exahype2::CellData cellData(otherTasks.size() + 1, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  ::exahype2::CellData cellData(otherTasks.size() + 1, tarch::MemoryLocation::Heap, targetDevice);
   int currentTask = 0;
   for (auto& p: otherTasks) {
     cellData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
@@ -394,7 +390,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::Heap, targetDevice);
     delete p;
     currentTask++;
   }
@@ -404,7 +400,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   cellData.t[currentTask]           = _t;
   cellData.dt[currentTask]          = _dt;
   cellData.id[currentTask]          = _taskNumber;
-  cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::Heap, targetDevice);
 
   //
   // ==============
@@ -446,7 +442,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<cellData.numberOfCells; i++) {
-    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::Heap, targetDevice);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
