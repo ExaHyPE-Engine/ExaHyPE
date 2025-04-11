@@ -14,22 +14,28 @@ from Tree import Tree
 	script to read peano grid patch file and convert it into the 
 	peano tree strcutre.
 
-	Please notice only 3D patch file is support yet
 """
 
 def round_sig(x, sig):
     return float(np.format_float_positional(x, precision=sig, unique=False, trim='k'))
 
-def read_patches(file_path, size_group):
+def read_patches(file_path, size_group, dimension):
     with open(file_path, "r") as f:
         content = f.read()
     
     # Regular expression to extract offset and size
-    patch_pattern = re.compile(
-        r'begin patch.*?offset ([\d.eE+\-]+ [\d.eE+\-]+ [\d.eE+\-]+).*?'
-        r'size ([\d.eE+\-]+ [\d.eE+\-]+ [\d.eE+\-]+)', 
-        re.DOTALL
-    )
+    if dimension==3:
+	    patch_pattern = re.compile(
+	        r'begin patch.*?offset ([\d.eE+\-]+ [\d.eE+\-]+ [\d.eE+\-]+).*?'
+	        r'size ([\d.eE+\-]+ [\d.eE+\-]+ [\d.eE+\-]+)', 
+	        re.DOTALL
+	    )
+    elif dimension==2:
+	    patch_pattern = re.compile(
+	        r'begin patch.*?offset ([\d.eE+\-]+ [\d.eE+\-]+).*?'
+	        r'size ([\d.eE+\-]+ [\d.eE+\-]+)', 
+	        re.DOTALL
+	    )
 
     # Find all matches
     for match in patch_pattern.findall(content):
@@ -38,15 +44,7 @@ def read_patches(file_path, size_group):
 
     return size_group
 
-#===================================================================================================
-#main start here
-#input parameters
-parser = argparse.ArgumentParser(description='Grid Patch File Reader')
-parser.add_argument("-file", "--file-path", dest="file", type=str, required="True",  help="file path" )
-
-args = parser.parse_args()
-
-def GridPatchFileReader(file_path):
+def GridPatchFileReader(name, file_path, dimension):
 	folder_path=file_path
 
 	if folder_path[-1] != '/':
@@ -56,13 +54,11 @@ def GridPatchFileReader(file_path):
 	# List all files in the folder with the specified prefix
 	datafiles = [f for f in os.listdir(folder_path) if f.startswith(prefix)]
 
-	dimension=3 # notice only 3D file is supported
-
 	#extract grid infomation
 	size_groups = []   # Dictionary to store {size: [offsets]}
 	for file_path in datafiles: 
 	    size_group = defaultdict(list)
-	    read_patches(folder_path+'/'+file_path, size_group)
+	    read_patches(folder_path+'/'+file_path, size_group, dimension)
 	    size_groups.append(size_group)
 
 	total_level=-1
@@ -94,7 +90,10 @@ def GridPatchFileReader(file_path):
 	    		max_size_key=size
 	#print(max_size)
 
-	leftmost_offset=[999,999,999]
+	if dimension==3:
+		leftmost_offset=[999,999,999]
+	elif dimension==2:
+		leftmost_offset=[999,999]
 	for size_group in size_groups:
 	    for offset in size_group[max_size_key]:
 	        offset_tuple = tuple(map(float, offset.split()))
@@ -102,9 +101,8 @@ def GridPatchFileReader(file_path):
 	            if offset_tuple[m]<leftmost_offset[m]:
 	                leftmost_offset[m]=offset_tuple[m]
 	                leftmost_offset_key=offset
-	#print(leftmost_offset, leftmost_offset_key)
 
-	domain_offset = tuple(leftmost_offset)#tuple(map(float, leftmost_offset_key.split()))
+	domain_offset = tuple(leftmost_offset)
 	domain_size = tuple(map(float, max_size_key.split()))
 	domain_size = tuple( round_sig(x * 3,5) for x in domain_size)
 
@@ -123,7 +121,10 @@ def GridPatchFileReader(file_path):
 	        matrix=np.zeros((matrix_size, matrix_size, matrix_size), dtype=int)
 	        for offset in offsets:
 	            offset_tuple = tuple(map(float, offset.split()))
-	            index=[-1,-1,-1]
+	            if dimension==3:
+	                index=[-1,-1,-1]
+	            elif dimension==2:
+	                index=[-1,-1]
 	            for i in range(len(offset_tuple)):
 	                index[i]=round((offset_tuple[i]-domain_offset[i])/size_tuple[i])
 	            matrix[tuple(index)]=1
@@ -133,7 +134,7 @@ def GridPatchFileReader(file_path):
 	    tree_matrices.append(tree_matrix)
 
 	#create the Tree class and assign properly
-	peano_tree = Tree(dimension, domain_offset, domain_size)
+	peano_tree = Tree(name, dimension, domain_offset, domain_size)
 	peano_tree.read_in_tree_from_arrays(input_tree_arrays=tree_matrices, max_level=total_level, weighted=False)
 
 	return peano_tree

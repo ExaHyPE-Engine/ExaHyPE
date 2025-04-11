@@ -32,8 +32,9 @@ class Tree(object):
 	Notice the lowest level is 1 with a size of 3x3 or 3x3x3
 	"""
 
-	def __init__(self, dimension, domain_offset, domain_size):
+	def __init__(self, name, dimension, domain_offset, domain_size):
 
+		self._name			=	name
 		self._dimension		=	dimension
 		self._domain_offset =	domain_offset
 		self._domain_size 	=	domain_size
@@ -46,10 +47,11 @@ class Tree(object):
 		self._max_level		= -1
 		self._weighted		= False
 
+
 	def __str__(self):
 		result = (
 			"""
-Peano Tree Structure  
+Peano Tree Structure From """ + self._name + """
 Domain offset:	"""
 			+ str(self._domain_offset)
 			+ """
@@ -99,6 +101,7 @@ Split pattern:	"""
 
 			self._tree_arrays.append(new_level_array)
 
+		#actual read in
 		for i in range(self._subtree_count):
 			for level in range(self._max_level):
 				self.read_in_level_array(input_tree_arrays[i][level], i, level)
@@ -121,6 +124,18 @@ Split pattern:	"""
 					for c in range(3**(level+1)):
 						if input_level_arrays[a][b][c]==1:
 							self._tree_arrays[level][a][b][c] = (input_level_arrays[a][b][c], subtree_id)
+
+
+	def read_in_tree_from_artificial(self, input_artificial_arrays, max_level, weighted=False):
+		self._subtree_count = 1
+		self._max_level		= max_level
+
+		self._tree_arrays 	= input_artificial_arrays
+
+		self.update_split_pattern()
+
+		if self._weighted:
+			self.update_weight()
 
 
 	def update_split_pattern(self):
