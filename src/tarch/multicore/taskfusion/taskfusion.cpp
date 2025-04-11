@@ -39,7 +39,11 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(task->getTaskType());
 
-  if (instruction.maxTasks<1) {
+  assertion1(instruction.device==tarch::multicore::Task::Host or instruction.device>=0, instruction.toString());
+  assertion1(instruction.minTasks>=0, instruction.toString());
+  assertion1(instruction.maxTasks>instruction.minTasks, instruction.toString());
+
+  if (instruction.maxTasks<=1) {
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {

@@ -28,12 +28,49 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
   logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << _taskQueue->tasks.size() << ")" );
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+  const bool hasTaskBeenProcessedWhenFunctionInvoked = hasTaskBeenProcessed();
 
-  while ( not hasTaskBeenProcessed() ) {
-    if (instruction.minTasks>=_taskQueue->tasks.size()) {
-      processTasks();
+  if (
+    not hasTaskBeenProcessedWhenFunctionInvoked
+  ) {
+    _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.setValue(_taskQueue->tasks.size());
+
+    if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
+      tarch::multicore::getOrchestration().updateFuseStatistics(
+        _taskQueue->type,
+        _taskQueue->tasks.size(),
+        _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue()
+      );
     }
-    else {
+  }
+
+  if (
+    not hasTaskBeenProcessedWhenFunctionInvoked
+    and
+    instruction.timeoutMicroSeconds>std::chrono::microseconds(0)
+    and
+    instruction.minTasks>=_taskQueue->tasks.size()
+  ) {
+    logDebug( "run(...)", "sleep for " << instruction.timeoutMicroSeconds << " milliseconds" );
+    auto deadline = std::chrono::system_clock::now() + instruction.timeoutMicroSeconds;
+    while (std::chrono::system_clock::now() < deadline) {
+      std::this_thread::sleep_for( std::chrono::microseconds(1) );
+    }
+  }
+
+  if (
+    not hasTaskBeenProcessedWhenFunctionInvoked
+    and
+    instruction.minTasks<=_taskQueue->tasks.size()
+  ) {
+    logInfo( "run(...)", "fuse as we have " << _taskQueue->tasks.size() << " tasks" );
+    processTasks();
+  }
+
+  if (
+    not hasTaskBeenProcessedWhenFunctionInvoked
+  ) {
+    while ( not hasTaskBeenProcessed() ) {
       tryToProcessOneTask(_taskQueue, _taskNumber);
     }
   }
@@ -77,12 +114,6 @@ void tarch::multicore::taskfusion::ProcessReadyTask::tryToProcessOneTask(
 void tarch::multicore::taskfusion::ProcessReadyTask::processTasks() {
   tarch::multicore::Lock lock(_taskQueue->semaphore);
   const int queueSize = static_cast<int>(_taskQueue->tasks.size());
-  const double averageNumberOfPendingReadyTasksPerProcessTaskExecution = _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue();
-
-  _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.setValue(queueSize);
-  if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
-// @todo This will be a new feature likely   ...
-  }
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
 

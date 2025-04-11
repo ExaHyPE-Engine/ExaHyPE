@@ -86,6 +86,7 @@ class Project:
                                            plot_after_each_mesh_sweep = False,
                                            )
 
+    self._multicore_orchestration = "new ::mghype::MultigridDefaultMulticoreOrchestration()"
 
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """!
@@ -211,11 +212,13 @@ class Project:
 
 
   def __set_solver_repository_dict(self):
-    self.dictionary = {}
-    self.dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
-    self.dictionary[ "AUX_SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._aux_solvers ]
-    self.dictionary[ "LOAD_BALANCER" ]           = self._load_balancer_name
-    self.dictionary[ "LOAD_BALANCER_ARGUMENTS" ] = self._load_balancer_arguments
+    self.dictionary = {
+      "SOLVER_INSTANCES":         [(x.typename(), x.instance_name()) for x in self._solvers ],
+      "AUX_SOLVER_INSTANCES":     [(x.typename(), x.instance_name()) for x in self._aux_solvers ],
+      "LOAD_BALANCER":            self._load_balancer_name,
+      "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
+      "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
+    }
 
   def __generate_solver_repository(self):
     # make sure solver repository dict is set    
@@ -361,3 +364,13 @@ This is yet to be written, and we need to have a paper on our work.
   @property
   def subdirectory(self):
     return self._subdirectory
+
+  def set_multicore_orchestration(self, value):
+      """! Set orchestration
+      value has to be a string which creates an orchestration object,
+      i.e., an object of the type tarch::multicore::orchestration::Orchestration.
+      You can either create it directly (in this case you need to add a new),
+      or you can use a factory method such as
+      "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()".
+      """
+      self._multicore_orchestration = value

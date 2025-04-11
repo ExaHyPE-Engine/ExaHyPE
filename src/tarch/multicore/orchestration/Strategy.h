@@ -7,6 +7,11 @@ namespace tarch {
     namespace orchestration {
       class Strategy;
 
+      /**
+       * Default strategy
+       *
+       * The default strategy is AllOnGPU at the moment.
+       */
       Strategy* createDefaultStrategy();
     } // namespace orchestration
   }   // namespace multicore
@@ -14,6 +19,8 @@ namespace tarch {
 
 #include <string>
 #include <utility>
+#include <chrono>
+
 
 /**
  * Interface for any task orchestration
@@ -48,12 +55,14 @@ public:
    *
    * Represent if and how to fuse tasks:
    *
-   * @param device Which device is to be used. Can be Host.
+   * @param device Which device is to be used. Can be
+   *   tarch::multicore::Task::Host.
    * @param minTasks How many tasks are to be used at least. Can be zero, which
-   *   means we always have to fuse, but should not be negative.
+   *   means we always have to fuse (unless maxTask equals 1), but should not
+   *   be negative.
    * @param maxTasks How many tasks are to be fused at most. Has to be bigger
-   *   than zero. If you set it to one however, you disable fusion and tasks go
-   *   straight into the runtime system as proper tasks.
+   *   than minTasks. If you set it to one however, you disable fusion and
+   *   tasks go straight into the runtime system as proper tasks.
    * @param timeoutNanoSeconds Timeout, i.e. time to wait for the right number
    *   of fused tasks to arrive.
    *
@@ -66,16 +75,16 @@ public:
     int device;
     int minTasks;
     int maxTasks;
-    int timeoutNanoSeconds;
-    FuseInstruction(int device_, int minTasks_, int maxTasks_, int timeoutNanoSeconds_ = 0):
+    std::chrono::microseconds timeoutMicroSeconds;
+    FuseInstruction(int device_, int minTasks_, int maxTasks_, const std::chrono::microseconds& timeoutMicroSeconds_ = std::chrono::microseconds(0)):
       device(device_),
       minTasks(minTasks_),
       maxTasks(maxTasks_),
-      timeoutNanoSeconds(timeoutNanoSeconds_) {}
+      timeoutMicroSeconds(timeoutMicroSeconds_) {}
 
     std::string toString() const {
       return "(#device=" + std::to_string(device) + ",min=" + std::to_string(minTasks)
-             + ",max=" + std::to_string(maxTasks) + ",timeout=" + std::to_string(timeoutNanoSeconds) + "ns)";
+             + ",max=" + std::to_string(maxTasks) + ",timeout=" + std::to_string(timeoutMicroSeconds.count()) + "ms)";
     }
   };
 
