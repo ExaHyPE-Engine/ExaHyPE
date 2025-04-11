@@ -21,37 +21,56 @@ namespace tarch {
  * There are multiple orchestration strategies implementing this interface and
  * hence guiding the task execution pattern. You can create those and make them
  * live by calling tarch::multicore::setOrchestration().
+ *
+ * Please consult the operation fuse() and its result type, FuseInstruction,
+ * for details on the exact decision process.
+ *
  */
 class tarch::multicore::orchestration::Strategy {
 public:
   /**
    * Provide hint of execution policy
    *
-   * @see tarch::multicore::spawnAndWait() for rationale and details.
-   * @see tarch::multicore for general overview and further design rationale.
-   *
-   * @todo I would like to have a flag which tells the actual multicore
-   *   runtime not (!) to continue with further ready tasks. Such a
-   *   feature does not exist in OpenMP, e.g., and therefore we do not
-   *   use such a flag.
+   * @see tarch::multicore::spawnAndWait() for rationale and details re the BSP
+   *      sections of the code.
+   * @see tarch::multicore::taskfusion for some remarks how the policies
+   *      implemented through a strategy affect the task fusion.
+   * @see The page @ref page_tarch_multicore for generic documentation on the
+   *      design of the whole multicore component.
    */
   enum class ExecutionPolicy {
     RunSerially,
     RunParallel
   };
 
+  /**
+   * Fuse instruction
+   *
+   * Represent if and how to fuse tasks:
+   *
+   * @param device Which device is to be used. Can be Host.
+   * @param minTasks How many tasks are to be used at least. Can be zero, which
+   *   means we always have to fuse, but should not be negative.
+   * @param maxTasks How many tasks are to be fused at most. Has to be bigger
+   *   than zero. If you set it to one however, you disable fusion and tasks go
+   *   straight into the runtime system as proper tasks.
+   * @param timeoutNanoSeconds Timeout, i.e. time to wait for the right number
+   *   of fused tasks to arrive.
+   */
   struct FuseInstruction {
     int device;
     int minTasks;
     int maxTasks;
-    FuseInstruction(int device_, int minTasks_, int maxTasks_):
+    int timeoutNanoSeconds;
+    FuseInstruction(int device_, int minTasks_, int maxTasks_, int timeoutNanoSeconds_ = 0):
       device(device_),
       minTasks(minTasks_),
-      maxTasks(maxTasks_) {}
+      maxTasks(maxTasks_),
+      timeoutNanoSeconds(timeoutNanoSeconds_) {}
 
     std::string toString() const {
       return "(#device=" + std::to_string(device) + ",min=" + std::to_string(minTasks)
-             + ",max=" + std::to_string(maxTasks) + ")";
+             + ",max=" + std::to_string(maxTasks) + ",timeout=" + std::to_string(timeoutNanoSeconds) + "ns)";
     }
   };
 
@@ -66,6 +85,12 @@ public:
    * Notifies the strategy that we leave a BSP (fork-join) section
    */
   virtual void endBSPSection(int nestedParallelismLevel) = 0;
+  
+  virtual void updateFuseStatistics(
+    int    taskType,
+    int    queueSize,
+    double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+  ) = 0;
 
   static constexpr int EndOfBSPSection = -1;
 
@@ -75,6 +100,59 @@ public:
    *
    * @todo Docu
    *
+       *
+       * If the average number of ready tasks in the queue is higher than the
+       * max fused tasks every time a process ready task is invoked, the
+       * handling of the fused tasks is too slow. We better should start to
+       * spawn more tasks as native tasks on the host. This is kind of assuming
+       * that fused tasks are shipped to an accelerator.
+       *
+       * If the average number of ready tasks in the queue is smaller than
+       * the minimum number of tasks we'd need to fuse properly every time we
+       * hit the scheduling point, the host code does handle the fused tasks
+       * too quickly. That likely means that cores on the host are
+       * underutilised, i.e. every time we enqueue a task, its ProcessReadyTask
+       * almost immediately kicks in. They count towards the average if and
+       * only if their task is not yet processed, and they add a zero to the
+       * stats if the queue is empty even though their task is not yet done.
+       * This happens whenever a lot of ProcessReadyTask instances are out
+       * there and hit hit the fused task queue concurrently.
+       *
+       * If the average number of ready tasks is not yet known, we should
+       * definitely not spawn any tasks as native ones, as we first want to
+       * build up experience how many
+       * fused tasks there are on average over time. And we should only
+       * shortcut and map fusable tasks onto native ones as long as there's
+       * at least one task left in the fused queue. Because then we know that
+       * the averages will be updated at least once more.
+       *
+       * Here's a more in-depth explanation of the rationale behind the
+       * implementation:
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *  static_cast<double>(instruction.maxTasks) < averageNumberOfPendingReadyTasksPerProcessTaskExecution
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * Every time an instance of ProcessReadyTask runs and doesn't find its
+       * corresponding task, it processes a set of fused tasks. However, there
+       * are always way more pending tasks in the queue than we are allowed to
+       * process. So even if we take the maximum number of tasks, the one we are
+       * really interested in might not be among them. We enqueue too
+       * aggressively into the set of fused tasks.
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *  static_cast<double>(instruction.minTasks) > averageNumberOfPendingReadyTasksPerProcessTaskExecution
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * Every time an instance of ProcessReadyTask runs and doesn't find its
+       * corresponding task, it processes a set of fused tasks. However, there
+       * are never enough pending tasks in the queue so we can fuse. This
+       * happens if the ProcessReadyTasks are executed too quickly. They should
+       * come way later than the actually insertion of the task into the
+       * fusable set. Therefore, it might be convenient to map more tasks onto
+       * native tasks and therefore throttle the processing of the fused tasks
+       * as we keep more cores on the host busy.
+
    * Tell the runtime system how many tasks to hold back: If there
    * are more tasks than the result, the tasking system will map them
    * onto native tasks. As long as we have fewer tasks than this

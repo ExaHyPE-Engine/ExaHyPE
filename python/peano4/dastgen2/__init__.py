@@ -4,3 +4,4 @@
 from .MPIAndStorageAspect import MPIAndStorageAspect
 from .Peano4DoubleArray   import Peano4DoubleArray
 from .Peano4IntegerArray  import Peano4IntegerArray
+from .Peano4SmartPointerDoubleArray import Peano4SmartPointerDoubleArray

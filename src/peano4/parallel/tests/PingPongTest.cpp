@@ -55,7 +55,7 @@ namespace {
         _data(data),
         _blockingMPI(blockingMPI) {}
    
-      bool run() {
+      void run() {
         #if defined(Parallel) and not defined(UseSmartMPI)
         const int out = 23+_data;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
@@ -70,7 +70,6 @@ namespace {
           MPI_Wait(&request,MPI_STATUS_IGNORE);
         }
         #endif
-        return false;
       }
   };
 
@@ -85,7 +84,7 @@ namespace {
         _data(expectedData),
         _blockingMPI(blockingMPI) {}
 
-      bool run() {
+      void run() {
         #if defined(Parallel) and not defined(UseSmartMPI)
         int in = -12;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
@@ -104,7 +103,6 @@ namespace {
           testErrors++;
         }
         #endif
-        return false;
       }
   };
 }

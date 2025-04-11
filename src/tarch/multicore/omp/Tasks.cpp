@@ -219,9 +219,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 #endif
     {
       OTTER_TASK_START(otter_tasks[i]);
-      while (tasks[i]->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
+      tasks[i]->run();
       delete tasks[i];
       OTTER_TASK_END();
     }
@@ -242,16 +240,13 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  // Administer in-dependencies incl self-dep
+  // Administer in-dependencies
   std::vector<TaskNumber>  iterableExistingInDepencencies;
   iterableExistingInDepencencies.reserve( inDependencies.size()+1 );
   for (auto inTask: inDependencies) {
     if ( canServeDependencyEntry(inTask) ) {
       iterableExistingInDepencencies.push_back(inTask);
     }
-  }
-  if (canServeDependencyEntry(taskNumber)) {
-    iterableExistingInDepencencies.push_back(taskNumber);
   }
 
   if (taskNumber == NoOutDependencies) {
@@ -263,9 +258,7 @@ void tarch::multicore::native::spawnTask(
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) untied
     {
       OTTER_TASK_START(task);
-      while (job->run()) {
-        #pragma omp taskyield
-      }
+      job->run();
       delete job;
 
       #pragma omp atomic
@@ -289,20 +282,16 @@ void tarch::multicore::native::spawnTask(
     // Please consult canServeDependencyEntry() for this critical section
     #pragma omp critical (dependency_checks)
     {
-      #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+      #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(inout: dependencyTrackingBaseAddress[taskNumber]) untied
       {
         OTTER_TASK_START(task);
-        while (job->run()) {
-          OTTER_TASK_YIELD_START();
-          #pragma omp taskyield
-          OTTER_TASK_YIELD_END();
-        }
+        job->run();
         delete job;
 
         #pragma omp atomic
         numberOfSpawnedTasks--;
         OTTER_TASK_END();
-      } // end of task
+      }
     } // end of critical section, i.e. now memory region might change again
   }
   else {
@@ -315,58 +304,15 @@ void tarch::multicore::native::spawnTask(
       ")"
     );
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
+
+    // @todo There might be a bug in current OpenMP implementations requiring us to switch to the second variant
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+    //#pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) if (0)
+    //{}
+
     OTTER_TASK_WAIT_END();
-    while (job->run()) {
-      OTTER_TASK_YIELD_START();
-      #pragma omp taskyield
-      OTTER_TASK_YIELD_END();
-    }
+    job->run();
     delete job;
-  }
-}
-
-
-/**
- * It is not clear what happens if I use tasksOfSameType directly within the task.
- * It is clear that a pure reference cannot be used within a task, as the task uses
- * firstprivate by default. Therefore, it would copy something which ceases to exist.
- * It is not clear what happens with const references, but we had some memory issues
- * with the newer Intel/LLVM versions. Therefore, I manually copy the list and pass
- * this one into fuse(). The firstprivate annotation is not required, as this is the
- * default. But I leave it in here to highlight that three variables are copied,
- * but tasksOfSameType is not copied and not used within the task.
- *
- * ## NVIDIA
- *
- * With NVIDIA/nvc++, I get the error
- *
- * <pre>
-NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variable is not supported
-(tarch/multicore/omp/Tasks.cpp: 289) NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
- * </pre>
- *
- * if I try to map fuse onto a task of its own.
- *
- */
-void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  #if !defined(__NVCOMPILER)
-  OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
-  #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
-  #endif
-  {
-    #if !defined(__NVCOMPILER)
-    OTTER_TASK_START(task);
-    #endif
-    const bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
-    while (stillExecuteLocally and myTask->run() ) {
-      tarch::multicore::Core::getInstance().yield();
-    }
-    delete myTask;
-    #if !defined(__NVCOMPILER)
-    OTTER_TASK_END();
-    #endif
   }
 }
 
@@ -384,7 +330,10 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
   if (not iterableExistingInDepencencies.empty()) {
     logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
+    // @todo There might be a bug in current OpenMP versions, so we might have to use the second version
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+    //#pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) if (0)
+    //{}
     OTTER_TASK_WAIT_END();
   }
 }

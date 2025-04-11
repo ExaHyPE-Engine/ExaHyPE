@@ -1,12 +1,21 @@
 /**
 \page page_multigrid_solvers Solvers
 
-Use the links below to find documentation on each of the solvers currently in use
+Use the links below to find documentation on each of the solvers currently in use.
 
-- \subpage matrixfree_dg_solver
-- \subpage matrixfree_collocated_solver
-- \subpage matrixfree_collocated_h_coarsening
-- \subpage petsc_collocated_solver
-- \subpage petsc_dg_solver
+\li solvers.api.CollocatedDLinearDiscretisationWithPointJacobi.CollocatedDLinearDiscretisationWithPointJacobi
+\li solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+\li solvers.api.DiscontinuousGalerkinWithFusionUnshifted.DiscontinuousGalerkinWithFusionUnshifted
+\li solvers.api.DiscontinuousGalerkinWithoutFusion.DiscontinuousGalerkinWithoutFusion
+\li solvers.api.CollocatedMG.CollocatedMG
+\li solvers.api.CollocatedMGSingleThreaded.CollocatedMGSingleThreaded
+
+There is also some important stuff in the abstract base class (from which all of them inherit from) - solvers.api.Solver.Solver.
+
+There is a lot of docu about the DGCGCoupling to be found in solvers.api.actionsets.DGCGCoupling.AbstractDGCGCoupling 
+The only one of these solvers actually in use is solvers.api.actionsets.DGCGCoupling.MultiplicativeDGCGCoupling, which works
+with the standard DGSolver (solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver), as
+well as the standard Collocated solver (solvers.api.CollocatedDLinearDiscretisationWithPointJacobi.CollocatedDLinearDiscretisationWithPointJacobi) if you want to
+use it in parallel, or the standard Multilevel CG solver single threaded (solvers.api.CollocatedMGSingleThreaded.CollocatedMGSingleThreaded) if single-threaded is fine too.
 
 */

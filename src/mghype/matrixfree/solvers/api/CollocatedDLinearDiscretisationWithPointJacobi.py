@@ -4,10 +4,11 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
-from .Solver                                       import Solver
-from .actionsets.CollocatedSolver.InitDofs         import InitDofsCollocated
-from .actionsets.CollocatedSolver.CollocatedSolver import CollocatedSolver
-from .actionsets.PlotVertexDataInPeanoBlockFormat  import PlotVertexDataInPeanoBlockFormat
+from .Solver                                              import Solver
+from .actionsets.CollocatedSolver.InitDofs                import InitDofsCollocated
+from .actionsets.CollocatedSolver.UpdateSolution          import UpdateSolution
+from .actionsets.CollocatedSolver.ResetAndUpdateResidual  import ResetAndUpdateResidual
+from .actionsets.PlotVertexDataInPeanoBlockFormat         import PlotVertexDataInPeanoBlockFormat
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
@@ -101,7 +102,11 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
 
   # Enforcement of boundary conditions
 
-  to be completed
+
+  # Todos
+  
+  We currently overcount the residual on vertices that are shared across boundaries. This isn't an issue at present,
+  since we only check for the max, which is unaffected by this bug. But something to fix at later date.
 
   """
 
@@ -141,6 +146,7 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "diag",       str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
+    self._vertex_data.peano4_mpi_and_storage_aspect.merge_implementation = self.get_vertex_merge_method()
 
     self._unknowns_per_vertex_node      = unknowns_per_vertex
 
@@ -208,9 +214,9 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
     pass
 
   def add_to_solve(self, observer):
-    new_action_set = CollocatedSolver(self)
-    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
-    observer.add_action_set( new_action_set )
+    descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
+    observer.add_action_set( UpdateSolution(        self, descend_invocation_order+0, False) )
+    observer.add_action_set( ResetAndUpdateResidual(self, descend_invocation_order+1, False) )
     pass
   
   def add_implementation_files_to_project(self, namespace, output, subdirectory="", abstract_overwrite=True):
@@ -272,3 +278,19 @@ class CollocatedDLinearDiscretisationWithPointJacobi(Solver):
     output.makefile.add_cpp_file( subdirectory + "Abstract" + self._name + ".cpp", generated=True )
     output.makefile.add_cpp_file( subdirectory + self._name + ".cpp", generated=True )
 
+  def get_vertex_merge_method(self):
+    d = {}
+    d["SOLVER_NAME"] = self.typename()
+
+    output = """
+  if( !marker.willBeRefined() ) {
+
+    // naive += with the diag
+    setDiag( getDiag() + neighbour.getDiag() );
+
+    // ditto for residual
+    setResidual( getResidual() + neighbour.getResidual() );
+  }
+    """
+
+    return output

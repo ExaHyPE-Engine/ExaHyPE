@@ -4,6 +4,10 @@
 
 @image html documentation/icons/peano4.png
 
+- Data manipulation
+  - \subpage tutorials_peano4_assign_data_to_mesh
+
+
 - \subpage page_peano4_tutorials_finite_volumes
 
 ## How to add your own tutorial

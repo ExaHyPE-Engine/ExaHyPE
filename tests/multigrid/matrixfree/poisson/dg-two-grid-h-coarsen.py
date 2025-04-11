@@ -28,7 +28,7 @@ project = mghype.matrixfree.api.Project( project_name = "DGTwoGrid",
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 
-matrices = mghype.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GaussLobattoMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
@@ -70,6 +70,7 @@ solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointW
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 1.0e-6,
+  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0) # Should be specified in [0,1] interval
 )
 #! [Instantiate solver]
 
@@ -91,7 +92,7 @@ correction_matrix, correction_matrix_scaling = correction_equation_matrices.get_
 """
 We use the identity matrix everywhere...
 """
-correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMG("CollocatedMG",
+correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMGSingleThreaded("CollocatedMG",
                                                     1,
                                                     args.dimensions,
                                                     args.meshsize,
@@ -103,7 +104,7 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedMG("Colloca
                                                     correction_matrix = correction_matrix,
                                                     correction_matrix_scaling = correction_matrix_scaling,
                                                     solver_tolerance=1e-12,
-                                                    pre_smoothing_steps =5,
+                                                    pre_smoothing_steps =6,
                                                     post_smoothing_steps=5,
                                                     restriction_matrix=intergridOperators.restriction(),
                                                     prolongation_matrix=intergridOperators.prolongation(),
@@ -164,7 +165,6 @@ project.set_global_simulation_parameters(
   max_iterations = 2000
 )
 
-# project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
