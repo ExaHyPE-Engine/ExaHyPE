@@ -325,7 +325,7 @@ endif()
 
 if(WITH_NETCDF)
   find_package(NetCDF REQUIRED)
-  target_link_libraries(PeanoOptions INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
+  target_link_libraries(PeanoOptions INTERFACE ${NETCDF_LIBRARIES})
   target_include_directories(PeanoOptions INTERFACE ${NETCDF_INCLUDES})
   target_compile_definitions(PeanoOptions INTERFACE UseNetCDF)
 endif()

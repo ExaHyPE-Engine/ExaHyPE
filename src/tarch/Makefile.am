@@ -102,7 +102,9 @@ Tarch_SOURCES = \
 	plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter_VertexDataWriter.cpp \
 	plotter/griddata/blockstructured/PeanoTextPatchFileWriter_CellDataWriter.cpp \
 	plotter/pointdata/vtk/VTKWriter.cpp \
+	reader/NetCDFReader.cpp \
 	reader/PeanoTextPatchFileReader.cpp \
+	reader/TopologyParser.cpp \
 	mpi/BooleanSemaphore.cpp \
 	mpi/Lock.cpp \
 	mpi/Rank.cpp \

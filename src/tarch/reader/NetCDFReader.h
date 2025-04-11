@@ -2,13 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#ifdef UseNetCDF
+
 #include <string>
 
-namespace applications::exahype2::swe {
+namespace tarch::reader {
   class NetCDFReader;
-} // namespace applications::exahype2::swe
+} // namespace tarch::reader
 
-class applications::exahype2::swe::NetCDFReader {
+class tarch::reader::NetCDFReader {
 public:
   /**
    * @brief Opens a netCDF file, returns ncid.
@@ -165,3 +167,5 @@ public:
     std::size_t end
   );
 };
+
+#endif

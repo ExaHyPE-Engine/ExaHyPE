@@ -2,10 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "NetCDFReader.h"
 
+#ifdef UseNetCDF
+
 #include <netcdf.h>
 #include <sys/stat.h>
 
-int applications::exahype2::swe::NetCDFReader::open(const std::string& filename) {
+int tarch::reader::NetCDFReader::open(const std::string& filename) {
   // Check that file exists (nc_open does not do that apparently)
   struct stat buffer;
   if (stat(filename.c_str(), &buffer) != 0) {
@@ -21,7 +23,7 @@ int applications::exahype2::swe::NetCDFReader::open(const std::string& filename)
 }
 
 
-int applications::exahype2::swe::NetCDFReader::close(int ncid) {
+int tarch::reader::NetCDFReader::close(int ncid) {
   if (nc_close(ncid) != NC_NOERR) {
     return -1;
   }
@@ -29,7 +31,7 @@ int applications::exahype2::swe::NetCDFReader::close(int ncid) {
 }
 
 
-std::size_t applications::exahype2::swe::NetCDFReader::getDimension(
+std::size_t tarch::reader::NetCDFReader::getDimension(
   int         ncid,
   const char* key
 ) {
@@ -47,7 +49,7 @@ std::size_t applications::exahype2::swe::NetCDFReader::getDimension(
 }
 
 
-int* applications::exahype2::swe::NetCDFReader::getGlobalAttInt(
+int* tarch::reader::NetCDFReader::getGlobalAttInt(
   int         ncid,
   const char* name
 ) {
@@ -65,7 +67,7 @@ int* applications::exahype2::swe::NetCDFReader::getGlobalAttInt(
 }
 
 
-float* applications::exahype2::swe::NetCDFReader::getGlobalAttFloat(
+float* tarch::reader::NetCDFReader::getGlobalAttFloat(
   int         ncid,
   const char* name
 ) {
@@ -83,7 +85,7 @@ float* applications::exahype2::swe::NetCDFReader::getGlobalAttFloat(
 }
 
 
-double* applications::exahype2::swe::NetCDFReader::getGlobalAttDouble(
+double* tarch::reader::NetCDFReader::getGlobalAttDouble(
   int         ncid,
   const char* name
 ) {
@@ -101,7 +103,7 @@ double* applications::exahype2::swe::NetCDFReader::getGlobalAttDouble(
 }
 
 
-char* applications::exahype2::swe::NetCDFReader::getGlobalAttText(
+char* tarch::reader::NetCDFReader::getGlobalAttText(
   int         ncid,
   const char* name
 ) {
@@ -118,7 +120,7 @@ char* applications::exahype2::swe::NetCDFReader::getGlobalAttText(
   return tmp;
 }
 
-int applications::exahype2::swe::NetCDFReader::
+int tarch::reader::NetCDFReader::
   readVariable1D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
@@ -134,7 +136,7 @@ int applications::exahype2::swe::NetCDFReader::
 }
 
 
-int applications::exahype2::swe::NetCDFReader::readVariable2D(
+int tarch::reader::NetCDFReader::readVariable2D(
   int         ncid,
   const char* key,
   double**    variable,
@@ -166,7 +168,7 @@ int applications::exahype2::swe::NetCDFReader::readVariable2D(
 }
 
 
-int applications::exahype2::swe::NetCDFReader::
+int tarch::reader::NetCDFReader::
   readVariable2D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
@@ -182,7 +184,7 @@ int applications::exahype2::swe::NetCDFReader::
 }
 
 
-int applications::exahype2::swe::NetCDFReader::readVariable2DHyperslab(
+int tarch::reader::NetCDFReader::readVariable2DHyperslab(
   int         ncid,
   const char* key,
   double**    variable,
@@ -218,7 +220,7 @@ int applications::exahype2::swe::NetCDFReader::readVariable2DHyperslab(
 }
 
 
-int applications::exahype2::swe::NetCDFReader::readVariable3DHyperslab(
+int tarch::reader::NetCDFReader::readVariable3DHyperslab(
   int         ncid,
   const char* key,
   double*     variable,
@@ -241,3 +243,5 @@ int applications::exahype2::swe::NetCDFReader::readVariable3DHyperslab(
 
   return 0;
 }
+
+#endif

@@ -2,13 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TopologyParser.h"
 
+#ifdef UseNetCDF
+
 #include "tarch/la/ScalarOperations.h"
 
 #include <cstring>
 #include <stdexcept>
-#include <iostream>
 
-applications::exahype2::swe::TopologyParser::TopologyParser(
+tarch::logging::Log tarch::reader::TopologyParser::_log("tarch::reader::TopologyParser");
+
+tarch::reader::TopologyParser::TopologyParser(
   const char* bathymetryFilePath,
   const char* displacementFilePath,
   double      lengthOfSimulationDomainInX,
@@ -38,7 +41,7 @@ applications::exahype2::swe::TopologyParser::TopologyParser(
 }
 
 
-applications::exahype2::swe::TopologyParser::TopologyParser(
+tarch::reader::TopologyParser::TopologyParser(
   const char* bathymetryFilePath,
   double      lengthOfSimulationDomainInX,
   double      lengthOfSimulationDomainInY,
@@ -60,14 +63,14 @@ applications::exahype2::swe::TopologyParser::TopologyParser(
 }
 
 
-applications::exahype2::swe::TopologyParser::~TopologyParser() {
+tarch::reader::TopologyParser::~TopologyParser() {
   delete[] this->_bathymetry;
   delete[] this->_displacement;
 }
 
 
-void applications::exahype2::swe::TopologyParser::parseBathymetryFile(const char* bathymetryFilePath) {
-  std::cout << "Sample bathymetry with keys (" << _ncBathymetryKey << ", " << _ncBathymetryKeyX << ", " << _ncBathymetryKeyY << ")" << std::endl;
+void tarch::reader::TopologyParser::parseBathymetryFile(const char* bathymetryFilePath) {
+  logInfo("parseBathymetryFile()", "Parse bathymetry file with keys (" << _ncBathymetryKey << ", " << _ncBathymetryKeyX << ", " << _ncBathymetryKeyY << ")");
 
   int ncid = -1;
 
@@ -122,8 +125,8 @@ void applications::exahype2::swe::TopologyParser::parseBathymetryFile(const char
 }
 
 
-void applications::exahype2::swe::TopologyParser::parseDisplacementFile(const char* displacementFilePath) {
-  std::cout << "Sample displacement with keys (" << _ncDisplacementKey << ", " << _ncDisplacementKeyX << ", " << _ncDisplacementKeyY << ")" << std::endl;
+void tarch::reader::TopologyParser::parseDisplacementFile(const char* displacementFilePath) {
+  logInfo("parseDisplacementFile()", "Parse displacement file with keys (" << _ncDisplacementKey << ", " << _ncDisplacementKeyX << ", " << _ncDisplacementKeyY << ")");
 
   int ncid = -1;
 
@@ -178,7 +181,7 @@ void applications::exahype2::swe::TopologyParser::parseDisplacementFile(const ch
 }
 
 
-double applications::exahype2::swe::TopologyParser::sampleBathymetry(double x, double y) {
+double tarch::reader::TopologyParser::sampleBathymetry(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
@@ -217,7 +220,7 @@ double applications::exahype2::swe::TopologyParser::sampleBathymetry(double x, d
 }
 
 
-double applications::exahype2::swe::TopologyParser::sampleDisplacement(double x, double y) {
+double tarch::reader::TopologyParser::sampleDisplacement(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
@@ -256,7 +259,7 @@ double applications::exahype2::swe::TopologyParser::sampleDisplacement(double x,
 }
 
 
-double applications::exahype2::swe::TopologyParser::transformIndexSimulationToCDFRange(
+double tarch::reader::TopologyParser::transformIndexSimulationToCDFRange(
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
   double minIndexOfCDFspaceInZDirection,
@@ -275,7 +278,7 @@ double applications::exahype2::swe::TopologyParser::transformIndexSimulationToCD
 }
 
 
-int applications::exahype2::swe::TopologyParser::transformIndexCDFRangeToArray(
+int tarch::reader::TopologyParser::transformIndexCDFRangeToArray(
   double      xCoordinateInCDFMesh,
   double      yCoordinateInCDFMesh,
   double      minXCoordinateInCDFMesh,
@@ -310,3 +313,5 @@ int applications::exahype2::swe::TopologyParser::transformIndexCDFRangeToArray(
 
   return yIndex * lengthOfXDimensionInCDFMesh + xIndex;
 }
+
+#endif
