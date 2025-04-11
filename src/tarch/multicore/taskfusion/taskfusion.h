@@ -58,6 +58,9 @@ namespace tarch {
      * To ensure that fusion is only applied to tasks of the same type, we store
      * the fusable tasks in a map indexed by the task type. This map is called
      * pendingTasksThatCanBeFused.
+     *
+     * @see Consult the page @ref documentation_tarch_task_fusion_strategies
+     *   for recommendations and hints on task fusion strategies.
      */
     namespace taskfusion {
       /**
