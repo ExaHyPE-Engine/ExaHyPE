@@ -17,8 +17,14 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
-parser.add_argument("-var", "--variant",              dest="variant",        choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+<<<<<<< HEAD
+parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "dg-tasks"], required=True, help="Pick variant" )
+=======
+parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
+>>>>>>> refs/remotes/origin/multigrid
+parser.add_argument("-var", "--variant",              dest="variant",        choices=["rediscretise", "precompute"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
+parser.add_argument("-t",   "--max-trees",            dest="max_trees",      type=int, default=0, help="Number of trees")
 args = parser.parse_args()
 
 project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
@@ -31,7 +37,7 @@ matrices = mghype.api.matrixgenerators.GaussLobattoMatrixFree(
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
   2,  # We use the penalty formulation (see docu in tutorials)
-  2
+  2,
 )
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
@@ -45,15 +51,27 @@ approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 
 Solver_Type = None
-if args.variant == "dg-sweeps":
-    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinWithFusionUnshifted
-elif args.variant == "dg-shifted-and-fused":
+if args.realisation == "dg-sweeps":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
+elif args.realisation == "dg-shifted-and-fused":
     Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-elif args.variant == "tasks":
-    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+elif args.realisation == "dg-tasks":
+    Solver_Type = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks
+ 
+name = "DGPoisson"
+if args.variant == "rediscretise":
+    name = "DGPoissonRediscretise"
+if args.variant == "precompute":
+    name = "DGPoissonPrecompute"
+
+name = "DGPoisson"
+if args.variant == "rediscretise":
+    name = "DGPoissonRediscretise"
+if args.variant == "precompute":
+    name = "DGPoissonPrecompute"
 
 solver = Solver_Type(
-  name = "DGPoisson",
+  name = name,
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
   unknowns_per_cell_node = 1,
@@ -76,9 +94,8 @@ solver = Solver_Type(
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
-  integration_points = matrices.get_nodal_points_1d(),
+  integration_points = 0.5*(matrices.get_nodal_points_1d() + 1.0), # Should be specified in [0,1] interval
   enable_plotting    = False,
-  solver_includes    = """#include "{}/tests/multigrid/matrixfree/poisson/Scenario.h" """.format(args.peanodir)
 )
 
 project.add_solver(solver)
@@ -92,6 +109,8 @@ build_mode = peano4.output.CompileMode.Release
 
 cube_size = 1.0
 max_iterations = 10
+if args.realisation == "dg-sweeps":
+    max_iterations = max_iterations * 3
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [ 0.0       for _ in range(args.dimensions) ],
@@ -100,7 +119,12 @@ project.set_global_simulation_parameters(
   max_iterations                   = max_iterations
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false)" )
+if args.max_trees>0:
+    max_trees = args.max_trees
+else:
+    max_trees = "::exahype2::LoadBalancingConfiguration::UseNumberOfThreads"
+
+project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, {}, {})".format(max_trees, max_trees) )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)

@@ -3,13 +3,7 @@
 """
 import mghype.matrixfree.solvers.api.actionsets
 
-from .CollocatedDLinearDiscretisationWithPointJacobi                import CollocatedDLinearDiscretisationWithPointJacobi
-from .ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi   import ContinuousGalerkinDiscretisationGaussLobattoWithBlockJacobi
-
-from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-from .DiscontinuousGalerkinWithoutFusion                        import DiscontinuousGalerkinWithoutFusion
-from .DGTaskingSolver                                           import DGTaskingSolver
-from .DiscontinuousGalerkinWithFusionUnshifted                  import DiscontinuousGalerkinWithFusionUnshifted
-from .CollocatedMG                                              import CollocatedMG
-from .CollocatedMGSingleThreaded                                import CollocatedMGSingleThreaded
+from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver           import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Unshifted
+from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks     import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver_Tasks
 

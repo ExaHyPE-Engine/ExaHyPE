@@ -44,6 +44,19 @@ class Peano4SmartPointerDoubleArray(dastgen2.attributes.DoubleArray):
         self._cardinality       = str(cardinality)
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
+        """!
+            
+        This routine defines which operations the generated data type offers
+        
+        It is very much the same as Peano4DoubleArray, i.e. it hides the 
+        underlying smart pointers. If the user calls get, the data is converted
+        into a normal tarch vector. If the user calls set, we take the argument
+        and copy it into the underlying smart pointer.
+        
+        However, we add one more routine: getXXXXSmartPointer(). This way, 
+        users can get access to the smart pointer data under the hood.
+            
+        """
         accessor_name = self._name[:1].title() + self._name[1:]
         return [
             (
@@ -60,6 +73,10 @@ class Peano4SmartPointerDoubleArray(dastgen2.attributes.DoubleArray):
             ),
             ("get" + accessor_name + "(int index) const", "double"),
             ("set" + accessor_name + "(int index, double value)", "void"),
+            (
+                "get" + accessor_name + "SmartPointer()",
+                "tarch::la::SmartPointerVector<" + self._cardinality + ",double>",
+            ),
         ]
 
     def use_default_copy_constructor(self):
@@ -87,6 +104,11 @@ class Peano4SmartPointerDoubleArray(dastgen2.attributes.DoubleArray):
         else:
             name = "  _" + self._name
             
+        if (
+            signature.startswith("get")
+            and "SmartPointer" in signature
+        ):
+            return "  return " + name + ";\n"
         if (
             signature.startswith("get")
             and "index" in signature
