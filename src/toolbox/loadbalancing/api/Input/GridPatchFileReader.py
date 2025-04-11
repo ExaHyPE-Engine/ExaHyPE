@@ -1,9 +1,7 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-import sys
-import os
-import math
-import argparse
-import matplotlib.cm as cm
+import sys, os, math
 import re
 from collections import defaultdict
 

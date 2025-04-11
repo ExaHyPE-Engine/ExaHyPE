@@ -1,11 +1,8 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-import sys
-import os
-import math
+import sys, time
 import argparse
-import matplotlib.cm as cm
-import re
-from collections import defaultdict
 
 from Tree import Tree
 from Input.GridPatchFileReader import *
@@ -20,7 +17,8 @@ from Visualize.TreeVisualizer import TreeVisualizer
 	python3 OfflineDecomposition.py -file Input/example2 -d 3 -plot
 
 	example for artificial generated tree (regular grid):
-	python3 OfflineDecomposition.py -d 3 -level 4
+	python3 OfflineDecomposition.py -d 2 -level 4
+	python3 OfflineDecomposition.py -d 3 -level 3 -plot
 
 """
 
@@ -33,6 +31,8 @@ parser.add_argument("-level",   "--max-level", 		dest="max_level",  	type=int, d
 
 args = parser.parse_args()
 
+time1 = time.time()
+
 if args.file_path != None:
 	name = "Files-"+args.file_path
 	tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.dimension)
@@ -43,8 +43,17 @@ else:
 	print("No input file specified nor required parameter for Generation, quiting...")
 	sys.exit(1)
 
+time2 = time.time()
+
 print(tree)
 
 if args.plot_flag:
 	TreeVisualizer(tree, args.dimension)
 	print("Figure Saved.")
+
+time3 = time.time()
+
+
+print('='*40)
+print(f"Input Time Cost: {(time2-time1):.4f} seconds")
+if args.plot_flag: print(f"Visualization Time Cost: {(time3-time2):.4f} seconds")

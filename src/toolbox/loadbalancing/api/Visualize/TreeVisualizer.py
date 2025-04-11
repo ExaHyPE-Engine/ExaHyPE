@@ -1,9 +1,8 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import numpy as np
 import matplotlib.pyplot as plt
-import math
-import sys
-import os
-import matplotlib.cm as cm
+import sys, os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Tree import Tree
