@@ -1,6 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "KernelBenchmarksADER-main.h"
+#include "KernelBenchmarks-main.h"
 
 #include "config.h"
 #include "Constants.h"
