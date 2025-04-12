@@ -27,6 +27,7 @@ bool tarch::multicore::taskfusion::ProcessReadyTask::hasTaskBeenProcessed() cons
 void tarch::multicore::taskfusion::ProcessReadyTask::run() {
   logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << _taskQueue->tasks.size() << ")" );
 
+  tarch::multicore::Lock lock(_taskQueue->semaphore);
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
   const bool hasTaskBeenProcessedWhenFunctionInvoked = hasTaskBeenProcessed();
 
@@ -34,15 +35,21 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
     not hasTaskBeenProcessedWhenFunctionInvoked
   ) {
     _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.setValue(_taskQueue->tasks.size());
-
-    if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
-      tarch::multicore::getOrchestration().updateFuseStatistics(
-        _taskQueue->type,
-        _taskQueue->tasks.size(),
-        _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue()
-      );
-    }
+    _taskQueue->probabilityThatTaskIsCompleted.setValue(1.0);
   }
+  else {
+    _taskQueue->probabilityThatTaskIsCompleted.setValue(0.0);
+  }
+
+  if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
+    tarch::multicore::getOrchestration().updateFuseStatistics(
+      _taskQueue->type,
+      _taskQueue->tasks.size(),
+      _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue(),
+      _taskQueue->probabilityThatTaskIsCompleted.getValue()
+    );
+  }
+  lock.free();
 
   if (
     not hasTaskBeenProcessedWhenFunctionInvoked

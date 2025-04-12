@@ -112,7 +112,10 @@ the underlying tasks is not processed yet.
 
 Let the task return instruction.maxTasks=0 to disable the fusion completely.
 In this case, the fusable tasks are spawned as native tasks. 
-This reduces overhead.
+This reduces overhead, but has to be used carefully: 
+On the one hand, tasks will not enter their fuse() operation anymore.
+On the other hand, task queue stats (size of queues, average size of queues, 
+process statistics) won't be updated anymore.
 
 
 ### Timeouts
@@ -120,13 +123,29 @@ This reduces overhead.
 If the average number of ready tasks in the queue is always smaller than
 the minimum number of tasks we'd need to fuse properly every time we
 hit the scheduling point, the host code does handle the fused tasks
-too quickly. That likely means that cores on the host are
+too quickly or they are too cheap. That likely means that cores on the host are
 underutilised, i.e. every time we enqueue a task, its ProcessReadyTask
-almost immediately kicks in. They count towards the average if and
-only if their task is not yet processed, and they add a zero to the
-stats if the queue is empty even though their task is not yet done.
-This happens whenever a lot of ProcessReadyTask instances are out
-         * there and hit hit the fused task queue concurrently.
+almost immediately kicks in. 
+
+One strategy to mitigate this is to spawn some fusable tasks as real tasks.
+You leave some of the tasks you could fuse to the CPU, hence delaying
+some of the ProcessReadyTask instances. If this is not possible, you can
+alternatively equip the processing with a timeout: When it becomes active
+and there are not enough fusable tasks, let it wait for a few milliseconds
+to see if more fusable tasks drop in.
+
+
+### Reduce fused batch size
+
+If the average number of ready tasks in the queue is higher than the
+max fused tasks every time a process ready task is invoked, the
+handling of the fused tasks is too slow. Again, we have two options.
+
+We could start to spawn more tasks as native tasks on the host. The CPU
+will be "more busy" with work, and the fused processing will get fewer
+tasks overall to process. In return, they have more time to handle their
+bunch of tasks, e.g. on an accelerator.
+
 
 
 
@@ -184,15 +203,6 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
 
 
 
-         *
-         * If the average number of ready tasks in the queue is higher than the
-         * max fused tasks every time a process ready task is invoked, the
-         * handling of the fused tasks is too slow. We better should start to
-         * spawn more tasks as native tasks on the host. This is kind of assuming
-         * that fused tasks are shipped to an accelerator.
-         *
-
-
          * Here's a more in-depth explanation of the rationale behind the
          * implementation:
          *
@@ -220,59 +230,5 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
          * native tasks and therefore throttle the processing of the fused tasks
          * as we keep more cores on the host busy.
 
-     * Tell the runtime system how many tasks to hold back: If there
-     * are more tasks than the result, the tasking system will map them
-     * onto native tasks. As long as we have fewer tasks than this
-     * number, the runtime system will store tasks in its internal
-     * queue and not pass them on. Holding tasks back gives us the
-     * opportunity to fuse tasks, and it reduces pressure from the
-     * underlying task system. It also is an implicit priorisation, i.e.
-     * tasks that we hold back are ready, but as we do not pass them
-     * on to the tasking runtime, they implicitly have ultra-low
-     * priority.
-     *
-     * My data suggest that it is a very delicate decision to hold back
-     * tasks, as you run risk all the time that you starve threads even
-     * though work would be available. I recommend to hold back tasks -
-     * in line with the text above - iff
-     *
-     * - your tasking runtime struggles to handle many jobs. This happens with
-     *   OpenMP for example as you have implicit scheudling points, i.e. OpenMP
-     *   is allowed to process spawned tasks immediately. GNU does this one the
-     *   number of tasks exceeds a certain threshold. You don't want this in
-     *   Peano, so you can hold tasks back.
-     * - you want to fuse tasks and offload them en block to the GPU. This is a
-     *   reasonable motivation as kernel launches are extremely expensive. In
-     *   this case, hold up to N tasks back if you fuse N tasks in one bash,
-     *   but do not hold back any tasks if you are outside of a BSP section, as
-     *   no new tasks will be created anymore and you want the tasks to be done.
-     *
-     * ## Realisation
-     *
-     * The routine is not const, as I want strategies give the opportunity to
-     * adopt decisions after each call.
-     *
-     * ## Invocation pattern
-     *
-     * This routine is called once per task spawned (to know if we
-     * maybe should immediately map it onto a native task), and then
-     * at each end of the BSP section. When it is called for a particular
-     * task, we pass in a proper task type. That is, the decision of the
-     * strategy may depend on the type of the task for which we ask. At
-     * the end of a BSP section, we pass in
-     * tarch::multicore::orchestration::Strategy::EndOfBSPSection instead of a
-     * particular task type.
-     *
-     * tarch::multicore::spawnAndWait() is the routine which triggers the query
-     * for the end of a BSP section. If we have N tasks and N is bigger than the
-     * result of this outine, it will map tasks onto native tasks through
-     * internal::mapPendingTasksOntoNativeTasks().
-     *
-     * tarch::multicore::spawnTask() is the routine which queries this routine
-     * for each and every task.
-     *
-     *
-     * @param taskType Either actual task type if we get a task or
-     *   EndOfBSPSection if it is not asked for a particular task
-     *   type or, well, at the end of a fork-join part.
-     */
+     
+*/

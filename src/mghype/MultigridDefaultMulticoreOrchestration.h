@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/logging/Log.h"
 #include "tarch/multicore/orchestration/Strategy.h"
 
 #include <set>
@@ -17,10 +18,21 @@ namespace mghype {
  */
 class mghype::MultigridDefaultMulticoreOrchestration: public tarch::multicore::orchestration::Strategy {
   private:
+    static tarch::logging::Log _log;
+
     bool        _isInBspSection;
 
     std::set< int >  _residualComputationTasks;
     std::set< int >  _operatorInversionTasks;
+
+    int _residualComputationMinTasks;
+    int _operatorInversionMinTasks;
+
+    int _residualComputationMaxTasks;
+    int _operatorInversionMaxTasks;
+
+    std::chrono::microseconds  _residualComputationTimeout;
+    std::chrono::microseconds  _operatorInversionTimeout;
   public:
     MultigridDefaultMulticoreOrchestration();
 
@@ -45,6 +57,7 @@ class mghype::MultigridDefaultMulticoreOrchestration: public tarch::multicore::o
     virtual void updateFuseStatistics(
       int    taskType,
       int    queueSize,
-      double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+      double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+      double probabilityThatTaskIsCompleted
     ) override;
 };

@@ -100,10 +100,27 @@ public:
    */
   virtual void endBSPSection(int nestedParallelismLevel) = 0;
   
+  /**
+   * This routine is called every time a process read tasks kicks off
+   *
+   * Feed orchestration with some stats around the task queue of interest.
+   * Please note that this routine is invoked iff the orchestration beforehand
+   * had decided to fuse tasks.
+   *
+   * @param taskType Number of the task that we are studying
+   * @param queueSize Size of the queue at this observation point
+   * @param averageNumberOfPendingReadyTasksPerProcessTaskExecution average
+   *   over number of tasks in the queue whenever a process task has kicked
+   *   off and the underlying real task has not completed yet.
+   * @param probabilityThatTaskIsCompleted Probability that task result has
+   *   been there already when the corresponding instance of ProcessReadyTask
+   *   fires up.
+   */
   virtual void updateFuseStatistics(
     int    taskType,
     int    queueSize,
-    double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+    double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+    double probabilityThatTaskIsCompleted
   ) = 0;
 
   static constexpr int EndOfBSPSection = -1;

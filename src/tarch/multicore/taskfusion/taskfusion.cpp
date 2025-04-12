@@ -28,6 +28,13 @@ namespace {
 }
 
 
+tarch::multicore::taskfusion::ReadyFusableTasks::ReadyFusableTasks(int type_):
+  type(type_),
+  numberOfPendingReadyTasksPerProcessTaskExecution(),
+  probabilityThatTaskIsCompleted(256)
+{}
+
+
 void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
   Task*                        task,
   const std::set<TaskNumber>&  inDependencies,

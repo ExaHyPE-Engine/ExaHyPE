@@ -55,6 +55,7 @@ public:
   virtual void updateFuseStatistics(
     int    taskType,
     int    queueSize,
-    double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+    double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+    double probabilityThatTaskIsCompleted
   ) override;
 };

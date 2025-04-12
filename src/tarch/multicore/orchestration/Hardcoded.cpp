@@ -95,7 +95,8 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
 void tarch::multicore::orchestration::Hardcoded::updateFuseStatistics(
   int    taskType,
   int    queueSize,
-  double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+  double probabilityThatTaskIsCompleted
 ) {
   // empty on purpose
 }

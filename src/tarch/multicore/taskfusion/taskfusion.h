@@ -82,9 +82,9 @@ namespace tarch {
         tarch::multicore::BooleanSemaphore         semaphore;
         int                                        type;
         tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
+        tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
 
-        ReadyFusableTasks(int type_):
-          type(type_) {}
+        ReadyFusableTasks(int type_);
       };
 
       /**

@@ -54,7 +54,8 @@ void tarch::multicore::orchestration::AllOnGPU::toggleDevice() {
 void tarch::multicore::orchestration::AllOnGPU::updateFuseStatistics(
   int    taskType,
   int    queueSize,
-  double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+  double probabilityThatTaskIsCompleted
 ) {
   // empty on purpose
 }
