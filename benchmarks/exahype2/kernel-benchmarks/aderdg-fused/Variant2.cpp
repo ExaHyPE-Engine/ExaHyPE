@@ -238,7 +238,7 @@ void variant2::runBenchmarks(
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     cellData.QIn[cellIndex] = tarch::allocateMemory<double>(
       NumberOfInputEntriesPerCell,
-      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+      tarch::MemoryLocation::Heap
     );
     cellData.t[cellIndex]             = timeStamp;
     cellData.dt[cellIndex]            = timeStepSize;
@@ -253,11 +253,11 @@ void variant2::runBenchmarks(
     for (int i = 0; i < 2 * Dimensions; i++) {
       cellFaceData.QIn[cellIndex][i] = tarch::allocateMemory<double>(
         2 * kernels::AderSolver::getBndFaceSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
       cellFaceData.QOut[cellIndex][i] = tarch::allocateMemory<double>(
         2 * kernels::AderSolver::getBndFluxSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
     }
 

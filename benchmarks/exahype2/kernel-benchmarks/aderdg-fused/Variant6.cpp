@@ -242,7 +242,7 @@ void variant6::runBenchmarks(
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     cellData.QIn[cellIndex] = tarch::allocateMemory<double>(
       NumberOfInputEntriesPerCell,
-      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+      tarch::MemoryLocation::Heap
     );
     cellData.t[cellIndex]             = timeStamp;
     cellData.dt[cellIndex]            = timeStepSize;
@@ -277,20 +277,20 @@ void variant6::runBenchmarks(
       // Allocating data for the right side of the left face and the left side of the right face
       faceData.QIn[faceIndex + d][1] = tarch::allocateMemory<double>(
         kernels::AderSolver::getBndFaceSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
       faceData.QIn[faceIndex + d + Dimensions][0] = tarch::allocateMemory<double>(
         kernels::AderSolver::getBndFaceSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
 
       faceData.QOut[faceIndex + d][1] = tarch::allocateMemory<double>(
         kernels::AderSolver::getBndFluxSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
       faceData.QOut[faceIndex + d + Dimensions][0] = tarch::allocateMemory<double>(
         kernels::AderSolver::getBndFluxSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
 
       // Stitching these faces together

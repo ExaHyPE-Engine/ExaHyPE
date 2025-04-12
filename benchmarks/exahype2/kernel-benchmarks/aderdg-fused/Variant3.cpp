@@ -236,7 +236,7 @@ void variant3::runBenchmarks(
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     cellData.QIn[cellIndex] = tarch::allocateMemory<double>(
       NumberOfInputEntriesPerCell,
-      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+      tarch::MemoryLocation::Heap
     );
     cellData.t[cellIndex]             = timeStamp;
     cellData.dt[cellIndex]            = timeStepSize;
@@ -251,11 +251,11 @@ void variant3::runBenchmarks(
     for (int i = 0; i < Dimensions; i++) {
       cellFaceData.QIn[cellIndex][i] = tarch::allocateMemory<double>(
         2 * kernels::AderSolver::getBndFaceSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
       cellFaceData.QOut[cellIndex][i] = tarch::allocateMemory<double>(
         2 * kernels::AderSolver::getBndFluxSize(),
-        tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+        tarch::MemoryLocation::Heap
       );
     }
     // Stitch faces together by connecting the left and right faces of any given cell

@@ -372,10 +372,10 @@ double runKernels(int device, exahype2::CellData<double, double>& cellData, int 
 void runBenchmarks(int numberOfCells) {
   exahype2::CellData<double, double> cellData(numberOfCells);
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    cellData.QIn[cellIndex]           = tarch::allocateMemory<double>(NumberOfInputEntriesPerCell, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    cellData.QIn[cellIndex]           = tarch::allocateMemory<double>(NumberOfInputEntriesPerCell, tarch::MemoryLocation::Heap);
     cellData.t[cellIndex]             = TimeStamp;
     cellData.dt[cellIndex]            = TimeStepSize;
-    cellData.QOut[cellIndex]          = nullptr; //tarch::allocateMemory<double>(NumberOfOutputEntriesPerCell, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    cellData.QOut[cellIndex]          = nullptr; //tarch::allocateMemory<double>(NumberOfOutputEntriesPerCell, tarch::MemoryLocation::Heap);
     cellData.cellCentre[cellIndex]    = CellCenter;
     cellData.cellSize[cellIndex]      = CellSize;
     cellData.maxEigenvalue[cellIndex] = 0.0;
