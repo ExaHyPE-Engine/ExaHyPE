@@ -243,7 +243,6 @@ void step() {
         observers::Solve::unprepareTraversal();
 
         solveMeasurement.setValue( watch.getCalendarTime() );
-        repositories::endCreateGrid();
       }
       break;
 

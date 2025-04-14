@@ -3,6 +3,7 @@
 \page page_tarch_multicore Multicore programming
 
 \tableofcontents
+\subpage documentation_tarch_task_fusion_strategies
 
  To compile with multicore support, you have to invoke the configure script with
  the option 
@@ -198,6 +199,9 @@ task types or task graph types, respectively:
    have to provide a function which can handle a set of tasks of the same type.
    Details on how the fusion is implemented are provided by tarch::multicore::taskfusion.
    
+   There is a separate @ref documentation_tarch_task_fusion_strategies "page on task fusion strategies"
+   and things to consider if you want to tune and tailor how tasks are bundled
+   (both on the CPU and the GPU).
    
 
    ### Orchestration and (auto-)tuning

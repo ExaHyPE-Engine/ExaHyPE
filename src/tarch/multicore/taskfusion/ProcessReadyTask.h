@@ -62,11 +62,12 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
     static tarch::logging::Log _log;
 
     /**
-     * Look up if the task number to which this process task is tied to has already been done
+     * Look up if the task number to which this process task is tied to has already been done.
      *
-     * This routine is thread-safe.
+     * @param tryLock If set, we use a try lock (not a lock) and return false
+     *                if the try fails. If it is unset, we use a proper lock.
      */
-    bool hasTaskBeenProcessed() const;
+    bool hasTaskBeenProcessed( bool tryLock ) const;
 
     /**
      * Process tasks from queue
@@ -101,12 +102,28 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
      * We ensure this by calling processTasks() which in turn invokes
      * tryToProcessOneTask().
      *
-     * The routine checks if there's potential to fuse. If so, we call
-     * processTasks(). The check for potential can be done unsafely,
-     * as processTasks() will check once again, i.e. ensure that noone
-     * has grabbed tasks meanwhile. If we cannot fuse anymore, we'll
-     * only process the one single tasks that we are resonsible for
+     * If the task we are tied to is already completed - a property we
+     * can check through hasTaskBeenProcessed() - we return immediately
+     * and nothing is to be done. Another ProcessReadyTask instance has
+     * snapped "our" task and we can degenerate.
+     *
+     * If the task is not yet complete, we checks if there's potential to fuse.
+     * If so, we call processTasks(). The check for a successful fuse can be
+     * done unsafely, as processTasks() will check once again, i.e. ensure
+     * that noone has grabbed tasks meanwhile.
+     *
+     * We we cannot fuse but should fuse and if we are told to use a timeout,
+     * we enter the timeout phase, i.e. we wait for a specified time if more
+     * tasks become available to fuse.
+     *
+     * If we cannot fuse anymore, we'll only process the one single tasks that
+     * we are responsible for
      * (and therefore will afterwards terminate the while loop).
+     *
+     * @see Consult the page @ref documentation_tarch_task_fusion_strategies
+     *   for recommendations and hints on task fusion strategies.
+     * @see Consult the namespace documentation of tarch::multicore::taskfusion
+     *   for details on the realisation of the task fusion.
      */
     virtual void run() override;
 

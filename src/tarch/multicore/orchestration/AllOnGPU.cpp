@@ -5,10 +5,11 @@
 
 #include <limits>
 
-tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
+tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device, const std::chrono::microseconds& timeout):
   _device(device),
   _deviceToUse(device==RoundRobin ? 0 : _device),
-  _isInBspSection(false) {}
+  _isInBspSection(false),
+  _timeout(timeout) {}
 
 void tarch::multicore::orchestration::AllOnGPU::startBSPSection(int nestedParallelismLevel) {
   if (nestedParallelismLevel <= 1) {
@@ -24,7 +25,7 @@ void tarch::multicore::orchestration::AllOnGPU::endBSPSection(int nestedParallel
 
 tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orchestration::AllOnGPU::fuse(int /*taskType*/) {
   if (_device==RoundRobin) toggleDevice();
-  return FuseInstruction(_deviceToUse, 1, std::numeric_limits<int>::max());
+  return FuseInstruction(_deviceToUse, 1, std::numeric_limits<int>::max(), _timeout);
 }
 
 
@@ -54,7 +55,8 @@ void tarch::multicore::orchestration::AllOnGPU::toggleDevice() {
 void tarch::multicore::orchestration::AllOnGPU::updateFuseStatistics(
   int    taskType,
   int    queueSize,
-  double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+  double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+  double probabilityThatTaskIsCompleted
 ) {
   // empty on purpose
 }

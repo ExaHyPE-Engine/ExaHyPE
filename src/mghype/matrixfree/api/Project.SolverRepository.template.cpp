@@ -3,8 +3,8 @@
 #include "peano4/grid/grid.h"
 #include "tarch/multicore/Core.h"
 #include "peano4/parallel/SpacetreeSet.h"
-
 #include "tarch/logging/Log.h"
+#include "tarch/multicore/orchestration/Hardcoded.h"
 
 
 {% for N in NAMESPACE %}
@@ -58,7 +58,10 @@ namespace {{N}} {
       {% endfor %}
     }
 
-    void endCreateGrid() { loadBalancer.finishStep(); }
+    void endCreateGrid() {
+      loadBalancer.finishStep();
+      tarch::multicore::setOrchestration( {{MULTICORE_ORCHESTRATION}} );
+    }
     
     void incrementPlotCounter() {plotCounter++;}
     int getPlotCounter() {

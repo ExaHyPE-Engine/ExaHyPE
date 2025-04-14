@@ -27,12 +27,14 @@ void tarch::multicore::taskfusion::LogReadyTask::run() {
 
 
 void tarch::multicore::taskfusion::LogReadyTask::insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue ) {
-  tarch::multicore::Lock lock(taskQueue->semaphore);
-
+  tarch::multicore::Lock completedTasksLock(taskQueue->completedTasksSemaphore);
   ReadyFusableTasks::FinishedTaskNumbers::iterator p = taskQueue->completedTaskNumbers.find( taskNumber );
   if ( p != taskQueue->completedTaskNumbers.end() ) {
     taskQueue->completedTaskNumbers.erase(p);
   }
+
+
+  tarch::multicore::Lock readyTasksLock(taskQueue->readyTasksSemaphore);
   taskQueue->tasks.push_back( std::pair<tarch::multicore::Task*, int>(task, taskNumber) );
 }
 

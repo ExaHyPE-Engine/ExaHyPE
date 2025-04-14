@@ -18,24 +18,82 @@ tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber
 }
 
 
-bool tarch::multicore::taskfusion::ProcessReadyTask::hasTaskBeenProcessed() const {
-  tarch::multicore::Lock lock(_taskQueue->semaphore);
-  return _taskQueue->completedTaskNumbers.find( _taskNumber ) != _taskQueue->completedTaskNumbers.end();
+bool tarch::multicore::taskfusion::ProcessReadyTask::hasTaskBeenProcessed(bool tryLock) const {
+  if (tryLock) {
+    tarch::multicore::Lock lock(_taskQueue->completedTasksSemaphore, false);
+
+    if (lock.tryLock()) {
+      return _taskQueue->completedTaskNumbers.find( _taskNumber ) != _taskQueue->completedTaskNumbers.end();
+    }
+    else return false;
+  }
+  else {
+    tarch::multicore::Lock lock(_taskQueue->completedTasksSemaphore);
+    return _taskQueue->completedTaskNumbers.find( _taskNumber ) != _taskQueue->completedTaskNumbers.end();
+  }
 }
 
 
 void tarch::multicore::taskfusion::ProcessReadyTask::run() {
   logDebug( "run(...)", "process all tasks of type " << _taskQueue->type << " (initial queue size=" << _taskQueue->tasks.size() << ")" );
 
-  const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+  const bool hasTaskBeenProcessedWhenFunctionInvoked = hasTaskBeenProcessed(true);
 
-  while ( not hasTaskBeenProcessed() ) {
-    if (instruction.minTasks>=_taskQueue->tasks.size()) {
+  if ( hasTaskBeenProcessedWhenFunctionInvoked ) {
+    tarch::multicore::Lock lock(_taskQueue->statisticsSemaphore);
+    _taskQueue->probabilityThatTaskIsCompleted.setValue(1.0);
+  }
+  else {
+    tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
+
+    if (
+      instruction.timeoutMicroSeconds>std::chrono::microseconds(0)
+      and
+      instruction.minTasks>=_taskQueue->tasks.size()
+    ) {
+      logDebug( "run(...)", "sleep for " << instruction.timeoutMicroSeconds << " milliseconds" );
+      const    auto deadline      = std::chrono::system_clock::now() + instruction.timeoutMicroSeconds;
+      volatile int  taskQueueSize = _taskQueue->tasks.size();
+      while (
+        std::chrono::system_clock::now() < deadline
+        and
+        not hasTaskBeenProcessed(false)
+        and
+        instruction.minTasks>=taskQueueSize
+      ) {
+        taskQueueSize = _taskQueue->tasks.size();
+//          std::this_thread::sleep_for( std::chrono::microseconds(1) );
+      }
+    }
+
+    tarch::multicore::Lock lock(_taskQueue->statisticsSemaphore);
+    _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.setValue(_taskQueue->tasks.size());
+    _taskQueue->probabilityThatTaskIsCompleted.setValue(0.0);
+
+    if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
+      tarch::multicore::getOrchestration().updateFuseStatistics(
+        _taskQueue->type,
+        _taskQueue->tasks.size(),
+        _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue(),
+        _taskQueue->probabilityThatTaskIsCompleted.getValue()
+      );
+    }
+    lock.free();
+
+    if (
+      instruction.minTasks<=_taskQueue->tasks.size()
+    ) {
+      logDebug( "run(...)", "fuse as we have " << _taskQueue->tasks.size() << " tasks" );
       processTasks();
     }
-    else {
+
+    while ( not hasTaskBeenProcessed(false) ) {
       tryToProcessOneTask(_taskQueue, _taskNumber);
     }
+  }
+
+  if (_taskQueue->lastProcessReadyTask==_taskNumber) {
+    _taskQueue->lastProcessReadyTask = NoOutDependencies;
   }
 }
 
@@ -46,7 +104,7 @@ void tarch::multicore::taskfusion::ProcessReadyTask::tryToProcessOneTask(
 ) {
   Task* task = nullptr;
 
-  tarch::multicore::Lock lock(taskQueue->semaphore);
+  tarch::multicore::Lock readyTaskLock(taskQueue->readyTasksSemaphore);
   ReadyFusableTasks::Tasks::iterator p = taskQueue->tasks.begin();
   while (
     p!=taskQueue->tasks.end()
@@ -62,12 +120,12 @@ void tarch::multicore::taskfusion::ProcessReadyTask::tryToProcessOneTask(
     task = p->first;
     taskQueue->tasks.erase(p);
   }
-  lock.free();
+  readyTaskLock.free();
 
   if (task!=nullptr) {
     task->run();
     delete task;
-    tarch::multicore::Lock lock(taskQueue->semaphore);
+    tarch::multicore::Lock lock(taskQueue->completedTasksSemaphore);
     taskQueue->completedTaskNumbers.insert( taskNumber );
   }
 }
@@ -75,14 +133,8 @@ void tarch::multicore::taskfusion::ProcessReadyTask::tryToProcessOneTask(
 
 
 void tarch::multicore::taskfusion::ProcessReadyTask::processTasks() {
-  tarch::multicore::Lock lock(_taskQueue->semaphore);
+  tarch::multicore::Lock readyTaskLock(_taskQueue->readyTasksSemaphore);
   const int queueSize = static_cast<int>(_taskQueue->tasks.size());
-  const double averageNumberOfPendingReadyTasksPerProcessTaskExecution = _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.getValue();
-
-  _taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.setValue(queueSize);
-  if (_taskQueue->numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
-// @todo This will be a new feature likely   ...
-  }
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue->type);
 
@@ -110,12 +162,12 @@ void tarch::multicore::taskfusion::ProcessReadyTask::processTasks() {
     }
     logDebug( "run(...)", "run " << extractedTasks.size() << " tasks on top of first task" );
 
-    lock.free();
+    readyTaskLock.free();
 
     tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTasks.size());
     processFusedTask(firstTask, extractedTasks, instruction.device);
 
-    lock.lock();
+    tarch::multicore::Lock completedTaskLock(_taskQueue->completedTasksSemaphore);
     _taskQueue->completedTaskNumbers.insert( firstTaskNumber );
     for (auto& p: extractedTaskNumbers) {
       _taskQueue->completedTaskNumbers.insert( p );
