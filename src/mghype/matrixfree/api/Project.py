@@ -86,7 +86,7 @@ class Project:
                                            plot_after_each_mesh_sweep = False,
                                            )
 
-    self._multicore_orchestration = "new ::mghype::MultigridDefaultMulticoreOrchestration()"
+    self._multicore_orchestration = "new ::tarch::multicore::orchestration::Hardcoded(8,256,tarch::multicore::Task::Host,::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,::tarch::multicore::orchestration::Hardcoded::NoTimeout)"
 
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """!

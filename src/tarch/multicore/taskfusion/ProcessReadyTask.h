@@ -62,11 +62,12 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
     static tarch::logging::Log _log;
 
     /**
-     * Look up if the task number to which this process task is tied to has already been done
+     * Look up if the task number to which this process task is tied to has already been done.
      *
-     * This routine is thread-safe.
+     * @param tryLock If set, we use a try lock (not a lock) and return false
+     *                if the try fails. If it is unset, we use a proper lock.
      */
-    bool hasTaskBeenProcessed() const;
+    bool hasTaskBeenProcessed( bool tryLock ) const;
 
     /**
      * Process tasks from queue

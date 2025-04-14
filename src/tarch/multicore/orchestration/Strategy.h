@@ -101,10 +101,12 @@ public:
   virtual void endBSPSection(int nestedParallelismLevel) = 0;
   
   /**
-   * This routine is called every time a process read tasks kicks off
+   * Update task fusion status
    *
    * Feed orchestration with some stats around the task queue of interest.
-   * Please note that this routine is invoked iff the orchestration beforehand
+   * This routine is not called every time a process read tasks kicks off,
+   * but only every now and then. Furthermore,
+   * please note that this routine is invoked iff the orchestration beforehand
    * had decided to fuse tasks.
    *
    * @param taskType Number of the task that we are studying
@@ -114,7 +116,9 @@ public:
    *   off and the underlying real task has not completed yet.
    * @param probabilityThatTaskIsCompleted Probability that task result has
    *   been there already when the corresponding instance of ProcessReadyTask
-   *   fires up.
+   *   fires up. This is a biased value: If we try to look up if a task is
+   *   already completed and the underlying dictionary is locked, then this
+   *   counts as a "no hit" as well.
    */
   virtual void updateFuseStatistics(
     int    taskType,

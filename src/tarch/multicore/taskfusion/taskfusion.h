@@ -65,6 +65,8 @@ namespace tarch {
     namespace taskfusion {
       /**
        * Task queue of tasks which we hold back
+       *
+       * @see tarch::multicore::strategy::Strategy::updateFuseStatistics()
        */
       struct ReadyFusableTasks {
         ~ReadyFusableTasks()                       = default;
@@ -79,10 +81,13 @@ namespace tarch {
 
         Tasks                                      tasks;
         FinishedTaskNumbers                        completedTaskNumbers;
-        tarch::multicore::BooleanSemaphore         semaphore;
+        tarch::multicore::BooleanSemaphore         readyTasksSemaphore;
+        tarch::multicore::BooleanSemaphore         completedTasksSemaphore;
+        tarch::multicore::BooleanSemaphore         statisticsSemaphore;
         int                                        type;
         tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
         tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
+        int                                        lastProcessReadyTask;
 
         ReadyFusableTasks(int type_);
       };
@@ -129,11 +134,20 @@ namespace tarch {
        * If the max number of tasks that should be fused is smaller one, the
        * user has, by definition switched off all fusion. We therefore
        * immediately spawn the task as a native one.
+       *
+       *
+       * ## Partial serialisation
+       *
+       * The whole idea of the fusion is that multiple tasks are bundled into
+       * one. If there are too many instances of ProcessReadyTask, then they
+       * will all grab from the fusion queue and there will never be enough
+       * tasks. So it makes sense to serialise the ProcessReadyTask instances
+       * if there are less than two times the max tasks in the queue.
        */
       void translateFusableTaskIntoTaskSequence(
-        Task*                        task,
-        const std::set<TaskNumber>&  inDependencies,
-        const TaskNumber&            taskNumber
+        Task*                  task,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber
       );
 
       void processAllReadyTasks();

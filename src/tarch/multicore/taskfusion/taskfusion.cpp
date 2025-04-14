@@ -36,9 +36,9 @@ tarch::multicore::taskfusion::ReadyFusableTasks::ReadyFusableTasks(int type_):
 
 
 void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
-  Task*                        task,
-  const std::set<TaskNumber>&  inDependencies,
-  const TaskNumber&            taskNumber
+  Task*                  task,
+  std::set<TaskNumber>   inDependencies,
+  const TaskNumber&      taskNumber
 ) {
   ::tarch::logging::Statistics::getInstance().inc(SubmitFusedTaskStatisticsIdentifier, 1, false, true);
 
@@ -89,6 +89,16 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
       readyTask->setPriority(task->getPriority());
       tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
       processReadTaskInDependencyNumber.insert( taskNumber );
+    }
+
+    if (
+      taskQueue->tasks.size()*2 < instruction.maxTasks
+      and
+      taskNumber != NoOutDependencies
+    ) {
+      logDebug( "translateFusableTaskIntoTaskSequence(...)", "partially serialise as we have only " << taskQueue->tasks.size() << " tasks" );
+      inDependencies.insert( taskQueue->lastProcessReadyTask );
+      taskQueue->lastProcessReadyTask = taskNumber;
     }
 
     Task* processTask = new ProcessReadyTask(taskNumber, taskQueue);

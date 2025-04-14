@@ -4,7 +4,7 @@
 #include "tarch/multicore/Core.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/logging/Log.h"
-#include "mghype/MultigridDefaultMulticoreOrchestration.h"
+#include "tarch/multicore/orchestration/Hardcoded.h"
 
 
 {% for N in NAMESPACE %}

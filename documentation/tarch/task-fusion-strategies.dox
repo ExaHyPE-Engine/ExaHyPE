@@ -200,35 +200,32 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
 
 
 
+## Further links
 
+- The namespace tarch::multicore::orchestration features a couple of 
+  pre-defined, hardcoded orchestration strategies.
+- The paper
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@InProceedings{10.1007/978-3-642-31464-3_68,
+author="Nogina, Svetlana and Unterweger, Kristof and Weinzierl, Tobias",
+editor="Wyrzykowski, Roman and Dongarra, Jack and Karczewski, Konrad and Wa{\'{s}}niewski, Jerzy",
+title="Autotuning of Adaptive Mesh Refinement PDE Solvers on Shared Memory Architectures",
+booktitle="Parallel Processing and Applied Mathematics",
+year="2012",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="671--680",
+isbn="978-3-642-31464-3"
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  provides some ideas how to find good parameters automatically. However, none
+  of these is implemented in the current code generation. 
+- In MGHyPE, we use
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    self._multicore_orchestration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  in mghype.matrixfree.api.Project to hard-code a configuration.  
 
-
-         * Here's a more in-depth explanation of the rationale behind the
-         * implementation:
-         *
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         *  static_cast<double>(instruction.maxTasks) < averageNumberOfPendingReadyTasksPerProcessTaskExecution
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         *
-         * Every time an instance of ProcessReadyTask runs and doesn't find its
-         * corresponding task, it processes a set of fused tasks. However, there
-         * are always way more pending tasks in the queue than we are allowed to
-         * process. So even if we take the maximum number of tasks, the one we are
-         * really interested in might not be among them. We enqueue too
-         * aggressively into the set of fused tasks.
-         *
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         *  static_cast<double>(instruction.minTasks) > averageNumberOfPendingReadyTasksPerProcessTaskExecution
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         *
-         * Every time an instance of ProcessReadyTask runs and doesn't find its
-         * corresponding task, it processes a set of fused tasks. However, there
-         * are never enough pending tasks in the queue so we can fuse. This
-         * happens if the ProcessReadyTasks are executed too quickly. They should
-         * come way later than the actually insertion of the task into the
-         * fusable set. Therefore, it might be convenient to map more tasks onto
-         * native tasks and therefore throttle the processing of the fused tasks
-         * as we keep more cores on the host busy.
 
      
 */

@@ -9,7 +9,6 @@ endif
 
 MultigridSources = \
   mghype.cpp \
-  MultigridDefaultMulticoreOrchestration.cpp \
   matrixfree/solvers/DGCGCoupling.cpp \
   matrixfree/solvers/Solver.cpp \
   matrixfree/solvers/CGMultigrid.cpp

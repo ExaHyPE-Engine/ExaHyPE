@@ -3,6 +3,7 @@
 \page page_tarch_multicore Multicore programming
 
 \tableofcontents
+\subpage documentation_tarch_task_fusion_strategies
 
  To compile with multicore support, you have to invoke the configure script with
  the option 
