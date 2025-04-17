@@ -2,6 +2,7 @@
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/multicore/Task.h"
 
 #ifdef CompilerHasSysinfo
