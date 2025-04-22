@@ -138,12 +138,11 @@ def _get_particle_iterator_templates(particle_name):
         // Template in python/swift2/particle/AlgorithmStepLibrary.py
         // iterate_over_particles_assigned_to_cell
         
-        ::swift2::kernels::forAllParticlePairs(cellMetaData,
+        ::swift2::kernels::forAllParticlePairs<*FUNCTION*<globaldata::{PARTICLE}>, *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>, *FUNCTION*EvaluatePairInteractionPredicate<globaldata::{PARTICLE}>>(
+                                               cellMetaData,
                                                localParticles,
                                                activeParticles,
-                                               *FUNCTION*<globaldata::{PARTICLE}>,
-                                               *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>,
-                                               *FUNCTION*EvaluatePairInteractionPredicate<globaldata::{PARTICLE}>
+                                               ::swift2::kernels::kernelrealisation::Generic
                                                );
         // end template
 """
@@ -151,11 +150,10 @@ def _get_particle_iterator_templates(particle_name):
         // Template in python/swift2/particle/AlgorithmStepLibrary.py
         // iterate_over_particles_assigned_to_vertex_with_global_reduction
 
-        ::swift2::kernels::forAllParticles(marker,
+        ::swift2::kernels::forAllParticles<*FUNCTION*<globaldata::{PARTICLE}>, *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>>(marker,
                                            assignedParticles,
                                            numberOfCoalescedAssignedParticles,
-                                           *FUNCTION*<globaldata::{PARTICLE}>,
-                                           *FUNCTION*UpdateParticlePredicate<globaldata::{PARTICLE}>
+                                           ::swift2::kernels::kernelrealisation::Generic
                                            );
         // end template
         """
@@ -168,11 +166,10 @@ def _get_particle_iterator_templates(particle_name):
             // iterate_over_particles_assigned_to_vertex_for_move
 
             auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-            ::swift2::kernels::forAllParticles(marker,
+            ::swift2::kernels::forAllParticles<*FUNCTION*<globaldata::{PARTICLE}>, *FUNCTION*ParticleUpdatePredicate<globaldata::{PARTICLE}>>(marker,
                                                assignedParticles,
                                                numberOfCoalescedAssignedParticles,
-                                               *FUNCTION*<globaldata::{PARTICLE}>,
-                                               *FUNCTION*ParticleUpdatePredicate<globaldata::{PARTICLE}>
+                                               ::swift2::kernels::kernelrealisation::Generic
                                                );
             ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles,
                                                                            oldParticlePositions,
@@ -193,10 +190,10 @@ def _get_particle_iterator_templates(particle_name):
         iterate_over_particles_assigned_to_vertex_with_global_reduction = f"""
         // Template in python/swift2/particle/AlgorithmStepLibrary.py,
         // iterate_over_particles_assigned_to_vertex_with_global_reduction
-        ::swift2::kernels::forAllParticles(marker,
+        ::swift2::kernels::forAllParticles<*FUNCTION*<globaldata::{PARTICLE}>,
+                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>>(marker,
                                            assignedParticles,
-                                           *FUNCTION*<globaldata::{PARTICLE}>,
-                                           ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>
+                                           ::swift2::kernels::kernelrealisation::Generic
                                            );
         // end template
         """

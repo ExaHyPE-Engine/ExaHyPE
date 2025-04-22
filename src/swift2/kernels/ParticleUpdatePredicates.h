@@ -134,31 +134,31 @@ namespace swift2 {
      * @param localParticle: particle to check for
      * @param marker: the cell's CellMarker
      */
-    template <typename Particle>
+    template <typename ParticleA, typename ParticleB = ParticleA>
     bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
-      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+      const peano4::datamanagement::CellMarker& marker, const ParticleA& localParticle, const ParticleB& activeParticle
     ) {
-      return &localParticle != &activeParticle
+      return (void*)(&localParticle) != (void*)(&activeParticle)
          and not localParticle.getCellHasUpdatedParticle()
          and marker.isContained(
            localParticle.getX(),
            toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
          )
-         and localParticle.getParallelState() == Particle::ParallelState::Local;
+         and localParticle.getParallelState() == ParticleA::ParallelState::Local;
     }
 
 
-    template <typename Particle>
+    template <typename ParticleA, typename ParticleB = ParticleA>
     bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticleWithinIterationRange(
-      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+      const peano4::datamanagement::CellMarker& marker, const ParticleA& localParticle, const ParticleB& activeParticle
     ) {
-      return &localParticle != &activeParticle
+      return (void*)(&localParticle) != (void*)(&activeParticle)
          and not localParticle.getCellHasUpdatedParticle()
          and marker.isContained(
            localParticle.getX(),
            toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
          )
-         and localParticle.getParallelState() == Particle::ParallelState::Local;
+         and localParticle.getParallelState() == ParticleA::ParallelState::Local;
     }
 
 

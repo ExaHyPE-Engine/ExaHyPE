@@ -43,7 +43,7 @@ void swift2::kernels::adoptInteractionRadiusAndTriggerRerun(
           "increasing the search radius of particle " << localParticle->toString(
           ) << " did pay off, but there are still to few neighbours. Trigger re-analysis"
         );
-        localParticle->getSpecies().setRerunPreviousGridSweep();
+        Particle::getSpecies().setRerunPreviousGridSweep();
       } else if (newNumberOfInteractingParticles > interactingParticles) {
         logDebug(
           "adoptInteractionRadiusAndTriggerRerun(...)",

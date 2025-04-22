@@ -4,14 +4,14 @@
 
 
 
-template <typename Particle>
+template <typename ParticleA, typename ParticleB>
 void swift2::kernels::legacy::densityKernel(
   const peano4::datamanagement::CellMarker& marker,
-  Particle&                                 localParticle,
-  const Particle&                           activeParticle
+  ParticleA&                                 localParticle,
+  const ParticleB&                           activeParticle
 ) {
-  assertion2( densityKernelEvaluatePairInteractionPredicate(marker,localParticle,activeParticle), localParticle.toString(), activeParticle.toString() );
-  density_kernel(&localParticle, &activeParticle);
+  assertion2( ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate(marker,localParticle,activeParticle), localParticle.toString(), activeParticle.toString() );
+  density_kernel(localParticle, activeParticle);
 }
 
 
@@ -24,10 +24,9 @@ bool swift2::kernels::legacy::densityKernelUpdateParticlePredicate(
     (not localParticle.getSmoothingLengthConverged());
 }
 
-
-template <typename Particle>
+template <typename ParticleA, typename ParticleB>
 bool swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate(
-  const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+  const peano4::datamanagement::CellMarker& marker, const ParticleA& localParticle, const ParticleB& activeParticle
 ) {
   assertion1( densityKernelUpdateParticlePredicate(marker, true, localParticle), localParticle.toString() );
   assertion1( not localParticle.getSmoothingLengthConverged(), localParticle.toString() );
@@ -125,25 +124,25 @@ void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 }
 
 
-template <typename Particle>
+template <typename ParticleA, typename ParticleB>
 void swift2::kernels::legacy::density_kernel(
-  Particle*       localParticle,
-  const Particle* activeParticle
+  ParticleA&       localParticle,
+  const ParticleB& activeParticle
 ) {
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
 
-  const double hydroDimensions = localParticle->getHydroDimensions();
+  const double hydroDimensions = localParticle.getHydroDimensions();
 
   /* Retrieve basic properties of local and active particles */
-  const double hi = localParticle->getSmoothingLength();
+  const double hi = localParticle.getSmoothingLength();
 
   /* Distance between the particles */
   const tarch::la::Vector<Dimensions, double>
-               dx = localParticle->getX() - activeParticle->getX();
+               dx = localParticle.getX() - activeParticle.getX();
   const double r  = tarch::la::norm2(dx);
 
-    const double mj     = activeParticle->getMass();
+    const double mj     = activeParticle.getMass();
     const double hi_inv = 1. / hi;
     // Normalized distance to evaluate kernel
     const double qi = r * hi_inv;
@@ -154,16 +153,16 @@ void swift2::kernels::legacy::density_kernel(
     const double dwi_dh = -(hydroDimensions * wi + qi * dwi_dx);
 
     // Increment density
-    localParticle->setDensity(localParticle->getDensity() + mj * wi);
+    localParticle.setDensity(localParticle.getDensity() + mj * wi);
 
     // Increment drho/dh. Note that minus sign was absorbed into dwi_dh
-    localParticle->setRho_dh(localParticle->getRho_dh() + mj * dwi_dh);
+    localParticle.setRho_dh(localParticle.getRho_dh() + mj * dwi_dh);
 
     // Increment fractional number density
-    localParticle->setWcount(localParticle->getWcount() + wi);
+    localParticle.setWcount(localParticle.getWcount() + wi);
 
     // Increment dWcount/dh. Note that minus sign was absorbed into dwi_dh
-    localParticle->setWcount_dh(localParticle->getWcount_dh() + dwi_dh);
+    localParticle.setWcount_dh(localParticle.getWcount_dh() + dwi_dh);
 
 
     // Compute dv dot r
@@ -174,26 +173,26 @@ void swift2::kernels::legacy::density_kernel(
     const double r_inv = r ? 1.0 / r : 0.0;
     const double fac_i = mj * dwi_dx * r_inv;
 
-    dv                = localParticle->getV() - activeParticle->getV();
+    dv                = localParticle.getV() - activeParticle.getV();
     const double dvdr = tarch::la::dot(dv, dx);
-    localParticle->setDiv_v(localParticle->getDiv_v() - fac_i * dvdr);
+    localParticle.setDiv_v(localParticle.getDiv_v() - fac_i * dvdr);
 
     /* Compute dv cross r */
     /* 2D Term only has 1 component (z) */
 #if Dimensions < 3
     const double curlvr2D = dv[0] * dx[1] - dv[1] * dx[0];
-    localParticle->setRot_v(localParticle->getRot_v() + fac_i * curlvr2D);
+    localParticle.setRot_v(localParticle.getRot_v() + fac_i * curlvr2D);
 #else
     const tarch::la::Vector<3, double> curlvr = {
       dv[1] * dx[2] - dv[2] * dx[1],
       dv[2] * dx[0] - dv[0] * dx[2],
       dv[0] * dx[1] - dv[1] * dx[0]};
-    localParticle->setRot_v(localParticle->getRot_v() + fac_i * curlvr);
+    localParticle.setRot_v(localParticle.getRot_v() + fac_i * curlvr);
 #endif
 
 #if PeanoDebug > 0
-    localParticle->setDensityNeighbourCount(
-      localParticle->getDensityNeighbourCount() + 1
+    localParticle.setDensityNeighbourCount(
+      localParticle.getDensityNeighbourCount() + 1
     );
 #endif
 }

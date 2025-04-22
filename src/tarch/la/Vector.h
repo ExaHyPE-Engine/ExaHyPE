@@ -183,7 +183,7 @@ struct tarch::la::Vector {
      * We do not allow assignment of a vector this itself. Consequently, we can
      * insert an ivdep statement and thus allow the compiler to optimise.
      */
-    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
+    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod = default;
 
     /**
      * Copy constructor to copy from any vector type.
@@ -193,7 +193,7 @@ struct tarch::la::Vector {
      *
      * @see operator= for a discussion of SSE optimisation.
      */
-    Vector(const Vector<Size,Scalar>&  toCopy);
+    Vector(const Vector<Size,Scalar>&  toCopy) = default;
 
     /**
      * Returns the number of components of the vector.

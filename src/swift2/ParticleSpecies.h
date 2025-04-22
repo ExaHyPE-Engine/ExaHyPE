@@ -133,6 +133,18 @@ public:
 
   void clearSearchRadius();
   void clearVelocity();
+
+  /**
+   * Clear all the time step sizes and time stamps
+   *
+   * These values then can be reduced again through
+   *
+   * - setTimeStepSize()
+   * - setTimeStamp()
+   *
+   * before they are actually queried through getMinTimeStepSize() and related
+   * routines.
+   */
   void clearTimeStampAndTimeStepSize();
 
   void allReduce();
