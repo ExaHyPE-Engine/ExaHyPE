@@ -48,7 +48,7 @@ namespace swift2 {
        * moved that into hydroPredictExtra().
        */
       template <typename Particle>
-      void leapfrog_drift_global_time_step_size(Particle* particle);
+      void leapfrog_drift_global_time_step_size(Particle& particle);
 
       template <typename Particle>
       bool leapfrogDriftWithGlobalTimeStepSizeParticleUpdatePredicate(
@@ -61,7 +61,7 @@ namespace swift2 {
       template <typename Particle>
       void leapfrogDriftWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         assertion2(leapfrogDriftWithGlobalTimeStepSizeParticleUpdatePredicate(marker, localParticle), marker.toString(), localParticle.toString());
-        leapfrog_drift_global_time_step_size(&localParticle);
+        leapfrog_drift_global_time_step_size(localParticle);
       }
 
       /**
@@ -73,7 +73,7 @@ namespace swift2 {
        * flavour.
        */
       template <typename Particle>
-      void hydro_predict_extra(Particle* localParticle);
+      void hydro_predict_extra(Particle& localParticle);
 
       template <typename Particle>
       bool hydroPredictExtraUpdateParticlePredicate(
@@ -86,7 +86,7 @@ namespace swift2 {
       template <typename Particle>
       void hydroPredictExtra(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         assertion( hydroPredictExtraUpdateParticlePredicate(marker,localParticle) );
-        hydro_predict_extra(&localParticle);
+        hydro_predict_extra(localParticle);
       }
 
       /**
@@ -146,7 +146,7 @@ namespace swift2 {
        * of the internal energy.
        */
       template <typename Particle>
-      void leapfrog_kick_global_time_step_size(Particle* particle);
+      void leapfrog_kick_global_time_step_size(Particle& particle);
 
       template <typename Particle>
       bool leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(
@@ -159,7 +159,7 @@ namespace swift2 {
       template <typename Particle>
       void leapfrogKickWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         assertion(leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(marker, localParticle));
-        leapfrog_kick_global_time_step_size(&localParticle);
+        leapfrog_kick_global_time_step_size(localParticle);
       }
 
       /**
@@ -175,7 +175,7 @@ namespace swift2 {
        * time treating it as the velocity.
        */
       template <typename Particle>
-      void hydro_kick_extra_global_time_step_size(Particle* localParticle);
+      void hydro_kick_extra_global_time_step_size(Particle& localParticle);
 
       template <typename Particle>
       bool leapfrogKickExtraWithGlobalTimeStepSizeUpdateParticlePredicate(
@@ -188,7 +188,7 @@ namespace swift2 {
       template <typename Particle>
       void leapfrogKickExtraWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         assertion(leapfrogKickExtraWithGlobalTimeStepSizeUpdateParticlePredicate(marker,localParticle));
-        hydro_kick_extra_global_time_step_size(&localParticle);
+        hydro_kick_extra_global_time_step_size(localParticle);
       }
 
       /**
@@ -196,7 +196,7 @@ namespace swift2 {
        * kick time.
        */
       template <typename Particle>
-      void hydro_reset_predicted_values(Particle* localParticle);
+      void hydro_reset_predicted_values(Particle& localParticle);
 
       template <typename Particle>
       bool resetPredictedValuesUpdateParticlePredicate(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
@@ -206,7 +206,7 @@ namespace swift2 {
       template <typename Particle>
       void resetPredictedValues(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         assertion(resetPredictedValuesUpdateParticlePredicate(marker,localParticle));
-        hydro_reset_predicted_values(&localParticle);
+        hydro_reset_predicted_values(localParticle);
       }
     }
   } // namespace timestepping

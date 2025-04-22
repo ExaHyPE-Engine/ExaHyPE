@@ -115,10 +115,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         ~~~~~~~~~~~~~~~~~~~~~~
     particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += " " "
     if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
-      ::swift2::kernels::forAllParticles(
-        marker,
-        assignedParticles,
-        numberOfCoalescedAssignedParticles,
+      ::swift2::kernels::forAllParticles<
         [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
           ::swift2::boundaryconditions::applyFixedBoundaryCondition(
             assignedParticle,
@@ -128,8 +125,13 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
             0.1,
             _spacetreeId
           );
-        }
-      );
+        },
+        @todo Attribute missing 
+      >(
+         marker,
+         assignedParticles,
+         numberOfCoalescedAssignedParticles
+       );
     }
     " " "
     particle.algorithm_steps_dict["Drift"].includes += " " "

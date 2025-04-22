@@ -22,7 +22,7 @@ namespace swift2 {
        * terms, hydro conversions, etc.
        */
       template <typename Particle>
-      void hydro_prepare_force(Particle* localParticle);
+      void hydro_prepare_force(Particle& localParticle);
 
       template <typename Particle>
       bool prepareHydroForceUpdateParticlePredicate(
@@ -38,7 +38,7 @@ namespace swift2 {
         Particle&                                   localParticle
       ) {
         assertion(prepareHydroForceUpdateParticlePredicate(marker, localParticle));
-        hydro_prepare_force(&localParticle);
+        hydro_prepare_force(localParticle);
       }
 
       /**
@@ -48,7 +48,7 @@ namespace swift2 {
        * for the sums taking place in the various force interactions.
        */
       template <typename Particle>
-      void hydro_reset_acceleration(Particle* localParticle);
+      void hydro_reset_acceleration(Particle& localParticle);
 
       template <typename Particle>
       bool resetAccelerationUpdateParticlePredicate(
@@ -64,7 +64,7 @@ namespace swift2 {
         Particle&                                   localParticle
       ) {
         assertion(resetAccelerationUpdateParticlePredicate(marker, localParticle));
-        hydro_reset_acceleration(&localParticle);
+        hydro_reset_acceleration(localParticle);
       }
 
       /**
@@ -79,7 +79,7 @@ namespace swift2 {
        * @param localParticle The particle to act upon
        */
       template <typename Particle>
-      void hydro_end_force(Particle* localParticle);
+      void hydro_end_force(Particle& localParticle);
 
       template <typename Particle>
       bool endHydroForceCalculationUpdateParticlePredicate(
@@ -95,7 +95,7 @@ namespace swift2 {
         Particle&                                   localParticle
       ) {
         assertion(endHydroForceCalculationUpdateParticlePredicate(marker, localParticle));
-        hydro_end_force(&localParticle);
+        hydro_end_force(localParticle);
       }
 
       /**
@@ -178,10 +178,10 @@ namespace swift2 {
        *
        * @see forceKernelVectorised()
        */
-      template <typename Particle>
+      template <typename ParticleA, typename ParticleB = ParticleA>
       void force_kernel(
-        Particle*       localParticle,
-        const Particle* activeParticle
+        ParticleA&       localParticle,
+        const ParticleB& activeParticle
       );
 
 
@@ -203,11 +203,11 @@ namespace swift2 {
        * - forceKernelUpdateParticlePredicate() and
        * - forceKernelEvaluatePairInteractionPredicate()
        */
-      template <typename Particle>
+      template <typename ParticleA, typename ParticleB = ParticleA>
       void forceKernel(
         const peano4::datamanagement::CellMarker& marker,
-        Particle&                                 localParticle,
-        const Particle&                           activeParticle
+        ParticleA&                                 localParticle,
+        const ParticleB&                           activeParticle
       );
 
       /**
