@@ -1,5 +1,4 @@
-# @TODO: add dependence on SPH scheme (only minimal SPH ATM)
-# @TODO: merge 1D and 2D based on HYDRO_DIMENSIONS input parameter.
+
 class SedovBlastIC:
     """
     Initialisation snippet for the Sedov Blast problem in different spatial dimensions.
@@ -7,10 +6,13 @@ class SedovBlastIC:
     """
 
     def __init__(self):
+
         self.initialisation_snippet = """
 
-      /* Code inserted via the python initialisation snippet library.
+      /*
+       * Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
+       * Template located in python/swift2/scenario/SedovBlast.py
        */
 
       /*
@@ -25,53 +27,33 @@ class SedovBlastIC:
 
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0);
+      const double GridSize_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
+      particle->setSearchRadius( 0.999 * GridSize_x);
 
-      /* Constant density field */
+      /* Constant background density field */
       particle->setDensity ( 1.0 );
-      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
+      particle->setMass( particle->getDensity() * std::pow((DomainSize(0) / (double) HYDRO_PART_NUMBER) , HYDRO_DIMENSIONS) );
 
       /* Initial estimate for smoothing length */
       const double eta_fac = particle->getEtaFactor();
       particle->setSmoothingLength( eta_fac * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
-      particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
 
       // Initialise the blast
-      const double BLAST_CENTER = 0.5;
       const double BLAST_ENERGY = 1.0;
-      const double SPIKE_RADIUS = 2.0 * (1.0 / HYDRO_PART_NUMBER);
+      const double SPIKE_RADIUS = 2.001 / HYDRO_PART_NUMBER;
 
-      tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
-      const double dist_blast = tarch::la::norm2( particle->getX() - blast_cent );
+      tarch::la::Vector<Dimensions,double> blast_center = 0.5 * DomainSize + DomainOffset;
 
-       /* Default method */
-       /* Inject energy evenly into group of central particles */
-       if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
-         particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
-       } else {
-         particle->setU( 1e-6 );  // negligible background value
-       }
+      const double dist_blast = tarch::la::norm2( particle->getX() - blast_center );
 
-//       /* New method */
-//       /* Smooth the explosion with kernel */
-//       const double h = particle->getSmoothingLength();
-//       const double R_smooth = 4.0 * h;
-//
-//       // Evaluate kernel
-//       const double q = dist_blast / h;
-//       double w, dw_dq;
-//       kernel_deval(q, w, dw_dq);
-//
-//       // Normalization factors
-//       const double W = w / std::pow( h, Dimensions );
-//
-//      if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
-//        particle->setU( BLAST_ENERGY * W ) ;
-//      } else {
-//        particle->setU( 1e-6 );  // negligible background value
-//      }
+      /* Default method */
+      /* Inject energy evenly into group of central particles */
+      if ( tarch::la::smallerEquals( dist_blast, SPIKE_RADIUS ) ) {
+        particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
+      } else {
+        particle->setU( 1e-6 );  // negligible background value
+      }
 
       /* Compute the pressure from the EoS */
       const double pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
@@ -105,27 +87,62 @@ class SedovBlastIC:
       particle->setUDot  (0.0);
       particle->setHDot  (0.0);
       particle->setWcount(0.0);
-      particle->setNcount(0  );
       particle->setF     (0.0);
       particle->setRho_dh(0.0);
       particle->setWcount_dh(0.0);
 
-      particle->setHLeft (particle->getSmlMin());
-      particle->setHRight(particle->getSmlMax());
-
-      particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setResidual(0.0);
-      particle->setIterCount(0);
+      particle->setSmoothingLengthIterCount(0);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);
       particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
       particle->setBalsara (0.0);
 
-      /* Verbose */
-      logDebug( "Init()", "dist = " << dist );
-      logDebug( "Init()", "Particle: " << particle->toString() );
+      particle->setCellHasUpdatedParticle(false);
+
+      #if PeanoDebug > 0
+
+      // Set a reproducible particle ID assuming we're distributing particles on a regular grid
+      // int max - 1
+      int MAX_PART_NUMBER = 2147483646;
+      if (HYDRO_DIMENSIONS==2) {
+        // ~ sqrt int max - 1
+        MAX_PART_NUMBER = 46339;
+      }
+      else if (HYDRO_DIMENSIONS==3) {
+        // ~ cbrt int max - 1
+        MAX_PART_NUMBER = 1289;
+      }
+
+      double xp = particle->getX(0);
+      double oneOverDx = MAX_PART_NUMBER / DomainSize[0];
+      int i = (int) ((xp - DomainOffset[0]) * oneOverDx);
+      int partid = i;
+
+      // Assuming here we're running 1D experiments on a 2D grid,
+      // as we always do, then we don't need compile time macro guards.
+      if (HYDRO_DIMENSIONS > 1) {
+        double yp = particle->getX(1);
+        double oneOverDy = MAX_PART_NUMBER / DomainSize[1];
+        int j = (int) ((yp - DomainOffset[1]) * oneOverDy);
+        partid += j * MAX_PART_NUMBER;
+      }
+
+      // For 3D, we need the guard.
+      #if Dimensions > 2
+      if (HYDRO_DIMENSIONS > 2){
+        double zp = particle->getX(2);
+        double oneOverDz = MAX_PART_NUMBER / DomainSize[2];
+        int k = (int) ((zp - DomainOffset[2]) * oneOverDz);
+        partid += k * MAX_PART_NUMBER * MAX_PART_NUMBER;
+      }
+      #endif
+
+      particle->setPartid(partid);
+
+      #endif // PeanoDebug > 0
+
 
       /* End of inserted block */
 
