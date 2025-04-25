@@ -267,8 +267,8 @@ void swift2::kernels::legacy::force_kernel(
   if ((tarch::la::smaller(r, iactRi) or (tarch::la::smaller(r, iactRj))) and tarch::la::greater(r, 0.0)) {
 
 #if PeanoDebug > 0
-    localParticle->setForceNeighbourCount(
-      localParticle->getForceNeighbourCount() + 1
+    localParticle.setForceNeighbourCount(
+      localParticle.getForceNeighbourCount() + 1
     );
 #endif
 
