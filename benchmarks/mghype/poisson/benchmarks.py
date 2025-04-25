@@ -17,11 +17,7 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, required=True, help="Polynomial Degree")
 parser.add_argument("-m",   "--meshsize",             dest="meshsize",       required=True, help="Mesh size")
-<<<<<<< HEAD
 parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "dg-tasks"], required=True, help="Pick variant" )
-=======
-parser.add_argument("-rea", "--realisation",          dest="realisation",    choices=["dg-sweeps", "dg-shifted-and-fused", "tasks"], required=True, help="Pick variant" )
->>>>>>> refs/remotes/origin/multigrid
 parser.add_argument("-var", "--variant",              dest="variant",        choices=["rediscretise", "precompute"], required=True, help="Pick variant" )
 parser.add_argument("-o",   "--output",               dest="output",         required=True, help="Name of executable")
 parser.add_argument("-t",   "--max-trees",            dest="max_trees",      type=int, default=0, help="Number of trees")
@@ -100,11 +96,13 @@ solver = Solver_Type(
 
 project.add_solver(solver)
 
-#
+#t
 # Configure build
 #
 build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Asserts
+
+#project.set_multicore_orchestration
 
 
 cube_size = 1.0

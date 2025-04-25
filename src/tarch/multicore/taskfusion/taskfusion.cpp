@@ -28,10 +28,17 @@ namespace {
 }
 
 
+tarch::multicore::taskfusion::ReadyFusableTasks::ReadyFusableTasks(int type_):
+  type(type_),
+  numberOfPendingReadyTasksPerProcessTaskExecution(),
+  probabilityThatTaskIsCompleted(256)
+{}
+
+
 void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
-  Task*                        task,
-  const std::set<TaskNumber>&  inDependencies,
-  const TaskNumber&            taskNumber
+  Task*                  task,
+  std::set<TaskNumber>   inDependencies,
+  const TaskNumber&      taskNumber
 ) {
   ::tarch::logging::Statistics::getInstance().inc(SubmitFusedTaskStatisticsIdentifier, 1, false, true);
 
@@ -39,7 +46,11 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
 
   const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(task->getTaskType());
 
-  if (instruction.maxTasks<1) {
+  assertion1(instruction.device==tarch::multicore::Task::Host or instruction.device>=0, instruction.toString());
+  assertion1(instruction.minTasks>=0, instruction.toString());
+  assertion1(instruction.maxTasks>instruction.minTasks, instruction.toString());
+
+  if (instruction.maxTasks<=1) {
     native::spawnTask(task, inDependencies, taskNumber);
   }
   else {
@@ -78,6 +89,16 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
       readyTask->setPriority(task->getPriority());
       tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
       processReadTaskInDependencyNumber.insert( taskNumber );
+    }
+
+    if (
+      taskQueue->tasks.size()*2 < instruction.maxTasks
+      and
+      taskNumber != NoOutDependencies
+    ) {
+      logDebug( "translateFusableTaskIntoTaskSequence(...)", "partially serialise as we have only " << taskQueue->tasks.size() << " tasks" );
+      inDependencies.insert( taskQueue->lastProcessReadyTask );
+      taskQueue->lastProcessReadyTask = taskNumber;
     }
 
     Task* processTask = new ProcessReadyTask(taskNumber, taskQueue);
