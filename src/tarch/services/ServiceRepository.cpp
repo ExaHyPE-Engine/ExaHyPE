@@ -5,10 +5,6 @@
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/RecursiveLock.h"
 
-#ifdef UseSmartMPI
-#include "smartmpi.h"
-#endif
-
 #include <sstream>
 
 
@@ -81,10 +77,6 @@ bool tarch::services::ServiceRepository::hasService( Service* service ) const {
 
 
 void tarch::services::ServiceRepository::receiveDanglingMessages() {
-  #ifdef UseSmartMPI
-  smartmpi::chime();
-  #endif
-
   // Don't do such a thing. See docu
   // tarch::multicore::processPendingTasks(1);
 

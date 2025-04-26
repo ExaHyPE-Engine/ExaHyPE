@@ -5,8 +5,6 @@ from .FV import FV
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.fv.actionsets import UpdateCell
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructedArrayMemoryLocation
-
 class SingleSweep(FV):
   """
   Probably the simplest solver you could think off.
@@ -32,7 +30,6 @@ class SingleSweep(FV):
                auxiliary_variables,
                min_volume_h,
                max_volume_h,
-               pde_terms_without_state: bool,
                plot_grid_properties: bool,
                ):
     super(SingleSweep, self).__init__(name,
@@ -42,7 +39,6 @@ class SingleSweep(FV):
                                       auxiliary_variables,
                                       min_volume_h,
                                       max_volume_h,
-                                      pde_terms_without_state,
                                       plot_grid_properties,
                                       )
 
@@ -116,17 +112,11 @@ class SingleSweep(FV):
     if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
-    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
 
     if refinement_criterion==PDETerms.None_Implementation:
       assert False, "Refinement criterion cannot be none"
     if initial_conditions==PDETerms.None_Implementation:
       assert False, "Initial conditions cannot be none"
-
-    if self._reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       self._reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
-      raise Exception("Memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
     self._user_action_set_includes += additional_action_set_includes
     self._user_solver_includes     += additional_user_includes

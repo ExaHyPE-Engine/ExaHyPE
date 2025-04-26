@@ -6,15 +6,16 @@
 // **********************************************************************************************
 #pragma once
 
-#include "exahype2/RefinementControl.h"
-#include "exahype2/PlotFilter.h"
 #include "peano4/grid/GridStatistics.h"
 
-#ifdef UseToolboxLoadBalancing
+#include "exahype2/RefinementControl.h"
+#include "exahype2/PlotFilter.h"
+
+{% if LOAD_BALANCER!="" -%}
 #include "{{LOAD_BALANCER | replace('::', '/') }}.h"
-#else
+{% else -%}
 #include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
-#endif
+{% endif -%}
 
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
@@ -26,20 +27,22 @@
 {%- endfor %}
 
   {% for item in SOLVERS -%}
-  extern {{ item[0] }}  {{ item[1] }};
+  extern {{ item[0] }} {{ item[1] }};
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   extern ::exahype2::RefinementControl  refinementControl;
   extern ::exahype2::PlotFilter         plotFilter;
 
-#ifdef UseToolboxLoadBalancing
+  {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}} loadBalancer;
-#else
+  {% else -%}
   extern toolbox::loadbalancing::strategies::NoLoadBalancing loadBalancer;
-#endif
+  {% endif -%}
 
-  extern peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
+  extern peano4::grid::GridStatistics gridStatisticsAfterGridConstruction;
+
+  static constexpr int PrintTimeStepIntervalInSeconds = {{PRINT_TIME_STEP_INTERVAL_IN_SECONDS}};
 
   /**
    * Return the global min time stamp over all solvers.
@@ -48,7 +51,7 @@
    * there's a global minimum time stamp over all solvers. This might not
    * be the min time stamp after the last update. If you have local time
    * stepping, then some cells might just have done a tiny time step,
-   * whereas the big cells still span a large time span. Hence, no the other
+   * whereas the big cells still span a large time span. Hence, on the other
    * hand, there's also a (time-)local time stamp.
    */
   double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false);
@@ -110,6 +113,8 @@
    */
   void finishTimeStep();
   void finishPlottingStep();
+
+  void printTimeStep();
 
   void startSimulation();
   void finishSimulation();

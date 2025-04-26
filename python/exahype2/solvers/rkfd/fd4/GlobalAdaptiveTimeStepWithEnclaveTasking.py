@@ -84,7 +84,6 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
   def set_implementation(self,
     flux=None, ncp=None, source_term=None, eigenvalues=None,
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
-    memory_location         = None,
     additional_action_set_includes = "",
     additional_user_includes       = "",
     KOSigma                 = None
@@ -102,7 +101,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     """
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(  
       flux, ncp, source_term, eigenvalues,
-      boundary_conditions, refinement_criterion, initial_conditions, memory_location, additional_action_set_includes, additional_user_includes)
+      boundary_conditions, refinement_criterion, initial_conditions, additional_action_set_includes, additional_user_includes)
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
@@ -151,6 +150,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
+    self._print_time_step_implementation     = solver_code_snippets.create_print_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
     
     self.create_action_sets()

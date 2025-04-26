@@ -13,7 +13,7 @@
  */
 
 #include "peano4/utils/Globals.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 
 namespace swift2 {

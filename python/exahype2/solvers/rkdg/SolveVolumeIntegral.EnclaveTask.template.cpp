@@ -21,17 +21,13 @@
 
 #include "peano4/utils/Loop.h"
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
 #include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
-
-#if defined(UseSmartMPI)
-#include "communication/Tags.h"
-#endif
 
 #include <string.h>
 #include <memory>
@@ -110,9 +106,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       tarch::freeMemory( _inputValues, tarch::MemoryLocation::Heap );
     }
   ),
-#ifdef UseSmartMPI
-  smartmpi::Task(_enclaveTaskTypeId),
-#endif
   _linearCombinationOfPreviousShots(nullptr) {
   // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
   //       distinguish different task types once we map other steps onto tasks, too
@@ -152,9 +145,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       );
     }
   ),
-#ifdef UseSmartMPI
-  smartmpi::Task(_enclaveTaskTypeId),
-#endif
   _linearCombinationOfPreviousShots(linearCombinationOfPreviousShots) {
   // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
   //       distinguish different task types once we map other steps onto tasks, too

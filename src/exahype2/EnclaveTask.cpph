@@ -1,37 +1,19 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-// tarch::logging::Log exahype2::EnclaveTask<T>::_log("exahype2::EnclaveTask");
-
-template<typename T>
-int exahype2::EnclaveTask<T>::getNumberOfActiveTasks() {
-  return _taskNumberPool().sizeInUse();
-}
-
-template<typename T>
-void exahype2::EnclaveTask<T>::releaseTaskNumber(int number) {
-  _taskNumberPool().release(number);
-}
-
-template<typename T>
-int exahype2::EnclaveTask<T>::reserveTaskNumber() {
-  return _taskNumberPool().getNext();
-}
-
-template<typename T>
+template <typename T>
 exahype2::EnclaveTask<T>::EnclaveTask(
   int                                         enclaveTaskTypeId,
   const peano4::datamanagement::CellMarker&   marker,
   double                                      t,
   double                                      dt,
-  T* __restrict__                             inputValues,
-  T* __restrict__                             outputValues,
+  /*const*/ T* __restrict__ const                 inputValues,
+  T* __restrict__ const                       outputValues,
   int                                         numberOfInputValues,
   int                                         numberOfResultValues,
   Functor                                     functor
 ):
   tarch::multicore::Task(enclaveTaskTypeId, tarch::multicore::Task::DefaultPriority),
-  _taskNumber(reserveTaskNumber()),
   _marker(marker),
   _t(t),
   _dt(dt),
@@ -39,41 +21,22 @@ exahype2::EnclaveTask<T>::EnclaveTask(
   _outputValues(outputValues),
   _numberOfInputValues(numberOfInputValues),
   _numberOfResultValues(numberOfResultValues),
-  _functor(functor),
-  _maxEigenvalue(-1.0) {
-  logTraceIn("EnclaveTask(...)");
+  _functor(functor) {
+  logTraceIn("EnclaveTask()");
 
-  assertion(_numberOfResultValues > 0);
+  assertion(_numberOfInputValues > 0);
   assertion(_inputValues != nullptr);
 
-  logTraceOut("EnclaveTask(...)");
+  assertion(_numberOfResultValues > 0);
+  assertion(_outputValues != nullptr);
+
+  logTraceOut("EnclaveTask()");
 }
 
-template<typename T>
+template <typename T>
 bool exahype2::EnclaveTask<T>::run() {
-  logTraceInWith1Argument("run()", _taskNumber);
-  computeTask();
-  EnclaveBookkeeping<T>::getInstance().bookmarkFinishedTask(_taskNumber, _numberOfResultValues, _outputValues, _maxEigenvalue);
+  logTraceIn("run()");
+  _functor();
   logTraceOut("run()");
   return false;
-}
-
-template<typename T>
-void exahype2::EnclaveTask<T>::computeTask() {
-  if (!_outputValues) {
-    _outputValues = tarch::allocateMemory<T>(_numberOfResultValues, tarch::MemoryLocation::Heap);
-  } else {
-    logDebug(
-      "computeTask(...)",
-      "enclave task " << _taskNumber << " writes directly into mesh data structure at " << _outputValues << " (uses data from " << _inputValues << ")"
-    );
-  }
-
-  _functor();
-  logDebug("computeTask()", "task " << _taskNumber << " finished its computation: lambda=" << _maxEigenvalue);
-}
-
-template<typename T>
-int exahype2::EnclaveTask<T>::getTaskId() const {
-  return _taskNumber;
 }

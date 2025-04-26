@@ -1,16 +1,17 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "parallel.h"
 
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
 
-
-int peano4::parallel::getTaskType(const std::string&  className) {
+int peano4::parallel::getTaskType(const std::string& className) {
   static int taskTypeCounter = -1;
   taskTypeCounter++;
 
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    std::cout << "assign task " << className << " id " << taskTypeCounter  << std::endl;
-  }
+  // if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+  //   std::cout << "Assign task " << className << " id " << taskTypeCounter  << std::endl;
+  // }
 
   return taskTypeCounter;
 }

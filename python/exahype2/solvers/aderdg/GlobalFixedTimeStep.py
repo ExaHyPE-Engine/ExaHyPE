@@ -110,7 +110,6 @@ class GlobalFixedTimeStep(SingleSweep):
             init_point_source_implementation=self._init_point_sources_implementation,
             is_linear=self._is_linear,
             computation_precisions=computation_precisions,
-            pde_terms_without_state=False,
         )
         abstract_solver_definitions = AbstractSolverDefinitions(
             flux_implementation=self._flux_implementation,
@@ -123,7 +122,6 @@ class GlobalFixedTimeStep(SingleSweep):
             init_point_source_implementation=self._init_point_sources_implementation,
             is_linear=self._is_linear,
             computation_precisions=computation_precisions,
-            pde_terms_without_state=False,
         )
         solver_declarations = SolverDeclarations(
             flux_implementation=self._flux_implementation,
@@ -136,7 +134,6 @@ class GlobalFixedTimeStep(SingleSweep):
             init_point_source_implementation=self._init_point_sources_implementation,
             is_linear=self._is_linear,
             computation_precisions=computation_precisions,
-            pde_terms_without_state=False,
         )
         solver_definitions = SolverDefinitions(
             flux_implementation=self._flux_implementation,
@@ -149,7 +146,6 @@ class GlobalFixedTimeStep(SingleSweep):
             init_point_source_implementation=self._init_point_sources_implementation,
             is_linear=self._is_linear,
             computation_precisions=computation_precisions,
-            pde_terms_without_state=False,
         )
 
         self._abstract_solver_user_declarations = (
@@ -185,6 +181,9 @@ class GlobalFixedTimeStep(SingleSweep):
         )
         self._finish_time_step_implementation = (
             solver_code_snippets.create_finish_time_step_implementation()
+        )
+        self._print_time_step_implementation = (
+            solver_code_snippets.create_print_time_step_implementation()
         )
 
         self._constructor_implementation = (

@@ -157,9 +157,6 @@ void finishTimeStep() {
     ")\t(unrefined/refined)"
    );
 
-  #ifdef UseSmartMPI
-  smartmpi::tick();
-  #endif
   logTraceOut( "finishTimeStep()" );
 }
 

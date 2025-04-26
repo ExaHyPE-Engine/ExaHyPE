@@ -120,7 +120,6 @@ python3 ~/git/Peano/python/peano4/postprocessing/inspect-statistics.py statistic
 Column 	| Counter
 --------|----------------
 0	|  time (always used to plot)
-1	|  exahype2::EnclaveBookkeeping::memory-allocations
 2	|  mpi wait times
 3	|  tarch::multicore::bsp-concurrency-level
 4	|  tarch::multicore::spawned-tasks

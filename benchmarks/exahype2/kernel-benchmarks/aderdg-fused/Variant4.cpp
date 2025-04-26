@@ -88,8 +88,8 @@ inline void initialTask(
     myCellData->QIn[cellId],
     myCellData->cellCentre[cellId],
     myCellData->cellSize[cellId],
-    myCellData->t[cellId],
-    myCellData->dt[cellId]
+    myCellData->t,
+    myCellData->dt
   );
 
   watchKernelCompute.stop();
@@ -163,7 +163,7 @@ void runKernels(
       direction,
       0,
       inverseDxDirection,
-      myCellData->dt[cellId]
+      myCellData->dt
     );
 
     kernels::AderSolver::riemannSolver<double>(
@@ -186,7 +186,7 @@ void runKernels(
       direction,
       1,
       inverseDxDirection,
-      myCellData->dt[cellId]
+      myCellData->dt
     );
 
   } // for d
@@ -196,8 +196,8 @@ void runKernels(
     myCellData->QIn[cellId],
     myCellData->cellCentre[cellId],
     myCellData->cellSize[cellId],
-    myCellData->t[cellId],
-    myCellData->dt[cellId]
+    myCellData->t,
+    myCellData->dt
   );
 
   int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
@@ -207,8 +207,8 @@ void runKernels(
     myCellData->QIn[cellId],
     myCellData->cellCentre[cellId],
     myCellData->cellSize[cellId],
-    myCellData->t[cellId],
-    myCellData->dt[cellId]
+    myCellData->t,
+    myCellData->dt
   );
 
   watchKernelCompute.stop();
@@ -234,8 +234,8 @@ void variant4::runBenchmarks(
       NumberOfInputEntriesPerCell,
       tarch::MemoryLocation::Heap
     );
-    cellData.t[cellIndex]             = timeStamp;
-    cellData.dt[cellIndex]            = timeStepSize;
+    cellData.t                        = timeStamp;
+    cellData.dt                       = timeStepSize;
     cellData.QOut[cellIndex]          = nullptr;
     cellData.cellCentre[cellIndex]    = cellCenter;
     cellData.cellSize[cellIndex]      = cellSize;

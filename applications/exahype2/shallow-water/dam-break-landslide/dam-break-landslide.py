@@ -80,7 +80,6 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
-    pde_terms_without_state=args.stateless,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
@@ -91,7 +90,6 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
-riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 #riemann_solver._preprocess_reconstructed_patch = extrapolate_halo + compute_first_derivatives # TODO: Should be replaced by proper derivative computation within the solver
 
 project = exahype2.Project(

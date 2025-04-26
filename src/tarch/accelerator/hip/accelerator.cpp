@@ -13,8 +13,6 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::hip");
 } // namespace
 
-void tarch::gpuAbort() {}
-
 void* tarch::internal::allocateRawData(
   std::size_t    sizeInBytes,
   MemoryLocation location,
@@ -35,10 +33,12 @@ void* tarch::internal::allocateRawData(
 
   assertion(data);
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
   }
+#endif
 
   return data;
 }
@@ -52,15 +52,17 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
+      logDebug("freeRawData()", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
   }
+#endif
 
   switch (location) {
   case MemoryLocation::Heap:

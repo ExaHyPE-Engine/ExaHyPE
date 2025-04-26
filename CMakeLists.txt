@@ -87,6 +87,7 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
     -W
     -Wall
     -Wextra
+    -Kieee
     --diag_suppress=unrecognized_attribute
   )
 else()
@@ -104,7 +105,7 @@ else()
   )
 endif()
 
-option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
+option(WITH_MPI "Build with Message Passing Interface (MPI) support" ON)
 option(WITH_TARGETDART "Build with targetDART support" OFF)
 option(WITH_OTTER "Build with Otter support" OFF)
 option(WITH_PETSC "Build with PETSc support" OFF)
@@ -116,9 +117,9 @@ option(WITH_ASAGI "Build with ASAGI support" OFF)
 
 option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
 option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
-option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
-option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
-option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
+option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
+option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" ON)
+option(ENABLE_EXAHYPE "Enable ExaHyPE 2" ON)
 option(ENABLE_MGHYPE "Enable MGHyPE" OFF)
 option(ENABLE_SWIFT "Enable Swift 2" OFF)
 
@@ -156,10 +157,10 @@ list(APPEND AVAILABLE_MULTITHREADING
   "no"
   "omp"
   "sycl"
-  "tbb"
-#  "cpp"
+  #"tbb"
+  #"cpp"
 )
-set(WITH_MULTITHREADING "no" CACHE STRING "${AVAILABLE_MULTITHREADING}")
+set(WITH_MULTITHREADING "omp" CACHE STRING "${AVAILABLE_MULTITHREADING}")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${AVAILABLE_MULTITHREADING})
 
 if(WITH_MULTITHREADING STREQUAL "omp")
@@ -193,8 +194,8 @@ list(APPEND AVAILABLE_ACCELERATORS
   "no"
   "omp"
   "sycl"
+  #"hip"
   "cuda"
-#  "hip"
   "cpp"
 )
 set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")

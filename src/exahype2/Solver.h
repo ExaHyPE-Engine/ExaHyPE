@@ -61,6 +61,8 @@ class exahype2::Solver {
     ) = 0;
     virtual void finishTimeStep() = 0;
 
+    virtual void printTimeStep() = 0;
+
     virtual void startPlottingStep(
       double globalMinTimeStamp,
       double globalMaxTimeStamp,

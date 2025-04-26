@@ -44,12 +44,7 @@ private:
   void checkForMemoryLeaks();
 
 public:
-  /**
-   * Accelerator devices (GPUs) are enumerated starting from 0. If you argue
-   * where to offload tasks and want to pick the host, then pass in this
-   * constant instead.
-   */
-  static constexpr int HostDevice = -1;
+  static constexpr int DefaultDevice = 0;
 
   /**
    * Destructor

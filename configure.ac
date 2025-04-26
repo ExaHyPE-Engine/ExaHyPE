@@ -1259,28 +1259,6 @@ fi
 
 
 #
-# SmartMPI
-#
-AC_ARG_WITH(smartmpi,
-  AS_HELP_STRING([--with-smartmpi],[build with SmartMPI [default=no,Merged,Alternating]]),
-  [ AC_MSG_CHECKING(for smartmpi)
-    case "${withval}" in
-      no)               AC_MSG_RESULT(no);    smartmpi=false ;;
-      Merged)           AC_MSG_RESULT(yes; use topology Merged);            smartmpi=Merged ;;
-      Alternating)      AC_MSG_RESULT(yes; use topology Alternating);       smartmpi=Alternating ;;
-      *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
-    esac ],
-  [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
-AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
-if test "$smartmpi" == Merged; then
-  AC_DEFINE([UseSmartMPI], [Merged], [UseSmartMPI])
-fi
-if test "$smartmpi" == Alternating; then
-  AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
-fi
-
-
-#
 # targetDART
 #
 AC_ARG_WITH(targetdart,

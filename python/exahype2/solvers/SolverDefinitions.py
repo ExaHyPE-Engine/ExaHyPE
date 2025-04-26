@@ -13,7 +13,6 @@ class SolverDefinitions:
         riemann_solver_implementation,
         source_term_implementation,
         adjust_solution_implementation,
-        pde_terms_without_state,
         precision = "double"
     ):
         self._flux_implementation = flux_implementation
@@ -23,108 +22,105 @@ class SolverDefinitions:
         self._riemann_solver_implementation = riemann_solver_implementation
         self._source_term_implementation = source_term_implementation
         self._adjust_solution_implementation = adjust_solution_implementation
-        self._pde_terms_without_state = pde_terms_without_state
         self._precision = precision
 
     def create_solver_user_definitions(self):
         Template = jinja2.Template(
             """
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-  [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const __restrict__                   L
+  [[maybe_unused]] {{PR}}* const noalias                   L
 ) {
   // @todo Implement
 }
 {% endif %}
 
-{% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" %}
+{% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal
 ) {
-  logTraceInWith4Arguments("maxEigenvalue(...)", x, h, t, normal);
-  // @todo Compute max eigenvalue
-  logTraceOut("maxEigenvalue(...)");
-  // @todo Return max eigenvalue (make sure to call logTraceOut before the return)
+  // @todo Implement
   return 0.0;
 }
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const __restrict__                   F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{PR}}* const noalias                   F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
 }
 {% endif %}
 
-{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{PR}}* const __restrict__             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const __restrict__                   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{PR}}* const noalias                   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
 }
 {% endif %}
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  [[maybe_unused]] const {{PR}}* const __restrict__             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] {{PR}}* const __restrict__                   S // S[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{PR}}* const noalias                   S // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
 }
 {% endif %}
 
-{% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
+{% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
-  [[maybe_unused]] const {{PR}}* const __restrict__             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{PR}}* const __restrict__             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{PR}}* const noalias             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const __restrict__                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-  [[maybe_unused]] {{PR}}* const __restrict__                   FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{PR}}* const noalias                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{PR}}* const noalias                   FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
+  return 0.0;
 }
 {% endif %}
 
-{% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" %}
+{% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] double* const __restrict__                   Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] double* const noalias                   Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
 ) {
   // @todo Implement
 }
@@ -141,6 +137,5 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["PR"] = self._precision
         return Template.render(**d)

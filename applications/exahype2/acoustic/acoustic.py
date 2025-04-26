@@ -65,13 +65,6 @@ class Acoustic:
         )
 
         parser.add_argument(
-            "-stateless",
-            "--stateless",
-            action="store_true",
-            default=False,
-            help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
-        )
-        parser.add_argument(
             "-o",
             "--output",
             type=str,
@@ -155,14 +148,6 @@ class Acoustic:
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
 
-        parser.add_argument(
-            "--storage",
-            type=str,
-            choices=[e.name for e in exahype2.solvers.Storage],
-            default="CallStack",
-            help="The storage scheme to use."
-        )
-
         available_load_balancing_strategies = [
             "SpreadOut",
             "SpreadOutOnceGridStagnates",
@@ -192,13 +177,6 @@ class Acoustic:
             type=int,
             default=0,
             help="Number of threads per rank.",
-        )
-        parser.add_argument(
-            "-f",
-            "--fuse-tasks",
-            type=int,
-            default=131072,
-            help="Number of enclave tasks to fuse into one meta task.",
         )
         parser.add_argument(
             "-timeout",
@@ -236,13 +214,6 @@ class Acoustic:
             else {"p": 1, "u": 1, "v": 1},
             "auxiliary_variables": 0,
         }
-
-        if args.stateless:
-            solver_params.update(
-                {
-                    "pde_terms_without_state": True,
-                }
-            )
 
         if "Fixed" in args.solver:
             solver_params.update(
@@ -298,7 +269,6 @@ class Acoustic:
         if solver_params["auxiliary_variables"] != 0:
             solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
-        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         if "ADERDG" in args.solver:
             solver.add_kernel_optimisations(is_linear = True,)
@@ -354,12 +324,6 @@ class Acoustic:
             project.set_load_balancing(strategy, configuration)
 
         project.set_number_of_threads(args.threads)
-
-        project.set_multicore_orchestration(
-            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
-            % str(args.fuse_tasks)
-        )
-        project.additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")
 
         project.set_timeout(args.timeout)
 

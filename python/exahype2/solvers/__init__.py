@@ -4,21 +4,8 @@
 from .PDETerms import PDETerms
 from .FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 from .AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
-from .OptimisticAdaptiveTimeSteppingCodeSnippets import (
-    OptimisticAdaptiveTimeSteppingCodeSnippets,
-)
-from .FixedSubcyclingTimeSteppingCodeSnippets import (
-    FixedSubcyclingTimeSteppingCodeSnippets,
-)
-from .AdaptiveSubcyclingTimeSteppingCodeSnippets import (
-    AdaptiveSubcyclingTimeSteppingCodeSnippets,
-)
-from .LocalTimeSteppingCodeSnippets import LocalTimeSteppingCodeSnippets
 from .SolverMatrixInterpolator import SolverMatrixInterpolator
-
 from .LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
-
 from .Storage                                    import Storage
-
 from .MathUtils                                  import MathUtils
 from .ErrorMeasurement                           import ErrorMeasurement

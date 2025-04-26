@@ -2,7 +2,7 @@
 
 #include "../CompressedFloatingPointNumbers.h"
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 
 #ifdef UseTestSpecificCompilerSettings

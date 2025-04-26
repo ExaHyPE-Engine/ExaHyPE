@@ -16,7 +16,6 @@ class AbstractSolverDeclarations:
         init_point_source_implementation,
         is_linear,
         computation_precisions,
-        pde_terms_without_state,
     ):
         self._flux_implementation = flux_implementation
         self._ncp_implementation = ncp_implementation
@@ -28,7 +27,6 @@ class AbstractSolverDeclarations:
         self._init_point_source_implementation = init_point_source_implementation
         self._is_linear = is_linear
         self._computation_precisions = computation_precisions
-        self._pde_terms_without_state = pde_terms_without_state
 
     def create_abstract_solver_user_declarations(self):
         Template = jinja2.Template(
@@ -39,7 +37,7 @@ class AbstractSolverDeclarations:
   #error Eigenvalue implementation cannot be none or empty
   {% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
@@ -48,7 +46,7 @@ class AbstractSolverDeclarations:
     ) = 0;
   {% else %}
     virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
@@ -59,26 +57,26 @@ class AbstractSolverDeclarations:
 
   {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       F
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       F
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}
 
   {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__  Q,
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__  deltaQ,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias  Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias  deltaQ,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__        BTimesDeltaQ
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias        BTimesDeltaQ
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}
 
@@ -130,7 +128,7 @@ class AbstractSolverDeclarations:
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
-      double* const __restrict__                                    Q,
+      double* const noalias                                    Q,
     ) {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}
 """,
@@ -148,5 +146,4 @@ class AbstractSolverDeclarations:
         d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation
         d["IS_LINEAR"] = self._is_linear
         d["COMPUTATION_PRECISIONS"] = self._computation_precisions
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         return Template.render(**d)

@@ -65,13 +65,6 @@ class Euler:
         )
 
         parser.add_argument(
-            "-stateless",
-            "--stateless",
-            action="store_true",
-            default=False,
-            help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
-        )
-        parser.add_argument(
             "-o",
             "--output",
             type=str,
@@ -155,14 +148,6 @@ class Euler:
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
 
-        parser.add_argument(
-            "--storage",
-            type=str,
-            choices=[e.name for e in exahype2.solvers.Storage],
-            default="CallStack",
-            help="The storage scheme to use."
-        )
-
         available_load_balancing_strategies = [
             "SpreadOut",
             "SpreadOutOnceGridStagnates",
@@ -194,11 +179,23 @@ class Euler:
             help="Number of threads per rank.",
         )
         parser.add_argument(
-            "-f",
-            "--fuse-tasks",
+            "-ti",
+            "--print-time-interval",
             type=int,
-            default=131072,
-            help="Number of enclave tasks to fuse into one meta task.",
+            default=10,
+            help="Time interval to print time step information.",
+        )
+        parser.add_argument(
+            "-td",
+            "--target-device",
+            default="tarch::accelerator::Device::DefaultDevice",
+            help="Target device for GPU offloading.",
+        )
+        parser.add_argument(
+            "--tasks",
+            type=int,
+            default=1,
+            help="Number of fused enclave tasks to offload asynchronously.",
         )
         parser.add_argument(
             "-timeout",
@@ -237,10 +234,10 @@ class Euler:
             "auxiliary_variables": 0,
         }
 
-        if args.stateless:
+        if "Enclave" in args.solver:
             solver_params.update(
                 {
-                    "pde_terms_without_state": True,
+                    "number_of_tasks": args.tasks,
                 }
             )
 
@@ -312,7 +309,6 @@ class Euler:
         if solver_params["auxiliary_variables"] != 0:
             solver.plot_description += ", ".join(solver_params["auxiliary_variables"].keys())
         solver.set_implementation(**implementation_params)
-        solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
         if "ADERDG" in args.solver:
             solver.add_kernel_optimisations(is_linear = False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto)
@@ -368,17 +364,12 @@ class Euler:
             project.set_load_balancing(strategy, configuration)
 
         project.set_number_of_threads(args.threads)
-
-        project.set_multicore_orchestration(
-            "tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, 0)"
-            % str(args.fuse_tasks)
-        )
-        project.additional_includes.append("tarch/multicore/orchestration/Hardcoded.h")
-
+        project.set_print_time_step_interval_in_seconds(args.print_time_interval)
         project.set_timeout(args.timeout)
 
         project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
         project = project.generate_Peano4_project(verbose=False)
+        project.output.makefile.set_target_device(args.target_device)
 
         if args.fpe:
             project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

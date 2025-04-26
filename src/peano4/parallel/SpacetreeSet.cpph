@@ -6,10 +6,6 @@
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
 
-#ifdef UseSmartMPI
-#include "smartmpi.h"
-#endif
-
 template <class Container>
 void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(
   [[maybe_unused]] Container& stackContainer,

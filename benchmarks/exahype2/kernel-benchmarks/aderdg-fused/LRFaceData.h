@@ -78,13 +78,13 @@ namespace exahype2 {
       double                                       dt_,
       outType*                                     QOut_[2],
       tarch::MemoryLocation                        memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                                          targetDevice_   = tarch::accelerator::Device::HostDevice
+      int                                          targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
     FaceData(
       int                   numberOfFaces_,
       tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                   targetDevice_   = tarch::accelerator::Device::HostDevice
+      int                   targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
     FaceData(const FaceData& copy)       = delete;

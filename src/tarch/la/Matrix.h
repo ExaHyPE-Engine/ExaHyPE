@@ -16,7 +16,7 @@ namespace tarch {
 #include "tarch/la/MatrixMatrixOperations.h"
 #include "tarch/la/MatrixScalarOperations.h"
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 
 #include <string>

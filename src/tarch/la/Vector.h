@@ -6,7 +6,7 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #include <string>
 #include <bitset>

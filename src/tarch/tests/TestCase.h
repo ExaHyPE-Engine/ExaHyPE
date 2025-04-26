@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/tests/TestMacros.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include <string>
 
 

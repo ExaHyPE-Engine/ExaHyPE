@@ -20,8 +20,6 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::sycl");
 } // namespace
 
-void tarch::gpuAbort() {}
-
 void* tarch::accelerator::allocateRawData(
   std::size_t    sizeInBytes,
   MemoryLocation location,
@@ -32,8 +30,7 @@ void* tarch::accelerator::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-    assertion1(device == Device::HostDevice, device);
-    data = std::aligned_alloc( // sycl::malloc_host
+    data = std::aligned_alloc(
       AlignmentOnHeap,
       tarch::padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
@@ -47,14 +44,26 @@ void* tarch::accelerator::allocateRawData(
     data = sycl::malloc_device(sizeInBytes, queue);
 #endif
     break;
+  }
+  case MemoryLocation::Pinned: {
+    assertion1(device >= 0, device);
+    sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
+#ifdef UseUSM
+    data = sycl::malloc_shared(sizeInBytes, queue);
+#else
+    data = sycl::malloc_host(sizeInBytes, queue);
+#endif
+    break;
   }}
 
   assertion(data);
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
   }
+#endif
 
   return data;
 }
@@ -68,22 +77,24 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
+      logDebug("freeRawData()", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
   }
+#endif
 
   switch (location) {
     case MemoryLocation::Heap:
-      assertion1(device == Device::HostDevice, device);
-      std::free(data); // sycl::free
+      std::free(data);
       break;
     case MemoryLocation::Device:
+    case MemoryLocation::Pinned:
       assertion1(device >= 0, device);
       sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
       sycl::free(data, queue);
@@ -104,15 +115,16 @@ void tarch::accelerator::copyTo(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
-  case MemoryLocation::Device: {
+  case MemoryLocation::Device:
+  case MemoryLocation::Pinned: {
 #ifdef UseUSM
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to device");
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
     sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
     queue.memcpy(target, source, sizeInBytes).wait();
     //queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();
@@ -134,15 +146,16 @@ void tarch::accelerator::copyFrom(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
-  case MemoryLocation::Device: {
+  case MemoryLocation::Device:
+  case MemoryLocation::Pinned: {
 #ifdef UseUSM
     std::memcpy(target, source, sizeInBytes);
 #else
     assertion1(device >= 0, device);
-    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from device to host");
+    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
     sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
     queue.memcpy(target, source, sizeInBytes).wait();
     //queue.submit([&](sycl::handler& handle) { handle.memcpy(target, source, sizeInBytes); }).wait_and_throw();

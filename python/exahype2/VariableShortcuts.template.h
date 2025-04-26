@@ -29,10 +29,10 @@ public:
   // Positions of fields inside the unknown vector (solution vector) Q
   static constexpr int Q[NumberOfDistinctVariables + 1] = { {% for VARIABLE_NO in range(0, VARIABLE_NAMES|length-1) -%}
   {{VARIABLE_POSITIONS[VARIABLE_NO]}},
-{%- endfor %} {{VARIABLE_POSITIONS[VARIABLE_NAMES|length-1]}} };
+  {%- endfor %} {{VARIABLE_POSITIONS[VARIABLE_NAMES|length-1]}} };
 
   {% for VARIABLE_NO in range(0, VARIABLE_NAMES|length) %}
-    static constexpr int {{VARIABLE_NAMES[VARIABLE_NO]}} = {{VARIABLE_POSITIONS[VARIABLE_NO]}};
+  static constexpr int {{VARIABLE_NAMES[VARIABLE_NO]}} = {{VARIABLE_POSITIONS[VARIABLE_NO]}};
   {% endfor %}
 
   constexpr int operator [] (const int index) const noexcept { return Q[index]; }

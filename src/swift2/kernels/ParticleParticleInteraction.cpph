@@ -3,7 +3,7 @@
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 #include "swift2/kernels/SmoothingLengthComputation.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
 
 

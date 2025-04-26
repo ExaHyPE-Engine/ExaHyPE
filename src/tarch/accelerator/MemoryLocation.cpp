@@ -9,6 +9,8 @@ std::string tarch::toString(MemoryLocation value) {
     return "Heap";
   case MemoryLocation::Device:
     return "Device";
+  case MemoryLocation::Pinned:
+    return "Pinned";
   }
   return "<undef>";
 }

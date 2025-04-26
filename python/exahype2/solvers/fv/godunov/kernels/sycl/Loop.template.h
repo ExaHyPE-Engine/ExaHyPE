@@ -54,87 +54,23 @@
 {% endmacro %}
 
 {% macro loopOverPatches() %}
-  const int numberOfPatches = patchData.numberOfCells;
+  const int numberOfPatches               = patchData.numberOfCells;
+  const {{COMPUTE_PRECISION}}* const QIns = patchData.QIn1D;
+  {{COMPUTE_PRECISION}}* const QOuts      = patchData.QOut1D;
+  const double* const patchCentres        = patchData.cellCentre[0].data();
+  const double* const patchSizes          = patchData.cellSize[0].data();
+  const double timeStamp                  = patchData.t;
+  const double timeStepSize               = patchData.dt;
 
-  // TODO: We need to get rid of these memory allocations and the memory copies below.
-  {{COMPUTE_PRECISION}}* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  {{COMPUTE_PRECISION}}* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* patchCentres = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* patchSizes = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* timeStamps = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* timeStepSizes = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double* maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
     1,
-    tarch::MemoryLocation::Device,
+    tarch::MemoryLocation::Pinned,
     targetDevice
   );
   // Initialise to zero
-  tarch::copyTo(maxEigenvalue, &maxEigenvalueAfterTimeStep, 1, tarch::MemoryLocation::Device, targetDevice);
+  tarch::copyTo(maxEigenvalue, &maxEigenvalueAfterTimeStep, 1, tarch::MemoryLocation::Pinned, targetDevice);
   {% endif %}
-
-  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    tarch::copyTo(
-      &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}],
-      patchData.QIn[patchIndex],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-      tarch::MemoryLocation::Device,
-      targetDevice
-    );
-  }
-
-  tarch::copyTo(
-    patchCentres,
-    patchData.cellCentre[0].data(),
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  tarch::copyTo(
-    patchSizes,
-    patchData.cellSize[0].data(),
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  tarch::copyTo(
-    timeStamps,
-    patchData.t,
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  tarch::copyTo(
-    timeStepSizes,
-    patchData.dt,
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
 
   sycl::queue& queue = *static_cast<sycl::queue*>(tarch::accelerator::getSYCLQueue(targetDevice));
   //sycl::queue queue{ sycl::default_selector{} };
@@ -174,9 +110,6 @@
         {% endif %}
       };
 
-      const double timeStamp    = timeStamps[patchIndex];
-      const double timeStepSize = timeStepSizes[patchIndex];
-
       {% if COMPUTE_MAX_EIGENVALUE==True %}
       double maxEigenvalueAfterTimeStep = 0.0;
       {% endif %}
@@ -195,28 +128,12 @@
   });
   event.wait();
 
-  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    tarch::copyFrom(
-      &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}],
-      patchData.QOut[patchIndex],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
-      tarch::MemoryLocation::Device,
-      targetDevice
-    );
-  }
-
-  tarch::accelerator::MemoryManager::getInstance().free(QIns, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(QOuts, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(patchCentres, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(patchSizes, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(timeStamps, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(timeStepSizes, targetDevice);
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   tarch::copyFrom(
     maxEigenvalue,
     &maxEigenvalueAfterTimeStep,
     1,
-    tarch::MemoryLocation::Device,
+    tarch::MemoryLocation::Pinned,
     targetDevice
   );
   tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, targetDevice);

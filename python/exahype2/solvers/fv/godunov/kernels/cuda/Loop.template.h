@@ -57,15 +57,15 @@
   __global__ static void
   {% if DIMENSIONS==3 %} __launch_bounds__(512) {% else %} __launch_bounds__(256) {% endif %}
   kernel(
-    const {{STORAGE_PRECISION}}* const __restrict__ QIns,
-    {{STORAGE_PRECISION}}* const __restrict__       QOuts,
-    const double* const __restrict__                patchCentres,
-    const double* const __restrict__                patchSizes,
-    const double* const __restrict__                timeStamps,
-    const double* const __restrict__                timeStepSizes
+    const {{STORAGE_PRECISION}}* const noalias QIns,
+    {{STORAGE_PRECISION}}* const noalias       QOuts,
+    const double* const noalias                patchCentres,
+    const double* const noalias                patchSizes,
+    const double                                    timeStamp,
+    const double                                    timeStepSize
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     ,
-    {{COMPUTE_PRECISION}}* const __restrict__       maxEigenvalues
+    {{COMPUTE_PRECISION}}* const noalias       maxEigenvalues
     {% endif %}
   ) {
     const int patchIndex    = blockIdx.x;
@@ -88,9 +88,6 @@
       patchSizes[patchIndex * {{DIMENSIONS}} + 2]
       {% endif %}
     };
-
-    const double timeStamp    = timeStamps[patchIndex];
-    const double timeStepSize = timeStepSizes[patchIndex];
 
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     double maxEigenvalueAfterTimeStep = 0.0;
@@ -122,37 +119,6 @@
 {% macro loopOverPatches() %}
   const int numberOfPatches = patchData.numberOfCells;
 
-  // TODO: We need to get rid of these memory allocations and the memory copies below.
-  {{COMPUTE_PRECISION}}* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  {{COMPUTE_PRECISION}}* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* patchCentres = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* patchSizes = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* timeStamps = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  double* timeStepSizes = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   {{COMPUTE_PRECISION}}* maxEigenvalues = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
     numberOfPatches,
@@ -161,56 +127,17 @@
   );
   {% endif %}
 
-  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    tarch::copyTo(
-      &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}],
-      patchData.QIn[patchIndex],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-      tarch::MemoryLocation::Device,
-      targetDevice
-    );
-  }
-
-  tarch::copyTo(
-    patchCentres,
-    patchData.cellCentre[0].data(),
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  tarch::copyTo(
-    patchSizes,
-    patchData.cellSize[0].data(),
-    numberOfPatches * {{DIMENSIONS}},
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  tarch::copyTo(
-    timeStamps,
-    patchData.t,
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-  tarch::copyTo(
-    timeStepSizes,
-    patchData.dt,
-    numberOfPatches,
-    tarch::MemoryLocation::Device,
-    targetDevice
-  );
-
   {% if DIMENSIONS==3 %} const dim3 dimBlock(8, 8, 8); {% else %} const dim3 dimBlock(16, 16, 1); {% endif %}
   const dim3 dimGrid(numberOfPatches, 1, 1);
-  CHECK_CUDA_ERROR(cudaSetDevice(patchData.targetDevice));
+  CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));
 
   kernel<<<dimGrid, dimBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
-    QIns,
-    QOuts,
-    patchCentres,
-    patchSizes,
-    timeStamps,
-    timeStepSizes
+    patchData.QIn1D,
+    patchData.QOut1D,
+    patchData.cellCentre[0].data(),
+    patchData.cellSize[0].data(),
+    patchData.t,
+    patchData.dt
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     , maxEigenvalues
     {% endif %}
@@ -218,20 +145,9 @@
 
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    tarch::copyFrom(
-      &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}],
-      patchData.QOut[patchIndex],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
-      tarch::MemoryLocation::Device,
-      targetDevice
-    );
-  }
-
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   {{COMPUTE_PRECISION}}* cubMaxEigenvalue = nullptr;
-  CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));
-  CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof({{COMPUTE_PRECISION}})));
+  CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
   void* cubTempStorage = nullptr;
   std::size_t cubTempStorageBytes = 0;
   cub::DeviceReduce::Max(
@@ -258,19 +174,8 @@
   ));
   CHECK_CUDA_ERROR(cudaFree(cubTempStorage));
   CHECK_CUDA_ERROR(cudaFree(cubMaxEigenvalue));
-  {% endif %}
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
-
-  tarch::accelerator::MemoryManager::getInstance().free(QIns, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(QOuts, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(patchCentres, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(patchSizes, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(timeStamps, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(timeStepSizes, targetDevice);
-  {% if COMPUTE_MAX_EIGENVALUE==True %}
   tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalues, targetDevice);
   {% endif %}
 
-  CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet())); // TODO: Should be moved in fuse() to be able to launch kernels asynchronously
 {% endmacro %}

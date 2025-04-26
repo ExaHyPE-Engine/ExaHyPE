@@ -16,7 +16,6 @@ class SolverDefinitions:
         init_point_source_implementation,
         is_linear,
         computation_precisions,
-        pde_terms_without_state,
     ):
         self._flux_implementation = flux_implementation
         self._ncp_implementation = ncp_implementation
@@ -28,14 +27,13 @@ class SolverDefinitions:
         self._init_point_source_implementation = init_point_source_implementation
         self._is_linear = is_linear
         self._computation_precisions = computation_precisions
-        self._pde_terms_without_state = pde_terms_without_state
 
     def create_solver_user_definitions(self):
         Template_SinglePrecisions = jinja2.Template(
             """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
@@ -52,13 +50,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* __restrict__       F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* noalias       F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceIn("flux(...)");
   // @todo implement
@@ -68,14 +66,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* __restrict__       BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* noalias       BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith3Arguments("nonconservativeProduct(...)", x, t, normal);
   // @todo implement
@@ -141,7 +139,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const T* __restrict__                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* noalias                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
@@ -155,7 +153,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
@@ -168,13 +166,13 @@ template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const T* __restrict__                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* noalias                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] T* __restrict__                                               F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] T* noalias                                               F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceIn( "flux(...)");
   // @todo implement
@@ -183,13 +181,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       F
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       F
 );
 {% endfor%}
 {% endif %}
@@ -197,14 +195,14 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const T* __restrict__                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const T* __restrict__                                         deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* noalias                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* noalias                                         deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] T* __restrict__                                               BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] T* noalias                                               BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith3Arguments("nonconservativeProduct(...)", x, t, normal);
   // @todo implement
@@ -213,14 +211,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ deltaQ,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias deltaQ,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       BTimesDeltaQ
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       BTimesDeltaQ
 );
 {% endfor%}
 {% endif %}
@@ -293,7 +291,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(
     const tarch::la::Vector<Dimensions, double>&                  h,
     double                                                        t,
     double                                                        dt,
-    double* const __restrict__                                    Q,
+    double* const noalias                                    Q,
   ) {
     // @todo implement
   }
@@ -338,7 +336,6 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
         d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation
         d["IS_LINEAR"] = self._is_linear
         d["COMPUTATION_PRECISIONS"] = self._computation_precisions
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
 
         if len(self._computation_precisions) > 1:
             return Template_MultiplePrecisions.render(**d)

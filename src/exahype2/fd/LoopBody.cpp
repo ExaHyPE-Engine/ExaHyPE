@@ -25,8 +25,8 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           cell,
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex]
+          patchData.t,
+          patchData.dt
         )
       );
     }

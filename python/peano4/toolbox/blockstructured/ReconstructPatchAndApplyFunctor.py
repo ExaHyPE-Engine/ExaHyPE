@@ -4,31 +4,6 @@ from enum import IntEnum
 
 from peano4.solversteps.ActionSet import ActionSet
 
-class ReconstructedArrayMemoryLocation(IntEnum):
-  """
-   All arrays are held on the call stack. Might not work with PGI compilers or
-   Clang, but it does work with GCC and Intel. This mode is the preferred one,
-   as all memory frees are implicitly done.
-  """
-  CallStack = 0,
-  """
-   Create data on the heap. Done via a plain new. You have to delete the
-   reconstructed data yourself.
-  """
-  Heap = 1,
-  HeapWithoutDelete = 2,
-  """
-    Use tarch::allocateMemory()
-  """  
-  HeapThroughTarch = 3,
-  HeapThroughTarchWithoutDelete = 4,
-  """
-    Use tarch::allocateMemory()
-  """
-  ManagedSharedAcceleratorDeviceMemoryThroughTarch = 5,
-  ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete = 6
-
-
 class ReconstructPatchAndApplyFunctor(ActionSet):
   """!
   This class assumes that you have NxNxN patch within your block. It also assumes that
@@ -51,10 +26,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
                patch,
                patch_overlap,
                functor_implementation,
-               reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,
                guard="true", 
                add_assertions_to_halo_exchange = True,
-               precision="double"
                ):
     """!
   patch: peano4.datamodel.Patch
@@ -75,20 +48,15 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     oldQWithHalo
     newQ
 
-  Both are plain pointers of type "precision", which defaults to double.
-
   ## Data validation
 
   I use quite a lot of validitiy checks for the copied data via comparison to its self. This
   way, I can at least spot nans. I use the dictionary entries ASSERTION_WITH_X_ARGUMENTS to 
   realise this, and they are, by default, set to Peano's assertion macros. You can redefine 
   them.
-  
-    """
+  """
     super(ReconstructPatchAndApplyFunctor,self).__init__(descend_invocation_order=1,parallel=False)
-    
-    assert isinstance(reconstructed_array_memory_location,ReconstructedArrayMemoryLocation), "type of argument is {}".format( type(reconstructed_array_memory_location) )
-    
+
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
       assert( patch_overlap.dim[0] % 2 == 0 )
@@ -105,16 +73,13 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.total_overlap  = int(patch_overlap.dim[0])
     self.overlap_name   = patch_overlap.name
     self.patch_name     = patch.name
-    self.precision      = precision
-    
+
     self.functor_implementation              = functor_implementation
     self.add_assertions_to_halo_exchange     = add_assertions_to_halo_exchange
-    self.reconstructed_array_memory_location = reconstructed_array_memory_location
 
 
   def _add_action_set_entries_to_dictionary(self,d):
     """!
-    
     Befill dictionary
     
     If you inherit from this class and specialise this routine, you can add
@@ -147,11 +112,6 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     d[ "UNKNOWNS" ]           = str(self.no_of_unknowns)
     d[ "DOFS_PER_AXIS" ]      = str(self.dofs_per_axis)
     d[ "OVERLAP" ]            = str(int(self.total_overlap/2))
-    d[ "PRECISION" ]          = self.precision
-    d[ "NUMBER_OF_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis)
-    d[ "NUMBER_OF_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis * self.dofs_per_axis)
-    d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
-    d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
     d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + self.overlap_name
     d[ "CELL_ACCESSOR" ]      = "fineGridCell" + self.patch_name
 
@@ -170,56 +130,15 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     else:
       d[ "ASSERTION_PREFIX_FOR_HALO" ] = "true"
 
-    if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
-      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    #if Dimensions==2
-    """ + d[ "PRECISION" ] + """* oldQWithHalo = new """ + d[ "PRECISION" ] + """[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
-    #elif Dimensions==3
-    """ + d[ "PRECISION" ] + """* oldQWithHalo = new """ + d[ "PRECISION" ] + """[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
-    #endif
-"""
-    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
-      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    #if Dimensions==2
-    """ + d[ "PRECISION" ] + """ oldQWithHalo[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
-    #elif Dimensions==3
-    """ + d[ "PRECISION" ] + """ oldQWithHalo[""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
-    #endif
-"""
-    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
-      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    #if Dimensions==2
-    """ + d[ "PRECISION" ] + """* oldQWithHalo = ::tarch::allocateMemory<""" + d[ "PRECISION" ] + """>(""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
-    #elif Dimensions==3
-    """ + d[ "PRECISION" ] + """* oldQWithHalo = ::tarch::allocateMemory<""" + d[ "PRECISION" ] + """>(""" + d[ "NUMBER_OF_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
-    #endif
-"""
-    else:
-      raise Exception( "Error: memory allocation mode {} for patch reconstruction not known".format(self.reconstructed_array_memory_location) )
-
-    if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
-      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    delete[] oldQWithHalo;
-"""
-    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch:
-      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::Heap );
-"""
-    else:
-      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
-
   def get_constructor_body(self):
     return """  _treeNumber = treeNumber;
 """
 
-
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
-
   def user_should_modify_template(self):
     return False
-
 
   _Template_TouchCellFirstTime_Preamble = """
   auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
@@ -229,20 +148,17 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       result += overlapCell(d) * base;
       if (d==normal) {{
         base *= {OVERLAP}*2;
-      }}
-      else {{
+      }} else {{
         base *= {DOFS_PER_AXIS};
       }}
     }}
     return result;
   }};
-  
+
   if ({GUARD}) {{
-    logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
-
-    {CREATE_RECONSTRUCTED_PATCH}
+    logTraceInWith1Argument("touchCellFirstTime()", marker.toString());
+    auto* /*const*/ oldQWithHalo = {CELL_ACCESSOR}Reconstructed.value;
 """
-
 
   _Template_TouchCellFirstTime_Fill_Patch = """
     //
@@ -259,16 +175,15 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     }}
 """
 
-  
   _Template_TouchCellFirstTime_Fill_Halos = """
     //
     // Bring in the auxiliary patches, i.e. befill halo
     //
     for(int d=0; d<Dimensions; d++) {{
-      logTraceInWith1Argument( "touchCellFirstTime(...)::loopOverFace", d );
+      logTraceInWith1Argument( "touchCellFirstTime()::loopOverFace", d );
       //
       // d-loop over all dimensions except d. The vector k's entry d is set
-      // to 0. We start with the left/bottom face, i.e. the one closer to the 
+      // to 0. We start with the left/bottom face, i.e. the one closer to the
       // coordinate system's origin.
       //
       dfore(k,{DOFS_PER_AXIS},d,0) {{
@@ -277,7 +192,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           tarch::la::Vector<Dimensions,int> sourceCell      = k;
           destinationCell(d) = i;
           sourceCell(d)      = i;
-          
+
           int destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
           int sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
 
@@ -305,21 +220,19 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           }}
         }}
       }}
-      logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
+      logTraceOut("touchCellFirstTime()::loopOverFace");
     }}
 """
 
 
   _Template_TouchCellFirstTime_Core = """
-    {PRECISION}* newQ = {CELL_ACCESSOR}.value;
+    auto* /*const*/ newQ = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
-    
-    {DESTROY_RECONSTRUCTED_PATCH}
 """
 
 
   _Template_TouchCellFirstTime_Epilogue = """
-    logTraceOut( "touchCellFirstTime(...)" );
+    logTraceOut("touchCellFirstTime()");
   }}
 """
 

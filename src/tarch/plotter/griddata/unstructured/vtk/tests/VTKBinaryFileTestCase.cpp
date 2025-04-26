@@ -4,7 +4,7 @@
 #include "tarch/plotter/griddata/unstructured/vtk/VTKBinaryFileWriter.h"
 
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 
 #ifdef UseTestSpecificCompilerSettings

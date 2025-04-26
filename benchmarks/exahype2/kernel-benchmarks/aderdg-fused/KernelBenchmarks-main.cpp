@@ -58,7 +58,6 @@ int main(int argc, char** argv) {
   // Do this early, so people can use logInfo properly.
   repositories::initLogFilters();
   tarch::initNonCriticalAssertionEnvironment();
-  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
   repositories::initSharedMemoryAndGPUEnvironment();
 
@@ -89,7 +88,6 @@ int main(int argc, char** argv) {
     variant6::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
   }
 
-  tarch::multicore::shutdownSmartMPI();
   tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 

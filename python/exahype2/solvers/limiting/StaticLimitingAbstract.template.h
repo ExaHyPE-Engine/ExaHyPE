@@ -20,10 +20,8 @@
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
-
 {%- endfor %}
   class {{CLASSNAME}};
-
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
@@ -45,7 +43,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
 
-    SolverState  getSolverState() const;
+    SolverState getSolverState() const;
 
     double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
@@ -71,7 +69,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishGridConstructionStep() override;
 
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -84,9 +81,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishGridInitialisationStep() override;
 
-
     virtual void suspendSolversForOneGridSweep() override;
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -105,6 +100,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
+    virtual void printTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -147,7 +143,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishSimulation() override;
 
-
     public:
         /**
         * Inform the solver about a cell being troubled, meaning its value
@@ -155,6 +150,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         * timestep until this is done.
         */
         void addTroubledCell();
+
         int getNumberOfTroubledCells() const;
 
         /**
@@ -188,15 +184,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 {% endif %}
 
   protected:
-    static tarch::logging::Log  _log;
+    static tarch::logging::Log _log;
 
-    SolverState  _solverState;
+    SolverState _solverState;
 
-    int        _cellUpdates;
+    int _numberOfTroubledCells;
 
-    int        _totalNumberOfTroubledCells;
-
-    tarch::multicore::BooleanSemaphore  _semaphore;
+    tarch::multicore::BooleanSemaphore _semaphore;
 
   {{SOLVER_USER_DECLARATIONS}}
 };

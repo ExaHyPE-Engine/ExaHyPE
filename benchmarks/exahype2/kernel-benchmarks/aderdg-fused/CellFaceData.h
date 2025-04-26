@@ -78,13 +78,13 @@ namespace exahype2 {
       double                                       dt_,
       outType*                                     QOut_[2 * Dimensions],
       tarch::MemoryLocation                        memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                                          targetDevice_   = tarch::accelerator::Device::HostDevice
+      int                                          targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
     CellFaceData(
       int                   numberOfCells_,
       tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                   targetDevice_   = tarch::accelerator::Device::HostDevice
+      int                   targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
     CellFaceData(const CellFaceData& copy)       = delete;

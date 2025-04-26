@@ -87,21 +87,34 @@
 {% endmacro %}
 
 {% macro loopOverPatches() %}
-  const int numberOfPatches                                       = patchData.numberOfCells;
-  {{STORAGE_PRECISION}}** const QIns                              = patchData.QIn;
-  {{STORAGE_PRECISION}}** const QOuts                             = patchData.QOut;
-  const tarch::la::Vector<Dimensions, double>* const patchCentres = patchData.cellCentre;
-  const tarch::la::Vector<Dimensions, double>* const patchSizes   = patchData.cellSize;
-  const double* const timeStamps                                  = patchData.t;
-  const double* const timeStepSizes                               = patchData.dt;
+  const int numberOfPatches               = patchData.numberOfCells;
+  const {{COMPUTE_PRECISION}}* const QIns = patchData.QIn1D;
+  {{COMPUTE_PRECISION}}* const QOuts      = patchData.QOut1D;
+  const double* const patchCentres        = patchData.cellCentre[0].data();
+  const double* const patchSizes          = patchData.cellSize[0].data();
+  const double timeStamp                  = patchData.t;
+  const double timeStepSize               = patchData.dt;
 
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    const {{STORAGE_PRECISION}}* const QIn                        = QIns[patchIndex];
-    {{STORAGE_PRECISION}}* const QOut                             = QOuts[patchIndex];
-    const tarch::la::Vector<Dimensions, double>& patchCentre      = patchCentres[patchIndex];
-    const tarch::la::Vector<Dimensions, double>& patchSize        = patchSizes[patchIndex];
-    const double timeStamp                                        = timeStamps[patchIndex];
-    const double timeStepSize                                     = timeStepSizes[patchIndex];
+    const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
+    {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
+
+    const tarch::la::Vector<Dimensions, double> patchCentre {
+      patchCentres[patchIndex * {{DIMENSIONS}}],
+      patchCentres[patchIndex * {{DIMENSIONS}} + 1]
+      {% if DIMENSIONS==3 %}
+      ,
+      patchCentres[patchIndex * {{DIMENSIONS}} + 2]
+      {% endif %}
+    };
+    const tarch::la::Vector<Dimensions, double> patchSize {
+      patchSizes[patchIndex * {{DIMENSIONS}}],
+      patchSizes[patchIndex * {{DIMENSIONS}} + 1]
+      {% if DIMENSIONS==3 %}
+      ,
+      patchSizes[patchIndex * {{DIMENSIONS}} + 2]
+      {% endif %}
+    };
 
     {{ loopOverVolumes() | indent(2) }}
   } // patchIndex

@@ -10,25 +10,19 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
   def __init__(self, normalised_time_step_size):
     self._normalised_time_step_size = normalised_time_step_size
 
-  def create_start_time_step_implementation(self):
-    """
-    The outcome is used before we actually roll over the accumulation variables
-    and other stuff.
-    """
+  def create_print_time_step_implementation(self):
     return """
-  if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster()
-    and
-    (_maxVolumeH > 0.0 or _maxVolumeHThisTimeStep > 0.0)
-    and
-    isFirstGridSweepOfTimeStep()
-  ) {
-    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("startTimeStep()", "t       = " << _minTimeStampThisTimeStep);
-    logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("startTimeStep()", "h_{min} = " << _minVolumeHThisTimeStep << " (volume size)");
-    logInfo("startTimeStep()", "h_{max} = " << _maxVolumeHThisTimeStep << " (volume size)");
+  if (tarch::la::greater(getMaxVolumeSize(false), 0.0)) {
+    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("printTimeStep()", "t       = " << getMinTimeStamp(false) << " / " << MinTerminalTime);
+    logInfo("printTimeStep()", "dt      = " << getTimeStepSize());
+    logInfo("printTimeStep()", "h_{min} = " << getMinVolumeSize(false) << " (volume size)");
+    logInfo("printTimeStep()", "h_{max} = " << getMaxVolumeSize(false) << " (volume size)");
   }
+"""
+
+  def create_start_time_step_implementation(self):
+    return """
 """
 
   def create_finish_time_step_implementation(self):

@@ -199,7 +199,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             functor_implementation="""
 #error please switch to your Riemann solver of choice
 """,
-            reconstructed_array_memory_location=solver._reconstructed_array_memory_location,
             guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
             add_assertions_to_halo_exchange=False,
         )
@@ -536,7 +535,6 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         boundary_conditions,
         refinement_criterion,
         initial_conditions,
-        memory_location,
         additional_action_set_includes,
         additional_user_includes,
     ):
@@ -553,8 +551,6 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
             self._refinement_criterion_implementation = refinement_criterion
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
-        if memory_location is not None:
-            self._reconstructed_array_memory_location = memory_location
 
         if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "refinement criterion cannot be none"
@@ -569,18 +565,6 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
             self._eigenvalues_implementation = eigenvalues
         if source_term is not None:
             self._source_term_implementation = source_term
-
-        if (
-            self._reconstructed_array_memory_location
-            == peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
-            or self._reconstructed_array_memory_location
-            == peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete
-            or self._reconstructed_array_memory_location
-            == peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete
-        ):
-            raise Exception(
-                "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak"
-            )
 
         self._user_action_set_includes += additional_action_set_includes
         self._user_solver_includes += additional_user_includes

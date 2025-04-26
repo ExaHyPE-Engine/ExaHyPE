@@ -10,9 +10,8 @@ endif
 
 ExaHyPE2Sources = \
   CellAccess.cpp \
-  EnclaveBookkeeping.cpp \
+  CellData.cpp \
   EnclaveTask.cpp \
-  EnclaveTaskNumberPool.cpp \
   LoadBalancingConfiguration.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
@@ -21,8 +20,6 @@ ExaHyPE2Sources = \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
-  tests/EnclaveBookkeepingTest.cpp \
-  tests/EnclaveTaskNumberPoolTest.cpp \
   enumerator/AoSLexicographicEnumerator.cpp \
   enumerator/SoALexicographicEnumerator.cpp \
   enumerator/SingleDoFEnumerator.cpp \

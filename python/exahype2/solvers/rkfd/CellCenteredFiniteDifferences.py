@@ -185,10 +185,6 @@ class CellCenteredFiniteDifferences(object):
                 + ")"
             )
 
-        self._reconstructed_array_memory_location = (
-            peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-        )
-
         self._solver_template_file_class_name = None
 
         self._plot_description = ""
@@ -224,6 +220,7 @@ class CellCenteredFiniteDifferences(object):
 
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
+        self._print_time_step_implementation = ""
         self._constructor_implementation = ""
 
         self._boundary_conditions_implementation = None
@@ -483,6 +480,11 @@ The finest mesh width of """
             self._unknowns + self._auxiliary_variables,
             self._unknown_identifier(),
         )
+        self._patch_reconstructed = peano4.datamodel.Patch(
+            (self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap),
+            self._unknowns + self._auxiliary_variables,
+            self._unknown_identifier() + "Reconstructed",
+        )
         self._patch_estimates = peano4.datamodel.Patch(
             (
                 self.number_of_Runge_Kutta_steps() * self._patch_size,
@@ -512,6 +514,9 @@ The finest mesh width of """
             self._patch.generator = peano4.datamodel.PatchToDoubleArray(
                 self._patch, "double"
             )
+            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch_reconstructed, "double"
+            )
             self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArray(
                 self._patch_estimates, "double"
             )
@@ -519,12 +524,18 @@ The finest mesh width of """
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
                 self._patch, "double"
             )
+            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+                self._patch_reconstructed, "double"
+            )
             self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
                 self._patch_estimates, "double"
             )
         elif self._cell_data_storage == Storage.SmartPointers:
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
                 self._patch, "double"
+            )
+            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                self._patch_reconstructed, "double"
             )
             self._patch_estimates.generator = (
                 peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
@@ -953,14 +964,15 @@ The finest mesh width of """
             print("Patch data")
             print("----------")
             print(str(self._patch))
-            print("Patch overlap data")
+            print(str(self._patch_reconstructed))
             print("----------")
+            print("Patch overlap data")
             print(str(self._patch_overlap_old))
-            print("Patch overlap data")
-            print("----------")
             print(str(self._patch_overlap_new))
+            print("----------")
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._patch)
+        datamodel.add_cell(self._patch_reconstructed)
         datamodel.add_cell(self._patch_estimates)
         datamodel.add_face(self._patch_overlap_old)
         datamodel.add_face(self._patch_overlap_new)
@@ -977,6 +989,7 @@ The finest mesh width of """
 
         """
         step.use_cell(self._patch)
+        step.use_cell(self._patch_reconstructed)
         step.use_cell(self._patch_estimates)
         step.use_cell(self._cell_label)
         step.use_face(self._patch_overlap_old)
@@ -1421,6 +1434,9 @@ The finest mesh width of """
         ).render(**d)
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
             self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
+            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined

@@ -44,7 +44,7 @@ def generate_kernels(solver,
     output.makefile.add_cpp_file(kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True)
     solver._user_action_set_includes += f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'
 
-    Template_Riemann = """
+    solver._compute_kernel_call = jinja2.Template("""
     {{KERNELS_NAMESPACE}}::updateSolutionWithRiemann(
       repositories::{{SOLVER_INSTANCE}},
       oldQWithHalo,
@@ -54,23 +54,7 @@ def generate_kernels(solver,
       marker.x(),
       marker.h()
     );
-"""
-
-    Template_Riemann_Stateless = """
-    {{KERNELS_NAMESPACE}}::updateSolutionWithRiemann(
-      oldQWithHalo,
-      newQ,
-      timeStamp,
-      timeStepSize,
-      marker.x(),
-      marker.h()
-    );
-"""
-
-    if solver._pde_terms_without_state:
-        solver._compute_kernel_call = jinja2.Template(Template_Riemann_Stateless, undefined=jinja2.DebugUndefined).render(**d)
-    else:
-        solver._compute_kernel_call = jinja2.Template(Template_Riemann, undefined=jinja2.DebugUndefined).render(**d)
+""", undefined=jinja2.DebugUndefined).render(**d)
 
 def generate_fused_kernels(solver,
                            namespace,
@@ -110,11 +94,10 @@ def generate_fused_kernels(solver,
     output.makefile.add_cpp_file(kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True)
     solver._user_action_set_includes += f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'
 
-    Template_Riemann_Fused = """
+    solver._fused_compute_kernel_call = jinja2.Template("""
     {{KERNELS_NAMESPACE}}::updateSolutionWithRiemannFused(
+      repositories::{{SOLVER_INSTANCE}},
       patchData,
-      targetDevice
+      TARGET_DEVICE
     );
-"""
-
-    solver._fused_compute_kernel_call = jinja2.Template(Template_Riemann_Fused, undefined=jinja2.DebugUndefined).render(**d)
+""", undefined=jinja2.DebugUndefined).render(**d)

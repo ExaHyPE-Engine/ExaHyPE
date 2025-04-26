@@ -10,6 +10,9 @@ Tarch_SOURCES = \
 	Enumerator.cpp \
 	NonCriticalAssertions.cpp \
 	UnitTests.cpp \
+	tests/TestCaseCollection.cpp \
+	tests/TreeTestCaseCollection.cpp \
+	tests/TestCase.cpp \
 	la/Scalar.cpp \
 	la/Vector.cpp \
 	la/DynamicMatrix.cpp \
@@ -48,7 +51,6 @@ Tarch_SOURCES = \
 	multicore/MultiReadSingleWriteLock.cpp \
 	multicore/RecursiveLock.cpp \
 	multicore/RecursiveSemaphore.cpp \
-	multicore/smartScheduling.cpp \
 	multicore/Task.cpp \
 	multicore/cpp/multicore.cpp \
 	multicore/cpp/BooleanSemaphore.cpp \
@@ -59,7 +61,6 @@ Tarch_SOURCES = \
 	multicore/omp/BooleanSemaphore.cpp \
 	multicore/omp/Core.cpp \
 	multicore/omp/RecursiveSemaphore.cpp \
-	multicore/taskfusion/taskfusion.cpp \
 	multicore/tbb/multicore.cpp \
 	multicore/tbb/BooleanSemaphore.cpp \
 	multicore/tbb/Core.cpp \
@@ -71,13 +72,9 @@ Tarch_SOURCES = \
 	multicore/sycl/BooleanSemaphore.cpp \
 	multicore/sycl/Core.cpp \
 	multicore/sycl/RecursiveSemaphore.cpp \
-	multicore/orchestration/AllOnGPU.cpp \
-	multicore/orchestration/Hardcoded.cpp \
-	multicore/orchestration/Strategy.cpp \
 	multicore/tests/SpawnTaskTest.cpp \
-	tests/TestCaseCollection.cpp \
-	tests/TreeTestCaseCollection.cpp \
-	tests/TestCase.cpp \
+	multicore/taskfusion/taskfusion.cpp \
+	multicore/taskfusion/tests/TaskFusionTest.cpp \
 	plotter/griddata/unstructured/vtk/VTUTextFileWriter_CellWriter.cpp \
 	plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexDataWriter.cpp \
 	plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexWriter.cpp \

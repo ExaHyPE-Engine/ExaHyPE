@@ -14,8 +14,6 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::omp");
 } // namespace
 
-void tarch::gpuAbort() {}
-
 void* tarch::accelerator::allocateRawData(
   std::size_t    sizeInBytes,
   MemoryLocation location,
@@ -33,23 +31,29 @@ void* tarch::accelerator::allocateRawData(
     break;
   case MemoryLocation::Device:
 #ifdef UseUSM
-    data = std::aligned_alloc( //omp_aligned_alloc(
-      AlignmentOnHeap,
-      padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
-    );
+    data = omp_alloc(sizeInBytes, llvm_omp_target_shared_mem_alloc);
 #else
     assertion1(device >= 0, device);
     data = omp_target_alloc(sizeInBytes, device);
+#endif
+    break;
+  case MemoryLocation::Pinned:
+#ifdef UseUSM
+    data = omp_alloc(sizeInBytes, llvm_omp_target_shared_mem_alloc);
+#else
+    data = omp_alloc(sizeInBytes, llvm_omp_target_host_mem_alloc);
 #endif
     break;
   }
 
   assertion(data);
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
   }
+#endif
 
   return data;
 }
@@ -63,15 +67,17 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
+      logDebug("freeRawData()", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
   }
+#endif
 
   switch (location) {
   case MemoryLocation::Heap:
@@ -79,10 +85,17 @@ void tarch::accelerator::freeRawData(
     break;
   case MemoryLocation::Device:
 #ifdef UseUSM
-    std::free(data); //omp_free(data);
+    omp_free(data, llvm_omp_target_shared_mem_alloc);
 #else
     assertion1(device >= 0, device);
     omp_target_free(data, device);
+#endif
+    break;
+  case MemoryLocation::Pinned:
+#ifdef UseUSM
+    omp_free(data, llvm_omp_target_shared_mem_alloc);
+#else
+    omp_free(data, llvm_omp_target_host_mem_alloc);
 #endif
     break;
   }
@@ -99,11 +112,12 @@ void tarch::accelerator::copyTo(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to device");
+  case MemoryLocation::Pinned:
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
 #ifdef UseUSM
     std::memcpy(target, source, sizeInBytes);
 #else
@@ -125,11 +139,12 @@ void tarch::accelerator::copyFrom(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
-    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from device to host");
+  case MemoryLocation::Pinned:
+    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
 #ifdef UseUSM
     std::memcpy(target, source, sizeInBytes);
 #else

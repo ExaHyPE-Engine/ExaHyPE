@@ -28,7 +28,9 @@ GCC:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_NETCDF=ON"
+                            -DWITH_NETCDF=ON \
+                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MPI=OFF"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -72,7 +74,9 @@ Intel:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_NETCDF=ON"
+                            -DWITH_NETCDF=ON \
+                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MPI=OFF"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -139,7 +143,9 @@ LLVM:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_NETCDF=ON"
+                            -DWITH_NETCDF=ON \
+                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MPI=OFF"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -183,7 +189,9 @@ NVIDIA:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_NETCDF=ON"
+                            -DWITH_NETCDF=ON \
+                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MPI=OFF"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml
@@ -204,7 +212,9 @@ AMD:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
-                            -DWITH_NETCDF=ON"
+                            -DWITH_NETCDF=ON \
+                            -DWITH_MULTITHREADING=no \
+                            -DWITH_MPI=OFF"
   trigger:
     include:
       - .continuous_integration/pipelines/cmake.yml

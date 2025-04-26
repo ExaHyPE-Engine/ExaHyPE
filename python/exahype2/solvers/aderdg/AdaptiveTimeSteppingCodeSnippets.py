@@ -30,26 +30,24 @@ class AdaptiveTimeSteppingCodeSnippets(
       0.0;
 """
 
+    def create_print_time_step_implementation(self):
+        return """
+  if (tarch::la::greater(getMaxCellSize(false), 0.0) and tarch::la::greater(getMaxEigenvalue(false), 0.0)) {
+    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("printTimeStep()", "t            = " << getMinTimeStamp(false) << " / " << MinTerminalTime);
+    logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("printTimeStep()", "h_{min}      = " << getMinCellSize(false));
+    logInfo("printTimeStep()", "h_{max}      = " << getMaxCellSize(false));
+    logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(false));
+  }
+"""
+
     def create_start_time_step_implementation(self):
         return """
-      if (
-        tarch::mpi::Rank::getInstance().isGlobalMaster()
-        and
-        _maxCellH > 0.0
-        and
-        isFirstGridSweepOfTimeStep()
-      ) {
-        logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
-        logInfo("startTimeStep()", "t            = " << _minTimeStamp);
-        logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-        logInfo("startTimeStep()", "h_{min}      = " << _minCellH);
-        logInfo("startTimeStep()", "h_{max}      = " << _maxCellH);
-        logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
-      }
-
-      if (isFirstGridSweepOfTimeStep()) {
-        _maxEigenvalue = 0.0;
-      }
+  if (isFirstGridSweepOfTimeStep()) {
+    _maxEigenvalue = _maxEigenvalueThisTimeStep;
+    _maxEigenvalueThisTimeStep = 0.0;
+  }
 """
 
     def create_finish_time_step_implementation(self):
@@ -65,16 +63,16 @@ class AdaptiveTimeSteppingCodeSnippets(
       if (
         isLastGridSweepOfTimeStep()
         and
-        tarch::la::greater(_maxEigenvalue, 0.0)
+        tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)
       ) {
         const double minCellSize = _minCellHThisTimeStep;
         // The max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction.
-        _admissibleTimeStepSize = std::min(MinTerminalTime - _minTimeStampThisTimeStep, CFL * PNPM / _maxEigenvalue);
-        if (std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize)) {
-          ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_admissibleTimeStepSize > 0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize));
+        _admissibleTimeStepSizeThisTimeStep = std::min(MinTerminalTime - _minTimeStampThisTimeStep, CFL * PNPM / _maxEigenvalueThisTimeStep);
+        if (std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep)) {
+          tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep));
         }
-        if (tarch::la::smallerEquals(_admissibleTimeStepSize, 0.0, 1e-10)) {
-          logWarning("finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << minCellSize << ")");
+        if (tarch::la::smallerEquals(_admissibleTimeStepSizeThisTimeStep, 0.0, 1e-10)) {
+          logWarning("finishTimeStep()", "Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << minCellSize << ")");
         }
       }
 """

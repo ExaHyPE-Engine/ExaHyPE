@@ -42,8 +42,8 @@ namespace tarch {
  * temporary and we only write entries if there are entries updated.
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * t   exahype2::EnclaveBookkeeping::memory-allocations  mpi wait times  tarch::multicore::bsp-concurrency-level   tarch::multicore::fuse-tasks  tarch::multicore::global-pending-tasks  tarch::multicore::thread-local-pending-tasks  grid-control-events
- * t, exahype2::EnclaveBookkeeping::memory-allocations, mpi wait times, tarch::multicore::bsp-concurrency-level, tarch::multicore::fuse-tasks, tarch::multicore::global-pending-tasks, tarch::multicore::thread-local-pending-tasks, grid-control-events
+ * t  mpi wait times  tarch::multicore::bsp-concurrency-level   tarch::multicore::fuse-tasks  tarch::multicore::global-pending-tasks  tarch::multicore::thread-local-pending-tasks  grid-control-events
+ * t, mpi wait times, tarch::multicore::bsp-concurrency-level, tarch::multicore::fuse-tasks, tarch::multicore::global-pending-tasks, tarch::multicore::thread-local-pending-tasks, grid-control-events
  * 0.00130565, , (0.150548/0/0.157291/#10), (1/0/1/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
  * 0.00131057, , , (2/1/2/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
  * 0.00134099, , , (3/2/3/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,

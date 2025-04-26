@@ -1,4 +1,4 @@
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "exahype2/Solver.h"
 #include "exahype2/fd/PatchUtils.h"
 #include <algorithm>    // std::find

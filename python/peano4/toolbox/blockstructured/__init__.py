@@ -9,5 +9,3 @@ from .PlotPatchesOverFacesInPeanoBlockFormat import PlotPatchesOverFacesInPeanoB
 from .DynamicAMR                      import DynamicAMR
 from .ProjectPatchOntoFaces           import ProjectPatchOntoFaces
 from .ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
-from .ReconstructPatchAndApplyFunctor import ReconstructedArrayMemoryLocation
-

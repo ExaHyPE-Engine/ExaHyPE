@@ -2,7 +2,7 @@
 
 #include "tarch/la/ScalarOperations.h"
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 
 

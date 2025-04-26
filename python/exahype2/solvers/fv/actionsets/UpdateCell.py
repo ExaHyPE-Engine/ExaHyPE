@@ -8,12 +8,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template("""
       const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-      // Set the variable
-      // double timeStepSize
       {{COMPUTE_TIME_STEP_SIZE}}
-
-      assertion2(::tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
-      assertion2(::tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
+      assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
+      assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
        #if PeanoDebug > 0
        ::exahype2::fv::validatePatch(
@@ -45,14 +42,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ); // Outcome has to be valid
       #endif
 
-      // Set the variable
-      // double newTimeStepSize
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
       fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
       repositories::{{SOLVER_INSTANCE}}.update(
         newTimeStepSize,
         timeStamp + timeStepSize,
@@ -69,10 +62,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       functor_implementation = """
 #error Please switch to your Riemann solver of choice
 """,
-      reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
       guard = "not marker.willBeRefined() and not marker.hasBeenRefined()",
       add_assertions_to_halo_exchange = False,
-      precision=solver._storage_precision
     )
     self._solver = solver
 

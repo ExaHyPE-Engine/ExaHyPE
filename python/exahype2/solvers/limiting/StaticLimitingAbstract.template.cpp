@@ -2,20 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#include <algorithm>
-
 #include "Constants.h"
+#include "repositories/SolverRepository.h"
 
 #include "tarch/multicore/Lock.h"
 
-#include "repositories/SolverRepository.h"
+#include <algorithm>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
-  _cellUpdates(0),
-  _totalNumberOfTroubledCells(0) {
+  _numberOfTroubledCells(0) {
 
   kernels::{{SOLVER_NAME}}::Quadrature<double>::initQuadratureNodesAndWeights();
 
@@ -96,41 +94,35 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
-
-  if (::tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("startTimeStep(...)", "Solver {{SOLVER_NAME}}:");
-    logInfo("startTimeStep(...)", "total number of troubled cells: " << _totalNumberOfTroubledCells);
-    logInfo("startTimeStep(...)", "phase " + toString(_solverState) );
-  }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
-    #ifdef Parallel
-    int newCellUpdates = _cellUpdates;
-
-    tarch::mpi::Rank::getInstance().allReduce(
-        &newCellUpdates,
-        &_cellUpdates,
+#ifdef Parallel
+    if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
+      int newNumberOfTroubleCells = _numberOfTroubledCells;
+      tarch::mpi::Rank::getInstance().allReduce(
+        &newNumberOfTroubleCells,
+        &_numberOfTroubledCells,
         1, MPI_INT,
         MPI_SUM,
         [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-
-    if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
-      int newNumberOfTroubleCells = _totalNumberOfTroubledCells;
-      tarch::mpi::Rank::getInstance().allReduce(
-          &newNumberOfTroubleCells,
-          &_totalNumberOfTroubledCells,
-          1, MPI_INT,
-          MPI_SUM,
-          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-          );
+      );
     }
-    #endif
+#endif
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+  {{PRINT_TIME_STEP_IMPLEMENTATION}}
+
+  if (getNumberOfTroubledCells() > 0) {
+    logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("printTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells());
+  }
+  logDebug("printTimeStep()", "Phase " + toString(_solverState));
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
@@ -141,16 +133,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
 ) {
   if ( _solverState==SolverState::GridInitialisation) {
     _solverState = SolverState::PlottingAfterGridInitialisation;
-  }
-  else {
+  } else {
     _solverState = SolverState::Plotting;
   }
 }
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
@@ -172,11 +160,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState!=SolverState::LimiterStatusSpreadingToNeighbours;
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return (
@@ -186,9 +172,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
     and
     repositories::{{LIMITER_SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep()
   );
-
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return (
@@ -200,40 +184,31 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
   );
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
-
-}
-
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::addTroubledCell(){
   tarch::multicore::Lock lock(_semaphore);
-  _totalNumberOfTroubledCells += 1;
-}
-int {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getNumberOfTroubledCells() const {
-  return _totalNumberOfTroubledCells;  
+  ++_numberOfTroubledCells;
 }
 
+int {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getNumberOfTroubledCells() const {
+  return _numberOfTroubledCells;
+}
 
 {% if ADMISSIBILITY_IMPLEMENTATION!="<empty>" and ADMISSIBILITY_IMPLEMENTATION!="<user-defined>" %}
 bool {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::isPhysicallyAdmissible(
-  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,
-  const tarch::la::Vector<Dimensions,double>& x,
-  const tarch::la::Vector<Dimensions,double>& h,
+  const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const Q,
+  const tarch::la::Vector<Dimensions, double>&      x,
+  const tarch::la::Vector<Dimensions, double>&      h,
   const double timeStamp
 ){
-
   {% if ADMISSIBILITY_IMPLEMENTATION!="<none>"%}
   {{ADMISSIBILITY_IMPLEMENTATION}}
   {% else %}
   return true;
   {% endif %}
-
 }
 {% endif %}
 

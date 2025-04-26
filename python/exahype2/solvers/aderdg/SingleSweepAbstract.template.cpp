@@ -33,8 +33,7 @@ using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
   _minTimeStepSize(std::numeric_limits<double>::max()),
   _maxTimeStepSize(0.0),
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
-  _maxTimeStepSizeThisTimeStep(0.0),
-  _cellUpdates(0) {
+  _maxTimeStepSizeThisTimeStep(0.0) {
 
   // Initialise nodes, weights and matrices for use of the kernels.
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
@@ -98,8 +97,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize,_maxTimeStepSizeThisTimeStep);
     assertion2(_minTimeStepSizeThisTimeStep<=_maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
 
-    _cellUpdates++;
-
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   }
@@ -126,7 +123,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const {{SOLUTION_STORAGE_PRECISION}} * noalias Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
 	double                                       t
@@ -144,7 +141,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  {{SOLUTION_STORAGE_PRECISION}}* __restrict__  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{SOLUTION_STORAGE_PRECISION}}* noalias  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
   //const tarch::la::Vector<Dimensions, int>&      index,
@@ -156,8 +153,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{CORRECTOR_COMPUTATION_PRECISION}} * noalias                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{CORRECTOR_COMPUTATION_PRECISION}} * noalias                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
@@ -169,7 +166,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
     exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{SOLUTION_STORAGE_PRECISION}} * noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&         x,
       const tarch::la::Vector<Dimensions,double>&         h,
       double                                              t,
@@ -283,18 +280,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
-
-    _cellUpdates    = 0;
-  }
-
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logDebug("startTimeStep()", "phase " + toString(_solverState));
   }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
-    #ifdef Parallel
+#ifdef Parallel
     double newMinTimeStamp    = _minTimeStampThisTimeStep;
     double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
     double newMinCellH        = _minCellHThisTimeStep;
@@ -305,76 +296,66 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
     double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
-    int newCellUpdates = _cellUpdates;
+    tarch::mpi::Rank::getInstance().allReduce(
+      &newMinTimeStamp,
+      &_minTimeStampThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().allReduce(
+      &newMaxTimeStamp,
+      &_maxTimeStampThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMinTimeStamp,
-        &_minTimeStampThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MIN,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
+      &newMinCellH,
+      &_minCellHThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxTimeStamp,
-        &_maxTimeStampThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MAX,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
+      &newMaxCellH,
+      &_maxCellHThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMinCellH,
-        &_minCellHThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MIN,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
+      &newMinTimeStepSize,
+      &_minTimeStepSizeThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxCellH,
-        &_maxCellHThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MAX,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
+      &newMaxTimeStepSize,
+      &_maxTimeStepSizeThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMinTimeStepSize,
-        &_minTimeStepSizeThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MIN,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
+      &newLocalMinTimeStamp,
+      &_localMinTimeStampThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxTimeStepSize,
-        &_maxTimeStepSizeThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MAX,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-
-    tarch::mpi::Rank::getInstance().allReduce(
-        &newLocalMinTimeStamp,
-        &_localMinTimeStampThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MIN,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-    tarch::mpi::Rank::getInstance().allReduce(
-        &newLocalMaxTimeStamp,
-        &_localMaxTimeStampThisTimeStep,
-        1, MPI_DOUBLE,
-        MPI_MAX,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-
-    tarch::mpi::Rank::getInstance().allReduce(
-        &newCellUpdates,
-        &_cellUpdates,
-        1, MPI_INT,
-        MPI_SUM,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-    #endif
+      &newLocalMaxTimeStamp,
+      &_localMaxTimeStampThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+#endif
 
     if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
       _minTimeStampThisTimeStep = 0.0;
@@ -385,6 +366,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+  {{PRINT_TIME_STEP_IMPLEMENTATION}}
+  logDebug("printTimeStep()", "Phase " + toString(_solverState));
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(

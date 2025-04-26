@@ -3,7 +3,6 @@
 import jinja2
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructedArrayMemoryLocation
 
 class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
     """!
@@ -47,12 +46,9 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
     SolveRiemannProblemsOverPatch = jinja2.Template("""
       const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-      // Set the variable
-      // double timeStepSize
       {{COMPUTE_TIME_STEP_SIZE}}
-
-      assertion2(::tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
-      assertion2(::tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
+      assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
+      assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
        #if PeanoDebug > 0
        ::exahype2::fv::validatePatch(
@@ -85,47 +81,28 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
         ); // Outcome has to be valid
         #endif
 
-        // Set the variable
-        // double newTimeStepSize
         {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
-        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping<{{STORAGE_PRECISION}}>::SkeletonTask);
-        fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-        fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
         fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+        repositories::{{SOLVER_INSTANCE}}.update(
+          newTimeStepSize,
+          timeStamp + timeStepSize,
+          marker.h()(0)
+        );
       } else { // is an enclave cell
         assertion(marker.willBeEnclaveCell());
         assertion(not marker.willBeRefined());
 
-        {{PREPROCESS_RECONSTRUCTED_PATCH}}
-        auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+        tarch::multicore::spawnTask(new tasks::{{SOLVER_NAME}}EnclaveTask(
           marker,
           timeStamp,
           timeStepSize,
           oldQWithHalo,
-          {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
-          nullptr
-          {% else %}
           newQ
-          {% endif %}
-        );
-
-        const int newEnclaveTaskNumber = newEnclaveTask->getTaskId();
-        const int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
-
-        tarch::multicore::spawnTask(
-          newEnclaveTask,
-          predecessorEnclaveTaskNumber >= 0 ? std::set<int>{predecessorEnclaveTaskNumber} : tarch::multicore::NoInDependencies,
-          newEnclaveTaskNumber
-        );
-
-        if (predecessorEnclaveTaskNumber >= 0) {
-          ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>::releaseTaskNumber(predecessorEnclaveTaskNumber);
-        }
-
-        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTaskNumber);
-        fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
+        ));
       }
+
+      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 """)
 
     def __init__(self, solver):
@@ -136,7 +113,6 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
             functor_implementation="""
       #error Please switch to your Riemann solver of choice
       """,
-            reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
             # Guard does not use willBeRefined() in contrast to SingleSweep
             guard ="not marker.hasBeenRefined() and ("
                   + "repositories::"
@@ -151,7 +127,6 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
                   + "::SolverState::PrimaryAfterGridInitialisation"
                   + ")",
             add_assertions_to_halo_exchange=True,
-            precision=solver._storage_precision
         )
 
         self._Template_TouchCellFirstTime_Preamble = (

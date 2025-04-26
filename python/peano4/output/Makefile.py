@@ -151,6 +151,7 @@ the SISC paper
         self.d["MULTITHREADING"] = ""
         self.d["GPU"] = ""
         self.d["GPU_ARCH"] = ""
+        self.d["TARGET_DEVICE"] = "tarch::accelerator::Device::DefaultDevice"
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["FORTRAN_MODULES"] = []
         self.d["APP_SUBDIRECTORIES"] = []
@@ -265,6 +266,9 @@ the SISC paper
 
     def set_linker_flags(self, value):
         self.d["LDFLAGS"] = value + " "
+
+    def set_target_device(self, value):
+        self.d["TARGET_DEVICE"] = value
 
     def parse_configure_script_outcome(self, directory):
         """

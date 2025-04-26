@@ -137,7 +137,7 @@ to translate as the compiler's optimiser has a hard time to translate
 the long code fragments. I thus recommend to insert
 
 ~~~~~~~~~~~~~~~~~
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #ifdef UseTestSpecificCompilerSettings 
 #pragma optimize("", off)
