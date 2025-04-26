@@ -33,7 +33,7 @@ class SolverDefinitions:
             """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
@@ -50,13 +50,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* noalias       F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* NOALIAS       F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceIn("flux(...)");
   // @todo implement
@@ -66,14 +66,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* noalias deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&      h,
   [[maybe_unused]] double                                            t,
   [[maybe_unused]] double                                            dt,
   [[maybe_unused]] int                                               normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* noalias       BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[0]}}* NOALIAS       BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith3Arguments("nonconservativeProduct(...)", x, t, normal);
   // @todo implement
@@ -139,7 +139,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const T* noalias                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* NOALIAS                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
@@ -153,7 +153,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
@@ -166,13 +166,13 @@ template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const T* noalias                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* NOALIAS                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] T* noalias                                               F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] T* NOALIAS                                               F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceIn( "flux(...)");
   // @todo implement
@@ -181,13 +181,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       F
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       F
 );
 {% endfor%}
 {% endif %}
@@ -195,14 +195,14 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const T* noalias                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const T* noalias                                         deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* NOALIAS                                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const T* NOALIAS                                         deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] T* noalias                                               BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] T* NOALIAS                                               BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith3Arguments("nonconservativeProduct(...)", x, t, normal);
   // @todo implement
@@ -211,14 +211,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias deltaQ,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS deltaQ,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
   [[maybe_unused]] double                                                        dt,
   [[maybe_unused]] int                                                           normal,
-  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       BTimesDeltaQ
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       BTimesDeltaQ
 );
 {% endfor%}
 {% endif %}
@@ -291,7 +291,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(
     const tarch::la::Vector<Dimensions, double>&                  h,
     double                                                        t,
     double                                                        dt,
-    double* const noalias                                    Q,
+    double* const NOALIAS                                    Q,
   ) {
     // @todo implement
   }

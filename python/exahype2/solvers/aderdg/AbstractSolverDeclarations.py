@@ -37,7 +37,7 @@ class AbstractSolverDeclarations:
   #error Eigenvalue implementation cannot be none or empty
   {% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
@@ -46,7 +46,7 @@ class AbstractSolverDeclarations:
     ) = 0;
   {% else %}
     virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
@@ -57,26 +57,26 @@ class AbstractSolverDeclarations:
 
   {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       F
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       F
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}
 
   {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias  Q,
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias  deltaQ,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*NOALIAS  Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*NOALIAS  deltaQ,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias        BTimesDeltaQ
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*NOALIAS        BTimesDeltaQ
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}
 
@@ -128,7 +128,7 @@ class AbstractSolverDeclarations:
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
-      double* const noalias                                    Q,
+      double* const NOALIAS                                    Q,
     ) {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
   {% endif %}
 """,

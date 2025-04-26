@@ -14,7 +14,7 @@ using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const {{SOLUTION_STORAGE_PRECISION}} * noalias Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
 	const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -31,7 +31,7 @@ using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
-  const {{SOLUTION_STORAGE_PRECISION}} * noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&         x,
   const tarch::la::Vector<Dimensions,double>&         h,
   double                                              t,
@@ -45,7 +45,7 @@ using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  {{SOLUTION_STORAGE_PRECISION}} * noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
   //const tarch::la::Vector<Dimensions, int>&     point,
@@ -61,8 +61,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const {{CORRECTOR_COMPUTATION_PRECISION}} * noalias                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{CORRECTOR_COMPUTATION_PRECISION}} * noalias                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{CORRECTOR_COMPUTATION_PRECISION}} * NOALIAS                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{CORRECTOR_COMPUTATION_PRECISION}} * NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,

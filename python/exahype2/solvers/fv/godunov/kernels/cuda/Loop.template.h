@@ -57,15 +57,15 @@
   __global__ static void
   {% if DIMENSIONS==3 %} __launch_bounds__(512) {% else %} __launch_bounds__(256) {% endif %}
   kernel(
-    const {{STORAGE_PRECISION}}* const noalias QIns,
-    {{STORAGE_PRECISION}}* const noalias       QOuts,
-    const double* const noalias                patchCentres,
-    const double* const noalias                patchSizes,
-    const double                                    timeStamp,
-    const double                                    timeStepSize
+    const {{STORAGE_PRECISION}}* const NOALIAS QIns,
+    {{STORAGE_PRECISION}}* const NOALIAS       QOuts,
+    const double* const NOALIAS                patchCentres,
+    const double* const NOALIAS                patchSizes,
+    const double                               timeStamp,
+    const double                               timeStepSize
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     ,
-    {{COMPUTE_PRECISION}}* const noalias       maxEigenvalues
+    {{COMPUTE_PRECISION}}* const NOALIAS       maxEigenvalues
     {% endif %}
   ) {
     const int patchIndex    = blockIdx.x;

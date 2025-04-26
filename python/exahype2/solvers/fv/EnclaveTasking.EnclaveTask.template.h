@@ -45,8 +45,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const peano4::datamanagement::CellMarker&       marker,
       double                                          timeStamp,
       double                                          timeStepSize,
-      /*const*/ {{STORAGE_PRECISION}}* noalias const oldQWithHalo,
-      {{STORAGE_PRECISION}}* noalias const       newQ
+      /*const*/ {{STORAGE_PRECISION}}* NOALIAS const oldQWithHalo,
+      {{STORAGE_PRECISION}}* NOALIAS const       newQ
     );
 
   public:
@@ -56,8 +56,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const peano4::datamanagement::CellMarker&       marker,
       double                                          timeStamp,
       double                                          timeStepSize,
-      /*const*/ {{STORAGE_PRECISION}}* noalias const oldQWithHalo,
-      {{STORAGE_PRECISION}}* noalias const       newQ
+      /*const*/ {{STORAGE_PRECISION}}* NOALIAS const oldQWithHalo,
+      {{STORAGE_PRECISION}}* NOALIAS const       newQ
     );
 
     ~{{CLASSNAME}}() override final = default;

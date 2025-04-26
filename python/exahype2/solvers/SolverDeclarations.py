@@ -34,13 +34,13 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void eigenvalues(
-      [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] {{PR}}* const noalias                   L
+      [[maybe_unused]] {{PR}}* const NOALIAS                   L
     ) InlineMethod {
       {% if EIGENVALUES_IMPLEMENTATION!="<empty>" %}
       {{EIGENVALUES_IMPLEMENTATION}}
@@ -57,7 +57,7 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     double maxEigenvalue(
-      [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
@@ -81,13 +81,13 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void flux(
-      [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] {{PR}}* const noalias                   F // F[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const NOALIAS                   F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
       {% if MAX_EIGENVALUE_IMPLEMENTATION!="<empty>" %}
       {{FLUX_IMPLEMENTATION}}
@@ -104,14 +104,14 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void nonconservativeProduct(
-      [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const {{PR}}* const noalias             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] {{PR}}* const noalias                   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const NOALIAS                   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
       {% if MAX_EIGENVALUE_IMPLEMENTATION!="<empty>" %}
       {{NCP_IMPLEMENTATION}}
@@ -128,12 +128,12 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void sourceTerm(
-      [[maybe_unused]] const {{PR}}* const noalias             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] {{PR}}* const noalias                   S // S[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const NOALIAS                   S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
       {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
       {{SOURCE_TERM_IMPLEMENTATION}}
@@ -150,15 +150,15 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     double solveRiemannProblem(
-      [[maybe_unused]] const {{PR}}* const noalias             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const {{PR}}* const noalias             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{PR}}* const NOALIAS             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      [[maybe_unused]] {{PR}}* const noalias                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-      [[maybe_unused]] {{PR}}* const noalias                   FR // FR[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const NOALIAS                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{PR}}* const NOALIAS                   FR // FR[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
       {% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" %}
       {{RIEMANN_SOLVER_IMPLEMENTATION}}
@@ -181,7 +181,7 @@ class SolverDeclarations:
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] double* const noalias                   Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] double* const NOALIAS                   Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) InlineMethod {
       {% if ADJUST_SOLUTION_IMPLEMENTATION!="<empty>" %}
       {{ADJUST_SOLUTION_IMPLEMENTATION}}
@@ -194,19 +194,19 @@ class SolverDeclarations:
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
     void eigenvalues(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    L
+      {{PR}}* const NOALIAS                                    L
     ) override final;
     {% endif %}
 
     {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     double maxEigenvalue(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
@@ -217,51 +217,51 @@ class SolverDeclarations:
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
     void flux(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override final;
     {% endif %}
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
     void nonconservativeProduct(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{PR}}* const noalias                              deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override final;
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     void sourceTerm(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
-      {{PR}}* const noalias                                    S // S[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) override final;
     {% endif %}
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     double solveRiemannProblem(
-      const {{PR}}* const noalias                              QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{PR}}* const noalias                              QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-      {{PR}}* const noalias                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
     ) override final;
     {% endif %}
 
@@ -271,7 +271,7 @@ class SolverDeclarations:
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
-      double* const noalias                                    Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* const NOALIAS                                    Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) override final;
     {% endif %}
 """,

@@ -35,7 +35,7 @@ class AbstractSolverDefinitions:
 
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
@@ -48,13 +48,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias  Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS  Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                   x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                   h,
   [[maybe_unused]] double                                                         t,
   [[maybe_unused]] double                                                         dt,
   [[maybe_unused]] int                                                            normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias                         F
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS                         F
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
@@ -62,14 +62,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias Q,
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias deltaQ,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*NOALIAS Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*NOALIAS deltaQ,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 h,
   [[maybe_unused]] double                                                       t,
   [[maybe_unused]] double                                                       dt,
   [[maybe_unused]] int                                                          normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias                        BTimesDeltaQ
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*NOALIAS                        BTimesDeltaQ
 ) {
   {{NCP_IMPLEMENTATION}}
 }
@@ -131,7 +131,7 @@ virtual void adjustSolution(
   const tarch::la::Vector<Dimensions, double>&                  h,
   double                                                        t,
   double                                                        dt,
-  double* const noalias                                    Q,
+  double* const NOALIAS                                    Q,
 ) {
   {{ADJUST_SOLUTION_IMPLEMENTATION}}
 };

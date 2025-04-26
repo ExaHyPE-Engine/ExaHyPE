@@ -20,7 +20,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   const tarch::la::Vector<Dimensions, double>&    cellSize,
   double                                          timeStamp,
   double                                          timeStepSize,
-  {{SOLUTION_STORAGE_PRECISION}}* noalias    Q,
+  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS    Q,
   double                                          errors[3]
 ) {
   errors[0] = 0.0;

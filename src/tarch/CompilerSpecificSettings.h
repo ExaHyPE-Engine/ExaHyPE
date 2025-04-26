@@ -14,7 +14,7 @@
 #endif
 
 #if defined(__NVCOMPILER)
-#define noalias // nvc++ does seem to give incorrect results with the __restrict__ keyword in inlined functions
+#define NOALIAS // nvc++ does seem to give incorrect results with the __restrict__ keyword in inlined functions
 #else
-#define noalias __restrict__
+#define NOALIAS __restrict__
 #endif

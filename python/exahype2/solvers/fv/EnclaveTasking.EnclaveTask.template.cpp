@@ -31,8 +31,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const peano4::datamanagement::CellMarker&       marker,
   double                                          timeStamp,
   double                                          timeStepSize,
-  /*const*/ {{STORAGE_PRECISION}}* noalias const oldQWithHalo,
-  {{STORAGE_PRECISION}}* noalias const       newQ
+  /*const*/ {{STORAGE_PRECISION}}* NOALIAS const oldQWithHalo,
+  {{STORAGE_PRECISION}}* NOALIAS const       newQ
 ) {
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
   {% if COMPUTE_MAX_EIGENVALUE %}
@@ -65,8 +65,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const peano4::datamanagement::CellMarker&       marker,
   double                                          timeStamp,
   double                                          timeStepSize,
-  /*const*/ {{STORAGE_PRECISION}}* noalias const oldQWithHalo,
-  {{STORAGE_PRECISION}}* noalias const       newQ
+  /*const*/ {{STORAGE_PRECISION}}* NOALIAS const oldQWithHalo,
+  {{STORAGE_PRECISION}}* NOALIAS const       newQ
 ):
   ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
     _enclaveTaskTypeId,

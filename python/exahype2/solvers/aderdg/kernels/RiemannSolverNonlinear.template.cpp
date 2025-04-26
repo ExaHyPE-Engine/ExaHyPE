@@ -14,10 +14,10 @@
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  cCompType* noalias                       FL,
-  cCompType* noalias                       FR,
-  const cCompType* noalias const           QL,
-  const cCompType* noalias const           QR,
+  cCompType* NOALIAS                       FL,
+  cCompType* NOALIAS                       FR,
+  const cCompType* NOALIAS const           QL,
+  const cCompType* NOALIAS const           QR,
   const double                                  timeStamp,
   const double                                  timeStepSize,
   const tarch::la::Vector<Dimensions, double>&  faceCentre,
@@ -116,10 +116,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                               solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias             FL,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias             FR,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const noalias QL,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const noalias QR,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             FL,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             FR,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS QL,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS QR,
   const double                                                  timeStamp,
   const double                                                  timeStepSize,
   const tarch::la::Vector<Dimensions, double>&                  faceCentre,

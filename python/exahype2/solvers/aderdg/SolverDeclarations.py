@@ -33,7 +33,7 @@ class SolverDeclarations:
             """
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[0]}}* noalias Q,
+      const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q,
       const tarch::la::Vector<Dimensions, double>&      x,
       const tarch::la::Vector<Dimensions, double>&      h,
       double                                            t,
@@ -44,26 +44,26 @@ class SolverDeclarations:
 
   {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
-      const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&      x,
       const tarch::la::Vector<Dimensions, double>&      h,
       double                                            t,
       double                                            dt,
       int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}} * noalias      F // F[{{NUMBER_OF_UNKNOWNS}}]
+      {{COMPUTATION_PRECISIONS[0]}} * NOALIAS      F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
   {% endif %}
 
   {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[0]}}*noalias  Q,
-      const {{COMPUTATION_PRECISIONS[0]}}*noalias  deltaQ,
+      const {{COMPUTATION_PRECISIONS[0]}}*NOALIAS  Q,
+      const {{COMPUTATION_PRECISIONS[0]}}*NOALIAS  deltaQ,
       const tarch::la::Vector<Dimensions, double>&      x,
       const tarch::la::Vector<Dimensions, double>&      h,
       double                                            t,
       double                                            dt,
       int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}}*noalias        BTimesDeltaQ
+      {{COMPUTATION_PRECISIONS[0]}}*NOALIAS        BTimesDeltaQ
     ) override;
   {% endif %}
 
@@ -113,7 +113,7 @@ class SolverDeclarations:
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
-      double* const noalias                                    Q,
+      double* const NOALIAS                                    Q,
     ) override;
   {% endif %}
 """,
@@ -125,7 +125,7 @@ class SolverDeclarations:
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     template <typename T>
     double maxEigenvalue(
-      const T* noalias                         Q,
+      const T* NOALIAS                         Q,
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       double                                        t,
@@ -137,27 +137,27 @@ class SolverDeclarations:
   {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     template <typename T>
     void flux(
-      const T* noalias                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const T* NOALIAS                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       double                                        t,
       double                                        dt,
       int                                           normal,
-      T* noalias                               F // F[{{NUMBER_OF_UNKNOWNS}}]
+      T* NOALIAS                               F // F[{{NUMBER_OF_UNKNOWNS}}]
     );
   {% endif %}
 
   {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     template <typename T>
     void nonconservativeProduct(
-      const T*noalias                          Q,
-      const T*noalias                          deltaQ,
+      const T*NOALIAS                          Q,
+      const T*NOALIAS                          deltaQ,
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       double                                        t,
       double                                        dt,
       int                                           normal,
-      T*noalias                                BTimesDeltaQ
+      T*NOALIAS                                BTimesDeltaQ
     );
 
   {% endif %}
@@ -208,7 +208,7 @@ class SolverDeclarations:
 
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
@@ -221,13 +221,13 @@ class SolverDeclarations:
 
   {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       F
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       F
     ) {
       flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, F);
     }
@@ -235,14 +235,14 @@ class SolverDeclarations:
 
   {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *noalias Q,
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *noalias deltaQ,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *NOALIAS Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *NOALIAS deltaQ,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *noalias       BTimesDeltaQ
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *NOALIAS       BTimesDeltaQ
     ) override {
       nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
     }

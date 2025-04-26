@@ -30,19 +30,19 @@ class AbstractSolverDeclarations:
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
     virtual void eigenvalues(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    L
+      {{PR}}* const NOALIAS                                    L
     ) = 0;
     {% endif %}
 
     {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     virtual double maxEigenvalue(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
@@ -53,51 +53,51 @@ class AbstractSolverDeclarations:
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) = 0;
     {% endif %}
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{PR}}* const noalias                              deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) = 0;
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
-      const {{PR}}* const noalias                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
-      {{PR}}* const noalias                                    S // S[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) = 0;
     {% endif %}
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     virtual double solveRiemannProblem(
-      const {{PR}}* const noalias                              QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{PR}}* const noalias                              QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{PR}}* const NOALIAS                              QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
       const int                                                     normal,
-      {{PR}}* const noalias                                    FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-      {{PR}}* const noalias                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+      {{PR}}* const NOALIAS                                    FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
     ) = 0;
     {% endif %}
 
@@ -107,7 +107,7 @@ class AbstractSolverDeclarations:
       const tarch::la::Vector<Dimensions, double>&                  h,
       const double                                                  t,
       const double                                                  dt,
-      double* const noalias                                    Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* const NOALIAS                                    Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     ) = 0;
     {% endif %}
 """,
