@@ -89,7 +89,6 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     eigenvalues=max_eigenvalue,
 )
 aderdg_solver.plot_description = ", ".join(unknowns.keys())
-aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
 unknowns = {"h": 1, "hu": 1, "hv": 1}
@@ -103,14 +102,12 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
-    pde_terms_without_state=args.stateless,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     riemann_solver=hllem,
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
-riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
 limiting_solver = exahype2.solvers.limiting.StaticLimiting(
     name="Limiting",

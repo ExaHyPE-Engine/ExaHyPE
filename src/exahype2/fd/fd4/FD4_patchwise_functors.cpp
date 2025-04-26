@@ -44,7 +44,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-    const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
+    const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt : 1.0;
 
     // STEP 1: copy solution from old array to new array, or set all to zero
     if ( Dimensions==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
@@ -204,7 +204,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           patchData.QOut[patchIndex],
           QOutEnumerator
@@ -223,7 +223,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           patchData.QOut[patchIndex],
           QOutEnumerator
@@ -243,7 +243,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           0, // normal
           tempFluxX,
@@ -260,7 +260,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           1, // normal
           tempFluxY,
@@ -297,7 +297,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           0, // normal
           tempFluxX,
@@ -315,7 +315,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           1, // normal
           tempFluxY,
@@ -333,7 +333,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           2, // normal
           tempFluxZ,
@@ -372,7 +372,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           0, // normal
           tempDifferentialSourceX,
@@ -390,7 +390,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           1, // normal
           tempDifferentialSourceY,
@@ -427,7 +427,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           0, // normal
           tempDifferentialSourceX,
@@ -446,7 +446,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           1, // normal
           tempDifferentialSourceY,
@@ -465,7 +465,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           2, // normal
           tempDifferentialSourceZ,
@@ -503,7 +503,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           0, // normal
           tempKODissipationX,
@@ -519,7 +519,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchData.cellSize[patchIndex],
           patchIndex,
           gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
+          patchData.t,
           timeStepSize,
           1, // normal
           tempKODissipationY,
@@ -554,7 +554,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchData.cellSize[patchIndex],
             patchIndex,
             gridCellIndex3d(x,y,z),
-            patchData.t[patchIndex],
+            patchData.t,
             timeStepSize,
             0, // normal
             tempKODissipationX,
@@ -571,7 +571,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchData.cellSize[patchIndex],
             patchIndex,
             gridCellIndex3d(x,y,z),
-            patchData.t[patchIndex],
+            patchData.t,
             timeStepSize,
             1, // normal
             tempKODissipationY,
@@ -588,7 +588,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchData.cellSize[patchIndex],
             patchIndex,
             gridCellIndex3d(x,y,z),
-            patchData.t[patchIndex],
+            patchData.t,
             timeStepSize,
             2, // normal
             tempKODissipationZ,

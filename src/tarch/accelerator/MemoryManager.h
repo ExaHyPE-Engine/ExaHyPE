@@ -2,8 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Device.h"
+#include "MemoryLocation.h"
+
 #include "tarch/tarch.h"
-#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
@@ -92,7 +94,7 @@ public:
   void* allocate(std::size_t sizeInBytes, MemoryLocation location, int device);
 
   template <class T>
-  T* allocate(std::size_t count, MemoryLocation location, int device) {
+  T* allocate(std::size_t count, MemoryLocation location, int device = Device::DefaultDevice) {
     return reinterpret_cast<T*>(
       allocate(count * sizeof(T), location, device)
     );
@@ -103,7 +105,7 @@ public:
    * back to the singleton, such that the next allocate() call can
    * reuse the memory region.
    */
-  void free(void* pointer, int device);
+  void free(void* pointer, int device = Device::DefaultDevice);
 
   /**
    * Idempotent function

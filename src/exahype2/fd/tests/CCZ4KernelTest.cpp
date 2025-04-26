@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <math.h>
-
+#include <cstring>
 
 exahype2::fd::tests::CCZ4KernelTest::CCZ4KernelTest():
   TestCase ("exahype2::fd::tests::CCZ4KernelTest") {
@@ -229,7 +229,7 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
       double                                       dt,
       double * __restrict__ S
     )->void {
-      tarch::memset(S, 0, unknowns*sizeof(double));
+      std::memset(S, 0, unknowns*sizeof(double));
       applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);   
     }
   );

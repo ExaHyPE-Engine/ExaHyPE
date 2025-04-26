@@ -71,9 +71,9 @@
   } // unknown
 
   // Retrieve user data
-  {% if STATELESS_PDE_TERMS==True %}
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered, ::exahype2::Solver::Offloadable::Yes);
+  {% if STATELESS_RIEMANN_SOLVER==True %}
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);
   {% else %}
   const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = solver.solveRiemannProblem(QInGatheredLeft, QInGathered, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGatheredLeft, rightGoingFluxGatheredLeft);
   const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.solveRiemannProblem(QInGathered, QInGatheredRight, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftGoingFluxGathered, rightGoingFluxGathered);

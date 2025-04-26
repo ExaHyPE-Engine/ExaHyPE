@@ -65,60 +65,31 @@
 {% endmacro %}
 
 {% macro loopOverPatches() %}
-  const int numberOfPatches         = patchData.numberOfCells;
-  const double* const patchCentres  = patchData.cellCentre[0].data();
-  const double* const patchSizes    = patchData.cellSize[0].data();
-  const double* const timeStamps    = patchData.t;
-  const double* const timeStepSizes = patchData.dt;
+  const int numberOfPatches               = patchData.numberOfCells;
+  const {{COMPUTE_PRECISION}}* const QIns = patchData.QIn1D;
+  {{COMPUTE_PRECISION}}* const QOuts      = patchData.QOut1D;
+  const double* const patchCentres        = patchData.cellCentre[0].data();
+  const double* const patchSizes          = patchData.cellSize[0].data();
+  const double timeStamp                  = patchData.t;
+  const double timeStepSize               = patchData.dt;
 
   {% if GPU == "omp" %}
-  // TODO: We need to get rid of these memory allocations and the memory copies below.
-  {{COMPUTE_PRECISION}}* QIns = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-    tarch::MemoryLocation::Heap,
-    targetDevice
-  );
-
-  {{COMPUTE_PRECISION}}* QOuts = tarch::accelerator::MemoryManager::getInstance().allocate<{{COMPUTE_PRECISION}}>(
-    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
-    tarch::MemoryLocation::Heap,
-    targetDevice
-  );
-
-  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    std::copy_n(
-      patchData.QIn[patchIndex],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-      &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}]
-    );
-  }
-  {% else %}
-  {{COMPUTE_PRECISION}}** const QIns = patchData.QIn;
-  {{COMPUTE_PRECISION}}** const QOuts = patchData.QOut;
-  {% endif %}
-
-  {% if GPU == "omp" %}
-  #pragma omp target teams distribute device(targetDevice) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %} nowait depend(out: patchData.QOut) \
+  #pragma omp target teams distribute device(targetDevice) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %} /*nowait*/ \
     map(to: \
       numberOfPatches, \
       QIns[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
       patchCentres[0: numberOfPatches * {{DIMENSIONS}}], \
       patchSizes[0: numberOfPatches * {{DIMENSIONS}}], \
-      timeStamps[0: numberOfPatches], \
-      timeStepSizes[0: numberOfPatches]) \
+      timeStamp, \
+      timeStepSize) \
     map(from: \
       QOuts[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}])
   {% else %}
   #pragma omp parallel for {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
   {% endif %}
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    {% if GPU == "omp" %}
     const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
     {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
-    {% else %}
-    const {{COMPUTE_PRECISION}}* const QIn = QIns[patchIndex];
-    {{COMPUTE_PRECISION}}* const QOut      = QOuts[patchIndex];
-    {% endif %}
 
     const tarch::la::Vector<Dimensions, double> patchCentre {
       patchCentres[patchIndex * {{DIMENSIONS}}],
@@ -137,23 +108,6 @@
       {% endif %}
     };
 
-    const double timeStamp    = timeStamps[patchIndex];
-    const double timeStepSize = timeStepSizes[patchIndex];
-
     {{ loopOverVolumes() }}
   } // patchIndex
-
-  {% if GPU == "omp" %}
-  #pragma omp taskwait depend(in: patchData.QOut)
-  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    std::copy_n(
-      &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
-      patchData.QOut[patchIndex]
-    );
-  }
-
-  tarch::accelerator::MemoryManager::getInstance().free(QIns, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(QOuts, targetDevice);
-  {% endif %}
 {% endmacro %}

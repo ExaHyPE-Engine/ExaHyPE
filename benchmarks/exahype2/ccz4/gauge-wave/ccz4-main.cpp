@@ -489,7 +489,6 @@ int main(int argc, char** argv) {
   repositories::initLogFilters();
 
   tarch::initNonCriticalAssertionEnvironment();
-  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
   peano4::initSingletons(DomainOffset, DomainSize, PeriodicBC);
@@ -530,13 +529,8 @@ int main(int argc, char** argv) {
     {
 #endif
 
-#if defined(UseSmartMPI)
-      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-#else
       const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
       const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
-#endif
 
       if (isGlobalMaster) {
         while (selectNextAlgorithmicStep()) {
@@ -578,14 +572,6 @@ int main(int argc, char** argv) {
           step();
         }
       }
-#if defined(UseSmartMPI)
-      else {
-        while (smartmpi::continueToRun()) {
-          smartmpi::tick();
-        }
-      }
-#endif
-
 #if defined(SharedOMP)
     }
   }
@@ -599,7 +585,6 @@ int main(int argc, char** argv) {
 
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();
-  tarch::multicore::shutdownSmartMPI();
   tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 

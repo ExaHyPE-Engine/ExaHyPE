@@ -8,8 +8,7 @@ namespace tarch::accelerator::tests {
   class MemoryManagerTest;
 } // namespace tarch::accelerator::tests
 
-class tarch::accelerator::tests::MemoryManagerTest:
-  public tarch::tests::TestCase {
+class tarch::accelerator::tests::MemoryManagerTest: public tarch::tests::TestCase {
 private:
   void testMemoryAllocationsForOneDevice();
   void testMemoryAllocationsForMultipleDevices();

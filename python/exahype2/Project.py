@@ -16,7 +16,7 @@ class Project(object):
 
     ExaHyPE 2 project
 
-    Represents an ExaHyPE 2 project. An ExaHyPE2 project is a Peano 4
+    Represents an ExaHyPE 2 project. An ExaHyPE 2 project is a Peano 4
     project with a particular set of actions (algorithmic phases)
     that you can choose from and with particular solver types. It
     realises a builder mechanism, i.e. you build up your ExaHyPE 2
@@ -50,7 +50,7 @@ class Project(object):
         self._load_balancer_arguments = ""
         self._log_filter_file         = "exahype.log-filter"
         self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
-        self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
+        self._print_time_step_interval_in_seconds = 10
         self._timeout                 = 3600
         self._gpus                    = []
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
@@ -109,7 +109,6 @@ class Project(object):
         """
         self._log_filter_file = file_name
 
-
     def set_number_of_threads(self, value):
         """! Set number of threads to use
         Pass in number of threads (positive integer) or a string such as
@@ -117,17 +116,8 @@ class Project(object):
         """
         self._number_of_threads = value
 
-
-    def set_multicore_orchestration(self, value):
-        """! Set orchestration
-        value has to be a string which creates an orchestration object,
-        i.e., an object of the type tarch::multicore::orchestration::Orchestration.
-        You can either create it directly (in this case you need to add a new),
-        or you can use a factory method such as
-        "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()".
-        """
-        self._multicore_orchestration = value
-
+    def set_print_time_step_interval_in_seconds(self, value):
+        self._print_time_step_interval_in_seconds = value
 
     def set_timeout(self, value):
         """! Set timeout
@@ -470,7 +460,7 @@ thus appreciate any citation of the original release paper
             "TRACERS":                  [x.name for x in self._tracer_particles],
             "LOG_FILTER_FILE":          self._log_filter_file,
             "NUMBER_OF_THREADS":        self._number_of_threads,
-            "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
+            "PRINT_TIME_STEP_INTERVAL_IN_SECONDS": self._print_time_step_interval_in_seconds,
             "TIMEOUT":                  self._timeout,
             "GPUS":                     self._gpus,
             "ADDITIONAL_INCLUDES":      self._additional_includes,

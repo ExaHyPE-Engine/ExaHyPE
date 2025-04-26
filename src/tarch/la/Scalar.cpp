@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 double tarch::la::max(double a, double b, double c) { return std::max(a, std::max(b, c)); }
 

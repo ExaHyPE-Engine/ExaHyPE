@@ -5,7 +5,7 @@
 #include "Vector.h"
 
 #include "tarch/Assertions.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
   namespace la {

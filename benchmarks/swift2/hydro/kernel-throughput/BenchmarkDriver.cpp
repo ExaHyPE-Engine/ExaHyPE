@@ -478,7 +478,6 @@ int main(int argc, char** argv) {
     const int ExitCodeInvalidArguments = 2;
 
     peano4::initParallelEnvironment(&argc,&argv);
-    tarch::multicore::initSmartMPI();
     peano4::fillLookupTables();
     tarch::initNonCriticalAssertionEnvironment();
 

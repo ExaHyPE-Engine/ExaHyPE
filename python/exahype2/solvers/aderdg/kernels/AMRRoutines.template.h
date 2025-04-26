@@ -9,28 +9,28 @@ namespace {{ item }} {
 {%- endfor %}
 
 void faceUnknownsProlongation(
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__             lQhbndFine,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__             lFhbndFine,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const __restrict__ lQhbndCoarse,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const __restrict__ lFhbndCoarse,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias             lQhbndFine,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias             lFhbndFine,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const noalias lQhbndCoarse,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const noalias lFhbndCoarse,
   const tarch::la::Vector<Dimensions - 1, int>&                 subfaceIndex
 );
 
 void faceFluxRestriction(
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__             lFhbndCoarse,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const __restrict__ lFhbndFine,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias             lFhbndCoarse,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const noalias lFhbndFine,
   const tarch::la::Vector<Dimensions - 1, int>&                 subfaceIndex
 );
 
 void cellUnknownsProlongation(
-  {{SOLUTION_STORAGE_PRECISION}}* __restrict__             luhFine,
-  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__ luhCoarse,
+  {{SOLUTION_STORAGE_PRECISION}}* noalias             luhFine,
+  const {{SOLUTION_STORAGE_PRECISION}}* const noalias luhCoarse,
   const tarch::la::Vector<Dimensions, int>&                subcellIndex
 );
 
 void cellUnknownsRestriction(
-  const {{SOLUTION_STORAGE_PRECISION}}* const __restrict__ luhFine,
-  {{SOLUTION_STORAGE_PRECISION}}* __restrict__             luhCoarse,
+  const {{SOLUTION_STORAGE_PRECISION}}* const noalias luhFine,
+  {{SOLUTION_STORAGE_PRECISION}}* noalias             luhCoarse,
   const tarch::la::Vector<Dimensions, int>&                subcellIndex
 );
 

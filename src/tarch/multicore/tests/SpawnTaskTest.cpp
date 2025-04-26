@@ -2,98 +2,118 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SpawnTaskTest.h"
 
-#include "tarch/multicore/multicore.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/multicore/Task.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/taskfusion/taskfusion.h"
+#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Task.h"
 
-int numberOfTasksThatHaveBeenExecuted = 0;
-tarch::multicore::BooleanSemaphore numberOfTasksThatHaveBeenExecutedSemaphore;
+#include <chrono>
+#include <thread>
 
-class NonFusableTask : public tarch::multicore::Task {
+constexpr int NumberOfTasksToExecute = 1000;
+
+int numberOfProducerTasksThatHaveBeenExecuted = 0;
+int numberOfConsumerTasksThatHaveBeenExecuted = 0;
+
+tarch::multicore::BooleanSemaphore producerTaskSemaphore;
+tarch::multicore::BooleanSemaphore consumerTaskSemaphore;
+
+class ProducerTask: public tarch::multicore::Task {
 public:
-  NonFusableTask(int priority = tarch::multicore::Task::DefaultPriority)
-    : Task(Task::DontFuse, priority) {}
+  ProducerTask():
+    tarch::multicore::Task(Task::DontFuse, Task::DefaultPriority) {}
 
-  ~NonFusableTask() override = default;
+  ~ProducerTask() override = default;
 
   bool run() override {
-    tarch::multicore::Lock lock(numberOfTasksThatHaveBeenExecutedSemaphore);
-    ++numberOfTasksThatHaveBeenExecuted;
+    tarch::multicore::Lock lock(producerTaskSemaphore);
+    numberOfProducerTasksThatHaveBeenExecuted++;
+    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // simulate work
     return false;
   }
+
+  bool canFuse() const override { return false; }
 };
 
-class FusableTask : public tarch::multicore::Task {
+class ConsumerTask: public tarch::multicore::Task {
 public:
-  FusableTask(int priority = tarch::multicore::Task::DefaultPriority)
-    : Task(0, priority) {}
+  ConsumerTask():
+    tarch::multicore::Task(Task::DontFuse, Task::DefaultPriority) {}
 
-  ~FusableTask() override = default;
-
-  bool fuse(const std::list<Task*>& otherTasks, int) override {
-    const int numberOfTasksToBeFused = otherTasks.size() + 1;
-    numberOfTasksThatHaveBeenExecuted = numberOfTasksToBeFused;
-    return false;
-  }
+  ~ConsumerTask() override = default;
 
   bool run() override {
-    // Do nothing
+    tarch::multicore::Lock lock(consumerTaskSemaphore);
+    numberOfConsumerTasksThatHaveBeenExecuted++;
     return false;
   }
+
+  bool canFuse() const override { return false; }
 };
 
 tarch::multicore::tests::SpawnTaskTest::SpawnTaskTest():
   TestCase("tarch::multicore::tests::SpawnTaskTest") {}
 
 void tarch::multicore::tests::SpawnTaskTest::run() {
-  testMethod([this]() { testSpawnNonFusableTasksWithoutDependencies(4, 1000); });
-  testMethod([this]() { testSpawnFusableTasksWithoutDependencies(4, 1000); });
+#ifdef SharedOMP
+#pragma omp parallel
+  {
+#pragma omp master
+#endif
+    {
+      testMethod([this]() { testSpawnIndependentTask(); });
+      testMethod([this]() { testSpawnTaskWithOutDependency(); });
+      testMethod([this]() { testSpawnTaskWithInAndOutDependency(); });
+      testMethod([this]() { testSpawnTasks(); });
+    }
+#ifdef SharedOMP
+  }
+#endif
 }
 
-void tarch::multicore::tests::SpawnTaskTest::testSpawnNonFusableTasksWithoutDependencies(
-  int taskLoopIterations,
-  int numberOfTasksToSpawn
-) {
-  #if defined(SharedOMP)
-  #pragma omp parallel
-  #pragma omp master
-  #pragma omp taskloop
-  #endif
-  for (int t = 0; t < taskLoopIterations; t++) {
-    for (int i = 0; i < numberOfTasksToSpawn; i++) {
-      NonFusableTask* nonFusableTask = new NonFusableTask();
-      spawnTask(nonFusableTask);
-    }
+void tarch::multicore::tests::SpawnTaskTest::testSpawnIndependentTask() {
+  numberOfProducerTasksThatHaveBeenExecuted = 0;
+  for (int i = 0; i < NumberOfTasksToExecute; i++) {
+    spawnTask(new ProducerTask);
   }
-
   waitForAllTasks();
-  validateEquals(numberOfTasksThatHaveBeenExecuted, taskLoopIterations * numberOfTasksToSpawn);
-
-  numberOfTasksThatHaveBeenExecuted = 0;
-  validateEquals(numberOfTasksThatHaveBeenExecuted, 0);
+  validateEquals(numberOfProducerTasksThatHaveBeenExecuted, NumberOfTasksToExecute);
 }
 
-void tarch::multicore::tests::SpawnTaskTest::testSpawnFusableTasksWithoutDependencies(
-  int taskLoopIterations,
-  int numberOfTasksToSpawn
-) {
-  #if defined(SharedOMP)
-  #pragma omp parallel
-  #pragma omp master
-  #pragma omp taskloop
-  #endif
-  for (int t = 0; t < taskLoopIterations; t++) {
-    for (int i = 0; i < numberOfTasksToSpawn; i++) {
-      FusableTask* fusableTask = new FusableTask();
-      spawnTask(fusableTask);
-    }
+void tarch::multicore::tests::SpawnTaskTest::testSpawnTaskWithOutDependency() {
+  numberOfProducerTasksThatHaveBeenExecuted = 0;
+  std::vector<char> outDependencies(NumberOfTasksToExecute);
+  for (int i = 0; i < NumberOfTasksToExecute; i++) {
+    spawnTask(new ProducerTask, nullptr, &outDependencies[i]);
   }
+  for (int i = 0; i < NumberOfTasksToExecute; i++) {
+    waitForTask(&outDependencies[i]);
+  }
+  validateEquals(numberOfProducerTasksThatHaveBeenExecuted, NumberOfTasksToExecute);
+}
 
-  taskfusion::processPendingTasksThatCanBeFused();
-  validateEquals(numberOfTasksThatHaveBeenExecuted, taskLoopIterations * numberOfTasksToSpawn);
+void tarch::multicore::tests::SpawnTaskTest::testSpawnTaskWithInAndOutDependency() {
+  numberOfProducerTasksThatHaveBeenExecuted = 0;
+  numberOfConsumerTasksThatHaveBeenExecuted = 0;
+  std::vector<char> producerDependencies(NumberOfTasksToExecute);
+  std::vector<char> consumerDependencies(NumberOfTasksToExecute);
+  for (int i = 0; i < NumberOfTasksToExecute; i++) {
+    spawnTask(new ProducerTask, nullptr, &producerDependencies[i]);
+    spawnTask(new ConsumerTask, &producerDependencies[i], &consumerDependencies[i]);
+  }
+  for (int i = 0; i < NumberOfTasksToExecute; i++) {
+    waitForTask(&consumerDependencies[i]);
+  }
+  validateEquals(numberOfProducerTasksThatHaveBeenExecuted, NumberOfTasksToExecute);
+  validateEquals(numberOfConsumerTasksThatHaveBeenExecuted, NumberOfTasksToExecute);
+}
 
-  numberOfTasksThatHaveBeenExecuted = 0;
-  validateEquals(numberOfTasksThatHaveBeenExecuted, 0);
+void tarch::multicore::tests::SpawnTaskTest::testSpawnTasks() {
+  numberOfProducerTasksThatHaveBeenExecuted = 0;
+  std::vector<Task*> tasks;
+  for (int i = 0; i < NumberOfTasksToExecute; i++) {
+    tasks.push_back(new ProducerTask);
+  }
+  spawnTasks(tasks);
+  validateEquals(numberOfProducerTasksThatHaveBeenExecuted, NumberOfTasksToExecute);
 }

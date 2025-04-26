@@ -20,6 +20,8 @@ namespace tarch {
      * Create data on the device.
      */
     Device,
+
+    Pinned,
   };
 
   std::string toString(MemoryLocation value);

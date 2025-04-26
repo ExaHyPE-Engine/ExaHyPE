@@ -10,6 +10,7 @@
 
 #include "peano4/utils/Globals.h"
 
+#include <cstring>
 #include <stdio.h>
 #include <string.h>
 
@@ -32,7 +33,7 @@ void applications::exahype2::ccz4::gaugeWave(
   double phi    = pow(( 1.0 / HH),(1.0/6.0));
   double Kxx    = - 0.5*peak_number*pi*ICA*cos( peak_number * pi*(x[0] - t))/sqrt( 1.0 - ICA*sin( peak_number*pi*( x[0] - t))  );
   double traceK = Kxx/HH;
-  tarch::memset(Q, .0, nVars*sizeof(double));
+  std::memset(Q, .0, nVars*sizeof(double));
   Q[0]  = phi*phi*HH ;					//\tilde(\gamma)_xx
   Q[3]  = phi*phi  ;					//\tilde(\gamma)_yy
   Q[5]  = phi*phi                            ;		//\tilde(\gamma)_zz
@@ -61,7 +62,7 @@ void applications::exahype2::ccz4::diagonal_gaugeWave(
   constexpr double ICA = 0.1; ///< Amplitude of the wave, B in the note 
   double phase  = peak_number*pi*( x[0] - x[1] - t);
   double H=1+2.0*ICA*sin(phase);
-  tarch::memset(Q, .0, nVars*sizeof(double));
+  std::memset(Q, .0, nVars*sizeof(double));
   Q[0]  = pow(H,(-1.0/3.0))*(1+ICA*sin(phase));				//\tilde(\gamma)_xx
   Q[1]  = -pow(H,(-1.0/3.0))*(ICA*sin(phase));				//\tilde(\gamma)_xy
   Q[3]  = pow(H,(-1.0/3.0))*(1+ICA*sin(phase));				//\tilde(\gamma)_yy
@@ -101,7 +102,7 @@ void applications::exahype2::ccz4::linearWave(
   double HH     =  ICA*sin( peak_number*pi*( X[0] - t));
   double dxHH   =  peak_number*pi*ICA*cos( peak_number * pi*(X[0] - t));
   double dtHH   = -peak_number*pi*ICA*cos( peak_number * pi*(X[0] - t));
-  tarch::memset(Q, .0, nVars*sizeof(double));
+  std::memset(Q, .0, nVars*sizeof(double));
   Q[0]  = 1.0  ;		//\tilde(\gamma)_xx
   Q[3]  = 1+HH ;		//\tilde(\gamma)_yy
   Q[5]  = 1-HH ;		//\tilde(\gamma)_zz
@@ -120,7 +121,7 @@ void applications::exahype2::ccz4::flat(
   const tarch::la::Vector<Dimensions,double>&  x,
   double t
 ) {
-  tarch::memset(Q, .0, 59*sizeof(double));
+  std::memset(Q, .0, 59*sizeof(double));
   Q[0]  = 1.0 ;          //\tilde(\gamma)_xx
   Q[3]  = 1.0  ;          //\tilde(\gamma)_yy
   Q[5]  = 1.0                            ;    //\tilde(\gamma)_zz
@@ -139,7 +140,7 @@ void applications::exahype2::ccz4::ApplyTwoPunctures(
   constexpr int nVars = 59;
   const double coor[3]={X[0],X[1],X[2]};
   double LgradQ[3*nVars];
-  tarch::memset(Q, .0, nVars*sizeof(double));
+  std::memset(Q, .0, nVars*sizeof(double));
   tp->Interpolate(coor,Q,low_res);				//do the interpolate
   //std::cout << coor[0] <<coor[1] << coor[2] << "\n";
   //std::cout << "real quantites without tilde" <<"\n";

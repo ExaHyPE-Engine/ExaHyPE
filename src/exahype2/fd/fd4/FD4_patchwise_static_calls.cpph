@@ -43,7 +43,7 @@ namespace exahype2 {
           const bool evaluateKODissipation = KOSigma>0.0;
 
           for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-            const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
+            const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt : 1.0;
 
             // STEP 1: copy solution from old array to new array, or set all to zero
             if ( Dimensions==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
@@ -120,7 +120,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   patchData.QOut[patchIndex],
                   QOutEnumerator
@@ -138,7 +138,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   patchData.QOut[patchIndex],
                   QOutEnumerator
@@ -157,7 +157,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   0, // normal
                   tempFluxX,
@@ -173,7 +173,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   1, // normal
                   tempFluxY,
@@ -209,7 +209,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   0, // normal
                   tempFluxX,
@@ -226,7 +226,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   1, // normal
                   tempFluxY,
@@ -243,7 +243,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   2, // normal
                   tempFluxZ,
@@ -281,7 +281,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   0, // normal
                   tempDifferentialSourceX,
@@ -298,7 +298,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   1, // normal
                   tempDifferentialSourceY,
@@ -334,7 +334,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   0, // normal
                   tempDifferentialSourceX,
@@ -352,7 +352,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   1, // normal
                   tempDifferentialSourceY,
@@ -370,7 +370,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex3d(x,y,z),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   2, // normal
                   tempDifferentialSourceZ,
@@ -408,7 +408,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   0, // normal
                   tempKODissipationX,
@@ -424,7 +424,7 @@ namespace exahype2 {
                   patchData.cellSize[patchIndex],
                   patchIndex,
                   gridCellIndex2d(x,y),
-                  patchData.t[patchIndex],
+                  patchData.t,
                   timeStepSize,
                   1, // normal
                   tempKODissipationY,
@@ -459,7 +459,7 @@ namespace exahype2 {
                     patchData.cellSize[patchIndex],
                     patchIndex,
                     gridCellIndex3d(x,y,z),
-                    patchData.t[patchIndex],
+                    patchData.t,
                     timeStepSize,
                     0, // normal
                     tempKODissipationX,
@@ -476,7 +476,7 @@ namespace exahype2 {
                     patchData.cellSize[patchIndex],
                     patchIndex,
                     gridCellIndex3d(x,y,z),
-                    patchData.t[patchIndex],
+                    patchData.t,
                     timeStepSize,
                     1, // normal
                     tempKODissipationY,
@@ -493,7 +493,7 @@ namespace exahype2 {
                     patchData.cellSize[patchIndex],
                     patchIndex,
                     gridCellIndex3d(x,y,z),
-                    patchData.t[patchIndex],
+                    patchData.t,
                     timeStepSize,
                     2, // normal
                     tempKODissipationZ,

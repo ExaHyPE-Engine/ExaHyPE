@@ -16,7 +16,6 @@ class AbstractSolverDefinitions:
         init_point_source_implementation,
         is_linear,
         computation_precisions,
-        pde_terms_without_state,
     ):
         self._flux_implementation = flux_implementation
         self._ncp_implementation = ncp_implementation
@@ -28,7 +27,6 @@ class AbstractSolverDefinitions:
         self._init_point_source_implementation = init_point_source_implementation
         self._is_linear = is_linear
         self._computation_precisions = computation_precisions
-        self._pde_terms_without_state = pde_terms_without_state
 
     def create_abstract_solver_user_definitions(self):
         Template = jinja2.Template(
@@ -37,7 +35,7 @@ class AbstractSolverDefinitions:
 
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                  h,
   [[maybe_unused]] double                                                        t,
@@ -50,13 +48,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__  Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias  Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                   x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                   h,
   [[maybe_unused]] double                                                         t,
   [[maybe_unused]] double                                                         dt,
   [[maybe_unused]] int                                                            normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                         F
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias                         F
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
@@ -64,14 +62,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias Q,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias deltaQ,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&                 h,
   [[maybe_unused]] double                                                       t,
   [[maybe_unused]] double                                                       dt,
   [[maybe_unused]] int                                                          normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__                        BTimesDeltaQ
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*noalias                        BTimesDeltaQ
 ) {
   {{NCP_IMPLEMENTATION}}
 }
@@ -133,7 +131,7 @@ virtual void adjustSolution(
   const tarch::la::Vector<Dimensions, double>&                  h,
   double                                                        t,
   double                                                        dt,
-  double* const __restrict__                                    Q,
+  double* const noalias                                    Q,
 ) {
   {{ADJUST_SOLUTION_IMPLEMENTATION}}
 };
@@ -153,5 +151,4 @@ virtual void adjustSolution(
         d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation
         d["IS_LINEAR"] = self._is_linear
         d["COMPUTATION_PRECISIONS"] = self._computation_precisions
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         return Template.render(**d)

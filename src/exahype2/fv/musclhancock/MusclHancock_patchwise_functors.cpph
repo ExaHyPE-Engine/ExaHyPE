@@ -98,8 +98,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         patchData.cellSize[patchIndex],
         patchIndex,
         volumeIndex3d(x,y,z),
-        patchData.t[patchIndex],
-        patchData.dt[patchIndex],
+        patchData.t,
+        patchData.dt,
         timeDerivative,
         QInterEnumerator
        );
@@ -123,8 +123,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         patchData.cellSize[patchIndex],
         patchIndex,
         volumeIndex3d(x,y,z),
-        patchData.t[patchIndex],
-        patchData.dt[patchIndex],
+        patchData.t,
+        patchData.dt,
         timeDerivative,
         QfaceXneg, QfaceXpos,
         QfaceYneg, QfaceYpos,
@@ -146,7 +146,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
               patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
+              patchData.t, patchData.dt,
               0,
               tempEigenvalueX,
               eigenvalueEnumerator
@@ -163,7 +163,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
               patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
+              patchData.t, patchData.dt,
               1,
               tempEigenvalueY,
               eigenvalueEnumerator
@@ -180,7 +180,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
               patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
+              patchData.t, patchData.dt,
               2,
               tempEigenvalueZ,
               eigenvalueEnumerator
@@ -208,7 +208,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
+          patchData.dt,
           patchData.QOut[patchIndex],
           QOutEnumerator,
           QfaceXneg, QfaceXpos,
@@ -235,8 +235,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          patchData.t,
+          patchData.dt,
           0, // normal
           tempFluxXL, tempFluxXR,
           fluxEnumerator
@@ -252,8 +252,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          patchData.t,
+          patchData.dt,
           1, // normal
           tempFluxYL, tempFluxYR,
           fluxEnumerator
@@ -269,8 +269,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          patchData.t,
+          patchData.dt,
           2, // normal
           tempFluxZL, tempFluxZR,
           fluxEnumerator
@@ -290,7 +290,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
+          patchData.dt,
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
@@ -311,8 +311,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            patchData.t,
+            patchData.dt,
             0, // normal
             tempDX,
             ncpEnumerator
@@ -328,8 +328,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            patchData.t,
+            patchData.dt,
             1, // normal
             tempDY,
             ncpEnumerator
@@ -345,8 +345,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            patchData.t,
+            patchData.dt,
             2, // normal
             tempDZ,
             ncpEnumerator
@@ -364,7 +364,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
             patchIndex,
             volumeIndex3d(x,y,z),
             unknown,
-            patchData.dt[patchIndex],
+            patchData.dt,
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
@@ -387,8 +387,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         patchData.cellSize[patchIndex],
         patchIndex,
         volumeIndex3d(x,y,z),
-        patchData.t[patchIndex],
-        patchData.dt[patchIndex],
+        patchData.t,
+        patchData.dt,
         timeDerivative,
         patchData.QOut[patchIndex],
         QOutEnumerator,
@@ -413,8 +413,8 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex]
+            patchData.t,
+            patchData.dt
           )
         );
       }

@@ -270,7 +270,6 @@ int main(int argc, char** argv) {
 
   peano4::initParallelEnvironment(&argc, &argv);
   petsc::initParallelEnvironment(&argc, &argv);
-  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
   tarch::la::Vector<Dimensions, double> x = {{DomainOffset}};
@@ -395,7 +394,6 @@ int main(int argc, char** argv) {
 
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();
-  tarch::multicore::shutdownSmartMPI();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;

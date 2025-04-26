@@ -48,8 +48,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     double* __restrict__                        cellQout = cellData.QOut[currentCell];
     const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
     const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
-    const double                                t        = cellData.t[currentCell];
-    const double                                dt       = cellData.dt[currentCell];
+    const double                                t        = cellData.t;
+    const double                                dt       = cellData.dt;
 
     const int nodesPerAxis = order+1;
     const int strideQ=unknowns+auxiliaryVariables;
@@ -224,8 +224,8 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
             order,
             QuadratureNodes1d
           ),
-          cellData.t[cellIndex],
-          cellData.dt[cellIndex],
+          cellData.t,
+          cellData.dt,
           direction
         );
 
@@ -235,7 +235,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
       }
     }
 
-    cellData.maxEigenvalue[cellIndex] = eigenvalue;
+    //cellData.maxEigenvalue[cellIndex] = eigenvalue;
   }
 }
 

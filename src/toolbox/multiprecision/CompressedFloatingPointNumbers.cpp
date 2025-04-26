@@ -1,6 +1,6 @@
 #include "CompressedFloatingPointNumbers.h"
 #include "tarch/Assertions.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/Scalar.h"
 
 #include <bitset>

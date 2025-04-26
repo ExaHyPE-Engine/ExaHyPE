@@ -61,31 +61,31 @@ args.patch_size = args.dg_order * 2 + 1
 unknowns={"h": 1, "hu": 1, "hv": 1}
 auxiliary_variables={
     "b": 1, # Elevation
-    "hx": 1,
-    "hy": 1,
-    "ux": 1,
-    "uy": 1,
-    "uxx": 1,
-    "uyy": 1,
-    "uxy": 1,
-    "vx": 1,
-    "vy": 1,
-    "vxx": 1,
-    "vyy": 1,
-    "vxy": 1,
+    # "hx": 1,
+    # "hy": 1,
+    # "ux": 1,
+    # "uy": 1,
+    # "uxx": 1,
+    # "uyy": 1,
+    # "uxy": 1,
+    # "vx": 1,
+    # "vy": 1,
+    # "vxx": 1,
+    # "vyy": 1,
+    # "vxy": 1,
     "bx": 1,
     "by": 1,
 }
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking(
     name="Rusanov" + str(args.patch_size),
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
     min_volume_h=min_h,
     max_volume_h=max_h,
+    number_of_tasks=args.tasks,
     time_step_relaxation=args.time_step_relaxation,
-    pde_terms_without_state=args.stateless,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
@@ -101,7 +101,6 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
 )
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
-riemann_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 riemann_solver.add_user_solver_includes(
     """
 #include "tarch/reader/TopologyParser.h"
@@ -156,6 +155,7 @@ project.set_number_of_threads(args.threads)
 project.set_timeout(3600)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=True)
+project.output.makefile.set_target_device(args.target_device)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 

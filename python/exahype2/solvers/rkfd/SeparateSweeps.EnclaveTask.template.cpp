@@ -24,7 +24,7 @@
 
 #include "peano4/utils/Loop.h"
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
 #include "tarch/multicore/otter.h"

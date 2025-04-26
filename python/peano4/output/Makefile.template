@@ -71,6 +71,7 @@ LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_DEBUG}} {{LIBS}}
 {% endif %}
 
 FCFLAGS+={{FCFLAGS}}
+CXXFLAGS+=-DTARGET_DEVICE={{TARGET_DEVICE}}
 
 H_HEADERS={% for item in H_HEADERS -%} {{item+" "}} {%- endfor %}
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %}

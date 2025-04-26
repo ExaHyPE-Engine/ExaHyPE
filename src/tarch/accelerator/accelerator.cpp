@@ -13,8 +13,6 @@ namespace {
 
 #if defined(GPUOffloadingOff)
 
-void tarch::gpuAbort() { std::abort(); }
-
 void* tarch::accelerator::allocateRawData(
   std::size_t                     sizeInBytes,
   [[maybe_unused]] MemoryLocation location,
@@ -29,10 +27,12 @@ void* tarch::accelerator::allocateRawData(
   );
   assertion(data);
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
   }
+#endif
 
   return data;
 }
@@ -42,17 +42,49 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation, int) {
     return;
   }
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "attempt to free invalid pointer")
+      logDebug("freeRawData()", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
   }
+#endif
 
   std::free(data);
+}
+
+void tarch::accelerator::copyTo(
+  void*                           target,
+  const void*                     source,
+  std::size_t                     sizeInBytes,
+  [[maybe_unused]] MemoryLocation location,
+  int
+) {
+  assertion2(target, sizeInBytes, toString(location));
+  assertion2(source, sizeInBytes, toString(location));
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+
+  logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+  std::memcpy(target, source, sizeInBytes);
+}
+
+void tarch::accelerator::copyFrom(
+  const void*                     source,
+  void*                           target,
+  std::size_t                     sizeInBytes,
+  [[maybe_unused]] MemoryLocation location,
+  int
+) {
+  assertion2(target, sizeInBytes, toString(location));
+  assertion2(source, sizeInBytes, toString(location));
+  assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
+
+  logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
+  std::memcpy(target, source, sizeInBytes);
 }
 
 #endif // defined(GPUOffloadingOff)
@@ -66,6 +98,7 @@ void* tarch::accelerator::reallocateRawData(
   assertion(data);
   assertion2(sizeInBytes > 0, sizeInBytes, toString(location));
 
+#if PeanoDebug > 0
   std::size_t currentSizeInBytes = 0;
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
@@ -74,6 +107,7 @@ void* tarch::accelerator::reallocateRawData(
   if (currentSizeInBytes >= sizeInBytes) {
     return data;
   }
+#endif
 
   std::size_t newSizeInBytes = sizeInBytes + sizeInBytes / 2;
   void* newData = allocateRawData(newSizeInBytes, location, device);
@@ -99,28 +133,3 @@ std::size_t tarch::padSizeToAlignment(std::size_t size, std::size_t alignment) {
   int padding = size % alignment == 0 ? 0 : alignment - (size % alignment);
   return size + padding;
 }
-
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
-double* tarch::memset(double* dest, double ch, std::size_t byteCount) {
-#if defined(GPUOffloadingOff)
-  assertion2(byteCount % sizeof(double) == 0, ch, byteCount);
-#endif
-#if defined(OpenMPManuallyOffloadMemset)
-  for (size_t i = 0; i < byteCount / sizeof(double); i++) {
-    dest[i] = ch;
-  }
-  return dest;
-#else
-  return static_cast<double*>(std::memset(
-    static_cast<void*>(dest),
-    // static_cast<int>(ch),
-    ch,
-    byteCount
-  ));
-#endif
-}
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif

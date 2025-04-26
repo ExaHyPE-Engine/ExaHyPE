@@ -98,7 +98,7 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
 
   tarch::multicore::Lock lock(_semaphore);
   if (not _data.empty()) {
-    logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
+    logInfo( "dumpCSVFile()", "Dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
     file << std::scientific;
     file << "t," << _dataName << std::endl;
@@ -119,7 +119,7 @@ void toolbox::blockstructured::GlobalDatabase::dumpCSVFile() {
   }
   else {
     #if PeanoDebug>=1
-    logInfo( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
+    logInfo( "dumpCSVFile()", "Particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
     #endif
   }
 
@@ -254,7 +254,7 @@ void toolbox::blockstructured::GlobalDatabase::addGlobalSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addSnapshot(...)", "flushed database file (temporary flush - simulation has not terminated yet)" );
+    logInfo( "addSnapshot(...)", "Flushed database file (temporary flush - simulation has not terminated yet)" );
     _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
   }
 }
@@ -293,7 +293,7 @@ void toolbox::blockstructured::GlobalDatabase::addGlobalSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addSnapshot(...)", "flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
+    logInfo( "addSnapshot(...)", "Flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
     _thresholdForNextDatabaseFlush = _deltaBetweenTwoDatabaseFlushes;
   }
 }

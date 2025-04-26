@@ -499,18 +499,18 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 
 
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer) {
-  logTraceIn("traverse(TraversalObserver&)");
+  logTraceIn("traverse()");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     peano4::parallel::Node::getInstance().continueToRun();
   }
-  logDebug("traverse(TraversalObserver)", "start new grid sweep");
+  logDebug("traverse()", "Start new grid sweep");
 
   tarch::mpi::Rank::getInstance().barrier([&]() -> void {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     answerQuestions();
   });
-  logDebug("traverse(TraversalObserver&)", "rank has passed barrier");
+  logDebug("traverse()", "Rank has passed barrier");
 
   _state = SpacetreeSetState::TraverseTreesAndExchangeData;
 
@@ -524,22 +524,22 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
     case peano4::grid::SpacetreeState::JoinTriggered:
     case peano4::grid::SpacetreeState::Joining:
       logDebug(
-        "traverse(TraversalObserver&)",
-        "issue task to traverse tree " << p._id << " in the primary tree set " << p.toString()
+        "traverse()",
+        "Issue task to traverse tree " << p._id << " in the primary tree set " << p.toString()
       );
       primaryTasks.push_back(new TraverseTask(p, *this, observer, false));
       break;
     case peano4::grid::SpacetreeState::Running:
       if (p._joining.empty()) {
         logDebug(
-          "traverse(TraversalObserver&)",
-          "issue task to traverse tree " << p._id << " in the primary tree set " << p.toString()
+          "traverse()",
+          "Issue task to traverse tree " << p._id << " in the primary tree set " << p.toString()
         );
         primaryTasks.push_back(new TraverseTask(p, *this, observer, false));
       } else {
         logDebug(
-          "traverse(TraversalObserver&)",
-          "issue task to traverse tree "
+          "traverse()",
+          "Issue task to traverse tree "
             << p._id << " in the third tree set as it joins in other tree: " << p.toString()
         );
         tertiaryTasks.push_back(new TraverseTask(p, *this, observer, false));
@@ -547,59 +547,55 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
       break;
     case peano4::grid::SpacetreeState::EmptyRun:
       logDebug(
-        "traverse(TraversalObserver&)",
-        "issue task to traverse tree " << p._id << " in secondary tree set as empty tree and in third set as new tree"
+        "traverse()",
+        "Issue task to traverse tree " << p._id << " in secondary tree set as empty tree and in third set as new tree"
       );
       secondaryTasks.push_back(new TraverseTask(p, *this, observer, true));
       tertiaryTasks.push_back(new TraverseTask(p, *this, observer, false));
       break;
     case peano4::grid::SpacetreeState::Joined:
     case peano4::grid::SpacetreeState::NewFromSplit:
-      assertionMsg("should not happen", false);
+      assertionMsg("Should not happen", false);
       break;
     }
   }
 
-  // I use this boolean flag from time to time to debug the code.
-  [[maybe_unused]] const bool runSequentially = false;
+#ifdef SharedOMP
+#pragma omp parallel
+  {
+#pragma omp master
+#endif
+    {
+      if (not primaryTasks.empty()) {
+        tarch::multicore::spawnTasks(primaryTasks);
+      }
 
-  logTraceInWith1Argument("traverse(TraversalObserver&)-primary", primaryTasks.size());
-  tarch::multicore::spawnAndWait(primaryTasks);
-  logTraceOut("traverse(TraversalObserver&)-primary");
+      streamDataFromSplittingTreesToNewTrees(observer);
+      exchangeVerticalDataBetweenTrees(observer);
 
-  logDebug(
-    "traverse(TraversalObserver&)", "primary tasks (traversals) complete, trigger split data stream if required"
-  );
-  streamDataFromSplittingTreesToNewTrees(observer);
-  logDebug("traverse(TraversalObserver&)", "exchange vertical data if required");
-  exchangeVerticalDataBetweenTrees(observer);
+      if (not secondaryTasks.empty()) {
+        tarch::multicore::spawnTasks(secondaryTasks);
+      }
 
-  logTraceInWith1Argument("traverse(TraversalObserver&)-secondary", secondaryTasks.size());
-  tarch::multicore::spawnAndWait(secondaryTasks);
-  logTraceOut("traverse(TraversalObserver&)-secondary");
+      exchangeVerticalDataBetweenTrees(observer);
 
-  tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false);
+      if (not tertiaryTasks.empty()) {
+        tarch::multicore::spawnTasks(tertiaryTasks);
+      }
 
-  exchangeVerticalDataBetweenTrees(observer);
-
-  logTraceInWith1Argument("traverse(TraversalObserver&)-tertiary", tertiaryTasks.size());
-  tarch::multicore::spawnAndWait(tertiaryTasks);
-  logTraceOut("traverse(TraversalObserver&)-tertiary");
-
-  exchangeHorizontalDataBetweenTrees(observer);
-
-  dataExchangeTime.stop();
-  tarch::logging::Statistics::getInstance().log("mpi wait times", dataExchangeTime.getCPUTime());
+      exchangeHorizontalDataBetweenTrees(observer);
+    }
+#ifdef SharedOMP
+  }
+#endif
 
   _state = SpacetreeSetState::Waiting;
 
   cleanUpTrees(observer);
-
   createNewTrees();
-
   deleteClonedObservers();
 
-  logTraceOut("traverse(TraversalObserver&)");
+  logTraceOut("traverse()");
 }
 
 
@@ -689,7 +685,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
         logDebug(
           "cleanUpTrees()", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString()
         );
-        logDebug("traverse(Observer)", "not implemented yet");
+        logDebug("traverse(Observer)", "Not implemented yet");
       }
     }
     p++;

@@ -113,7 +113,7 @@ tarch::logging::LogFilter& tarch::logging::LogFilter::getInstance() {
 
 void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProgramPhase) {
   #if PeanoDebug>=4
-  std::cout << "switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
+  //std::cout << "Switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
   #endif
 
   _activeProgramPhase = activeProgramPhase;

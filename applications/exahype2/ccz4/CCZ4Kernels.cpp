@@ -2,6 +2,7 @@
 #include "Constants.h"
 
 #include <limits>
+#include <cstring>
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
@@ -354,7 +355,7 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
         }
     }
 
-    tarch::memset(constraints, 0, 4*sizeof(double));
+    std::memset(constraints, 0, 4*sizeof(double));
 
     constraints[0]  =   Ham;        //59
     constraints[1]  =   Mom[0];     //60
@@ -900,7 +901,7 @@ void applications::exahype2::ccz4::TestingOutput(double* terms, const double* co
         }
     }
 
-    tarch::memset(terms, 0, 15*sizeof(double));
+    std::memset(terms, 0, 15*sizeof(double));
     terms[0]  =   Ham;        //59
     terms[1]  =   Mom[0];     //60
     terms[2]  =   Mom[1];     //61

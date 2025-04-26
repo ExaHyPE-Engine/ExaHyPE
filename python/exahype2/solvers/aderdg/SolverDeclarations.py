@@ -16,7 +16,6 @@ class SolverDeclarations:
         init_point_source_implementation,
         is_linear,
         computation_precisions,
-        pde_terms_without_state,
     ):
         self._flux_implementation = flux_implementation
         self._ncp_implementation = ncp_implementation
@@ -28,14 +27,13 @@ class SolverDeclarations:
         self._init_point_source_implementation = init_point_source_implementation
         self._is_linear = is_linear
         self._computation_precisions = computation_precisions
-        self._pde_terms_without_state = pde_terms_without_state
 
     def create_solver_user_declarations(self):
         Template_SinglePrecisions = jinja2.Template(
             """
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[0]}}* noalias Q,
       const tarch::la::Vector<Dimensions, double>&      x,
       const tarch::la::Vector<Dimensions, double>&      h,
       double                                            t,
@@ -46,26 +44,26 @@ class SolverDeclarations:
 
   {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
-      const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[0]}}* noalias Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&      x,
       const tarch::la::Vector<Dimensions, double>&      h,
       double                                            t,
       double                                            dt,
       int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}} * __restrict__      F // F[{{NUMBER_OF_UNKNOWNS}}]
+      {{COMPUTATION_PRECISIONS[0]}} * noalias      F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
   {% endif %}
 
   {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[0]}}*__restrict__  Q,
-      const {{COMPUTATION_PRECISIONS[0]}}*__restrict__  deltaQ,
+      const {{COMPUTATION_PRECISIONS[0]}}*noalias  Q,
+      const {{COMPUTATION_PRECISIONS[0]}}*noalias  deltaQ,
       const tarch::la::Vector<Dimensions, double>&      x,
       const tarch::la::Vector<Dimensions, double>&      h,
       double                                            t,
       double                                            dt,
       int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}}*__restrict__        BTimesDeltaQ
+      {{COMPUTATION_PRECISIONS[0]}}*noalias        BTimesDeltaQ
     ) override;
   {% endif %}
 
@@ -115,7 +113,7 @@ class SolverDeclarations:
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
-      double* const __restrict__                                    Q,
+      double* const noalias                                    Q,
     ) override;
   {% endif %}
 """,
@@ -127,7 +125,7 @@ class SolverDeclarations:
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     template <typename T>
     double maxEigenvalue(
-      const T* __restrict__                         Q,
+      const T* noalias                         Q,
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       double                                        t,
@@ -139,27 +137,27 @@ class SolverDeclarations:
   {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     template <typename T>
     void flux(
-      const T* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const T* noalias                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       double                                        t,
       double                                        dt,
       int                                           normal,
-      T* __restrict__                               F // F[{{NUMBER_OF_UNKNOWNS}}]
+      T* noalias                               F // F[{{NUMBER_OF_UNKNOWNS}}]
     );
   {% endif %}
 
   {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     template <typename T>
     void nonconservativeProduct(
-      const T*__restrict__                          Q,
-      const T*__restrict__                          deltaQ,
+      const T*noalias                          Q,
+      const T*noalias                          deltaQ,
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       double                                        t,
       double                                        dt,
       int                                           normal,
-      T*__restrict__                                BTimesDeltaQ
+      T*noalias                                BTimesDeltaQ
     );
 
   {% endif %}
@@ -210,7 +208,7 @@ class SolverDeclarations:
 
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
@@ -223,13 +221,13 @@ class SolverDeclarations:
 
   {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias Q,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__       F
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* noalias       F
     ) {
       flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, F);
     }
@@ -237,14 +235,14 @@ class SolverDeclarations:
 
   {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ Q,
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ deltaQ,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *noalias Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *noalias deltaQ,
       const tarch::la::Vector<Dimensions, double>&                  x,
       const tarch::la::Vector<Dimensions, double>&                  h,
       double                                                        t,
       double                                                        dt,
       int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__       BTimesDeltaQ
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *noalias       BTimesDeltaQ
     ) override {
       nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
     }
@@ -306,7 +304,6 @@ class SolverDeclarations:
         d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation
         d["IS_LINEAR"] = self._is_linear
         d["COMPUTATION_PRECISIONS"] = self._computation_precisions
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
 
         if len(self._computation_precisions) > 1:
             return Template_MultiplePrecisions.render(**d)

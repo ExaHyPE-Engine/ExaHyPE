@@ -74,7 +74,6 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     eigenvalues=max_eigenvalue,
 )
 aderdg_solver.plot_description = ", ".join(unknowns.keys())
-aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 aderdg_solver.add_user_solver_includes(
     """

@@ -3,12 +3,12 @@
 
 template <typename inType, typename outType>
 exahype2::CellData<inType, outType>::CellData(
-  inType*                                       QIn_,
+  inType* const                                 QIn_,
   const tarch::la::Vector<Dimensions, double>&  cellCentre_,
   const tarch::la::Vector<Dimensions, double>&  cellSize_,
   double                                        t_,
   double                                        dt_,
-  outType*                                      QOut_,
+  outType* const                                QOut_,
   tarch::MemoryLocation                         memoryLocation_,
   int                                           targetDevice_
 ):
@@ -16,10 +16,9 @@ exahype2::CellData<inType, outType>::CellData(
   QIn[0]        = QIn_;
   cellCentre[0] = cellCentre_;
   cellSize[0]   = cellSize_;
-  t[0]          = t_;
-  dt[0]         = dt_;
+  t             = t_;
+  dt            = dt_;
   QOut[0]       = QOut_;
-  id[0]         = -1;
 }
 
 template <typename inType, typename outType>
@@ -32,43 +31,19 @@ exahype2::CellData<inType, outType>::CellData(
   memoryLocation(memoryLocation_),
   targetDevice(targetDevice_) {
 
-  // QIn           = tarch::allocateMemory<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
-  // cellCentre    = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-  // cellSize      = tarch::allocateMemory<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-  // t             = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
-  // dt            = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
-  // id            = tarch::allocateMemory<int>(numberOfCells_, memoryLocation_, targetDevice_);
-  // QOut          = tarch::allocateMemory<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
-  // maxEigenvalue = tarch::allocateMemory<double>(numberOfCells_, memoryLocation_, targetDevice_);
-
   QIn           = tarch::accelerator::MemoryManager::getInstance().allocate<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
   cellCentre    = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
   cellSize      = tarch::accelerator::MemoryManager::getInstance().allocate<tarch::la::Vector<Dimensions, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-  t             = tarch::accelerator::MemoryManager::getInstance().allocate<double>(numberOfCells_, memoryLocation_, targetDevice_);
-  dt            = tarch::accelerator::MemoryManager::getInstance().allocate<double>(numberOfCells_, memoryLocation_, targetDevice_);
-  id            = tarch::accelerator::MemoryManager::getInstance().allocate<int>(numberOfCells_, memoryLocation_, targetDevice_);
   QOut          = tarch::accelerator::MemoryManager::getInstance().allocate<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
-  maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<double>(numberOfCells_, memoryLocation_, targetDevice_);
+  maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<outType>(numberOfCells_, memoryLocation_, targetDevice_);
 }
 
 template <typename inType, typename outType>
 exahype2::CellData<inType, outType>::~CellData() {
-  // tarch::freeMemory(QIn, memoryLocation, targetDevice);
-  // tarch::freeMemory(cellCentre, memoryLocation, targetDevice);
-  // tarch::freeMemory(cellSize, memoryLocation, targetDevice);
-  // tarch::freeMemory(t, memoryLocation, targetDevice);
-  // tarch::freeMemory(dt, memoryLocation, targetDevice);
-  // tarch::freeMemory(QOut, memoryLocation, targetDevice);
-  // tarch::freeMemory(id, memoryLocation, targetDevice);
-  // tarch::freeMemory(maxEigenvalue, memoryLocation, targetDevice);
-
   tarch::accelerator::MemoryManager::getInstance().free(QIn, targetDevice);
   tarch::accelerator::MemoryManager::getInstance().free(cellCentre, targetDevice);
   tarch::accelerator::MemoryManager::getInstance().free(cellSize, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(t, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(dt, targetDevice);
   tarch::accelerator::MemoryManager::getInstance().free(QOut, targetDevice);
-  tarch::accelerator::MemoryManager::getInstance().free(id, targetDevice);
   tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, targetDevice);
 }
 
@@ -77,8 +52,9 @@ std::string exahype2::CellData<inType, outType>::toString() const {
   std::ostringstream msg;
   msg << "[";
   for (int i = 0; i < numberOfCells; i++) {
-    msg << "(x=" << cellCentre[i] << ",h=" << cellSize[i] << ",t=" << t[i] << ",dt=" << dt[i] << ",id=" << id[i]
-        << ",lambda=" << maxEigenvalue[i] << ")";
+    msg << "(x=" << cellCentre[i] << ",h=" << cellSize[i] << ",t=" << t << ",dt=" << dt
+        << ",lambda=" << maxEigenvalue[i]
+        << ")";
   }
   msg << "]";
   return msg.str();

@@ -115,14 +115,6 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
 
-        self.add_argument(
-            "--storage",
-            type=str,
-            choices=[e.name for e in exahype2.solvers.Storage],
-            default="CallStack",
-            help="The storage scheme to use.",
-        )
-
         available_load_balancing_strategies = [
             "SpreadOut",
             "SpreadOutOnceGridStagnates",
@@ -154,11 +146,23 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Number of threads per rank.",
         )
         self.add_argument(
-            "-stateless",
-            "--stateless",
-            action="store_true",
-            default=False,
-            help="Use stateless PDE terms (needed for GPU offloading).",
+            "-ti",
+            "--print-time-interval",
+            type=int,
+            default=10,
+            help="Time interval to print time step information.",
+        )
+        self.add_argument(
+            "-td",
+            "--target-device",
+            default="tarch::accelerator::Device::DefaultDevice",
+            help="Target device for GPU offloading.",
+        )
+        self.add_argument(
+            "--tasks",
+            type=int,
+            default=1,
+            help="Number of fused enclave tasks to offload asynchronously.",
         )
         self.add_argument(
             "-fpe",

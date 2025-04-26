@@ -10,7 +10,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/mpi.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/grid.h"

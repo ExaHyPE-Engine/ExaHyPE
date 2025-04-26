@@ -81,13 +81,6 @@ parser.add_argument(
     default=0,
     help="Number of AMR grid levels on top of max. size of a cell.",
 )
-parser.add_argument(
-    "--storage",
-    type=str,
-    choices=[e.name for e in exahype2.solvers.Storage],
-    default="Heap",
-    help="The storage scheme to use."
-)
 available_load_balancing_strategies = [
     "SpreadOut",
     "SpreadOutOnceGridStagnates",
@@ -117,20 +110,6 @@ parser.add_argument(
     type=int,
     default=0,
     help="Number of threads per rank.",
-)
-parser.add_argument(
-    "-fuse",
-    "--fuse",
-    action="store_true",
-    default=False,
-    help="Fuse enclave tasks on the CPU (requires an enclave solver).",
-)
-parser.add_argument(
-    "-gpu",
-    "--gpu",
-    action="store_true",
-    default=False,
-    help="Fuse enclave tasks on the GPU (requires an enclave solver).",
 )
 parser.add_argument(
     "-timeout",
@@ -215,7 +194,6 @@ fv_solver = available_solvers[args.solver](
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=0.5,
-    pde_terms_without_state=True,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
@@ -228,7 +206,6 @@ fv_solver = available_solvers[args.solver](
     max_eigenvalue="return 1.0;",
 )
 fv_solver.plot_description = ", ".join({"v": args.dimensions}.keys())
-fv_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 
 fv_solver.set_solver_precisions(
   storage_precision = args.precision,

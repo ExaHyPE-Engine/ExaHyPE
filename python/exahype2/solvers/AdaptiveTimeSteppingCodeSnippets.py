@@ -1,108 +1,105 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .SolverCodeSnippets import SolverCodeSnippets
 
 
-class AdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
-  """
-  
-  Code snippet generator for all fixed time stepping solvers
-  
-  """
+class AdaptiveTimeSteppingCodeSnippets(SolverCodeSnippets):
+    """
+    Code snippet generator for all adaptive time stepping solvers
+    """
 
-  def create_abstract_solver_user_declarations(self):
-    return """
+    def create_abstract_solver_user_declarations(self):
+        return """
 protected:
   double _maxEigenvalue;
+  double _maxEigenvalueThisTimeStep;
+
   double _admissibleTimeStepSize;
-  double _previousTimeStepSize;
+  double _admissibleTimeStepSizeThisTimeStep;
+
 public:
-  void setMaxEigenvalue( double eigenvalue );  
+  void setMaxEigenvalue(double eigenvalue);
+  double getMaxEigenvalue(bool ofCurrentlyRunningGridSweep = true) const;
+
   /**
-   * @return Admissible time step size for the current sweep, i.e. 
+   * @return Admissible time step size for the current sweep, i.e.
    *         return _admissibleTimeStepSize. This value always refers
    *         to the minimum mesh volume size. If you use subcycling,
    *         you have to scale it for cells that are not on the finest
-   *         mesh resolution. 
+   *         mesh resolution.
    */
-  virtual double getAdmissibleTimeStepSize() const;  
-    """  
+  virtual double getAdmissibleTimeStepSize() const;
+"""
 
-
-  def create_abstract_solver_user_definitions(self):
-    return """
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
-  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
+    def create_abstract_solver_user_definitions(self):
+        return """
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue(double eigenvalue) {
+  if (tarch::la::greater(eigenvalue, 0.0)) {
     tarch::multicore::Lock lock(_semaphore);
-    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
+    _maxEigenvalueThisTimeStep = std::max(_maxEigenvalueThisTimeStep, eigenvalue);
   }
-}    
+}
 
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _maxEigenvalueThisTimeStep : _maxEigenvalue;
+}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
-  return _admissibleTimeStepSize;
+  return _admissibleTimeStepSizeThisTimeStep;
 }
-    """  
-
-
-  def create_abstract_solver_constructor_statements(self):
-    return """
-    _admissibleTimeStepSize = 0.0;
-    _previousTimeStepSize = 0.0;
 """
-  
-  
-  def create_compute_time_step_size(self):
-    return """
+
+    def create_abstract_solver_constructor_statements(self):
+        return """
+    _admissibleTimeStepSize = 0.0;
+    _admissibleTimeStepSizeThisTimeStep = 0.0;
+"""
+
+    def create_compute_time_step_size(self):
+        return """
     double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
-  
-  def create_compute_new_time_step_size(self):
-    """
-    
-    This is global, fixed time stepping, i.e. the new time step size will likely
-    be the same as the previous one, unless the mesh changes, as we work with 
-    normalised time step sizes, i.e. in this case the time step size might change.
-    Anyway, the new time step size is only for stats anyway, as we'll pick a 
-    global one when we determine timeStepSize the next time step.
-    
-    """
-    return """
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-    
-    // This is a value set for stats reasons. We'll ignore it later as we 
+    def create_compute_new_time_step_size(self):
+        """
+        This is global, fixed time stepping, i.e. the new time step size will likely
+        be the same as the previous one, unless the mesh changes, as we work with
+        normalised time step sizes, i.e. in this case the time step size might change.
+        Anyway, the new time step size is only for stats anyway, as we'll pick a
+        global one when we determine timeStepSize the next time step.
+        """
+        return """
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
+
+    // This is a value set for stats reasons. We'll ignore it later as we
     // ask for a new valid time step size from getAdmissibleTimeStepSize().
     const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
-
-  def create_finish_time_step_implementation(self):
-    """
-    This routine is inserted after we have reduced all global quantities. These
-    are the quantities with the postfix ThisTimeStep.
-    """
-    return """
-  if ( isLastGridSweepOfTimeStep() ) {
-    #ifdef Parallel
-    double newMaxEigenvalue = _maxEigenvalue;
+    def create_finish_time_step_implementation(self):
+        """
+        This routine is inserted after we have reduced all global quantities. These
+        are the quantities with the postfix ThisTimeStep.
+        """
+        return """
+  if (isLastGridSweepOfTimeStep()) {
+#ifdef Parallel
+    double newMaxEigenvalue = _maxEigenvalueThisTimeStep;
     tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxEigenvalue,
-        &_maxEigenvalue,
-        1,
-        MPI_DOUBLE,
-        MPI_MAX,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-    #endif
+      &newMaxEigenvalue,
+      &_maxEigenvalueThisTimeStep,
+      1,
+      MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+#endif
 
-    if (tarch::la::smaller(_maxEigenvalue, 0.0)) {
-      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue >= 0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue));
-      // Keep time step size invariant
-      // _admissibleTimeStepSize = _admissibleTimeStepSize;
-    } else if (tarch::la::equals(_maxEigenvalue, 0.0)) {
-      ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalue > 0", "max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalue));
-      _admissibleTimeStepSize = 0.0;
+    if (tarch::la::smaller(_maxEigenvalueThisTimeStep, 0.0)) {
+      tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalueThisTimeStep >= 0", "Invalid max eigenvalue: " + std::to_string(_maxEigenvalueThisTimeStep));
+    } else if (tarch::la::equals(_maxEigenvalueThisTimeStep, 0.0)) {
+      tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalueThisTimeStep > 0", "Max eigenvalue has reached zero, which means that the simulation cannot successfully continue: " + std::to_string(_maxEigenvalueThisTimeStep));
+      _admissibleTimeStepSizeThisTimeStep = 0.0;
     }
   }
 """

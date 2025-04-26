@@ -34,9 +34,9 @@ namespace {{ item }} {
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pStoreType* __restrict__                      lQhbnd[2*Dimensions],
-  pStoreType* __restrict__                      lFhbnd[2*Dimensions],
-  cStoreType* const __restrict__                luh,
+  pStoreType* noalias                      lQhbnd[2*Dimensions],
+  pStoreType* noalias                      lFhbnd[2*Dimensions],
+  cStoreType* const noalias                luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
   const double                                  timeStamp,
@@ -618,9 +618,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
 template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                   solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                 lQhbnd[2*Dimensions],
-  {{CORRECTOR_COMPUTATION_PRECISION}}* __restrict__                 lFhbnd[2*Dimensions],
-  {{SOLUTION_STORAGE_PRECISION}}* const __restrict__                luh,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias                 lQhbnd[2*Dimensions],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* noalias                 lFhbnd[2*Dimensions],
+  {{SOLUTION_STORAGE_PRECISION}}* const noalias                luh,
   const tarch::la::Vector<Dimensions, double>&                      cellCentre,
   const tarch::la::Vector<Dimensions, double>&                      cellSize,
   const double                                                      timeStamp,

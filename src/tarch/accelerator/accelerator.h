@@ -9,9 +9,11 @@
 #include "cuda/Device.h" // To get access to the __device__ keyword
 #endif
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
+  // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
+  // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
   #if defined(GPUOffloadingCUDA) or defined(GPUOffloadingHIP) or (defined(GPUOffloadingCPP) and defined(_NVHPC_STDPAR_GPU))
     #define GPUCallableMethod __host__ __device__
     GPUCallableMethod void gpuAbort();
@@ -26,13 +28,6 @@ namespace tarch {
   #else
     #define GPUCallableMethod
     #define GPUOffloadingOff // No device accelerator chosen
-    /**
-     * Delegates to std::abort() if no GPU offloading is active. Otherwise it
-     * degenerates to nop, as there is no abort on an accelerator. The vanilla
-     * implementation can be found in accelerator.cpp. The vendor-specific
-     * implementations are hold within their accelerator.cpp file.
-     */
-    void gpuAbort();
   #endif
 
   namespace accelerator {
@@ -76,7 +71,7 @@ namespace tarch {
    * Allocates memory on the specified memory location
    *
    * The device id is an optional argument that is required for
-   * memory allocation on an accelerator. Default is -1 (HostDevice).
+   * memory allocation on an accelerator. Default is 0 (DefaultDevice).
    * For memory allocation on accelerators, passing a device id >= 0 is
    * necessary.
    *
@@ -88,7 +83,7 @@ namespace tarch {
   T* allocateMemory(
     std::size_t    count,
     MemoryLocation location,
-    int            device = accelerator::Device::HostDevice
+    int            device = accelerator::Device::DefaultDevice
   ) {
     return reinterpret_cast<T*>(
       accelerator::allocateRawData(count * sizeof(T), location, device)
@@ -100,7 +95,7 @@ namespace tarch {
     void*          memoryPtr,
     std::size_t    count,
     MemoryLocation location,
-    int            device = accelerator::Device::HostDevice
+    int            device = accelerator::Device::DefaultDevice
   ) {
     return reinterpret_cast<T*>(
       accelerator::reallocateRawData(memoryPtr, count * sizeof(T), location, device)
@@ -119,7 +114,7 @@ namespace tarch {
   void freeMemory(
     void*          memoryPtr,
     MemoryLocation location,
-    int            device = accelerator::Device::HostDevice
+    int            device = accelerator::Device::DefaultDevice
   );
 
   template <class To, class From>
@@ -128,7 +123,7 @@ namespace tarch {
     const From*    from,
     std::size_t    count,
     MemoryLocation location,
-    int            device = accelerator::Device::HostDevice
+    int            device = accelerator::Device::DefaultDevice
   ) {
     static_assert(sizeof(To) == sizeof(From), "Data type mismatch");
     accelerator::copyTo(to, from, count * sizeof(To), location, device);
@@ -140,46 +135,11 @@ namespace tarch {
     To*            to,
     std::size_t    count,
     MemoryLocation location,
-    int            device = accelerator::Device::HostDevice
+    int            device = accelerator::Device::DefaultDevice
   ) {
     static_assert(sizeof(From) == sizeof(To), "Data type mismatch");
     accelerator::copyFrom(from, to, count * sizeof(From), location, device);
   }
 
   std::size_t padSizeToAlignment(std::size_t size, std::size_t alignment);
-
-  /**
-   * Alternative GPU-ready version of memset
-   *
-   * AMD's standard library hasn't annotated the memset call with target
-   * offload for OpenMP. So we have to provide a GPU-ready version ourselves.
-   * We do so if and only if the OpenMPManuallyOffloadMemset macro is set. It
-   * is typically set in the CompilerSpecificSettings.h. If that macro is not
-   * defined, we fall back to std::memset.
-   *
-   * The signature here is compatible with std::memset. The original interface
-   * is
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * char* memset(char* dest, int ch, size_t count);
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * which is just not nice. It should be
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * double* memset(double* dest, double ch, size_t countNumberOfDoubles);
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * but that's not what the C++ standard gives us. So we pick the nicest
-   * interface we could think of, but is still compatible.
-   *
-   * @param count Byte count.
-   */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
-  double* memset(double* dest, double ch, std::size_t byteCount);
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
 } // namespace tarch

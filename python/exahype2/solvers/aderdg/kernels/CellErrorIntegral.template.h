@@ -22,7 +22,7 @@ void cellErrorIntegral(
   const tarch::la::Vector<Dimensions, double>&    cellSize,
   double                                          timeStamp,
   double                                          timeStepSize,
-  {{SOLUTION_STORAGE_PRECISION}}* __restrict__    Q,
+  {{SOLUTION_STORAGE_PRECISION}}* noalias    Q,
   double                                          errors[3]
 );
 

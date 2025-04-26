@@ -4,7 +4,7 @@
 
 #include "AbstractNavierStokesSolver.h"
 #include "peano4/utils/Loop.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/logging/Log.h"
 
 namespace applications::exahype2::CompressibleNavierStokes {

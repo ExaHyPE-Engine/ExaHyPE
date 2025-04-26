@@ -362,6 +362,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+  {{PRINT_TIME_STEP_IMPLEMENTATION}}
+}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStamp,

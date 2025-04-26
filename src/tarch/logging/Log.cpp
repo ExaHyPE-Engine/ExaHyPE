@@ -1,5 +1,5 @@
 #include "tarch/logging/Log.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 
@@ -40,7 +40,7 @@
 
 #include <time.h>
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 tarch::logging::Log::Log(const std::string& className):
   _className( className ) {

@@ -15,8 +15,6 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::cuda");
 } // namespace
 
-void tarch::gpuAbort() {}
-
 void* tarch::accelerator::allocateRawData(
   std::size_t    sizeInBytes,
   MemoryLocation location,
@@ -27,8 +25,7 @@ void* tarch::accelerator::allocateRawData(
 
   switch (location) {
   case MemoryLocation::Heap:
-    //assertion1(device == accelerator::Device::HostDevice, device);
-    data = std::aligned_alloc( // cudaMallocHost(flags) -> pinned memory with flags
+    data = std::aligned_alloc(
       AlignmentOnHeap,
       padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
     );
@@ -42,14 +39,25 @@ void* tarch::accelerator::allocateRawData(
     CHECK_CUDA_ERROR(cudaMalloc(&data, sizeInBytes));
 #endif
     break;
+  case MemoryLocation::Pinned:
+    assertion1(device >= 0, device);
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
+#ifdef UseUSM
+    CHECK_CUDA_ERROR(cudaMallocManaged(&data, sizeInBytes));
+#else
+    CHECK_CUDA_ERROR(cudaMallocHost(&data, sizeInBytes));
+#endif
+    break;
   }
 
   assertion(data);
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
   }
+#endif
 
   return data;
 }
@@ -63,24 +71,31 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
+      logDebug("freeRawData()", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
   }
+#endif
 
   switch (location) {
   case MemoryLocation::Heap:
-    //assertion1(device == accelerator::Device::HostDevice, device);
-    std::free(data); // cudaFreeHost
+    std::free(data);
     break;
   case MemoryLocation::Device:
     assertion1(device >= 0, device);
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));
+    break;
+  case MemoryLocation::Pinned:
+    assertion1(device >= 0, device);
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
+    CHECK_CUDA_ERROR(cudaFreeHost(data));
     break;
   }
 }
@@ -98,16 +113,17 @@ void tarch::accelerator::copyTo(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
     break;
   case MemoryLocation::Device:
-#ifdef UseUSM
-    std::memcpy(target, source, sizeInBytes);
-#else
+  case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to device");
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to device");
+#ifdef UseUSM
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
+#else
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, deviceStreamGet()));
 #endif
     break;
@@ -127,16 +143,17 @@ void tarch::accelerator::copyFrom(
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from host to host");
+    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from host to host");
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
     break;
   case MemoryLocation::Device:
-#ifdef UseUSM
-    std::memcpy(target, source, sizeInBytes);
-#else
+  case MemoryLocation::Pinned:
     assertion1(device >= 0, device);
+    logDebug("copyFrom()", "Copy " << sizeInBytes << " bytes from device to host");
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    logDebug("copyFrom(...)", "Copy " << sizeInBytes << " bytes from device to host");
+#ifdef UseUSM
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToHost, deviceStreamGet()));
+#else
     CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, deviceStreamGet()));
 #endif
     break;

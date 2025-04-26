@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "compiler/CompilerSpecificSettings.h"
+#include "CompilerSpecificSettings.h"
 
 /**
  * @namespace tarch

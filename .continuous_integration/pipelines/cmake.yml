@@ -240,6 +240,21 @@ ExaHyPE2_Kernels:
     - Build
   retry: 0
 
+ExaHyPE2_GaugeWave_FV:
+  stage: Benchmarks
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_GaugeWave_FV
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
 ExaHyPE2_SBH:
   stage: Benchmarks
   allow_failure: false

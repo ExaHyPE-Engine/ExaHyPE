@@ -341,30 +341,6 @@ double runKernels(int device, exahype2::CellData<double, double>& cellData, int 
 }
 
 /**
- * We want to use all kernels exactly the same way. However, the various
- * kernels all have slightly different signatures. So we write small helper
- * functions (wrappers) which map the generic test signature onto the
- * specific kernel.
- *
- * To make this possible, all parameters which are not part of the generic
- * interface, i.e., which are not cell data or the boolean, have to be
- * mapped onto template arguments.
- */
-//TODO: Shouldn't be necessary as we only have one generated version of the kernels, remove?
-// template <void (*Kernel)(exahype2::CellData<double, double>&, tarch::timing::Measurement&, peano4::utils::LoopPlacement),
-//           peano4::utils::LoopPlacement loopPlacement>
-// void wrapHostKernel(int device, exahype2::CellData<double, double>& cellData) {
-//   assertionEquals(device, tarch::accelerator::Device::HostDevice);
-//   Kernel(cellData, timingComputeKernel, loopPlacement);
-// }
-
-// template <void (*Kernel)(int, exahype2::CellData<double, double>&, tarch::timing::Measurement&)>
-// void wrapDeviceKernel(int device, exahype2::CellData<double, double>& cellData) {
-//   assertion(device != tarch::accelerator::Device::HostDevice);
-//   Kernel(device, cellData, timingComputeKernel);
-// }
-
-/**
  * Run the benchmark for one particular number of cells
  *
  * @param numberOfCells Number of cells to study
@@ -373,8 +349,6 @@ void runBenchmarks(int numberOfCells) {
   exahype2::CellData<double, double> cellData(numberOfCells);
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     cellData.QIn[cellIndex]           = tarch::allocateMemory<double>(NumberOfInputEntriesPerCell, tarch::MemoryLocation::Heap);
-    cellData.t[cellIndex]             = TimeStamp;
-    cellData.dt[cellIndex]            = TimeStepSize;
     cellData.QOut[cellIndex]          = nullptr; //tarch::allocateMemory<double>(NumberOfOutputEntriesPerCell, tarch::MemoryLocation::Heap);
     cellData.cellCentre[cellIndex]    = CellCenter;
     cellData.cellSize[cellIndex]      = CellSize;
@@ -382,6 +356,9 @@ void runBenchmarks(int numberOfCells) {
     initInputData(cellData.QIn[cellIndex]);
     std::memset(cellData.QOut[cellIndex], 0.0, NumberOfOutputEntriesPerCell * sizeof(double));
   }
+
+  cellData.t = TimeStamp;
+  cellData.dt = TimeStepSize;
 
   auto assessKernel = [&](
     std::function<double(int device, exahype2::CellData<double, double>& cellData, int cellIndex, tarch::timing::Measurement& measurement)> executeKernels,
@@ -424,7 +401,7 @@ void runBenchmarks(int numberOfCells) {
   if constexpr (AssessHostKernels) {
     assessKernel(runKernels,
       "host, stateless, batched, AoS, serial",
-      tarch::accelerator::Device::HostDevice
+      tarch::accelerator::Device::DefaultDevice
     );
   } // AssessHostKernels
 
@@ -453,7 +430,6 @@ int main(int argc, char** argv) {
   // Do this early, so people can use logInfo properly.
   repositories::initLogFilters();
   tarch::initNonCriticalAssertionEnvironment();
-  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
   repositories::initSharedMemoryAndGPUEnvironment();
 
@@ -528,7 +504,6 @@ int main(int argc, char** argv) {
 //   }
 // #endif
 
-  tarch::multicore::shutdownSmartMPI();
   tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 

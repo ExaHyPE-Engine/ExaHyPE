@@ -52,6 +52,7 @@ boundary_conditions = f"""
   constexpr double OriginalShockPosition = {OriginalShockPosition};
   constexpr double Gamma = {Gamma};
   const double p = (x[0] < -OriginalShockPosition && x[1] < -OriginalShockPosition) ? 0.1 : 1.0;
+
   Qoutside[0] = (x[0] < -OriginalShockPosition && x[1] < -OriginalShockPosition) ? 0.125 : 1.0;
   Qoutside[1] = 0.0;
   Qoutside[2] = 0.0;
@@ -64,14 +65,13 @@ flux = f"""
   const double irho = Q[0] > 0.0 ? 1.0 / Q[0] : 0.0;
   const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
 
-  if (p > pZero) {{
-    F[0] = Q[normal+1];
-    F[1] = Q[normal+1] * Q[1] * irho;
-    F[2] = Q[normal+1] * Q[2] * irho;
-    F[3] = Q[normal+1] * irho * (Q[3] + p);
+  if (tarch::la::greater(p, pZero)) {{
+    F[0] = Q[normal + 1];
+    F[1] = Q[normal + 1] * Q[1] * irho;
+    F[2] = Q[normal + 1] * Q[2] * irho;
+    F[3] = Q[normal + 1] * irho * (Q[3] + p);
     F[normal+1] += p;
-  }}
-  else {{
+  }} else {{
     F[0] = 0.0;
     F[1] = 0.0;
     F[2] = 0.0;
@@ -84,10 +84,11 @@ max_eval = f"""
   constexpr double pZero = {pZero};
   const double irho = Q[0] > 0.0 ? 1.0 / Q[0] : 0.0;
   const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho*(Q[1]*Q[1]+Q[2]*Q[2]));
-  if (p > pZero) {{
+
+  if (tarch::la::greater(p, pZero)) {{
     const double c = std::sqrt(Gamma * p * irho);
     const double un = Q[normal + 1] * irho;
-    return std::max(std::abs(un-c), std::abs(un+c));
+    return std::fmax(std::fabs(un - c), std::fabs(un + c));
   }}
   return 0.0;
 """
@@ -96,8 +97,9 @@ adjust_solution = f"""
   constexpr double pZero = {pZero};
   constexpr double Gamma = {Gamma};
   const double irho = Q[0] > 0.0 ? 1.0 / Q[0] : 0.0;
-  const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho*(Q[1]*Q[1]+Q[2]*Q[2]));
-  if (p < pZero) {{
+  const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
+
+  if (tarch::la::smaller(p, pZero)) {{
     Q[0] = 0.0;
     Q[1] = 0.0;
     Q[2] = 0.0;
@@ -113,16 +115,17 @@ elif with_limiting == 1:
   constexpr double Gamma = {Gamma};
   constexpr double pZero = {pZero};
   const double irho = Q[0] > 0.0 ? 1.0 / Q[0] : 0.0;
-  const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  const double p = (Gamma - 1.0) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
 
   // Pressure, Density and Energy should be positive
-  if ((p < pZero)       // Pressure should be positive
-    or (Q[0] < 0.0)     // Density should be positive
-    or (Q[3] < 0.0)) {{ // Energy should be positive
+  if ((tarch::la::smaller(p, pZero))  // Pressure should be positive
+    or (Q[0] < 0.0)                   // Density should be positive
+    or (Q[3] < 0.0)                   // Energy should be positive
+  ) {{
     return false;
   }}
 
-  // Pressure, Density and Energy should be finite
+  // Pressure, Density and Energy should be finite.
   // If non-physical oscillations occur, the wave speed might receive a negative value under the square root.
   // It results in eigenvalues becoming NaN, which are not marked as TROUBLED, if no isfinite check is performed.
   for (int i = 0; i < {len(unknowns)}; ++i) {{

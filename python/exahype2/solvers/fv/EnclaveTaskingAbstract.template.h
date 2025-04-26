@@ -2,17 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/la/Vector.h"
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/NonCriticalAssertions.h"
+#include "Constants.h"
+
+#include "exahype2/Solver.h"
+#include "exahype2/RefinementControl.h"
 
 #include "peano4/utils/Globals.h"
 
-#include "exahype2/RefinementControl.h"
-#include "exahype2/Solver.h"
+#include "tarch/NonCriticalAssertions.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
+#include "tarch/logging/Log.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
-#include "Constants.h"
+#include <algorithm>
 
 {% if USE_VARIABLE_SHORTCUT is sameas True %}
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
@@ -95,14 +98,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{STORAGE_PRECISION}}* __restrict__    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{STORAGE_PRECISION}}* noalias    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>& x,
       const tarch::la::Vector<Dimensions, double>& h,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     virtual void initialCondition(
-      {{STORAGE_PRECISION}}* __restrict__          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{STORAGE_PRECISION}}* noalias          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>& x,
       const tarch::la::Vector<Dimensions, double>& h,
       bool                                         gridIsConstructed
@@ -117,8 +120,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      const {{STORAGE_PRECISION}}* __restrict__    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{STORAGE_PRECISION}}* __restrict__          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{STORAGE_PRECISION}}* noalias    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{STORAGE_PRECISION}}* noalias          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>& x,
       const tarch::la::Vector<Dimensions, double>& h,
       double                                       t,
@@ -166,6 +169,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     virtual void finishTimeStep() override;
+
+    virtual void printTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -286,8 +291,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     double     _minTimeStepSizeThisTimeStep;
     double     _maxTimeStepSizeThisTimeStep;
-
-    int        _patchUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 

@@ -45,8 +45,8 @@
     #endif
     QInGathered[unknown] = QIn[indexWithHalo];
   }
-  {% if STATELESS_PDE_TERMS==True %}
-  {{FULL_QUALIFIED_SOLVER_NAME}}::sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered, ::exahype2::Solver::Offloadable::Yes);
+  {% if STATELESS_SOURCE_TERM==True %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
   {% else %}
   solver.sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
   {% endif %}
@@ -150,31 +150,31 @@
   } // unknown
 
   // Retrieve user data
-  {% if STATELESS_PDE_TERMS==True %}
-  const {{COMPUTE_PRECISION}} maxEigenvalueGathered      = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
-  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes);
-
-  {% if FLUX_IMPLEMENTATION!="<none>" %}
-  {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
-  {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredRight, ::exahype2::Solver::Offloadable::Yes);
-  {% endif %}
-
-  {% if NCP_IMPLEMENTATION!="<none>" %}
-  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGathered, DeltaQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ncpGathered, ::exahype2::Solver::Offloadable::Yes);
-  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGatheredLeft, DeltaQGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpGatheredLeft, ::exahype2::Solver::Offloadable::Yes);
-  {% endif %}
+  {% if STATELESS_MAX_EIGENVALUE==True %}
+  const {{COMPUTE_PRECISION}} maxEigenvalueGathered      = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal);
+  const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal);
   {% else %}
   const {{COMPUTE_PRECISION}} maxEigenvalueGathered      = solver.maxEigenvalue(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
   const {{COMPUTE_PRECISION}} maxEigenvalueGatheredLeft  = solver.maxEigenvalue(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal);
   const {{COMPUTE_PRECISION}} maxEigenvalueGatheredRight = solver.maxEigenvalue(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal);
+  {% endif %}
 
   {% if FLUX_IMPLEMENTATION!="<none>" %}
+  {% if STATELESS_FLUX==True %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft);
+  {{FULL_QUALIFIED_SOLVER_NAME}}::flux(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredRight);
+  {% else %}
   solver.flux(QInGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredLeft);
   solver.flux(QInGatheredRight, volumeCentreRight, volumeSize, timeStamp, timeStepSize, normal, fluxGatheredRight);
   {% endif %}
+  {% endif %}
 
   {% if NCP_IMPLEMENTATION!="<none>" %}
+  {% if STATELESS_NCP==True %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGathered, DeltaQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ncpGathered);
+  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(QAverageGatheredLeft, DeltaQGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpGatheredLeft);
+  {% else %}
   solver.nonconservativeProduct(QAverageGathered, DeltaQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ncpGathered);
   solver.nonconservativeProduct(QAverageGatheredLeft, DeltaQGatheredLeft, volumeCentreLeft, volumeSize, timeStamp, timeStepSize, normal, ncpGatheredLeft);
   {% endif %}
@@ -237,8 +237,8 @@
   for (int normal = 0; normal < {{DIMENSIONS}}; normal++) {
     maxEigenvalueAfterTimeStep = std::fmax(
       maxEigenvalueAfterTimeStep,
-      {% if STATELESS_PDE_TERMS==True %}
-      {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QOutGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, ::exahype2::Solver::Offloadable::Yes)
+      {% if STATELESS_MAX_EIGENVALUE==True %}
+      {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(QOutGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal)
       {% else %}
       solver.maxEigenvalue(QOutGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, normal)
       {% endif %}

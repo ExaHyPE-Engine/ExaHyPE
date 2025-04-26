@@ -80,9 +80,6 @@ fvSolver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     max_eigenvalue=eigenvalues_,
     flux=flux_,
 )
-fvSolver.switch_storage_scheme(
-    exahype2.solvers.Storage["CallStack"], exahype2.solvers.Storage["CallStack"]
-)
 
 project.set_global_simulation_parameters(
     dimensions=dimensions_,

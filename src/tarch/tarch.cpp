@@ -4,7 +4,7 @@
 
 #include "config.h"
 #include "tarch/logging/Log.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 #include <limits.h>
 #include <iostream>

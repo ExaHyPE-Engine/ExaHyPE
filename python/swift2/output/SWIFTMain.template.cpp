@@ -472,7 +472,6 @@ int main(int argc, char** argv) {
   {% endif -%}
 
   peano4::initParallelEnvironment(&argc,&argv);
-  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
   tarch::initNonCriticalAssertionEnvironment();
 

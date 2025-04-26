@@ -45,25 +45,28 @@ void toolbox::loadbalancing::strategies::SpreadOut::updateInterRankLoadBalancing
   const int minTreeSize = std::max(_configuration->getMinTreeSize(_state), 1); // We want to split as early as possible here
   const int numberOfTreesToAccommodateMinTreeSize = std::max(numberOfCells / minTreeSize, 1);
 
-  if (numberOfTreesToAccommodateMinTreeSize > numberOfRanks) {
-    const int numberOfCellsPerTree = std::max(static_cast<int>(std::round(numberOfCells / numberOfRanks)), 1);
-    logDebug(
-      "updateInterRankLoadBalancing()",
-      "Mesh has "
-        << numberOfCells << " cells, so split " << numberOfRanks - 1 << " times "
-        << "("
-        << "MinTreeSize=" << minTreeSize
-        << ", NumberOfTreesToAccommodateMinTreeSize=" << numberOfTreesToAccommodateMinTreeSize
-        << ", NumberOfCellsPerTree=" << numberOfCellsPerTree
-        << ")"
-    );
-    for (int targetRank = 1; targetRank < numberOfRanks; targetRank++ ) {
-      int numberOfCellsPerTreeWithRemainder = numberOfCellsPerTree;
-      if (numberOfCells % numberOfRanks >= targetRank) {
-        numberOfCellsPerTreeWithRemainder++;
-      }
-      triggerSplit(numberOfCellsPerTreeWithRemainder, targetRank);
+  if (numberOfTreesToAccommodateMinTreeSize < numberOfRanks) {
+    return; // Nothing to do (yet)
+  }
+
+  const int numberOfCellsPerTree = std::max(static_cast<int>(std::round(numberOfCells / numberOfRanks)), 1);
+  logDebug(
+    "updateInterRankLoadBalancing()",
+    "Mesh has "
+      << numberOfCells << " cells, so split " << numberOfRanks - 1 << " times "
+      << "("
+      << "MinTreeSize=" << minTreeSize
+      << ", NumberOfTreesToAccommodateMinTreeSize=" << numberOfTreesToAccommodateMinTreeSize
+      << ", NumberOfCellsPerTree=" << numberOfCellsPerTree
+      << ")"
+  );
+
+  for (int targetRank = 1; targetRank < numberOfRanks; targetRank++ ) {
+    int numberOfCellsPerTreeWithRemainder = numberOfCellsPerTree;
+    if (numberOfCells % numberOfRanks >= targetRank) {
+      numberOfCellsPerTreeWithRemainder++;
     }
+    triggerSplit(numberOfCellsPerTreeWithRemainder, targetRank);
   }
 }
 
@@ -89,7 +92,7 @@ void toolbox::loadbalancing::strategies::SpreadOut::updateIntraRankLoadBalancing
   const int numberOfTreesToAccommodateMinTreeSize = std::max(numberOfCells / minTreeSize, 1);
   const int numberOfAllowedTrees = std::min({numberOfTreesToAccommodateMinTreeSize, _maxPermittedTreesPerRank, numberOfThreads});
 
-  if (numberOfAllowedTrees < numberOfThreads or not _statistics.hasConsistentViewOfWorld()) {
+  if (numberOfTreesToAccommodateMinTreeSize < numberOfThreads or not _statistics.hasConsistentViewOfWorld()) {
     return; // Nothing to do (yet)
   }
 

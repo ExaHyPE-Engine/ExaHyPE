@@ -33,7 +33,7 @@ the compiler-dependencies are managed:
 
 # Realisation of Peano's internal compiler-specific switches
 
-Peano relies on a header tarch/compiler/CompilerSpecificSettings.h.
+Peano relies on a header tarch/CompilerSpecificSettings.h.
 This header reads out the compiler version and includes a particular flavour
 of the header for this compiler, i.e. the header reads out some compiler preprocessor directives and then includes the
 one it find most appropriate.

@@ -13,4 +13,3 @@ from .PreprocessSolution    import EmptyPreprocessSolution
 from .PreprocessSolution    import VolumeWisePreprocessSolution
 from .UpdateCell            import UpdateCell
 from .UpdateCellWithEnclaveTasking import UpdateCellWithEnclaveTasking
-from .MergeEnclaveTaskOutcome import MergeEnclaveTaskOutcome

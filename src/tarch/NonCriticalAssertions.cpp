@@ -10,7 +10,7 @@
 #include "tarch/Assertions.h"
 
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 
 namespace {
@@ -63,14 +63,14 @@ void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string
   tarch::multicore::Lock lock( assertionSemaphore );
 
   if (rankWhichHasSetNonCriticalAssertion>=0 and useNonCriticalAssertions) {
-    logDebug( "triggerNonCriticalAssertion(...)", "noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
-    //logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );
-    logDebug( "triggerNonCriticalAssertion(...)", "there has been a non-critical assertion before, so node should already be in shutdown mode" );
+    logDebug( "triggerNonCriticalAssertion()", "Noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
+    //logError( "triggerNonCriticalAssertion()", parameterValuePairs );
+    logDebug( "triggerNonCriticalAssertion()", "There has been a non-critical assertion before, so node should already be in shutdown mode" );
   }
   if (rankWhichHasSetNonCriticalAssertion<0 and useNonCriticalAssertions) {
-    logError( "triggerNonCriticalAssertion(...)", "noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
-    logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );
-    logError( "triggerNonCriticalAssertion(...)", "inform rank 0 to dump solution and to shutdown application" );
+    logError( "triggerNonCriticalAssertion()", "Noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
+    logError( "triggerNonCriticalAssertion()", parameterValuePairs );
+    logError( "triggerNonCriticalAssertion()", "Inform rank 0 to dump solution and to shutdown application" );
 
     rankWhichHasSetNonCriticalAssertion = tarch::mpi::Rank::getInstance().getRank();
 
@@ -107,7 +107,7 @@ bool tarch::hasNonCriticalAssertionBeenViolated() {
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
       rankWhichHasSetNonCriticalAssertion = message.getValue();
-      logError( "triggerNonCriticalAssertion(...)", "received non-critical assertion from rank " << status.MPI_SOURCE );
+      logError( "triggerNonCriticalAssertion()", "Received non-critical assertion from rank " << status.MPI_SOURCE );
     }
   }
   #endif

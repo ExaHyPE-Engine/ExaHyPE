@@ -2,14 +2,15 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 set(ADAPTIVE_CPP_VERSION 24.10.0)
+set(ACPP_TARGETS generic)
 
-if(PEANO_NVIDIA_GPU)
-  set(ACPP_TARGETS cuda:${WITH_GPU_ARCH})
-elseif(PEANO_AMD_GPU)
-  set(ACPP_TARGETS hip:${WITH_GPU_ARCH})
-else()
-  set(ACPP_TARGETS generic)
-endif()
+# if(PEANO_NVIDIA_GPU)
+#   set(ACPP_TARGETS cuda:${WITH_GPU_ARCH})
+# elseif(PEANO_AMD_GPU)
+#   set(ACPP_TARGETS hip:${WITH_GPU_ARCH})
+# else()
+#   set(ACPP_TARGETS generic)
+# endif()
 
 find_package(AdaptiveCpp CONFIG)
 

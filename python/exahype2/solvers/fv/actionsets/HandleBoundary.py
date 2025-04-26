@@ -34,8 +34,8 @@ class HandleBoundary(AbstractFVActionSet):
   TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fv::applyBoundaryConditions<{{STORAGE_PRECISION}}>(
         [&](
-          const {{STORAGE_PRECISION}} * __restrict__   Qinside,
-          {{STORAGE_PRECISION}} * __restrict__         Qoutside,
+          const {{STORAGE_PRECISION}} * noalias   Qinside,
+          {{STORAGE_PRECISION}} * noalias         Qoutside,
           const tarch::la::Vector<Dimensions,double>&  x,
           const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
@@ -56,8 +56,8 @@ class HandleBoundary(AbstractFVActionSet):
       );
       ::exahype2::fv::applyBoundaryConditions<{{STORAGE_PRECISION}}>(
         [&](
-          const {{STORAGE_PRECISION}} * __restrict__   Qinside,
-          {{STORAGE_PRECISION}} * __restrict__         Qoutside,
+          const {{STORAGE_PRECISION}} * noalias   Qinside,
+          {{STORAGE_PRECISION}} * noalias         Qoutside,
           const tarch::la::Vector<Dimensions,double>&  x,
           const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,

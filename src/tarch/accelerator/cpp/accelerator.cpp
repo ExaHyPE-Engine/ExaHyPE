@@ -13,8 +13,6 @@ namespace {
   tarch::logging::Log _log("tarch::accelerator::cpp");
 } // namespace
 
-void tarch::gpuAbort() { std::abort(); }
-
 void* tarch::accelerator::allocateRawData(
   std::size_t    sizeInBytes,
   MemoryLocation location,
@@ -26,6 +24,7 @@ void* tarch::accelerator::allocateRawData(
   switch (location) {
   case MemoryLocation::Heap:
   case MemoryLocation::Device:
+  case MemoryLocation::Pinned:
     data = std::aligned_alloc(
       AlignmentOnHeap,
       padSizeToAlignment(sizeInBytes, AlignmentOnHeap)
@@ -35,10 +34,12 @@ void* tarch::accelerator::allocateRawData(
 
   assertion(data);
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     Device::getInstance().getMemoryBlockTable()[data] = sizeInBytes;
   }
+#endif
 
   return data;
 }
@@ -52,19 +53,22 @@ void tarch::accelerator::freeRawData(
     return;
   }
 
+#if PeanoDebug > 0
   {
     tarch::multicore::Lock lock(Device::getInstance().getMemoryBlockSemaphore());
     auto itr = Device::getInstance().getMemoryBlockTable().find(data);
     if (itr == Device::getInstance().getMemoryBlockTable().end()) {
-      logDebug("freeRawData(...)", "Attempt to free invalid pointer")
+      logDebug("freeRawData()", "Attempt to free invalid pointer")
       return;
     }
     Device::getInstance().getMemoryBlockTable().erase(itr);
   }
+#endif
 
   switch (location) {
   case MemoryLocation::Heap:
   case MemoryLocation::Device:
+  case MemoryLocation::Pinned:
     std::free(data);
     break;
   }
@@ -82,7 +86,8 @@ void tarch::accelerator::copyTo(
   switch (location) {
   case MemoryLocation::Heap:
   case MemoryLocation::Device:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+  case MemoryLocation::Pinned:
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   }
@@ -100,7 +105,8 @@ void tarch::accelerator::copyFrom(
   switch (location) {
   case MemoryLocation::Heap:
   case MemoryLocation::Device:
-    logDebug("copyTo(...)", "Copy " << sizeInBytes << " bytes from host to host");
+  case MemoryLocation::Pinned:
+    logDebug("copyTo()", "Copy " << sizeInBytes << " bytes from host to host");
     std::memcpy(target, source, sizeInBytes);
     break;
   }

@@ -36,13 +36,13 @@ const tarch::multicore::BooleanSemaphore& tarch::accelerator::Device::getMemoryB
 }
 
 void tarch::accelerator::Device::checkForMemoryLeaks() {
+#if PeanoDebug > 0
   tarch::multicore::Lock lock(_memoryBlockSemaphore);
 
   if (!_memoryBlockTable.empty()) {
     logWarning("checkForMemoryLeaks()", "WARNING: Detected " << _memoryBlockTable.size() << " memory leaks!");
   }
 
-#if PeanoDebug > 0
   auto itr = _memoryBlockTable.begin();
   auto end = _memoryBlockTable.end();
 

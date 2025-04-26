@@ -87,13 +87,12 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
 
   if (lines[lines.size() - 1].find(Token_EndDataSet) == std::string::npos) {
     logWarning(
-      "addNewFileToCurrentDataSetInIndexFile(...)",
-      "last line in index file "
+      "addNewFileToCurrentDataSetInIndexFile()",
+      "Last line in index file "
         << _indexFile << " has not been end of dataset as expected. Expected \"" << Token_EndDataSet << "\" but got \""
         << lines[lines.size() - 1] << "\""
     );
   }
-
 
   const std::string newEntry = "  include \"" + filename + "\"";
   lines[lines.size() - 1]    = newEntry;
@@ -105,7 +104,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
   }
   indexFileOut.close();
 
-  logDebug( "addNewFileToCurrentDataSetInIndexFile(...)", "added new entry " << newEntry << " to latest time stamp section within " << _indexFile << " (#lines:" << lines.size() << ")" );
+  logDebug("addNewFileToCurrentDataSetInIndexFile()", "Added new entry " << newEntry << " to latest time stamp section within " << _indexFile << " (#lines:" << lines.size() << ")" );
 }
 
 
@@ -145,8 +144,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
   if (fileName.rfind(".peano-patch-file") != std::string::npos) {
     logWarning(
-      "writeToFile()",
-      "filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename prefix="
+      "PeanoTextPatchFileWriter()",
+      "Filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename prefix="
         << fileName
     );
   } else {
@@ -154,8 +153,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
   }
   if (indexFileName.rfind(".peano-patch-file") != std::string::npos) {
     logWarning(
-      "writeToFile()",
-      "index filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename "
+      "PeanoTextPatchFileWriter()",
+      "Index filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename "
       "prefix="
         << indexFileName
     );
@@ -176,7 +175,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     break;
   case IndexFileMode::AppendNewData:
     if (not std::filesystem::exists(_indexFile)) {
-      logInfo("PeanoTextPatchFileWriter(...)", "No index file " << _indexFile << " found. Create new one");
+      logDebug("PeanoTextPatchFileWriter()", "No index file " << _indexFile << " found. Create new one.");
       createEmptyIndexFile();
     } else if (tarch::la::smaller(
                  timeStamp,
@@ -186,7 +185,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
                  )
                )) {
       logWarning(
-        "PeanoTextPatchFileWriter(...)",
+        "PeanoTextPatchFileWriter()",
         "There is an index file "
           << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile()
           << ". Will be overwritten as we dump data for time " << timeStamp
@@ -197,7 +196,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     createBackupOfMetaFile();
     if (tarch::la::smaller(getLatestTimeStepInIndexFile(), timeStamp, DefaultTimeStampPrecision)) {
       logDebug(
-        "PeanoTextPatchFileWriter(...)",
+        "PeanoTextPatchFileWriter()",
         "Create new dataset for time stamp "
           << timeStamp << " linking to " << _fileName << " as last time stamp had been " << getLatestTimeStepInIndexFile()
       );
@@ -206,7 +205,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     addNewFileToCurrentDataSetInIndexFile(_fileName);
     break;
   }
-  logDebug("PeanoTextPatchFileWriter(...)", "Index file is ready");
+  logDebug("PeanoTextPatchFileWriter()", "Index file is ready");
 
   _snapshotFileOut << std::scientific;
 }
@@ -439,7 +438,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeT
   std::ofstream out;
   out.open(_fileName, std::ios::binary);
   if ((!out.fail()) && out.is_open()) {
-    logDebug("writeToFile()", "opened data file " + _fileName);
+    logDebug("writeToFile()", "Opened data file " + _fileName);
 
     if (_haveWrittenAtLeastOnePatch) {
       _snapshotFileOut << "end patch" << std::endl << std::endl;
@@ -450,7 +449,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeT
     _writtenToFile = true;
     return true;
   } else {
-    logError("close()", "unable to write output file " + _fileName);
+    logError("close()", "Unable to write output file " + _fileName);
     return false;
   }
 }
@@ -459,17 +458,9 @@ bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::isOpen
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::clear() {
   _writtenToFile = false;
-
   _snapshotFileOut.clear();
-
   _patchCounter = 0;
-
   _haveWrittenAtLeastOnePatch = false;
-
   _snapshotFileOut << HEADER << "format ASCII" << std::endl << "dimensions " << _dimensions << std::endl;
-
   _snapshotFileOut << std::endl << std::endl;
 }
-
-
-

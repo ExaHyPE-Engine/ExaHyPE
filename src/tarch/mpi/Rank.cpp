@@ -7,7 +7,7 @@
 #include <chrono>
 
 #include "Rank.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
 
 #include "tarch/mpi/DoubleMessage.h"
@@ -465,10 +465,6 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
   }
 }
 
-#ifdef UseTargetDART
-static void tdTextPointer() {}
-#endif
-
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
   #ifdef Parallel
   int result = MPI_SUCCESS;
@@ -484,10 +480,6 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   #else
   result = MPI_Init( argc, argv );
   #endif
-
-#ifdef UseTargetDART
-  td_init(reinterpret_cast<void*>(&tdTextPointer));
-#endif
 
   if (result!=MPI_SUCCESS) {
     std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;

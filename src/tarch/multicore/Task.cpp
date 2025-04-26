@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Task.h"
 
-#include <queue>
-#include <set>
-
 #include "BooleanSemaphore.h"
 #include "config.h"
 #include "Core.h"
@@ -13,7 +10,12 @@
 #include "tarch/Assertions.h"
 #include "tarch/services/ServiceRepository.h"
 
-bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) { return lhs.getPriority() < rhs.getPriority(); }
+#include <queue>
+#include <set>
+
+bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
+  return lhs.getPriority() < rhs.getPriority();
+}
 
 bool tarch::multicore::TaskComparison::operator()(const Task& lhs, const Task& rhs) const { return lhs < rhs; }
 
@@ -36,7 +38,7 @@ void tarch::multicore::Task::setPriority(int priority) {
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
-bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*device*/) {
+bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks) {
   assertion(canFuse());
   for (auto pp : otherTasks) {
     tarch::multicore::Task* currentTask = pp;
@@ -47,53 +49,46 @@ bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*devi
   return true;
 }
 
-std::string tarch::multicore::Task::toString() const {
-  return "<no-description-available>";
-}
+std::string tarch::multicore::Task::toString() const { return "<no-description-available>"; }
 
 tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
-    int taskType,
-    int priority,
-    const std::function<bool()>& taskFunctor
-    #if PeanoDebug>0
-    , const std::string&           taskDescription
-    #endif
-  ):
+  int                          taskType,
+  int                          priority,
+  const std::function<bool()>& taskFunctor
+#if PeanoDebug > 0
+  ,
+  const std::string& taskDescription
+#endif
+):
   Task(taskType, priority),
   _taskFunctor(taskFunctor)
-  #if PeanoDebug>0
-  , _taskDescription(taskDescription)
-  #endif
-{}
-
-bool tarch::multicore::TaskWithCopyOfFunctor::run() {
-  return _taskFunctor();
+#if PeanoDebug > 0
+  ,
+  _taskDescription(taskDescription)
+#endif
+{
 }
+
+bool tarch::multicore::TaskWithCopyOfFunctor::run() { return _taskFunctor(); }
 
 std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
-  #if PeanoDebug>0
+#if PeanoDebug > 0
   return _taskDescription;
-  #else
+#else
   return "";
-  #endif
+#endif
 }
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor):
+tarch::multicore::TaskWithoutCopyOfFunctor::
+  TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor):
   Task(taskType, priority),
-  _taskFunctor(taskFunctor) {
-}
+  _taskFunctor(taskFunctor) {}
 
-bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
-  return _taskFunctor();
-}
+bool tarch::multicore::TaskWithoutCopyOfFunctor::run() { return _taskFunctor(); }
 
 tarch::multicore::EmptyTask::EmptyTask(int priority):
   Task(Task::DontFuse, priority) {}
 
-bool tarch::multicore::EmptyTask::run() {
-  return false;
-}
+bool tarch::multicore::EmptyTask::run() { return false; }
 
-std::string tarch::multicore::EmptyTask::toString() const {
-  return "empty";
-}
+std::string tarch::multicore::EmptyTask::toString() const { return "empty"; }

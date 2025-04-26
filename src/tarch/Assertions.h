@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cstdio>
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
   /**
    * Define the assert macro. An assertion is given a boolean expression. If

@@ -19,11 +19,9 @@ For this, Peano provides some routines:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 peano4::initParallelEnvironment(&argc,&argv);
-tarch::multicore::initSmartMPI();
 peano4::fillLookupTables();
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-tarch::multicore::initSmartMPI() is optional. 
 peano4::initParallelEnvironment() calls in return all MPI initialisation and hence 
 ensures that the singleton tarch::Rank is properly configured.
 There are corresponding shutdown routines as well.

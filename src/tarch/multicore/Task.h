@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "multicore.h"
+
 #include <functional>
 #include <limits>
 #include <list>
@@ -9,9 +11,6 @@
 #include <string>
 #include <tuple>
 #include <vector>
-
-#include "multicore.h"
-
 
 namespace tarch {
   namespace multicore {
@@ -128,11 +127,8 @@ namespace tarch {
        *         same type as the present object. It is the tasks responsibility
        *         to get these tasks done. So either span some new tasks or handle
        *         them straightaway.
-       * @param targetDevice On which device should the task be processed? A
-       *         negative number means local host, and anything greater or equal
-       *         to zero denotes an accelerator.
        */
-      virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice);
+      virtual bool fuse(const std::list<Task*>& otherTasks);
 
       virtual std::string toString() const;
     };
@@ -202,9 +198,9 @@ namespace tarch {
        */
       std::function<bool()> _taskFunctor;
 
-      #if PeanoDebug>0
-      std::string           _taskDescription;
-      #endif
+#if PeanoDebug > 0
+      std::string _taskDescription;
+#endif
 
     public:
       TaskWithCopyOfFunctor()                             = delete;
@@ -217,12 +213,13 @@ namespace tarch {
        *   returns indicator if task has to rerun. See class documentation.
        */
       TaskWithCopyOfFunctor(
-        int taskType,
-        int priority,
+        int                          taskType,
+        int                          priority,
         const std::function<bool()>& taskFunctor
-        #if PeanoDebug>0
-        , const std::string&           taskDescription = ""
-        #endif
+#if PeanoDebug > 0
+        ,
+        const std::string& taskDescription = ""
+#endif
       );
 
       virtual bool run() override;
@@ -237,19 +234,19 @@ namespace tarch {
      * task graphs.
      */
     class EmptyTask: public Task {
-      public:
-        EmptyTask() = delete;
+    public:
+      EmptyTask() = delete;
 
-        /**
-         * Create empty task
-         *
-         * Every empty task is of the type DontFuse.
-         */
-        EmptyTask(int priority);
+      /**
+       * Create empty task
+       *
+       * Every empty task is of the type DontFuse.
+       */
+      EmptyTask(int priority);
 
-        virtual bool run() override;
+      virtual bool run() override;
 
-        virtual std::string toString() const override;
+      virtual std::string toString() const override;
     };
 
     /**
@@ -283,7 +280,7 @@ namespace tarch {
 
       virtual bool run() override;
     };
-  }   // namespace multicore
+  } // namespace multicore
 } // namespace tarch
 
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs);

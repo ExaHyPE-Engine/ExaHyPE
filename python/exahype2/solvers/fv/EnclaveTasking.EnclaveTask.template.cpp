@@ -2,59 +2,71 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-{{SOLVER_INCLUDES}}
-
 #include "config.h"
 
+{{SOLVER_INCLUDES}}
+
 #include "exahype2/CellData.h"
-#include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
+#include "exahype2/fv/PatchUtils.h"
 
 #include "peano4/parallel/parallel.h"
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/timing/Measurement.h"
 
-#include <string.h>
-#include <memory>
+#include <algorithm>
+#include <cstring>
 
-tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
   return _enclaveTaskTypeId;
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
-  const ::peano4::datamanagement::CellMarker& marker,
-  double                                      timeStamp,
-  double                                      timeStepSize,
-  {{STORAGE_PRECISION}}* __restrict__         oldQWithHalo,
-  {{STORAGE_PRECISION}}* __restrict__         newQ
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
+  const peano4::datamanagement::CellMarker&       marker,
+  double                                          timeStamp,
+  double                                          timeStepSize,
+  /*const*/ {{STORAGE_PRECISION}}* noalias const oldQWithHalo,
+  {{STORAGE_PRECISION}}* noalias const       newQ
 ) {
+  {{PREPROCESS_RECONSTRUCTED_PATCH}}
   {% if COMPUTE_MAX_EIGENVALUE %}
   const double maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
   {% else %}
   const double _ = {{COMPUTE_KERNEL_CALL}}
   {% endif %}
+  {{POSTPROCESS_UPDATED_PATCH}}
 
-  ::tarch::freeMemory(oldQWithHalo, ::tarch::MemoryLocation::Heap);
+  #if PeanoDebug > 0
+  ::exahype2::fv::validatePatch(
+    newQ,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    0, // Halo size
+    std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
+  ); // Outcome has to be valid
+  #endif
 
-  {% if COMPUTE_MAX_EIGENVALUE %}
-  return maxEigenvalue;
-  {% else %}
-  return 0.0;
-  {% endif %}
+  {{COMPUTE_NEW_TIME_STEP_SIZE}}
+  repositories::{{SOLVER_INSTANCE}}.update(
+    newTimeStepSize,
+    timeStamp + timeStepSize,
+    marker.h()(0)
+  );
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
-  const ::peano4::datamanagement::CellMarker& marker,
-  double                                      timeStamp,
-  double                                      timeStepSize,
-  {{STORAGE_PRECISION}}* __restrict__         oldQWithHalo,
-  {{STORAGE_PRECISION}}* __restrict__         newQ
+  const peano4::datamanagement::CellMarker&       marker,
+  double                                          timeStamp,
+  double                                          timeStepSize,
+  /*const*/ {{STORAGE_PRECISION}}* noalias const oldQWithHalo,
+  {{STORAGE_PRECISION}}* noalias const       newQ
 ):
   ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
     _enclaveTaskTypeId,
@@ -63,15 +75,15 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     timeStepSize,
     oldQWithHalo,
     newQ,
-    #if Dimensions==2
+    {% if DIMENSIONS == 2 %}
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-    #else
+    {% else %}
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-    #endif
+    {% endif %}
     [&]() -> void {
-      _maxEigenvalue = applyKernelToCell(
+      applyKernelToPatch(
         _marker,
         _t,
         _dt,
@@ -85,61 +97,98 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
-  {% if STATELESS_PDE_TERMS %}
+  {% if CAN_FUSE %}
   return true;
   {% else %}
   return false;
   {% endif %}
 }
 
-{% if STATELESS_PDE_TERMS %}
+{% if CAN_FUSE %}
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks) {
+  const int numberOfPatches = otherTasks.size() + 1;
 
-/**
- * Also merge the current task
- */
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
   logDebug("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
-    << " asked to fuse " << (otherTasks.size() + 1) << " tasks of type " << getTaskType() << " into one large enclave task on device " << targetDevice);
+    << " asked to fuse " << numberOfPatches << " patches of type " << getTaskType() << " into one large enclave task on device " << TARGET_DEVICE);
 
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}> patchData(otherTasks.size() + 1, ::tarch::MemoryLocation::Heap, targetDevice);
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}> patchData(
+    numberOfPatches,
+    tarch::MemoryLocation::Pinned,
+    TARGET_DEVICE
+  );
 
-  int currentTask = 0;
+  int patchIndex = 0;
   for (auto& p: otherTasks) {
-    patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    patchData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
-    patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
-    patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = ::tarch::allocateMemory<{{STORAGE_PRECISION}}>(_numberOfResultValues, ::tarch::MemoryLocation::Heap, targetDevice);
-    //patchData.QOut[currentTask]        = reinterpret_cast<{{STORAGE_PRECISION}}*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof({{STORAGE_PRECISION}}), ::tarch::MemoryLocation::Heap, targetDevice));
+    patchData.QIn[patchIndex]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
+    patchData.QOut[patchIndex]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_outputValues;
+    patchData.cellCentre[patchIndex]   = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
+    patchData.cellSize[patchIndex]     = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
     delete p;
-    currentTask++;
+    patchIndex++;
   }
-  patchData.QIn[currentTask]          = _inputValues;
-  patchData.cellCentre[currentTask]   = _marker.x();
-  patchData.cellSize[currentTask]     = _marker.h();
-  patchData.t[currentTask]            = _t;
-  patchData.dt[currentTask]           = _dt;
-  patchData.id[currentTask]           = _taskNumber;
-  patchData.QOut[currentTask]         = ::tarch::allocateMemory<{{STORAGE_PRECISION}}>(_numberOfResultValues, ::tarch::MemoryLocation::Heap, targetDevice);
-  //patchData.QOut[currentTask]         = reinterpret_cast<{{STORAGE_PRECISION}}*>(::tarch::accelerator::MemoryManager::getInstance().allocate(_numberOfResultValues * sizeof({{STORAGE_PRECISION}}), ::tarch::MemoryLocation::Heap, targetDevice));
+  patchData.t = _t;
+  patchData.dt = _dt;
+  patchData.QIn[patchIndex]            = _inputValues;
+  patchData.QOut[patchIndex]           = _outputValues;
+  patchData.cellCentre[patchIndex]     = _marker.x();
+  patchData.cellSize[patchIndex]       = _marker.h();
 
-  const double maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
+  patchData.QIn1D = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
+    tarch::MemoryLocation::Pinned,
+    TARGET_DEVICE
+  );
+  patchData.QOut1D = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+    numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
+    tarch::MemoryLocation::Pinned,
+    TARGET_DEVICE
+  );
+  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
+    auto* const oldQWithHalo = patchData.QOut[patchIndex];
 
-  //
-  // ==================
-  // Bring back results
-  // ==================
-  //
-  for (int i = 0; i < patchData.numberOfCells; i++) {
-    // Delete reconstructed data which has been allocated before spawning the tasks.
-    ::tarch::freeMemory(patchData.QIn[i], ::tarch::MemoryLocation::Heap, targetDevice);
-    ::exahype2::EnclaveBookkeeping<{{STORAGE_PRECISION}}>::getInstance().bookmarkFinishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], maxEigenvalue);
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+
+    std::copy_n(
+      patchData.QIn[patchIndex],
+      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
+      &patchData.QIn1D[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}]
+    );
   }
 
-  // Don't rerun, so return false.
+  const auto maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
+
+  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
+    std::copy_n(
+      &patchData.QOut1D[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}],
+      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
+      patchData.QOut[patchIndex]
+    );
+
+    auto* const newQ = patchData.QOut[patchIndex];
+    {{POSTPROCESS_UPDATED_PATCH}}
+
+    #if PeanoDebug > 0
+    ::exahype2::fv::validatePatch(
+      newQ,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0, // Halo size
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
+    ); // Outcome has to be valid
+    #endif
+  }
+
+  {{COMPUTE_NEW_TIME_STEP_SIZE}}
+  repositories::{{SOLVER_INSTANCE}}.update(
+    newTimeStepSize,
+    _t + _dt,
+    _marker.h()(0)
+  );
+
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.QIn1D, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.QOut1D, TARGET_DEVICE);
+
   return false;
 }
-
 {% endif %}

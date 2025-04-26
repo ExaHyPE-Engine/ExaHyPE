@@ -149,7 +149,6 @@ class FV(object):
         auxiliary_variables,
         min_volume_h,
         max_volume_h,
-        pde_terms_without_state: bool,
         plot_grid_properties: bool,
         baseline_action_set_descend_invocation_order=0,
     ):
@@ -258,10 +257,6 @@ class FV(object):
                 + ")"
             )
 
-        self._reconstructed_array_memory_location = (
-            peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-        )
-
         self._solver_template_file_class_name = None
 
         self._plot_description = ""
@@ -288,7 +283,13 @@ class FV(object):
         self._postprocess_updated_patch = ""
 
         self._compute_kernel_call = "#error Not yet defined"
-        self._pde_terms_without_state = pde_terms_without_state
+        self._use_stateless_flux = True
+        self._use_stateless_ncp = True
+        self._use_stateless_max_eigenvalue = True
+        self._use_stateless_eigenvalues = True
+        self._use_stateless_riemann_solver = True
+        self._use_stateless_source_term = True
+        self._use_stateless_adjust_solution = True
 
         self._compute_eigenvalue = False
         self._abstract_solver_user_declarations = ""
@@ -298,6 +299,7 @@ class FV(object):
 
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
+        self._print_time_step_implementation = ""
         self._constructor_implementation = ""
 
         self._boundary_conditions_implementation = None
@@ -312,7 +314,11 @@ class FV(object):
 
         self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
-        self.switch_storage_scheme(Storage.SmartPointers, Storage.SmartPointers)
+        self._cell_data_storage = Storage.SmartPointers
+        self._face_data_storage = Storage.SmartPointers
+
+        self.create_data_structures()
+        self.create_action_sets()
 
 
     def __str__(self):
@@ -323,12 +329,6 @@ Name:                   """
             + """
 Type:                   """
             + self.__class__.__module__
-            + """
-Stateless PDE terms:    """
-            + str(self._pde_terms_without_state)
-            + """
-Storage schemes:        """
-            + str(self._cell_data_storage) + ", " + str(self._face_data_storage)
             + """
 Patch size:             """
             + str(self._patch_size)
@@ -579,6 +579,11 @@ The finest mesh width of """
             self._unknowns + self._auxiliary_variables,
             self._unknown_identifier(), self._storage_precision
         )
+        self._patch_reconstructed = peano4.datamodel.Patch(
+            (self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap, self._patch_size + 2 * self._overlap),
+            self._unknowns + self._auxiliary_variables,
+            self._unknown_identifier() + "Reconstructed", self._storage_precision
+        )
         self._patch_overlap_old = peano4.datamodel.Patch(
             (2 * self._overlap, self._patch_size, self._patch_size),
             self._unknowns + self._auxiliary_variables,
@@ -599,13 +604,22 @@ The finest mesh width of """
             self._patch.generator = peano4.datamodel.PatchToDoubleArray(
                 self._patch, self._storage_precision
             )
+            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch_reconstructed, self._storage_precision
+            )
         elif self._cell_data_storage == Storage.Heap:
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
                 self._patch, self._storage_precision
             )
+            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+                self._patch_reconstructed, self._storage_precision
+            )
         elif self._cell_data_storage == Storage.SmartPointers:
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
                 self._patch, self._storage_precision
+            )
+            self._patch_reconstructed.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                self._patch_reconstructed, self._storage_precision
             )
         else:
             assert False, "Storage variant {} not supported".format(
@@ -1002,14 +1016,15 @@ The finest mesh width of """
             print("Patch data")
             print("----------")
             print(str(self._patch))
-            print("Patch overlap data")
+            print(str(self._patch_reconstructed))
             print("----------")
+            print("Patch overlap data")
             print(str(self._patch_overlap_old))
-            print("Patch overlap data")
-            print("----------")
             print(str(self._patch_overlap_new))
+            print("----------")
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._patch)
+        datamodel.add_cell(self._patch_reconstructed)
         datamodel.add_face(self._patch_overlap_old)
         datamodel.add_face(self._patch_overlap_new)
         datamodel.add_face(self._patch_overlap_update)
@@ -1028,6 +1043,7 @@ The finest mesh width of """
         data might make their load/store decisions depend on the label.
         """
         step.use_cell(self._patch)
+        step.use_cell(self._patch_reconstructed)
         step.use_cell(self._cell_label)
         step.use_face(self._patch_overlap_old)
         step.use_face(self._patch_overlap_new)
@@ -1175,7 +1191,7 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_project_patch_onto_faces)
-        # step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+        # step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
         plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
             filename=output_path + "solution-" + self._name,
@@ -1335,6 +1351,8 @@ The finest mesh width of """
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
         self._init_dictionary_with_default_parameters(implementationDictionary)
+        abstractHeaderDictionary["DIMENSIONS"] = str(dimensions)
+        implementationDictionary["DIMENSIONS"] = str(dimensions)
 
         header_file_abstr_template = templatefile_prefix + "Abstract.template.h"
         cpp_file_abstr_template = templatefile_prefix + "Abstract.template.cpp"
@@ -1498,6 +1516,9 @@ The finest mesh width of """
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
             self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
+        d["PRINT_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
+            self._print_time_step_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
@@ -1525,7 +1546,14 @@ The finest mesh width of """
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
 
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
+        d["STATELESS_FLUX"] = self._use_stateless_flux
+        d["STATELESS_NCP"] = self._use_stateless_ncp
+        d["STATELESS_EIGENVALUES"] = self._use_stateless_eigenvalues
+        d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
+        d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
+        d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
+        d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
+
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
         d["VARIABLE_NAMES"] = self._variable_names
         d["VARIABLE_POSITIONS"] = self._variable_pos
@@ -1581,7 +1609,7 @@ The finest mesh width of """
         including all auxiliary variables and copies it into another array which
         is calls reconstructedPatch (in FD4, this field is called oldQWithHalo).
         This array is bigger than the actual patch data, as it also holds the
-        halo. One the solution is copied over, the kernel writes in the halo
+        halo. Once the solution is copied over, the kernel writes in the halo
         data using data from the faces. This reconstructed object is now passed
         into the compute kernel, which derives new values for all evolution
         variables. That is, the compute kernels' output does not hold the auxiliary
@@ -1733,26 +1761,6 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
-
-    def switch_storage_scheme(
-        self,
-        cell_data_storage: Storage,
-        face_data_storage: Storage,
-    ):
-        """
-        By default, we hold all data on the heap using smart pointers. You can explicitly switch
-        to storage on the call stack or heap using raw pointers.
-
-        @see create_data_structures()
-        """
-        assert isinstance(cell_data_storage, Storage)
-        assert isinstance(face_data_storage, Storage)
-
-        self._cell_data_storage = cell_data_storage
-        self._face_data_storage = face_data_storage
-
-        self.create_data_structures()
-        self.create_action_sets()
 
     @abstractmethod
     def _generate_kernels(self, namespace, output, subdirectory, dimensions):

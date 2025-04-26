@@ -4,7 +4,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace exahype2 {
   /**

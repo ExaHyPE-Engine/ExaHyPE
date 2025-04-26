@@ -81,12 +81,12 @@ tarch::accelerator::MemoryManager::~MemoryManager() {
 void tarch::accelerator::MemoryManager::clearWithoutLock() {
   for (auto& memoryPage : _memoryPages) {
     int device = memoryPage.first;
-    logDebug("clear()", "free data of device " << device);
+    logDebug("clear()", "Free data of device " << device);
 
     if (not memoryPage.second.usedPages.empty()) {
-      logError(
+      logWarning(
         "clear()",
-        "used pages on device "
+        "Used pages on device "
           << device << " are not empty. " << memoryPage.second.usedPages.size()
           << " memory blocks still in use. Likely a memory leak (missing free())."
       );
@@ -207,24 +207,26 @@ void tarch::accelerator::MemoryManager::dumpStatistics() {
           << MemoryManager::getInstance().getNumberOfFreePages(memoryPage.first)
           << ")";
     }
-    msg << ", managed: "
+    msg << " (used/free)";
+
+    msg << ", Managed: "
       << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte) << "/"
       << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) << "/"
       << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) +
          MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte);
 
-    msg << " MB, ";
+    msg << " MB (used/free/total), ";
 
     // TODO: Use memory locations to report device and host memory.
   }
 
-  msg << "System: "
-      << getMemoryUsage(MemoryUsageFormat::MByte) << "/"
-      << getFreeMemory(MemoryUsageFormat::MByte) << "/"
-      << getTotalMemory(MemoryUsageFormat::MByte);
-  msg << " MB (used/free/total)";
+  // msg << "System: "
+  //     << getMemoryUsage(MemoryUsageFormat::MByte) << "/"
+  //     << getFreeMemory(MemoryUsageFormat::MByte) << "/"
+  //     << getTotalMemory(MemoryUsageFormat::MByte);
+  // msg << " MB (used/free/total)";
 
-  //if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logInfo("dumpStatistics()", msg.str());
-  //}
+  }
 }

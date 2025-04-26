@@ -6,18 +6,14 @@
 
 namespace tarch::multicore::tests {
   class SpawnTaskTest;
-}
+} // namespace tarch::multicore::tests
 
 class tarch::multicore::tests::SpawnTaskTest final: public tarch::tests::TestCase {
 private:
-  void testSpawnNonFusableTasksWithoutDependencies(
-    int taskLoopIterations,
-    int numberOfTasksToSpawn
-  );
-  void testSpawnFusableTasksWithoutDependencies(
-    int taskLoopIterations,
-    int numberOfTasksToSpawn
-  );
+  void testSpawnIndependentTask();
+  void testSpawnTaskWithOutDependency();
+  void testSpawnTaskWithInAndOutDependency();
+  void testSpawnTasks();
 
 public:
   SpawnTaskTest();
