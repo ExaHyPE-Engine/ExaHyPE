@@ -1,4 +1,3 @@
-
 class SedovBlastIC:
     """
     Initialisation snippet for the Sedov Blast problem in different spatial dimensions.
@@ -6,7 +5,6 @@ class SedovBlastIC:
     """
 
     def __init__(self):
-
         self.initialisation_snippet = """
 
       /*

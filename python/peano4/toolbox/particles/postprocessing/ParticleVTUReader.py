@@ -486,5 +486,3 @@ the ParticleVTUReader() object.
         pvdfile = vtuIO.PVDIO(pvdfilename, interpolation_backend="vtk")
         timesteps = pvdfile.timesteps
         return timesteps
-
-

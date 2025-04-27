@@ -237,8 +237,8 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / args.particle_number
 hydro_H_max = 0.49999 * args.cell_size_min
-if hydro_H_max < 3. * dx:
-    raise ValueError("Too small hydro_H_max", 3. * dx, hydro_H_max)
+if hydro_H_max < 3.0 * dx:
+    raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
@@ -262,7 +262,6 @@ particle.h_hydro_max = hydro_h_max
 particle.set_parameters()
 
 
-
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
@@ -282,10 +281,6 @@ particle_set.generator = (
 #          particle_set
 #      )
 #  )
-
-
-
-
 
 
 if args.debug:
@@ -331,14 +326,14 @@ initialisation_snippet = ICs.initialisation_snippet
 
 coords = np.ones((args.particle_number, 2)) * 0.5
 for i in range(args.particle_number):
-    coords[i,0] = (i + 0.5) / (args.particle_number + 1)
+    coords[i, 0] = (i + 0.5) / (args.particle_number + 1)
 
 # Finally, pass this configuration to the initialisation script
 # Note that Peano's internal cartesian grid particle generation can't do 1D grids at the moment.
 project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesByCoordinates(
         particle_set=particle_set,
-        coordinates = coords,
+        coordinates=coords,
         initialisation_call=initialisation_snippet,
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"

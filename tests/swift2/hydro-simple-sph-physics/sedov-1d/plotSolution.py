@@ -22,6 +22,7 @@
 
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -31,7 +32,6 @@ import numpy as np
 import sys
 
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
-
 
 
 """
@@ -61,7 +61,7 @@ pvdfile = "particles.pvd"
 reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=time)
 partData = reader.load()
 time = reader.get_snapshot_time()
-boxsize = 1.
+boxsize = 1.0
 
 x = partData.x[:, 0] - 0.5 * boxsize
 vel_x = partData.v[:, 0]
@@ -74,12 +74,10 @@ r = np.abs(x)
 v_r = x * vel_x / r
 
 
-
-
-
 # -------------------------
 # Get analytical solution
 # -------------------------
+
 
 def calc_a(g, nu=3):
     """
@@ -209,6 +207,7 @@ def sedov(t, E0, rho0, g, n=1000, nu=3):
     rho *= rho0
     return r, p, rho, u, r_s, p_s, rho_s, u_s, shock_speed
 
+
 # Parameters
 rho_0 = 1.0  # Background Density
 P_0 = 1.0e-6  # Background Pressure
@@ -234,24 +233,23 @@ u_s = P_s / (rho_s * (gas_gamma - 1.0))  # internal energy
 # -------------------------
 
 sim_props = {
-    "marker":".",
-    "ms":4,
-    "markeredgecolor":"none",
-    "alpha":1.0,
-    "zorder":-1,
-    "rasterized":True,
-    "linestyle":"none",
-    }
+    "marker": ".",
+    "ms": 4,
+    "markeredgecolor": "none",
+    "alpha": 1.0,
+    "zorder": -1,
+    "rasterized": True,
+    "linestyle": "none",
+}
 solution_props = {
-        "linestyle": "--",
-        "color" : "C4",
-        "alpha": 0.4,
-        "linewidth": 1.2,
-        }
+    "linestyle": "--",
+    "color": "C4",
+    "alpha": 0.4,
+    "linewidth": 1.2,
+}
 
 
-
-fig = plt.figure(figsize=(7., 7.))
+fig = plt.figure(figsize=(7.0, 7.0))
 ax1 = fig.add_subplot(2, 2, 1)
 ax2 = fig.add_subplot(2, 2, 2)
 ax3 = fig.add_subplot(2, 2, 3)
@@ -270,12 +268,12 @@ ax2.set_ylim(-0.2, 5.2)
 ax3.plot(r, pressure, **sim_props)
 ax3.plot(r_s, P_s, **solution_props)
 ax3.set_ylabel(r"Pressure $p$")
-ax3.set_ylim(-1., 12.5)
+ax3.set_ylim(-1.0, 12.5)
 
 ax4.plot(r, energy, **sim_props)
 ax4.plot(r_s, u_s, **solution_props)
 ax4.set_ylabel(r"Internal Energy $u$")
-ax4.set_ylim(-2., 22)
+ax4.set_ylim(-2.0, 22)
 
 for ax in fig.axes:
     ax.tick_params(direction="in", top=True, right=True)
@@ -286,4 +284,3 @@ plt.tight_layout()
 fname = f"sedov_profile-{time:.4f}.png"
 fig.savefig(fname)
 print("Saved", fname)
-

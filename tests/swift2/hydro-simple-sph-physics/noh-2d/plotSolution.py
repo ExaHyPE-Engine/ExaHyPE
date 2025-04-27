@@ -28,6 +28,7 @@ P0 = 1.0e-6  # Background pressure
 v0 = 1
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
