@@ -52,8 +52,7 @@ void swift2::kernels::forAllParticlePairs(
           cellMetaData.localParticleIsContainedInCell[currentParticle],
           *localParticle
         )) {
-      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1
-      )]] for (auto* activeParticle : activeParticles) {
+      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1)]] for (auto* activeParticle : activeParticles) {
         if (PairPredicate(cellMetaData.marker, *localParticle, *activeParticle)) {
           PairOperator(cellMetaData.marker, *localParticle, *activeParticle);
           if (tarch::la::oneGreater(
@@ -82,10 +81,7 @@ void swift2::kernels::forAllParticles(
   int numberOfCoalescedAssignedParticles,
   ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
 ) {
-  [[clang::
-      soa_conversion]] [[clang::
-                           soa_conversion_offload_compute]] for (auto* particle :
-                                                                 assignedParticles) {
+  [[clang::soa_conversion]] [[clang::soa_conversion_offload_compute]] for (auto* particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
@@ -100,10 +96,7 @@ void swift2::kernels::forAllParticles(
   const std::vector<int>&                   numberOfCoalescedLocalParticles,
   ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
 ) {
-  [[clang::
-      soa_conversion]] [[clang::
-                           soa_conversion_offload_compute]] for (auto* particle :
-                                                                 assignedParticles) {
+  [[clang::soa_conversion]] [[clang:: soa_conversion_offload_compute]] for (auto* particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
@@ -118,9 +111,8 @@ void swift2::kernels::forAllParticlePairs(
   auto&                       activeParticles,
   ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
 ) {
-  [[clang::soa_conversion]] [[clang::soa_conversion_offload_compute]] int
-    currentParticle
-    = -1;
+  [[clang::soa_conversion]] [[clang::soa_conversion_offload_compute]]
+    int currentParticle = -1;
   for (auto* localParticle : localParticles) {
     currentParticle++;
     if (LocalPredicate(
@@ -128,8 +120,8 @@ void swift2::kernels::forAllParticlePairs(
           cellMetaData.localParticleIsContainedInCell[currentParticle],
           *localParticle
         )) {
-      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1
-      )]] for (auto* activeParticle : activeParticles) {
+      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1)]]
+        for (auto* activeParticle : activeParticles) {
         if (PairPredicate(cellMetaData.marker, *localParticle, *activeParticle)) {
           PairOperator(cellMetaData.marker, *localParticle, *activeParticle);
           if (tarch::la::oneGreater(
