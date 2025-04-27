@@ -25,43 +25,61 @@ class SedovBlastIC:
        *
        */
 
+      // for kernel_gamma
+      using namespace ::swift2::kernels::legacy::kernelHydro;
+
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.999 * GridSize_x);
+      const double h_max = particle->getSmlMax();
+      const double H_max = h_max * kernel_gamma;
+      double search_radius = std::min(H_max, GridSize_x);
 
-      /* Constant background density field */
+      particle->setSearchRadius( search_radius );
+
+      // Constant background density field
       particle->setDensity ( 1.0 );
+
       particle->setMass( particle->getDensity() * std::pow((DomainSize(0) / (double) HYDRO_PART_NUMBER) , HYDRO_DIMENSIONS) );
 
-      /* Initial estimate for smoothing length */
+      // Initial estimate for smoothing length
       const double eta_fac = particle->getEtaFactor();
-      particle->setSmoothingLength( eta_fac * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
+      double h =  eta_fac * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) ;
+      h = std::min(h, h_max);
+      particle->setSmoothingLength(h);
+
+      // Set pressure
+      const double pressure = 1.e-6;
+      particle->setPressure( pressure );
+
 
       // Initialise the blast
       const double BLAST_ENERGY = 1.0;
-      const double SPIKE_RADIUS = 2.001 / HYDRO_PART_NUMBER;
+      double SPIKE_RADIUS = 1.001 * DomainSize(0) / HYDRO_PART_NUMBER;
+      double BLAST_FRACTION = 1. / 3.;
+      if (HYDRO_DIMENSIONS == 2) {
+        SPIKE_RADIUS = 2.501 * DomainSize(0) / HYDRO_PART_NUMBER;
+        BLAST_FRACTION = 1. / 21.;
+      }
+      if (HYDRO_DIMENSIONS == 3) {
+        SPIKE_RADIUS = 1.501 * DomainSize(0) / HYDRO_PART_NUMBER;
+        BLAST_FRACTION = 1. / 19.;
+      }
 
       tarch::la::Vector<Dimensions,double> blast_center = 0.5 * DomainSize + DomainOffset;
 
       const double dist_blast = tarch::la::norm2( particle->getX() - blast_center );
 
-      /* Default method */
-      /* Inject energy evenly into group of central particles */
+      // Default method
+      // Inject energy evenly into group of central particles
       if ( tarch::la::smallerEquals( dist_blast, SPIKE_RADIUS ) ) {
-        particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
+        particle->setU( BLAST_ENERGY * BLAST_FRACTION / particle->getMass() );
       } else {
-        particle->setU( 1e-6 );  // negligible background value
+        particle->setU(
+            ::swift2::kernels::legacy::eos::gas_internal_energy_from_pressure( particle->getDensity(), pressure )
+        );
       }
-
-      /* Compute the pressure from the EoS */
-      const double pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-      particle->setPressure( pressure );
-
-      /* Compute the sound speed */
-      const double soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( particle->getU() );
-      particle->setSoundSpeed( soundspeed );
 
       /* Initialize remaining fields  */
 
