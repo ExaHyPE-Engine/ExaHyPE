@@ -9,7 +9,6 @@
 // ===============================
 // Generic variants
 // ===============================
-
 template<auto ParticleOp, auto PredicateOp>
 void swift2::kernels::forAllParticles(
   const peano4::datamanagement::VertexMarker &marker,
@@ -18,9 +17,6 @@ void swift2::kernels::forAllParticles(
   auto realisation
 ) {
   [[clang::soa_conversion]]
-    # ifdef SOA_OFFLOAD
-  [[clang::soa_conversion_offload_compute]]
-    #endif
   for (auto *particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
@@ -37,15 +33,13 @@ void swift2::kernels::forAllParticles(
   auto realisation
 ) {
   [[clang::soa_conversion]]
-  # ifdef SOA_OFFLOAD
-  [[clang::soa_conversion_offload_compute]]
-  #endif
   for (auto *particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
   }
 }
+
 
 template<auto PairOperator, auto LocalPredicate, auto PairPredicate>
 void swift2::kernels::forAllParticlePairs(
@@ -55,9 +49,6 @@ void swift2::kernels::forAllParticlePairs(
   auto                         realisation
 ) {
   [[clang::soa_conversion]]
-# ifdef SOA_OFFLOAD
-  [[clang::soa_conversion_offload_compute]]
-#endif
   int currentParticle = -1;
   for (auto* localParticle : localParticles) {
     currentParticle++;
@@ -77,6 +68,430 @@ void swift2::kernels::forAllParticlePairs(
   }
 }
 
+
+// ===============================
+// Offloading variants
+// ===============================
+template<auto ParticleOp, auto PredicateOp>
+void swift2::kernels::forAllParticles(
+  const peano4::datamanagement::VertexMarker &marker,
+  auto &assignedParticles,
+  int numberOfCoalescedAssignedParticles,
+  ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
+) {
+  [[clang::soa_conversion]]
+  [[clang::soa_conversion_offload_compute]]
+  for (auto *particle : assignedParticles) {
+    if (PredicateOp(marker, *particle)) {
+      ParticleOp(marker, *particle);
+    }
+  }
+}
+
+
+template <auto ParticleOp, auto PredicateOp>
+void swift2::kernels::forAllParticles(
+  const peano4::datamanagement::CellMarker &marker,
+  auto &assignedParticles,
+  const std::vector<int> &numberOfCoalescedLocalParticles,
+  ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
+) {
+  [[clang::soa_conversion]]
+  [[clang::soa_conversion_offload_compute]]
+  for (auto *particle : assignedParticles) {
+    if (PredicateOp(marker, *particle)) {
+      ParticleOp(marker, *particle);
+    }
+  }
+}
+
+
+template<auto PairOperator, auto LocalPredicate, auto PairPredicate>
+void swift2::kernels::forAllParticlePairs(
+  const swift2::CellMetaData&  cellMetaData,
+  auto&                        localParticles,
+  auto&                        activeParticles,
+  ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
+) {
+  [[clang::soa_conversion]]
+  [[clang::soa_conversion_offload_compute]]
+  int currentParticle = -1;
+  for (auto* localParticle : localParticles) {
+    currentParticle++;
+    if (LocalPredicate(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[currentParticle], *localParticle)) {
+      [[clang::soa_conversion]]
+      [[clang::soa_conversion_hoist(1)]]
+      for (auto *activeParticle : activeParticles) {
+        if (PairPredicate(cellMetaData.marker, *localParticle, *activeParticle)) {
+          PairOperator(cellMetaData.marker, *localParticle, *activeParticle);
+          if (tarch::la::oneGreater((*activeParticle).getCellH(), (*localParticle).getCellH())) {
+            tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+            PairOperator(cellMetaData.marker, *activeParticle, *localParticle);
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+// ============================================
+// Generic variants exploiting coalesced memory
+// ============================================
+template <auto ParticleOp, auto PredicateOp>
+void swift2::kernels::forAllParticles(
+  const peano4::datamanagement::VertexMarker&   marker,
+  auto &assignedParticles,
+  int numberOfAssignedParticles,
+  ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation     realisation
+) {
+  auto *particles = *assignedParticles.begin();
+
+  [[clang::soa_conversion_target("particles")]]
+  for (int i = 0; i < numberOfAssignedParticles; i++) {
+    if (PredicateOp(marker, particles[i])) {
+      ParticleOp(marker, particles[i]);
+    }
+  }
+}
+
+
+template <auto ParticleOp, auto PredicateOp>
+void swift2::kernels::forAllParticles(
+  const peano4::datamanagement::CellMarker &marker,
+  auto &localParticles,
+  const std::vector<int> &numberOfLocalParticles,
+  ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation     realisation
+) {
+  auto* pFirstParticle = *localParticles.begin();
+
+  for (auto& chunkSize : numberOfLocalParticles) {
+    [[clang::soa_conversion_target("pFirstParticle")]]
+    for (int i = 0; i < chunkSize; i++) {
+      if (PredicateOp(marker, pFirstParticle[i])) {
+        ParticleOp(marker, pFirstParticle[i]);
+      }
+    }
+    pFirstParticle += chunkSize;
+  }
+}
+
+
+template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
+void swift2::kernels::forAllParticlePairs(
+  const swift2::CellMetaData&  cellMetaData,
+  auto&                        localParticles,
+  auto&                        activeParticles,
+  ::swift2::kernels::kernelrealisation::CoalescedMemoryActiveLocalRealisation     realisation
+) {
+  int firstActiveParticleOfCurrentChunk  = 0;
+  for (auto& activeParticleChunk: cellMetaData.numberOfCoalescedActiveParticlesPerVertex) {
+    auto *pFirstActiveParticleOfCurrentChunk = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
+    firstActiveParticleOfCurrentChunk += activeParticleChunk;
+
+    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+    for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+
+      int firstLocalParticleOfCurrentChunk  = 0;
+      for (auto& localParticleChunk: cellMetaData.numberOfCoalescedLocalParticlesPerVertex) {
+        auto *pFirstLocalParticleOfCurrentChunk  = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
+        firstLocalParticleOfCurrentChunk += localParticleChunk;
+
+        bool evaluateMultiscaleRelations = false;
+
+        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+        for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+          if (
+            LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
+            and
+            ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
+          ) {
+            ParticlePairOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
+
+            evaluateMultiscaleRelations |= (tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH()));
+          }
+        } // loop over local particles in current chunk
+
+        if (evaluateMultiscaleRelations) {
+          [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+          for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+            if (
+              LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
+              and
+              ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
+              and
+              tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH())
+            ) {
+              tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+              ParticlePairOp(cellMetaData.marker, pFirstActiveParticleOfCurrentChunk[iActiveParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle]);
+            }
+          }
+        } // loop over local particles in current chunk
+      } // loop over local chunks
+    } // loop over active particles in current chunk
+  } // loop over active chunks
+}
+
+
+template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
+void swift2::kernels::forAllParticlePairs(
+  const swift2::CellMetaData&  cellMetaData,
+  auto&                        localParticles,
+  auto&                        activeParticles,
+  ::swift2::kernels::kernelrealisation::CoalescedMemoryLocalActiveRealisation     realisation
+) {
+  int firstLocalParticleOfCurrentChunk  = 0;
+  for (auto& localParticleChunk: cellMetaData.numberOfCoalescedLocalParticlesPerVertex) {
+    auto *pFirstLocalParticleOfCurrentChunk = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
+    firstLocalParticleOfCurrentChunk += localParticleChunk;
+
+    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+    for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+      if (
+        LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
+      ) {
+        int firstActiveParticleOfCurrentChunk  = 0;
+        for (auto& activeParticleChunk: cellMetaData.numberOfCoalescedActiveParticlesPerVertex) {
+
+          auto *pFirstActiveParticleOfCurrentChunk  = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
+          firstActiveParticleOfCurrentChunk += activeParticleChunk;
+
+          bool evaluateMultiscaleRelations = false;
+
+          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+          for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+            if (
+              ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
+            ) {
+              ParticlePairOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
+
+              evaluateMultiscaleRelations |= tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH());
+            }
+          }
+
+          if (evaluateMultiscaleRelations) {
+            [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+            for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+              if (
+                ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
+                and
+                tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH())
+              ) {
+                tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+                ParticlePairOp(cellMetaData.marker, pFirstActiveParticleOfCurrentChunk[iActiveParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle]);
+              }
+            }
+          }
+        } // loop over local particles in current chunk
+      } // loop over local chunks
+    } // loop over active particles in current chunk
+  } // loop over active chunks
+}
+
+
+
+// ============================================
+// Generic variants exploiting coalesced memory which moves the checks out into
+// an explicit preamble.
+// ============================================
+template<auto ParticleOp, auto PredicateOp>
+void swift2::kernels::forAllParticles(
+  const peano4::datamanagement::VertexMarker &marker,
+  auto &assignedParticles,
+  int numberOfCoalescedAssignedParticles,
+  ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueRealisation
+) {
+  auto* particles  = *assignedParticles.begin();
+  bool* predicates = new bool[numberOfCoalescedAssignedParticles];
+
+  [[clang::soa_conversion_target("particles")]]
+  for (int i = 0; i < numberOfCoalescedAssignedParticles; i++) {
+    predicates[i] = PredicateOp(marker, particles[i]);
+  }
+
+  for (int i = 0; i < numberOfCoalescedAssignedParticles; i++) {
+    if (predicates[i]) {
+      ParticleOp(marker, particles[i]);
+    }
+  }
+
+  delete[] predicates;
+}
+
+
+template <auto ParticleOp, auto PredicateOp>
+void swift2::kernels::forAllParticles(
+  const peano4::datamanagement::CellMarker &marker,
+  auto &assignedParticles,
+  const std::vector<int> &numberOfCoalescedLocalParticles,
+  ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueRealisation
+) {
+  auto* pFirstParticle = *assignedParticles.begin();
+  bool* predicates = new bool[assignedParticles.size()];
+
+  for (auto& chunkSize : numberOfCoalescedLocalParticles) {
+    [[clang::soa_conversion_target("pFirstParticle")]]
+    for (int i = 0; i < chunkSize; i++) {
+      predicates[i] = PredicateOp(marker, pFirstParticle[i]);
+    }
+    pFirstParticle += chunkSize;
+  }
+
+  pFirstParticle = *assignedParticles.begin();
+  for (auto& chunkSize : numberOfCoalescedLocalParticles) {
+    for (int i = 0; i < chunkSize; i++) {
+      if (predicates[i]) {
+        ParticleOp(marker, pFirstParticle[i]);
+      }
+    }
+    pFirstParticle += chunkSize;
+  }
+
+  delete[] predicates;
+}
+
+
+template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
+void swift2::kernels::forAllParticlePairs(
+  const swift2::CellMetaData&  cellMetaData,
+  auto&                        localParticles,
+  auto&                        activeParticles,
+  ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueActiveLocalRealisation   realisation
+) {
+  int   firstActiveParticleOfCurrentChunk = 0;
+  bool* predicates                        = new bool[ localParticles.size() ];
+
+  for (auto& activeParticleChunk: cellMetaData.numberOfCoalescedActiveParticlesPerVertex) {
+    auto *pFirstActiveParticleOfCurrentChunk = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
+    firstActiveParticleOfCurrentChunk += activeParticleChunk;
+
+    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+    for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+
+      int firstLocalParticleOfCurrentChunk  = 0;
+      for (auto& localParticleChunk: cellMetaData.numberOfCoalescedLocalParticlesPerVertex) {
+        auto *pFirstLocalParticleOfCurrentChunk  = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
+        firstLocalParticleOfCurrentChunk += localParticleChunk;
+
+        bool multiscaleEvaluation = false;
+
+        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+        for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+          predicates[iLocalParticle] =
+            LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
+            and
+            ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
+
+          multiscaleEvaluation |=
+              LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
+              and
+              ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
+              and
+              tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH());
+        } // loop over local particles in current chunk
+
+        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+        for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+          if (predicates[iLocalParticle]) {
+            ParticlePairOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
+          }
+        } // loop over local particles in current chunk
+
+        if (multiscaleEvaluation) {
+          [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+          for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+            if (
+              predicates[iLocalParticle]
+              and
+              tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH())
+            ) {
+              tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+              ParticlePairOp(cellMetaData.marker, pFirstActiveParticleOfCurrentChunk[iActiveParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle]);
+            }
+          }
+        } // loop over local particles in current chunk
+      } // loop over local chunks
+    } // loop over active particles in current chunk
+  } // loop over active chunks
+
+  delete[] predicates;
+}
+
+
+
+
+template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
+void swift2::kernels::forAllParticlePairs(
+  const swift2::CellMetaData&  cellMetaData,
+  auto&                        localParticles,
+  auto&                        activeParticles,
+  ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueLocalActiveRealisation   realisation
+) {
+  bool* predicates                        = new bool[ activeParticles.size() ];
+
+  int firstLocalParticleOfCurrentChunk  = 0;
+  for (auto& localParticleChunk: cellMetaData.numberOfCoalescedLocalParticlesPerVertex) {
+    auto *pFirstLocalParticleOfCurrentChunk = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
+    firstLocalParticleOfCurrentChunk += localParticleChunk;
+
+    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+    for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
+      if (
+        LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
+      ) {
+        int firstActiveParticleOfCurrentChunk  = 0;
+        for (auto& activeParticleChunk: cellMetaData.numberOfCoalescedActiveParticlesPerVertex) {
+
+          auto *pFirstActiveParticleOfCurrentChunk  = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
+          firstActiveParticleOfCurrentChunk += activeParticleChunk;
+
+          bool evaluateMultiscaleRelations = false;
+
+          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+          for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+            predicates[iActiveParticle] =
+              ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
+
+            evaluateMultiscaleRelations |=
+              ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
+              and
+              tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH());
+          }
+
+          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+          for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+            if ( predicates[iActiveParticle] ) {
+              ParticlePairOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
+            }
+          }
+
+          if (evaluateMultiscaleRelations) {
+            [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+            for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
+              if (
+                predicates[iActiveParticle]
+                and
+                tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH())
+              ) {
+                tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
+                ParticlePairOp(cellMetaData.marker, pFirstActiveParticleOfCurrentChunk[iActiveParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle]);
+              }
+            }
+          }
+        } // loop over local particles in current chunk
+      } // loop over local chunks
+    } // loop over active particles in current chunk
+  } // loop over active chunks
+
+  delete[] predicates;
+}
+
+
+
+// ====================================
+// Helper functions
+// ====================================
 template <int SubChunkSize, typename LocalParticle, typename ActiveParticle>
 std::pair< std::bitset<SubChunkSize>, std::bitset<SubChunkSize> >  swift2::kernels::internal::identifyInteractingParticlesFixedLocalParticle(
     const peano4::datamanagement::CellMarker&  marker,
@@ -118,312 +533,4 @@ std::pair< std::bitset<SubChunkSize>, std::bitset<SubChunkSize> >  swift2::kerne
   }
 
   return { updateParticleEffect, evaluateBottomUpParticleEffect };
-}
-
-
-// ============================================
-// Generic variants exploiting coalesced memory
-// ============================================
-
-template <auto ParticleOp, auto PredicateOp>
-void swift2::kernels::forAllParticles(
-  const peano4::datamanagement::VertexMarker&   marker,
-  auto &assignedParticles,
-  int numberOfAssignedParticles,
-  ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation     realisation
-) {
-  auto *particles = *assignedParticles.begin();
-
-  [[clang::soa_conversion_target("particles")]]
-    # ifdef SOA_OFFLOAD
-    [[clang::soa_conversion_offload_compute]]
-    #endif
-    for (int i = 0; i < numberOfAssignedParticles; i++) {
-    if (PredicateOp(marker, particles[i])) {
-      ParticleOp(marker, particles[i]);
-    }
-  }
-}
-
-
-template <auto ParticleOp, auto PredicateOp>
-void swift2::kernels::forAllParticles(
-  const peano4::datamanagement::CellMarker &marker,
-  auto &localParticles,
-  const std::vector<int> &numberOfLocalParticles,
-  ::swift2::kernels::kernelrealisation::CoalescedMemoryRealisation     realisation
-) {
-  auto* pFirstParticle = *localParticles.begin();
-
-  for (auto& chunkSize : numberOfLocalParticles) {
-    [[clang::soa_conversion_target("pFirstParticle")]]
-    # ifdef SOA_OFFLOAD
-    [[clang::soa_conversion_offload_compute]]
-    #endif
-    for (int i = 0; i < chunkSize; i++) {
-      if (PredicateOp(marker, pFirstParticle[i])) {
-        ParticleOp(marker, pFirstParticle[i]);
-      }
-    }
-    pFirstParticle += chunkSize;
-  }
-}
-
-
-template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
-void swift2::kernels::forAllParticlePairs(
-  const swift2::CellMetaData&  cellMetaData,
-  auto&                        localParticles,
-  auto&                        activeParticles,
-  ::swift2::kernels::kernelrealisation::CoalescedMemoryActiveLocalRealisation     realisation
-) {
-  int firstActiveParticleOfCurrentChunk  = 0;
-  for (auto& activeParticleChunk: cellMetaData.numberOfCoalescedActiveParticlesPerVertex) {
-    auto *pFirstActiveParticleOfCurrentChunk = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
-    firstActiveParticleOfCurrentChunk += activeParticleChunk;
-
-    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
-    for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
-
-      int firstLocalParticleOfCurrentChunk  = 0;
-      for (auto& localParticleChunk: cellMetaData.numberOfCoalescedLocalParticlesPerVertex) {
-        auto *pFirstLocalParticleOfCurrentChunk  = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
-        firstLocalParticleOfCurrentChunk += localParticleChunk;
-
-        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
-          # ifdef SOA_OFFLOAD
-//          [[clang::soa_conversion_offload_compute]]
-          #endif
-        for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
-          if (
-            LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
-            and
-            ParticlePairPredicateOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])
-          ) {
-            ParticlePairOp(cellMetaData.marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
-
-            if (tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH())) {
-              tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
-              ParticlePairOp(cellMetaData.marker, pFirstActiveParticleOfCurrentChunk[iActiveParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle]);
-            }
-          }
-        } // loop over local particles in current chunk
-      } // loop over local chunks
-    } // loop over active particles in current chunk
-  } // loop over active chunks
-}
-
-
-template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
-void swift2::kernels::forAllParticlePairs(
-  const swift2::CellMetaData&  cellMetaData,
-  auto&                        localParticles,
-  auto&                        activeParticles,
-  ::swift2::kernels::kernelrealisation::CoalescedMemoryLocalActiveRealisation     realisation
-) {
-  // @todo change
-  int dummy;
-  forAllParticlePairs<ParticlePairOp, LocalPredicateOp, ParticlePairPredicateOp>(cellMetaData,localParticles,activeParticles,dummy);
-
-/*
-  int firstLocalParticleOfCurrentChunk  = 0;
-  for (auto& localParticleChunk: numberOfLocalParticlesPerVertex) {
-    auto *pFirstLocalParticleOfCurrentChunk = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
-    firstLocalParticleOfCurrentChunk += localParticleChunk;
-
-    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
-    for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
-
-      int firstActiveParticleOfCurrentChunk  = 0;
-      for (auto& activeParticleChunk: numberOfActiveParticlesPerVertex) {
-        auto *pFirstActiveParticleOfCurrentChunk  = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
-        firstActiveParticleOfCurrentChunk += activeParticleChunk;
-
-        [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
-          # ifdef SOA_OFFLOAD
-//          [[clang::soa_conversion_offload_compute]]
-          #endif
-        for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
-
-          if (ParticlePairPredicateOp(marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle])) {
-            ParticlePairOp(marker, pFirstLocalParticleOfCurrentChunk[iLocalParticle], pFirstActiveParticleOfCurrentChunk[iActiveParticle]);
-
-              #ifndef NO_SYMMETRIC_INTERACTIONS
-            if (tarch::la::oneGreater(pFirstActiveParticleOfCurrentChunk[iActiveParticle].getCellH(), pFirstLocalParticleOfCurrentChunk[iLocalParticle].getCellH())) {
-              tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
-              ParticlePairOp(marker, pFirstActiveParticleOfCurrentChunk[iActiveParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle]);
-            }
-              #endif
-          }
-        } // loop over local particles in current chunk
-      } // loop over local chunks
-    } // loop over active particles in current chunk
-  } // loop over active chunks
-*/
-}
-
-
-
-// ============================================
-// Generic variants exploiting coalesced memory which moves the checks out into
-// an explicit preamble
-// ============================================
-template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
-void swift2::kernels::forAllParticlePairs(
-  const swift2::CellMetaData&  cellMetaData,
-  auto&                        localParticles,
-  auto&                        activeParticles,
-  ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueActiveLocalRealisation   realisation
-) {
-  // @todo change
-  int dummy;
-  forAllParticlePairs<ParticlePairOp, LocalPredicateOp, ParticlePairPredicateOp>(cellMetaData,localParticles,activeParticles,dummy);
-
-/*
-  int firstActiveParticleOfCurrentChunk  = 0;
-  for (auto& activeParticleChunk: numberOfActiveParticlesPerVertex) {
-    typename ActiveParticleContainer::value_type pFirstActiveParticleOfCurrentChunk = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
-    firstActiveParticleOfCurrentChunk += activeParticleChunk;
-
-    for (int iActiveParticle=0; iActiveParticle<activeParticleChunk; iActiveParticle++) {
-
-      int firstLocalParticleOfCurrentChunk  = 0;
-      for (auto& localParticleChunk: numberOfLocalParticlesPerVertex) {
-        typename LocalParticleContainer::value_type  pFirstLocalParticleOfCurrentChunk  = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
-        firstLocalParticleOfCurrentChunk += localParticleChunk;
-
-        int iLocalParticle=0;
-        constexpr int SubChunkSize = 8;
-
-        while (iLocalParticle<localParticleChunk) {
-          const int thisSubchunkSize = std::min(SubChunkSize,localParticleChunk-iLocalParticle);
-
-          PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticleOfCurrentChunk+iActiveParticle);
-          PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle);
-
-          auto [updateParticleEffect, evaluateBottomUpParticleEffect] = swift2::kernels::internal::identifyInteractingParticlesFixedActiveParticle<SubChunkSize>(
-              marker,
-              &localParticle,
-              thisSubchunkSize,
-              &activeParticle,
-              particlePairPredicate
-          );
-
-          if (updateParticleEffect.all()) {
-            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
-              PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle+particleIndexWithinThisSubchunk);
-              f(marker, localParticle, activeParticle);
-            }
-          }
-          else if (updateParticleEffect.any()) {
-            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
-              if (updateParticleEffect[particleIndexWithinThisSubchunk]) {
-                PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle+particleIndexWithinThisSubchunk);
-                f(marker, localParticle, activeParticle);
-              }
-            }
-          }
-
-          if (evaluateBottomUpParticleEffect.any()) {
-            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
-              if (
-                updateParticleEffect[particleIndexWithinThisSubchunk]
-                and
-                evaluateBottomUpParticleEffect[particleIndexWithinThisSubchunk]
-              ) {
-//                tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
-                PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle+particleIndexWithinThisSubchunk);
-                f(marker, activeParticle, localParticle);
-              }
-            }
-          }
-
-          iLocalParticle+=SubChunkSize;
-        } // loop over local particles in current chunk. This is here done in subchunk sizes
-      } // loop over local chunks
-    } // loop over active particles in current chunk
-  } // loop over active chunks
-*/
-}
-
-
-
-
-template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
-void swift2::kernels::forAllParticlePairs(
-  const swift2::CellMetaData&  cellMetaData,
-  auto&                        localParticles,
-  auto&                        activeParticles,
-  ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueLocalActiveRealisation   realisation
-) {
-  // @todo change
-  int dummy;
-  forAllParticlePairs<ParticlePairOp, LocalPredicateOp, ParticlePairPredicateOp>(cellMetaData,localParticles,activeParticles,dummy);
-
-/*
-
-  int firstLocalParticleOfCurrentChunk  = 0;
-  for (auto& localParticleChunk: numberOfLocalParticlesPerVertex) {
-    typename LocalParticleContainer::value_type pFirstLocalParticleOfCurrentChunk = *localParticles.begin() + firstLocalParticleOfCurrentChunk;
-    firstLocalParticleOfCurrentChunk += localParticleChunk;
-
-    for (int iLocalParticle=0; iLocalParticle<localParticleChunk; iLocalParticle++) {
-
-      int firstActiveParticleOfCurrentChunk  = 0;
-      for (auto& activeParticleChunk: numberOfActiveParticlesPerVertex) {
-        typename ActiveParticleContainer::value_type  pFirstActiveParticleOfCurrentChunk  = *activeParticles.begin() + firstActiveParticleOfCurrentChunk;
-        firstActiveParticleOfCurrentChunk += activeParticleChunk;
-
-        int iActiveParticle=0;
-        constexpr int SubChunkSize = 8;
-
-        while (iActiveParticle<activeParticleChunk) {
-          const int thisSubchunkSize = std::min(SubChunkSize,activeParticleChunk-iActiveParticle);
-
-          PCParticle<ActiveParticleContainer>&  activeParticle = *(pFirstActiveParticleOfCurrentChunk+iActiveParticle);
-          PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle);
-
-          auto [updateParticleEffect, evaluateBottomUpParticleEffect] = swift2::kernels::internal::identifyInteractingParticlesFixedLocalParticle<SubChunkSize>(
-              marker,
-              &localParticle,
-              &activeParticle,
-              thisSubchunkSize,
-              particlePairPredicate
-          );
-
-          if (updateParticleEffect.all()) {
-            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
-              PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle+particleIndexWithinThisSubchunk);
-              f(marker, localParticle, activeParticle);
-            }
-          }
-          else if (updateParticleEffect.any()) {
-            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
-              if (updateParticleEffect[particleIndexWithinThisSubchunk]) {
-                PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle+particleIndexWithinThisSubchunk);
-                f(marker, localParticle, activeParticle);
-              }
-            }
-          }
-
-          if (evaluateBottomUpParticleEffect.any()) {
-            for (int particleIndexWithinThisSubchunk=0; particleIndexWithinThisSubchunk<thisSubchunkSize; particleIndexWithinThisSubchunk++) {
-              if (
-                updateParticleEffect[particleIndexWithinThisSubchunk]
-                and
-                evaluateBottomUpParticleEffect[particleIndexWithinThisSubchunk]
-              ) {
-//                tarch::multicore::Lock lock(internal::_multiscaleInteractionSemaphore);
-                PCParticle<LocalParticleContainer>&   localParticle  = *(pFirstLocalParticleOfCurrentChunk+iLocalParticle+particleIndexWithinThisSubchunk);
-                f(marker, activeParticle, localParticle);
-              }
-            }
-          }
-
-          iActiveParticle+=SubChunkSize;
-        } // loop over local particles in current chunk. This is here done in subchunk sizes
-      } // loop over local chunks
-    } // loop over active particles in current chunk
-  } // loop over active chunks
-*/
 }
