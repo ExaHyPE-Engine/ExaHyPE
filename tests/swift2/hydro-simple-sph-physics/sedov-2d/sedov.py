@@ -126,6 +126,15 @@ parser.add_argument(
     choices=sphtools.sph_kernel_list,
     help="SPH kernel function to use.",
 )
+parser.add_argument(
+    "-t",
+    "--trees",
+    dest="trees",
+    default=0,
+    type=int,
+    help="Number of trees (subdomains) (0 uses all threads)",
+)
+
 args = parser.parse_args()
 
 
@@ -312,7 +321,7 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 
 #  project.set_load_balancing(
 #      "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-#      "new toolbox::loadbalancing::DefaultConfiguration()",
+#      f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
 #  )
 
 
