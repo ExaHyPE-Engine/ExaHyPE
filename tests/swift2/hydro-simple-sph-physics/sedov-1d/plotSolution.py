@@ -1,105 +1,85 @@
-import meshio
-import numpy as np
-import glob, os
-import sys
+#!/usr/bin/env python3
 
-import matplotlib.pyplot as plt
-from matplotlib import gridspec
-from matplotlib.colors import LogNorm
-from matplotlib import mathtext
+###############################################################################
+# This file is part of SWIFT.
+# Copyright (c) 2015 Bert Vandenbroucke (bert.vandenbroucke@ugent.be)
+#                    Matthieu Schaller (schaller@strw.leidenuniv.nl)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
+
 import matplotlib
-import math
-from scipy import stats
-
-"""
-This script is run as
-python3 snapshot_number time_step_sim
-
-where:
-@param snapshot_number: snapshot number
-@param time_step_sim: size of the time-step used in the simulation
-"""
-
-# Plot Setup
-font = {"size": 14}
-plt.rc("font", **font)
-plt.rc("font", family="serif")
-plt.rc("text", usetex=False)
-
-# Do not display figures
 matplotlib.use("Agg")
 
-"""
-Import particle snapshot file
-"""
-snapshot_dir = ""
-snapshot_number = int(sys.argv[1])
-files = sorted(glob.glob(snapshot_dir + "*.vtu"), key=len)
-
-# Simulation Parameters
-# time_step_sim = 1e-4
-time_step_sim = float(sys.argv[2])
-snapshot_rate = 10
-time = float(snapshot_number) * snapshot_rate * time_step_sim
-
-snapshot = files[snapshot_number]
-print("Reading snapshot: " + snapshot)
-print("time of simulation = ", time)
-print("********************************************")
-
-mesh = meshio.read(snapshot)
-print(mesh.point_data_to_sets)
-print("********************************************")
-
-# Extract Fields
-pos = mesh.point_data["x"]
-x = pos[:, 0] - 0.5
-y = pos[:, 1] - 0.5
-vel = mesh.point_data["v"]
-vel_x = vel[:, 0]
-vel_y = vel[:, 1]
-r = np.sqrt(x**2 + y**2)
-v_r = (x * vel_x + y * vel_y) / r
-density = mesh.point_data["density"][:, 0]
-pressure = mesh.point_data["pressure"][:, 0]
-mass = mesh.point_data["mass"][:, 0]
-energy = mesh.point_data["u"][:, 0]
-
-print("Measure energy conservation:")
-E_ini = 1.0
-E_kin = mass[0] * np.sum(0.5 * (vel_x**2 + vel_y**2))
-E_int = mass[0] * np.sum(energy)
-E_tot = E_kin + E_int
-print(
-    "Initial E=", E_ini, "Total E= ", E_tot, "Kinetic E=", E_kin, "Internal E=", E_int
-)
-print("Relative Energy difference = ", (E_tot - E_ini) / E_ini)
-print("********************************************")
-
-# Filter by position
-x_mask = np.greater_equal(x, 0)
-y_min = -1e-2
-y_max = 1e-2
-y_mask = np.less_equal(y, y_max)
-y_mask = y_mask & np.greater_equal(y, y_min)
-pos_mask = x_mask & y_mask
-
-x_line = x[pos_mask]
-y_line = y[pos_mask]
-density_x = density[pos_mask]
-pressure_x = pressure[pos_mask]
-energy_x = energy[pos_mask]
-vel_x_line = vel_x[pos_mask]
-
-print("** " + str(len(x_line)) + " ** particles found with this filter.")
-
-"""
-Analytical solution (from Swift)
-Computes the analytical solution of the 2D Sedov blast wave. Taken from `swiftsim/examples/HydroTests/SedovBlast_2D`
-"""
-
+import matplotlib.pyplot as plt
+from scipy import stats
 from scipy.special import gamma as Gamma
+import numpy as np
+import sys
 
+from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
+
+
+
+"""
+!
+Computes the analytical solution of the 3D Sedov blast wave.
+The script works for a given initial box and dumped energy and computes the
+solution at a later time t.
+
+
+python3 plotSolution.py time
+
+where:
+@param time_step_sim : time to plot solution of
+"""
+
+
+if len(sys.argv) < 2:
+    time = 0.05
+else:
+    time = float(sys.argv[1])
+
+# -------------------------
+# Extract data
+# -------------------------
+
+pvdfile = "particles.pvd"
+reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=time)
+partData = reader.load()
+time = reader.get_snapshot_time()
+boxsize = 1.
+
+x = partData.x[:, 0] - 0.5 * boxsize
+vel_x = partData.v[:, 0]
+pressure = partData.pressure
+density = partData.density
+mass = partData.mass
+energy = partData.u
+
+r = np.abs(x)
+v_r = x * vel_x / r
+
+
+
+
+
+# -------------------------
+# Get analytical solution
+# -------------------------
 
 def calc_a(g, nu=3):
     """
@@ -229,14 +209,10 @@ def sedov(t, E0, rho0, g, n=1000, nu=3):
     rho *= rho0
     return r, p, rho, u, r_s, p_s, rho_s, u_s, shock_speed
 
-
-"""
-Parameters to evaluate the analytical solution
-"""
+# Parameters
 rho_0 = 1.0  # Background Density
 P_0 = 1.0e-6  # Background Pressure
-u_0 = 1.0
-E_0 = E_ini  # Total Energy of the explosion
+E_0 = 1.0  # Energy of the explosion
 gas_gamma = 5.0 / 3.0  # Gas polytropic index
 
 # The main properties of the solution
@@ -250,150 +226,64 @@ v_s = np.insert(v_s, np.size(v_s), [0, 0])
 
 # Additional arrays
 u_s = P_s / (rho_s * (gas_gamma - 1.0))  # internal energy
-s_s = P_s / rho_s**gas_gamma  # entropic function
+#  s_s = P_s / rho_s**gas_gamma  # entropic function
 
-"""
-Plot x-axis profiles
-"""
 
-fig = plt.figure(figsize=(14, 12))
-gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1], wspace=0.3)
+# -------------------------
+# Plot, plot, plot!
+# -------------------------
 
-ax0 = plt.subplot(gs[0])
-plt.plot(r_s, rho_s, c="r")
-plt.scatter(x_line, density_x, s=10, c="k")
-plt.xlabel(r"$x$")
-plt.ylabel(r"$\rho$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
-plt.axhline(rho_0, c="gray", ls=":", lw=1.2, zorder=-49)
-# plt.axhline( (5./3.+1.)/(5./3.-1.)*rho_0, c='r', ls=':', lw=1.2,zorder=-49 )
-ax0.text(0.45, 0.92, r"$t=$" + str(time), fontsize=12, transform=ax0.transAxes)
+sim_props = {
+    "marker":".",
+    "ms":4,
+    "markeredgecolor":"none",
+    "alpha":1.0,
+    "zorder":-1,
+    "rasterized":True,
+    "linestyle":"none",
+    }
+solution_props = {
+        "linestyle": "--",
+        "color" : "C4",
+        "alpha": 0.4,
+        "linewidth": 1.2,
+        }
 
-ax1 = plt.subplot(gs[1])
-plt.plot(r_s, P_s, c="r")
-plt.scatter(x_line, pressure_x, s=10, c="k")
-plt.xlabel(r"$x$")
-plt.ylabel(r"$P$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
 
-ax2 = plt.subplot(gs[2])
-plt.plot(r_s, u_s, c="r")
-plt.scatter(x_line, energy_x, s=10, c="k")
-plt.xlabel(r"$x$")
-plt.ylabel(r"$u$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
 
-ax3 = plt.subplot(gs[3])
-plt.plot(r_s, v_s, c="r")
-plt.scatter(x_line, vel_x_line, s=10, c="k")
-plt.xlabel(r"$x$")
-plt.ylabel(r"$v_x$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
+fig = plt.figure(figsize=(7., 7.))
+ax1 = fig.add_subplot(2, 2, 1)
+ax2 = fig.add_subplot(2, 2, 2)
+ax3 = fig.add_subplot(2, 2, 3)
+ax4 = fig.add_subplot(2, 2, 4)
 
-plt.show()
-fig.savefig(
-    "profile_Sedov_x_axis_" + "snap_" + str(snapshot_number) + ".pdf",
-    bbox_inches="tight",
-)
-plt.close()
+ax1.plot(r, v_r, **sim_props)
+ax1.plot(r_s, v_s, **solution_props)
+ax1.set_ylabel(r"Radial velocity $v_r$")
+ax1.set_ylim(-0.2, 3.8)
 
-"""
-Bin the data for radial profiles
-"""
+ax2.plot(r, density, **sim_props)
+ax2.plot(r_s, rho_s, **solution_props)
+ax2.set_ylabel(r"Density $\rho$")
+ax2.set_ylim(-0.2, 5.2)
 
-r_bin_edge = np.arange(0.0, 0.5, 0.005)
-r_bin = 0.5 * (r_bin_edge[1:] + r_bin_edge[:-1])
-rho_bin, _, _ = stats.binned_statistic(r, density, statistic="mean", bins=r_bin_edge)
-v_bin, _, _ = stats.binned_statistic(r, v_r, statistic="mean", bins=r_bin_edge)
-P_bin, _, _ = stats.binned_statistic(r, pressure, statistic="mean", bins=r_bin_edge)
-u_bin, _, _ = stats.binned_statistic(r, energy, statistic="mean", bins=r_bin_edge)
-rho2_bin, _, _ = stats.binned_statistic(
-    r, density**2, statistic="mean", bins=r_bin_edge
-)
-v2_bin, _, _ = stats.binned_statistic(r, v_r**2, statistic="mean", bins=r_bin_edge)
-P2_bin, _, _ = stats.binned_statistic(
-    r, pressure**2, statistic="mean", bins=r_bin_edge
-)
-u2_bin, _, _ = stats.binned_statistic(r, energy**2, statistic="mean", bins=r_bin_edge)
-rho_sigma_bin = np.sqrt(rho2_bin - rho_bin**2)
-v_sigma_bin = np.sqrt(v2_bin - v_bin**2)
-P_sigma_bin = np.sqrt(P2_bin - P_bin**2)
-u_sigma_bin = np.sqrt(u2_bin - u_bin**2)
+ax3.plot(r, pressure, **sim_props)
+ax3.plot(r_s, P_s, **solution_props)
+ax3.set_ylabel(r"Pressure $p$")
+ax3.set_ylim(-1., 12.5)
 
-# Plot radial profiles
-fig = plt.figure(figsize=(14, 12))
-gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1], wspace=0.3)
+ax4.plot(r, energy, **sim_props)
+ax4.plot(r_s, u_s, **solution_props)
+ax4.set_ylabel(r"Internal Energy $u$")
+ax4.set_ylim(-2., 22)
 
-line_color = "k"
-binned_color = "blue"
-binned_marker_size = 8
-scatter_props = dict(
-    color="red",
-    marker=".",
-    ms=3,
-    markeredgecolor="none",
-    alpha=0.5,
-    zorder=-1,
-    rasterized=True,
-    linestyle="none",
-)
-errorbar_props = dict(color=binned_color, ms=binned_marker_size, fmt=".", lw=1.5)
+for ax in fig.axes:
+    ax.tick_params(direction="in", top=True, right=True)
+    ax.set_xlim(0, 1.3 * r_shock)
+    ax.set_xlabel(r"Radius $r$")
 
-ax0 = plt.subplot(gs[0])
-plt.plot(r_s, rho_s, c=line_color, lw=0.9)
-plt.plot(r, density, **scatter_props)
-plt.errorbar(r_bin, rho_bin, yerr=rho_sigma_bin, **errorbar_props)
-plt.xlabel(r"Radial distance $r$")
-plt.ylabel(r"Density $\rho$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
-plt.axhline(rho_0, c="gray", ls=":", lw=1.2, zorder=-49)
-plt.axhline(
-    (5.0 / 3.0 + 1.0) / (5.0 / 3.0 - 1.0) * rho_0, c="r", ls=":", lw=1.2, zorder=-49
-)
-plt.xlim(0.1 * r_shock, 1.3 * r_shock)
-plt.ylim(0, 1.1 * rho_s.max())
+plt.tight_layout()
+fname = f"sedov_profile-{time:.4f}.png"
+fig.savefig(fname)
+print("Saved", fname)
 
-ax1 = plt.subplot(gs[1])
-plt.plot(r_s, P_s, c=line_color, lw=0.9)
-plt.plot(r, pressure, **scatter_props)
-plt.errorbar(r_bin, P_bin, yerr=P_sigma_bin, **errorbar_props)
-plt.xlabel(r"Radial distance $r$")
-plt.ylabel(r"Pressure $P$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
-plt.xlim(0.1 * r_shock, 1.3 * r_shock)
-plt.ylim(0, 1.1 * P_s.max())
-
-ax2 = plt.subplot(gs[2])
-plt.plot(r_s, u_s, c=line_color, lw=0.9)
-plt.plot(r, energy, **scatter_props)
-plt.errorbar(r_bin, u_bin, yerr=u_sigma_bin, **errorbar_props)
-plt.xlabel(r"Radial distance $r$")
-plt.ylabel(r"Internal energy $u$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
-plt.xlim(0.1 * r_shock, 1.3 * r_shock)
-plt.ylim(0, 1.1 * u_s[5:].max())
-
-ax3 = plt.subplot(gs[3])
-plt.plot(r_s, v_s, c=line_color, lw=0.9)
-plt.plot(r, v_r, **scatter_props)
-plt.errorbar(r_bin, v_bin, yerr=v_sigma_bin, **errorbar_props)
-plt.xlabel(r"Radial distance $r$")
-plt.ylabel(r"Radial velocity $v_r$")
-plt.margins(0.05, 0.1)
-plt.tick_params(direction="in", top=True, right=True)
-plt.xlim(0.1 * r_shock, 1.3 * r_shock)
-plt.ylim(0, 1.1 * v_s.max())
-
-plt.show()
-fig.savefig(
-    "profile_Sedov_spherical_average_" + "snap_" + str(snapshot_number) + ".pdf",
-    bbox_inches="tight",
-)
-plt.close()
