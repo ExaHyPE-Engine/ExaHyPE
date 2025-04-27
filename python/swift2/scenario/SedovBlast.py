@@ -54,7 +54,7 @@ class SedovBlastIC:
       // the setup below (how many particles we'll inject, and how we
       // split up the energy between them) depends on an even number of
       // regularly distributed particles.
-      assert((HYDRO_PART_NUMBER % 2) == 0);
+      assert((static_cast<int>(HYDRO_PART_NUMBER) % 2) == 0);
 
 
       // Initialise the blast
@@ -62,11 +62,11 @@ class SedovBlastIC:
       double SPIKE_RADIUS = 1.001 * DomainSize(0) / HYDRO_PART_NUMBER;
       double BLAST_FRACTION = 1. / 3.;
       if (HYDRO_DIMENSIONS == 2) {
-        SPIKE_RADIUS = 2.501 * DomainSize(0) / HYDRO_PART_NUMBER;
+        SPIKE_RADIUS = 2.751 * DomainSize(0) / HYDRO_PART_NUMBER;
         BLAST_FRACTION = 1. / 21.;
       }
       if (HYDRO_DIMENSIONS == 3) {
-        SPIKE_RADIUS = 1.501 * DomainSize(0) / HYDRO_PART_NUMBER;
+        SPIKE_RADIUS = 1.701 * DomainSize(0) / HYDRO_PART_NUMBER;
         BLAST_FRACTION = 1. / 19.;
       }
 
