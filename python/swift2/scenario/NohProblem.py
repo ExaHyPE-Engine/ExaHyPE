@@ -24,11 +24,18 @@ class NohProblemIC:
        * Particles will then develop a shock that propagates outwards.
        */
 
+      // for kernel_gamma
+      using namespace ::swift2::kernels::legacy::kernelHydro;
+
       // Internal search radius used by Peano and with max value R = grid_size/2
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = 0.5 * GridSize(0);
 
-      particle->setSearchRadius( 0.999 * GridSize_x );
+      const double h_max = particle->getSmlMax();
+      const double H_max = h_max * kernel_gamma;
+      double search_radius = std::min(H_max, GridSize_x);
+
+      particle->setSearchRadius( search_radius );
 
       // Constant background density field
       particle->setDensity ( 1.0 );
@@ -37,7 +44,9 @@ class NohProblemIC:
 
       const double eta_fac = particle->getEtaFactor();
       // Initial estimate for smoothing length
-      particle->setSmoothingLength( eta_fac * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
+      double h =  eta_fac * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) ;
+      h = std::min(h, h_max);
+      particle->setSmoothingLength(h);
 
       // Set neglibible background pressure
       particle->setPressure( 1e-6 );
