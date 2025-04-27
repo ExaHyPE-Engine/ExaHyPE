@@ -331,12 +331,13 @@ initialisation_snippet = ICs.initialisation_snippet
 
 # Finally, pass this configuration to the initialisation script
 project.algorithm_step_initial_conditions.add_action_set(
-    swift2.input.InsertParticlesAlongCartesianGrid(
+    swift2.input.InsertNoisyParticlesAlongCartesianGrid(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
         distance_between_particles_along_one_axis=(
             domain_size[0] / (args.particle_number)
         ),
+        noise_scale=0.25,
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
 #include "swift2/kernels/legacy/kernel_hydro.h"
