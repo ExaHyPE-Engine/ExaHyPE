@@ -32,7 +32,7 @@ class SedovBlastIC:
 
       const double h_max = particle->getSmlMax();
       const double H_max = h_max * kernel_gamma;
-      double search_radius = std::min(H_max, GridSize_x);
+      double search_radius = 0.999 * std::min(H_max, GridSize_x);
 
       particle->setSearchRadius( search_radius );
 
