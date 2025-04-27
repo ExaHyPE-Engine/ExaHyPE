@@ -183,6 +183,7 @@ namespace swift2 {
       class EvaluatePredicateInPrologueRealisation {};
       class EvaluatePredicateInPrologueLocalActiveRealisation {};
       class EvaluatePredicateInPrologueActiveLocalRealisation {};
+      class GenericOffloadRealisation {};
 
       extern GenericRealisation                                Generic;
       extern CoalescedMemoryRealisation                        CoalescedMemory;
@@ -191,6 +192,7 @@ namespace swift2 {
       extern EvaluatePredicateInPrologueRealisation            EvaluatePredicateInPrologue;
       extern EvaluatePredicateInPrologueLocalActiveRealisation EvaluatePredicateInPrologueLocalActive;
       extern EvaluatePredicateInPrologueActiveLocalRealisation EvaluatePredicateInPrologueActiveLocal;
+      extern GenericOffloadRealisation                         GenericOffload;
     }
 
     /**
@@ -253,6 +255,18 @@ namespace swift2 {
 
 
     /**
+     * Exactly the same version as the generic variant, but we use the 
+     * offload attribute. 
+     */
+    template<auto ParticleOp, auto PredicateOp>
+    void forAllParticles(
+      const peano4::datamanagement::VertexMarker &marker,
+      auto &assignedParticles,
+      int numberOfCoalescedAssignedParticles,
+      ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
+    );
+
+    /**
      * Loop over all particles within a cell
      *
      * ## Predicates
@@ -275,6 +289,18 @@ namespace swift2 {
       auto &localParticles,
       const std::vector<int> &numberOfCoalescedLocalParticles,
       auto realisation
+    );
+
+
+    /**
+     * Generic version but annotated with offloading attributes.
+     */
+    template <auto ParticleOp, auto PredicateOp>
+    void forAllParticles(
+      const peano4::datamanagement::CellMarker &marker,
+      auto &localParticles,
+      const std::vector<int> &numberOfCoalescedLocalParticles,
+      ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
     );
 
 
@@ -381,6 +407,18 @@ namespace swift2 {
       auto &localParticles,
       auto &activeParticles,
       auto realisation
+    );
+
+    /**
+     * Exactly the same version as the generic variant, but with an additional
+     * offload annotation.
+     */
+    template<auto PairOperator, auto LocalPredicate, auto PairPredicate>
+    void forAllParticlePairs(
+      const swift2::CellMetaData&                cellMetaData,
+      auto &localParticles,
+      auto &activeParticles,
+      ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
     );
 
     template<auto PairOperator, auto LocalPredicate, auto PairPredicate>
@@ -524,32 +562,35 @@ namespace swift2 {
         ::swift2::kernels::kernelrealisation::CoalescedMemoryActiveLocalRealisation     realisation
       );
 
-    template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
-    void forAllParticlePairs(
-      const swift2::CellMetaData&  cellMetaData,
-      auto&                        localParticles,
-      auto&                        activeParticles,
-      ::swift2::kernels::kernelrealisation::CoalescedMemoryLocalActiveRealisation     realisation
-    );
-
-     template <typename ParticleContainer>
-     void forAllParticles(
-       const peano4::datamanagement::VertexMarker&                         marker,
-       ParticleContainer&                                                  assignedParticles,
-       int                                                                 numberOfCoalescedAssignedParticles,
-       ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType > auto f,
-       UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate,
-       ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueRealisation   realisation
+     template <auto ParticlePairOp, auto LocalPredicateOp, auto ParticlePairPredicateOp>
+     void forAllParticlePairs(
+       const swift2::CellMetaData&  cellMetaData,
+       auto&                        localParticles,
+       auto&                        activeParticles,
+       ::swift2::kernels::kernelrealisation::CoalescedMemoryLocalActiveRealisation     realisation
      );
 
-     template <typename ParticleContainer>
+     /**
+      * We split up the loop into two loops: The first one runs over the
+      * predicates and collects all the results in one large bit field. The
+      * idea/hope is that this part vectorises. After that, we run over the
+      * particle set again, but only evaluate those guys where the bitfield
+      * is actually set.
+      */
+     template<auto ParticleOp, auto PredicateOp>
      void forAllParticles(
-       const peano4::datamanagement::CellMarker&                  marker,
-       ParticleContainer&                                         localParticles,
-       const std::vector<int>&                                    numberOfCoalescedLocalParticlesPerVertex,
-       ParticleUnaryOperatorOnCell<PCParticle<ParticleContainer>> auto f,
-       UpdateParticleAssignedToCellPredicate<PCParticle<ParticleContainer>>  predicate,
-       ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueRealisation   realisation
+       const peano4::datamanagement::VertexMarker &marker,
+       auto &assignedParticles,
+       int numberOfCoalescedAssignedParticles,
+       ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueRealisation
+     );
+
+     template <auto ParticleOp, auto PredicateOp>
+     void forAllParticles(
+       const peano4::datamanagement::CellMarker &marker,
+       auto &localParticles,
+       const std::vector<int> &numberOfCoalescedLocalParticles,
+       ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueRealisation
      );
 
      /**
