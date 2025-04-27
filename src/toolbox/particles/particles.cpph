@@ -1,12 +1,9 @@
+#include "internal.h"
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/utils/Loop.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
-#include "peano4/utils/Loop.h"
-
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/datamanagement/CellMarker.h"
-
-
-#include "internal.h"
 
 
 template <typename Iterator>
@@ -63,17 +60,16 @@ void toolbox::particles::insertParticlesIntoCell(
 
 
 void toolbox::particles::updateContainedInAdjacentCellProperty(
-  const peano4::datamanagement::CellMarker&  marker,
-  const std::bitset<Dimensions>&             assignedVertex,
-  auto&                                      particle
+  const peano4::datamanagement::CellMarker& marker,
+  const std::bitset<Dimensions>&            assignedVertex,
+  auto&                                     particle
 ) {
-  const tarch::la::Vector< Dimensions, double >  vertexPositionOfAssignedVertex =
-    marker.getOffset()
-    +
-    tarch::la::multiplyComponents(
-      tarch::la::Vector< Dimensions, double >(assignedVertex),
-      marker.h()
-    );
+  const tarch::la::Vector<Dimensions, double> vertexPositionOfAssignedVertex
+    = marker.getOffset()
+      + tarch::la::multiplyComponents(
+        tarch::la::Vector<Dimensions, double>(assignedVertex),
+        marker.h()
+      );
   updateContainedInAdjacentCellProperty(
     vertexPositionOfAssignedVertex,
     marker.h(),
@@ -83,42 +79,37 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
 
 
 void toolbox::particles::updateContainedInAdjacentCellProperty(
-  const peano4::datamanagement::VertexMarker&  marker,
-  auto&                                        particle
+  const peano4::datamanagement::VertexMarker& marker,
+  auto&                                       particle
 ) {
-  updateContainedInAdjacentCellProperty(
-    marker.x(),
-    marker.h(),
-    particle
-  );
+  updateContainedInAdjacentCellProperty(marker.x(), marker.h(), particle);
 }
 
 
 void toolbox::particles::updateContainedInAdjacentCellProperty(
-  const tarch::la::Vector< Dimensions, double >&  x,
-  const tarch::la::Vector< Dimensions, double >&  h,
-  auto&                                           particle
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  auto&                                        particle
 ) {
-  std::bitset<TwoPowerD>    result = 0;
+  std::bitset<TwoPowerD> result = 0;
 
-  dfor2(k)
-    tarch::la::Vector< Dimensions, double >  adjacentCellCentre =
-      x - 0.5 * h
-      +
-      tarch::la::multiplyComponents(
-        tarch::la::convertScalar< double >(k),
-        h
-      );
+  dfor2(k) tarch::la::Vector<Dimensions, double>
+    adjacentCellCentre = x - 0.5 * h
+                         + tarch::la::multiplyComponents(
+                           tarch::la::convertScalar<double>(k),
+                           h
+                         );
 
-    result[kScalar] = peano4::datamanagement::CellMarker::isContained(
-      particle.getX(),
-      adjacentCellCentre,
-      h,
-      toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(h) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    );
+  result[kScalar] = peano4::datamanagement::CellMarker::isContained(
+    particle.getX(),
+    adjacentCellCentre,
+    h,
+    toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(h
+    ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+  );
   enddforx
 
-  particle.setContainedInAdjacentCell( result );
+    particle.setContainedInAdjacentCell(result);
 }
 
 
@@ -156,9 +147,8 @@ void toolbox::particles::insertParticleIntoCell(
   }
 
   assertion5(
-    tarch::la::smaller(
-      2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())
-    ),
+    tarch::la::
+      smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())),
     marker.toString(),
     newParticle->toString(),
     2.0 * newParticle->getSearchRadius(),
@@ -168,7 +158,7 @@ void toolbox::particles::insertParticleIntoCell(
 
   newParticle->setParallelState(Particle::ParallelState::Local);
   newParticle->setCellH(marker.h());
-  updateContainedInAdjacentCellProperty( marker, targetVertex, *newParticle );
+  updateContainedInAdjacentCellProperty(marker, targetVertex, *newParticle);
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
 

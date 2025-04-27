@@ -38,7 +38,7 @@ class InsertNoisyParticlesAlongCartesianGrid(
             distance_between_particles=distance_between_particles_along_one_axis,
             initialisation_call=initialisation_call,
             noise=True,
-            noise_scale = noise_scale,
+            noise_scale=noise_scale,
             computational_domain_offset=[
                 "DomainOffset[0]",
                 "DomainOffset[1]",

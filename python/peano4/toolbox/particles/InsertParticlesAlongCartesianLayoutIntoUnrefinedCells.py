@@ -15,7 +15,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         computational_domain_size,
         initialisation_call="",
         noise=True,
-        noise_scale=1.,
+        noise_scale=1.0,
         additional_includes="",
         guard="true",
     ):

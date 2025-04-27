@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <vector>
-
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/utils/Globals.h"
+
+#include <vector>
 
 
 namespace toolbox {
@@ -28,7 +28,11 @@ namespace toolbox {
      * insertParticleIntoCell() which then in turn will toggle to Local.
      */
     template <class T>
-    void init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double searchRadius);
+    void init(
+      T&                                           particle,
+      const tarch::la::Vector<Dimensions, double>& x,
+      double                                       searchRadius
+    );
 
     /**
      * Create equally spaced particles for one cell
@@ -39,17 +43,19 @@ namespace toolbox {
      * layout of particles, but you will not get a globally equidistant layout:
      * The particles will not be spaced the same way across a cell face as
      * they are spaced out inside a cell. If you need a globally equidistant
-     * layout, you will have to use createParticlesAlignedWithGlobalCartesianMesh().
+     * layout, you will have to use
+     * createParticlesAlignedWithGlobalCartesianMesh().
      *
      * The routine creates all the resulting particles on the heap via a plain
      * new(). That is, the particles will be scattered in memory.
      *
-     * @param spacingH Spacing of particles. Pick it smaller or equal to 0 and we'll always
-     *   create one particle in the center.
+     * @param spacingH Spacing of particles. Pick it smaller or equal to 0 and
+     * we'll always create one particle in the center.
      *
      * @param voxelX Centre of voxel in space
      *
-     * @param voxelH Size of voxel, i.e. subcell, into which the particles shall be embedded
+     * @param voxelH Size of voxel, i.e. subcell, into which the particles shall
+     * be embedded
      *
      */
     template <class T>

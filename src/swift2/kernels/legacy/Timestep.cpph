@@ -1,8 +1,8 @@
 #pragma once
 
-#include <limits>
-
 #include "kernel_hydro.h"
+
+#include <limits>
 
 
 template <typename Particle>
