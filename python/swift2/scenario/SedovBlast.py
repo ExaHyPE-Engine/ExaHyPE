@@ -51,6 +51,11 @@ class SedovBlastIC:
       const double pressure = 1.e-6;
       particle->setPressure( pressure );
 
+      // the setup below (how many particles we'll inject, and how we
+      // split up the energy between them) depends on an even number of
+      // regularly distributed particles.
+      assert((HYDRO_PART_NUMBER % 2) == 0);
+
 
       // Initialise the blast
       const double BLAST_ENERGY = 1.0;
