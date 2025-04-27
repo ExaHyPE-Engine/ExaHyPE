@@ -35,6 +35,7 @@ namespace swift2 {
       Particle&                                    particle
     ) {
       assertion2(::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle), marker.toString(), particle.toString());
+      reset_moved_particle_marker(particle);
     }
   }
 }
