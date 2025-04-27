@@ -57,7 +57,8 @@ namespace toolbox {
       double                                       spacingH,
       const tarch::la::Vector<Dimensions, double>& voxelX,
       const tarch::la::Vector<Dimensions, double>& voxelH,
-      bool                                         addNoise
+      bool                                         addNoise,
+      double                                       noiseScale = 1.
     );
 
     /**
@@ -70,6 +71,9 @@ namespace toolbox {
      * one ends up exactly on the face, we skip it. The rationale is that the
      * right neighbour will insert that guy later on, and we don't want to
      * insert particles twice.
+     *
+     * @param noiseScale When adding noise, the amplitude is set by
+     * +-0.5 * particle distance multiplied by this scale factor.
      */
     template <class T>
     std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(
@@ -78,7 +82,8 @@ namespace toolbox {
       const tarch::la::Vector<Dimensions, double>& voxelH,
       const tarch::la::Vector<Dimensions, double>& domainOffset,
       const tarch::la::Vector<Dimensions, double>& domainSize,
-      bool                                         addNoise
+      bool                                         addNoise,
+      double                                       noiseScale = 1.
     );
   } // namespace particles
 } // namespace toolbox

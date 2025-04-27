@@ -15,6 +15,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         computational_domain_size,
         initialisation_call="",
         noise=True,
+        noise_scale=1.,
         additional_includes="",
         guard="true",
     ):
@@ -33,6 +34,13 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         initialisation_call: String (C code)
            Within this code snippet, you have a variable particle which is a pointer to
            your particle type. You can use it to set the particle attributes.
+
+        noise: Bool
+           If True, add noise to particle coordinates
+
+        noise_scale:
+           If noise=True, the noise added to particle coordinates is +-0.5 * particle
+           distance multiplied by this factor
 
         computational_domain_offset: [Float]
            Has to be an array with Dimensions entries that specifies the global domain
@@ -76,8 +84,10 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         self.d["GUARD"] = guard
         if noise:
             self.d["NOISE"] = "true"
+            self.d["NOISE_SCALE"] = noise_scale
         else:
             self.d["NOISE"] = "false"
+            self.d["NOISE_SCALE"] = "1."
         self.additional_includes = additional_includes
 
     __Template_TouchCellFirstTime = jinja2.Template(
@@ -99,7 +109,8 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
       marker.h(),
       domainOffset,
       domainSize,
-      {{NOISE}}
+      {{NOISE}},
+      {{NOISE_SCALE}}
     );
     for (auto* particle: newParticles) {
       if ( {{GUARD}} ) {

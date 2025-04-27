@@ -29,7 +29,8 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
   double                                       spacing,
   const tarch::la::Vector<Dimensions, double>& voxelX,
   const tarch::la::Vector<Dimensions, double>& voxelH,
-  bool                                         addNoise
+  bool                                         addNoise,
+  double                                       noiseScale
 ) {
   std::vector<T*> result;
 
@@ -54,7 +55,7 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
 
       if (addNoise) {
         for (int d = 0; d < Dimensions; d++) {
-          x(d) += (randomDist(e2) - 0.5) * particleSpacing;
+          x(d) += (randomDist(e2) - 0.5) * particleSpacing * noiseScale;
         }
       }
 
@@ -74,7 +75,8 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   const tarch::la::Vector<Dimensions, double>& voxelH,
   const tarch::la::Vector<Dimensions, double>& domainOffset,
   const tarch::la::Vector<Dimensions, double>& domainSize,
-  bool                                         addNoise
+  bool                                         addNoise,
+  double                                       noiseScale
 ) {
   static tarch::logging::Log _log("toolbox::particles");
   logTraceInWith4Arguments(
@@ -116,7 +118,7 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
 
     if (addNoise) {
       for (int d = 0; d < Dimensions; d++) {
-        x(d) += (randomDist(e2) - 0.5) * spacing;
+        x(d) += (randomDist(e2) - 0.5) * spacing * noiseScale;
       }
     }
 
