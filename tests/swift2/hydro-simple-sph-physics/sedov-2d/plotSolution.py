@@ -239,16 +239,16 @@ sim_props = {
     "marker":".",
     "ms":4,
     "markeredgecolor":"none",
-    "alpha":1.0,
+    "alpha":0.4,
     "zorder":-1,
     "rasterized":True,
     "linestyle":"none",
     }
 solution_props = {
         "linestyle": "--",
-        "color" : "C4",
-        "alpha": 0.4,
-        "linewidth": 1.2,
+        "color" : "C1",
+        "alpha": 0.8,
+        "linewidth": 2.0,
         }
 
 
