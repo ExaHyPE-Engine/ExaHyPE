@@ -96,11 +96,13 @@ solver = Solver_Type(
 
 project.add_solver(solver)
 
-#
+#t
 # Configure build
 #
 build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Asserts
+
+#project.set_multicore_orchestration
 
 
 cube_size = 1.0

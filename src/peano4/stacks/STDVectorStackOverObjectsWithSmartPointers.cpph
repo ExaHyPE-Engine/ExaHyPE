@@ -25,21 +25,14 @@ peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::STDVectorStackOve
   _flattenedData(nullptr),
   _ioMode(IOMode::None)
 #ifdef Parallel
-  ,
-  _ioMPIRequest(nullptr),
-  _ioMetaDataMPIRequest(nullptr),
-  _ioDebugMetaDataMPIRequest(nullptr)
+  , _ioMPIRequest(nullptr)
 #endif
 {
   assertionMsg(_data.empty(), "may not copy non-empty stack");
   assertionMsg(copy._data.empty(), "may not copy non-empty stack");
 #ifdef Parallel
   assertionMsg(_ioMPIRequest == nullptr, "may not copy sending/receiving stack");
-  assertionMsg(_ioMetaDataMPIRequest == nullptr, "may not copy sending/receiving stack");
-  assertionMsg(_ioDebugMetaDataMPIRequest == nullptr, "may not copy sending/receiving stack");
   assertionMsg(copy._ioMPIRequest == nullptr, "may not copy sending/receiving stack");
-  assertionMsg(copy._ioMetaDataMPIRequest == nullptr, "may not copy sending/receiving stack");
-  assertionMsg(copy._ioDebugMetaDataMPIRequest == nullptr, "may not copy sending/receiving stack");
 #endif
 }
 
@@ -78,8 +71,8 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startSend(
   _ioMPIRequest = new MPI_Request;
   int result = MPI_Isend(
     _flattenedData.data(),
-    _currentElement,
-    translateContextIntoDatatype<T::FlattenedType>( context ),
+    _flattenedData.size(),
+    translateContextIntoDatatype<typename T::FlattenedType>( context ),
     _ioRank, _ioTag, comm, _ioMPIRequest
   );
   if  (result!=MPI_SUCCESS) {
@@ -106,7 +99,6 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startReceive
   _data.clear();
   _data.resize(numberOfElements, T(T::ObjectConstruction::NoData));
   _flattenedData.resize(size());
-  _currentElement = numberOfElements;
 
   assertion3( _ioMPIRequest == nullptr, rank, tag, numberOfElements );
   _ioMPIRequest = new MPI_Request;
@@ -114,7 +106,7 @@ void peano4::stacks::STDVectorStackOverObjectsWithSmartPointers<T>::startReceive
   int result = MPI_Irecv(
     _flattenedData.data(),
     _data.size(),
-    translateContextIntoDatatype<T::FlattenedType>( context ),
+    translateContextIntoDatatype<typename T::FlattenedType>( context ),
     _ioRank, _ioTag, comm, _ioMPIRequest
   );
   if  (result!=MPI_SUCCESS) {

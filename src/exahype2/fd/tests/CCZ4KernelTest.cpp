@@ -137,7 +137,8 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
       oldQWithHalos[CellIndexSerialised*(unknowns+auxiliaryVariables)+53] = trK;      // K
       oldQWithHalos[CellIndexSerialised*(unknowns+auxiliaryVariables)+54] = phi;      // phi
 
-      delete g,K;
+      delete g;
+      delete K;
     }
   }
 

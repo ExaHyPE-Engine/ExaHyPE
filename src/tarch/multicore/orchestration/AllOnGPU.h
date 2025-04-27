@@ -20,6 +20,7 @@ private:
   const int   _device;
   int         _deviceToUse;
   bool        _isInBspSection;
+  const std::chrono::microseconds  _timeout;
 
   void toggleDevice();
 public:
@@ -31,7 +32,7 @@ public:
    * @param device Either a nonnegative integer picking one device or
    *   RoundRobin.
    */
-  AllOnGPU(int device);
+  AllOnGPU(int device, const std::chrono::microseconds& timeout = std::chrono::microseconds(100) );
 
   virtual void startBSPSection(int nestedParallelismLevel) override;
   virtual void endBSPSection(int nestedParallelismLevel) override;
@@ -55,6 +56,7 @@ public:
   virtual void updateFuseStatistics(
     int    taskType,
     int    queueSize,
-    double averageNumberOfPendingReadyTasksPerProcessTaskExecution
+    double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
+    double probabilityThatTaskIsCompleted
   ) override;
 };

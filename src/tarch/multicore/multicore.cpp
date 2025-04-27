@@ -163,8 +163,7 @@ void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::mul
 
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& tasks) {
   for (auto& p : tasks) {
-    while (p->run()) {
-    }
+    p->run();
     delete p;
   }
 }
@@ -175,8 +174,7 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>& /*inDependencies*/,
   const TaskNumber& /*taskNumber*/
 ) {
-  while (job->run()) {
-  }
+  job->run();
   delete job;
 }
 
