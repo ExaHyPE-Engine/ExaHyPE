@@ -329,16 +329,20 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 ICs = swift2.scenario.SedovBlastIC()
 initialisation_snippet = ICs.initialisation_snippet
 
+coords = np.ones((args.particle_number, 2)) * 0.5
+for i in range(args.particle_number):
+    coords[i,0] = (i + 0.5) / (args.particle_number + 1)
+
 # Finally, pass this configuration to the initialisation script
+# Note that Peano's internal cartesian grid particle generation can't do 1D grids at the moment.
 project.algorithm_step_initial_conditions.add_action_set(
-    swift2.input.InsertParticlesAlongCartesianGrid(
+    swift2.input.InsertParticlesByCoordinates(
         particle_set=particle_set,
+        coordinates = coords,
         initialisation_call=initialisation_snippet,
-        distance_between_particles_along_one_axis=(
-            domain_size[0] / (args.particle_number)
-        ),
         additional_includes="""
 #include "swift2/kernels/legacy/equation_of_state.h"
+#include "swift2/kernels/legacy/kernel_hydro.h"
 """,
     )
 )
