@@ -234,13 +234,8 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
       std::bitset<TwoPowerD> mask = 0;
       mask.set(i);
       bool isLocal = (mask | p->getContainedInAdjacentCell()).any();
-<<<<<<< HEAD
       assertionEquals2( 
         isLocal, 
-=======
-      assertionEquals2(
-        isLocal,
->>>>>>> branch 'mladen/sedov' of https://gitlab.lrz.de/hpcsoftware/Peano.git
         marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
         marker.toString(),
         p->toString()
