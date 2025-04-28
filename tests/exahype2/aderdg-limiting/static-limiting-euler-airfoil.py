@@ -197,12 +197,12 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
+    "toolbox::loadbalancing::strategies::SpreadOut",
+    "new ::exahype2::LoadBalancingConfiguration()",
 )
 project.set_Peano4_installation("../../../", build_mode)
-project = project.generate_Peano4_project("False")
-#project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+project = project.generate_Peano4_project(verbose=False)
+# project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")  # TODO: Static limiter crashes with this
 
 project.build(make_clean_first=True)
 

@@ -61,21 +61,22 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
     const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp() - timeStepSize;
 
     // [nk] On the FV layer the troubled cells and their neighbors LIMITER_TO_REGULAR were recalculated.
-    // Therefore we project limited values on the regular solver layer
-    if (fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker()>=celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR) {
+    // Therefore we project limited values on the regular solver layer.
+    if (fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker() >= celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::LIMITER_TO_REGULAR) {
       kernels::{{SOLVER_NAME}}::projectOnDGSpaceFromFVWithoutHalo(
         fineGridCell{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}.value,
         fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value
       );
     }
-
+/*
     // [nk] Convert all cells to TROUBLED status
-    // That is done as a further criteria for time step synchronization between Regular and Limiter solver within the SaveNewData step
+    // That is done as a further criteria for time step synchronisation between the regular and limiter solvers within the SaveNewData step.
     repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
     fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
-    for(int d=0; d<2*Dimensions; d++){
+    for (int d = 0; d < 2 * Dimensions; d++) {
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
     }
+*/
   }"""
 
   def __init__(self,solver, regularToLimiterGuard, limiterToRegularGuard):

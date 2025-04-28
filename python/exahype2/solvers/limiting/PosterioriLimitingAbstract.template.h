@@ -54,6 +54,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
 
+    double getAdmissibleTimeStepSize() const;
+
     //TODO: link these to the max and min of the other solvers
     static constexpr double MaxAdmissibleCellH  = 1000.;
     static constexpr double MinAdmissibleCellH  = 0.;
@@ -200,6 +202,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState _solverState;
 
+    double _admissibleTimeStepSize;
+    
     int _numberOfTroubledCells;
     int _numberOfTroubledCellsThisTimeStep;
 

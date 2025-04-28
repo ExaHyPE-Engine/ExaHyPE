@@ -9,8 +9,9 @@ import jinja2
 class SaveNewCellData(AbstractLimiterActionSet):
   TemplateSaveNewCellData = """
   if ({{PREDICATE}}) {
-    //[nk] TODO: This logic won't work for the Fixed timestep solvers, since they do not have getAdmissibleTimeStepSize() methods.
-    //[nk] By default we use the Regular solver time step
+    /*
+    //[nk] TODO: This logic won't work for the fixed timestep solvers, since they do not have getAdmissibleTimeStepSize() methods.
+    //[nk] By default we use the regular solver's time step
     double timeStepSize = repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
     //[nk] However, if we fall to the LimiterSolver layer, all cells will be marked as TROUBLED. Therefore we should use the timeStepSize
     // from the Limiter Solver
@@ -20,17 +21,18 @@ class SaveNewCellData(AbstractLimiterActionSet):
       timeStepSize = repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
     }
 
-    //[nk] Store the timestep inside the cellLabel
+    //[nk] Store the time step inside the cell label
     fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
     coarseGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
     fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
     coarseGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
 
-    //[nk] Synchronise the timeStamp for all solvers inside the cellLabel
+    //[nk] Synchronise the time stamp for all solvers inside the cell label
     const double timeStampSynchronised = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
     coarseGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
     fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
     coarseGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
+    */
 
     {% if USE_DMP %}
     // Resetting local min and max

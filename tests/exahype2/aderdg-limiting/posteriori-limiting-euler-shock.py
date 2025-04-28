@@ -22,7 +22,7 @@ min_level = 3
 max_depth = 0
 ndof = 6
 order = ndof - 1
-end_time = 2.0
+end_time = 0.1
 CFL = 0.5
 unknowns = {"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1}
 auxiliary = {}
@@ -201,11 +201,11 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
+    "toolbox::loadbalancing::strategies::SpreadOut",
+    "new ::exahype2::LoadBalancingConfiguration()",
 )
 project.set_Peano4_installation("../../../", build_modes[curr_build_mode])
-project = project.generate_Peano4_project("False")
+project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.build(make_clean_first=True)

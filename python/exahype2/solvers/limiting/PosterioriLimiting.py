@@ -156,12 +156,21 @@ class PosterioriLimiting(object):
 
         # [nk] The time step is recomputed in limiting solvers' SaveNewData action.
         # Therefore in regular and limiter solver we should get it from the cell.
-        self._regular_solver._compute_time_step_size = """
-      const double timeStepSize  = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
-  """
-        self._limiter_solver._compute_time_step_size = """
-    double timeStepSize = coarseGridCell""" + self._limiter_solver._name + """CellLabel.getTimeStepSize();
-"""
+#         self._regular_solver._compute_time_step_size = """
+#       const double timeStepSize  = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
+#   """
+#         self._limiter_solver._compute_time_step_size = """
+#     double timeStepSize = coarseGridCell""" + self._limiter_solver._name + """CellLabel.getTimeStepSize();
+# """
+
+#         compute_time_step_size = """
+#     double timeStepSize = std::min( repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
+#                                     repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
+# """
+        compute_time_step_size = "double timeStepSize = repositories::" + self.get_name_of_global_instance() + ".getAdmissibleTimeStepSize();"
+
+        self._limiter_solver._compute_time_step_size = compute_time_step_size
+        self._regular_solver._compute_time_step_size = compute_time_step_size
 
 
     """
@@ -175,11 +184,12 @@ class PosterioriLimiting(object):
     @abstractmethod
     def create_action_sets(self):
         self._action_set_save_new_cell_data = SaveNewCellData(self,
-            guard = ("not marker.willBeRefined() and not marker.hasBeenRefined() and" +
-              " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver" +
+            guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
+              " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver" +
               " and " + "repositories::" + self._regular_solver.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
             use_DMP=self._number_of_dmp_observables>0,
-            reset_troubled_markers=True
+            reset_troubled_markers=True,
+            transmit_cell_timestamps=True
         )
 
         self._action_set_check_troubledness = VerifyTroubledness(self,
@@ -201,7 +211,11 @@ class PosterioriLimiting(object):
             # [nk] Regular cells are allowed to enter this step as a part of time-step synchronization between solvers.
             limiterToRegularGuard = ( "not marker.willBeRefined() and not marker.hasBeenRefined() and"
               + " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
-              + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()")
+              # + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()")
+              + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
+              + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
+              + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR")
+
         )
 
         """
