@@ -226,7 +226,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
       bool isLocal = (mask | p->getContainedInAdjacentCell()).any();
       assertionEquals2( 
         isLocal, 
-        marker.isContained( *p, toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
+        marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
         marker.toString(),
         p->toString()
       );
