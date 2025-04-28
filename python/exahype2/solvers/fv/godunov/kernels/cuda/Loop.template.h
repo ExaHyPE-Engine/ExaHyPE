@@ -68,7 +68,7 @@
     {{COMPUTE_PRECISION}}* const NOALIAS       maxEigenvalues
     {% endif %}
   ) {
-    const int patchIndex    = blockIdx.x;
+    const int patchIndex                   = blockIdx.x;
     const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
     {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
@@ -143,8 +143,6 @@
     {% endif %}
   );
 
-  CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   {{COMPUTE_PRECISION}}* cubMaxEigenvalue = nullptr;
   CHECK_CUDA_ERROR(cudaMalloc(&cubMaxEigenvalue, sizeof(double)));
@@ -165,6 +163,7 @@
     cubMaxEigenvalue,
     numberOfPatches
   );
+  double maxEigenvalueAfterTimeStep = 0.0;
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &maxEigenvalueAfterTimeStep,
     cubMaxEigenvalue,
@@ -177,5 +176,11 @@
   tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalues, targetDevice);
   {% endif %}
 
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet())); // TODO: Should be moved in fuse() to be able to launch kernels asynchronously
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+
+  {% if COMPUTE_MAX_EIGENVALUE==True %}
+  return maxEigenvalueAfterTimeStep;
+  {% else %}
+  return 0.0;
+  {% endif %}
 {% endmacro %}

@@ -63,6 +63,7 @@
   const double timeStepSize               = patchData.dt;
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
+  double maxEigenvalueAfterTimeStep = 0.0;
   double* maxEigenvalue = tarch::accelerator::MemoryManager::getInstance().allocate<double>(
     1,
     tarch::MemoryLocation::Pinned,
@@ -137,5 +138,11 @@
     targetDevice
   );
   tarch::accelerator::MemoryManager::getInstance().free(maxEigenvalue, targetDevice);
+  {% endif %}
+
+  {% if COMPUTE_MAX_EIGENVALUE==True %}
+  return maxEigenvalueAfterTimeStep;
+  {% else %}
+  return 0.0;
   {% endif %}
 {% endmacro %}

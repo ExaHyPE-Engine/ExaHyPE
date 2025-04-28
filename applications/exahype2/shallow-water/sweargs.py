@@ -159,7 +159,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Target device for GPU offloading.",
         )
         self.add_argument(
-            "--tasks",
+            "--ntasks",
             type=int,
             default=1,
             help="Number of fused enclave tasks to offload asynchronously.",
