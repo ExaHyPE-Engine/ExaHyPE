@@ -1,0 +1,24 @@
+# Level (info or debug)   Trace   Rank (-1 means all ranks)   Black or white list entry
+
+
+#
+# General debug settings
+#
+debug  tarch                               -1     black always-on
+debug  peano4                              -1     black always-on
+debug  tests                               -1     black always-on
+debug  swift2                              -1     black always-on
+debug  toolbox                             -1     black always-on
+
+info  tarch                                -1     white always-on
+info  peano4                               -1     white always-on
+info  tests                                -1     white always-on
+info  swift2                               -1     white always-on
+info  toolbox                              -1     white always-on
+ 
+trace  tarch                               -1     black always-on    
+trace  peano4                              -1     black always-on
+trace  tests                               -1     black always-on
+trace  swift2                              -1     black always-on
+trace  toolbox                             -1     black always-on
+

@@ -32,7 +32,7 @@ class SedovBlastIC:
 
       const double h_max = particle->getSmlMax();
       const double H_max = h_max * kernel_gamma;
-      double search_radius = std::min(H_max, GridSize_x);
+      double search_radius = 0.999 * std::min(H_max, GridSize_x);
 
       particle->setSearchRadius( search_radius );
 
@@ -51,17 +51,22 @@ class SedovBlastIC:
       const double pressure = 1.e-6;
       particle->setPressure( pressure );
 
+      // the setup below (how many particles we'll inject, and how we
+      // split up the energy between them) depends on an even number of
+      // regularly distributed particles.
+      assert((static_cast<int>(HYDRO_PART_NUMBER) % 2) == 0);
+
 
       // Initialise the blast
       const double BLAST_ENERGY = 1.0;
       double SPIKE_RADIUS = 1.001 * DomainSize(0) / HYDRO_PART_NUMBER;
       double BLAST_FRACTION = 1. / 3.;
       if (HYDRO_DIMENSIONS == 2) {
-        SPIKE_RADIUS = 2.501 * DomainSize(0) / HYDRO_PART_NUMBER;
+        SPIKE_RADIUS = 2.751 * DomainSize(0) / HYDRO_PART_NUMBER;
         BLAST_FRACTION = 1. / 21.;
       }
       if (HYDRO_DIMENSIONS == 3) {
-        SPIKE_RADIUS = 1.501 * DomainSize(0) / HYDRO_PART_NUMBER;
+        SPIKE_RADIUS = 1.701 * DomainSize(0) / HYDRO_PART_NUMBER;
         BLAST_FRACTION = 1. / 19.;
       }
 
