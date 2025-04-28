@@ -13,6 +13,7 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_l
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
+  _admissibleTimeStepSize(0.0),
   _numberOfTroubledCells(0),
   _numberOfTroubledCellsThisTimeStep(0) {
 
@@ -47,6 +48,10 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinMeshSize();
+}
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
+  return _admissibleTimeStepSize;
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
@@ -104,8 +109,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   _numberOfTroubledCells = _numberOfTroubledCellsThisTimeStep;
-  // TODO: Why do we need this?
   if (_solverState == SolverState::RegularSolver) {
+    _admissibleTimeStepSize = repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() > 0.0 ?
+      std::min(
+        repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
+        repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize()
+      ) : repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
     _numberOfTroubledCellsThisTimeStep = 0;
   }
 
