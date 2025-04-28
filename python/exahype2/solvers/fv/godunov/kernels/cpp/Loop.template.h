@@ -92,5 +92,15 @@
   const double timeStamp                  = patchData.t;
   const double timeStepSize               = patchData.dt;
 
+  {% if COMPUTE_MAX_EIGENVALUE==True %}
+  double maxEigenvalueAfterTimeStep = 0.0;
+  {% endif %}
+
   {{ loopOverVolumes() }}
+
+  {% if COMPUTE_MAX_EIGENVALUE==True %}
+  return maxEigenvalueAfterTimeStep;
+  {% else %}
+  return 0.0;
+  {% endif %}
 {% endmacro %}

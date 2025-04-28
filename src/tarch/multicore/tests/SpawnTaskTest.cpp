@@ -28,7 +28,7 @@ public:
   bool run() override {
     tarch::multicore::Lock lock(producerTaskSemaphore);
     numberOfProducerTasksThatHaveBeenExecuted++;
-    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // simulate work
+    std::this_thread::sleep_for(std::chrono::milliseconds(5)); // simulate work
     return false;
   }
 

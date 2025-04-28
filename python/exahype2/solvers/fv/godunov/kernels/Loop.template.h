@@ -95,6 +95,10 @@
   const double timeStamp                  = patchData.t;
   const double timeStepSize               = patchData.dt;
 
+  {% if COMPUTE_MAX_EIGENVALUE==True %}
+  double maxEigenvalueAfterTimeStep = 0.0;
+  {% endif %}
+
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
     const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
     {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
@@ -118,4 +122,10 @@
 
     {{ loopOverVolumes() | indent(2) }}
   } // patchIndex
+
+  {% if COMPUTE_MAX_EIGENVALUE==True %}
+  return maxEigenvalueAfterTimeStep;
+  {% else %}
+  return 0.0;
+  {% endif %}
 {% endmacro %}

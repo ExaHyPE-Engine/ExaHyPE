@@ -109,7 +109,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   const int numberOfPatches = otherTasks.size() + 1;
 
   logDebug("fuse()", "Rank " << tarch::mpi::Rank::getInstance().getRank()
-    << " asked to fuse " << numberOfPatches << " patches of type " << getTaskType() << " into one large enclave task on device " << TARGET_DEVICE);
+    << " asked to fuse " << numberOfPatches << " patches of type " << getTaskType() << " into "
+    << {{NUMBER_OF_TASKS}} << " enclave tasks on target device " << TARGET_DEVICE
+  );
 
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}> patchData(
     numberOfPatches,
@@ -119,19 +121,21 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   int patchIndex = 0;
   for (auto& p: otherTasks) {
-    patchData.QIn[patchIndex]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    patchData.QOut[patchIndex]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_outputValues;
-    patchData.cellCentre[patchIndex]   = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    patchData.cellSize[patchIndex]     = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    patchData.QIn[patchIndex]             = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
+    patchData.QOut[patchIndex]            = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_outputValues;
+    patchData.cellCentre[patchIndex]      = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
+    patchData.cellSize[patchIndex]        = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    patchData.maxEigenvalue[patchIndex]   = 0.0;
     delete p;
     patchIndex++;
   }
-  patchData.t = _t;
-  patchData.dt = _dt;
-  patchData.QIn[patchIndex]            = _inputValues;
-  patchData.QOut[patchIndex]           = _outputValues;
-  patchData.cellCentre[patchIndex]     = _marker.x();
-  patchData.cellSize[patchIndex]       = _marker.h();
+  patchData.t                             = _t;
+  patchData.dt                            = _dt;
+  patchData.QIn[patchIndex]               = _inputValues;
+  patchData.QOut[patchIndex]              = _outputValues;
+  patchData.cellCentre[patchIndex]        = _marker.x();
+  patchData.cellSize[patchIndex]          = _marker.h();
+  patchData.maxEigenvalue[patchIndex]     = 0.0;
 
   patchData.QIn1D = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},

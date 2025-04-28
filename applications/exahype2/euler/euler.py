@@ -192,7 +192,7 @@ class Euler:
             help="Target device for GPU offloading.",
         )
         parser.add_argument(
-            "--tasks",
+            "--ntasks",
             type=int,
             default=1,
             help="Number of fused enclave tasks to offload asynchronously.",
@@ -237,7 +237,7 @@ class Euler:
         if "Enclave" in args.solver:
             solver_params.update(
                 {
-                    "number_of_tasks": args.tasks,
+                    "number_of_tasks": args.ntasks,
                 }
             )
 

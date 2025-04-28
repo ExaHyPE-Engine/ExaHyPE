@@ -39,15 +39,5 @@ double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemannFused(
   ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}>& patchData,
   const int                                                           targetDevice
 ) {
-  {% if COMPUTE_MAX_EIGENVALUE==True %}
-  double maxEigenvalueAfterTimeStep = 0.0;
-  {% endif %}
-
   {{ fused.loopOverPatches() }}
-
-  {% if COMPUTE_MAX_EIGENVALUE==True %}
-  return maxEigenvalueAfterTimeStep;
-  {% else %}
-  return 0.0;
-  {% endif %}
 }
