@@ -106,9 +106,7 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
     switch (orchestrationStrategy->paralleliseForkJoinSection(localNestedSpawnAndWaits, tasks.size(), tasks[0]->getTaskType())) {
       case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially:
         for (auto& p : tasks) {
-          while (p->run()) {
-            Core::getInstance().yield();
-          }
+          p->run();
           delete p;
         }
         break;
@@ -129,6 +127,7 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
 
 
 void tarch::multicore::waitForAllTasks() {
+  tarch::multicore::taskfusion::processAllReadyTasks();
   native::waitForAllTasks();
 }
 
@@ -144,9 +143,19 @@ void tarch::multicore::spawnTask(
 
   if (task->canFuse()) {
     taskfusion::translateFusableTaskIntoTaskSequence(task, inDependencies, taskNumber);
-  } else {
+  }
+  else {
     native::spawnTask(task, inDependencies, taskNumber);
   }
+}
+
+
+void tarch::multicore::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
+  myTask->fuse(tasksOfSameType, device);
+  for (auto& p: tasksOfSameType) {
+    delete p;
+  }
+  delete myTask;
 }
 
 
@@ -154,19 +163,8 @@ void tarch::multicore::spawnTask(
 
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<Task*>& tasks) {
   for (auto& p : tasks) {
-    while (p->run()) {
-    }
+    p->run();
     delete p;
-  }
-}
-
-
-void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
-  if (stillExecuteLocally) {
-    tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
-  } else {
-    delete myTask;
   }
 }
 
@@ -176,8 +174,7 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>& /*inDependencies*/,
   const TaskNumber& /*taskNumber*/
 ) {
-  while (job->run()) {
-  }
+  job->run();
   delete job;
 }
 

@@ -39,15 +39,13 @@ void tarch::multicore::Task::setPriority(int priority) {
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
-bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*device*/) {
+void tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks, int /*device*/) {
   assertion(canFuse());
   for (auto pp : otherTasks) {
     tarch::multicore::Task* currentTask = pp;
-    while (currentTask->run()) {
-    }
-    delete currentTask;
+    currentTask->run();
   }
-  return true;
+  run();
 }
 
 std::string tarch::multicore::Task::toString() const {
@@ -57,7 +55,7 @@ std::string tarch::multicore::Task::toString() const {
 tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
     int taskType,
     int priority,
-    const std::function<bool()>& taskFunctor
+    const std::function<void()>& taskFunctor
     #if PeanoDebug>0
     , const std::string&           taskDescription
     #endif
@@ -69,8 +67,8 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   #endif
 {}
 
-bool tarch::multicore::TaskWithCopyOfFunctor::run() {
-  return _taskFunctor();
+void tarch::multicore::TaskWithCopyOfFunctor::run() {
+  _taskFunctor();
 }
 
 std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
@@ -81,20 +79,20 @@ std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
   #endif
 }
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor):
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<void()>& taskFunctor):
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
 }
 
-bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
-  return _taskFunctor();
+void tarch::multicore::TaskWithoutCopyOfFunctor::run() {
+  _taskFunctor();
 }
 
 tarch::multicore::EmptyTask::EmptyTask(int priority):
   Task(Task::DontFuse, priority) {}
 
-bool tarch::multicore::EmptyTask::run() {
-  return false;
+void tarch::multicore::EmptyTask::run() {
+  return;
 }
 
 std::string tarch::multicore::EmptyTask::toString() const {

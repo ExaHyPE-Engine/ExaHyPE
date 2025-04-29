@@ -65,6 +65,48 @@ class Particle(DaStGen2):
     Details can be found in
       UpdateParallelState.
 
+      
+    ## Debug information
+      
+    If any debug level is active, each particle carries a unique identifier.
+    
+    
+    ## Performance optimisation
+    
+    Particles in Peano are typically stored in the vertex next to them. This is 
+    the pidt (paricle in dual tree) technique referenced in the Readme.md file 
+    that's automatically generated when you use the particle toolbox.
+    
+    In the illustration below, the blue paricle is associated to the vertex 
+    left above it, the red one belongs to the vertex right of it.
+    
+    @image html Particle.png
+    
+    The logical information where the "owning" vertex of a particle is is easy 
+    to compute at any time from the geometric context. However, we found that 
+    this recomputation is quickly becoming excessively expensive. Therefore, we
+    add the field
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    self.data.add_attribute(
+        dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
+    )
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    to the data model which encodes this information. It is to be set properly 
+    by the particle sorting algorithm in use. 
+    
+    In the example above, the bitfield would hold 010 (read from right to 
+    left) for the blue particle and 0100 for the red one. The code is read from
+    the vertex's point of view: If we look at the centre vertex and study the 
+    position of particle, it is not in the left bottom adjacent cell. It is 
+    however in the right bottom adjacent cell. So we use a lexicographic 
+    enumeration of the adjacent cells. 
+    
+    As the position of a particle within cells is not unique if a particle
+    resides exactly on the face between two cells, the bitfield can hold
+    more than one entry.
+    
     """
 
     def __init__(self, name):
@@ -82,14 +124,18 @@ class Particle(DaStGen2):
         peano4.datamodel.DaStGen2.__init__(self, name)
 
         self.name = name
+        # Is used in subclases
+        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PeanoDebug > 0"], initval="-1")
 
         self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "Dimensions"))
         self.data.add_attribute(
             peano4.dastgen2.Peano4DoubleArray("cellH", "Dimensions")
         )
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
-        self.partid = dastgen2.attributes.Integer("partid", ifdefs=["PeanoDebug > 0"], initval="-1")
         self.data.add_attribute(self.partid)
+        self.data.add_attribute(
+            dastgen2.attributes.BooleanArray("containedInAdjacentCell", "TwoPowerD", compress=True)
+        )
 
         #
         # Never manipulate as user

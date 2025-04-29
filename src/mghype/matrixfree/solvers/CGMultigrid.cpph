@@ -9,13 +9,14 @@ void mghype::matrixfree::solvers::cgmultigrid::restrictToNextLevel(
   auto& fineGridVertex,
   const auto& vertexMarker
 ) {
-  logTraceInWith3Arguments("restrict", fineGridVertex.getLevel(), fineGridVertex.getResidual(), restrictionMatrix);
+  logTraceInWith4Arguments("restrict", fineGridVertex.getLevel(), fineGridVertex.getResidual(), vertexMarker.x(), vertexMarker.h());
 
   int col = peano4::utils::dLinearised( vertexMarker.getRelativePositionWithinFatherCell(), TwoPowerD );
   
   for (int v=0; v<TwoPowerD; v++) {
     for (int unknown=0; unknown<CGSolver::VertexUnknowns; unknown++) {
-      logTraceInWith1Argument("restrictLoop", coarseGridVertices(v).getRhs());
+      logTraceInWith1Argument("restrictLoop", coarseGridVertices(v).toString());
+
       coarseGridVertices(v).setRhs(
         unknown,
         coarseGridVertices(v).getRhs(unknown) + restrictionMatrix(v,col) * fineGridVertex.getResidual(unknown)

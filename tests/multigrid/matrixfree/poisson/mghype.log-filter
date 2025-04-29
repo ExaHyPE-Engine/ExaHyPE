@@ -1,0 +1,32 @@
+# Level (info or debug)   Trace   Rank (-1 means all ranks)   Black or white list entry
+
+
+#
+# General debug settings
+#
+debug  tarch                               -1     black always-on
+debug  peano4                              -1     black always-on
+debug  examples                            -1     black always-on
+debug  examples                            -1     white init-grid
+debug  examples                            -1     white plot-solution
+debug  examples                            -1     white time-step
+debug  examples::exahype2::euler::Euler    -1     white always-on
+debug  exahype2                            -1     black always-on
+debug  toolbox                             -1     white always-on
+
+info  tarch                                -1     white always-on
+info  peano4                               -1     white always-on
+info  examples                             -1     white always-on
+info  exahype2                             -1     white always-on
+info  toolbox                              -1     white always-on
+info examples::exahype2::euler::observers  -1     white always-on
+ 
+trace  tarch                               -1     black always-on    
+trace  peano4                              -1     black always-on
+trace  tests                               -1     black always-on
+trace  exahype2                            -1     black always-on
+trace  toolbox                             -1     black always-on
+trace  tests::multigrid::matrixfree::poisson::observers::InitSolution2mghype_matrixfree_solvers_api_actionsets_CollocatedMGSolver_InitDofs0         -1  white always-on
+trace  tests::multigrid::matrixfree::poisson::observers::Solve2mghype_matrixfree_solvers_api_actionsets_CollocatedMGSolver_UpdateSolution_Solve0    -1  black always-on
+trace  mghype::matrixfree::solvers::cgmultigrid                                                                                                     -1  white always-on
+#info  toolbox::loadbalancing              -1  black time-step

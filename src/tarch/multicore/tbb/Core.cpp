@@ -3,6 +3,7 @@
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Task.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #ifdef CompilerHasSysinfo
@@ -93,6 +94,7 @@ int tarch::multicore::Core::getThreadNumber() const {
 
 
 void tarch::multicore::Core::yield() {
+  tarch::multicore::taskfusion::processAllReadyTasks();
   // @todo This is not what I want. I want to interrupt the current task and
   //       tell TBB to continue with another task. This is technically not a
   //       yield, as I do not expect another thread to come in

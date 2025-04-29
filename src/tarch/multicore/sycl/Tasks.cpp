@@ -64,27 +64,6 @@ void tarch::multicore::native::spawnTask(Task* job) {
   });
 }
 
-/**
- * It is not clear what happens if I use tasksOfSameType directly within the task.
- * It is clear that a pure reference cannot be used within a task, as the task uses
- * firstprivate by default. Therefore, it would copy something which ceases to exist.
- * It is not clear what happens with const references, but we had some memory issues
- * with the newer Intel/LLVM versions. Therefore, I manually copy the list and pass
- * this one into fuse(). The firstprivate annotation is not required, as this is the
- * default. But I leave it in here to highlight that three variables are copied,
- * but tasksOfSameType is not copied and not used within the task.
- */
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
-  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
-  if (stillExecuteLocally) {
-    tarch::multicore::native::spawnTask(myTask);
-  } else {
-    delete myTask;
-  }
-}
-
 
 // void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
 

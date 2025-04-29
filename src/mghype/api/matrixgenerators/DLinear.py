@@ -27,8 +27,9 @@ class DLinear(MatrixGenerator):
 
     super( DLinear, self ).__init__(dimensions,
                                     poly_degree = 1,
-                                    unknowns_per_node = unknowns_per_node
                                    )
+
+    self.unknowns_per_node = unknowns_per_node
     
     # Use matrices for DG Interior Penalty for Poisson equation as we only need the cell-cell and mass matrices, which are identical from CG
     self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(self.poly_degree)

@@ -53,20 +53,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
-    ) = 0;
+    ) {%if CUSTOM_INIT_VERTEX=="" %} = 0 {% endif %};
 
     virtual void setBoundaryConditions(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value
-    ) = 0;
+    ) {%if CUSTOM_BOUNDARY_CONDITIONS=="" %} = 0 {% endif %};
 
-    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
+    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
+    virtual celldata::{{SOLVER_NAME}}::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
@@ -76,7 +76,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if LOCAL_ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getMassMatrix(
+    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if MASS_MATRIX is not defined  %} = 0 {% endif %};
@@ -91,15 +91,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::mghype::matrixfree::so
 
     bool isSuspended() const;
 
-    bool update() const;
+    bool updateSolution() const;
+    bool updateResidual() const;
 
     State getState() const;
-
     {{ABSTRACT_SOLVER_HEADER_EXTRAS}}
     
   protected:
     static tarch::logging::Log  _log;
 
     State  _state;
+
+    /**
+     * We need to allow the residual and diagonal values to
+     * synchonise across parallel boundaries before updating
+     * the solution. To prevent 0-divison error, we can't
+     * update the solution on the first 
+     */
+    bool _updateSolution;
 };
 
