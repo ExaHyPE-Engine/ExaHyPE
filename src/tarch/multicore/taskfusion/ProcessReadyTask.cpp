@@ -51,7 +51,6 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
       and
       instruction.minTasks>=_taskQueue->tasks.size()
     ) {
-      logDebug( "run(...)", "sleep for " << instruction.timeoutMicroSeconds << " milliseconds" );
       const    auto deadline      = std::chrono::system_clock::now() + instruction.timeoutMicroSeconds;
       volatile int  taskQueueSize = _taskQueue->tasks.size();
       while (
