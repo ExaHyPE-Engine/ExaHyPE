@@ -77,6 +77,18 @@ class MatrixGenerator:
     points, weights = leggauss( self.poly_degree + 1 )
     return points
 
+  def get_integration_points_over_unit_interval(self):
+    """!
+        
+    Most schemes define the integration point over the interval [-1,1]
+    whereas MGHyPE often needs it on the unit interval. Therefore, I 
+    offer this genereric recalibration routine.
+    
+    """
+    shift   = -min(self.get_points1d())
+    scaling = 1.0/(max(self.get_points1d())-min(self.get_points1d()))
+    return [ (x+shift)*scaling for x in self.get_points1d() ]
+  
   @abstractmethod
   def get_weights1d(self):
     """!

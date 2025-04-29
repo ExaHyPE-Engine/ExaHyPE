@@ -134,6 +134,14 @@ bool peano4::datamanagement::FaceMarker::isLocal() const {
   return isLocal(_select);
 }
 
+bool peano4::datamanagement::FaceMarker::isAdjacentToParallelBoundary() const {
+  return isAdjacentToParallelBoundary(_select);
+}
+
+bool peano4::datamanagement::FaceMarker::isAdjacentToParallelBoundary(int i) const {
+  return _isAdjacentToParallelBoundary[i];
+}
+
 
 tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell() const {
   assertion1( _select>=0, toString() );

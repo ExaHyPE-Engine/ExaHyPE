@@ -10,6 +10,7 @@ endif
 ToolboxParticles_SOURCES = \
   FileReader.cpp \
   FileReaderHDF5.cpp \
+  internal.cpp \
   MultiscaleTransitions.cpp \
   ParticleSet.cpp \
   TrajectoryDatabase.cpp \

@@ -215,17 +215,23 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     _Template_BeginTraversal = jinja2.Template(
         """
+  // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
+
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
   _numberOfLifts  = 0;
   _numberOfDrops  = 0;
   _numberOfLiftsIntoSieveSet = 0;
   _numberOfDropsFromSieveSet = 0;
   _numberOfDropsIntoHorizontalTreeDecomposition = 0;
+
+  // End template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 """
     )
 
     _Template_EndTraversal = jinja2.Template(
         """
+  // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
+
   vertexdata::{{PARTICLES_CONTAINER}}::updateLiftDropStatistics(
     _numberOfLifts,
     _numberOfDrops,
@@ -234,11 +240,15 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfDropsFromSieveSet,
     _numberOfDropsIntoHorizontalTreeDecomposition
   );
+
+  // End template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 """
     )
 
     _Template_ValidateParticleLevelAssociation = jinja2.Template(
         """
+  // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
+
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     assertion3(
       marker.isContainedInAdjacentCells( p->getX(), 0.5*(1.0+SortingTolerance) ),
@@ -247,6 +257,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       p->toString()
     );
   }
+
+  // End template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 """
     )
 
@@ -274,6 +286,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   """
     _Template_Drop = jinja2.Template(
         """
+
+  // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
+
   for (int i=0; i<TwoPowerD; i++) {
     if ( marker.isParentVertexLocal(i) ) {
       // Define inside for loop, as sieve will define it as well
@@ -300,6 +315,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           _numberOfDrops++;
 
           (*p)->setCellH(marker.h());
+          toolbox::particles::updateContainedInAdjacentCellProperty(marker,**p);
+          
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             (*p)->getX(),
@@ -318,7 +335,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             marker.x(),
             marker.h(),
             _spacetreeId,
-            "AbstractUpdateParticleGridAssociation::_Template_Drop"
+            "AbstractUpdateParticleGridAssociation::_Template_Drop",
+            peano4::datamanagement::reconstructXOfParentVertex(marker, i),
+            marker.h()*3.0
           );
           assertion3(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
@@ -339,6 +358,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       } // while loop over coarse particles
     } // if coarse vertex local
   }
+
+  // End template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 """
     )
 
@@ -355,10 +376,16 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   If the parent cell is local, we know that all @f$ 2^d @f$ parent
   vertices are local. However, we have to know if the real parent
   is local, too.
+  
+  As we assume that this routine is called for touchVertexLastTime(), we 
+  do not have to invoke updateContainedInAdjacentCellProperty(). The 
+  relative association to vertices will still be correct at this point.
 
   """
     _Template_LiftAllParticles = jinja2.Template(
         """
+  // Start template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
+
   std::bitset<Dimensions> target;
   for (int d=0; d<Dimensions; d++) {
     target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
@@ -368,9 +395,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
-    for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-      p->setCellH(3.0 * marker.h());
-    }
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
 
       #if PeanoDebug > 0
@@ -378,6 +402,22 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       #else
       int partID = -1;
       #endif
+      
+      tarch::la::Vector< Dimensions, double > coarseGridVertexX = 
+              marker.x()
+              -
+              tarch::la::multiplyComponents(
+                tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+                marker.h()
+              )
+              +
+              tarch::la::multiplyComponents(
+                tarch::la::Vector<Dimensions,double>(target),
+                3.0*marker.h()
+              );
+              
+      p->setCellH(3.0 * marker.h());
+      toolbox::particles::updateContainedInAdjacentCellProperty(coarseGridVertexX,marker.h()*3.0,*p);
 
       toolbox::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
@@ -394,20 +434,12 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-        marker.x()
-        -
-        tarch::la::multiplyComponents(
-          tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-          marker.h()
-        )
-        +
-        tarch::la::multiplyComponents(
-          tarch::la::Vector<Dimensions,double>(target),
-          3.0*marker.h()
-        ),
+        coarseGridVertexX,
         3.0*marker.h(),
         _spacetreeId,
-        "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"
+        "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)",
+        marker.x(),
+        marker.h()
       );
     }
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
@@ -437,6 +469,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         p->getX(),
         partID,
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+        marker.x(),
         marker.h(),
         _spacetreeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
@@ -445,6 +478,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
+
+  // End template in python/peano4/toolbox/particles/api/AbstractUpdateParticleGridAssociation.py
 """
     )
 

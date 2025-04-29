@@ -44,7 +44,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
 
   logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -116,7 +116,7 @@ class InitDofsCollocatedRandomRhs(ActionSet):
   templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -273,7 +273,7 @@ class InitDofsCollocatedRandomTest2(InitDofsCollocatedRandomRhs):
 
   logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -376,7 +376,7 @@ class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
     return isCorner;
   };
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -446,7 +446,7 @@ class InitCollocatedTest4(InitDofsCollocatedRandomRhs):
   templateTouchCellFirstTime="""
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -517,7 +517,7 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
     return isCorner;
   };
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -584,7 +584,7 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
 
   templateTouchCellFirstTime="""
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -617,7 +617,7 @@ class InitCollocatedTest5(InitDofsCollocatedRandomRhs):
         for (int i=0; i<TwoPowerD; i++) randoms(i) = fineGridVertices{{SOLVER_NAME}}(i).getRand(0);
 
         auto ACGValues = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix( marker.x(), marker.h() ) * randoms;
-        auto MCGValues = repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() )          * randoms;
+        auto MCGValues = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix( marker.x(), marker.h() )          * randoms;
 
         for (int i=0; i<TwoPowerD; i++) {
           fineGridVertices{{SOLVER_NAME}}(i).setAcg( 0, ACGValues(i) + fineGridVertices{{SOLVER_NAME}}(i).getAcg(0) );
@@ -674,7 +674,7 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
 
   logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -753,7 +753,7 @@ class InitCollocatedTest7(InitDofsCollocatedRandomRhs):
   templateTouchCellFirstTime="""
   logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
 
   switch(dofType)
   {

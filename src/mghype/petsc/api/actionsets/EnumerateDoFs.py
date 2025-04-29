@@ -38,7 +38,7 @@ class EnumerateDoFs(ActionSet):
   fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
   fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Undefined );
   
-  vertexdata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
   
   switch (dofType) {
     case vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary:
@@ -96,7 +96,7 @@ class EnumerateDoFs(ActionSet):
   fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
   fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Undefined );
   
-  facedata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
+  facedata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceType(marker.x(),marker.h());
   
   switch (dofType) {
     case facedata::{{SOLVER_NAME}}PETScData::Type::Boundary:
@@ -145,7 +145,7 @@ class EnumerateDoFs(ActionSet):
   fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
   fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Undefined );
   
-  celldata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
   switch (dofType) {
     case celldata::{{SOLVER_NAME}}PETScData::Type::Interior:

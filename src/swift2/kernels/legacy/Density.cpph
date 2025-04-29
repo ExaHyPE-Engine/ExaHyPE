@@ -3,17 +3,6 @@
 #include "kernel_hydro.h"
 
 
-template <typename Particle>
-void swift2::kernels::legacy::densityKernelWithoutChecks(
-  const peano4::datamanagement::CellMarker& marker,
-  Particle&                                 localParticle,
-  const Particle&                           activeParticle
-) {
-    assertion3( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle), marker.toString(), localParticle.toString(), activeParticle.toString() );
-    assertion3( densityKernelPredicate(marker,localParticle,activeParticle), marker.toString(), localParticle.toString(), activeParticle.toString() );
-    density_kernel(&localParticle, &activeParticle);
-}
-
 
 template <typename Particle>
 void swift2::kernels::legacy::densityKernel(
@@ -21,21 +10,27 @@ void swift2::kernels::legacy::densityKernel(
   Particle&                                 localParticle,
   const Particle&                           activeParticle
 ) {
-  if (
-    ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle)
-    and
-    densityKernelPairEvaluationPredicate(marker,localParticle,activeParticle)
-  ) {
-    density_kernel(&localParticle, &activeParticle);
-  }
+  assertion2( densityKernelEvaluatePairInteractionPredicate(marker,localParticle,activeParticle), localParticle.toString(), activeParticle.toString() );
+  density_kernel(&localParticle, &activeParticle);
 }
 
 
 template <typename Particle>
-bool swift2::kernels::legacy::densityKernelPairEvaluationPredicate(
+bool swift2::kernels::legacy::densityKernelUpdateParticlePredicate(
+  const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
+) {
+  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker, localParticleIsContainedInCell, localParticle)
+    and
+    (not localParticle.getSmoothingLengthConverged());
+}
+
+
+template <typename Particle>
+bool swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate(
   const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
 ) {
-  assertion( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker,localParticle) );
+  assertion1( densityKernelUpdateParticlePredicate(marker, true, localParticle), localParticle.toString() );
+  assertion1( not localParticle.getSmoothingLengthConverged(), localParticle.toString() );
 
   const tarch::la::Vector<Dimensions, double>
                dx = localParticle.getX() - activeParticle.getX();
@@ -47,15 +42,7 @@ bool swift2::kernels::legacy::densityKernelPairEvaluationPredicate(
   /* Compute the actual interaction radius */
   const double iactRSquared = kernel_gamma * kernel_gamma * hi * hi;
 
-  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
-           marker,
-           localParticle,
-           activeParticle
-         )
-         and
-         (not localParticle.getSmoothingLengthConverged())
-         and
-         tarch::la::smaller(rSquared, iactRSquared)
+  return tarch::la::smaller(rSquared, iactRSquared)
          and tarch::la::greater(rSquared, 0.0) // Self-contribution is calculated elsewhere
          ;
 }

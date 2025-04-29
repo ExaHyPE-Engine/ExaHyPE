@@ -1,6 +1,8 @@
 #include "GramSchmidt.h"
+#include "tarch/Assertions.h"
 
 #include <limits>
+
 
 void tarch::la::modifiedGramSchmidt (
   DynamicMatrix   A,
@@ -17,16 +19,14 @@ void tarch::la::modifiedGramSchmidt (
     for (int i=0; i < A.rows(); i++){
       R(k,k) += std::pow(A(i,k), 2);
     }
-    if (tarch::la::greater(R(k, k), 0.0)){
+    assertion4( tarch::la::greater(R(k, k), 0.0), A.toString(), Q.toString(), R.toString(), k );
       
-      R(k,k) = std::sqrt(R(k,k));
-      // Normalize k-th column of matrix Q
-      for (int i=0; i < A.rows(); i++){
-        Q(i,k) = A(i,k) / R(k,k);
-      }
-      
+    R(k,k) = std::sqrt(R(k,k));
+    // Normalize k-th column of matrix Q
+    for (int i=0; i < A.rows(); i++){
+      Q(i,k) = A(i,k) / R(k,k);
     }
-
+      
     // Compute entries in R and next orthonormal vector
     for (int j=k+1; j < A.cols(); j++){
       // Compute entries of R from current Q and A
