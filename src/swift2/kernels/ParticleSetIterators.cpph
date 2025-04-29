@@ -44,16 +44,19 @@ void swift2::kernels::forAllParticlePairs(
   auto&                       activeParticles,
   auto                        realisation
 ) {
-  [[clang::soa_conversion]] int currentParticle = -1;
+  int currentParticle = -1;
+  [[clang::soa_conversion]]
   for (auto* localParticle : localParticles) {
     currentParticle++;
+    assertion( currentParticle<cellMetaData.localParticleIsContainedInCell.size());
+    std::cout << " " << currentParticle;
     if (LocalPredicate(
           cellMetaData.marker,
           cellMetaData.localParticleIsContainedInCell[currentParticle],
           *localParticle
         )) {
-      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1
-      )]] for (auto* activeParticle : activeParticles) {
+      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1)]]
+      for (auto* activeParticle : activeParticles) {
         if (PairPredicate(cellMetaData.marker, *localParticle, *activeParticle)) {
           PairOperator(cellMetaData.marker, *localParticle, *activeParticle);
           if (tarch::la::oneGreater(

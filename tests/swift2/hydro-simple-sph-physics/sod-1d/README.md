@@ -5,9 +5,11 @@
 
  Before we start, we have to set the Python path appropriately:
 
-             export PYTHONPATH=./../../../../python
+       export PYTHONPATH=./../../../../python
 
  ## Run tests
+ 
+       ./run_debug.sh
  
  ## Validate outcomes
 

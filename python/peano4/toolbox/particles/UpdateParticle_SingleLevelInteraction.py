@@ -232,8 +232,8 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       std::bitset<TwoPowerD> mask = 0;
-      mask.set(i);
-      bool isLocal = (mask | p->getContainedInAdjacentCell()).any();
+      mask.set(TwoPowerD-i-1);
+      bool isLocal = (mask & p->getContainedInAdjacentCell()).any();
       assertionEquals2( 
         isLocal, 
         marker.isContained( p->getX(), toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance( marker.h() ) * tarch::la::NUMERICAL_ZERO_DIFFERENCE ),
