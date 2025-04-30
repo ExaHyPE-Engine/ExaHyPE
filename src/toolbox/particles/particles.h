@@ -120,17 +120,17 @@ namespace toolbox {
      * @see the explanation in Particle.py
      */
     void updateContainedInAdjacentCellProperty(
-      const peano4::datamanagement::CellMarker&  marker,
-      const std::bitset<Dimensions>&             assignedVertex,
-      auto&                                      particle
+      const peano4::datamanagement::CellMarker& marker,
+      const std::bitset<Dimensions>&            assignedVertex,
+      auto&                                     particle
     );
 
     /**
      * We are
      */
     void updateContainedInAdjacentCellProperty(
-      const peano4::datamanagement::VertexMarker&  marker,
-      auto&                                        particle
+      const peano4::datamanagement::VertexMarker& marker,
+      auto&                                       particle
     );
 
     /**
@@ -156,9 +156,9 @@ namespace toolbox {
      * @see the explanation in toolbox.particles.Particle
      */
     void updateContainedInAdjacentCellProperty(
-      const tarch::la::Vector< Dimensions, double >&  x,
-      const tarch::la::Vector< Dimensions, double >&  h,
-      auto&                                           particle
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      auto&                                        particle
     );
 
     bool particleAssignedToVertexWillBeLocal(

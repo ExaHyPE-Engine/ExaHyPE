@@ -22,6 +22,7 @@
 
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -76,6 +77,7 @@ v_r = x * vel_x / r
 # -------------------------
 # Get analytical solution
 # -------------------------
+
 
 def calc_a(g, nu=3):
     """
@@ -205,6 +207,7 @@ def sedov(t, E0, rho0, g, n=1000, nu=3):
     rho *= rho0
     return r, p, rho, u, r_s, p_s, rho_s, u_s, shock_speed
 
+
 # Parameters
 rho_0 = 1.0  # Background Density
 P_0 = 1.0e-6  # Background Pressure
@@ -230,24 +233,23 @@ u_s = P_s / (rho_s * (gas_gamma - 1.0))  # internal energy
 # -------------------------
 
 sim_props = {
-    "marker":".",
-    "ms":4,
-    "markeredgecolor":"none",
-    "alpha":1.0,
-    "zorder":-1,
-    "rasterized":True,
-    "linestyle":"none",
-    }
+    "marker": ".",
+    "ms": 4,
+    "markeredgecolor": "none",
+    "alpha": 1.0,
+    "zorder": -1,
+    "rasterized": True,
+    "linestyle": "none",
+}
 solution_props = {
-        "linestyle": "--",
-        "color": "C1",
-        "alpha": 0.6,
-        "linewidth": 2.0,
-        }
+    "linestyle": "--",
+    "color": "C1",
+    "alpha": 0.6,
+    "linewidth": 2.0,
+}
 
 
-
-fig = plt.figure(figsize=(7., 7.))
+fig = plt.figure(figsize=(7.0, 7.0))
 fig.suptitle(f"t={time}")
 
 ax1 = fig.add_subplot(2, 2, 1)
