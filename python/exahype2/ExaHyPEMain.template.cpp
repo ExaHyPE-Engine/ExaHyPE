@@ -55,6 +55,7 @@ tarch::timing::Measurement timeStepMeasurement;
 tarch::timing::Measurement plotMeasurement;
 
 static double printNextTimeStep = 0.0;
+static bool haveReceivedNonCriticalAssertion = false;
 
 /**
  * Decide which step to run next
@@ -73,7 +74,6 @@ bool selectNextAlgorithmicStep() {
   static double                                 nextMaxCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static double                                 nextMinCheckpointTimeStamp            = {{SUBNAMESPACE}}FirstCheckpointTimeStamp;
   static bool                                   haveJustWrittenSnapshot               = false;
-  static bool                                   haveReceivedNonCriticalAssertion     = false;
   static bool                                   addGridSweepWithoutGridRefinementNext = false;
   static tarch::la::Vector<Dimensions, double>  minH                                  = tarch::la::Vector<Dimensions, double>(
                                                                                           std::numeric_limits<double>::max()
@@ -481,6 +481,8 @@ void step() {
 }
 
 int main(int argc, char** argv) {
+  int returnCode = EXIT_SUCCESS;
+
   peano4::initParallelEnvironment(&argc, &argv);
 
 #ifdef UseTargetDART
@@ -499,7 +501,7 @@ int main(int argc, char** argv) {
   {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
 
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
-  feenableexcept({{FENV_ARGS}} );
+  feenableexcept({{FENV_ARGS}});
   {% endif -%}
 
   {{SUBNAMESPACE}}repositories::startSimulation();
@@ -511,10 +513,16 @@ int main(int argc, char** argv) {
       step();
     }
 
-    // Print final timestep information
-    {{SUBNAMESPACE}}repositories::printTimeStep();
+    if (haveReceivedNonCriticalAssertion) {
+      logInfo("main()", "Terminated gracefully after noncritical assertion");
+      returnCode = EXIT_FAILURE;
+    } else {
+      // Print final timestep information
+      {{SUBNAMESPACE}}repositories::printTimeStep();
+      logInfo("main()", "Terminated successfully");
+      int returnCode = EXIT_SUCCESS;
+    }
 
-    logInfo("main()", "Terminated successfully");
     if (timeStepMeasurement.getNumberOfMeasurements()) {
       logInfo(
         "main()",
@@ -561,5 +569,5 @@ int main(int argc, char** argv) {
   tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
-  return EXIT_SUCCESS;
+  return returnCode;
 }
