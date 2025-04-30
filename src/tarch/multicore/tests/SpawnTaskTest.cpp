@@ -10,7 +10,7 @@
 #include <chrono>
 #include <thread>
 
-constexpr int NumberOfTasksToExecute = 1000;
+constexpr int NumberOfTasksToExecute = 100;
 
 int numberOfProducerTasksThatHaveBeenExecuted = 0;
 int numberOfConsumerTasksThatHaveBeenExecuted = 0;
@@ -28,7 +28,7 @@ public:
   bool run() override {
     tarch::multicore::Lock lock(producerTaskSemaphore);
     numberOfProducerTasksThatHaveBeenExecuted++;
-    std::this_thread::sleep_for(std::chrono::milliseconds(5)); // simulate work
+    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // simulate work
     return false;
   }
 
