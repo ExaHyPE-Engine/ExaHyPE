@@ -246,8 +246,8 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / args.particle_number
 hydro_H_max = 0.49999 * args.cell_size_min
-if hydro_H_max < 3.0 * dx:
-    raise ValueError("Too small hydro_H_max", 3.0 * dx, hydro_H_max)
+if hydro_H_max < 3. * dx:
+    raise ValueError("Too small hydro_H_max", 3. * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
@@ -314,10 +314,10 @@ project.set_global_simulation_parameters(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-#  project.set_load_balancing(
-#      "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-#      f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
-#  )
+project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    f"new toolbox::loadbalancing::DefaultConfiguration({args.trees})",
+)
 
 
 ###############################################################################

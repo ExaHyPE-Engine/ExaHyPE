@@ -22,7 +22,6 @@
 
 
 import matplotlib
-
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -77,7 +76,6 @@ v_r = x * vel_x / r
 # -------------------------
 # Get analytical solution
 # -------------------------
-
 
 def calc_a(g, nu=3):
     """
@@ -207,7 +205,6 @@ def sedov(t, E0, rho0, g, n=1000, nu=3):
     rho *= rho0
     return r, p, rho, u, r_s, p_s, rho_s, u_s, shock_speed
 
-
 # Parameters
 rho_0 = 1.0  # Background Density
 P_0 = 1.0e-6  # Background Pressure
@@ -215,7 +212,7 @@ E_0 = 1.0  # Energy of the explosion
 gas_gamma = 5.0 / 3.0  # Gas polytropic index
 
 # The main properties of the solution
-r_s, P_s, rho_s, v_s, r_shock, _, _, _, _ = sedov(time, E_0, rho_0, gas_gamma, 2000, 1)
+r_s, P_s, rho_s, v_s, r_shock, _, _, _, _ = sedov(time, E_0, rho_0, gas_gamma, 1000, 1)
 
 # Append points for after the shock
 r_s = np.insert(r_s, np.size(r_s), [r_shock, r_shock * 3])
@@ -233,23 +230,24 @@ u_s = P_s / (rho_s * (gas_gamma - 1.0))  # internal energy
 # -------------------------
 
 sim_props = {
-    "marker": ".",
-    "ms": 4,
-    "markeredgecolor": "none",
-    "alpha": 1.0,
-    "zorder": -1,
-    "rasterized": True,
-    "linestyle": "none",
-}
+    "marker":".",
+    "ms":4,
+    "markeredgecolor":"none",
+    "alpha":0.4,
+    "zorder":-1,
+    "rasterized":True,
+    "linestyle":"none",
+    }
 solution_props = {
-    "linestyle": "--",
-    "color": "C4",
-    "alpha": 0.4,
-    "linewidth": 1.2,
-}
+        "linestyle": "--",
+        "color": "C1",
+        "alpha": 0.8,
+        "linewidth": 2.0,
+        }
 
 
-fig = plt.figure(figsize=(7.0, 7.0))
+
+fig = plt.figure(figsize=(7., 7.))
 ax1 = fig.add_subplot(2, 2, 1)
 ax2 = fig.add_subplot(2, 2, 2)
 ax3 = fig.add_subplot(2, 2, 3)
