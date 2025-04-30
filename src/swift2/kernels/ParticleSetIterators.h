@@ -14,8 +14,7 @@ namespace swift2 {
 
     // template for convenience and code legibility.
     template <typename ParticleContainer>
-    using PCParticle = typename std::remove_pointer<
-      typename ParticleContainer::value_type>::type;
+    using PCParticle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
     /**
      * Definition of particle update (unary operation)

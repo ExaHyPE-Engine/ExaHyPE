@@ -14,7 +14,8 @@ void swift2::kernels::forAllParticles(
   int  numberOfCoalescedAssignedParticles,
   auto realisation
 ) {
-  [[clang::soa_conversion]] for (auto* particle : assignedParticles) {
+  [[clang::soa_conversion]]
+  for (auto* particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
@@ -29,7 +30,8 @@ void swift2::kernels::forAllParticles(
   const std::vector<int>&                   numberOfCoalescedLocalParticles,
   auto                                      realisation
 ) {
-  [[clang::soa_conversion]] for (auto* particle : assignedParticles) {
+  [[clang::soa_conversion]]
+  for (auto* particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
@@ -84,10 +86,8 @@ void swift2::kernels::forAllParticles(
   int numberOfCoalescedAssignedParticles,
   ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
 ) {
-  [[clang::
-      soa_conversion]] [[clang::
-                           soa_conversion_offload_compute]] for (auto* particle :
-                                                                 assignedParticles) {
+  [[clang:: soa_conversion]] [[clang:: soa_conversion_offload_compute]]
+  for (auto* particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
@@ -102,10 +102,8 @@ void swift2::kernels::forAllParticles(
   const std::vector<int>&                   numberOfCoalescedLocalParticles,
   ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
 ) {
-  [[clang::
-      soa_conversion]] [[clang::
-                           soa_conversion_offload_compute]] for (auto* particle :
-                                                                 assignedParticles) {
+  [[clang:: soa_conversion]] [[clang:: soa_conversion_offload_compute]]
+  for (auto* particle : assignedParticles) {
     if (PredicateOp(marker, *particle)) {
       ParticleOp(marker, *particle);
     }
@@ -120,9 +118,8 @@ void swift2::kernels::forAllParticlePairs(
   auto&                       activeParticles,
   ::swift2::kernels::kernelrealisation::GenericOffloadRealisation
 ) {
-  [[clang::soa_conversion]] [[clang::soa_conversion_offload_compute]] int
-    currentParticle
-    = -1;
+    int currentParticle = -1;
+  [[clang::soa_conversion]] [[clang::soa_conversion_offload_compute]]
   for (auto* localParticle : localParticles) {
     currentParticle++;
     if (LocalPredicate(
@@ -130,8 +127,8 @@ void swift2::kernels::forAllParticlePairs(
           cellMetaData.localParticleIsContainedInCell[currentParticle],
           *localParticle
         )) {
-      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1
-      )]] for (auto* activeParticle : activeParticles) {
+      [[clang::soa_conversion]] [[clang::soa_conversion_hoist(1)]]
+      for (auto* activeParticle : activeParticles) {
         if (PairPredicate(cellMetaData.marker, *localParticle, *activeParticle)) {
           PairOperator(cellMetaData.marker, *localParticle, *activeParticle);
           if (tarch::la::oneGreater(
@@ -162,8 +159,8 @@ void swift2::kernels::forAllParticles(
 ) {
   auto* particles = *assignedParticles.begin();
 
-  [[clang::soa_conversion_target("particles"
-  )]] for (int i = 0; i < numberOfAssignedParticles; i++) {
+  [[clang::soa_conversion_target("particles")]]
+  for (int i = 0; i < numberOfAssignedParticles; i++) {
     if (PredicateOp(marker, particles[i])) {
       ParticleOp(marker, particles[i]);
     }
@@ -181,8 +178,8 @@ void swift2::kernels::forAllParticles(
   auto* pFirstParticle = *localParticles.begin();
 
   for (auto& chunkSize : numberOfLocalParticles) {
-    [[clang::soa_conversion_target("pFirstParticle"
-    )]] for (int i = 0; i < chunkSize; i++) {
+    [[clang::soa_conversion_target("pFirstParticle")]]
+    for (int i = 0; i < chunkSize; i++) {
       if (PredicateOp(marker, pFirstParticle[i])) {
         ParticleOp(marker, pFirstParticle[i]);
       }
@@ -210,8 +207,8 @@ void swift2::kernels::forAllParticlePairs(
                                                + firstActiveParticleOfCurrentChunk;
     firstActiveParticleOfCurrentChunk += activeParticleChunk;
 
-    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-    )]] for (int iActiveParticle = 0; iActiveParticle < activeParticleChunk;
+    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+    for (int iActiveParticle = 0; iActiveParticle < activeParticleChunk;
              iActiveParticle++) {
 
       int firstLocalParticleOfCurrentChunk = 0;
@@ -223,8 +220,8 @@ void swift2::kernels::forAllParticlePairs(
 
         bool evaluateMultiscaleRelations = false;
 
-        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-        )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+        for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
                  iLocalParticle++) {
           if (
             LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
@@ -245,8 +242,8 @@ void swift2::kernels::forAllParticlePairs(
         } // loop over local particles in current chunk
 
         if (evaluateMultiscaleRelations) {
-          [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-          )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+          [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+          for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
                    iLocalParticle++) {
             if (
               LocalPredicateOp(cellMetaData.marker, cellMetaData.localParticleIsContainedInCell[firstLocalParticleOfCurrentChunk+iLocalParticle], pFirstLocalParticleOfCurrentChunk[iLocalParticle])
@@ -290,8 +287,8 @@ void swift2::kernels::forAllParticlePairs(
                                               + firstLocalParticleOfCurrentChunk;
     firstLocalParticleOfCurrentChunk += localParticleChunk;
 
-    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-    )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+    for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
              iLocalParticle++) {
       if (LocalPredicateOp(
             cellMetaData.marker,
@@ -309,8 +306,8 @@ void swift2::kernels::forAllParticlePairs(
 
           bool evaluateMultiscaleRelations = false;
 
-          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-          )]] for (int iActiveParticle = 0;
+          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+          for (int iActiveParticle = 0;
                    iActiveParticle < activeParticleChunk;
                    iActiveParticle++) {
             if (ParticlePairPredicateOp(
@@ -332,8 +329,8 @@ void swift2::kernels::forAllParticlePairs(
           }
 
           if (evaluateMultiscaleRelations) {
-            [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-            )]] for (int iActiveParticle = 0;
+            [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+            for (int iActiveParticle = 0;
                      iActiveParticle < activeParticleChunk;
                      iActiveParticle++) {
               if (
@@ -373,8 +370,8 @@ void swift2::kernels::forAllParticles(
   auto* particles  = *assignedParticles.begin();
   bool* predicates = new bool[numberOfCoalescedAssignedParticles];
 
-  [[clang::soa_conversion_target("particles"
-  )]] for (int i = 0; i < numberOfCoalescedAssignedParticles; i++) {
+  [[clang::soa_conversion_target("particles")]]
+  for (int i = 0; i < numberOfCoalescedAssignedParticles; i++) {
     predicates[i] = PredicateOp(marker, particles[i]);
   }
 
@@ -399,8 +396,8 @@ void swift2::kernels::forAllParticles(
   bool* predicates     = new bool[assignedParticles.size()];
 
   for (auto& chunkSize : numberOfCoalescedLocalParticles) {
-    [[clang::soa_conversion_target("pFirstParticle"
-    )]] for (int i = 0; i < chunkSize; i++) {
+    [[clang::soa_conversion_target("pFirstParticle")]]
+    for (int i = 0; i < chunkSize; i++) {
       predicates[i] = PredicateOp(marker, pFirstParticle[i]);
     }
     pFirstParticle += chunkSize;
@@ -440,8 +437,8 @@ void swift2::kernels::forAllParticlePairs(
                                                + firstActiveParticleOfCurrentChunk;
     firstActiveParticleOfCurrentChunk += activeParticleChunk;
 
-    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-    )]] for (int iActiveParticle = 0; iActiveParticle < activeParticleChunk;
+    [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+    for (int iActiveParticle = 0; iActiveParticle < activeParticleChunk;
              iActiveParticle++) {
 
       int firstLocalParticleOfCurrentChunk = 0;
@@ -453,8 +450,8 @@ void swift2::kernels::forAllParticlePairs(
 
         bool multiscaleEvaluation = false;
 
-        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-        )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+        for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
                  iLocalParticle++) {
           predicates[iLocalParticle]
             = LocalPredicateOp(
@@ -487,8 +484,8 @@ void swift2::kernels::forAllParticlePairs(
                );
         } // loop over local particles in current chunk
 
-        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-        )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+        [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+        for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
                  iLocalParticle++) {
           if (predicates[iLocalParticle]) {
             ParticlePairOp(
@@ -500,8 +497,8 @@ void swift2::kernels::forAllParticlePairs(
         } // loop over local particles in current chunk
 
         if (multiscaleEvaluation) {
-          [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-          )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+          [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+          for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
                    iLocalParticle++) {
             if (
               predicates[iLocalParticle]
@@ -547,8 +544,8 @@ void swift2::kernels::forAllParticlePairs(
                                               + firstLocalParticleOfCurrentChunk;
     firstLocalParticleOfCurrentChunk += localParticleChunk;
 
-    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk"
-    )]] for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
+    [[clang::soa_conversion_target("pFirstLocalParticleOfCurrentChunk")]]
+    for (int iLocalParticle = 0; iLocalParticle < localParticleChunk;
              iLocalParticle++) {
       if (LocalPredicateOp(
             cellMetaData.marker,
@@ -566,8 +563,8 @@ void swift2::kernels::forAllParticlePairs(
 
           bool evaluateMultiscaleRelations = false;
 
-          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-          )]] for (int iActiveParticle = 0;
+          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+          for (int iActiveParticle = 0;
                    iActiveParticle < activeParticleChunk;
                    iActiveParticle++) {
             predicates[iActiveParticle] = ParticlePairPredicateOp(
@@ -589,8 +586,8 @@ void swift2::kernels::forAllParticlePairs(
                  );
           }
 
-          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-          )]] for (int iActiveParticle = 0;
+          [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+          for (int iActiveParticle = 0;
                    iActiveParticle < activeParticleChunk;
                    iActiveParticle++) {
             if (predicates[iActiveParticle]) {
@@ -603,8 +600,8 @@ void swift2::kernels::forAllParticlePairs(
           }
 
           if (evaluateMultiscaleRelations) {
-            [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk"
-            )]] for (int iActiveParticle = 0;
+            [[clang::soa_conversion_target("pFirstActiveParticleOfCurrentChunk")]]
+            for (int iActiveParticle = 0;
                      iActiveParticle < activeParticleChunk;
                      iActiveParticle++) {
               if (
