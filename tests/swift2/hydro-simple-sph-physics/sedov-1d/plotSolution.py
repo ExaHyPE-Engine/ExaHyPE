@@ -233,7 +233,7 @@ sim_props = {
     "marker":".",
     "ms":4,
     "markeredgecolor":"none",
-    "alpha":0.4,
+    "alpha":1.0,
     "zorder":-1,
     "rasterized":True,
     "linestyle":"none",
@@ -241,13 +241,15 @@ sim_props = {
 solution_props = {
         "linestyle": "--",
         "color": "C1",
-        "alpha": 0.8,
+        "alpha": 0.6,
         "linewidth": 2.0,
         }
 
 
 
 fig = plt.figure(figsize=(7., 7.))
+fig.suptitle(f"t={time}")
+
 ax1 = fig.add_subplot(2, 2, 1)
 ax2 = fig.add_subplot(2, 2, 2)
 ax3 = fig.add_subplot(2, 2, 3)
