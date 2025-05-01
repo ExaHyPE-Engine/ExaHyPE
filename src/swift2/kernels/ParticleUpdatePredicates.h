@@ -147,6 +147,12 @@ namespace swift2 {
          and localParticle.getParallelState() == ParticleA::ParallelState::Local;
     }
 
+    template <typename ParticleA, typename ParticleB = ParticleA>
+    bool updateFromAnyOtherParticle(
+        const peano4::datamanagement::CellMarker& marker, const ParticleA& localParticle, const ParticleB& activeParticle
+    ) {
+        return (void*)(&localParticle) != (void*)(&activeParticle);
+    }
 
     template <typename ParticleA, typename ParticleB = ParticleA>
     bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticleWithinIterationRange(
