@@ -79,7 +79,8 @@ namespace applications {
         const double        CCZ4e,
         const double        CCZ4ds,
         const double        CCZ4GLMc,
-        const double        CCZ4GLMd
+        const double        CCZ4GLMd,
+        double*             maxEigenvalue
       ) InlineMethod;
 
 
