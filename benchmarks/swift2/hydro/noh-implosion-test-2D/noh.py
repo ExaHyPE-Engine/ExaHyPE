@@ -171,7 +171,7 @@ hydro_dimensions = 2  # dimensions for the hydro
 particles_per_cell = args.particles_per_cell
 total_number_of_particles = args.particle_number**hydro_dimensions
 total_number_of_cells = total_number_of_particles / particles_per_cell
-cells_per_dimension = total_number_of_cells ** (2.0 / hydro_dimensions)
+cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
 max_cell_size = 2.0 / cells_per_dimension * 3.0
 
 print(
