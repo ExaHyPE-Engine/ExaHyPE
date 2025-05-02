@@ -543,13 +543,17 @@ levels.
                     current_species_set.name
                 )
             )
-            cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(
-                current_species_set.name
+            cell_marker_for_tasks = (
+                peano4.toolbox.api.EnumerateCellsAndVertices.create_cell_marker(
+                    current_species_set.name
+                )
             )
-            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVertices.create_vertex_marker(
-                task_name=current_species_set.name,
-                full_qualified_enumerator_type="::swift2::TaskEnumerator",
-                enumerator_include=""" #include "swift2/TaskEnumerator.h" """,
+            vertex_marker_for_tasks = (
+                peano4.toolbox.api.EnumerateCellsAndVertices.create_vertex_marker(
+                    task_name=current_species_set.name,
+                    full_qualified_enumerator_type="::swift2::TaskEnumerator",
+                    enumerator_include=""" #include "swift2/TaskEnumerator.h" """,
+                )
             )
 
             # Enable cell statistics for this species
@@ -634,14 +638,13 @@ levels.
 
         return self._project
 
-
     def set_realisation(
-            self,
-            parallelisation = Parallelisation_DomainDecomposition,
-            storage = Storage_Scattered,
-            sorting = Sorting_BucketSort,
-            kernel_optimisation = KernelOptimisation_NoOptimisation
-            ):
+        self,
+        parallelisation=Parallelisation_DomainDecomposition,
+        storage=Storage_Scattered,
+        sorting=Sorting_BucketSort,
+        kernel_optimisation=KernelOptimisation_NoOptimisation,
+    ):
         """!
         Specify the realisation of the project: Select
         - which parallelisation method to use
@@ -659,36 +662,46 @@ levels.
         """
 
         # have we added particle sets already?
-        if self._particle_species is None or len(self._particle_species) == 0 or self._particle_species_set is None or len(self._particle_species_set) == 0:
-            raise ValueError("No particle species recorded. Call this function only after adding particle sets to project.")
-
+        if (
+            self._particle_species is None
+            or len(self._particle_species) == 0
+            or self._particle_species_set is None
+            or len(self._particle_species_set) == 0
+        ):
+            raise ValueError(
+                "No particle species recorded. Call this function only after adding particle sets to project."
+            )
 
         # make sure selections are valid.
         if parallelisation not in ParallelisationVariants:
             raise ValueError(
-                    f"parallelisation variant '{parallelisation}' unknown; available options are",
-                    ParallelisationVariants
-                    )
+                f"parallelisation variant '{parallelisation}' unknown; available options are",
+                ParallelisationVariants,
+            )
         if storage not in StorageVariants:
             raise ValueError(
-                    f"storage variant '{storage}' unknown; available options are",
-                    StorageVariants
-                    )
+                f"storage variant '{storage}' unknown; available options are",
+                StorageVariants,
+            )
         if sorting not in SortingVariants:
             raise ValueError(
-                    f"sorting variant '{sorting}' unknown; available options are",
-                    SortingVariants
-                    )
+                f"sorting variant '{sorting}' unknown; available options are",
+                SortingVariants,
+            )
         if kernel_optimisation not in AllKernelOptimisationVariants:
             raise ValueError(
-                    f"sorting variant '{kernel_optimisation}' unknown; available options are",
-                    AllKernelOptimisationVariants
-                    )
+                f"sorting variant '{kernel_optimisation}' unknown; available options are",
+                AllKernelOptimisationVariants,
+            )
 
         # check that selection makes sense.
-        if storage == Storage_Scattered and kernel_optimisation not in BasicKernelOptimisationVariants:
-            raise ValueError("Can't use kernel optimisation '{kernel_optimisation}' with scattered storage.")
-
+        if (
+            storage == Storage_Scattered
+            and kernel_optimisation not in BasicKernelOptimisationVariants
+        ):
+            raise ValueError(
+                "Can't use kernel optimisation '{kernel_optimisation}' with scattered storage."
+            )
 
         self.algorithm_steps_task_graph_compiler = None
         self.initialisation_steps_task_graph_compiler = None
@@ -718,7 +731,10 @@ levels.
                 else:
                     raise NotImplementedError()
 
-            elif storage == Storage_ContinuousPerVertex or storage == Storage_GlobalContinuous:
+            elif (
+                storage == Storage_ContinuousPerVertex
+                or storage == Storage_GlobalContinuous
+            ):
                 if sorting == Sorting_MultiscaleSort:
                     self.algorithm_steps_task_graph_compiler = (
                         swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
@@ -758,7 +774,10 @@ levels.
                 else:
                     raise NotImplementedError()
 
-            elif storage == Storage_ContinuousPerVertex or storage == Storage_GlobalContinuous:
+            elif (
+                storage == Storage_ContinuousPerVertex
+                or storage == Storage_GlobalContinuous
+            ):
                 if sorting == Sorting_MultiscaleSort:
                     self.algorithm_steps_task_graph_compiler = (
                         swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
@@ -797,7 +816,10 @@ levels.
                 else:
                     raise NotImplementedError()
 
-            elif storage == Storage_ContinuousPerVertex or storage == Storage_GlobalContinuous:
+            elif (
+                storage == Storage_ContinuousPerVertex
+                or storage == Storage_GlobalContinuous
+            ):
                 if sorting == Sorting_MultiscaleSort:
                     self.algorithm_steps_task_graph_compiler = (
                         swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_coalesced_memory
@@ -825,12 +847,10 @@ levels.
         if self.initialisation_steps_task_graph_compiler is None:
             raise ValueError("No initialisation stpe task graph compiler selected?")
 
-
         # Update particle sets and particles now
         new_particlelist = []
 
         for p in self._particle_species:
-
             # lists are traversed as copies, not by reference, so we need to
             # make a new list.
             newp = copy.deepcopy(p)
@@ -838,18 +858,19 @@ levels.
             if kernel_optimisation == KernelOptimisation_NoOptimisation:
                 pass
             elif kernel_optimisation == KernelOptimisation_VectoriseAll:
-                newp.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::")
+                newp.switch_namespace_of_all_particle_iterators(
+                    "::swift2::kernels::coalesced::"
+                )
             elif kernel_optimisation == KernelOptimisation_VectoriseDistanceChecks:
-                newp.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::prefixcheck::")
+                newp.switch_namespace_of_all_particle_iterators(
+                    "::swift2::kernels::coalesced::prefixcheck::"
+                )
             else:
                 raise NotImplementedError()
 
             new_particlelist.append(newp)
 
         self._particle_species = new_particlelist
-
-
-
 
         new_particlesetlist = []
 
@@ -865,13 +886,13 @@ levels.
                 )
             elif storage == Storage_GlobalContinuous:
                 newps.generator = (
-                    peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(newps)
-                )
-            elif storage == Storage_Scattered:
-                newps.generator = (
-                    peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+                    peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(
                         newps
                     )
+                )
+            elif storage == Storage_Scattered:
+                newps.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+                    newps
                 )
             else:
                 raise NotImplementedError()
@@ -881,13 +902,6 @@ levels.
         self._particle_species_set = new_particlesetlist
 
         return
-
-
-
-
-
-
-
 
     @abstractmethod
     def main_file_template(self):

@@ -16,7 +16,11 @@ ParallelisationVariants = [
 Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
 Storage_GlobalContinuous = "global-continuous"
-StorageVariants = [Storage_Scattered, Storage_ContinuousPerVertex, Storage_GlobalContinuous]
+StorageVariants = [
+    Storage_Scattered,
+    Storage_ContinuousPerVertex,
+    Storage_GlobalContinuous,
+]
 
 Sorting_MultiscaleSort = "multiscale-sort"
 Sorting_BucketSort = "bucket-sort"
@@ -34,5 +38,3 @@ AllKernelOptimisationVariants = [
     KernelOptimisation_VectoriseAll,
     KernelOptimisation_VectoriseDistanceChecks,
 ]
-
-

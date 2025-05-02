@@ -147,7 +147,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-
     args = parse_args()
 
     ########################################################################################
@@ -159,7 +158,6 @@ if __name__ == "__main__":
     project = swift2.Project(
         namespace=project_namespace, project_name="Noh", executable=args.output_file
     )
-
 
     # Initialise the SPH particle --------------------------------------------------
     # If multiple particle species are present, we can specify the parameters
@@ -283,15 +281,18 @@ if __name__ == "__main__":
     # the particle_set to the project
     particle_set = project.add_particle_species(particle)
 
-
-    realisation =  args.realisation.split(".")
+    realisation = args.realisation.split(".")
     parallelisation = realisation[0]
     storage = realisation[1]
     sorting = realisation[2]
     kernel_optimisation = realisation[3]
 
-    project.set_realisation(parallelisation=parallelisation, storage=storage, sorting=sorting, kernel_optimisation=kernel_optimisation)
-
+    project.set_realisation(
+        parallelisation=parallelisation,
+        storage=storage,
+        sorting=sorting,
+        kernel_optimisation=kernel_optimisation,
+    )
 
     if args.mode == "release":
         build_mode = peano4.output.CompileMode.Release
