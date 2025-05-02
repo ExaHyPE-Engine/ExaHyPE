@@ -188,8 +188,18 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
+depth = 0
+cellsize = domain_size[0]
+while cellsize > args.cell_size:
+    cellsize /= 3.
+    depth += 1
+    if depth == 100:
+        raise ValueError("Suspicious depth")
+
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 20.0 * dx
+hydro_H_max = 0.499 * cellsize
+if hydro_H_max < 5.0 * dx:
+    raise ValueError("Too small hydro_H_max", 5.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
@@ -238,11 +248,27 @@ project.set_global_simulation_parameters(
     plotter_precision=8,
 )
 
+#  parallelisation = "domain-decomposition"
+#  parallelisation = "task-graph"
+parallelisation = "multisweep-task-graph"
+#  storage = "scattered"
+#  storage = "continuous-per-vertex"
+storage = "global-continuous"
+sorting = "multiscale-sort"
+#  sorting = "bucket-sort"
+kernel_optimisation = "no-optimisation"
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
+)
+
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
+    "new toolbox::loadbalancing::DefaultConfiguration(1)",
 )
 
 
@@ -255,7 +281,6 @@ project.algorithm_step_initial_conditions.add_action_set(
         particle_set=particle_set, filename="sodShock.hdf5"
     )
 )
-
 
 ###############################################################################
 # Set up the plotter
