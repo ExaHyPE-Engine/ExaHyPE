@@ -14,116 +14,149 @@ import shutil
 # Parse user input
 ########################################################################################
 
-parser = argparse.ArgumentParser(description="SPH test script")
-parser.add_argument(
-    "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
-)
-parser.add_argument(
-    "-v",
-    "--verbose",
-    dest="verbose",
-    action="store_true",
-    default=False,
-    help="Verbose",
-)
-parser.add_argument(
-    "-c",
-    "--clean",
-    dest="clean_temporary_directories",
-    action="store_true",
-    help="Remove temporary directories before script starts",
-)
-parser.add_argument(
-    "-np",
-    "--particle-number",
-    dest="particle_number",
-    required=True,
-    type=int,
-    help="Particle number (1D)",
-)
-parser.add_argument(
-    "-et",
-    "--end-time",
-    dest="end_time",
-    type=float,
-    default=0.2,
-    help="End of simulation",
-)
-parser.add_argument(
-    "-plot",
-    "--plot-delta",
-    dest="plot_delta",
-    type=float,
-    default=0.01,
-    help="Plot delta (0 switches off)",
-)
-parser.add_argument(
-    "-dt",
-    "--timestep-size",
-    dest="timestep_size",
-    type=float,
-    default=1e-4,
-    help="Global timestep size (initial value)",
-)
-parser.add_argument(
-    "-cfl",
-    "--cfl-factor",
-    dest="cfl_factor",
-    type=float,
-    default=0.1,
-    help="Value of the CFL constant",
-)
-parser.add_argument(
-    "-cs",
-    "--cell-size",
-    dest="cell_size",
-    type=float,
-    default=0.3,
-    help="Cell size (default 0.3)",
-)
-parser.add_argument(
-    "-pd",
-    "--peano-dir",
-    dest="peanodir",
-    default="../../../..",
-    help="Peano4 directory",
-)
-parser.add_argument(
-    "-asserts",
-    "--asserts",
-    dest="asserts",
-    action="store_true",
-    default=False,
-    help="Switch on assertions",
-)
-parser.add_argument(
-    "-debug",
-    "--debug",
-    dest="debug",
-    action="store_true",
-    default=False,
-    help="Switch on full debug checks",
-)
-parser.add_argument(
-    "-k",
-    "--kernel",
-    dest="kernel",
-    type=str,
-    default="quartic_spline",
-    choices=sphtools.sph_kernel_list,
-    help="SPH kernel function to use.",
-)
-args = parser.parse_args()
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="SPH benchmarking script")
+    parser.add_argument(
+        "-j",
+        "--parallel-builds",
+        dest="j",
+        type=int,
+        default=-1,
+        help="Parallel builds",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="Verbose",
+    )
+    parser.add_argument(
+        "-c",
+        "--clean",
+        dest="clean_temporary_files",
+        action="store_true",
+        help="Remove temporary directories and output files before script starts",
+    )
+    parser.add_argument(
+        "-np",
+        "--particle-number",
+        dest="particle_number",
+        required=True,
+        type=int,
+        help="Particle number (1D)",
+    )
+    parser.add_argument(
+        "-t",
+        "--trees",
+        dest="trees",
+        default=0,
+        type=int,
+        help="Number of trees (subdomains) rank rank (0 uses all threads)",
+    )
+    parser.add_argument(
+        "-et",
+        "--end-time",
+        dest="end_time",
+        type=float,
+        default=0.2,
+        help="End of simulation",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        dest="output_file",
+        default="noh3D",
+        help="Executable file name",
+    )
+    parser.add_argument(
+        "-plot",
+        "--plot-delta",
+        dest="plot_delta",
+        type=float,
+        default=0.01,
+        help="Plot delta (0 switches off)",
+    )
+    parser.add_argument(
+        "-dt",
+        "--timestep-size",
+        dest="timestep_size",
+        type=float,
+        default=1e-4,
+        help="Global timestep size (initial value)",
+    )
+    parser.add_argument(
+        "-cfl",
+        "--cfl-factor",
+        dest="cfl_factor",
+        type=float,
+        default=0.1,
+        help="Value of the CFL constant",
+    )
+    parser.add_argument(
+        "-ppc",
+        "--particles-per-cell",
+        dest="particles_per_cell",
+        type=int,
+        default=100,
+        help="Particles per cell. If we have x particles, we will have 2^d*x particle comparisons on average per cell, as we compare to neighbouring half cells as well",
+    )
+    parser.add_argument(
+        "-pd",
+        "--peano-dir",
+        dest="peanodir",
+        default="../../../..",
+        help="Peano4 directory",
+    )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        dest="mode",
+        choices=["release", "stats", "trace", "asserts", "debug"],
+        default="release",
+        help="Pick build type",
+    )
+    parser.add_argument(
+        "-rea",
+        "--realisation",
+        dest="realisation",
+        default="domain-decomposition.scattered.multiscale-sorting.no-optimisation",
+        help="Realisation to use. See Peano/python/swift2/ProjectRealisation.py for options",
+    )
+    parser.add_argument(
+        "-ms",
+        "--mantissa-size",
+        dest="mantissa_size",
+        type=int,
+        default=0,
+        help="Mantissa size for clang truncation (if supported by compiler). Default of 0 disables any compression",
+    )
+    parser.add_argument(
+        "-k",
+        "--kernel",
+        dest="kernel",
+        type=str,
+        default="quartic_spline",
+        choices=sphtools.sph_kernel_list,
+        help="SPH kernel function to use.",
+    )
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
 
 ########################################################################################
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["tests", "swift2", "noh3D"]
+project_namespace = ["benchmarks", "swift2", "noh3D"]
 
 project = swift2.Project(
-    namespace=project_namespace, project_name="Noh3D", executable="noh3D"
+    namespace=project_namespace, project_name="Noh3D", executable=args.output_file
 )
 
 # Initialise the SPH particle --------------------------------------------------
@@ -135,18 +168,32 @@ name = "HydroPart"
 dimensions = 3
 hydro_dimensions = 3  # dimensions for the hydro
 
+particles_per_cell = args.particles_per_cell
+total_number_of_particles = args.particle_number**hydro_dimensions
+total_number_of_cells = total_number_of_particles / particles_per_cell
+cells_per_dimension = total_number_of_cells ** (2.0 / hydro_dimensions)
+max_cell_size = 2.0 / cells_per_dimension * 3.0
+
+print(
+    "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
+        total_number_of_particles,
+        total_number_of_cells,
+        cells_per_dimension,
+        max_cell_size,
+    )
+)
+
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
-    name,
+    name=name,
     dimensions_hydro=hydro_dimensions,
     cfl_factor=args.cfl_factor,
     initial_time_step_size=args.timestep_size,
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
-    particles_per_cell=20,
-    min_h=args.cell_size / 100,
-    max_h=args.cell_size,
+    particles_per_cell=particles_per_cell,
+    min_h=max_cell_size,
+    max_h=max_cell_size,
 )
-
 
 ########################################################################################
 # Set parameters for the SPH simulation
@@ -154,10 +201,6 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 # default values. The values of the parameters can be modified or retrieved
 # using the set/get methods.
 ########################################################################################
-
-offset = [0, 0, 0]
-domain_size = [1, 1, 1]
-periodic_boundary_conditions = [False, False, False]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
@@ -186,15 +229,11 @@ kernel = args.kernel
 KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
 KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
-
-# Additional Particle Parameters -----------------------------------------------
-dx = domain_size[0] / args.particle_number
-hydro_H_max = 10.0 * dx
+hydro_H_max = max_cell_size / 2
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
     hydro_H_max, kernel, hydro_dimensions
 )
-
-particle.h_hydro_max = hydro_h_max
+#  particle.h_hydro_max = hydro_h_max
 
 # particle.h_hydro_min = 1e-6
 # particle.h_max_iterations = 10
@@ -205,25 +244,73 @@ particle.h_hydro_max = hydro_h_max
 
 # Optional: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
-# particle.mantissa_size = 23
+if args.mantissa_size > 0:
+    particle.mass.valid_mantissa_bits = args.mantissa_size
+    particle.velocity.valid_mantissa_bits = args.mantissa_size
+    particle.acceleration.valid_mantissa_bits = args.mantissa_size
+    particle.density.valid_mantissa_bits = args.mantissa_size
+    particle.pressure.valid_mantissa_bits = args.mantissa_size
+    particle.smoothL.valid_mantissa_bits = args.mantissa_size
+    particle.u.valid_mantissa_bits = args.mantissa_size
+    particle.uDot.valid_mantissa_bits = args.mantissa_size
+    particle.f.valid_mantissa_bits = args.mantissa_size
+    particle.wcount_dh.valid_mantissa_bits = args.mantissa_size
+    particle.rho_dh.valid_mantissa_bits = args.mantissa_size
+    particle.hleft.valid_mantissa_bits = args.mantissa_size
+    particle.hright.valid_mantissa_bits = args.mantissa_size
+    particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
+    particle.wcount.valid_mantissa_bits = args.mantissa_size
+    particle.hDot.valid_mantissa_bits = args.mantissa_size
+    particle.residual.valid_mantissa_bits = args.mantissa_size
+    particle.balsara.valid_mantissa_bits = args.mantissa_size
+    particle.rot_v.valid_mantissa_bits = args.mantissa_size
+    particle.div_v.valid_mantissa_bits = args.mantissa_size
+    particle.v_sig_AV.valid_mantissa_bits = args.mantissa_size
+    particle.soundSpeed.valid_mantissa_bits = args.mantissa_size
+    particle.v_full.valid_mantissa_bits = args.mantissa_size
+    particle.u_full.valid_mantissa_bits = args.mantissa_size
 
+particle.data.expose_all_attributes_in_header_file()
 
 # deploy particle properties
 # This needs to be done if you're changing any of the default values.
+# Otherwise, the changes won't propagate into dastgen.
 particle.set_parameters()
-
 
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if args.debug:
-    build_mode = peano4.output.CompileMode.Debug
-elif args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
-else:
+realisation = args.realisation.split(".")
+parallelisation = realisation[0]
+storage = realisation[1]
+sorting = realisation[2]
+kernel_optimisation = realisation[3]
+
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
+)
+
+if args.mode == "release":
     build_mode = peano4.output.CompileMode.Release
+if args.mode == "stats":
+    build_mode = peano4.output.CompileMode.Stats
+if args.mode == "asserts":
+    build_mode = peano4.output.CompileMode.Asserts
+if args.mode == "trace":
+    build_mode = peano4.output.CompileMode.Trace
+if args.mode == "debug":
+    build_mode = peano4.output.CompileMode.Debug
+
+# Set Peano4 simulation parameters ---------------------------------------------
+offset = [0, 0, 0]
+domain_size = [2, 2, 2]
+periodic_boundary_conditions = [False, False, False]
+
 
 # Set Peano4 simulation parameters ---------------------------------------------
 project.set_global_simulation_parameters(
@@ -242,9 +329,8 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
+    "new toolbox::loadbalancing::DefaultConfiguration({})".format(args.trees),
 )
-
 
 ###############################################################################
 # Initialisation snippet for the particle
@@ -305,12 +391,11 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-if args.asserts or args.debug:
+if args.mode == "asserts" or args.mode == "debug":
     particle_plotter.add_attribute_to_plot(particle.partid, 1)
     particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
     particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
-
 
 ###############################################################################
 # Generate plain Peano 4 project
@@ -339,7 +424,6 @@ print(f"Adiabatic index: {GAMMA}")
 print(f"Smoothing length free factor: {particle.eta_factor}")
 print("-----------------------------------------------------------------------")
 
-
 # Export Constants.h file ------------------------------------------------------
 peano4_project.constants.export_const_with_type(
     "HYDRO_DIMENSIONS", str(HYDRO_DIMENSIONS), "double"
@@ -359,13 +443,12 @@ peano4_project.output.makefile.add_CXX_flag(
 peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
 peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
 
-
 ###############################################################################
 # Cleanup and compilation
 ###############################################################################
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
-if args.clean_temporary_directories:
+if args.clean_temporary_files:
     dirs = ["vertexdata/", "repositories/", "globaldata/", "observers/"]
     for dir in dirs:
         shutil.rmtree(dir)
@@ -375,13 +458,15 @@ if args.clean_temporary_directories:
 peano4_project.generate(
     overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True
 )
+
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
-# remove output files from previous runs
-output_files = [
-    f
-    for f in os.listdir(".")
-    if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd")
-]
-for f in output_files:
-    os.remove(f)
+if args.clean_temporary_files:
+    # remove output files from previous runs
+    output_files = [
+        f
+        for f in os.listdir(".")
+        if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd")
+    ]
+    for f in output_files:
+        os.remove(f)

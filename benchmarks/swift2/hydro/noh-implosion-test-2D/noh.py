@@ -149,323 +149,324 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    ########################################################################################
-    # Generate SWIFT project
-    ########################################################################################
+########################################################################################
+# Generate SWIFT project
+########################################################################################
 
-    project_namespace = ["benchmarks", "swift2", "noh"]
+project_namespace = ["benchmarks", "swift2", "noh2D"]
 
-    project = swift2.Project(
-        namespace=project_namespace, project_name="Noh", executable=args.output_file
+project = swift2.Project(
+    namespace=project_namespace, project_name="Noh2D", executable=args.output_file
+)
+
+# Initialise the SPH particle --------------------------------------------------
+# If multiple particle species are present, we can specify the parameters
+# independently for each case.
+
+name = "HydroPart"
+
+dimensions = 2
+hydro_dimensions = 2  # dimensions for the hydro
+
+particles_per_cell = args.particles_per_cell
+total_number_of_particles = args.particle_number**hydro_dimensions
+total_number_of_cells = total_number_of_particles / particles_per_cell
+cells_per_dimension = total_number_of_cells ** (2.0 / hydro_dimensions)
+max_cell_size = 2.0 / cells_per_dimension * 3.0
+
+print(
+    "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
+        total_number_of_particles,
+        total_number_of_cells,
+        cells_per_dimension,
+        max_cell_size,
     )
+)
 
-    # Initialise the SPH particle --------------------------------------------------
-    # If multiple particle species are present, we can specify the parameters
-    # independently for each case.
+particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
+    name=name,
+    dimensions_hydro=hydro_dimensions,
+    cfl_factor=args.cfl_factor,
+    initial_time_step_size=args.timestep_size,
+    constant_time_step_size=True,
+    swift_project_namespace=project_namespace,
+    particles_per_cell=particles_per_cell,
+    min_h=max_cell_size,
+    max_h=max_cell_size,
+)
 
-    name = "HydroPart"
+########################################################################################
+# Set parameters for the SPH simulation
+# If no parameters are passed to the swift2 project, it initializes with
+# default values. The values of the parameters can be modified or retrieved
+# using the set/get methods.
+########################################################################################
 
-    dimensions = 2
-    hydro_dimensions = 2  # dimensions for the hydro
+# HYDRO_DIMENSION can be smaller than the Peano4 dimensions
+HYDRO_DIMENSIONS = hydro_dimensions
 
-    particles_per_cell = args.particles_per_cell
-    total_number_of_particles = args.particle_number**hydro_dimensions
-    total_number_of_cells = total_number_of_particles / particles_per_cell
-    cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
-    max_cell_size = 1.0 / cells_per_dimension * 3.0
+# Particle number along 1 dimension
+HYDRO_PART_NUMBER = args.particle_number
 
-    print(
-        "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
-            total_number_of_particles,
-            total_number_of_cells,
-            cells_per_dimension,
-            max_cell_size,
-        )
+# Time integration parameters
+GLOBAL_TIME_STEP_SIZE = args.timestep_size
+CFL_CONSTANT = args.cfl_factor
+
+# EoS parameter ---------------------------------------------------------------
+gamma_hydro_list = [str(5 / 3), str(7 / 5), str(4 / 3), str(2 / 1)]
+gamma_hydro_list_symbols = [
+    "HYDRO_GAMMA_5_3",
+    "HYDRO_GAMMA_7_5",
+    "HYDRO_GAMMA_4_3",
+    "HYDRO_GAMMA_2_1",
+]
+GAMMA = gamma_hydro_list[0]
+GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
+
+# SPH kernel -------------------------------------------------------
+
+kernel = args.kernel
+KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
+KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
+
+hydro_H_max = max_cell_size / 2
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+    hydro_H_max, kernel, hydro_dimensions
+)
+#  particle.h_hydro_max = hydro_h_max
+
+# particle.h_hydro_min = 1e-6
+# particle.h_max_iterations = 10
+# particle.h_tolerance = 1e-4
+# particle.eta_factor = 1.2348
+# particle.beta_av = 3.0
+# particle.alpha_av = 0.8
+
+# IMPORTANT: Reduce the mantissa size for particle attributes -------------------
+# Native size is 53 (double precision)
+if args.mantissa_size > 0:
+    particle.mass.valid_mantissa_bits = args.mantissa_size
+    particle.velocity.valid_mantissa_bits = args.mantissa_size
+    particle.acceleration.valid_mantissa_bits = args.mantissa_size
+    particle.density.valid_mantissa_bits = args.mantissa_size
+    particle.pressure.valid_mantissa_bits = args.mantissa_size
+    particle.smoothL.valid_mantissa_bits = args.mantissa_size
+    particle.u.valid_mantissa_bits = args.mantissa_size
+    particle.uDot.valid_mantissa_bits = args.mantissa_size
+    particle.f.valid_mantissa_bits = args.mantissa_size
+    particle.wcount_dh.valid_mantissa_bits = args.mantissa_size
+    particle.rho_dh.valid_mantissa_bits = args.mantissa_size
+    particle.hleft.valid_mantissa_bits = args.mantissa_size
+    particle.hright.valid_mantissa_bits = args.mantissa_size
+    particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
+    particle.wcount.valid_mantissa_bits = args.mantissa_size
+    particle.hDot.valid_mantissa_bits = args.mantissa_size
+    particle.residual.valid_mantissa_bits = args.mantissa_size
+    particle.balsara.valid_mantissa_bits = args.mantissa_size
+    particle.rot_v.valid_mantissa_bits = args.mantissa_size
+    particle.div_v.valid_mantissa_bits = args.mantissa_size
+    particle.v_sig_AV.valid_mantissa_bits = args.mantissa_size
+    particle.soundSpeed.valid_mantissa_bits = args.mantissa_size
+    particle.v_full.valid_mantissa_bits = args.mantissa_size
+    particle.u_full.valid_mantissa_bits = args.mantissa_size
+
+particle.data.expose_all_attributes_in_header_file()
+
+# deploy particle properties
+# This needs to be done if you're changing any of the default values.
+# Otherwise, the changes won't propagate into dastgen.
+particle.set_parameters()
+
+# Add particle to the SWIFT project --------------------------------------------
+# Notice that you any change to the particle will not take effect after adding
+# the particle_set to the project
+particle_set = project.add_particle_species(particle)
+
+realisation = args.realisation.split(".")
+parallelisation = realisation[0]
+storage = realisation[1]
+sorting = realisation[2]
+kernel_optimisation = realisation[3]
+
+project.set_realisation(
+    parallelisation=parallelisation,
+    storage=storage,
+    sorting=sorting,
+    kernel_optimisation=kernel_optimisation,
+)
+
+if args.mode == "release":
+    build_mode = peano4.output.CompileMode.Release
+if args.mode == "stats":
+    build_mode = peano4.output.CompileMode.Stats
+if args.mode == "asserts":
+    build_mode = peano4.output.CompileMode.Asserts
+if args.mode == "trace":
+    build_mode = peano4.output.CompileMode.Trace
+if args.mode == "debug":
+    build_mode = peano4.output.CompileMode.Debug
+
+# Set Peano4 simulation parameters ---------------------------------------------
+offset = [0, 0, 0]
+domain_size = [2, 2, 2]
+periodic_boundary_conditions = [False, False, False]
+
+
+# Set Peano4 simulation parameters ---------------------------------------------
+project.set_global_simulation_parameters(
+    dimensions=dimensions,
+    offset=offset,
+    domain_size=domain_size,
+    min_end_time=args.end_time,
+    max_end_time=0.0,
+    first_plot_time_stamp=0.0,
+    time_in_between_plots=args.plot_delta,
+    periodic_BC=periodic_boundary_conditions,
+    plotter_precision=8,
+)
+
+project.set_Peano4_installation(args.peanodir, build_mode)
+
+project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    "new toolbox::loadbalancing::DefaultConfiguration({})".format(args.trees),
+)
+
+###############################################################################
+# Initialisation snippet for the particle
+###############################################################################
+
+#  Noh problem (2D) snippet  --------------------------------------------------
+#  The particle attributes are set via an initalisation snippet that sets
+#  the initial conditions specific for this problem, i.e. the velocity field
+#  that converges towards the center of the domain and that generates the
+#  collapse.
+
+ICs = swift2.scenario.NohProblemIC(dimensions=HYDRO_DIMENSIONS)
+initialisation_snippet = ICs.initialisation_snippet
+
+project.algorithm_step_initial_conditions.add_action_set(
+    swift2.input.InsertParticlesAlongCartesianGrid(
+        particle_set=particle_set,
+        initialisation_call=initialisation_snippet,
+        distance_between_particles_along_one_axis=1.0 / args.particle_number,
+        additional_includes="""
+#include "swift2/kernels/legacy/equation_of_state.h"
+""",
     )
+)
 
-    particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
-        name=name,
-        dimensions_hydro=hydro_dimensions,
-        cfl_factor=args.cfl_factor,
-        initial_time_step_size=args.timestep_size,
-        constant_time_step_size=True,
-        swift_project_namespace=project_namespace,
-        particles_per_cell=particles_per_cell,
-        min_h=max_cell_size,
-        max_h=max_cell_size,
-    )
+###############################################################################
+# Set up the plotter
+###############################################################################
+#
+# A plotter has to be told explicitly which data to visualisation. We visualise
+# the velocity here as scalar attribute. To some degree, this is redundant info
+# as we implicitly have the position of the particle and can "see" its
+# velocity when we play through a movie. But the explicit visualisation shows
+# how to handle attributes per particle.
+#
+# When we create the plotter, we have to inform it how to enumerate the
+# individual snapshots. Obviously, we can just count through the snapshots.
+# In this case, you have to pass the constant peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps
+# into the field time_stamp_evaluation. You can also define your own time
+# stamp. For this, it is useful to know that each particle definition in the
+# Python script will yield a particle class with the same name in the
+# subnamespace globaldata. Every particle class in return has a class attribute
+#
+#            getSpecies()
+#
+# which returns an object that holds global information about this particle
+# type.
+###############################################################################
+particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
+    "particles",
+    particle_set,
+    "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
+)
+particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
+particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
+particle_plotter.add_attribute_to_plot(particle.mass, 1)
+particle_plotter.add_attribute_to_plot(particle.density, 1)
+particle_plotter.add_attribute_to_plot(particle.pressure, 1)
+particle_plotter.add_attribute_to_plot(particle.u, 1)
+particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
+if args.mode == "asserts" or args.mode == "debug":
+    particle_plotter.add_attribute_to_plot(particle.partid, 1)
+    particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
+    particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
+project.algorithm_step_plot.add_action_set(particle_plotter)
 
-    ########################################################################################
-    # Set parameters for the SPH simulation
-    # If no parameters are passed to the swift2 project, it initializes with
-    # default values. The values of the parameters can be modified or retrieved
-    # using the set/get methods.
-    ########################################################################################
+###############################################################################
+# Generate plain Peano 4 project
+###############################################################################
+#
+# The value of some constants such as the adiabatic index cannot be arbitrary
+# but rather we have a set of pre-defined options. The same happens for some
+# functions, e.g. the SPH smoothing kernel. This allows us to define some
+# symbols and fix the values at compile time.
+#
+#
+###############################################################################
 
-    # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
-    HYDRO_DIMENSIONS = hydro_dimensions
+peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-    # Particle number along 1 dimension
-    HYDRO_PART_NUMBER = args.particle_number
+# Some sanity checks ----------------------------------------------------------
+if GAMMA not in gamma_hydro_list:
+    print(f"Please check the value of GAMMA. You have chosen: {GAMMA}")
 
-    # Time integration parameters
-    GLOBAL_TIME_STEP_SIZE = args.timestep_size
-    CFL_CONSTANT = args.cfl_factor
+print("-----------------------------------------------------------------------")
+print("SPH parameters summary:")
+print(f"Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}")
+print(f"Global time-step size: {GLOBAL_TIME_STEP_SIZE}")
+print(f"Number of particles (1D): {HYDRO_PART_NUMBER}")
+print(f"Adiabatic index: {GAMMA}")
+print(f"Smoothing length free factor: {particle.eta_factor}")
+print("-----------------------------------------------------------------------")
 
-    # EoS parameter ---------------------------------------------------------------
-    gamma_hydro_list = [str(5 / 3), str(7 / 5), str(4 / 3), str(2 / 1)]
-    gamma_hydro_list_symbols = [
-        "HYDRO_GAMMA_5_3",
-        "HYDRO_GAMMA_7_5",
-        "HYDRO_GAMMA_4_3",
-        "HYDRO_GAMMA_2_1",
+# Export Constants.h file ------------------------------------------------------
+peano4_project.constants.export_const_with_type(
+    "HYDRO_DIMENSIONS", str(HYDRO_DIMENSIONS), "double"
+)
+peano4_project.constants.export_const_with_type(
+    "HYDRO_PART_NUMBER", str(HYDRO_PART_NUMBER), "double"
+)
+peano4_project.constants.export_const_with_type(
+    "GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double"
+)
+peano4_project.constants.export_const_with_type("GAMMA", GAMMA, "double")
+
+# Export symbols for compilation (e.g. for SPH kernel) -----------------------
+peano4_project.output.makefile.add_CXX_flag(
+    "-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS)
+)
+peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
+peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
+
+###############################################################################
+# Cleanup and compilation
+###############################################################################
+
+# If we want to start a project from scratch, we may want to remove some of the generated code
+if args.clean_temporary_files:
+    dirs = ["vertexdata/", "repositories/", "globaldata/", "observers/"]
+    for dir in dirs:
+        shutil.rmtree(dir)
+
+# It is safe (and recommended) to overwrite any existing main file, since this
+# is generated automatically by the Swift2 graph compiler.
+peano4_project.generate(
+    overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True
+)
+
+peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+
+if args.clean_temporary_files:
+    # remove output files from previous runs
+    output_files = [
+        f
+        for f in os.listdir(".")
+        if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd")
     ]
-    GAMMA = gamma_hydro_list[0]
-    GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
-
-    # SPH kernel -------------------------------------------------------
-
-    kernel = args.kernel
-    KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
-    KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
-
-    hydro_H_max = max_cell_size / 2
-    hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
-        hydro_H_max, kernel, hydro_dimensions
-    )
-
-    # particle.h_hydro_min = 1e-6
-    # particle.h_max_iterations = 10
-    # particle.h_tolerance = 1e-4
-    # particle.eta_factor = 1.2348
-    # particle.beta_av = 3.0
-    # particle.alpha_av = 0.8
-
-    # IMPORTANT: Reduce the mantissa size for particle attributes -------------------
-    # Native size is 53 (double precision)
-    if args.mantissa_size > 0:
-        particle.mass.valid_mantissa_bits = args.mantissa_size
-        particle.velocity.valid_mantissa_bits = args.mantissa_size
-        particle.acceleration.valid_mantissa_bits = args.mantissa_size
-        particle.density.valid_mantissa_bits = args.mantissa_size
-        particle.pressure.valid_mantissa_bits = args.mantissa_size
-        particle.smoothL.valid_mantissa_bits = args.mantissa_size
-        particle.u.valid_mantissa_bits = args.mantissa_size
-        particle.uDot.valid_mantissa_bits = args.mantissa_size
-        particle.f.valid_mantissa_bits = args.mantissa_size
-        particle.wcount_dh.valid_mantissa_bits = args.mantissa_size
-        particle.rho_dh.valid_mantissa_bits = args.mantissa_size
-        particle.hleft.valid_mantissa_bits = args.mantissa_size
-        particle.hright.valid_mantissa_bits = args.mantissa_size
-        particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
-        particle.wcount.valid_mantissa_bits = args.mantissa_size
-        particle.hDot.valid_mantissa_bits = args.mantissa_size
-        particle.residual.valid_mantissa_bits = args.mantissa_size
-        particle.balsara.valid_mantissa_bits = args.mantissa_size
-        particle.rot_v.valid_mantissa_bits = args.mantissa_size
-        particle.div_v.valid_mantissa_bits = args.mantissa_size
-        particle.v_sig_AV.valid_mantissa_bits = args.mantissa_size
-        particle.soundSpeed.valid_mantissa_bits = args.mantissa_size
-        particle.v_full.valid_mantissa_bits = args.mantissa_size
-        particle.u_full.valid_mantissa_bits = args.mantissa_size
-
-    particle.data.expose_all_attributes_in_header_file()
-
-    # deploy particle properties
-    # This needs to be done if you're changing any of the default values.
-    # Otherwise, the changes won't propagate into dastgen.
-    particle.set_parameters()
-
-    # Add particle to the SWIFT project --------------------------------------------
-    # Notice that you any change to the particle will not take effect after adding
-    # the particle_set to the project
-    particle_set = project.add_particle_species(particle)
-
-    realisation = args.realisation.split(".")
-    parallelisation = realisation[0]
-    storage = realisation[1]
-    sorting = realisation[2]
-    kernel_optimisation = realisation[3]
-
-    project.set_realisation(
-        parallelisation=parallelisation,
-        storage=storage,
-        sorting=sorting,
-        kernel_optimisation=kernel_optimisation,
-    )
-
-    if args.mode == "release":
-        build_mode = peano4.output.CompileMode.Release
-    if args.mode == "stats":
-        build_mode = peano4.output.CompileMode.Stats
-    if args.mode == "asserts":
-        build_mode = peano4.output.CompileMode.Asserts
-    if args.mode == "trace":
-        build_mode = peano4.output.CompileMode.Trace
-    if args.mode == "debug":
-        build_mode = peano4.output.CompileMode.Debug
-
-    # Set Peano4 simulation parameters ---------------------------------------------
-    offset = [0, 0, 0]
-    domain_size = [1, 1, 1]
-    periodic_boundary_conditions = [False, False, False]
-
-    project.set_global_simulation_parameters(
-        dimensions=dimensions,
-        offset=offset,
-        domain_size=domain_size,
-        min_end_time=args.end_time,
-        max_end_time=0.0,
-        first_plot_time_stamp=0.0,
-        time_in_between_plots=args.plot_delta,
-        periodic_BC=periodic_boundary_conditions,
-        plotter_precision=8,
-    )
-
-    project.set_Peano4_installation(args.peanodir, build_mode)
-
-    project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-        "new toolbox::loadbalancing::DefaultConfiguration({})".format(args.trees),
-    )
-
-    ###############################################################################
-    # Initialisation snippet for the particle
-    ###############################################################################
-
-    #  Noh problem (2D) snippet  --------------------------------------------------
-    #  The particle attributes are set via an initalisation snippet that sets
-    #  the initial conditions specific for this problem, i.e. the velocity field
-    #  that converges towards the center of the domain and that generates the
-    #  collapse.
-
-    ICs = swift2.scenario.NohProblemIC(dimensions=HYDRO_DIMENSIONS)
-    initialisation_snippet = ICs.initialisation_snippet
-
-    project.algorithm_step_initial_conditions.add_action_set(
-        swift2.input.InsertParticlesAlongCartesianGrid(
-            particle_set=particle_set,
-            initialisation_call=initialisation_snippet,
-            distance_between_particles_along_one_axis=1.0 / args.particle_number,
-            additional_includes="""
-    #include "swift2/kernels/legacy/equation_of_state.h"
-    """,
-        )
-    )
-
-    ###############################################################################
-    # Set up the plotter
-    ###############################################################################
-    #
-    # A plotter has to be told explicitly which data to visualisation. We visualise
-    # the velocity here as scalar attribute. To some degree, this is redundant info
-    # as we implicitly have the position of the particle and can "see" its
-    # velocity when we play through a movie. But the explicit visualisation shows
-    # how to handle attributes per particle.
-    #
-    # When we create the plotter, we have to inform it how to enumerate the
-    # individual snapshots. Obviously, we can just count through the snapshots.
-    # In this case, you have to pass the constant peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps
-    # into the field time_stamp_evaluation. You can also define your own time
-    # stamp. For this, it is useful to know that each particle definition in the
-    # Python script will yield a particle class with the same name in the
-    # subnamespace globaldata. Every particle class in return has a class attribute
-    #
-    #            getSpecies()
-    #
-    # which returns an object that holds global information about this particle
-    # type.
-    ###############################################################################
-    particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
-        "particles",
-        particle_set,
-        "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
-    )
-    particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
-    particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
-    particle_plotter.add_attribute_to_plot(particle.mass, 1)
-    particle_plotter.add_attribute_to_plot(particle.density, 1)
-    particle_plotter.add_attribute_to_plot(particle.pressure, 1)
-    particle_plotter.add_attribute_to_plot(particle.u, 1)
-    particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-    if args.mode == "asserts" or args.mode == "debug":
-        particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
-        particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
-    project.algorithm_step_plot.add_action_set(particle_plotter)
-
-    ###############################################################################
-    # Generate plain Peano 4 project
-    ###############################################################################
-    #
-    # The value of some constants such as the adiabatic index cannot be arbitrary
-    # but rather we have a set of pre-defined options. The same happens for some
-    # functions, e.g. the SPH smoothing kernel. This allows us to define some
-    # symbols and fix the values at compile time.
-    #
-    #
-    ###############################################################################
-
-    peano4_project = project.generate_Peano4_project(verbose=args.verbose)
-
-    # Some sanity checks ----------------------------------------------------------
-    if GAMMA not in gamma_hydro_list:
-        print(f"Please check the value of GAMMA. You have chosen: {GAMMA}")
-
-    print("-----------------------------------------------------------------------")
-    print("SPH parameters summary:")
-    print(f"Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}")
-    print(f"Global time-step size: {GLOBAL_TIME_STEP_SIZE}")
-    print(f"Number of particles (1D): {HYDRO_PART_NUMBER}")
-    print(f"Adiabatic index: {GAMMA}")
-    print(f"Smoothing length free factor: {particle.eta_factor}")
-    print("-----------------------------------------------------------------------")
-
-    # Export Constants.h file ------------------------------------------------------
-    peano4_project.constants.export_const_with_type(
-        "HYDRO_DIMENSIONS", str(HYDRO_DIMENSIONS), "double"
-    )
-    peano4_project.constants.export_const_with_type(
-        "HYDRO_PART_NUMBER", str(HYDRO_PART_NUMBER), "double"
-    )
-    peano4_project.constants.export_const_with_type(
-        "GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double"
-    )
-    peano4_project.constants.export_const_with_type("GAMMA", GAMMA, "double")
-
-    # Export symbols for compilation (e.g. for SPH kernel) -----------------------
-    peano4_project.output.makefile.add_CXX_flag(
-        "-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS)
-    )
-    peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
-    peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
-
-    ###############################################################################
-    # Cleanup and compilation
-    ###############################################################################
-
-    # If we want to start a project from scratch, we may want to remove some of the generated code
-    if args.clean_temporary_files:
-        dirs = ["vertexdata/", "repositories/", "globaldata/", "observers/"]
-        for dir in dirs:
-            shutil.rmtree(dir)
-
-    # It is safe (and recommended) to overwrite any existing main file, since this
-    # is generated automatically by the Swift2 graph compiler.
-    peano4_project.generate(
-        overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True
-    )
-
-    # TODO: put this back in
-    #  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-
-    if args.clean_temporary_files:
-        # remove output files from previous runs
-        output_files = [
-            f
-            for f in os.listdir(".")
-            if f.endswith(".peano-patch-file")
-            or f.endswith(".vtu")
-            or f.endswith(".pvd")
-        ]
-        for f in output_files:
-            os.remove(f)
+    for f in output_files:
+        os.remove(f)
