@@ -7,6 +7,7 @@ import dastgen2
 
 import os
 import sys
+import copy
 
 from swift2.particle.Particle import Particle
 from swift2.actionsets.DynamicMeshRefinementAnalysis import (
@@ -16,6 +17,8 @@ from swift2.output.SWIFTMain import SWIFTMain
 from swift2.actionsets.Cleanup import Cleanup
 
 import swift2.api.graphcompiler
+
+from .ProjectRealisation import *
 
 
 from abc import abstractmethod
@@ -70,12 +73,12 @@ class Project(object):
 
         self.additional_action_sets_per_solver_step = []
 
-        self.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-        )
-        self.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
-        )
+        #  self.algorithm_steps_task_graph_compiler = (
+        #      swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+        #  )
+        #  self.initialisation_steps_task_graph_compiler = (
+        #      swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+        #  )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
         """
@@ -630,6 +633,261 @@ levels.
         self._project.output.makefile.set_mode(self._build_mode)
 
         return self._project
+
+
+    def set_realisation(
+            self,
+            parallelisation = Parallelisation_DomainDecomposition,
+            storage = Storage_Scattered,
+            sorting = Sorting_BucketSort,
+            kernel_optimisation = KernelOptimisation_NoOptimisation
+            ):
+        """!
+        Specify the realisation of the project: Select
+        - which parallelisation method to use
+            (domain-decomposition, task-graph, multisweep-task-graph)
+        - which storage strategy to use
+            (scattered, continuous-per-vertex, global-continuous)
+        - which particle sorting strategy to use
+            (multiscale-sort, bucket-sort)
+        - which kernel optimisation to use
+            (no-optimisation, vectorise-all, vectorise-distance-checks-preamble)
+
+        Available options for all these are kept in ./ProjectRealisation.py.
+
+        Only call this function after adding particle species to the project via self.add_particle_species().
+        """
+
+        # have we added particle sets already?
+        if self._particle_species is None or len(self._particle_species) == 0 or self._particle_species_set is None or len(self._particle_species_set) == 0:
+            raise ValueError("No particle species recorded. Call this function only after adding particle sets to project.")
+
+
+        # make sure selections are valid.
+        if parallelisation not in ParallelisationVariants:
+            raise ValueError(
+                    f"parallelisation variant '{parallelisation}' unknown; available options are",
+                    ParallelisationVariants
+                    )
+        if storage not in StorageVariants:
+            raise ValueError(
+                    f"storage variant '{storage}' unknown; available options are",
+                    StorageVariants
+                    )
+        if sorting not in SortingVariants:
+            raise ValueError(
+                    f"sorting variant '{sorting}' unknown; available options are",
+                    SortingVariants
+                    )
+        if kernel_optimisation not in AllKernelOptimisationVariants:
+            raise ValueError(
+                    f"sorting variant '{kernel_optimisation}' unknown; available options are",
+                    AllKernelOptimisationVariants
+                    )
+
+        # check that selection makes sense.
+        if storage == Storage_Scattered and kernel_optimisation not in BasicKernelOptimisationVariants:
+            raise ValueError("Can't use kernel optimisation '{kernel_optimisation}' with scattered storage.")
+
+
+        self.algorithm_steps_task_graph_compiler = None
+        self.initialisation_steps_task_graph_compiler = None
+
+        print(parallelisation)
+        print(sorting)
+        print(storage)
+        print(kernel_optimisation)
+
+        # pick correct task graph compiler given the selection
+        if parallelisation == Parallelisation_DomainDecomposition:
+            if storage == Storage_Scattered:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            elif storage == Storage_ContinuousPerVertex or storage == Storage_GlobalContinuous:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_coalesced_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_coalesced_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            else:
+                raise NotImplementedError()
+
+        elif parallelisation == Parallelisation_MultisweepTaskGraph:
+            if storage == Storage_Scattered:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_bucket_sort_scattered_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            elif storage == Storage_ContinuousPerVertex or storage == Storage_GlobalContinuous:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_multisweep_task_graph_multiscale_sort_coalesced_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_tree_bucket_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory
+                    )
+                else:
+                    raise NotImplementedError()
+            else:
+                raise NotImplementedError()
+
+        elif parallelisation == Parallelisation_TaskGraph:
+            if storage == Storage_Scattered:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_multiscale_sort_scattered_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_bucket_sort_scattered_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_bucket_sort_scattered_memory
+                    )
+                else:
+                    raise NotImplementedError()
+
+            elif storage == Storage_ContinuousPerVertex or storage == Storage_GlobalContinuous:
+                if sorting == Sorting_MultiscaleSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_multiscale_sort_coalesced_memory
+                    )
+                elif sorting == Sorting_BucketSort:
+                    self.algorithm_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.particle_steps_onto_task_graph_bucket_sort_coalesced_memory
+                    )
+                    self.initialisation_steps_task_graph_compiler = (
+                        swift2.api.graphcompiler.initialisation_steps_onto_task_graph_bucket_sort_coalesced_memory
+                    )
+                else:
+                    raise NotImplementedError()
+            else:
+                raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+
+        # Make sure we didn't miss anything
+        if self.algorithm_steps_task_graph_compiler is None:
+            raise ValueError("No task graph compiler selected?")
+        if self.initialisation_steps_task_graph_compiler is None:
+            raise ValueError("No initialisation stpe task graph compiler selected?")
+
+
+        # Update particle sets and particles now
+        new_particlelist = []
+
+        for p in self._particle_species:
+
+            # lists are traversed as copies, not by reference, so we need to
+            # make a new list.
+            newp = copy.deepcopy(p)
+
+            if kernel_optimisation == KernelOptimisation_NoOptimisation:
+                pass
+            elif kernel_optimisation == KernelOptimisation_VectoriseAll:
+                newp.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::")
+            elif kernel_optimisation == KernelOptimisation_VectoriseDistanceChecks:
+                newp.switch_namespace_of_all_particle_iterators( "::swift2::kernels::coalesced::prefixcheck::")
+            else:
+                raise NotImplementedError()
+
+            new_particlelist.append(newp)
+
+        self._particle_species = new_particlelist
+
+
+
+
+        new_particlesetlist = []
+
+        for p in self._particle_species_set:
+            # lists are traversed as copies, not by reference, so we need to make a new list.
+            newps = copy.deepcopy(p)
+
+            if storage == Storage_ContinuousPerVertex:
+                newps.generator = (
+                    peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
+                        newps
+                    )
+                )
+            elif storage == Storage_GlobalContinuous:
+                newps.generator = (
+                    peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(newps)
+                )
+            elif storage == Storage_Scattered:
+                newps.generator = (
+                    peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+                        newps
+                    )
+                )
+            else:
+                raise NotImplementedError()
+
+            new_particlesetlist.append(newps)
+
+        self._particle_species_set = new_particlesetlist
+
+        return
+
+
+
+
+
+
+
 
     @abstractmethod
     def main_file_template(self):
