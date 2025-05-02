@@ -336,7 +336,6 @@ project.set_realisation(
     kernel_optimisation=kernel_optimisation,
 )
 
-
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(

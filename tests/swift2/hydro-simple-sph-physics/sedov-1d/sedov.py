@@ -209,7 +209,7 @@ while cellsize > args.cell_size_min:
         raise ValueError("Suspicious depth")
 
 dx = domain_size[0] / args.particle_number
-hydro_H_max = 0.499 * cellsize
+hydro_H_max = 0.499 * args.cell_size_min
 if hydro_H_max < 5.0 * dx:
     raise ValueError("Too small hydro_H_max", 5.0 * dx, hydro_H_max)
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
