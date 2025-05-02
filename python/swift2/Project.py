@@ -706,11 +706,6 @@ levels.
         self.algorithm_steps_task_graph_compiler = None
         self.initialisation_steps_task_graph_compiler = None
 
-        print(parallelisation)
-        print(sorting)
-        print(storage)
-        print(kernel_optimisation)
-
         # pick correct task graph compiler given the selection
         if parallelisation == Parallelisation_DomainDecomposition:
             if storage == Storage_Scattered:
@@ -874,9 +869,9 @@ levels.
 
         new_particlesetlist = []
 
-        for p in self._particle_species_set:
+        for ps in self._particle_species_set:
             # lists are traversed as copies, not by reference, so we need to make a new list.
-            newps = copy.deepcopy(p)
+            newps = copy.deepcopy(ps)
 
             if storage == Storage_ContinuousPerVertex:
                 newps.generator = (
