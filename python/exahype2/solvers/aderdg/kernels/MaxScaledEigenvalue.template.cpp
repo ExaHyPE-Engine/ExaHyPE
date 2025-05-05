@@ -16,11 +16,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
   const double                                  timeStamp,
   const double                                  timeStepSize
 ) {
-  const double invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
-{% if DIMENSIONS == 3 %}
-  , 1.0 / cellSize[2]
-{% endif %}
-  };
+  //Inverse of the smallest cell size
+  const double invDx = 1. / tarch::la::min(cellSize);
 
   double maxEigenvalue = 0.0;
   for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
@@ -51,7 +48,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
                  timeStepSize,
                  d
                )
-               * invDx[d];
+               * invDx;
         }
 
         maxEigenvalue = std::max(maxEigenvalue, denominator);

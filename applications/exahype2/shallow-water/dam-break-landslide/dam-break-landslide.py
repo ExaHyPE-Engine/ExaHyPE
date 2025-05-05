@@ -73,7 +73,7 @@ auxiliary_variables={
 }
 
 riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="Godunov" + str(args.patch_size),
+    name="FVRusanovSolver",
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
@@ -139,13 +139,9 @@ if args.load_balancing_strategy != "None":
 project.set_number_of_threads(args.threads)
 project.set_timeout(3600)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
-project = project.generate_Peano4_project(verbose=True)
+project = project.generate_Peano4_project(verbose=False)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(args)
-print(project)
-print(riemann_solver)

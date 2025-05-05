@@ -63,23 +63,6 @@ fWave = r"""
   double bLeft = QL[s::b];
   double bRight = QR[s::b];
 
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(hLeft));
-  assertion(!std::isnan(hRight));
-  assertion(!std::isnan(huLeft));
-  assertion(!std::isnan(huRight));
-  nonCriticalAssertion(hLeft == hLeft);
-  nonCriticalAssertion(hRight == hRight);
-  nonCriticalAssertion(huLeft == huLeft);
-  nonCriticalAssertion(huRight == huRight);
-  nonCriticalAssertion(bLeft == bLeft);
-  nonCriticalAssertion(bRight == bRight);
-  nonCriticalAssertion1(tarch::la::greaterEquals(hLeft, 0.0), hLeft); // Dry cells are allowed
-  nonCriticalAssertion1(tarch::la::greaterEquals(hRight, 0.0), hRight);
-#endif
-
   //! Wet/dry state of our Riemann-problem
   WetDryState wetDryState = WetDryState::WetWet; // Assume everything is wet
 

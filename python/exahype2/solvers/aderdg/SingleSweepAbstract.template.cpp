@@ -87,7 +87,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return _maxTimeStepSize;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double cellSize) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize) {
   tarch::multicore::Lock lock(_semaphore);
 
   if ( tarch::la::greater(timeStepSize,0.0) ) {
@@ -107,12 +107,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
   assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, cellSize );
 
-  assertion1(cellSize<std::numeric_limits<double>::max()/10.0,cellSize);
-  assertion1(cellSize>0.0,cellSize);
-  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
-  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
+  assertion1(maxCellSize<std::numeric_limits<double>::max()/10.0,maxCellSize);
+  assertion1(minCellSize>0.0,minCellSize);
+  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,maxCellSize);
+  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,minCellSize);
 
-  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep );
+  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize << ": t(new)=" << _minTimeStampThisTimeStep );
 }
 
 

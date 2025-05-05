@@ -30,7 +30,6 @@ pCompType picardIteration(
   pCompType* NOALIAS                       lSi,
   pCompType* NOALIAS                       gradQ,
   pCompType* NOALIAS                       new_lQi_slice,
-  const pCompType* NOALIAS                 dudxT_by_dx,
   const cStoreType* const NOALIAS          luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
@@ -80,14 +79,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   pCompType* gradQ = nullptr;
   {% endif %}
 
-  // Assume dx[0] == dx[1] == dx[2]
-  assertionNumericalEquals(cellSize[0], cellSize[1]);
-  #if Dimensions == 3
-  assertionNumericalEquals(cellSize[0], cellSize[2]);
-  #endif
-
-  const double invDx = 1.0 / cellSize[0];
-
   const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
   const pCompType* Kxi_T  = DGMatrices<pCompType>::Kxi_T;
   const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
@@ -96,18 +87,13 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //****** Picard ******
   //********************
 
-  pCompType new_lQi_slice[{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
-  const pCompType dtByDx = invDx * timeStepSize;
+  const pCompType invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
+    {% if DIMENSIONS == 3 %}
+      , 1.0 / cellSize[2]
+    {% endif %}
+  };
 
-{% if USE_NCP %}
-  pCompType dudxT_by_dx[{{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
-  // 0: Precompute 1/dx * dudx_T.
-  for (int it = 0; it < {{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}; it++) {
-    dudxT_by_dx[it] = invDx * DGMatrices<pCompType>::dudx_T[it];
-  }
-{% else %}
-    pCompType* dudxT_by_dx = nullptr;
-{% endif %}
+  pCompType new_lQi_slice[{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
 
   // 1: Trivial initial guess
   for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
@@ -127,7 +113,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       lSi,
       gradQ,
       new_lQi_slice,
-      dudxT_by_dx,
       luh,
       cellCentre,
       cellSize,
@@ -326,7 +311,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for(int i=0; i<{{NUMBER_OF_DOF}}; i++) {
     for(int j=0; j<{{NUMBER_OF_DOF}}; j++) {
       coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] *
-        invDx * timeStepSize * Quadrature<pCompType>::iweights1[i];
+        timeStepSize * Quadrature<pCompType>::iweights1[i];
     }
   }
 
@@ -335,20 +320,20 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for (int j = 0; j < {{NUMBER_OF_DOF_3D}}; j++) {
     for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
       // x
-      {{ m.gemm('lduh_x', 'lFhi', 'coeffVolume', 'luh',
+      {{ m.gemm('lduh_x', 'lFhi', 'invDx[0]*coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
-        '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_DATA*NUMBER_OF_DOF) ) | indent(6) }}{##}
+        '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_DATA*NUMBER_OF_DOF)) | indent(6) }}{##}
 
       // y
-      {{ m.gemm('lduh_y', 'lFhi', 'coeffVolume', 'luh',
+      {{ m.gemm('lduh_y', 'lFhi', 'invDx[1]*coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~(NUMBER_OF_DOF*NUMBER_OF_DOF)~'+i)*'~NUMBER_OF_DATA) | indent(6) }}{##}
 
 {% if DIMENSIONS==3 %}
       // z
-      {{ m.gemm('lduh_z', 'lFhi', 'coeffVolume', 'luh',
+      {{ m.gemm('lduh_z', 'lFhi', 'invDx[2]*coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~NUMBER_OF_DOF~'+i)*'~NUMBER_OF_DATA) | indent(6) }}{##}
@@ -394,19 +379,27 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   pCompType* NOALIAS                       lSi,
   pCompType* NOALIAS                       gradQ,
   pCompType* NOALIAS                       new_lQi_slice,
-  const pCompType* NOALIAS                 dudxT_by_dx,
   const cStoreType* const NOALIAS          luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
   const double                                  timeStamp,
   const double                                  timeStepSize
 ) {
-  // Assume dx[0] == dx[1] == dx[2]
-  const double invDx = 1.0 / cellSize[0];
 
   const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
   const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
-  const pCompType dtByDx = invDx * timeStepSize;
+
+  const pCompType invDx[Dimensions] = {1. / cellSize[0], 1. / cellSize[1]
+    {% if DIMENSIONS == 3 %}
+      , 1. / cellSize[2]
+    {% endif %}
+  };
+
+  const pCompType dtByDx[Dimensions] = {timeStepSize * invDx[0], timeStepSize * invDx[1]
+    {% if DIMENSIONS == 3 %}
+      , timeStepSize * invDx[2]
+    {% endif %}
+  };
 
   for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {  // Time DOFs
 {% if USE_NCP %}
@@ -416,7 +409,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     // x-direction (independent from the y- and z-derivatives)
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-        {{ m.gemm('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ',
+        {{ m.gemm('gradQ_x', 'lQi', 'invDx[0] * DGMatrices<pCompType>::dudx_T', 'gradQ',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED,
           '0',
           '(z*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF) | indent(10) }}{##}
@@ -426,7 +419,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     // y-direction (independent from the x- and z-derivatives)
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ',
+        {{ m.gemm('gradQ_y', 'lQi', 'invDx[1] * DGMatrices<pCompType>::dudx_T', 'gradQ',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
           '0',
           '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)) | indent(10) }}{##}
@@ -437,7 +430,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     // z-direction (independent from the x- and y-derivatives)
     for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ',
+        {{ m.gemm('gradQ_z', 'lQi', 'invDx[2] * DGMatrices<pCompType>::dudx_T', 'gradQ',
           '((t*'~NUMBER_OF_DOF_3D*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
           '0',
           '(y*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)) | indent(10) }}{##}
@@ -526,7 +519,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
           '0',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF,
           true_B='Kxi',
-          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+y] * dtByDx') | indent(10) }}{##}
+          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+y] * dtByDx[0]') | indent(10) }}{##}
       }
     }
 
@@ -538,7 +531,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
           '0',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED,
           true_B='Kxi',
-          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+x] * dtByDx') | indent(10) }}{##}
+          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+x] * dtByDx[1]') | indent(10) }}{##}
       }
     }
 
@@ -551,7 +544,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
           '0',
           '((t*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED,
           true_B='Kxi',
-          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+y*'~NUMBER_OF_DOF~'+x] * dtByDx') | indent(10) }}{##}
+          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+y*'~NUMBER_OF_DOF~'+x] * dtByDx[2]') | indent(10) }}{##}
       }
     }
 {% endif %}
@@ -666,7 +659,6 @@ template {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} {{FULL_QUALIFIED_NA
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       lSi,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       gradQ,
   {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       new_lQi_slice,
-  const {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS dudxT_by_dx,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS                luh,
   const tarch::la::Vector<Dimensions, double>&                            cellCentre,
   const tarch::la::Vector<Dimensions, double>&                            cellSize,

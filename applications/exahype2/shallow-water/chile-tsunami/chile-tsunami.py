@@ -47,8 +47,8 @@ refinement_criterion = """
 
 parser = SWEArgumentParser()
 parser.set_defaults(
-    end_time=1000.0,
-    width=[4e6, 4e6],
+    end_time=5000.0,
+    width=[7e6, 4e6],
 )
 args = parser.parse_args()
 
@@ -60,7 +60,7 @@ unknowns={"h": 1, "hu": 1, "hv": 1}
 auxiliary_variables={"b": 1}
 
 riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="FWave" + str(args.patch_size),
+    name="FWaveSolver",
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
@@ -127,13 +127,9 @@ if args.load_balancing_strategy != "None":
 project.set_number_of_threads(args.threads)
 project.set_timeout(3600)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
-project = project.generate_Peano4_project(verbose=True)
+project = project.generate_Peano4_project(verbose=False)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(args)
-print(project)
-print(riemann_solver)

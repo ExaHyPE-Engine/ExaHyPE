@@ -62,25 +62,15 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType* gradQ = memory + getGradQShift();
   {% endif %}
 
-  // Assume dx[0] == dx[1] == dx[2]
-  assertionNumericalEquals(cellSize[0], cellSize[1]);
-  #if Dimensions == 3
-  assertionNumericalEquals(cellSize[0], cellSize[2]);
-  #endif
-
   const pCompType invDt = 1.0 / timeStepSize;
-  const pCompType invDx = 1.0 / cellSize[0];
+
+  const pCompType invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
+    {% if DIMENSIONS == 3 %}
+      , 1.0 / cellSize[2]
+    {% endif %}
+  };
 
   pCompType tmpArray[{{TMP_ARRAY_SIZE}}] __attribute__((aligned({{ALIGNMENT}})));
-  pCompType dudxT_by_dx[{{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
-
-  // 0: Precompute 1/dx * dudx_T.
-  #ifdef SharedOMP
-  #pragma omp simd aligned(dudxT_by_dx:{{ALIGNMENT}})
-  #endif
-  for (int it = 0; it < {{NUMBER_OF_DOF*NUMBER_OF_DOF_PADDED}}; it++) {
-    dudxT_by_dx[it] = invDx * DGMatrices<pCompType>::dudx_T[it];
-  }
 
   //***************************
   //**** Cauchy-Kovalewski ****
@@ -142,10 +132,10 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
               // Map point source location onto reference element
               const double* const pointSourceLocation = solver.pointSourceLocation[p];
 
-              const pCompType update = basisFunction[x]((pointSourceLocation[0] - cellCentre[0]) * invDx + 0.5)
-                                     * basisFunction[y]((pointSourceLocation[1] - cellCentre[1]) * invDx + 0.5)
+              const pCompType update = basisFunction[x]((pointSourceLocation[0] - cellCentre[0]) * invDx[0] + 0.5)
+                                     * basisFunction[y]((pointSourceLocation[1] - cellCentre[1]) * invDx[1] + 0.5)
 {% if DIMENSIONS==3 %}
-                                     * basisFunction[z]((pointSourceLocation[2] - cellCentre[2]) * invDx + 0.5)
+                                     * basisFunction[z]((pointSourceLocation[2] - cellCentre[2]) * invDx[2] + 0.5)
 {% endif %}
                                      * Quadrature<pCompType>::iweights3[(z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x] * ivolume; // Division by weights product and volume
               #ifdef SharedOMP
@@ -211,11 +201,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
           #ifdef SharedOMP
-          #pragma omp simd aligned(tmpArray,lFi,dudxT_by_dx:{{ALIGNMENT}})
+          #pragma omp simd aligned(tmpArray,lFi)
           #endif
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3] += lFi[yz * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
-              * dudxT_by_dx[it_1 * {{NUMBER_OF_DOF}} + it_2];
+              * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
           }
         }
       }
@@ -228,12 +218,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
           for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
             #ifdef SharedOMP
-            #pragma omp simd aligned(tmpArray,lFi,dudxT_by_dx:{{ALIGNMENT}})
+            #pragma omp simd aligned(tmpArray,lFi)
             #endif
             for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
               tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
                 += lFi[{{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + z * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + x * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
-                * dudxT_by_dx[it_1 * {{NUMBER_OF_DOF}} + it_2];
+                * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
             }
           }
         }
@@ -254,12 +244,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
         for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
           #ifdef SharedOMP
-          #pragma omp simd aligned(tmpArray,lFi,dudxT_by_dx:{{ALIGNMENT}})
+          #pragma omp simd aligned(tmpArray,lFi)
           #endif
           for (int it_3 = 0; it_3 < {{NUMBER_OF_UNKNOWNS_PADDED}}; it_3++) {
             tmpArray[it_1 * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
               += lFi[{{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} + xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + it_2 * {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + it_3]
-              * dudxT_by_dx[it_1 * {{NUMBER_OF_DOF}} + it_2];
+              * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF}} + it_2];
           }
         }
       }
@@ -280,7 +270,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     std::memset(gradQ, 0, {{DIMENSIONS*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
     // Compute the derivatives in x-direction (independent from the y- and z-derivatives)
     for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
-      {{ m.gemm('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ',
+      {{ m.gemm('gradQ_x', 'lQi', 'invDx[0] * DGMatrices<pCompType>::dudx_T', 'gradQ',
         'yz*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED,
         '0',
         'yz*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
@@ -289,7 +279,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     // y-direction (independent from the x- and z-derivatives)
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ',
+        {{ m.gemm('gradQ_y', 'lQi', 'invDx[1] * DGMatrices<pCompType>::dudx_T', 'gradQ',
         '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
         '0',
         '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED) | indent(8) }}{##}
@@ -299,7 +289,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     // z-direction (independent from the x- and y-derivatives)
     for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
       {{ m.gemm('gradQ_z',
-        'lQi', 'dudxT_by_dx', 'gradQ', 'xy*'~NUMBER_OF_DATA_PADDED,
+        'lQi', 'invDx[2] * DGMatrices<pCompType>::dudx_T', 'gradQ', 'xy*'~NUMBER_OF_DATA_PADDED,
         '0',
         'xy*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED) | indent(6) }}{##}
     }

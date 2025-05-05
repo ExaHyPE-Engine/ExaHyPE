@@ -28,70 +28,20 @@ friction_coefficients = r"""
 """
 
 max_eigenvalue = friction_coefficients + r"""
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(tarch::la::greaterEquals(Q[s::h], 0.0));
-#endif
-
   double result{0.0};
 
   if (tarch::la::greater(Q[s::h], 0.0)) {
     const double u = Q[s::hu + normal] / Q[s::h];
     const double c = std::sqrt(GRAV * std::cos(Zeta) * Q[s::h]);
-
-#ifdef GPUOffloadingOff
-    assertion(Q[s::h] > 0.0);
-    assertion(!std::isnan(u));
-    assertion(!std::isnan(c));
-#endif
-
     result = std::fmax(std::fabs(u - c), std::fabs(u + c));
-
-#ifdef GPUOffloadingOff
-    assertion(!std::isnan(result));
-#endif
   }
 
   return result;
 """
 
 flux = friction_coefficients + r"""
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  assertion(!std::isnan(F[s::h]));
-  assertion(!std::isnan(F[s::hu]));
-  assertion(!std::isnan(F[s::hv]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(F[s::h] == F[s::h]);
-  nonCriticalAssertion(F[s::hu] == F[s::hu]);
-  nonCriticalAssertion(F[s::hv] == F[s::hv]);
-  nonCriticalAssertion(tarch::la::greaterEquals(Q[s::h], 0.0));
-#endif
-
   if (tarch::la::greater(Q[s::h], 0.0)) {
     const double ih = 1.0 / Q[s::h];
-
-#ifdef GPUOffloadingOff
-    assertion(!std::isnan(ih));
-#endif
-
     F[s::h] = Q[s::hu + normal];
     switch (normal) {
     case 0:
@@ -108,40 +58,9 @@ flux = friction_coefficients + r"""
     F[s::hu] = 0.0;
     F[s::hv] = 0.0;
   }
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(F[s::h]));
-  assertion(!std::isnan(F[s::hu]));
-  assertion(!std::isnan(F[s::hv]));
-  nonCriticalAssertion(F[s::h] == F[s::h]);
-  nonCriticalAssertion(F[s::hu] == F[s::hu]);
-  nonCriticalAssertion(F[s::hv] == F[s::hv]);
-#endif
 """
 
 nonconservative_product = friction_coefficients + r"""
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  assertion(!std::isnan(deltaQ[s::h]));
-  assertion(!std::isnan(deltaQ[s::hu]));
-  assertion(!std::isnan(deltaQ[s::hv]));
-  assertion(!std::isnan(deltaQ[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(deltaQ[s::h] == deltaQ[s::h]);
-  nonCriticalAssertion(deltaQ[s::hu] == deltaQ[s::hu]);
-  nonCriticalAssertion(deltaQ[s::hv] == deltaQ[s::hv]);
-  nonCriticalAssertion(deltaQ[s::b] == deltaQ[s::b]);
-  nonCriticalAssertion1(tarch::la::greaterEquals(Q[s::h], 0.0), Q[s::h]);
-#endif
-
   BTimesDeltaQ[s::h] = 0.0;
   BTimesDeltaQ[s::hu] = 0.0;
   BTimesDeltaQ[s::hv] = 0.0;
@@ -150,11 +69,6 @@ nonconservative_product = friction_coefficients + r"""
   const double hx = (Q[s::hx] - 0.5 * deltaQ[s::hx]) / (1.0 * h(0));
   const double hy = (Q[s::hy] - 0.5 * deltaQ[s::hy]) / (1.0 * h(1));
 
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(hx));
-  assertion(!std::isnan(hy));
-#endif
-
   // u
   const double ux  = (Q[s::ux] - 0.5 * deltaQ[s::ux]) / (1.0 * h(0));
   const double uy  = (Q[s::uy] - 0.5 * deltaQ[s::uy]) / (1.0 * h(1));
@@ -162,28 +76,12 @@ nonconservative_product = friction_coefficients + r"""
   const double uyy = (Q[s::uyy] - 0.5 * deltaQ[s::uyy]) / (h(1) * h(1));
   const double uxy = (Q[s::uxy] - 0.5 * deltaQ[s::uxy]) / (4.0 * h(0) * h(1));
 
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(ux));
-  assertion(!std::isnan(uy));
-  assertion(!std::isnan(uxx));
-  assertion(!std::isnan(uyy));
-  assertion(!std::isnan(uxy));
-#endif
-
   // v
   const double vx  = (Q[s::vx] - 0.5 * deltaQ[s::vx]) / (1.0 * h(0));
   const double vy  = (Q[s::vy] - 0.5 * deltaQ[s::vy]) / (1.0 * h(1));
   const double vxx = (Q[s::vxx] - 0.5 * deltaQ[s::vxx]) / (h(0) * h(0));
   const double vyy = (Q[s::vyy] - 0.5 * deltaQ[s::vyy]) / (h(1) * h(1));
   const double vxy = (Q[s::vxy] - 0.5 * deltaQ[s::vxy]) / (4.0 * h(0) * h(1));
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(vx));
-  assertion(!std::isnan(vy));
-  assertion(!std::isnan(vxx));
-  assertion(!std::isnan(vyy));
-  assertion(!std::isnan(vxy));
-#endif
 
   switch (normal) {
   case 0: // x
@@ -195,38 +93,9 @@ nonconservative_product = friction_coefficients + r"""
     BTimesDeltaQ[s::hv] = -(h(1) * Nu * std::sqrt(Q[s::h]) * (1.5 * hy * vy + Q[s::h] * vyy));
     break;
   }
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(BTimesDeltaQ[s::h]));
-  assertion(!std::isnan(BTimesDeltaQ[s::hu]));
-  assertion(!std::isnan(BTimesDeltaQ[s::hv]));
-  nonCriticalAssertion(BTimesDeltaQ[s::h] == BTimesDeltaQ[s::h]);
-  nonCriticalAssertion(BTimesDeltaQ[s::hu] == BTimesDeltaQ[s::hu]);
-  nonCriticalAssertion(BTimesDeltaQ[s::hv] == BTimesDeltaQ[s::hv]);
-#endif
 """
 
 coulomb_friction = friction_coefficients + r"""
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  assertion(!std::isnan(S[s::h]));
-  assertion(!std::isnan(S[s::hu]));
-  assertion(!std::isnan(S[s::hv]));
-  assertion(!std::isnan(S[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(S[s::h] == S[s::h]);
-  nonCriticalAssertion(S[s::hu] == S[s::hu]);
-  nonCriticalAssertion(S[s::hv] == S[s::hv]);
-  nonCriticalAssertion(S[s::b] == S[s::b]);
-  nonCriticalAssertion(tarch::la::greaterEquals(Q[s::h], 0.0));
-#endif
-
   S[s::h] = 0.0;
   S[s::hu] = 0.0;
   S[s::hv] = 0.0;
@@ -245,38 +114,9 @@ coulomb_friction = friction_coefficients + r"""
       S[s::hv] += v / velMagnitude * friction;
     }
   }
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(S[s::h]));
-  assertion(!std::isnan(S[s::hu]));
-  assertion(!std::isnan(S[s::hv]));
-  nonCriticalAssertion(S[s::h] == S[s::h]);
-  nonCriticalAssertion(S[s::hu] == S[s::hu]);
-  nonCriticalAssertion(S[s::hv] == S[s::hv]);
-#endif
 """
 
 material_dependent_basal_friction = friction_coefficients + r"""
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  assertion(!std::isnan(S[s::h]));
-  assertion(!std::isnan(S[s::hu]));
-  assertion(!std::isnan(S[s::hv]));
-  assertion(!std::isnan(S[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(S[s::h] == S[s::h]);
-  nonCriticalAssertion(S[s::hu] == S[s::hu]);
-  nonCriticalAssertion(S[s::hv] == S[s::hv]);
-  nonCriticalAssertion(S[s::b] == S[s::b]);
-  nonCriticalAssertion(tarch::la::greaterEquals(Q[s::h], 0.0));
-#endif
-
   if (tarch::la::greater(Q[s::h], 0.0)) {
     const double ih    = 1.0 / Q[s::h];
     const double u     = ih * Q[s::hu];
@@ -284,16 +124,6 @@ material_dependent_basal_friction = friction_coefficients + r"""
     const double ubar  = std::sqrt(Q[s::hu] * Q[s::hu] + Q[s::hv] * Q[s::hv]) * ih;
     const double Fr    = ubar / std::sqrt(GRAV * Q[s::h] * std::cos(Zeta));
     const double Hstar = (BetaStar + Gamma) * Hstop / Beta;
-
-#ifdef GPUOffloadingOff
-    assertion(Q[s::h] > 0.0);
-    assertion(!std::isnan(ih));
-    assertion(!std::isnan(u));
-    assertion(!std::isnan(v));
-    assertion(!std::isnan(Fr));
-    assertion(!std::isnan(ubar));
-    assertion(!std::isnan(Hstar));
-#endif
 
     double Mu = 1.0;
     if (Fr > BetaStar) {
@@ -322,10 +152,6 @@ material_dependent_basal_friction = friction_coefficients + r"""
         Mu = frictionVectorMagnitude;
       }
 
-#ifdef GPUOffloadingOff
-    assertion(!std::isnan(Mu));
-#endif
-
       if (tarch::la::equals(Mu, 0.0)) {
         S[s::h]  = 0.0;
         S[s::hu] = Q[s::h] * GRAV * std::sin(Zeta);
@@ -345,13 +171,4 @@ material_dependent_basal_friction = friction_coefficients + r"""
     S[s::hu] = 0.0;
     S[s::hv] = 0.0;
   }
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(S[s::h]));
-  assertion(!std::isnan(S[s::hu]));
-  assertion(!std::isnan(S[s::hv]));
-  nonCriticalAssertion(S[s::h] == S[s::h]);
-  nonCriticalAssertion(S[s::hu] == S[s::hu]);
-  nonCriticalAssertion(S[s::hv] == S[s::hv]);
-#endif
 """

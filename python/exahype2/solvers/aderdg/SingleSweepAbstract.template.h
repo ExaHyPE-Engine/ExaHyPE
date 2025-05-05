@@ -297,7 +297,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @see setTimeStepSize(double)
      */
-    void update(double timeStepSize, double timeStamp, double cellSize);
+    void update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize);
 
     SolverState  getSolverState() const;
 

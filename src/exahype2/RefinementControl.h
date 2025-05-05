@@ -2,17 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-#include <list>
-
-#include "tarch/multicore/BooleanSemaphore.h"
 #include "peano4/grid/GridControlEvent.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+
+#include <list>
+#include <vector>
 
 namespace exahype2 {
-  enum class RefinementCommand {
-    Keep, Refine, Erase
-  };
+  enum class RefinementCommand { Keep, Refine, Erase };
 
   /**
    * The default is coarsen as this is the lowest priority command.
@@ -21,16 +18,15 @@ namespace exahype2 {
 
   class RefinementControl;
   class RefinementControlService;
-}
-
+} // namespace exahype2
 
 /**
  * If one of the flags says refine, then refine. If one of the two flags says keep and
  * noone says refine, return keep. Coarsen if and only if both say coarsen.
  */
-exahype2::RefinementCommand operator&&( exahype2::RefinementCommand lhs, exahype2::RefinementCommand rhs);
+exahype2::RefinementCommand operator&&(exahype2::RefinementCommand lhs, exahype2::RefinementCommand rhs);
 
-std::string toString( exahype2::RefinementCommand value );
+std::string toString(exahype2::RefinementCommand value);
 
 /**
  * Manage refine/erase requests within ExaHyPE 2
@@ -76,7 +72,6 @@ std::string toString( exahype2::RefinementCommand value );
  * @see _committedEvents
  *
  *
- *
  * ## Multithreading
  *
  * As we use the class within a multithreaded environment, Peano 4 creates an observer object per
@@ -92,78 +87,74 @@ std::string toString( exahype2::RefinementCommand value );
  *   commands into this local object.
  * - When we are done, we merge the local copy back.
  *
- *
  */
 class exahype2::RefinementControl {
-  public:
-    typedef std::list< std::pair<peano4::grid::GridControlEvent,int> >  NewEvents;
+public:
+  typedef std::list<std::pair<peano4::grid::GridControlEvent, int>> NewEvents;
 
-    friend class RefinementControlService;
+  friend class RefinementControlService;
 
-    /**
-     * @param tolerance How much should the code add around each
-     *   grid control. By default we use one percent additional
-     *   tolerance.
-     */
-    RefinementControl(double tolerance = 0.01);
-    virtual ~RefinementControl();
+  /**
+   * @param tolerance How much should the code add around each
+   *   grid control. By default we use one percent additional
+   *   tolerance.
+   */
+  RefinementControl(double tolerance = 0.01);
+  virtual ~RefinementControl() = default;
 
-    /**
-     * Clears the new events
-     *
-     * Has no affect for the committed events. This routine should only ever be
-     * called by the action sets on their local refinement control assembly.
-     * The global one is persistent and should not be cleared by the user, as
-     * you would loose all those events that should remain alive. Thererfore,
-     * there's no clear for the service.
-     */
-    void clear();
+  /**
+   * Clears the new events
+   *
+   * Has no affect for the committed events. This routine should only ever be
+   * called by the action sets on their local refinement control assembly.
+   * The global one is persistent and should not be cleared by the user, as
+   * you would loose all those events that should remain alive. Thererfore,
+   * there's no clear for the service.
+   */
+  void clear();
 
+  /**
+   * Add a new command.
+   *
+   * Depending on the context, we add a new refinement instruction
+   * interpreting x and h. If you refine, I divide h by three.
+   *
+   * ## Lifetime of a refinement event
+   *
+   * If a refinement event is triggered, we keep it alive for a while. This
+   * avoids oscillations (refinement events always overwrite coarsening) and
+   * it helps ranks to catch up - a code might not be able to refine
+   * immediately as it implements a Runge-Kutta scheme, e.g. In this case, we
+   * keep the event alive and then realise it once the code is ready to do
+   * so.
+   *
+   * @param x Centre of the cell for which this command is triggered. This is
+   *   typically marker.x().
+   * @param h Size of this cell. Typically marker.h().
+   * @param lifetime Has to be greater equal 1.
+   */
+  void addCommand(
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    exahype2::RefinementCommand                  command,
+    int                                          lifetime
+  );
 
-    /**
-     * Add a new command.
-     *
-     * Depending on the context, we add a new refinement instruction
-     * interpreting x and h. If you refine, I divide h by three.
-     * 
-     * ## Lifetime of a refinement event
-     *
-     * If a refinement event is triggered, we keep it alive for a while. This
-     * avoids oscillations (refinement events always overwrite coarsening) and
-     * it helps ranks to catch up - a code might not be able to refine
-     * immediately as it implements a Runge-Kutta scheme, e.g. In this case, we
-     * keep the event alive and then realise it once the code is ready to do
-     * so.
-     *
-     * @param x Centre of the cell for which this command is triggered. This is
-     *   typically marker.x().
-     * @param h Size of this cell. Typically marker.h().
-     * @param lifetime Has to be greater equal 1.
-     */
-    void addCommand(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      exahype2::RefinementCommand                  command,
-      int                                          lifetime
-    );
+  std::string toString() const;
 
-    std::string toString() const;
+private:
+  static tarch::logging::Log _log;
 
-  private:
-    static tarch::logging::Log  _log;
+  static tarch::multicore::BooleanSemaphore _semaphore;
 
-    static tarch::multicore::BooleanSemaphore  _semaphore;
+  /**
+   * We blow up the region around refinement criterion slightly.
+   */
+  const double _tolerance;
 
-    /**
-     * We blow up the region around refinement criterion slightly.
-     */
-    const double _Tolerance;
-    
-    /**
-     * Container to accumulate new events. This is a list as we may assume
-     * that a lot of inserts are done per iteration.
-     */
-    NewEvents    _newEvents;
-
+  /**
+   * Container to accumulate new events. This is a list as we may assume
+   * that a lot of inserts are done per iteration.
+   */
+  NewEvents _newEvents;
 };
-

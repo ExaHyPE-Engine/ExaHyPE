@@ -104,7 +104,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "-md",
             "--min-depth",
             type=float,
-            default=4,
+            default=5,
             help="Determines maximum size of a single cell on each axis.",
         )
         self.add_argument(

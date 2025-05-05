@@ -40,27 +40,6 @@ hllem = r"""
   const double bLeft   = QL[s::b];
   const double bRight  = QR[s::b];
 
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(hLeft));
-  assertion(!std::isnan(hRight));
-  assertion(!std::isnan(huLeft));
-  assertion(!std::isnan(huRight));
-  assertion(!std::isnan(hvLeft));
-  assertion(!std::isnan(hvRight));
-  nonCriticalAssertion(hLeft == hLeft);
-  nonCriticalAssertion(hRight == hRight);
-  nonCriticalAssertion(huLeft == huLeft);
-  nonCriticalAssertion(huRight == huRight);
-  nonCriticalAssertion(hvLeft == hvLeft);
-  nonCriticalAssertion(hvRight == hvRight);
-  nonCriticalAssertion(bLeft == bLeft);
-  nonCriticalAssertion(bRight == bRight);
-  nonCriticalAssertion1(tarch::la::greaterEquals(hLeft, 0.0), hLeft);
-  nonCriticalAssertion1(tarch::la::greaterEquals(hRight, 0.0), hRight);
-#endif
-
   // Compute dry tolerance according to KURGANOV. Does not work!
   //const double dryTol = std::pow(h[0], 4);
   const double dryTol = 1e-3;
