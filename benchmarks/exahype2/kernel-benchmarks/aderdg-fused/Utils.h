@@ -5,6 +5,8 @@
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 
+#include <fstream>
+
 namespace benchmarks {
   namespace exahype2 {
     namespace kernelbenchmarks {
@@ -26,7 +28,7 @@ namespace benchmarks {
        * TODO: should we update this to actual initial conditions?
        */
       inline void initInputData(
-        double*                                     Q,
+        SolverPrecision*                            Q,
         const tarch::la::Vector<Dimensions, double> CellCenter,
         const tarch::la::Vector<Dimensions, double> CellSize
       ) {
@@ -43,7 +45,7 @@ namespace benchmarks {
               CellSize,
               index,
               repositories::instanceOfAderSolver.Order + 1,
-              kernels::AderSolver::Quadrature<double>::nodes
+              kernels::AderSolver::Quadrature<SolverPrecision>::nodes
             ),
             CellSize,
             // index,
@@ -61,12 +63,14 @@ namespace benchmarks {
        * Second set of outputs refers to the time including the kernel launch overhead.
        * The throughput is measured in the updates of volumes per second (dof/s).
        *
+       * In the second part, this also writes the information about the runtime to a csv file
        */
       inline void reportRuntime(
         const std::string&                kernelIdentificator,
         const tarch::timing::Measurement& timingComputeKernel,
         const tarch::timing::Measurement& timingKernelLaunch,
         int                               numberOfCells,
+        int                               numberOfThreads,
         tarch::logging::Log               _log
       ) {
         std::stringstream ss;
@@ -79,6 +83,24 @@ namespace benchmarks {
         ss << "average total time per cell: " << (timingKernelLaunch.getValue() / numberOfCells);
         ss << " |\n\t" << timingKernelLaunch.toString();
         logInfo("reportRuntime()", ss.str());
+
+
+        std::ostringstream snapshotFileName;
+        snapshotFileName << "ader-benchmarks-prec-" 
+                         << typeid(SolverPrecision).name()
+                         << ".csv";
+        std::ofstream file( snapshotFileName.str(), std::ios_base::app );
+        file  << kernelIdentificator << ","
+              << numberOfThreads << ","
+              << numberOfCells << ","
+              << timingComputeKernel.getValue() << ","
+              << timingKernelLaunch.getValue() << ","
+              << (timingComputeKernel.getValue() / numberOfCells) << ","
+              << (timingKernelLaunch.getValue() / numberOfCells) << ","
+              << timingKernelLaunch.max() << ","
+              << timingKernelLaunch.min() << ","
+              << timingKernelLaunch.getStandardDeviation()
+              << std::endl;
       }
     } // namespace kernelbenchmarks
   }   // namespace exahype2

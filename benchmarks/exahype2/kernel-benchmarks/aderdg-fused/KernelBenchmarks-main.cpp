@@ -39,6 +39,8 @@
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
 
+#include <fstream>
+
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 tarch::logging::Log _log("::");
@@ -77,6 +79,13 @@ int main(int argc, char** argv) {
   logInfo("main()", "set SYCL_DEVICE_FILTER=gpu or ONEAPI_DEVICE_SELECTOR=cuda:0 when using SYCL on the device");
   logInfo("main()", "set SYCL_PI_TRACE=2 in case of runtime errors");
 #endif
+
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "ader-benchmarks-prec-" 
+                   << typeid(SolverPrecision).name()
+                   << ".csv";
+  std::ofstream file( snapshotFileName.str() );
+  file << "Variant,omp threads,cells,total compute time,total time (including launch),avg compute time,avg time,max,min,std deviation" << std::endl;
 
   for (int i = 0; i < NumberOfCellsToStudy.size(); i++) {
     logInfo("main()", "number of cells: " << NumberOfCellsToStudy[i]);

@@ -43,8 +43,8 @@ tarch::logging::Log variant1::_log("variants1::");
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 inline void initialTask(
-  exahype2::CellData<double, double>*     myCellData,
-  exahype2::CellFaceData<double, double>* myFaceData,
+  exahype2::CellData<SolverPrecision, SolverPrecision>*     myCellData,
+  exahype2::CellFaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                               cellId,
   const int                               faceId,
   tarch::timing::Measurement&             measurement
@@ -52,7 +52,7 @@ inline void initialTask(
 
   // Assume that the faces for a given cell are one after another
   // in typical Peano order, e.g. left, lower, right, upper
-  double* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * Dimensions] = {
     myFaceData->QIn[faceId][0],
     myFaceData->QIn[faceId][1],
 #if Dimensions == 3
@@ -66,7 +66,7 @@ inline void initialTask(
 #endif
   };
 
-  double* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * Dimensions] = {
     myFaceData->QOut[faceId][0],
     myFaceData->QOut[faceId][1],
 #if Dimensions == 3
@@ -82,7 +82,7 @@ inline void initialTask(
 
   tarch::timing::Watch watchKernelCompute("::runBenchmarks", "assessKernel(...)", false);
 
-  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
+  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<SolverPrecision, SolverPrecision, SolverPrecision>(
     repositories::instanceOfAderSolver,
     lQhbnd,
     lFhbnd,
@@ -98,7 +98,7 @@ inline void initialTask(
 }
 
 inline void firstTask(
-  exahype2::CellFaceData<double, double>* myFaceData,
+  exahype2::CellFaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                               leftFaceId,
   const int                               rightFaceId,
   const int                               faceDirection,
@@ -111,7 +111,7 @@ inline void firstTask(
   // In a real ExaHyPE application boundaries will exist
   // but we can still assume that the corresponding faces
   // will have received data
-  kernels::AderSolver::riemannSolver<double>(
+  kernels::AderSolver::riemannSolver<SolverPrecision>(
     repositories::instanceOfAderSolver,
     myFaceData->QOut[leftFaceId][faceDirection + Dimensions], // lFhbnd[d+Dimensions],
     myFaceData->QOut[rightFaceId][faceDirection],
@@ -129,8 +129,8 @@ inline void firstTask(
 }
 
 inline void secondTask(
-  exahype2::CellData<double, double>*     myCellData,
-  exahype2::CellFaceData<double, double>* myFaceData,
+  exahype2::CellData<SolverPrecision, SolverPrecision>*     myCellData,
+  exahype2::CellFaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                               cellId,
   const int                               faceId,
   tarch::timing::Measurement&             measurement
@@ -138,7 +138,7 @@ inline void secondTask(
 
   // Assume that the faces for a given cell are one after another
   // in typical Peano order, e.g. left, lower, right, upper
-  double* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * Dimensions] = {
     myFaceData->QIn[faceId][0],
     myFaceData->QIn[faceId][1],
 #if Dimensions == 3
@@ -152,7 +152,7 @@ inline void secondTask(
 #endif
   };
 
-  double* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * Dimensions] = {
     myFaceData->QOut[faceId][0],
     myFaceData->QOut[faceId][1],
 #if Dimensions == 3
@@ -203,7 +203,7 @@ inline void secondTask(
     myCellData->dt
   );
 
-  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
+  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<SolverPrecision, SolverPrecision, SolverPrecision>(
     repositories::instanceOfAderSolver,
     lQhbnd,
     lFhbnd,
@@ -229,31 +229,31 @@ void variant1::runBenchmarks(
 
   tarch::timing::Measurement timingComputeKernel;
 
-  exahype2::CellData<double, double>     cellData(numberOfCells);
-  exahype2::CellFaceData<double, double> cellFaceData(numberOfCells);
+  exahype2::CellData<SolverPrecision, SolverPrecision>     cellData(numberOfCells);
+  exahype2::CellFaceData<SolverPrecision, SolverPrecision> cellFaceData(numberOfCells);
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    cellData.QIn[cellIndex] = tarch::allocateMemory<double>(
+    cellData.QIn[cellIndex] = tarch::allocateMemory<SolverPrecision>(
       NumberOfInputEntriesPerCell,
       tarch::MemoryLocation::Heap
     );
     cellData.t               = timeStamp;
     cellData.dt              = timeStepSize;
-    cellData.QOut[cellIndex] = nullptr; // tarch::allocateMemory<double>(NumberOfOutputEntriesPerCell,
+    cellData.QOut[cellIndex] = nullptr; // tarch::allocateMemory<SolverPrecision>(NumberOfOutputEntriesPerCell,
                                         // tarch::MemoryLocation::Heap);
     cellData.cellCentre[cellIndex]    = cellCenter;
     cellData.cellSize[cellIndex]      = cellSize;
     cellData.maxEigenvalue[cellIndex] = 0.0;
 
     initInputData(cellData.QIn[cellIndex], cellCenter, cellSize);
-    std::memset(cellData.QOut[cellIndex], 0.0, NumberOfOutputEntriesPerCell * sizeof(double));
+    std::memset(cellData.QOut[cellIndex], 0.0, NumberOfOutputEntriesPerCell * sizeof(SolverPrecision));
 
     for (int i = 0; i < 2 * Dimensions; i++) {
-      cellFaceData.QIn[cellIndex][i] = tarch::allocateMemory<double>(
+      cellFaceData.QIn[cellIndex][i] = tarch::allocateMemory<SolverPrecision>(
         kernels::AderSolver::getBndFaceSize(),
         tarch::MemoryLocation::Heap
       );
-      cellFaceData.QOut[cellIndex][i] = tarch::allocateMemory<double>(
+      cellFaceData.QOut[cellIndex][i] = tarch::allocateMemory<SolverPrecision>(
         kernels::AderSolver::getBndFluxSize(),
         tarch::MemoryLocation::Heap
       );
@@ -264,48 +264,57 @@ void variant1::runBenchmarks(
     cellFaceData.cellCentre[cellIndex] = cellCenter;
     cellFaceData.cellSize[cellIndex]   = cellSize;
 
-    std::memset(cellData.QOut[cellIndex], 0.0, NumberOfOutputEntriesPerCell * sizeof(double));
+    std::memset(cellData.QOut[cellIndex], 0.0, NumberOfOutputEntriesPerCell * sizeof(SolverPrecision));
   }
 
+  int numberOfThreads = 1;
 
-  timingComputeKernel.erase();
-  tarch::timing::Measurement timingKernelLaunch;
+  #if defined(SharedOMP)
+  for (int threadIndex = 0; threadIndex < NumberOfLaunchingThreads.size(); threadIndex++) {
+    numberOfThreads = NumberOfLaunchingThreads[threadIndex];
+  #endif
 
-  // Initial task
-  for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    initialTask(&cellData, &cellFaceData, cellIndex, cellIndex, timingComputeKernel);
-  }
-
-  for (int sample = 0; sample <= NumberOfSamples; sample++) {
-#if defined(SharedOMP)
-#pragma omp parallel num_threads(NumberOfLaunchingThreads)
-#endif
+    // Initial task
     for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-      // We're not actually simulating a real grid, instead
-      // we are making each cell it's own neighbour, as though
-      // it were a whole periodic domain
+      initialTask(&cellData, &cellFaceData, cellIndex, cellIndex, timingComputeKernel);
+    }
+
+    timingComputeKernel.erase();
+    tarch::timing::Measurement timingKernelLaunch;
+
+    for (int sample = 0; sample <= NumberOfSamples; sample++) {
+
       tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
-      firstTask(&cellFaceData, cellIndex, cellIndex, 0, timingComputeKernel);
-      firstTask(&cellFaceData, cellIndex, cellIndex, 1, timingComputeKernel);
+
+      #if defined(SharedOMP)
+      #pragma omp parallel for num_threads(NumberOfLaunchingThreads[threadIndex])
+      #endif
+      for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
+        // We're not actually simulating a real grid, instead
+        // we are making each cell it's own neighbour, as though
+        // it were a whole periodic domain
+        firstTask(&cellFaceData, cellIndex, cellIndex, 0, timingComputeKernel);
+        firstTask(&cellFaceData, cellIndex, cellIndex, 1, timingComputeKernel);
+      }
+      #if defined(SharedOMP)
+      #pragma omp parallel for num_threads(NumberOfLaunchingThreads[threadIndex])
+      #endif
+      for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
+        cellData.maxEigenvalue[cellIndex] = 0.0;
+        secondTask(&cellData, &cellFaceData, cellIndex, cellIndex, timingComputeKernel);
+      }
+
       watchKernelLaunch.stop();
       timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-    }
-#if defined(SharedOMP)
-#pragma omp parallel num_threads(NumberOfLaunchingThreads)
-#endif
-    for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-      cellData.maxEigenvalue[cellIndex] = 0.0;
-      tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
-      secondTask(&cellData, &cellFaceData, cellIndex, cellIndex, timingComputeKernel);
-      watchKernelLaunch.stop();
-      timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-    }
-  }
+    }    
 
+    reportRuntime("variant 1", timingComputeKernel, timingKernelLaunch, numberOfCells, numberOfThreads, _log);
+    // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+    // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
 
-  reportRuntime("variant 1", timingComputeKernel, timingKernelLaunch, numberOfCells, _log);
-  // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
-  // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+  #if defined(SharedOMP)
+  }//threadIndex
+  #endif
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     tarch::freeMemory(cellData.QIn[cellIndex], tarch::MemoryLocation::Heap);
