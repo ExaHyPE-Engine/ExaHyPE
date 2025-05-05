@@ -31,7 +31,8 @@ parser.add_argument(
     "-t",
     "--num-threads",
     type=int,
-    default=1,
+    nargs="+",
+    default=[1, 2, 4, 8, 16],
     help="Number of launching threads",
 )
 parser.add_argument(
@@ -46,7 +47,7 @@ parser.add_argument(
     "--num-cells",
     type=int,
     nargs="+",
-    default=[32, 64, 128, 256, 512, 1024, 2048],
+    default=[64, 81, 128, 256, 512, 729, 1024, 2048],#, 4096, 6561, 16384, 32768, 59049, 65536],
     help="Number of patches to study",
 )
 parser.add_argument(
@@ -171,8 +172,10 @@ project.constants.export_const_with_type(
     "tarch::la::Vector<%s, int>" % len(args.num_cells),
 )
 
-project.constants.export_constexpr_with_type(
-    "NumberOfLaunchingThreads", str(args.num_threads), "int"
+formatted_num_threads = "{{{}}}".format(", ".join(str(val) for val in args.num_threads))
+project.constants.export_const_with_type(
+    "NumberOfLaunchingThreads", str(formatted_num_threads),     
+    "tarch::la::Vector<%s, int>" % len(args.num_threads),
 )
 
 if args.fpe:
@@ -188,6 +191,8 @@ else:
     project.constants.export_boolean("AssessDeviceKernels", True if args.gpu else False)
 
 makefile = project.output.makefile
+
+makefile.add_CXX_flag("-DSolverPrecision="+args.precision)
 
 for i in range(1, 7):
     makefile.add_cpp_file("Variant" + str(i) + ".cpp")

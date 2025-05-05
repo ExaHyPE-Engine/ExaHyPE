@@ -39,8 +39,8 @@ tarch::logging::Log variant5::_log("variants5::");
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 inline void initialTask(
-  exahype2::CellData<double, double>* myCellData,
-  exahype2::FaceData<double, double>* myFaceData,
+  exahype2::CellData<SolverPrecision, SolverPrecision>* myCellData,
+  exahype2::FaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                           cellId,
   const int                           faceId,
   tarch::timing::Measurement&         measurement
@@ -50,7 +50,7 @@ inline void initialTask(
   // in typical Peano order, e.g. left, lower, right, upper
   //  so faceId is the left, lower (front) face,
   //  faceId+1 is the one after this, and so on.
-  double* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * Dimensions] = {
     myFaceData->QIn[faceId + 0][1],
     myFaceData->QIn[faceId + 1][1],
 #if Dimensions == 3
@@ -64,7 +64,7 @@ inline void initialTask(
 #endif
   };
 
-  double* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * Dimensions] = {
     myFaceData->QOut[faceId + 0][1],
     myFaceData->QOut[faceId + 1][1],
 #if Dimensions == 3
@@ -80,7 +80,7 @@ inline void initialTask(
 
   tarch::timing::Watch watchKernelCompute("::runBenchmarks", "assessKernel(...)", false);
 
-  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
+  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<SolverPrecision, SolverPrecision, SolverPrecision>(
     repositories::instanceOfAderSolver,
     lQhbnd,
     lFhbnd,
@@ -96,7 +96,7 @@ inline void initialTask(
 }
 
 inline void firstTask(
-  exahype2::FaceData<double, double>* myFaceData,
+  exahype2::FaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                           leftFaceId,
   const int                           rightFaceId,
   const int                           faceDirection,
@@ -109,7 +109,7 @@ inline void firstTask(
   // In a real ExaHyPE application boundaries will exist
   // but we can still assume that the corresponding faces
   // will have received data
-  kernels::AderSolver::riemannSolver<double>(
+  kernels::AderSolver::riemannSolver<SolverPrecision>(
     repositories::instanceOfAderSolver,
     myFaceData->QOut[leftFaceId][1], // lFhbnd[d+Dimensions],
     myFaceData->QOut[rightFaceId][0],
@@ -128,8 +128,8 @@ inline void firstTask(
 
 
 inline void secondTask(
-  exahype2::CellData<double, double>* myCellData,
-  exahype2::FaceData<double, double>* myFaceData,
+  exahype2::CellData<SolverPrecision, SolverPrecision>* myCellData,
+  exahype2::FaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                           cellId,
   const int                           faceId,
   tarch::timing::Measurement&         measurement
@@ -139,7 +139,7 @@ inline void secondTask(
   // in typical Peano order, e.g. left, lower, right, upper
   // Assume that the faces for a given cell are one after another
   // in typical Peano order, e.g. left, lower, right, upper
-  double* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * Dimensions] = {
     myFaceData->QIn[faceId + 0][1],
     myFaceData->QIn[faceId + 1][1],
 #if Dimensions == 3
@@ -153,7 +153,7 @@ inline void secondTask(
 #endif
   };
 
-  double* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * Dimensions] = {
     myFaceData->QOut[faceId + 0][1],
     myFaceData->QOut[faceId + 1][1],
 #if Dimensions == 3
@@ -204,7 +204,7 @@ inline void secondTask(
     myCellData->dt
   );
 
-  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
+  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<SolverPrecision, SolverPrecision, SolverPrecision>(
     repositories::instanceOfAderSolver,
     lQhbnd,
     lFhbnd,
@@ -230,11 +230,11 @@ void variant5::runBenchmarks(
 
   tarch::timing::Measurement timingComputeKernel;
 
-  exahype2::CellData<double, double> cellData(numberOfCells);
-  exahype2::FaceData<double, double> faceData(2 * Dimensions * numberOfCells);
+  exahype2::CellData<SolverPrecision, SolverPrecision> cellData(numberOfCells);
+  exahype2::FaceData<SolverPrecision, SolverPrecision> faceData(2 * Dimensions * numberOfCells);
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    cellData.QIn[cellIndex] = tarch::allocateMemory<double>(
+    cellData.QIn[cellIndex] = tarch::allocateMemory<SolverPrecision>(
       NumberOfInputEntriesPerCell,
       tarch::MemoryLocation::Heap
     );
@@ -254,19 +254,19 @@ void variant5::runBenchmarks(
   //  so face (2*Dimensions*i+j) will be the jth face of the ith cell
   for (int faceIndex = 0; faceIndex < 2 * Dimensions * numberOfCells; faceIndex++) {
     // Allocating data for the left and right sides of a given face
-    faceData.QIn[faceIndex][0] = tarch::allocateMemory<double>(
+    faceData.QIn[faceIndex][0] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFaceSize(),
       tarch::MemoryLocation::Heap
     );
-    faceData.QIn[faceIndex][1] = tarch::allocateMemory<double>(
+    faceData.QIn[faceIndex][1] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFaceSize(),
       tarch::MemoryLocation::Heap
     );
-    faceData.QOut[faceIndex][0] = tarch::allocateMemory<double>(
+    faceData.QOut[faceIndex][0] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFluxSize(),
       tarch::MemoryLocation::Heap
     );
-    faceData.QOut[faceIndex][1] = tarch::allocateMemory<double>(
+    faceData.QOut[faceIndex][1] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFluxSize(),
       tarch::MemoryLocation::Heap
     );
@@ -277,50 +277,16 @@ void variant5::runBenchmarks(
     faceData.faceSize[faceIndex]   = cellSize;
   }
 
-  timingComputeKernel.erase();
-  tarch::timing::Measurement timingKernelLaunch;
+  int numberOfThreads = 1;
 
-  // Initial task
-  for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    initialTask(
-      &cellData,
-      &faceData,
-      cellIndex,
-      cellIndex * 2 * Dimensions, // just passing the first of a cells faces, it can get the others by pointer
-                                  // arithmetic
-      timingComputeKernel
-    );
-  }
+  #if defined(SharedOMP)
+  for (int threadIndex = 0; threadIndex < NumberOfLaunchingThreads.size(); threadIndex++) {
+    numberOfThreads = NumberOfLaunchingThreads[threadIndex];
+  #endif
 
-  for (int sample = 0; sample <= NumberOfSamples; sample++) {
-#if defined(SharedOMP)
-#pragma omp parallel num_threads(NumberOfLaunchingThreads)
-#endif
+    // Initial task
     for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-
-      for (int d = 0; d < Dimensions; d++) {
-        tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
-        // Stitch negative and positive face together and just
-        //  perform the Riemann kernel on that.
-        firstTask(
-          &faceData,
-          2 * Dimensions * cellIndex + d + Dimensions,
-          2 * Dimensions * cellIndex + d,
-          d,
-          timingComputeKernel
-        );
-        watchKernelLaunch.stop();
-        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-      }
-    }
-
-#if defined(SharedOMP)
-#pragma omp parallel num_threads(NumberOfLaunchingThreads)
-#endif
-    for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-      cellData.maxEigenvalue[cellIndex] = 0.0;
-      tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
-      secondTask(
+      initialTask(
         &cellData,
         &faceData,
         cellIndex,
@@ -328,15 +294,60 @@ void variant5::runBenchmarks(
                                     // arithmetic
         timingComputeKernel
       );
+    }
+
+    timingComputeKernel.erase();
+    tarch::timing::Measurement timingKernelLaunch;
+
+    for (int sample = 0; sample <= NumberOfSamples; sample++) {
+
+      tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
+
+      #if defined(SharedOMP)
+      #pragma omp parallel for num_threads(NumberOfLaunchingThreads[threadIndex])
+      #endif
+      for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
+
+        for (int d = 0; d < Dimensions; d++) {
+          // Stitch negative and positive face together and just
+          //  perform the Riemann kernel on that.
+          firstTask(
+            &faceData,
+            2 * Dimensions * cellIndex + d + Dimensions,
+            2 * Dimensions * cellIndex + d,
+            d,
+            timingComputeKernel
+          );
+        }
+      }
+
+      #if defined(SharedOMP)
+      #pragma omp parallel for num_threads(NumberOfLaunchingThreads[threadIndex])
+      #endif
+      for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
+        cellData.maxEigenvalue[cellIndex] = 0.0;
+        secondTask(
+          &cellData,
+          &faceData,
+          cellIndex,
+          cellIndex * 2 * Dimensions, // just passing the first of a cells faces, it can get the others by pointer
+                                      // arithmetic
+          timingComputeKernel
+        );
+      }
+
       watchKernelLaunch.stop();
       timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
     }
-  }
 
 
-  reportRuntime("variant 5", timingComputeKernel, timingKernelLaunch, numberOfCells, _log);
-  // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
-  // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+    reportRuntime("variant 5", timingComputeKernel, timingKernelLaunch, numberOfCells, numberOfThreads, _log);
+    // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+    // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+
+  #if defined(SharedOMP)
+  }//threadIndex
+  #endif
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     tarch::freeMemory(cellData.QIn[cellIndex], tarch::MemoryLocation::Heap);

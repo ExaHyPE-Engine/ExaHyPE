@@ -40,8 +40,8 @@ tarch::logging::Log variant4::_log("variants4::");
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 inline void initialTask(
-  exahype2::CellData<double, double>* myCellData,
-  exahype2::FaceData<double, double>* myFaceData,
+  exahype2::CellData<SolverPrecision, SolverPrecision>* myCellData,
+  exahype2::FaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                           cellId,
   const int                           faceId,
   tarch::timing::Measurement&         measurement
@@ -51,7 +51,7 @@ inline void initialTask(
   // in typical Peano order, e.g. left, lower, right, upper
   //  so faceId is the left, lower (front) face,
   //  faceId+1 is the one after this, and so on.
-  double* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * Dimensions] = {
     myFaceData->QIn[faceId + 0][1],
     myFaceData->QIn[faceId + 1][1],
 #if Dimensions == 3
@@ -65,7 +65,7 @@ inline void initialTask(
 #endif
   };
 
-  double* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * Dimensions] = {
     myFaceData->QOut[faceId + 0][1],
     myFaceData->QOut[faceId + 1][1],
 #if Dimensions == 3
@@ -81,7 +81,7 @@ inline void initialTask(
 
   tarch::timing::Watch watchKernelCompute("::runBenchmarks", "assessKernel(...)", false);
 
-  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
+  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<SolverPrecision, SolverPrecision, SolverPrecision>(
     repositories::instanceOfAderSolver,
     lQhbnd,
     lFhbnd,
@@ -98,8 +98,8 @@ inline void initialTask(
 
 
 void runKernels(
-  exahype2::CellData<double, double>* myCellData,
-  exahype2::FaceData<double, double>* myFaceData,
+  exahype2::CellData<SolverPrecision, SolverPrecision>* myCellData,
+  exahype2::FaceData<SolverPrecision, SolverPrecision>* myFaceData,
   const int                           cellId,
   const int                           faceId,
   tarch::timing::Measurement&         measurement
@@ -109,7 +109,7 @@ void runKernels(
   // in typical Peano order, e.g. left, lower, right, upper
   // Assume that the faces for a given cell are one after another
   // in typical Peano order, e.g. left, lower, right, upper
-  double* lQhbnd[2 * Dimensions] = {
+  SolverPrecision* lQhbnd[2 * Dimensions] = {
     myFaceData->QIn[faceId + 0][1],
     myFaceData->QIn[faceId + 1][1],
 #if Dimensions == 3
@@ -123,7 +123,7 @@ void runKernels(
 #endif
   };
 
-  double* lFhbnd[2 * Dimensions] = {
+  SolverPrecision* lFhbnd[2 * Dimensions] = {
     myFaceData->QOut[faceId + 0][1],
     myFaceData->QOut[faceId + 1][1],
 #if Dimensions == 3
@@ -142,7 +142,7 @@ void runKernels(
   for (int d = 0; d < Dimensions; d++) {
     const int direction = d;
 
-    kernels::AderSolver::riemannSolver<double>(
+    kernels::AderSolver::riemannSolver<SolverPrecision>(
       repositories::instanceOfAderSolver,
       myFaceData->QOut[faceId + d][0],
       myFaceData->QOut[faceId + d][1],
@@ -166,7 +166,7 @@ void runKernels(
       myCellData->dt
     );
 
-    kernels::AderSolver::riemannSolver<double>(
+    kernels::AderSolver::riemannSolver<SolverPrecision>(
       repositories::instanceOfAderSolver,
       myFaceData->QOut[faceId + d + Dimensions][0],
       myFaceData->QOut[faceId + d + Dimensions][1],
@@ -200,7 +200,7 @@ void runKernels(
     myCellData->dt
   );
 
-  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<double, double, double>(
+  int numberOfIterations = kernels::AderSolver::fusedSpaceTimePredictorVolumeIntegral<SolverPrecision, SolverPrecision, SolverPrecision>(
     repositories::instanceOfAderSolver,
     lQhbnd,
     lFhbnd,
@@ -226,11 +226,11 @@ void variant4::runBenchmarks(
 
   tarch::timing::Measurement timingComputeKernel;
 
-  exahype2::CellData<double, double> cellData(numberOfCells);
-  exahype2::FaceData<double, double> faceData(2 * Dimensions * numberOfCells);
+  exahype2::CellData<SolverPrecision, SolverPrecision> cellData(numberOfCells);
+  exahype2::FaceData<SolverPrecision, SolverPrecision> faceData(2 * Dimensions * numberOfCells);
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    cellData.QIn[cellIndex] = tarch::allocateMemory<double>(
+    cellData.QIn[cellIndex] = tarch::allocateMemory<SolverPrecision>(
       NumberOfInputEntriesPerCell,
       tarch::MemoryLocation::Heap
     );
@@ -250,19 +250,19 @@ void variant4::runBenchmarks(
   //  so face (2*Dimensions*i+j) will be the jth face of the ith cell
   for (int faceIndex = 0; faceIndex < 2 * Dimensions * numberOfCells; faceIndex++) {
     // Allocating data for the left and right sides of a given face
-    faceData.QIn[faceIndex][0] = tarch::allocateMemory<double>(
+    faceData.QIn[faceIndex][0] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFaceSize(),
       tarch::MemoryLocation::Heap
     );
-    faceData.QIn[faceIndex][1] = tarch::allocateMemory<double>(
+    faceData.QIn[faceIndex][1] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFaceSize(),
       tarch::MemoryLocation::Heap
     );
-    faceData.QOut[faceIndex][0] = tarch::allocateMemory<double>(
+    faceData.QOut[faceIndex][0] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFluxSize(),
       tarch::MemoryLocation::Heap
     );
-    faceData.QOut[faceIndex][1] = tarch::allocateMemory<double>(
+    faceData.QOut[faceIndex][1] = tarch::allocateMemory<SolverPrecision>(
       kernels::AderSolver::getBndFluxSize(),
       tarch::MemoryLocation::Heap
     );
@@ -273,63 +273,16 @@ void variant4::runBenchmarks(
     faceData.faceSize[faceIndex]   = cellSize;
   }
 
-  timingComputeKernel.erase();
-  tarch::timing::Measurement timingKernelLaunch;
+  int numberOfThreads = 1;
 
-  // Initial task
-  for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-    initialTask(
-      &cellData,
-      &faceData,
-      cellIndex,
-      cellIndex * 2 * Dimensions, // just passing the first of a cells faces, it can get the others by pointer
-                                  // arithmetic
-      timingComputeKernel
-    );
-  }
+  #if defined(SharedOMP)
+  for (int threadIndex = 0; threadIndex < NumberOfLaunchingThreads.size(); threadIndex++) {
+    numberOfThreads = NumberOfLaunchingThreads[threadIndex];
+  #endif
 
-  for (int sample = 0; sample <= NumberOfSamples; sample++) {
-#if defined(SharedOMP)
-#pragma omp parallel num_threads(NumberOfLaunchingThreads)
-#endif
+    // Initial task
     for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-
-      // Copy data from one side of each face to the other
-      // Here we just copy data from one side of a given cell's face to the opposite face of the same cell
-      for (int d = 0; d < Dimensions; d++) {
-        // Copy inner negative face into outer positive face
-        std::copy_n(
-          faceData.QIn[2 * Dimensions * cellIndex + d][1],
-          kernels::AderSolver::getBndFaceSize(),
-          faceData.QIn[2 * Dimensions * cellIndex + d + Dimensions][1]
-        );
-        std::copy_n(
-          faceData.QOut[2 * Dimensions * cellIndex + d][1],
-          kernels::AderSolver::getBndFluxSize(),
-          faceData.QOut[2 * Dimensions * cellIndex + d + Dimensions][1]
-        );
-
-        // Copy inner positive face into outer negative face
-        std::copy_n(
-          faceData.QIn[2 * Dimensions * cellIndex + d + Dimensions][0],
-          kernels::AderSolver::getBndFaceSize(),
-          faceData.QIn[2 * Dimensions * cellIndex + d][0]
-        );
-        std::copy_n(
-          faceData.QOut[2 * Dimensions * cellIndex + d + Dimensions][0],
-          kernels::AderSolver::getBndFluxSize(),
-          faceData.QOut[2 * Dimensions * cellIndex + d][0]
-        );
-      }
-    }
-
-#if defined(SharedOMP)
-#pragma omp parallel num_threads(NumberOfLaunchingThreads)
-#endif
-    for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
-      cellData.maxEigenvalue[cellIndex] = 0.0;
-      tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
-      runKernels(
+      initialTask(
         &cellData,
         &faceData,
         cellIndex,
@@ -337,15 +290,76 @@ void variant4::runBenchmarks(
                                     // arithmetic
         timingComputeKernel
       );
+    }
+
+    timingComputeKernel.erase();
+    tarch::timing::Measurement timingKernelLaunch;
+
+    for (int sample = 0; sample <= NumberOfSamples; sample++) {
+
+      #if defined(SharedOMP)
+      #pragma omp parallel for num_threads(NumberOfLaunchingThreads[threadIndex])
+      #endif
+      for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
+
+        // Copy data from one side of each face to the other
+        // Here we just copy data from one side of a given cell's face to the opposite face of the same cell
+        for (int d = 0; d < Dimensions; d++) {
+          // Copy inner negative face into outer positive face
+          std::copy_n(
+            faceData.QIn[2 * Dimensions * cellIndex + d][1],
+            kernels::AderSolver::getBndFaceSize(),
+            faceData.QIn[2 * Dimensions * cellIndex + d + Dimensions][1]
+          );
+          std::copy_n(
+            faceData.QOut[2 * Dimensions * cellIndex + d][1],
+            kernels::AderSolver::getBndFluxSize(),
+            faceData.QOut[2 * Dimensions * cellIndex + d + Dimensions][1]
+          );
+
+          // Copy inner positive face into outer negative face
+          std::copy_n(
+            faceData.QIn[2 * Dimensions * cellIndex + d + Dimensions][0],
+            kernels::AderSolver::getBndFaceSize(),
+            faceData.QIn[2 * Dimensions * cellIndex + d][0]
+          );
+          std::copy_n(
+            faceData.QOut[2 * Dimensions * cellIndex + d + Dimensions][0],
+            kernels::AderSolver::getBndFluxSize(),
+            faceData.QOut[2 * Dimensions * cellIndex + d][0]
+          );
+        }
+      }
+
+      tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
+
+      #if defined(SharedOMP)
+      #pragma omp parallel for num_threads(NumberOfLaunchingThreads[threadIndex])
+      #endif
+      for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
+        cellData.maxEigenvalue[cellIndex] = 0.0;
+        runKernels(
+          &cellData,
+          &faceData,
+          cellIndex,
+          cellIndex * 2 * Dimensions, // just passing the first of a cells faces, it can get the others by pointer
+                                      // arithmetic
+          timingComputeKernel
+        );
+      }
+
       watchKernelLaunch.stop();
       timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
     }
-  }
 
 
-  reportRuntime("variant 4", timingComputeKernel, timingKernelLaunch, numberOfCells, _log);
-  // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
-  // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+    reportRuntime("variant 4", timingComputeKernel, timingKernelLaunch, numberOfCells, numberOfThreads, _log);
+    // allocateAndStoreOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+    // validateOutcome(cellData.QOut, cellData.maxEigenvalue, numberOfCells);
+
+  #if defined(SharedOMP)
+  }//threadIndex
+  #endif
 
   for (int cellIndex = 0; cellIndex < numberOfCells; cellIndex++) {
     tarch::freeMemory(cellData.QIn[cellIndex], tarch::MemoryLocation::Heap);
