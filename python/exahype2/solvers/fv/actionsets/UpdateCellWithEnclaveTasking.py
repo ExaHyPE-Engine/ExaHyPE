@@ -86,7 +86,11 @@ class UpdateCellWithEnclaveTasking(ReconstructPatchAndApplyFunctor):
         repositories::{{SOLVER_INSTANCE}}.update(
           newTimeStepSize,
           timeStamp + timeStepSize,
-          marker.h()(0)
+          std::min({marker.h()(0), marker.h()(1)
+#if Dimensions == 3
+            , marker.h()(2)
+#endif
+          })
         );
       } else { // is an enclave cell
         assertion(marker.willBeEnclaveCell());

@@ -59,7 +59,7 @@ args.patch_size = args.dg_order * 2 + 1
 unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1}
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name="ADERDG" + str(args.dg_order),
+    name="ADERDGSolver",
     order=args.dg_order,
     unknowns=unknowns,
     auxiliary_variables=0,
@@ -128,13 +128,9 @@ if args.load_balancing_strategy != "None":
 project.set_number_of_threads(args.threads)
 project.set_timeout(3600)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
-project = project.generate_Peano4_project(verbose=True)
+project = project.generate_Peano4_project(verbose=False)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(args)
-print(project)
-print(aderdg_solver)

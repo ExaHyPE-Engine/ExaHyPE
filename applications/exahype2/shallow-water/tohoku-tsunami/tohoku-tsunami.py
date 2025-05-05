@@ -46,27 +46,25 @@ refinement_criterion = """
 
 parser = SWEArgumentParser()
 parser.set_defaults(
-    end_time=1000.0,
-    width=[4e6, 4e6],
+    end_time=5000.0,
+    width=[7e6, 4e6],
 )
 args = parser.parse_args()
 
 max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
-#args.patch_size = args.dg_order * 2 + 1
-args.patch_size = 32
+args.patch_size = args.dg_order * 2 + 1
 
 unknowns={"h": 1, "hu": 1, "hv": 1}
 auxiliary_variables={"b": 1}
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking(
-    name="FWave" + str(args.patch_size),
+riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FWaveSolver",
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=auxiliary_variables,
     min_volume_h=min_h,
     max_volume_h=max_h,
-    number_of_tasks=args.ntasks,
     time_step_relaxation=args.time_step_relaxation,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
@@ -128,7 +126,7 @@ if args.load_balancing_strategy != "None":
 project.set_number_of_threads(args.threads)
 project.set_timeout(3600)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
-project = project.generate_Peano4_project(verbose=True)
+project = project.generate_Peano4_project(verbose=False)
 project.output.makefile.set_target_device(args.target_device)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

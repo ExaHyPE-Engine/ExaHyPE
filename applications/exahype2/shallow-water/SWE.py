@@ -2,20 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 eigenvalues = r"""
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion1(tarch::la::greaterEquals(Q[s::h], 0.0), Q[s::h]);
-#endif
-
   L[s::h]  = 0.0;
   L[s::hu] = 0.0;
   L[s::hv] = 0.0;
@@ -30,12 +16,6 @@ eigenvalues = r"""
   L[s::h]        = u;
   L[s::hu]       = u + c;
   L[s::hv]       = u - c;
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(L[s::h]));
-  assertion(!std::isnan(L[s::hu]));
-  assertion(!std::isnan(L[s::hv]));
-#endif
 """
 
 max_eigenvalue = r"""
@@ -45,28 +25,6 @@ max_eigenvalue = r"""
 """.format(eigenvalues=eigenvalues)
 
 flux = r"""
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  assertion(!std::isnan(F[s::h]));
-  assertion(!std::isnan(F[s::hu]));
-  assertion(!std::isnan(F[s::hv]));
-  assertion(!std::isnan(F[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(F[s::h] == F[s::h]);
-  nonCriticalAssertion(F[s::hu] == F[s::hu]);
-  nonCriticalAssertion(F[s::hv] == F[s::hv]);
-  nonCriticalAssertion(F[s::b] == F[s::b]);
-  nonCriticalAssertion1(tarch::la::greaterEquals(Q[s::h], 0.0), Q[s::h]);
-#endif
-
   F[s::h]  = 0.0;
   F[s::hu] = 0.0;
   F[s::hv] = 0.0;
@@ -79,50 +37,13 @@ flux = r"""
 
   const double ih = 1.0 / Q[s::h];
 
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(ih));
-#endif
-
   F[s::h]  = Q[s::hu + normal];
   F[s::hu] = Q[s::hu + normal] * Q[s::hu] * ih;
   F[s::hv] = Q[s::hu + normal] * Q[s::hv] * ih;
   F[s::hu + normal] += 0.5 * GRAV * Q[s::h] * Q[s::h];
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(F[s::h]));
-  assertion(!std::isnan(F[s::hu]));
-  assertion(!std::isnan(F[s::hv]));
-  assertion(!std::isnan(F[s::b]));
-  nonCriticalAssertion(F[s::h] == F[s::h]);
-  nonCriticalAssertion(F[s::hu] == F[s::hu]);
-  nonCriticalAssertion(F[s::hv] == F[s::hv]);
-  nonCriticalAssertion(F[s::b] == F[s::b]);
-#endif
 """
 
 nonconservative_product = r"""
-#ifdef GPUOffloadingOff
-  assertion(normal >= 0);
-  assertion(normal < Dimensions);
-  assertion(!std::isnan(Q[s::h]));
-  assertion(!std::isnan(Q[s::hu]));
-  assertion(!std::isnan(Q[s::hv]));
-  assertion(!std::isnan(Q[s::b]));
-  assertion(!std::isnan(deltaQ[s::h]));
-  assertion(!std::isnan(deltaQ[s::hu]));
-  assertion(!std::isnan(deltaQ[s::hv]));
-  assertion(!std::isnan(deltaQ[s::b]));
-  nonCriticalAssertion(Q[s::h] == Q[s::h]);
-  nonCriticalAssertion(Q[s::hu] == Q[s::hu]);
-  nonCriticalAssertion(Q[s::hv] == Q[s::hv]);
-  nonCriticalAssertion(Q[s::b] == Q[s::b]);
-  nonCriticalAssertion(deltaQ[s::h] == deltaQ[s::h]);
-  nonCriticalAssertion(deltaQ[s::hu] == deltaQ[s::hu]);
-  nonCriticalAssertion(deltaQ[s::hv] == deltaQ[s::hv]);
-  nonCriticalAssertion(deltaQ[s::b] == deltaQ[s::b]);
-  nonCriticalAssertion1(tarch::la::greaterEquals(Q[s::h], 0.0), Q[s::h]);
-#endif
-
   BTimesDeltaQ[s::h] = 0.0;
   BTimesDeltaQ[s::hu] = 0.0;
   BTimesDeltaQ[s::hv] = 0.0;
@@ -134,13 +55,4 @@ nonconservative_product = r"""
   }
 
   BTimesDeltaQ[s::hu + normal] = GRAV * Q[s::h] * (deltaQ[s::h] + deltaQ[s::b]);
-
-#ifdef GPUOffloadingOff
-  assertion(!std::isnan(BTimesDeltaQ[s::h]));
-  assertion(!std::isnan(BTimesDeltaQ[s::hu]));
-  assertion(!std::isnan(BTimesDeltaQ[s::hv]));
-  nonCriticalAssertion(BTimesDeltaQ[s::h] == BTimesDeltaQ[s::h]);
-  nonCriticalAssertion(BTimesDeltaQ[s::hu] == BTimesDeltaQ[s::hu]);
-  nonCriticalAssertion(BTimesDeltaQ[s::hv] == BTimesDeltaQ[s::hv]);
-#endif
 """

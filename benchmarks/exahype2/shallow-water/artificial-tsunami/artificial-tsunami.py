@@ -12,16 +12,13 @@ from SWE import *
 end_time = 10.0
 width = [10000, 10000]  # [m]
 offset = [-5000, -5000]  # [m]
-min_depth = 6
+min_depth = 4
 amr_levels = 0
 dg_order = 5
 number_of_snapshots = 0
 build_mode = "Release"
-storage = "CallStack"
 output = "solutions"
-# load_balancing_strategy="SpreadOutOnceGridStagnates"
 load_balancing_strategy = "SpreadOut"
-# load_balancing_strategy = "RecursiveSplit"
 load_balancing_quality = 0.99
 trees = -2
 
@@ -67,7 +64,7 @@ max_h = 1.1 * min(width) / (3.0**min_depth)
 min_h = max_h * 3.0 ** (-amr_levels)
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name="ADERDG" + str(dg_order),
+    name="ADERDGSolver",
     order=dg_order,
     unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1},
     auxiliary_variables=0,
@@ -82,14 +79,13 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     eigenvalues=max_eigenvalue,
 )
 aderdg_solver.plot_description = ", ".join({"h": 1, "hu": 1, "hv": 1, "b": 1}.keys())
-aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[storage], exahype2.solvers.Storage[storage])
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
 project = exahype2.Project(
     namespace=["benchmarks", "exahype2", "swe"],
     project_name="ArtificialTsunami",
     directory=".",
-    executable=f"ArtificialTsunami.{build_mode}",
+    executable=f"ArtificialTsunami",
 )
 project.add_solver(aderdg_solver)
 
@@ -130,6 +126,3 @@ project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(project)
-print(aderdg_solver)

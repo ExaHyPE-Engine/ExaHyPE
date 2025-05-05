@@ -103,7 +103,7 @@ class Correction(AbstractADERDGActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0));
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
   }
 """
 

@@ -80,11 +80,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vect
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
-  // At the moment, we only use square/cubic elements
-  assertion2( data(0)>0.0, data, toString() );
-  assertion2( data(0)==data(1), data, toString() );
+  assertion2(data(0) > 0.0, data, toString());
+  assertion2(data(1) > 0.0, data, toString());
   #if Dimensions==3
-  assertion2( data(1)==data(2), data, toString() );
+  assertion2(data(2) > 0.0, data, toString());
   #endif
   _debugH = data;
 }

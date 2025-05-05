@@ -100,13 +100,14 @@ polynomials = (
 )
 
 project = exahype2.Project(
-    ["tests", "exahype2", "aderdg"],
-    ".",
-    executable=scenario.__class__.__name__,
+    namespace=["tests", "exahype2", "aderdg"],
+    project_name=scenario.__class__.__name__,
+    directory=".",
+    executable="ADERDG",
 )
 
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
-    name=scenario.__class__.__name__,
+    name="ADERDGSolver",
     order=order,
     min_cell_h=min_h,
     max_cell_h=max_h,
@@ -137,21 +138,14 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
     )
 
 project.add_solver(solver)
-
 project.set_output_path("solutions")
-
 scenario.set_global_simulation_parameters(project)
-
 project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
-project = project.generate_Peano4_project("False")
+project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.build(make_clean_first=True)
-
-print(args)
-print(solver)
-print(project)

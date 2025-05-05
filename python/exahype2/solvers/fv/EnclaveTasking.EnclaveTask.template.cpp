@@ -57,7 +57,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   repositories::{{SOLVER_INSTANCE}}.update(
     newTimeStepSize,
     timeStamp + timeStepSize,
-    marker.h()(0)
+    std::min({marker.h()(0), marker.h()(1)
+#if Dimensions == 3
+      , marker.h()(2)
+#endif
+    })
   );
 }
 
@@ -187,7 +191,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   repositories::{{SOLVER_INSTANCE}}.update(
     newTimeStepSize,
     _t + _dt,
-    _marker.h()(0)
+    std::min({_marker.h()(0), _marker.h()(1)
+#if Dimensions == 3
+      , _marker.h()(2)
+#endif
+    })
   );
 
   tarch::accelerator::MemoryManager::getInstance().free(patchData.QIn1D, TARGET_DEVICE);
