@@ -463,7 +463,7 @@ void step() {
       {{SUBNAMESPACE}}repositories::mayPlot()
     ) {
       printNextAlgorithmicStep(stepName);
-      {{SUBNAMESPACE}}repositories::printTimeStep();
+      {{SUBNAMESPACE}}repositories::printTimeStep(false);
       if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
         logInfo(
           "step()",
@@ -518,7 +518,7 @@ int main(int argc, char** argv) {
       returnCode = EXIT_FAILURE;
     } else {
       // Print final timestep information
-      {{SUBNAMESPACE}}repositories::printTimeStep();
+      {{SUBNAMESPACE}}repositories::printTimeStep(false);
       logInfo("main()", "Terminated successfully");
       int returnCode = EXIT_SUCCESS;
     }

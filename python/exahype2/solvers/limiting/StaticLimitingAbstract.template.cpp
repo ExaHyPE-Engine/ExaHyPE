@@ -115,14 +115,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRunningGridSweep) {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
   if (getNumberOfTroubledCells() > 0) {
     logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
     logInfo("printTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells());
   }
-  logDebug("printTimeStep()", "Phase " + toString(_solverState));
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(

@@ -152,14 +152,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   }
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRunningGridSweep) {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 
-  if (getNumberOfTroubledCells(false) > 0 /*and (_solverState == SolverState::RegularSolver or _solverState == SolverState::LimiterSolver)*/) {
+  if (getNumberOfTroubledCells(ofCurrentlyRunningGridSweep) > 0 /*and (_solverState == SolverState::RegularSolver or _solverState == SolverState::LimiterSolver)*/) {
     logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("printTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells(false));
+    logInfo("printTimeStep()", "Number of troubled cells: " << getNumberOfTroubledCells(ofCurrentlyRunningGridSweep));
   }
-  logDebug("printTimeStep()", "Phase " + toString(_solverState));
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(

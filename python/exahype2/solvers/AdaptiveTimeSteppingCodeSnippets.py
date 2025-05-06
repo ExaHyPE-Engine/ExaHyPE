@@ -28,7 +28,7 @@ public:
    *         you have to scale it for cells that are not on the finest
    *         mesh resolution.
    */
-  virtual double getAdmissibleTimeStepSize() const;
+  virtual double getAdmissibleTimeStepSize(bool ofCurrentlyRunningGridSweep = true) const;
 """
 
     def create_abstract_solver_user_definitions(self):
@@ -44,8 +44,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue(bool ofCurr
   return ofCurrentlyRunningGridSweep ? _maxEigenvalueThisTimeStep : _maxEigenvalue;
 }
 
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
-  return _admissibleTimeStepSizeThisTimeStep;
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _admissibleTimeStepSizeThisTimeStep : _admissibleTimeStepSize;
 }
 """
 
