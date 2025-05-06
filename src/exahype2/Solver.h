@@ -61,7 +61,7 @@ class exahype2::Solver {
     ) = 0;
     virtual void finishTimeStep() = 0;
 
-    virtual void printTimeStep() = 0;
+    virtual void printTimeStep(bool ofCurrentlyRunningGridSweep) = 0;
 
     virtual void startPlottingStep(
       double globalMinTimeStamp,

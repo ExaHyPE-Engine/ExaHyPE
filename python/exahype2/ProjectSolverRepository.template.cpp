@@ -323,9 +323,9 @@ void finishPlottingStep() {
 }
 
 
-void printTimeStep() {
+void printTimeStep(bool ofCurrentlyRunningGridSweep) {
   {% for item in SOLVERS -%}
-  {{ item[1] }}.printTimeStep();
+  {{ item[1] }}.printTimeStep(ofCurrentlyRunningGridSweep);
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 }

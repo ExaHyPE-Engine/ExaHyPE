@@ -377,7 +377,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRunningGridSweep) {
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 

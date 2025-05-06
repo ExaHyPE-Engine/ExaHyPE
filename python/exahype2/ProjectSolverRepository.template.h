@@ -114,7 +114,7 @@
   void finishTimeStep();
   void finishPlottingStep();
 
-  void printTimeStep();
+  void printTimeStep(bool ofCurrentlyRunningGridSweep);
 
   void startSimulation();
   void finishSimulation();

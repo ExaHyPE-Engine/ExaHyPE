@@ -15,13 +15,14 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
 
   def create_print_time_step_implementation(self):
     return """
-  if (tarch::la::greater(getMaxVolumeSize(false), 0.0) and tarch::la::greater(getMaxEigenvalue(false), 0.0)) {
+  if (tarch::la::greater(getMaxVolumeSize(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
     logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("printTimeStep()", "t            = " << getMinTimeStamp(false) << " / " << MinTerminalTime);
-    logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("printTimeStep()", "h_{min}      = " << getMinVolumeSize(false) << " (volume size)");
-    logInfo("printTimeStep()", "h_{max}      = " << getMaxVolumeSize(false) << " (volume size)");
-    logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(false));
+    logDebug("printTimeStep()", "Phase       = " << toString(_solverState));
+    logInfo("printTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+    logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
+    logInfo("printTimeStep()", "h_{min}      = " << getMinVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
+    logInfo("printTimeStep()", "h_{max}      = " << getMaxVolumeSize(ofCurrentlyRunningGridSweep) << " (volume size)");
+    logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
   }
 """
 
@@ -42,6 +43,7 @@ class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCode
 
     temp_implementation = super(AdaptiveTimeSteppingCodeSnippets, self).create_finish_time_step_implementation() + """
     if (isLastGridSweepOfTimeStep() and tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)) {
+      _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
       _admissibleTimeStepSizeThisTimeStep = """ + str(self._time_step_relaxation) + """ * _minVolumeHThisTimeStep / _maxEigenvalueThisTimeStep;
 """
 

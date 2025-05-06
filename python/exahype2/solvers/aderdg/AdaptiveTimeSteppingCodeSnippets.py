@@ -32,13 +32,14 @@ class AdaptiveTimeSteppingCodeSnippets(
 
     def create_print_time_step_implementation(self):
         return """
-  if (tarch::la::greater(getMaxCellSize(false), 0.0) and tarch::la::greater(getMaxEigenvalue(false), 0.0)) {
+  if (tarch::la::greater(getMaxCellSize(ofCurrentlyRunningGridSweep), 0.0) and tarch::la::greater(getMaxEigenvalue(ofCurrentlyRunningGridSweep), 0.0)) {
     logInfo("printTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("printTimeStep()", "t            = " << getMinTimeStamp(false) << " / " << MinTerminalTime);
-    logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("printTimeStep()", "h_{min}      = " << getMinCellSize(false));
-    logInfo("printTimeStep()", "h_{max}      = " << getMaxCellSize(false));
-    logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(false));
+    logDebug("printTimeStep()", "Phase       = " << toString(_solverState));
+    logInfo("printTimeStep()", "t            = " << getMinTimeStamp(ofCurrentlyRunningGridSweep) << " / " << MinTerminalTime);
+    logInfo("printTimeStep()", "dt           = " << getAdmissibleTimeStepSize(ofCurrentlyRunningGridSweep));
+    logInfo("printTimeStep()", "h_{min}      = " << getMinCellSize(ofCurrentlyRunningGridSweep));
+    logInfo("printTimeStep()", "h_{max}      = " << getMaxCellSize(ofCurrentlyRunningGridSweep));
+    logInfo("printTimeStep()", "lambda_{max} = " << getMaxEigenvalue(ofCurrentlyRunningGridSweep));
   }
 """
 
