@@ -83,7 +83,7 @@ class UpdateParticleMarker(ActionSet):
     };
 
   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     [=,this]()->bool {
       for (auto* particle: particles) {

@@ -265,7 +265,7 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::TraversalObserver& observer,
   bool                             invertTreeTraversalDirectionBeforeWeStart
 ):
-  Task(Task::DontFuse, Task::DefaultPriority),
+  Task(Task::NoTaskType, Task::DefaultPriority),
   _spacetree(tree),
   _spacetreeSet(set),
   _observer(observer),

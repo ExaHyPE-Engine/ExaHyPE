@@ -5,6 +5,8 @@
 #include "config.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
+#include "tests/EnclaveBookkeepingTest.h"
+
 #include "dg/tests/CellIntegralTest.h"
 #include "dg/tests/DGUtilsTest.h"
 #include "dg/tests/RiemannTest.h"
@@ -19,6 +21,8 @@
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
+
+  result->addTestCase(new exahype2::tests::EnclaveBookkeepingTest());
 
   result->addTestCase(new exahype2::dg::tests::CellIntegralTest());
   result->addTestCase(new exahype2::dg::tests::DGUtilsTest());

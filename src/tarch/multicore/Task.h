@@ -23,8 +23,8 @@ namespace tarch {
       int       _priority;
 
     public:
+      static constexpr int NoTaskType = -1;
       static constexpr int DefaultPriority = 1024;
-      static constexpr int DontFuse        = -1;
 
       /**
        * Construct task
@@ -33,10 +33,7 @@ namespace tarch {
        *
        * Each task in Peano has to have a task type. All tasks that do the same,
        * i.e. are of the same type, should have the same task type integer
-       * marker. Peano's tarch can use multiple tasks of the same type and
-       * fuse/batch them into one task call. However, if you don't want Peano
-       * to even thing about task fusion, pass in DontFuse as argument for the
-       * type.
+       * marker.
        *
        * It is totally up to the user to manage the task type numbers. Peano
        * for example offers a factory mechanism peano4::parallel::getTaskType()
@@ -55,7 +52,6 @@ namespace tarch {
        *
        *
        * @param taskType Unique task (type) number for this task.
-       *   Pass in DontFuse if you don't want this task to be fused.
        *
        * @param priority Integer value that indicates what priority you want to
        *        assign a task. Value has to be non-negative. Use
@@ -76,11 +72,6 @@ namespace tarch {
       void setPriority(int priority);
 
       /**
-       * @return true if the taskType is not DontFuse.
-       */
-      virtual bool canFuse() const;
-
-      /**
        * @return This task has to be executed again. In most cases, you should
        *   return false, to indicate that this task has finished.
        */
@@ -94,41 +85,8 @@ namespace tarch {
        * distinguish your tasks, you can downcast all the arguments, as you might
        * know the real type.
        *
-       * This operation is invoked on a task. However, it is also given N=otherTasks.size
-       * further tasks of the same type. You have two options now:
-       *
-       * - You can process the N tasks in one rush. In this case, the original
-       *   task, i.e. the object on which fuse() is called, remains intact and
-       *   has not been processed yet. You have to return true.
-       * - You can process the N+1 tasks in one rush, i.e. all tasks from
-       *   otherTasks and the task represented by the actual object on which
-       *   fuse is called. In this case, you return false, as the task on which
-       *   fuse has been called can be destroyed straightaway by the runtime.
-       *
-       * No matter which route you follow, you always have to delete all the tasks
-       * stores within otherTasks, as these have to be processed by fuse().
-       *
-       * <h2> Default implementation </h2>
-       *
-       * My default implementation executes all the passed tasks and then returns
-       * the original task back, i.e. this one is not executed. This is the first
-       * execution pattern described above.
-       *
-       * <h2> Memory ownership </h2>
-       *
-       * See above: fuse() has to delete all the instances within otherTasks.
-       * The calling routine does not have to delete anything there anymore.
-       * But it has to destroy the owning object, i.e. the object on which is
-       * has called fuse(), manually no matter whether we return true or false.
-       *
-       * @return Is the present task still to be executed or can the runtime
-       *         destroy it straightaway?
-       * @param otherTasks List of tasks to fuse and process. Will all have the
-       *         same type as the present object. It is the tasks responsibility
-       *         to get these tasks done. So either span some new tasks or handle
-       *         them straightaway.
-       */
-      virtual bool fuse(const std::list<Task*>& otherTasks);
+      */
+      virtual void fuse(const std::list<Task*>& otherTasks);
 
       virtual std::string toString() const;
     };
@@ -174,7 +132,7 @@ namespace tarch {
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
-     *     tarch::multicore::Task::DontFuse,
+     *     tarch::multicore::Task::NoTaskType,
      *     tarch::multicore::Task::DefaultPriority,
      *     [=,this]()->bool {
      *        ...
@@ -240,7 +198,7 @@ namespace tarch {
       /**
        * Create empty task
        *
-       * Every empty task is of the type DontFuse.
+       * Every empty task is of the type NoTaskType.
        */
       EmptyTask(int priority);
 

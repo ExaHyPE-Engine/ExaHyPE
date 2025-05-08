@@ -222,25 +222,23 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   }
   else if ( repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()==""" + solver._name + """::SolverState::GridInitialisation ) {
     /*
-    
-     @todo Not required for FV, but compare to FD4 variant what has to be done 
-           throughout initialisation.
-     
+     @todo Not required for FV, but compare to FD4 variant what has to be done throughout initialisation.
+
     logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
-    
+
     int normal = marker.getSelectedFaceNumber() % Dimensions;
     dfore(i, {{DOFS_PER_AXIS}}, normal, 0) {
       for( int j=0; j<2*{{OVERLAP}}; j++) {
         tarch::la::Vector<Dimensions, int> dof = i;
         dof(normal) = j;
-        
+
         int serialisedDoF = ::toolbox::blockstructured::serialiseVoxelIndexInOverlap(
           dof,
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal
         );
-        
+
         repositories::{{SOLVER_INSTANCE}}.initialCondition(
           fineGridFace""" + solver._name + """QNew.value + serialisedDoF * {{UNKNOWNS}},
           ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
@@ -261,24 +259,23 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
         );
       }
     }
-    
+
     logTraceOut( "createHangingFace(...)" );
     */
   }
 """
 
     """
-  
     Very similar to default version, but this time we interpolate QOld and
-    QNew. We also clear the update field via clearHaloLayerAoS(). It is 
+    QNew. We also clear the update field via clearHaloLayerAoS(). It is
     important that we initialise the time step sizes properly. As we deal
     with a persistent face, we set both the left and right time stamp from
     the coarse face.
-  
+
     """
     self._Template_CreatePersistentFace = """
   logTraceInWith1Argument( "createPersistentFace(...)", marker.toString() );
-  
+
   ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},

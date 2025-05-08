@@ -10,6 +10,7 @@ import peano4.datamodel
 
 import exahype2.solvers.fv.actionsets
 
+from exahype2.solvers import PDETerms
 from exahype2.solvers.Storage import Storage
 
 class FV(object):
@@ -20,15 +21,7 @@ class FV(object):
     exist, i.e., what in principle can be done while we run through the grid. It also
     provides some kind of very basic infrastructure, i.e., what the name of a solver
     is, what data is to be held per face or cell, or where in the multiscale mesh
-    we actually have to hold data.
-
-    The FV class cannot/should not be instantiated. There are two direct children:
-    SingleSweep and EnclaveTasking. The FV base class defines what data are available.
-    The two subclasses define how we run through the mesh: once per time step or
-    twice per time step with some tasking. So FV defines what can be done, the
-    subclasses define how the steps are orchestrated. Again, they do not (yet) say
-    what is computed. That's then the responsibility of classes that inherit from
-    SingleSweep or EnclaveTasking, respectively.
+    we actually have to hold data. The FV class cannot/should not be instantiated.
 
     A finite volume solver in ExaHyPE 2 (actually any solver) is first of all a
     static collection of data logically tied to grid entities and some operations
@@ -66,7 +59,7 @@ class FV(object):
     per cell) or if you want to alter the configuration of data tied to grid
     entities, you should redefine create_data_structures(). However, any
     subclass still should call FV's create_data_structures() - or the create_data_structures()
-    of the SingleSweep or EnclaveTasking, respectively. This will ensure that the
+    of the SingleSweep. This will ensure that the
     baseline configuration of all data is in place. After that, you can modify
     the properties.
 
@@ -77,16 +70,15 @@ class FV(object):
     FV class. See self._patch for example within create_action_sets(). These
     attributes have guards such as self._action_set_initial_conditions.guard.
     These guards are set to defaults in FV. It is basically the job of SingleSweep
-    or EnclaveTasking - they determine when which data are used - to reset these
+    or any other subclass - they determine when which data are used - to reset these
     guards from a default to something tailored to the particular data flow.
 
     If you want to redefine when data is stored or operations are invoked, overwrite
-    create_data_structures(), and call the superclass, i.e. either SingleSweep or
-    EnclaveTasking. This is what happens:
+    create_data_structures(), and call the superclass. This is what happens:
 
-    - SingleSweep or EnclaveTasking pass on the call to FV.create_data_structures().
+    - SingleSweep passes on the call to FV.create_data_structures().
       This call ensures that all the data structures are in place. Then it returns.
-    - SingleSweep's or EnclaveTasking's create_data_structures() then sets the
+    - SingleSweep's create_data_structures() then sets the
       guard, i.e. they configure when data is stored or used.
     - Finally, your own overwrite of create_data_structures() can augment the
       data structures (which are now in place and called at the right time) with
@@ -149,6 +141,8 @@ class FV(object):
         auxiliary_variables,
         min_volume_h,
         max_volume_h,
+        use_enclave_tasking: bool,
+        number_of_enclave_tasks: int,
         plot_grid_properties: bool,
         baseline_action_set_descend_invocation_order=0,
     ):
@@ -196,6 +190,9 @@ class FV(object):
 
         self._patch_size = patch_size
         self._overlap = overlap
+
+        self._dimensions = 2
+        self._namespace = ""
 
         """
         self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
@@ -283,15 +280,37 @@ class FV(object):
         self._postprocess_updated_patch = ""
 
         self._compute_kernel_call = "#error Not yet defined"
-        self._use_stateless_flux = True
-        self._use_stateless_ncp = True
-        self._use_stateless_max_eigenvalue = True
-        self._use_stateless_eigenvalues = True
-        self._use_stateless_riemann_solver = True
-        self._use_stateless_source_term = True
-        self._use_stateless_adjust_solution = True
+        self._can_fuse = True
+        self._fused_compute_kernel_call = "#error Not yet defined"
 
-        self._compute_eigenvalue = False
+        self._use_enclave_tasking = use_enclave_tasking
+        self._number_of_enclave_tasks = number_of_enclave_tasks
+        self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
+
+        self._initial_conditions_implementation = PDETerms.User_Defined_Implementation
+        self._boundary_conditions_implementation = PDETerms.User_Defined_Implementation
+        self._refinement_criterion_implementation = PDETerms.Empty_Implementation
+        self._flux_implementation = PDETerms.None_Implementation
+        self._ncp_implementation = PDETerms.None_Implementation
+        self._eigenvalues_implementation = PDETerms.None_Implementation
+        self._max_eigenvalue_implementation = PDETerms.None_Implementation
+        self._riemann_solver_implementation = PDETerms.None_Implementation
+        self._source_term_implementation = PDETerms.None_Implementation
+        self._adjust_solution_implementation = PDETerms.None_Implementation
+
+        self._use_stateless_initial_conditions = False
+        self._use_stateless_boundary_conditions = False
+        self._use_stateless_refinement_criterion = False
+        self._use_stateless_flux = False
+        self._use_stateless_ncp = False
+        self._use_stateless_max_eigenvalue = False
+        self._use_stateless_eigenvalues = False
+        self._use_stateless_riemann_solver = False
+        self._use_stateless_source_term = False
+        self._use_stateless_adjust_solution = False
+
+        self._compute_eigenvalue = True
+        self._time_stepping_code_snippets = None
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""
@@ -301,10 +320,6 @@ class FV(object):
         self._finish_time_step_implementation = ""
         self._print_time_step_implementation = ""
         self._constructor_implementation = ""
-
-        self._boundary_conditions_implementation = None
-        self._refinement_criterion_implementation = None
-        self._initial_conditions_implementation = None
 
         self._interpolation = "piecewise_constant"
         self._restriction = "averaging"
@@ -330,6 +345,15 @@ Name:                   """
 Type:                   """
             + self.__class__.__module__
             + """
+Dimensions:             """
+            + str(self._dimensions)
+            + """
+Use enclave tasking:    """
+            + str(self._use_enclave_tasking)
+            + """
+Can fuse:               """
+            + str(self._can_fuse)
+            + """
 Patch size:             """
             + str(self._patch_size)
             + """
@@ -347,7 +371,7 @@ h_volume_min:           """
             + """
 h_volume_max:           """
             + str(self._max_volume_h)
-            + """
+           + """
 Initial conditions:     """
             + str(self._initial_conditions_implementation)
             + """
@@ -862,7 +886,8 @@ The finest mesh width of """
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
 
-        self._action_set_update_cell = None
+        self._action_set_update_patch = None
+        self._action_set_reconstruct_patch = None
 
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
@@ -1127,7 +1152,6 @@ The finest mesh width of """
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
-
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
         The boundary information is set only once. It is therefore important that
@@ -1260,7 +1284,7 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_project_patch_onto_faces)
-        # step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+        # step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
         plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
             filename=output_path + "checkpoint-" + self._name,
@@ -1318,7 +1342,8 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_handle_boundary)
-        step.add_action_set(self._action_set_update_cell)
+        step.add_action_set(self._action_set_reconstruct_patch)
+        step.add_action_set(self._action_set_update_patch)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
@@ -1329,42 +1354,28 @@ The finest mesh width of """
         pass
 
     def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True):
-        """
-        The ExaHyPE project will call this operation when it sets
-        up the overall environment.
+        self._dimensions = dimensions
+        self._namespace = namespace
 
-        This routine is typically not invoked by a user.
+        self._generate_kernels(output, subdirectory)
 
-        output: peano4.output.Output
-        """
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
-
         if self._solver_template_file_class_name is None:
             templatefile_prefix += self.__class__.__name__
         else:
             templatefile_prefix += self._solver_template_file_class_name
 
-        if(subdirectory):
+        if subdirectory:
             subdirectory += "/"
 
-        abstractHeaderDictionary = {}
-        implementationDictionary = {}
-        self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
-        self._init_dictionary_with_default_parameters(implementationDictionary)
-        abstractHeaderDictionary["DIMENSIONS"] = str(dimensions)
-        implementationDictionary["DIMENSIONS"] = str(dimensions)
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
+        self.add_entries_to_text_replacement_dictionary(d)
 
         header_file_abstr_template = templatefile_prefix + "Abstract.template.h"
         cpp_file_abstr_template = templatefile_prefix + "Abstract.template.cpp"
-        abstractHeaderDictionary[ "HEADER_FILE_ABSTR_TEMPLATE" ] = os.path.basename(header_file_abstr_template)
-        abstractHeaderDictionary[ "CPP_FILE_ABSTR_TEMPLATE" ] = os.path.basename(cpp_file_abstr_template)
-        self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
-
         header_file_template = templatefile_prefix + ".template.h"
         cpp_file_template = templatefile_prefix + ".template.cpp"
-        implementationDictionary[ "HEADER_FILE_TEMPLATE" ] = os.path.basename(header_file_template)
-        implementationDictionary[ "CPP_FILE_TEMPLATE" ] = os.path.basename(cpp_file_template)
-        self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -1373,7 +1384,7 @@ The finest mesh width of """
                 "Abstract" + self._name,
                 namespace,
                 subdirectory + ".",
-                abstractHeaderDictionary,
+                d,
                 abstract_overwrite,
                 True,
             )
@@ -1385,7 +1396,7 @@ The finest mesh width of """
                 self._name,
                 namespace,
                 subdirectory + ".",
-                implementationDictionary,
+                d,
                 False,
                 True,
             )
@@ -1406,19 +1417,40 @@ The finest mesh width of """
                 "VariableShortcuts" + self._name,
                 namespace,
                 subdirectory + ".",
-                implementationDictionary,
+                d,
                 True,
                 True,
             )
             output.add(generated_shortcut_file)
             output.makefile.add_h_file(subdirectory + "VariableShortcuts" + self._name + ".h", generated=True)
 
-        self._generate_kernels(namespace, output, subdirectory, dimensions)
-
+        if self._use_enclave_tasking:
+            # Some includes might logically belong into the action sets, but now they are
+            # 'outsourced' into the enclave task. So we manually add it here.
+            #d["SOLVER_INCLUDES"] += self.user_solver_includes
+            d["SOLVER_INCLUDES"] += self.user_action_set_includes
+            generated_enclave_task = (
+                peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                    headfile_template=os.path.dirname(os.path.realpath(__file__))
+                    + "/"
+                    + "EnclaveTask.template.h",
+                    cppfile_template=os.path.dirname(os.path.realpath(__file__))
+                    + "/"
+                    + "EnclaveTask.template.cpp",
+                    classname="{}EnclaveTask".format(self._name),
+                    namespace=namespace + ["tasks"],
+                    subdirectory=subdirectory + "tasks",
+                    dictionary=d,
+                    default_overwrite=True,
+                    apply_iteratively=True
+                )
+            )
+            output.add(generated_enclave_task)
+            output.makefile.add_h_file(subdirectory + "tasks/" + "{}EnclaveTask".format(self._name) + ".h", generated=True)
+            output.makefile.add_cpp_file(subdirectory + "tasks/" + "{}EnclaveTask".format(self._name) + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
-
 
     def add_solver_constants(self, datastring):
         self._solver_constants += datastring + "\n"
@@ -1438,10 +1470,13 @@ The finest mesh width of """
         we have to apply the (partially befilled) dictionary to create a new entry
         for this very dictionary.
         """
+        d["DIMENSIONS"] = self._dimensions
         d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
         d["OVERLAP"] = self._overlap
         d["HALO_SIZE"] = int(self._patch_overlap_old.dim[0] / 2)
+        d["NAMESPACE"] = self._namespace
         d["SOLVER_NAME"] = self._name
+        d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(self._namespace) + "::" + self._name
         d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._unknowns
@@ -1494,10 +1529,6 @@ The finest mesh width of """
         d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
 
-        d["COMPUTE_KERNEL_CALL"] = jinja2.Template(
-            self._compute_kernel_call, undefined=jinja2.DebugUndefined
-        ).render(**d)
-
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
         ).render(**d)
@@ -1538,6 +1569,9 @@ The finest mesh width of """
         ).render(**d)
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
+        d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["FLUX_IMPLEMENTATION"] = self._flux_implementation
         d["NCP_IMPLEMENTATION"] = self._ncp_implementation
         d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
@@ -1546,6 +1580,9 @@ The finest mesh width of """
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
 
+        d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
+        d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
+        d["STATELESS_REFINEMENT_CRITERION"] = self._use_stateless_refinement_criterion
         d["STATELESS_FLUX"] = self._use_stateless_flux
         d["STATELESS_NCP"] = self._use_stateless_ncp
         d["STATELESS_EIGENVALUES"] = self._use_stateless_eigenvalues
@@ -1553,6 +1590,15 @@ The finest mesh width of """
         d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
+
+        d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
+        d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
+        d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
+        d["ENCLAVE_TASK_TYPE"] = f"{self._name}EnclaveTask"
+        d["CAN_FUSE"] = self._can_fuse
+
+        d["COMPUTE_KERNEL_CALL"] = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render(**d)
+        d["FUSED_COMPUTE_KERNEL_CALL"] = jinja2.Template(self._fused_compute_kernel_call, undefined=jinja2.DebugUndefined).render(**d)
 
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
         d["VARIABLE_NAMES"] = self._variable_names

@@ -8,7 +8,7 @@ import exahype2
 
 import jinja2
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
 
 from exahype2.solvers.ButcherTableau                import ButcherTableau
 
@@ -69,7 +69,7 @@ ReconstructLinearCombination = """
 
 
 
-class UpdateCell(ReconstructPatchAndApplyFunctor):
+class UpdateCell(ReconstructPatch):
   """
   
   Update one cell, i.e. compute Runge-Kutta step on it
@@ -135,7 +135,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     
     """
-    ReconstructPatchAndApplyFunctor.__init__(self,
+    ReconstructPatch.__init__(self,
       patch = solver._patch,
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = """

@@ -9,9 +9,7 @@
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}
-
   class {{CLASSNAME}};
-
 {% for item in NAMESPACE -%}
 }
 {%- endfor %}

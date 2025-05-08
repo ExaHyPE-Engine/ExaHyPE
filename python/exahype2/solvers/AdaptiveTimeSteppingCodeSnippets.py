@@ -70,9 +70,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize(bo
         """
         return """
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
-
-    // This is a value set for stats reasons. We'll ignore it later as we
-    // ask for a new valid time step size from getAdmissibleTimeStepSize().
     const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 

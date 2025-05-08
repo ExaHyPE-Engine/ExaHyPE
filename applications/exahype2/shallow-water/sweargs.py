@@ -159,6 +159,13 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Target device for GPU offloading.",
         )
         self.add_argument(
+            "-e",
+            "--use_enclave_tasking",
+            default=False,
+            action="store_true",
+            help="Use enclave tasking.",
+        )
+        self.add_argument(
             "--ntasks",
             type=int,
             default=1,

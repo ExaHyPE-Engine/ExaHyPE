@@ -9,7 +9,8 @@
 #include <functional>
 
 namespace exahype2 {
-  template <typename T> class EnclaveTask;
+  template <typename T>
+  class EnclaveTask;
 } // namespace exahype2
 
 /**
@@ -24,8 +25,8 @@ namespace exahype2 {
  * ## Usage:
  *
  * Every ExaHyPE solver category defines its own enclave tasks being subclasses
- * of the present, generic type. Enclave tasks are always to be spawned with
- * data, so we can efficiently wait for them:
+ * of the present, generic type. Enclave tasks may be spawned with
+ * data, so we can efficiently wait for them.
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
@@ -45,26 +46,15 @@ namespace exahype2 {
  */
 template <typename T>
 class exahype2::EnclaveTask: public tarch::multicore::Task {
-public:
+protected:
   typedef std::function<void()> Functor;
 
-protected:
-  static tarch::logging::Log& myLog(){
-    static tarch::logging::Log myLog("exahype2::EnclaveTask");
-    return myLog;
-  }
-
-  tarch::logging::Log& _log = myLog();
-
   const peano4::datamanagement::CellMarker _marker;
-
-  const double                _t;
-  const double                _dt;
-  /*const*/ T* __restrict__ const _inputValues;
-  T* __restrict__ const       _outputValues;
-  int                         _numberOfInputValues;
-  int                         _numberOfResultValues;
-  Functor                     _functor;
+  const double                             _t;
+  const double                             _dt;
+  /*const*/ T* __restrict__ const          _QIn;
+  T* __restrict__ const                    _QOut;
+  Functor                                  _functor;
 
 public:
   /**
@@ -78,31 +68,28 @@ public:
    * static int enclaveTaskTypeId = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}");
    * ~~~~~~~~~~~~~~~~~~~~~~~~~
    *
-   * @param inputValues Has to be created on heap before passing to the task
    * @param enclaveTaskTypeId Unique id for this type. If you use task
    *   fusion, only tasks of the same type will be fused.
-   * @param outputValues Has to be created on heap before passing to the task
+   * @param QIn Has to be created on heap before passing to the task
+   * @param QOut Has to be created on heap before passing to the task
    */
   EnclaveTask(
     int                                         enclaveTaskTypeId,
     const peano4::datamanagement::CellMarker&   marker,
     double                                      t,
     double                                      dt,
-    /*const*/ T* __restrict__ const             inputValues,
-    T* __restrict__ const                       outputValues,
-    int                                         numberOfInputValues,
-    int                                         numberOfResultValues,
+    /*const*/ T* __restrict__ const             QIn,
+    T* __restrict__ const                       QOut,
     Functor                                     functor
   );
 
-  EnclaveTask(const EnclaveTask& other)  = delete;
-  EnclaveTask(const EnclaveTask&& other) = delete;
+  EnclaveTask(const EnclaveTask&)  = delete;
+  EnclaveTask& operator=(const EnclaveTask&) = delete;
+  EnclaveTask(EnclaveTask&&) = delete;
+  EnclaveTask& operator=(EnclaveTask&&) = delete;
 
   virtual ~EnclaveTask() override = default;
 
-  /**
-   * Computes a task and bookmarks the outcome
-   */
   virtual bool run() override;
 };
 

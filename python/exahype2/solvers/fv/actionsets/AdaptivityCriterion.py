@@ -28,91 +28,101 @@ class AdaptivityCriterion(AbstractFVActionSet):
   
   Please consult EnclaveTasking.create_action_sets for details regarding
   the handling of AMR within the enclave tasking concept.
-  
   """
-  
-  
-  TemplateAMR = """  
-  logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.willBeRefined(), marker.hasBeenRefined() );
 
+  TemplateAMR = """
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
   {% if GRID_CONSTRUCTION %}
-  if ( 
-    not marker.willBeRefined() 
+  if (
+    not marker.willBeRefined()
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
+    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
-  } 
-  else if ( 
-    not marker.willBeRefined() 
+  } else if (
+    not marker.willBeRefined()
     and
-    tarch::la::greaterEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    tarch::la::greaterEquals(tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH)
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMDCriterionEvaluatedThroughoutGridConstruction()
-  ) { 
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-          nullptr,
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-          0.0
-        );
+  ) {
+    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+      {% if STATELESS_REFINEMENT_CRITERION==True %}
+      refinementCriterion = refinementCriterion and {{FULL_QUALIFIED_SOLVER_NAME}}::refinementCriterion(
+        nullptr,
+        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        0.0
+      );
+      {% else %}
+      refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
+        nullptr,
+        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        0.0
+      );
+      {% endif %}
     }
     fineGridCell{{CELL_LABEL_NAME}}.setAMDCriterionEvaluatedThroughoutGridConstruction(true);
-  }
-  else {
+  } else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
   }
   {% else %}
-  if ( 
+  if (
     {{PREDICATE}}
     and
-    not marker.willBeRefined() 
+    not marker.willBeRefined()
     and
-    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
+    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH)
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
-  } 
-  else if ( 
+  } else if (
     {{PREDICATE}}
     and
     fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
-  ) { 
+  ) {
     int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-          repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
-        );
-        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+      {% if STATELESS_REFINEMENT_CRITERION==True %}
+      refinementCriterion = refinementCriterion and {{FULL_QUALIFIED_SOLVER_NAME}}::refinementCriterion(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
+      );
+      {% else %}
+      refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
+      );
+      {% endif %}
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-     
+
     if (
-      refinementCriterion==::exahype2::RefinementCommand::Refine 
-      and 
+      refinementCriterion==::exahype2::RefinementCommand::Refine
+      and
       tarch::la::smallerEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
     ) {
       logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
-    } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
+    } else if (
+      refinementCriterion==::exahype2::RefinementCommand::Erase
+      and
+      3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH
+    ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
-    } 
-  }
-  else {
+    }
+  } else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
   }
   {% endif %}
-    
-  _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}} );
-  logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
+  _localRefinementControl.addCommand(marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}});
   """
-  
-    
+
   def __init__(self, 
                solver, 
                guard, 

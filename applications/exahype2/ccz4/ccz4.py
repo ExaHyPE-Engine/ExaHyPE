@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     print(args.implementation)
     if args.implementation=="fv-adaptive":
-       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+       SuperClass = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk2-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive-enclave":
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
 """
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+        if SuperClass==exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -199,7 +199,7 @@ if __name__ == "__main__":
             KOSigma                                  = self._KO_Sigma
           )
         
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+        if SuperClass==exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep:
           self.postprocess_updated_patch += """{
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};

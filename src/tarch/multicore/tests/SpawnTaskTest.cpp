@@ -21,7 +21,7 @@ tarch::multicore::BooleanSemaphore consumerTaskSemaphore;
 class ProducerTask: public tarch::multicore::Task {
 public:
   ProducerTask():
-    tarch::multicore::Task(Task::DontFuse, Task::DefaultPriority) {}
+    tarch::multicore::Task(Task::NoTaskType, Task::DefaultPriority) {}
 
   ~ProducerTask() override = default;
 
@@ -31,14 +31,12 @@ public:
     std::this_thread::sleep_for(std::chrono::milliseconds(10)); // simulate work
     return false;
   }
-
-  bool canFuse() const override { return false; }
 };
 
 class ConsumerTask: public tarch::multicore::Task {
 public:
   ConsumerTask():
-    tarch::multicore::Task(Task::DontFuse, Task::DefaultPriority) {}
+    tarch::multicore::Task(Task::NoTaskType, Task::DefaultPriority) {}
 
   ~ConsumerTask() override = default;
 
@@ -47,8 +45,6 @@ public:
     numberOfConsumerTasksThatHaveBeenExecuted++;
     return false;
   }
-
-  bool canFuse() const override { return false; }
 };
 
 tarch::multicore::tests::SpawnTaskTest::SpawnTaskTest():

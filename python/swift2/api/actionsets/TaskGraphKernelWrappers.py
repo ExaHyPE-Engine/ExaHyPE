@@ -113,7 +113,7 @@ def construct_touch_vertex_first_time_call(
   );
 
   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     [=,marker=marker,_spacetreeId=_spacetreeId,assignedParticles=fineGridVertexHydroPartSet,numberOfCoalescedAssignedParticles=numberOfCoalescedAssignedParticles]()->bool {
       {% if TOUCH_VERTEX_FIRST_TIME_KERNEL!=None %}
@@ -204,7 +204,7 @@ def construct_touch_cell_first_time_call(
       );
       
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
-        tarch::multicore::Task::DontFuse,
+        tarch::multicore::Task::NoTaskType,
         tarch::multicore::Task::DefaultPriority,
         [=,marker=marker,_spacetreeId=_spacetreeId,localParticles=localParticles,numberOfCoalescedLocalParticlesPerVertex=numberOfCoalescedLocalParticlesPerVertex,activeParticles = _activeParticles,numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex,adjacentResourcesIndices=adjacentResourcesIndices]()->bool {
           ::swift2::TaskEnumerator::lockResources(adjacentResourcesIndices);
@@ -325,7 +325,7 @@ def construct_touch_vertex_last_time_call(
       );
 
       tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
-        tarch::multicore::Task::DontFuse,
+        tarch::multicore::Task::NoTaskType,
         tarch::multicore::Task::DefaultPriority,
         [=,marker=marker,_spacetreeId=_spacetreeId,assignedParticles=fineGridVertexHydroPartSet,numberOfCoalescedAssignedParticles=numberOfCoalescedAssignedParticles]()->bool {
           {% if TOUCH_VERTEX_LAST_TIME_KERNEL!=None %}

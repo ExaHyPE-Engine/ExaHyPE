@@ -102,10 +102,14 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
+)
+
+riemann_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     riemann_solver=hllem,
 )
+
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 

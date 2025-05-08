@@ -1,23 +1,23 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .CellCenteredFiniteDifferences import CellCenteredFiniteDifferences
+from exahype2.solvers.rkfd.actionsets.AbstractRKFDActionSet import AbstractRKFDActionSet
 from exahype2.solvers.PDETerms import PDETerms
 
-import peano4
+import peano4.solversteps
 import exahype2
 
 import jinja2
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
-    ReconstructPatchAndApplyFunctor,
+from peano4.toolbox.blockstructured.ReconstructPatch import (
+    ReconstructPatch,
 )
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
 
 
-class UpdateCell(ReconstructPatchAndApplyFunctor):
+class UpdateCell(AbstractRKFDActionSet):
     r"""!
-
     Update one cell, i.e. compute Runge-Kutta step on it
 
     This routine is very similar to the Finite Volume step. The big difference in
@@ -48,14 +48,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     This is the stuff stored in RhsEstimates. It does not comprise any auxiliary
     variables. So I have to copy the auxiliary variables from the last valid
     time step every time I reconstruct a new guess.
-
-
-
     """
 
     SolveRiemannProblemsOverPatch = jinja2.Template(
         """
-      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(false);
+    if ({{GUARD}}) {
+      auto* /*const*/ newQ = {{NEW_ACCESSOR}}.value;
+      auto* /*const*/ oldQWithHalo = {{OLD_ACCESSOR}}.value;
+      double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
       // Set the variable
       // double timeStepSize
@@ -99,7 +100,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
               fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},dof,unknown) ];
           }
         {% endif %}
-              
         }
 
         newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
@@ -187,44 +187,21 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         0, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // outcome has to be valid
+    }
   """
     )
 
     def __init__(self, solver):
-        """ """
-        ReconstructPatchAndApplyFunctor.__init__(
-            self,
-            patch=solver._patch,
-            patch_overlap=solver._patch_overlap_new,
-            functor_implementation="""
-#error please switch to your Riemann solver of choice
-""",
-            guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
-            add_assertions_to_halo_exchange=False,
-        )
-        self._solver = solver
-
-        self._Template_TouchCellFirstTime_Preamble = (
-            """
-  fineGridCell"""
-            + solver._name
-            + """CellLabel.setHasUpdated(false);
-"""
-            + self._Template_TouchCellFirstTime_Preamble
-        )
-
+        super(UpdateCell, self).__init__(solver)
+        self.guard = "not marker.willBeRefined() and not marker.hasBeenRefined()"
+        self.old_accessor = "fineGridCell" + solver._patch_reconstructed.name
+        self.new_accessor = "fineGridCell" + solver._patch.name
         self._butcher_tableau = ButcherTableau(self._solver._rk_order)
 
     def _add_action_set_entries_to_dictionary(self, d):
-        """
-
-        This is our plug-in point to alter the underlying dictionary
-
-        """
-        super(UpdateCell, self)._add_action_set_entries_to_dictionary(d)
-
-        self._solver._init_dictionary_with_default_parameters(d)
-        self._solver.add_entries_to_text_replacement_dictionary(d)
+        d["GUARD"] = self.guard
+        d["OLD_ACCESSOR"] = self.old_accessor
+        d["NEW_ACCESSOR"] = self.new_accessor
 
         d["PREDICATES"] = [
             "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(
@@ -277,11 +254,16 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"
         ] = self._butcher_tableau.time_step_sizes()
 
-        # Has to come after we've set the predicates, as we use these
-        # fields in here already
-        d["CELL_FUNCTOR_IMPLEMENTATION"] = self.SolveRiemannProblemsOverPatch.render(
-            **d
-        )
+    def get_body_of_operation(self,operation_name):
+        result = ""
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+          d = {}
+          self._solver._init_dictionary_with_default_parameters(d)
+          self._solver.add_entries_to_text_replacement_dictionary(d)
+          self._add_action_set_entries_to_dictionary(d)
+          result = self.SolveRiemannProblemsOverPatch.render(**d)
+          pass
+        return result
 
     def get_includes(self):
         return (
@@ -295,13 +277,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         )
 
     def get_action_set_name(self):
-        """
-
-        You should replicate this function in each subclass, so you get
-        meaningful action set names (otherwise, it will be
-        AbstractRKFDActionSet0,1,2,...).
-
-        """
         return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
 
 
@@ -340,11 +315,6 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         plot_grid_properties,
         kernel_namespace,
     ):
-        """
-
-        Instantiate a generic FV scheme with an overlap of 1.
-
-        """
         self._rk_order = rk_order
 
         super(SeparateSweeps, self).__init__(
@@ -483,6 +453,14 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
 
         """
         super(SeparateSweeps, self).create_action_sets()
+        self._action_set_reconstruct_patch = ReconstructPatch(
+            patch=self._patch,
+            patch_overlap=self._patch_overlap_new,
+            patch_reconstructed=self._patch_reconstructed,
+            guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
+            add_assertions_to_halo_exchange=True
+        )
+        self._action_set_reconstruct_patch.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 3
         self._action_set_update_cell = UpdateCell(self)
         self._action_set_update_cell.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 4
         self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(

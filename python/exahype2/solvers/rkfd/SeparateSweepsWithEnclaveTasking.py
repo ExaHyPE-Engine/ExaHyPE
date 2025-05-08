@@ -11,15 +11,15 @@ import jinja2
 
 import os
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
-    ReconstructPatchAndApplyFunctor,
+from peano4.toolbox.blockstructured.ReconstructPatch import (
+    ReconstructPatch,
 )
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
 from exahype2.solvers.Storage import Storage
 
 
-class UpdateCell(ReconstructPatchAndApplyFunctor):
+class UpdateCell(ReconstructPatch):
     """!
 
     Update one cell that is compute Runge-Kutta step on it

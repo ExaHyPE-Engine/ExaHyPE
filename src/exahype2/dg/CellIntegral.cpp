@@ -235,7 +235,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
       }
     }
 
-    //cellData.maxEigenvalue[cellIndex] = eigenvalue;
+    cellData.maxEigenvalue[cellIndex] = eigenvalue;
   }
 }
 

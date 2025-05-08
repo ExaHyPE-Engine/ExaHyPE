@@ -20,7 +20,7 @@ void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
     {
       while (tasks[i]->run()) {
-        tarch::multicore::Core::getInstance().yield();
+        Core::getInstance().yield();
       }
       delete tasks[i];
     }
@@ -46,7 +46,7 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const inDepende
   untied
   {
     while (task->run()) {
-#pragma omp taskyield
+      Core::getInstance().yield();
     }
     delete task;
   }
@@ -61,7 +61,7 @@ void tarch::multicore::native::spawnTask(Task* task, const void* const outDepend
   untied
   {
     while (task->run()) {
-#pragma omp taskyield
+      Core::getInstance().yield();
     }
     delete task;
   }
@@ -73,7 +73,7 @@ void tarch::multicore::native::spawnTask(Task* task) {
 #pragma omp task priority(task->getPriority()) untied
   {
     while (task->run()) {
-#pragma omp taskyield
+      Core::getInstance().yield();
     }
     delete task;
   }

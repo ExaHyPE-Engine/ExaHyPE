@@ -23,7 +23,7 @@ class StepToActionSet(object):
         print( "user has to modify class " + action_set.get_action_set_name() + " in actions directory manually ")
       else:
         subnamespace = "observers" 
-        action_set_name = self.step.name + "2" + action_set.get_action_set_name() + str( self.step.action_sets.index(action_set))
+        action_set_name = self.step.name + "_" + str( self.step.action_sets.index(action_set)) + "_" + action_set.get_action_set_name()
 
       new_action_set = peano4.output.ActionSet(
         action_set_name, self.step.project.namespace + [ subnamespace ], self.step.project.subdirectory + subnamespace, action_set

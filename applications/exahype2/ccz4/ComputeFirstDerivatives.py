@@ -1,5 +1,5 @@
 #
-# New action set for second order CCZ4 formualtion
+# New action set for second order CCZ4 formulation
 #
 import peano4
 import jinja2
@@ -7,65 +7,20 @@ import jinja2
 from exahype2.solvers.ButcherTableau import ButcherTableau
 from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import ReconstructLinearCombination
 
-
-class ComputeFirstDerivativesFV(peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor):
+class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPatch):
     """!
-    
-    Explicit reconstruction of derivatives for Finite Volumes
-    
-    """
-    def __init__(self,
-                 solver
-                 ):
-        super( ComputeFirstDerivativesFD4, self ).__init__(patch=solver._patch,
-                                                        patch_overlap=solver._patch_overlap_new,
-                                                        functor_implementation="""
-::exahype2::CellData  patchData( 
-  oldQWithHalo, 
-  marker.x(), marker.h(), 
-  0.0, // timeStamp, 
-  0.0, // timeStepSize, 
-  newQ 
-);
-::exahype2::fd::fd4::reconstruct_first_derivatives(patchData,"""+str(solver._patch.dim[0])+","+str(int(solver._patch_overlap_new.dim[0]/2))+","+str(solver._patch.no_of_unknowns)+""",0);
-""",
-                                                        reconstructed_array_memory_location=solver._reconstructed_array_memory_location,
-                                                        guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
-                                                        add_assertions_to_halo_exchange=False,
-                                                        )
-        pass
 
-    
-    def user_should_modify_template(self):
-        return False
-    
-
-    def get_includes(self):
-        return super( ComputeFirstDerivativesFV, self ).get_includes() + """
-    #include "exahype2/CellData.h"
-    #include "tarch/NonCriticalAssertions.h"
-    """
-
-
-    def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_")
-
-        
-
-class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor):
-    """!
-    
     Explicit reconstruction of first derivatives for FD4 discretisation
-    
+
     FD4 is implemented as Runge-Kutta scheme. So we first have to recompute
     the current solution guess according to the Butcher tableau. Then we feed
     this reconstruction into the derivative computation. In theory, this is all
     simple, but in practice things require more work.
-    
+
     We assume that developers follow @ref page_exahype_coupling "ExaHyPE's generic recommendation how to add additional traversals".
     Yet, this is only half of the story. If they follow the vanilla blueprint
     and plug into a step after the last time step
-    
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
       if (repositories::isLastGridSweepOfTimeStep()
       and
@@ -147,10 +102,7 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
                  ):
         super( ComputeFirstDerivativesFD4RK, self ).__init__(patch=solver._patch,
                                                         patch_overlap=solver._patch_overlap_new,
-                                                        functor_implementation="""
-#error Will be inserted later down in this Python file
-""",
-                                                        reconstructed_array_memory_location=solver._reconstructed_array_memory_location,
+                                                        patch_reconstructed=solver._patch_reconstructed,
                                                         guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
                                                         add_assertions_to_halo_exchange=False,
                                                         )
@@ -262,7 +214,7 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
 
         if self._use_enclave_solver:
             d["PREDICATES"] = self._solver._primary_sweeps_of_Runge_Kutta_step_on_cell
-        else:       
+        else:
             d["PREDICATES"] = [
                 "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(
                     self._solver._store_cell_data_default_guard(),
@@ -273,13 +225,14 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
                 for step in range(0, self._solver.number_of_Runge_Kutta_steps())
             ]
 
-        # Has to come after we've set the predicates, as we use these
-        # fields in here already
-        d["CELL_FUNCTOR_IMPLEMENTATION"] = self.ComputeDerivativesOverCell.render(
-            **d
-        )
+    def get_body_of_operation(self, operation_name):
+        result = super(ComputeFirstDerivativesFD4RK, self).get_body_of_operation(self, operation_name)
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+            d = {}
+            self._add_action_set_entries_to_dictionary(d)
+            result += self.ComputeDerivativesOverCell.format(**d)
+        return result
 
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
-

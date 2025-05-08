@@ -7,36 +7,23 @@ exahype2::EnclaveTask<T>::EnclaveTask(
   const peano4::datamanagement::CellMarker&   marker,
   double                                      t,
   double                                      dt,
-  /*const*/ T* __restrict__ const                 inputValues,
-  T* __restrict__ const                       outputValues,
-  int                                         numberOfInputValues,
-  int                                         numberOfResultValues,
+  /*const*/ T* __restrict__ const             QIn,
+  T* __restrict__ const                       QOut,
   Functor                                     functor
 ):
   tarch::multicore::Task(enclaveTaskTypeId, tarch::multicore::Task::DefaultPriority),
   _marker(marker),
   _t(t),
   _dt(dt),
-  _inputValues(inputValues),
-  _outputValues(outputValues),
-  _numberOfInputValues(numberOfInputValues),
-  _numberOfResultValues(numberOfResultValues),
+  _QIn(QIn),
+  _QOut(QOut),
   _functor(functor) {
-  logTraceIn("EnclaveTask()");
-
-  assertion(_numberOfInputValues > 0);
-  assertion(_inputValues != nullptr);
-
-  assertion(_numberOfResultValues > 0);
-  assertion(_outputValues != nullptr);
-
-  logTraceOut("EnclaveTask()");
+  assertion(_QIn != nullptr);
+  assertion(_QOut != nullptr);
 }
 
 template <typename T>
 bool exahype2::EnclaveTask<T>::run() {
-  logTraceIn("run()");
   _functor();
-  logTraceOut("run()");
   return false;
 }

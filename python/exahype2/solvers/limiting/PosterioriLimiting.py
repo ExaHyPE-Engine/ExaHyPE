@@ -234,11 +234,14 @@ class PosterioriLimiting(object):
         self._action_set_spread_limiter_status.descend_invocation_order         = 1
         self._action_set_copy_convert_and_project_data.descend_invocation_order = 1000
 
-        # [nk] The Limiter Solver should be called to recompute TROUBLED cells and their neighbors LIMITER_TO_REGULAR based on the projections
+        # [nk] The limiter solver should be called to recompute TROUBLED cells and their neighbors LIMITER_TO_REGULAR based on the projections
         # that are sent from CopyAndConvertPatch action.
-        self._limiter_solver._action_set_update_cell.guard += ( 
+        update_patch_guard = (
            " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
-         + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR")
+         + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
+        )
+        self._limiter_solver._action_set_update_patch.guard += update_patch_guard
+        self._limiter_solver._action_set_reconstruct_patch.guard += update_patch_guard
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (

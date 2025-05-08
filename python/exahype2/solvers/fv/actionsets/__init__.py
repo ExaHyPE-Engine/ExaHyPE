@@ -11,5 +11,4 @@ from .PostprocessSolution   import EmptyPostprocessSolution
 from .PostprocessSolution   import VolumeWisePostprocessSolution
 from .PreprocessSolution    import EmptyPreprocessSolution
 from .PreprocessSolution    import VolumeWisePreprocessSolution
-from .UpdateCell            import UpdateCell
-from .UpdateCellWithEnclaveTasking import UpdateCellWithEnclaveTasking
+from .UpdatePatch           import UpdatePatch
