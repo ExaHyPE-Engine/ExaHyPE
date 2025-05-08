@@ -27,19 +27,19 @@
   namespace {{ item }} {
 {%- endfor %}
   class {{CLASSNAME}};
-
-  {% if USE_VARIABLE_SHORTCUT is sameas True %}
-  /*
-   * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
-   */
-  using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
-  {% endif %}
 {% for item in NAMESPACE -%}
 }
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
+    {% if USE_VARIABLE_SHORTCUT is sameas True %}
+    /*
+    * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+    */
+    using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
+    {% endif %}
+
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -55,7 +55,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
     static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    static constexpr int NumberOfUnknowns                     = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfAuxiliaryVariables           = {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
     /**
      * Maximum mesh size that this solver wants/is allowed to support. Peano 4
@@ -78,6 +83,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double MinAdmissibleVolumeH = {{MIN_VOLUME_H}};
     static constexpr double MinAdmissibleCellH   = MinAdmissiblePatchH;
 
+    {{SOLVER_CONSTANTS}}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+
+
     {{CLASSNAME}}();
 
     /**
@@ -89,42 +100,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
-
-    /**
-     * @param Q Vector of unknowns
-     * @param t Time
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{STORAGE_PRECISION}}* NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
-      double                                       t
-    ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
-    virtual void initialCondition(
-      {{STORAGE_PRECISION}}* NOALIAS          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
-      bool                                         gridIsConstructed
-    ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
-    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}
-    {% else %}
-    /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values though most BCs only modify the outside ones. Please
-     * note that the boundary conditions you set here are after that subject
-     * to the Riemann solver, i.e. flux and eigenvalues.
-     */
-    virtual void boundaryConditions(
-      const {{STORAGE_PRECISION}}* NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{STORAGE_PRECISION}}* NOALIAS          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
-      double                                       t,
-      int                                          normal
-    ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-    {% endif %}
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -212,19 +187,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @see setTimeStepSize(double)
      */
-    void update(double timeStepSize, double timeStamp, double patchSize);
+    void update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize);
 
-    SolverState  getSolverState() const;
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-    static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    {{SOLVER_CONSTANTS}}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
+    SolverState getSolverState() const;
 
     /**
      * Always holds.
@@ -252,35 +217,35 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishSimulation() override;
 
+    {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
+
   protected:
     static tarch::logging::Log _log;
 
-    SolverState  _solverState;
+    SolverState _solverState;
 
-    double     _minTimeStamp;
-    double     _maxTimeStamp;
+    double _minTimeStamp;
+    double _maxTimeStamp;
 
-    double     _minTimeStampThisTimeStep;
-    double     _maxTimeStampThisTimeStep;
+    double _minTimeStampThisTimeStep;
+    double _maxTimeStampThisTimeStep;
 
-    double     _localMinTimeStampThisTimeStep;
-    double     _localMaxTimeStampThisTimeStep;
+    double _localMinTimeStampThisTimeStep;
+    double _localMaxTimeStampThisTimeStep;
 
-    double     _minVolumeH;
-    double     _maxVolumeH;
+    double _minVolumeH;
+    double _maxVolumeH;
 
-    double     _minVolumeHThisTimeStep;
-    double     _maxVolumeHThisTimeStep;
+    double _minVolumeHThisTimeStep;
+    double _maxVolumeHThisTimeStep;
 
-    double     _minTimeStepSize;
-    double     _maxTimeStepSize;
+    double _minTimeStepSize;
+    double _maxTimeStepSize;
 
-    double     _minTimeStepSizeThisTimeStep;
-    double     _maxTimeStepSizeThisTimeStep;
+    double _minTimeStepSizeThisTimeStep;
+    double _maxTimeStepSizeThisTimeStep;
 
     tarch::multicore::BooleanSemaphore _semaphore;
-
-  {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };
 
 {# Empty line here #}

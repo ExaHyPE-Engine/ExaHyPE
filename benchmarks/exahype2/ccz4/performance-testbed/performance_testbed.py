@@ -799,6 +799,8 @@ if __name__ == "__main__":
 
     peano4_project.output.makefile.add_CXX_flag("-DCCZ4EINSTEIN")
 
+    peano4_project.output.makefile.add_h_file("CCZ4.h")
+    peano4_project.output.makefile.add_cpp_file("CCZ4.cpp")
     peano4_project.output.makefile.add_cpp_file(
         "../../../../applications/exahype2/ccz4/InitialValues.cpp"
     )

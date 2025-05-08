@@ -3,130 +3,262 @@
 from .FV import FV
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.fv.actionsets import UpdateCell
+
+from exahype2.solvers.AbstractSolverDeclarations import AbstractSolverDeclarations
+from exahype2.solvers.SolverDeclarations import SolverDeclarations
+from exahype2.solvers.SolverDefinitions import SolverDefinitions
+
+from exahype2.solvers.fv.actionsets import UpdatePatch
+from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
+
 
 class SingleSweep(FV):
-  """
-  Probably the simplest solver you could think off.
-
-  :: Write your own specialisation ::
-
-  self._preprocess_reconstructed_patch
-    Has to hold any preprocessing, but it also has to set the doubles
-    timeStepSize and timeStamp to valid data.
-
-  self._postprocess_updated_patch
-    You don't have to redefine this one, but if you want to alter the
-    time step size, then this is the right place to do so. If you don't
-    alter timeStepSize, the code will automatically continue with
-    the current one subject to a preprocessing in the next step.
-  """
-
-  def __init__(self,
-               name,
-               patch_size,
-               overlap,
-               unknowns,
-               auxiliary_variables,
-               min_volume_h,
-               max_volume_h,
-               plot_grid_properties: bool,
-               ):
-    super(SingleSweep, self).__init__(name,
-                                      patch_size,
-                                      overlap,
-                                      unknowns,
-                                      auxiliary_variables,
-                                      min_volume_h,
-                                      max_volume_h,
-                                      plot_grid_properties,
-                                      )
-
-    self._solver_template_file_class_name = "SingleSweep"
-
-
-  def create_data_structures(self):
     """
-    Call the superclass' create_data_structures() to ensure that all the data
-    structures are in place, i.e., each cell can host a patch, that each face hosts
-    patch overlaps, and so forth. These quantities are all set to defaults. See
-    FV.create_data_structures().
+    Probably the simplest solver you could think off.
 
-    After that, take the patch overlap (that's the data stored within the faces)
-    and ensure that these are sent and received via MPI whenever they are also
-    stored persistently. The default in FV is that no domain boundary data exchange
-    is active. Finally, ensure that the old data is only exchanged between the
-    initialisation sweep and the first first grid run-through.
+    :: Write your own specialisation ::
+
+    self._preprocess_reconstructed_patch
+      Has to hold any preprocessing, but it also has to set the doubles
+      timeStepSize and timeStamp to valid data.
+
+    self._postprocess_updated_patch
+      You don't have to redefine this one, but if you want to alter the
+      time step size, then this is the right place to do so. If you don't
+      alter timeStepSize, the code will automatically continue with
+      the current one subject to a preprocessing in the next step.
     """
-    super(SingleSweep, self).create_data_structures()
 
-    initialisation_sweep_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
-      ")"
-    first_iteration_after_initialisation_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
-    ")"
+    def __init__(
+        self,
+        name,
+        patch_size,
+        overlap,
+        unknowns,
+        auxiliary_variables,
+        min_volume_h,
+        max_volume_h,
+        use_enclave_tasking: bool,
+        number_of_enclave_tasks: int,
+        plot_grid_properties: bool,
+    ):
+        super(SingleSweep, self).__init__(
+            name=name,
+            patch_size=patch_size,
+            overlap=overlap,
+            unknowns=unknowns,
+            auxiliary_variables=auxiliary_variables,
+            min_volume_h=min_volume_h,
+            max_volume_h=max_volume_h,
+            use_enclave_tasking=use_enclave_tasking,
+            number_of_enclave_tasks=number_of_enclave_tasks,
+            plot_grid_properties=plot_grid_properties,
+        )
 
-    self._patch_overlap_new.generator.send_condition               = "true"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
+        self._solver_template_file_class_name = "SingleSweep"
 
-    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
-    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
+    def create_data_structures(self):
+        """
+        Call the superclass' create_data_structures() to ensure that all the data
+        structures are in place, i.e., each cell can host a patch, that each face hosts
+        patch overlaps, and so forth. These quantities are all set to defaults. See
+        FV.create_data_structures().
 
+        After that, take the patch overlap (that's the data stored within the faces)
+        and ensure that these are sent and received via MPI whenever they are also
+        stored persistently. The default in FV is that no domain boundary data exchange
+        is active. Finally, ensure that the old data is only exchanged between the
+        initialisation sweep and the first first grid run-through.
+        """
+        super(SingleSweep, self).create_data_structures()
 
-  def create_action_sets(self):
-    """
-    Call superclass routine and then reconfigure the update cell call.
-    Only the UpdateCell action set is specific to a single sweep.
+        initialisation_sweep_guard = (
+            "("
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::GridInitialisation"
+            + ")"
+        )
+        first_iteration_after_initialisation_guard = (
+            "("
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::TimeStepAfterGridInitialisation or "
+            + "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::PlottingAfterGridInitialisation"
+            + ")"
+        )
 
-    This operation is implicitly called via the superconstructor.
-    """
-    super(SingleSweep, self).create_action_sets()
-    self._action_set_update_cell = UpdateCell(self)
+        self._patch_overlap_new.generator.send_condition = "true"
+        self._patch_overlap_new.generator.receive_and_merge_condition = "true"
 
+        self._patch_overlap_old.generator.send_condition = initialisation_sweep_guard
+        self._patch_overlap_old.generator.receive_and_merge_condition = (
+            first_iteration_after_initialisation_guard
+        )
 
-  @property
-  def user_action_set_includes(self):
-    return """
+    def create_action_sets(self):
+        """
+        Call superclass routine and then reconfigure the update cell call.
+        This operation is implicitly called via the superconstructor.
+        """
+        super(SingleSweep, self).create_action_sets()
+        self._action_set_update_patch = UpdatePatch(self)
+        self._action_set_reconstruct_patch = ReconstructPatch(
+            patch=self._patch,
+            patch_overlap=self._patch_overlap_new,
+            patch_reconstructed=self._patch_reconstructed,
+            guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
+            add_assertions_to_halo_exchange=True
+        )
+
+    @property
+    def user_action_set_includes(self):
+        return (
+            """
 #include "exahype2/CellData.h"
-""" + super(SingleSweep, self).user_action_set_includes
+"""
+            + super(SingleSweep, self).user_action_set_includes
+        )
 
+    def set_implementation(
+        self,
+        initial_conditions=None,
+        boundary_conditions=None,
+        refinement_criterion=None,
+        flux=None,
+        ncp=None,
+        eigenvalues=None,
+        max_eigenvalue=None,
+        riemann_solver=None,
+        source_term=None,
+        adjust_solution=None,
+    ):
+        if initial_conditions is not None:
+            self._initial_conditions_implementation = initial_conditions
+            if initial_conditions is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_initial_conditions = True
+            else:
+                self._can_fuse = False  # We can only fuse if all terms are stateless
 
-  def set_implementation(
-    self,
-    boundary_conditions,
-    refinement_criterion,
-    initial_conditions,
-    memory_location,
-    additional_action_set_includes,
-    additional_user_includes
-  ):
-    """
-    If you pass in User_Defined, then the generator will create C++ stubs
-    that you have to befill manually. If you pass in None_Implementation, it
-    will create nop, i.e., no implementation or defaults. Any other string
-    is copied 1:1 into the implementation. If you pass in None, then the
-    set value so far won't be overwritten.
-    """
-    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
-    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
-    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+        if refinement_criterion is not None:
+            self._refinement_criterion_implementation = refinement_criterion
+            if refinement_criterion is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_refinement_criterion = True
+            else:
+                self._can_fuse = False
 
-    if refinement_criterion==PDETerms.None_Implementation:
-      assert False, "Refinement criterion cannot be none"
-    if initial_conditions==PDETerms.None_Implementation:
-      assert False, "Initial conditions cannot be none"
+        if boundary_conditions is not None:
+            self._boundary_conditions_implementation = boundary_conditions
+            if boundary_conditions is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_boundary_conditions = True
+            else:
+                self._can_fuse = False
 
-    self._user_action_set_includes += additional_action_set_includes
-    self._user_solver_includes     += additional_user_includes
+        if flux is not None:
+            self._flux_implementation = flux
+            if flux is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_flux = True
+            else:
+                self._can_fuse = False
 
-    self.create_action_sets()
+        if ncp is not None:
+            self._ncp_implementation = ncp
+            if ncp is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_ncp = True
+            else:
+                self._can_fuse = False
 
+        if max_eigenvalue is not None:
+            self._max_eigenvalue_implementation = max_eigenvalue
+            if max_eigenvalue is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_max_eigenvalue = True
+            else:
+                self._can_fuse = False
 
-  def add_entries_to_text_replacement_dictionary(self, d):
-    """
-     d: Dictionary of string to string
-        in/out argument
-    """
-    pass
+        if eigenvalues is not None:
+            self._eigenvalues_implementation = eigenvalues
+            if eigenvalues is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_eigenvalues = True
+            else:
+                self._can_fuse = False
+
+        if riemann_solver is not None:
+            self._riemann_solver_implementation = riemann_solver
+            if riemann_solver is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_riemann_solver = True
+            else:
+                self._can_fuse = False
+
+        if source_term is not None:
+            self._source_term_implementation = source_term
+            if source_term is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_source_term = True
+            else:
+                self._can_fuse = False
+
+        if adjust_solution is not None:
+            self._adjust_solution_implementation = adjust_solution
+            if adjust_solution is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_adjust_solution = True
+            else:
+                self._can_fuse = False
+
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
+        self.add_entries_to_text_replacement_dictionary(d)
+
+        abstract_solver_declarations = AbstractSolverDeclarations(d)
+        solver_declarations = SolverDeclarations(d)
+        solver_definitions = SolverDefinitions(d)
+
+        self._abstract_solver_user_declarations = (
+            abstract_solver_declarations.create_abstract_solver_user_declarations()
+        )
+        self._abstract_solver_user_declarations += (
+            self._time_stepping_code_snippets.create_abstract_solver_user_declarations()
+        )
+        self._abstract_solver_user_definitions = (
+            self._time_stepping_code_snippets.create_abstract_solver_user_definitions()
+        )
+        self._solver_user_declarations = (
+            solver_declarations.create_solver_user_declarations()
+        )
+        self._solver_user_definitions = (
+            solver_definitions.create_solver_user_definitions()
+        )
+
+        self._compute_time_step_size = (
+            self._time_stepping_code_snippets.create_compute_time_step_size()
+        )
+        self._compute_new_time_step_size = (
+            self._time_stepping_code_snippets.create_compute_new_time_step_size()
+        )
+        self._start_time_step_implementation = (
+            self._time_stepping_code_snippets.create_start_time_step_implementation()
+        )
+        self._finish_time_step_implementation = (
+            self._time_stepping_code_snippets.create_finish_time_step_implementation()
+        )
+        self._print_time_step_implementation = (
+            self._time_stepping_code_snippets.create_print_time_step_implementation()
+        )
+        self._constructor_implementation = (
+            self._time_stepping_code_snippets.create_abstract_solver_constructor_statements()
+        )
+
+        self.create_action_sets()
+
+    def add_entries_to_text_replacement_dictionary(self, d):
+        """
+        d: Dictionary of string to string
+           in/out argument
+        """
+        pass

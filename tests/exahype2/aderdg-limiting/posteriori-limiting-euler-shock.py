@@ -154,7 +154,6 @@ if use_aderdg:
         boundary_conditions=boundary_conditions,
     )
     project.add_solver(aderdg_solver)
-    print(aderdg_solver)
 
 if use_fv:
     fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
@@ -165,6 +164,8 @@ if use_fv:
         min_volume_h=min_h,
         max_volume_h=max_h,
         time_step_relaxation=CFL,
+    )
+    fv_solver.set_implementation(
         flux=flux,
         max_eigenvalue=max_eval,
         initial_conditions=initial_conditions,
@@ -172,7 +173,6 @@ if use_fv:
         adjust_solution=adjust_solution,
     )
     project.add_solver(fv_solver)
-    print(fv_solver)
 
 if use_limiting:
     limiter = exahype2.solvers.limiting.PosterioriLimiting(
@@ -185,7 +185,6 @@ if use_limiting:
         physical_admissibility_criterion=isPhysicallyAdmissible,
     )
     project.add_solver(limiter)
-    print(limiter)
 
 project.set_output_path("solutions")
 
@@ -209,5 +208,3 @@ project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.build(make_clean_first=True)
-
-print(project)

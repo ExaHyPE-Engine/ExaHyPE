@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    class CCZ4Solver(exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking):
+    class CCZ4Solver(exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep):
         def __init__(
             self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r, KOSig
         ):

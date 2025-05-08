@@ -50,7 +50,7 @@ namespace {
       const bool _blockingMPI;
     public:
       PingPongSendTask(int data, bool blockingMPI):
-        Task(Task::DontFuse,Task::DefaultPriority),
+        Task(Task::NoTaskType,Task::DefaultPriority),
         _data(data),
         _blockingMPI(blockingMPI) {}
    
@@ -80,7 +80,7 @@ namespace {
       const bool _blockingMPI;
     public:
       PingPongReceiveTask(int expectedData, bool blockingMPI):
-        Task(Task::DontFuse,Task::DefaultPriority),
+        Task(Task::NoTaskType,Task::DefaultPriority),
         _data(expectedData),
         _blockingMPI(blockingMPI) {}
 

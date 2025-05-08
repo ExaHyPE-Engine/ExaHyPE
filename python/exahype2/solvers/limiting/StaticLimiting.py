@@ -160,10 +160,12 @@ class StaticLimiting(object):
             " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()<=celldata::" + self._name + "CellLabel::Troubled_Marker::REGULAR_TO_LIMITER"
         )
 
-        self._limiter_solver._action_set_update_cell.guard += (
+        update_patch_guard = (
            " and " + "repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
          + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR"
-         )
+        )
+        self._limiter_solver._action_set_update_patch.guard += update_patch_guard
+        self._limiter_solver._action_set_reconstruct_patch.guard += update_patch_guard
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (

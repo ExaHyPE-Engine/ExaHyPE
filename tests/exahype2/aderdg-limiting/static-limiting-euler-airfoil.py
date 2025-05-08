@@ -128,7 +128,9 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     max_volume_h=max_h,
     time_step_relaxation=0.5,
     unknowns=4,
-    auxiliary_variables=1,
+    auxiliary_variables=1
+)
+fv_solver.set_implementation(
     flux=flux,
     boundary_conditions=boundaryCondition,
     initial_conditions=init,
@@ -203,10 +205,4 @@ project.set_load_balancing(
 project.set_Peano4_installation("../../../", build_mode)
 project = project.generate_Peano4_project(verbose=False)
 # project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")  # TODO: Static limiter crashes with this
-
 project.build(make_clean_first=True)
-
-print(fv_solver)
-print(aderdg_solver)
-print(limiter)
-print(project)

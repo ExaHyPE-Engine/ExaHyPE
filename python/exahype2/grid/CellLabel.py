@@ -91,8 +91,6 @@ def create_cell_label(solver_name):
    per-cell data per solver.
 
    :: Attributes per cell
-   - SemaphoreNumber is a number that links to a task that has been spawn in the
-     background. Consult the enclave tasking and its bookkeeping for details.
    - TimeStamp holds the local time stamp of the current cell. Even for global
      time stepping, it is important that this time stamp is stored per cell, as
      some postprocessing (particles, e.g.) rely on the field.
@@ -104,10 +102,9 @@ def create_cell_label(solver_name):
   """
   result = peano4.datamodel.DaStGen2( UpdateCellLabel.get_attribute_name( solver_name ) )
 
-  result.data.add_attribute( dastgen2.attributes.Integer("SemaphoreNumber") )
-  result.data.add_attribute( dastgen2.attributes.Double("TimeStamp") )
-  result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize") )
-  result.data.add_attribute( dastgen2.attributes.Boolean("HasUpdated") )
+  result.data.add_attribute( dastgen2.attributes.Double("TimeStamp"))
+  result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize"))
+  result.data.add_attribute( dastgen2.attributes.Boolean("HasUpdated"))
   result.data.add_attribute( dastgen2.attributes.Boolean("AMDCriterionEvaluatedThroughoutGridConstruction") )
 
   result.peano4_mpi_and_storage_aspect.merge_implementation = """

@@ -8,4 +8,4 @@ from .PlotPatchesInPeanoBlockFormat   import PlotPatchesInPeanoBlockFormat
 from .PlotPatchesOverFacesInPeanoBlockFormat import PlotPatchesOverFacesInPeanoBlockFormat
 from .DynamicAMR                      import DynamicAMR
 from .ProjectPatchOntoFaces           import ProjectPatchOntoFaces
-from .ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from .ReconstructPatch                import ReconstructPatch

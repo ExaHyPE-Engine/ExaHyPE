@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .RungeKuttaDG  import RungeKuttaDG
 from exahype2.solvers.PDETerms      import PDETerms
@@ -8,7 +8,7 @@ import exahype2
 
 import jinja2
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
 
 
 class SeparateSweeps(RungeKuttaDG):

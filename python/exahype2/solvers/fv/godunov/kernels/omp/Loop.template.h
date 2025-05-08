@@ -14,8 +14,6 @@
   {% if DIMENSIONS == 3 %}
   {% if GPU == "omp" %}
   #pragma omp parallel for collapse(3) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
-  {% else %}
-  #pragma omp simd collapse(3) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
   {% endif %}
   for (int z = 0; z < {{ NUMBER_OF_VOLUMES_PER_AXIS }}; ++z) {
     for (int y = 0; y < {{ NUMBER_OF_VOLUMES_PER_AXIS }}; ++y) {
@@ -40,8 +38,6 @@
   {% else %}
   {% if GPU == "omp" %}
   #pragma omp parallel for collapse(2) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
-  {% else %}
-  #pragma omp simd collapse(2) {% if COMPUTE_MAX_EIGENVALUE==True %} reduction(max : maxEigenvalueAfterTimeStep) {% endif %}
   {% endif %}
   for (int y = 0; y < {{ NUMBER_OF_VOLUMES_PER_AXIS }}; ++y) {
     for (int x = 0; x < {{ NUMBER_OF_VOLUMES_PER_AXIS }}; ++x) {
@@ -65,9 +61,9 @@
 {% endmacro %}
 
 {% macro loopOverPatches() %}
-  for (int task = 0; task < {{NUMBER_OF_TASKS}}; task++) {
-    const int startPatch = task * (patchData.numberOfCells / {{NUMBER_OF_TASKS}}) + std::min(task, patchData.numberOfCells % {{NUMBER_OF_TASKS}});
-    const int endPatch   = (task + 1) * (patchData.numberOfCells / {{NUMBER_OF_TASKS}}) + std::min(task + 1, patchData.numberOfCells % {{NUMBER_OF_TASKS}});
+  for (int task = 0; task < {{NUMBER_OF_ENCLAVE_TASKS}}; task++) {
+    const int startPatch = task * (patchData.numberOfCells / {{NUMBER_OF_ENCLAVE_TASKS}}) + std::min(task, patchData.numberOfCells % {{NUMBER_OF_ENCLAVE_TASKS}});
+    const int endPatch   = (task + 1) * (patchData.numberOfCells / {{NUMBER_OF_ENCLAVE_TASKS}}) + std::min(task + 1, patchData.numberOfCells % {{NUMBER_OF_ENCLAVE_TASKS}});
     const int numberOfPatches = endPatch - startPatch;
 
     const {{COMPUTE_PRECISION}}* const QIns     = patchData.QIn1D + startPatch * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %};

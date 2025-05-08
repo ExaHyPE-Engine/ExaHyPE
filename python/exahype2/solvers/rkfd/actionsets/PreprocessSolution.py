@@ -7,7 +7,7 @@ import peano4
 import jinja2
 
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
 
 
 class EmptyPreprocessSolution(AbstractRKFDActionSet):
@@ -35,7 +35,7 @@ class EmptyPreprocessSolution(AbstractRKFDActionSet):
 
 
 
-class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
+class PreprocessReconstructedSolutionWithHalo(ReconstructPatch):
   """!
   
   Preprocess the solution and reconstruct halo for this
@@ -111,7 +111,7 @@ class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
               assertion( """ + enclave_task_cell_label + """.getSemaphoreNumber()<0 );
               
               tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
-                tarch::multicore::Task::DontFuse,
+                tarch::multicore::Task::NoTaskType,
                 tarch::multicore::Task::DefaultPriority,
                 taskBody
               );

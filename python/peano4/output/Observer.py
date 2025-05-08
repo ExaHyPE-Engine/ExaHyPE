@@ -653,7 +653,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     loadVertex{{logical_type_name}}
   ));
@@ -820,7 +820,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     loadFace{{logical_type_name}}
   ));
@@ -974,7 +974,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     loadCell{{logical_type_name}}
   ));
@@ -1277,7 +1277,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     storeCell{{logical_type_name}}
   ));
@@ -1383,7 +1383,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     storeFace{{logical_type_name}}
   ));
@@ -1486,7 +1486,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   };
   
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::NoTaskType,
     tarch::multicore::Task::DefaultPriority,
     storeVertex{{logical_type_name}}
   ));

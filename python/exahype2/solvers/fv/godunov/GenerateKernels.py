@@ -6,14 +6,13 @@ import jinja2
 import peano4.output
 
 
-def generate_kernels(solver,
-                     namespace,
-                     output,
-                     subdirectory,
-                     dimensions,
-                    ):
-    kernels_namespace = namespace + ["kernels", "fv", "godunov", solver._name]
-    kernels_output_path = subdirectory + "kernels/fv/godunov/" + solver._name
+def generate_kernels(
+    solver,
+    output,
+    subdirectory,
+):
+    kernels_namespace = solver._namespace + ["kernels", solver._name]
+    kernels_output_path = subdirectory + "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
     if not os.path.exists(kernels_output_path):
         os.makedirs(kernels_output_path)
@@ -21,30 +20,35 @@ def generate_kernels(solver,
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["DIMENSIONS"] = dimensions
     d["KERNELS_NAMESPACE"] = "::".join(kernels_namespace)
-    d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(namespace) + "::" + solver._name
 
     riemann_solver_file = "RiemannSolver"
 
-    generated_kernels = (
-        peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            headfile_template=kernels_templates_prefix + f"{riemann_solver_file}.template.h",
-            cppfile_template=kernels_templates_prefix + f"{riemann_solver_file}.template.cpp",
-            classname=kernels_output_path + f"/{riemann_solver_file}",
-            namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
-            dictionary=d,
-            default_overwrite=True,
-            apply_iteratively=True,
-          )
+    generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+        headfile_template=kernels_templates_prefix
+        + f"{riemann_solver_file}.template.h",
+        cppfile_template=kernels_templates_prefix
+        + f"{riemann_solver_file}.template.cpp",
+        classname=kernels_output_path + f"/{riemann_solver_file}",
+        namespace=kernels_namespace,
+        subdirectory=subdirectory + ".",
+        dictionary=d,
+        default_overwrite=True,
+        apply_iteratively=True,
     )
     output.add(generated_kernels)
-    output.makefile.add_h_file(kernels_output_path + f"/{riemann_solver_file}.h", generated=True)
-    output.makefile.add_cpp_file(kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True)
-    solver._user_action_set_includes += f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'
+    output.makefile.add_h_file(
+        kernels_output_path + f"/{riemann_solver_file}.h", generated=True
+    )
+    output.makefile.add_cpp_file(
+        kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True
+    )
+    solver._user_action_set_includes += (
+        f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'
+    )
 
-    solver._compute_kernel_call = jinja2.Template("""
+    solver._compute_kernel_call = jinja2.Template(
+        """
     {{KERNELS_NAMESPACE}}::updateSolutionWithRiemann(
       repositories::{{SOLVER_INSTANCE}},
       oldQWithHalo,
@@ -54,16 +58,18 @@ def generate_kernels(solver,
       marker.x(),
       marker.h()
     );
-""", undefined=jinja2.DebugUndefined).render(**d)
+""",
+        undefined=jinja2.DebugUndefined,
+    ).render(**d)
 
-def generate_fused_kernels(solver,
-                           namespace,
-                           output,
-                           subdirectory,
-                           dimensions,
-                          ):
-    kernels_namespace = namespace + ["kernels", "fv", "godunov", solver._name]
-    kernels_output_path = subdirectory + "kernels/fv/godunov/" + solver._name
+
+def generate_fused_kernels(
+    solver,
+    output,
+    subdirectory,
+):
+    kernels_namespace = solver._namespace + ["kernels", solver._name]
+    kernels_output_path = subdirectory + "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
     if not os.path.exists(kernels_output_path):
         os.makedirs(kernels_output_path)
@@ -71,33 +77,40 @@ def generate_fused_kernels(solver,
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["DIMENSIONS"] = dimensions
     d["KERNELS_NAMESPACE"] = "::".join(kernels_namespace)
-    d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(namespace) + "::" + solver._name
 
     riemann_solver_file = "RiemannSolverFused"
 
-    generated_kernels = (
-        peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            headfile_template=kernels_templates_prefix + f"{riemann_solver_file}.template.h",
-            cppfile_template=kernels_templates_prefix + f"{riemann_solver_file}.template.cpp",
-            classname=kernels_output_path + f"/{riemann_solver_file}",
-            namespace=kernels_namespace,
-            subdirectory=subdirectory + ".",
-            dictionary=d,
-            default_overwrite=True,
-            apply_iteratively=True,
-          )
+    generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+        headfile_template=kernels_templates_prefix
+        + f"{riemann_solver_file}.template.h",
+        cppfile_template=kernels_templates_prefix
+        + f"{riemann_solver_file}.template.cpp",
+        classname=kernels_output_path + f"/{riemann_solver_file}",
+        namespace=kernels_namespace,
+        subdirectory=subdirectory + ".",
+        dictionary=d,
+        default_overwrite=True,
+        apply_iteratively=True,
     )
     output.add(generated_kernels)
-    output.makefile.add_h_file(kernels_output_path + f"/{riemann_solver_file}.h", generated=True)
-    output.makefile.add_cpp_file(kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True)
-    solver._user_action_set_includes += f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'
+    output.makefile.add_h_file(
+        kernels_output_path + f"/{riemann_solver_file}.h", generated=True
+    )
+    output.makefile.add_cpp_file(
+        kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True
+    )
+    solver._user_action_set_includes += (
+        f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'
+    )
 
-    solver._fused_compute_kernel_call = jinja2.Template("""
+    solver._fused_compute_kernel_call = jinja2.Template(
+        """
     {{KERNELS_NAMESPACE}}::updateSolutionWithRiemannFused(
       repositories::{{SOLVER_INSTANCE}},
       patchData,
       TARGET_DEVICE
     );
-""", undefined=jinja2.DebugUndefined).render(**d)
+""",
+        undefined=jinja2.DebugUndefined,
+    ).render(**d)

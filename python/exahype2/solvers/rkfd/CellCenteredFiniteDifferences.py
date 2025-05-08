@@ -851,6 +851,7 @@ The finest mesh width of """
         )
 
         self._action_set_update_cell = None
+        self._action_set_reconstruct_patch = None
 
 
     def _provide_cell_data_to_compute_kernels_default_guard(self):
@@ -1277,6 +1278,7 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_handle_boundary)
+        step.add_action_set(self._action_set_reconstruct_patch)
         step.add_action_set(self._action_set_update_cell)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_compute_final_linear_combination)

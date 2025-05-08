@@ -4,38 +4,58 @@ import jinja2
 
 
 class SolverDefinitions:
-    def __init__(
-        self,
-        flux_implementation,
-        ncp_implementation,
-        eigenvalues_implementation,
-        max_eigenvalue_implementation,
-        riemann_solver_implementation,
-        source_term_implementation,
-        adjust_solution_implementation,
-        precision = "double"
-    ):
-        self._flux_implementation = flux_implementation
-        self._ncp_implementation = ncp_implementation
-        self._eigenvalues_implementation = eigenvalues_implementation
-        self._max_eigenvalue_implementation = max_eigenvalue_implementation
-        self._riemann_solver_implementation = riemann_solver_implementation
-        self._source_term_implementation = source_term_implementation
-        self._adjust_solution_implementation = adjust_solution_implementation
-        self._precision = precision
+    def __init__(self, dictionary):
+        self.d = dictionary
 
     def create_solver_user_definitions(self):
         Template = jinja2.Template(
             """
+{% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initialCondition(
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const bool                                   gridIsConstructed
+) {
+  // @todo Implement
+}
+{% endif %}
+
+{% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::boundaryConditions(
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal
+) {
+  // @todo Implement
+}
+{% endif %}
+
+{% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
+::exahype2::RefinementCommand {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::refinementCriterion(
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t
+) {
+  auto result = ::exahype2::RefinementCommand::Keep;
+  // @todo Implement
+  return result;
+}
+{% endif %}
+
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-  [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const NOALIAS                   L
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         L
 ) {
   // @todo Implement
 }
@@ -43,7 +63,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
 
 {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -57,13 +77,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const NOALIAS                   F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
 }
@@ -71,14 +91,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{PR}}* const NOALIAS             deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const NOALIAS                   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
 }
@@ -86,12 +106,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  [[maybe_unused]] const {{PR}}* const NOALIAS             Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] {{PR}}* const NOALIAS                   S // S[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         S // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
 }
@@ -99,15 +119,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
-  [[maybe_unused]] const {{PR}}* const NOALIAS             QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{PR}}* const NOALIAS             QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
   [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] {{PR}}* const NOALIAS                   FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-  [[maybe_unused]] {{PR}}* const NOALIAS                   FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo Implement
   return 0.0;
@@ -120,7 +140,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] double* const NOALIAS                   Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
 ) {
   // @todo Implement
 }
@@ -129,13 +149,4 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
             undefined=jinja2.DebugUndefined,
         )
 
-        d = {}
-        d["FLUX_IMPLEMENTATION"] = self._flux_implementation
-        d["NCP_IMPLEMENTATION"] = self._ncp_implementation
-        d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
-        d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
-        d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
-        d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
-        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
-        d["PR"] = self._precision
-        return Template.render(**d)
+        return Template.render(**self.d)

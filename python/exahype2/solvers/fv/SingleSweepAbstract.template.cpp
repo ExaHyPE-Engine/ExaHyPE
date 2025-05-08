@@ -73,90 +73,45 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return _maxTimeStepSize;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double patchSize) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize) {
   tarch::multicore::Lock lock(_semaphore);
 
-  if ( tarch::la::greater(timeStepSize,0.0) ) {
-    assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
-    assertion1(timeStepSize>=0.0,timeStepSize);
-    _minTimeStepSizeThisTimeStep = std::min(timeStepSize,_minTimeStepSizeThisTimeStep);
-    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize,_maxTimeStepSizeThisTimeStep);
-    assertion2(_minTimeStepSizeThisTimeStep<=_maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
+  if (tarch::la::greater(timeStepSize, 0.0)) {
+    assertion1(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
+    assertion1(timeStepSize >= 0.0, timeStepSize);
+    _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
+    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
+    assertion2(_minTimeStepSizeThisTimeStep <= _maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   }
 
-  assertion1(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
-  assertion1(timeStamp>=0.0,timeStamp);
-  _maxTimeStampThisTimeStep = std::max(timeStamp,_maxTimeStampThisTimeStep);
-  _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
-  // This assertion makes sense, but if we reset the time stamp size (in couple systems) then
-  // it is valid.
-  // assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, patchSize );
+  assertion1(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
+  assertion1(timeStamp >= 0.0, timeStamp);
+  _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
+  _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
+  assertion2(_minTimeStampThisTimeStep <= _maxTimeStampThisTimeStep, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep);
 
-  assertion1(patchSize<std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch,patchSize);
-  assertion1(patchSize>0.0,patchSize);
-  _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
-  _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  assertion1(maxVolumeSize < std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch, maxVolumeSize);
+  assertion1(minVolumeSize > 0.0, minVolumeSize);
+  _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep, minVolumeSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep, maxVolumeSize / NumberOfFiniteVolumesPerAxisPerPatch);
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
   return _solverState;
 }
 
-{% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
-::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  [[maybe_unused]] const {{STORAGE_PRECISION}}* NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] double                                       t
-) {
-  {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  return result;
-  {% else %}
-  {{REFINEMENT_CRITERION_IMPLEMENTATION}}
-  {% endif %}
-}
-{% endif %}
-
-{% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  [[maybe_unused]] {{STORAGE_PRECISION}}* NOALIAS          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] bool                                         gridIsConstructed
-) {
-  {{INITIAL_CONDITIONS_IMPLEMENTATION}}
-}
-{% endif %}
-
-
-{% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  [[maybe_unused]] const {{STORAGE_PRECISION}}* NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] {{STORAGE_PRECISION}}* NOALIAS          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] int                                          normal
-) {
-  {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<empty>" %}
-  {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
-  {% endif %}
-}
-{% endif %}
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
-  assertion( _solverState == SolverState::GridConstruction );
+  assertion(_solverState == SolverState::GridConstruction);
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
+  assertion(_solverState == SolverState::GridConstruction);
   _solverState = SolverState::GridInitialisation;
 }
 
@@ -208,7 +163,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  #ifdef Parallel
+#ifdef Parallel
   double newMinTimeStamp = _minTimeStampThisTimeStep;
   double newMaxTimeStamp = _maxTimeStampThisTimeStep;
   double newMinVolumeH   = _minVolumeHThisTimeStep;
@@ -278,7 +233,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     MPI_MAX,
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
-  #endif
+ #endif
 
   if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
     _minTimeStampThisTimeStep = 0.0;
@@ -300,10 +255,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  if ( _solverState== SolverState::GridInitialisation) {
+  if (_solverState== SolverState::GridInitialisation) {
     _solverState = SolverState::PlottingAfterGridInitialisation;
-  }
-  else {
+  } else {
+    assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
     _solverState = SolverState::Plotting;
   }
 }
@@ -330,26 +285,20 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return true;
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return true;
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState!=SolverState::Suspended;
+  return _solverState != SolverState::Suspended;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
-
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

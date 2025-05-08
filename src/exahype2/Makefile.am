@@ -12,6 +12,7 @@ ExaHyPE2Sources = \
   CellAccess.cpp \
   CellData.cpp \
   EnclaveTask.cpp \
+  EnclaveBookkeeping.cpp \
   LoadBalancingConfiguration.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
@@ -20,6 +21,7 @@ ExaHyPE2Sources = \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
+  tests/EnclaveBookkeepingTest.cpp \
   enumerator/AoSLexicographicEnumerator.cpp \
   enumerator/SoALexicographicEnumerator.cpp \
   enumerator/SingleDoFEnumerator.cpp \

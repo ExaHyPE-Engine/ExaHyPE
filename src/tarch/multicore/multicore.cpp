@@ -6,7 +6,6 @@
 #include "Core.h"
 #include "Lock.h"
 #include "Task.h"
-#include "taskfusion/taskfusion.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/logging/Statistics.h"
@@ -23,16 +22,12 @@ void tarch::multicore::spawnTask(Task* task, const void* const inDependency, con
   assertion(task != nullptr);
   logging::Statistics::getInstance().inc(SpawnedTasksStatisticsIdentifier, 1, false, true);
 
-  if (task->canFuse()) {
-    taskfusion::translateFusableTaskIntoTaskSequence(task);
+  if (inDependency == nullptr and outDependency == nullptr) {
+    native::spawnTask(task);
+  } else if (inDependency == nullptr and outDependency != nullptr) {
+    native::spawnTask(task, outDependency);
   } else {
-    if (inDependency == nullptr and outDependency == nullptr) {
-      native::spawnTask(task);
-    } else if (inDependency == nullptr and outDependency != nullptr) {
-      native::spawnTask(task, outDependency);
-    } else {
-      native::spawnTask(task, inDependency, outDependency);
-    }
+    native::spawnTask(task, inDependency, outDependency);
   }
 }
 
@@ -45,27 +40,23 @@ void tarch::multicore::waitForAllTasks() { native::waitForAllTasks(); }
 #ifndef SharedMemoryParallelisation
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const, const void* const) {
-  while (task->run()) {
-  }
+  while (task->run()) {};
   delete task;
 }
 
 void tarch::multicore::native::spawnTask(Task* task, const void* const) {
-  while (task->run()) {
-  }
+  while (task->run()) {};
   delete task;
 }
 
 void tarch::multicore::native::spawnTask(Task* task) {
-  while (task->run()) {
-  }
+  while (task->run()) {};
   delete task;
 }
 
 void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   for (auto& p : tasks) {
-    while (p->run()) {
-    }
+    while (p->run()) {};
     delete p;
   }
 }

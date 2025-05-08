@@ -92,21 +92,27 @@ int """ + full_qualified_classname + """::domainPatchCount=0;
 
   TemplateInitialCondition = """
   if ({{PREDICATE}}) {
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
       int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
-      repositories::{{SOLVER_INSTANCE}}.initialCondition(
+      {% if STATELESS_INITIAL_CONDITIONS==True %}
+      {{FULL_QUALIFIED_SOLVER_NAME}}::initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
-        ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        ::exahype2::fv::getVolumeCentre(marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize(marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}),
         {{GRID_IS_CONSTRUCTED}}
       );
+      {% else %}
+      repositories::{{SOLVER_INSTANCE}}.initialCondition(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        ::exahype2::fv::getVolumeCentre(marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
+        ::exahype2::fv::getVolumeSize(marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}),
+        {{GRID_IS_CONSTRUCTED}}
+      );
+      {% endif %}
     }
 
     // Relevant for tracing et al which kicks in if and only if cell has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 """
 

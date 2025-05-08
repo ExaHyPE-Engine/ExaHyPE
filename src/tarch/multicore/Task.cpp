@@ -27,8 +27,6 @@ tarch::multicore::Task::Task(int taskType, int priority):
   assertion2(priority >= 0, taskType, priority);
 }
 
-bool tarch::multicore::Task::canFuse() const { return _taskType != DontFuse; }
-
 int tarch::multicore::Task::getPriority() const { return _priority; }
 
 void tarch::multicore::Task::setPriority(int priority) {
@@ -38,15 +36,12 @@ void tarch::multicore::Task::setPriority(int priority) {
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
-bool tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks) {
-  assertion(canFuse());
-  for (auto pp : otherTasks) {
-    tarch::multicore::Task* currentTask = pp;
-    while (currentTask->run()) {
-    }
-    delete currentTask;
+void tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks) {
+  for (auto& otherTask: otherTasks) {
+    while (otherTask->run()) {};
+    delete otherTask;
   }
-  return true;
+  while (this->run()) {};
 }
 
 std::string tarch::multicore::Task::toString() const { return "<no-description-available>"; }
@@ -87,7 +82,7 @@ tarch::multicore::TaskWithoutCopyOfFunctor::
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() { return _taskFunctor(); }
 
 tarch::multicore::EmptyTask::EmptyTask(int priority):
-  Task(Task::DontFuse, priority) {}
+  Task(Task::NoTaskType, priority) {}
 
 bool tarch::multicore::EmptyTask::run() { return false; }
 

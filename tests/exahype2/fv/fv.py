@@ -9,11 +9,6 @@ parser = argparse.ArgumentParser(
     description="ExaHyPE 2 - Testing Script for Various Finite Volumes Solvers"
 )
 
-available_solvers = {
-    "FVRusanovGlobalAdaptive": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
-    "FVRusanovGlobalAdaptiveEnclave": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-}
-
 available_precisions = [
     "float", "double"
 ]
@@ -24,13 +19,6 @@ parser.add_argument(
     default="float",
     choices=available_precisions,
     help="|".join(available_precisions),
-)
-parser.add_argument(
-    "-s",
-    "--solver",
-    default="FVRusanovGlobalAdaptive",
-    choices=available_solvers.keys(),
-    help="|".join(available_solvers.keys()),
 )
 parser.add_argument(
     "-d",
@@ -186,14 +174,17 @@ refinement_criterion = """
 max_h = 1.1 / 3.0**args.min_depth
 min_h = max_h * 3.0**(-args.amr_levels)
 
-fv_solver = available_solvers[args.solver](
-    name=args.solver,
+fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVSolver",
     patch_size=16,
     unknowns={"v": args.dimensions},
     auxiliary_variables=0,
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=0.5,
+)
+
+fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
@@ -205,6 +196,7 @@ fv_solver = available_solvers[args.solver](
 """,
     max_eigenvalue="return 1.0;",
 )
+
 fv_solver.plot_description = ", ".join({"v": args.dimensions}.keys())
 
 fv_solver.set_solver_precisions(
@@ -214,9 +206,9 @@ fv_solver.set_solver_precisions(
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
-    project_name=args.solver,
+    project_name="FVTest",
     directory=".",
-    executable=args.solver,
+    executable="FVTest",
 )
 project.add_solver(fv_solver)
 
@@ -266,7 +258,3 @@ if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
-
-print(args)
-print(project)
-print(fv_solver)

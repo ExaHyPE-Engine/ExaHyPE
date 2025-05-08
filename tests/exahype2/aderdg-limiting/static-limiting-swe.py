@@ -19,14 +19,12 @@ size = [2.0, 2.0, 2.0][0:dimensions]
 max_h = 1.1 * min(size) / (3.0**min_level)
 min_h = max_h / (3.0**max_depth)
 
-
 initial_conditions = """
   Q[0] = 4.0;
   Q[1] = 0.0;
   Q[2] = 0.0;
   Q[3] = 2.0 - tarch::la::norm2(x);
 """
-
 
 boundary_conditions = """
   Qoutside[0] = Qinside[0];
@@ -107,6 +105,9 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=0.9,
+
+)
+fv_solver.set_implementation(
     flux=flux,
     ncp=ncp,
     max_eigenvalue=max_eval,
@@ -145,10 +146,4 @@ project.set_load_balancing(
 project.set_Peano4_installation("../../../", build_mode)
 project = project.generate_Peano4_project(verbose=False)
 # project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")  # TODO: Static limiter crashes with this
-
 project.build(make_clean_first=True)
-
-print(fv_solver)
-print(aderdg_solver)
-print(limiter)
-print(project)

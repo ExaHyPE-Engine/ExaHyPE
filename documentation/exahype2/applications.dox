@@ -1,6 +1,6 @@
 /**
 
-@page page_exahype_applications Applications (incl ExaSeis and ExaGRyPE)
+@page page_exahype_applications Applications
 
 \tableofcontents
 
@@ -8,13 +8,10 @@
   - \subpage applications_exahype2_exaseis
 - Astrophysics
   - \subpage applications_exahype2_ExaGRyPE
-  - \subpage applications_exahype2_selfgravitation
-- Tsunamis and flooding
+- Tsunamis and Flooding
   - \subpage applications_exahype2_shallow_water
-- Others
-  - \subpage applications_exahype2_acoustic
-  - \subpage applications_exahype2_elastic
-  - \subpage applications_exahype2_euler
+- Computational Fluid Dynamics
+  - \subpage applications_exahype2_navier_stokes
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".

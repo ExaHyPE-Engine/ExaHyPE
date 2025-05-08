@@ -80,6 +80,9 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
+)
+
+riemann_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
@@ -88,6 +91,7 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     max_eigenvalue=max_eigenvalue,
     source_term=material_dependent_basal_friction,
 )
+
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 #riemann_solver._preprocess_reconstructed_patch = extrapolate_halo + compute_first_derivatives # TODO: Should be replaced by proper derivative computation within the solver

@@ -73,8 +73,6 @@ Tarch_SOURCES = \
 	multicore/sycl/Core.cpp \
 	multicore/sycl/RecursiveSemaphore.cpp \
 	multicore/tests/SpawnTaskTest.cpp \
-	multicore/taskfusion/taskfusion.cpp \
-	multicore/taskfusion/tests/TaskFusionTest.cpp \
 	plotter/griddata/unstructured/vtk/VTUTextFileWriter_CellWriter.cpp \
 	plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexDataWriter.cpp \
 	plotter/griddata/unstructured/vtk/VTKTextFileWriter_VertexWriter.cpp \

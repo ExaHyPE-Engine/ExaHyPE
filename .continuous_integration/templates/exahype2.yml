@@ -3,9 +3,8 @@
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      solver_type: [FVRusanovGlobalAdaptive, FVRusanovGlobalAdaptiveEnclave]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py -s $solver_type -d $dimensions -m $build_type;"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/exahype2/fv; PYTHONPATH=$CI_PROJECT_DIR/python python3 fv.py -d $dimensions -m $build_type;"
 
 .ExaHyPE2_ADERDG_Tests:
   parallel:
@@ -35,6 +34,14 @@
     - tutorial: [euler, acoustic, elastic, advection, swe]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/exahype2/symhype/$tutorial; PYTHONPATH=$CI_PROJECT_DIR/python python3 $tutorial.py;"
+
+.ExaHyPE2_NavierStokes:
+  parallel:
+    matrix:
+    - scenario: [breaking-dam, gaussian-explosion, point-explosion]
+      dimensions: [2, 3]
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/navier-stokes/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py -d $dimensions;"
 
 .ExaHyPE2_ShallowWater:
   parallel:
