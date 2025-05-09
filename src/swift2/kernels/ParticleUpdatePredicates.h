@@ -131,6 +131,24 @@ namespace swift2 {
      * Usually, you would do this check once in an outer loop via the is local
      * flag, and then you can skip it here.
      *
+     * ## Usage
+     *
+     * Usually, it is a poor idea to use this routine. It is brutally slow to
+     * check a local particle whether it is really contained within a cell per
+     * particle-particle interaction. I rather prefer to use
+     *
+     *        ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+     *
+     * once in an outer loop and then to apply
+     *
+     *
+     *        updateFromAnyOtherParticle
+     *
+     * as predicate (or something more restrictive such as densityKernelEvaluatePairInteractionPredicate
+     * but never this one).
+     *
+     *
+     *
      * @param localParticle: particle to check for
      * @param marker: the cell's CellMarker
      */

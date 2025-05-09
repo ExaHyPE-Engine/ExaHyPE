@@ -387,8 +387,8 @@ void runBenchmark(int numberOfParticles) {
 
             ::swift2::kernels::forAllParticlePairs<
               ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-              ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-              ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+              ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+              ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, scatteredWorkItemParticleSet[workItem], scatteredWorkItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::Generic);
           },
           "force (scattered,generic)",
@@ -403,8 +403,8 @@ void runBenchmark(int numberOfParticles) {
 
             ::swift2::kernels::forAllParticlePairs<
               ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-              ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-              ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+              ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+              ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::Generic);
           },
           "force (continuous,generic)",
@@ -419,8 +419,8 @@ void runBenchmark(int numberOfParticles) {
 
             ::swift2::kernels::forAllParticlePairs<
               ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-              ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-              ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+              ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+              ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::Generic);
           },
           "force (continuous,generic-offload)",
@@ -435,8 +435,8 @@ void runBenchmark(int numberOfParticles) {
 
             ::swift2::kernels::forAllParticlePairs<
               ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-              ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-              ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+              ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+              ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::CoalescedMemoryLocalActive);
           },
           "force (continuous,local-active-coalesced)",
@@ -451,8 +451,8 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-            ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+            ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::CoalescedMemoryActiveLocal);
         },
         "force (continuous,active-local-coalesced)",
@@ -467,8 +467,8 @@ void runBenchmark(int numberOfParticles) {
 
             ::swift2::kernels::forAllParticlePairs<
               ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-              ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-              ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+              ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+              ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueActiveLocal);
           },
           "force (continuous,active-local-preamble)",
@@ -483,8 +483,8 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::forceKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
-            ::swift2::kernels::updateFromAnyOtherParticle<globaldata::HydroPart>
+            ::swift2::kernels::legacy::forceKernelUpdateParticlePredicate<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
             >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueLocalActive);
         },
         "force (continuous,local-active-preamble)",
@@ -501,7 +501,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, scatteredWorkItemParticleSet[workItem], scatteredWorkItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::Generic);
         },
@@ -517,7 +517,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::Generic);
         },
@@ -533,7 +533,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::Generic);
         },
@@ -549,7 +549,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::CoalescedMemoryLocalActive);
         },
@@ -565,7 +565,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::CoalescedMemoryActiveLocal);
         },
@@ -582,7 +582,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueActiveLocal);
         },
@@ -598,7 +598,7 @@ void runBenchmark(int numberOfParticles) {
 
           ::swift2::kernels::forAllParticlePairs<
             ::swift2::kernels::legacy::densityKernel<globaldata::HydroPart>,
-            ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::HydroPart>,
+            ::swift2::kernels::legacy::densityKernelUpdateParticlePredicate<globaldata::HydroPart>,
             ::swift2::kernels::legacy::densityKernelEvaluatePairInteractionPredicate<globaldata::HydroPart>
           >( cellMetaData, workItemParticleSet[workItem], workItemParticleSet[workItem], ::swift2::kernels::kernelrealisation::EvaluatePredicateInPrologueLocalActive);
         },

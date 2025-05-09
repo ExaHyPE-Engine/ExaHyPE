@@ -21,7 +21,7 @@ bool swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate(
     ),
     marker.toString(), localParticle.toString(), activeParticle.toString()
   );
-  return &localParticle != &activeParticle;
+  return ::swift2::kernels::updateFromAnyOtherParticle(marker, localParticle, activeParticle);
 }
 
 
