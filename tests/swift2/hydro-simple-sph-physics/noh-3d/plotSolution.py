@@ -19,7 +19,15 @@
 #
 ##############################################################################
 
+# ----------------------------------------------------------------------------
 # Computes the analytical solution of the Noh problem and plots the SPH answer
+#
+# Usage: python3 plotSolution.py <snapshot-time>
+#
+# The script will look for the snapshot output with simulation time closest to
+# the provided <snapshot-time> in `particles.pvd` and create a plot of that
+# time.
+# ----------------------------------------------------------------------------
 
 
 # Parameters
