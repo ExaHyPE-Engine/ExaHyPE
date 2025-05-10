@@ -404,7 +404,6 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 # This macro defines the variable with_hdf5
 #
 #AX_LIB_HDF5
-
 AC_ARG_WITH(hdf5,
   AS_HELP_STRING([--with-hdf5],[enable HDF5 support [default=no]]),
   [ AC_MSG_CHECKING(for hdf5)

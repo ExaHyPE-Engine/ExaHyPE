@@ -474,7 +474,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       //    - dx               : Spatial step size.
       //    - xc               : Cell center coordinates in the global coordinate system.
       //    - rc = 0.5         : Cell center coordinates in the reference cell.
-      tarch::la::Vector<Dimensions,double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<double>::nodes);
+      tarch::la::Vector<Dimensions,double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
 
       // [nk] Measure the flux contribution to the local cell time evaluation.
       // Note: No connections with neighboring cells are considered during this step (e.g., no Riemann solver is used).
@@ -567,7 +567,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       const tarch::la::Vector<Dimensions, int> index           = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**(DIMENSIONS - 1)}}) / {{NUMBER_OF_DOF}} xyz / {{NUMBER_OF_DOF ** DIMENSIONS}}};
 {% endif %}
       const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
-      tarch::la::Vector<Dimensions,double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<double>::nodes);
+      tarch::la::Vector<Dimensions,double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
 {% endif %}
 
 {% if USE_NCP %}

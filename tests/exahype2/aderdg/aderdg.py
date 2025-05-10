@@ -29,50 +29,59 @@ available_scenarios = {
     "SWERestingLake": scenarios.SWERestingLake(),
 }
 
-parser = argparse.ArgumentParser(description="ExaHyPE 2 - ADER-DG testing script")
+parser = argparse.ArgumentParser(description="ExaHyPE 2 - ADER-DG Testing Script")
 
 parser.add_argument(
     "-md",
     "--mesh-depth",
-    dest="md",
     type=int,
     default=3,
     help="Depth of coarsest mesh level, i.e if 2 is specified there will be 9 cells per dimension",
 )
 parser.add_argument(
     "-amr",
-    "--adaptive-levels",
-    dest="adaptivity_levels",
+    "--adaptivity-levels",
     type=int,
     default=0,
     help="Number of AMR grid levels on top of hmax (0 by default)",
 )
-parser.add_argument("-o", "--order", dest="order", type=int, default=3, help="DG Order")
+parser.add_argument(
+    "-o",
+    "--order",
+    type=int,
+    default=3,
+    help="DG Order"
+)
 parser.add_argument(
     "-p",
-    "--p",
-    dest="polynomials",
+    "--polynomials",
     type=int,
     default=1,
     help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
 )
 parser.add_argument(
-    "-m", "--mode", dest="mode", default="release", help="|".join(modes.keys())
+    "-m", "--mode", default="release", help="|".join(modes.keys())
 )
 parser.add_argument(
-    "-pr", "--precision", dest="precision", default="fp64", help="|".join(available_prec)
+    "-pr", "--precision", default="fp64", help="|".join(available_prec)
 )
 parser.add_argument(
     "-s",
     "--scenario",
-    dest="s",
     default=None,
     help="|".join(available_scenarios.keys()),
+)
+parser.add_argument(
+    "-pl",
+    "--plotter",
+    type=str,
+    default="PeanoPatch",
+    help="Choose which plotter to use: 'HDF5' or 'PeanoPatch'.",
 )
 
 args = parser.parse_args()
 
-if args.s is None:
+if args.scenario is None:
     while True:
         try:
             s = input(
@@ -87,10 +96,10 @@ if args.s is None:
             # User has specified a valid scenario
             break
 else:
-    scenario = available_scenarios[args.s]
+    scenario = available_scenarios[args.scenario]
 
 order = args.order
-max_h = 1.1 * scenario._domain_size / (3.0**args.md)
+max_h = 1.1 * scenario._domain_size / (3.0**args.mesh_depth)
 min_h = max_h * 3.0 ** (-args.adaptivity_levels)
 
 polynomials = (
@@ -129,6 +138,8 @@ solver.set_implementation(
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
 )
+
+solver.set_plotter(args.plotter)
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
     exahype2.solvers.aderdg.ErrorMeasurement(

@@ -177,3 +177,10 @@ class SWEArgumentParser(argparse.ArgumentParser):
             action="store_true",
             help="Enable a floating-point exception handler.",
         )
+        self.add_argument(
+            "-pl",
+            "--plotter",
+            type=str,
+            default="PeanoPatch",
+            help="Choose which plotter to use: 'HDF5' or 'PeanoPatch'.",
+        )

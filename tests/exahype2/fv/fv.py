@@ -6,7 +6,7 @@ import peano4
 import exahype2
 
 parser = argparse.ArgumentParser(
-    description="ExaHyPE 2 - Testing Script for Various Finite Volumes Solvers"
+    description="ExaHyPE 2 - Finite Volumes Testing Script"
 )
 
 available_precisions = [

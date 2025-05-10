@@ -88,6 +88,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     ncp=nonconservative_product,
     eigenvalues=max_eigenvalue,
 )
+aderdg_solver.set_plotter(args.plotter)
 aderdg_solver.plot_description = ", ".join(unknowns.keys())
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
@@ -110,6 +111,7 @@ riemann_solver.set_implementation(
     riemann_solver=hllem,
 )
 
+riemann_solver.set_plotter(args.plotter)
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 

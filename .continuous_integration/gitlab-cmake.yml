@@ -28,6 +28,7 @@ GCC:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
@@ -51,6 +52,7 @@ GCC_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
@@ -74,6 +76,7 @@ Intel:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
@@ -97,6 +100,7 @@ Intel_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
@@ -120,6 +124,7 @@ Intel_SharedOMP_MPI:
 #                             -DENABLE_PARTICLES=ON \
 #                             -DENABLE_MGHYPE=ON \
 #                             -DENABLE_FINITEELEMENTS=ON \
+#                             -DWITH_HDF5=ON \
 #                             -DWITH_NETCDF=ON \
 #                             -DWITH_MULTITHREADING=sycl \
 #                             -DWITH_MPI=ON"
@@ -143,6 +148,7 @@ LLVM:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
@@ -166,6 +172,7 @@ LLVM_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
@@ -189,6 +196,7 @@ NVIDIA:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
@@ -212,6 +220,7 @@ AMD:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=no \
                             -DWITH_MPI=OFF"
@@ -235,6 +244,7 @@ AMD_SharedOMP_MPI:
                             -DENABLE_PARTICLES=ON \
                             -DENABLE_MGHYPE=ON \
                             -DENABLE_FINITEELEMENTS=ON \
+                            -DWITH_HDF5=ON \
                             -DWITH_NETCDF=ON \
                             -DWITH_MULTITHREADING=omp \
                             -DWITH_MPI=ON"
