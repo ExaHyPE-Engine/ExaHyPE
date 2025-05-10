@@ -19,6 +19,7 @@ from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
+from exahype2.solvers.Storage import Storage
 
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
@@ -74,6 +75,9 @@ class ADERDG(object):
         The number of support points used to represent this polynomial is always the order + 1
         """
         self._order = order
+
+        "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
+        self._plotter_option = "PeanoPatch"
 
         """
         self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
@@ -797,6 +801,9 @@ Material parameters:    """
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
+    def set_plotter(self, plotter_option):
+        self._plotter_option = plotter_option
+
     def add_actions_to_plot_solution(self, step, output_path):
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -811,27 +818,49 @@ Material parameters:    """
                 for x in self._basis.quadrature_points():
                     mapping.append((x, y, z))
 
-        # Calls a generator which generates a standard plotter that uses the tarch library.
-        step.add_action_set(
-            peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
-                filename=output_path + "solution-" + self._name,
-                patch=self._previous_time_step,
-                dataset_name=self._unknown_identifier()+"_old",
-                description=self.plot_description,
-                mapping=mapping,
-                select_dofs=self.select_dofs_to_print,
-                guard="repositories::plotFilter.plotPatch(marker) and "
-                + self._load_cell_data_default_guard(),
-                additional_includes="""
+        if self._plotter_option == "HDF5":
+            step.add_action_set(
+              peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
+                  filename=output_path + "solution-" + self._name,
+                  patch=self._previous_time_step,
+                  dataset_name=self._unknown_identifier()+"_old",
+                  description=self.plot_description,
+                  mapping=mapping,
+                  select_dofs=self.select_dofs_to_print,
+                  guard="repositories::plotFilter.plotPatch(marker) and "
+                  + self._load_cell_data_default_guard(),
+                  additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
-                precision="PlotterPrecision",
-                time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-                plot_cell_data=False,
-                dataType=self._solution_persistent_storage_precision,
-            )
-        )
+                  precision="PlotterPrecision",
+                  time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+                  plot_cell_data=False,
+                  dataType=self._solution_persistent_storage_precision,
+              )
+          )
+        elif self._plotter_option == "PeanoPatch":
+            step.add_action_set(
+              peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+                  filename=output_path + "solution-" + self._name,
+                  patch=self._previous_time_step,
+                  dataset_name=self._unknown_identifier()+"_old",
+                  description=self.plot_description,
+                  mapping=mapping,
+                  select_dofs=self.select_dofs_to_print,
+                  guard="repositories::plotFilter.plotPatch(marker) and "
+                  + self._load_cell_data_default_guard(),
+                  additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+""",
+                  precision="PlotterPrecision",
+                  time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+                  plot_cell_data=False,
+                  dataType=self._solution_persistent_storage_precision,
+              )
+          )
+
 
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 

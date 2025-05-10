@@ -10,10 +10,9 @@ namespace tarch {
       namespace blockstructured {
         class PatchWriter;
       } // namespace blockstructured
-    }   // namespace griddata
-  }     // namespace plotter
+    } // namespace griddata
+  } // namespace plotter
 } // namespace tarch
-
 
 /**
  * Abstract base class for a patch plotter
@@ -136,13 +135,16 @@ public:
    *   unknowns per axis
    * @param recordsPerCell    Number of entries stores per unknown. Data is, by default, written
    *   as AoS
-   * @param description       This is meta data, i.e. has no prescribed semanatics
+   * @param description       This is meta data, i.e. has no prescribed semantics
    * @param mapping           Array of positions within a unit cube/square. Is it an AoS of vectors
    *   within the unit square which distorts all the vertices within the mesh. Logically, all data
-   *   are Cartesian, but you might prefer Gauss Lobatto nodes, e.g.
+   *   are Cartesian, but you might prefer Gauss-Lobatto nodes, e.g.
    */
   virtual CellDataWriter* createCellDataWriter(
-    const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description
+    const std::string& identifier,
+    int                unknownsPerAxis,
+    int                recordsPerCell,
+    const std::string& description
   ) = 0;
   virtual CellDataWriter* createCellDataWriter(
     const std::string& identifier,
@@ -164,7 +166,10 @@ public:
    * Caller has to destroy this instance manually.
    */
   virtual VertexDataWriter* createVertexDataWriter(
-    const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description
+    const std::string& identifier,
+    int                unknownsPerAxis,
+    int                recordsPerVertex,
+    const std::string& description
   ) = 0;
   virtual VertexDataWriter* createVertexDataWriter(
     const std::string& identifier,

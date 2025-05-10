@@ -91,11 +91,11 @@ Tarch_SOURCES = \
 	plotter/griddata/unstructured/vtk/VTKTextFileWriter.cpp \
 	plotter/PVDTimeSeriesWriter.cpp \
 	plotter/griddata/blockstructured/PeanoTextPatchFileWriter.cpp \
-	plotter/griddata/blockstructured/PeanoTextPatchFileWriter_VertexDataWriter.cpp \
-	plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter.cpp \
-	plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter_CellDataWriter.cpp \
-	plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter_VertexDataWriter.cpp \
 	plotter/griddata/blockstructured/PeanoTextPatchFileWriter_CellDataWriter.cpp \
+	plotter/griddata/blockstructured/PeanoTextPatchFileWriter_VertexDataWriter.cpp \
+	plotter/griddata/blockstructured/PeanoHDF5FileWriter.cpp \
+	plotter/griddata/blockstructured/PeanoHDF5FileWriter_CellDataWriter.cpp \
+	plotter/griddata/blockstructured/PeanoHDF5FileWriter_VertexDataWriter.cpp \
 	plotter/pointdata/vtk/VTKWriter.cpp \
 	reader/NetCDFReader.cpp \
 	reader/PeanoTextPatchFileReader.cpp \

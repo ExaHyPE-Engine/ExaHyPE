@@ -82,6 +82,7 @@ riemann_solver.set_implementation(
     flux=flux,
 )
 
+riemann_solver.set_plotter(args.plotter)
 riemann_solver.plot_description = ", ".join(unknowns.keys())
 
 project = exahype2.Project(

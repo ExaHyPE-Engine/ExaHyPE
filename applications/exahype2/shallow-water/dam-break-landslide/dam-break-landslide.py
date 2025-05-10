@@ -92,6 +92,7 @@ riemann_solver.set_implementation(
     source_term=material_dependent_basal_friction,
 )
 
+riemann_solver.set_plotter(args.plotter)
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 #riemann_solver._preprocess_reconstructed_patch = extrapolate_halo + compute_first_derivatives # TODO: Should be replaced by proper derivative computation within the solver

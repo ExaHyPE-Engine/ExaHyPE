@@ -115,6 +115,9 @@ class CellCenteredFiniteDifferences(object):
         """
         self._name = name
 
+        "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
+        self._plotter_option = "PeanoPatch"
+
         self._min_meshcell_h = min_meshcell_h
         self._max_meshcell_h = max_meshcell_h
         self._plot_grid_properties = plot_grid_properties
@@ -124,7 +127,7 @@ class CellCenteredFiniteDifferences(object):
         self._rk_order = rk_order
 
         """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
         auxiliary variables in the equation to be computed. Unknowns are variables that change over
         time whereas auxiliary variables can be space-dependent but don't vary over time.
         These can be specified either as simple ints or by a dictionary
@@ -1107,6 +1110,9 @@ The finest mesh width of """
         """
         self._plot_description = description
 
+    def set_plotter(self, plotter_option):
+        self._plotter_option = plotter_option
+
     def add_actions_to_plot_solution(self, step, output_path, restart_from_checkpoint=False):
         """!
 
@@ -1149,7 +1155,8 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_cell_label)
         #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-        plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+        if self._plotter_option == "HDF5":
+            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
             filename=output_path + "solution-" + self._name,
             patch=self._patch,
             dataset_name=self._unknown_identifier(),
@@ -1165,6 +1172,23 @@ The finest mesh width of """
             select_dofs=self.select_dofs_to_print,
             restart_preprocess=restart_from_checkpoint
         )
+        elif self._plotter_option == "PeanoPatch":
+            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "solution-" + self._name,
+            patch=self._patch,
+            dataset_name=self._unknown_identifier(),
+            description=self._plot_description,
+            guard="repositories::plotFilter.plotPatch(marker) and "
+            + self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            select_dofs=self.select_dofs_to_print,
+        )
+
         plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 

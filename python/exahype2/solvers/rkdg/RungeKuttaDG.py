@@ -33,6 +33,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 )
 
 from exahype2.solvers.Storage import Storage
+import peano4.toolbox.blockstructured.PlotPatchesInHDF5Format
 
 
 class RungeKuttaDG(object):
@@ -247,6 +248,9 @@ class RungeKuttaDG(object):
         assert rk_order >= 1, "Runge-Kutta order has to be greater or equal to one"
 
         self._name = name
+
+        "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
+        self._plotter_option = "PeanoPatch"
 
         self._rk_order = rk_order
         self._basis = polynomial_basis
@@ -1209,6 +1213,8 @@ We use RK("""
         """
         self.plot_description = description
 
+    def set_plotter(self, plotter_option):
+        self._plotter_option = plotter_option
 
     def add_actions_to_plot_solution(self, step, output_path):
         """!
@@ -1244,7 +1250,8 @@ We use RK("""
                 for x in self._basis.quadrature_points:
                     mapping.append((x, y, z))
 
-        plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+        if self._plotter_option == "HDF5":
+            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
             filename=output_path + "solution-" + self._name,
             patch=self._current_time_step,
             dataset_name=self._unknown_identifier(),
@@ -1261,6 +1268,26 @@ We use RK("""
             plot_cell_data=False,
             select_dofs=self.select_dofs_to_print,
         )
+        elif self._plotter_option == "PeanoPatch":
+            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "solution-" + self._name,
+            patch=self._current_time_step,
+            dataset_name=self._unknown_identifier(),
+            description=self.plot_description,
+            mapping=mapping,
+            guard="repositories::plotFilter.plotPatch(marker) and "
+            + self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            time_stamp_evaluation="repositories::getMinTimeStamp()",
+            plot_cell_data=False,
+            select_dofs=self.select_dofs_to_print,
+        )
+
+
         plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 

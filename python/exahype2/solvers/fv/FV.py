@@ -184,6 +184,9 @@ class FV(object):
         """
         self._name = name
 
+        "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
+        self._plotter_option = "PeanoPatch"
+
         self._min_volume_h = min_volume_h
         self._max_volume_h = max_volume_h
         self._plot_grid_properties = plot_grid_properties
@@ -922,7 +925,6 @@ The finest mesh width of """
             self._baseline_action_set_descend_invocation_order
         )
 
-
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         """! Default logic when to create cell data or not
 
@@ -942,7 +944,6 @@ The finest mesh width of """
                    self._name
                )
 
-
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
                         "not marker.willBeRefined() "
@@ -952,7 +953,6 @@ The finest mesh width of """
                         + self._name
                         + "::SolverState::GridConstruction"
                 )
-
 
     def _store_cell_data_default_guard(self):
         """!
@@ -967,7 +967,6 @@ The finest mesh width of """
             + self._name
             + "::SolverState::GridConstruction"
         )
-
 
     def _load_cell_data_default_guard(self):
         """!
@@ -988,7 +987,6 @@ The finest mesh width of """
             + "::SolverState::GridInitialisation"
         )
 
-
     def _store_face_data_default_guard(self):
         """!
         Extend the guard via ands only. Never use an or, as subclasses might
@@ -1002,7 +1000,6 @@ The finest mesh width of """
             + self._name
             + "::SolverState::GridConstruction"
         )
-
 
     def _load_face_data_default_guard(self):
         """!
@@ -1023,14 +1020,11 @@ The finest mesh width of """
             + "::SolverState::GridInitialisation"
         )
 
-
     def _unknown_identifier(self):
         return self._name + "Q"
 
-
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
-
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """
@@ -1055,7 +1049,6 @@ The finest mesh width of """
         datamodel.add_face(self._patch_overlap_update)
         datamodel.add_face(self._face_label)
 
-
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         """
         Tell Peano what data to move around
@@ -1075,7 +1068,6 @@ The finest mesh width of """
         step.use_face(self._patch_overlap_update)
         step.use_face(self._face_label)
 
-
     def _get_default_includes(self):
         return """
 #include "tarch/la/Vector.h"
@@ -1085,7 +1077,6 @@ The finest mesh width of """
 
 #include "repositories/SolverRepository.h"
 """
-
 
     def add_actions_to_init_grid(self, step, restart_from_checkpoint=False):
         """!
@@ -1165,13 +1156,11 @@ The finest mesh width of """
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
-
     @property
     def plot_description(
         self,
     ):
         return self._plot_description
-
 
     @plot_description.setter
     def plot_description(self, description):
@@ -1184,6 +1173,8 @@ The finest mesh width of """
         """
         self._plot_description = description
 
+    def set_plotter(self, plotter_option):
+        self._plotter_option = plotter_option
 
     def add_actions_to_plot_solution(self, step, output_path, restart_from_checkpoint=False):
         """!
@@ -1217,7 +1208,8 @@ The finest mesh width of """
         step.add_action_set(self._action_set_project_patch_onto_faces)
         # step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
-        plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+        if self._plotter_option == "HDF5":
+           plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
             filename=output_path + "solution-" + self._name,
             patch=self._patch,
             dataset_name=self._unknown_identifier(),
@@ -1230,10 +1222,28 @@ The finest mesh width of """
 #include "../repositories/SolverRepository.h"
 """,
             precision="PlotterPrecision",
-            select_dofs=self.select_dofs_to_print,
             dataType=self._storage_precision,
-            restart_preprocess=restart_from_checkpoint
+            select_dofs=self.select_dofs_to_print,
+            # restart_preprocess=restart_from_checkpoint
         )
+        elif self._plotter_option == "PeanoPatch":
+            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "solution-" + self._name,
+            patch=self._patch,
+            dataset_name=self._unknown_identifier(),
+            description=self._plot_description,
+            guard="repositories::plotFilter.plotPatch(marker) and "
+            + self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            dataType=self._storage_precision,
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            select_dofs=self.select_dofs_to_print,
+        )
+
         plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 

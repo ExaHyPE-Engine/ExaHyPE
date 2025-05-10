@@ -91,6 +91,7 @@ riemann_solver.set_implementation(
     source_term=coulomb_friction,
 )
 
+riemann_solver.set_plotter(args.plotter)
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 

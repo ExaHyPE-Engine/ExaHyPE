@@ -76,6 +76,7 @@ riemann_solver.set_implementation(
     riemann_solver=fWave,
 )
 
+riemann_solver.set_plotter(args.plotter)
 riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
 riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 

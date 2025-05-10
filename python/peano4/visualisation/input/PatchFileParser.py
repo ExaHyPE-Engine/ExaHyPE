@@ -61,7 +61,6 @@ class UnknownAttributes:
 
           set_identifier: String
             Can be empty to parse everything.
-
     """
 
     def __init__(self, unknown_name, dimensions, is_data_associated_to_cell):
