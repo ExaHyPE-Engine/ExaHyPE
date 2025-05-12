@@ -1489,20 +1489,30 @@ void toolbox::blockstructured::
         }
       }
 
-      tarch::la::DynamicMatrix Q(A.rows(), A.cols());
-      tarch::la::DynamicMatrix R(A.cols(), A.cols());
-      tarch::la::modifiedGramSchmidt(A, Q, R);
+      tarch::la::DynamicMatrix x(numberOfDerivatives, unknowns);
+      if (A.rows() >= A.cols()){
+        tarch::la::DynamicMatrix Q(A.rows(), A.cols());
+        tarch::la::DynamicMatrix R(A.cols(), A.cols());
 
-      auto                     Q_T = tarch::la::transpose(Q);
-      tarch::la::DynamicMatrix c   = Q_T * deltas;
+        tarch::la::modifiedGramSchmidt(A, Q, R);
 
-      tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
-      double*                  result   = tarch::allocateMemory(
-        inverseR.rows() * c.cols(),
-        tarch::MemoryLocation::Heap
-      );
-      inverseR.multiplyBySmallMatrix(result, c);
-      tarch::la::DynamicMatrix x(inverseR.rows(), c.cols(), result);
+        auto                     Q_T = tarch::la::transpose(Q);
+        tarch::la::DynamicMatrix c   = Q_T * deltas;
+
+        tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+        inverseR.multiplyBySmallMatrix(x.data(), c);
+      } else{
+        tarch::la::DynamicMatrix Q(A.cols(), A.rows());
+        tarch::la::DynamicMatrix R(A.rows(), A.rows());
+
+        tarch::la::DynamicMatrix ATranspose = tarch::la::transpose(A);
+        tarch::la::modifiedGramSchmidt(ATranspose, Q, R);
+
+        tarch::la::DynamicMatrix inverseTransposeR = tarch::la::transpose(tarch::la::invertUpperTriangular(R));
+        tarch::la::DynamicMatrix c   = inverseTransposeR * deltas;
+
+        Q.multiplyBySmallMatrix(x.data(), c);
+      }
 
       tarch::la::Vector<Dimensions, int> destinationCorner1
         = (sourceVolume - tarch::la::Vector<Dimensions, int>(haloSourcePatch)
@@ -1833,16 +1843,30 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_second_order(
       }
     }
 
-    tarch::la::DynamicMatrix Q(A.rows(), A.cols());
-    tarch::la::DynamicMatrix R(A.cols(), A.cols());
+    tarch::la::DynamicMatrix x(numberOfDerivatives, unknowns);
+    if (A.rows() >= A.cols()){
+      tarch::la::DynamicMatrix Q(A.rows(), A.cols());
+      tarch::la::DynamicMatrix R(A.cols(), A.cols());
 
-    tarch::la::modifiedGramSchmidt(A, Q, R);
+      tarch::la::modifiedGramSchmidt(A, Q, R);
 
-    auto                     Q_T = tarch::la::transpose(Q);
-    tarch::la::DynamicMatrix c   = Q_T * deltas;
+      auto                     Q_T = tarch::la::transpose(Q);
+      tarch::la::DynamicMatrix c   = Q_T * deltas;
 
-    tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
-    tarch::la::DynamicMatrix x        = inverseR * c;
+      tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+      inverseR.multiplyBySmallMatrix(x.data(), c);
+    } else{
+      tarch::la::DynamicMatrix Q(A.cols(), A.rows());
+      tarch::la::DynamicMatrix R(A.rows(), A.rows());
+
+      tarch::la::DynamicMatrix ATranspose = tarch::la::transpose(A);
+      tarch::la::modifiedGramSchmidt(ATranspose, Q, R);
+
+      tarch::la::DynamicMatrix inverseTransposeR = tarch::la::transpose(tarch::la::invertUpperTriangular(R));
+      tarch::la::DynamicMatrix c   = inverseTransposeR * deltas;
+
+      Q.multiplyBySmallMatrix(x.data(), c);
+    }
 
     tarch::la::Vector<Dimensions, int> fineStart(0);
     tarch::la::Vector<Dimensions, int> fineEnd(3);
@@ -2108,18 +2132,33 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_third_order(
         }
       }
     }
-    tarch::la::DynamicMatrix Q(A.rows(), A.cols());
-    tarch::la::DynamicMatrix R(A.cols(), A.cols());
-    tarch::la::modifiedGramSchmidt(A, Q, R);
 
-    auto                     Q_T = tarch::la::transpose(Q);
-    tarch::la::DynamicMatrix c   = Q_T * deltas;
+    tarch::la::DynamicMatrix x(numberOfDerivatives, unknowns);
+    if (A.rows() >= A.cols()){
+      tarch::la::DynamicMatrix Q(A.rows(), A.cols());
+      tarch::la::DynamicMatrix R(A.cols(), A.cols());
 
-    tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
-    tarch::la::DynamicMatrix x        = inverseR * c;
+      tarch::la::modifiedGramSchmidt(A, Q, R);
+
+      auto                     Q_T = tarch::la::transpose(Q);
+      tarch::la::DynamicMatrix c   = Q_T * deltas;
+
+      tarch::la::DynamicMatrix inverseR = tarch::la::invertUpperTriangular(R);
+      inverseR.multiplyBySmallMatrix(x.data(), c);
+    } else{
+      tarch::la::DynamicMatrix Q(A.cols(), A.rows());
+      tarch::la::DynamicMatrix R(A.rows(), A.rows());
+
+      tarch::la::DynamicMatrix ATranspose = tarch::la::transpose(A);
+      tarch::la::modifiedGramSchmidt(ATranspose, Q, R);
+
+      tarch::la::DynamicMatrix inverseTransposeR = tarch::la::transpose(tarch::la::invertUpperTriangular(R));
+      tarch::la::DynamicMatrix c   = inverseTransposeR * deltas;
+      Q.multiplyBySmallMatrix(x.data(), c);
+    }
+
     tarch::la::Vector<Dimensions, int> fineStart(0);
     tarch::la::Vector<Dimensions, int> fineEnd(3);
-
 
     if (kCoarse(i) == 0)
       fineStart(i
