@@ -1,4 +1,3 @@
-#include "tarch/Assertions.h"
 #include "tarch/tarch.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -539,14 +538,6 @@ MPI_Comm tarch::mpi::Rank::getCommunicator() const {
   return _communicator;
 }
 #endif
-
-
-int tarch::mpi::Rank::getNumberOfRanks() const {
-  #ifdef Parallel
-  assertion(_initIsCalled);
-  #endif
-  return _numberOfProcessors;
-}
 
 
 void tarch::mpi::Rank::setTimeOutWarning( int value ) {

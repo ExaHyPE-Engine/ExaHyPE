@@ -463,78 +463,22 @@ void {{NAMESPACE | join("::")}}::step() {
 
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
-  const int ExitCodeInvalidArguments = 2;
+  peano4::init(&argc, &argv, {{NAMESPACE | join("::")}}::DomainOffset, {{NAMESPACE | join("::")}}::DomainSize, {{NAMESPACE | join("::")}}::PeriodicBC);
 
-  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
-  feenableexcept({{FENV_ARGS}} );
-  {% endif -%}
-
-  peano4::initParallelEnvironment(&argc,&argv);
-  peano4::fillLookupTables();
-  tarch::initNonCriticalAssertionEnvironment();
-
-  peano4::initSingletons(
-    {{NAMESPACE | join("::")}}::DomainOffset,
-    {{NAMESPACE | join("::")}}::DomainSize,
-    {{NAMESPACE | join("::")}}::PeriodicBC
-  );
 
   {{NAMESPACE | join("::")}}::repositories::DataRepository::initDatatypes();
 
   if (not swift2::parseCommandLineArguments(argc,argv) ) {
     logError("main()", "Invalid command line arguments.");
-    return ExitCodeInvalidArguments;
+    return EXIT_FAILURE;
   }
-
-  #if PeanoDebug>=2
-  tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
-  peanoCoreTests->run();
-  if (peanoCoreTests->getNumberOfErrors() != 0) {
-    logError("main()", "Peano4 core unit tests failed. Quit.");
-    exit(ExitCodeUnitTestsFailed);
-  }
-  delete peanoCoreTests;
-
-  tarch::tests::TestCase* tarchTests = tarch::getUnitTests();
-  tarchTests->run();
-  if (tarchTests->getNumberOfErrors() != 0) {
-    logError("main()", "technical architecture (tarch) unit tests failed. Quit.");
-    exit(ExitCodeUnitTestsFailed);
-  }
-  delete tarchTests;
-
-  tarch::tests::TestCase* swiftTests = swift2::getUnitTests();
-  swiftTests->run();
-  if (swiftTests->getNumberOfErrors() != 0) {
-    logError("main()", "Swift unit tests failed. Quit.");
-    exit(ExitCodeUnitTestsFailed);
-  }
-  delete swiftTests;
-
-  tarch::tests::TestCase* particlesTests = toolbox::particles::getUnitTests();
-  particlesTests->run();
-  if (particlesTests->getNumberOfErrors() != 0) {
-    logError("main()", "toolbox particles unit tests failed. Quit.");
-    exit(ExitCodeUnitTestsFailed);
-  }
-  delete particlesTests;
-  #endif
 
   tarch::logging::Statistics::getInstance().clear();
 
   OTTER_INITIALISE();
 
-
-  #if defined(SharedOMP)
-  #pragma omp parallel
-  {
-  #pragma omp master
-  {
-  #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    while ( {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() ) {
+    while ({{NAMESPACE | join("::")}}::selectNextAlgorithmicStep()) {
       {{NAMESPACE | join("::")}}::step();
     }
 
@@ -545,23 +489,17 @@ int main(int argc, char** argv) {
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "cleanup:            " << cleanupMeasurement.getAccumulatedValue() << "s\t" << cleanupMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
-  }
-  else {
+  } else {
     while (peano4::parallel::Node::getInstance().continueToRun()) {
       {{NAMESPACE | join("::")}}::step();
     }
   }
-  #if defined(SharedOMP)
-  }
-  }
-  #endif
 
   OTTER_FINALISE();
 
-  peano4::shutdownSingletons();
   {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();
-  peano4::shutdownParallelEnvironment();
 
-  return ExitCodeSuccess;
+  peano4::shutdown();
+
+  return EXIT_SUCCESS;
 }
-

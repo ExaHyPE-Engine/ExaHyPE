@@ -56,12 +56,8 @@ const tarch::la::Vector<Dimensions, double> cellSize = benchmarks::exahype2::ker
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
 
 int main(int argc, char** argv) {
-  peano4::initParallelEnvironment(&argc, &argv);
-  // Do this early, so people can use logInfo properly.
+  peano4::init(&argc, &argv, benchmarks::exahype2::kernelbenchmarks::DomainOffset, benchmarks::exahype2::kernelbenchmarks::DomainSize);
   repositories::initLogFilters();
-  tarch::initNonCriticalAssertionEnvironment();
-  peano4::fillLookupTables();
-  repositories::initSharedMemoryAndGPUEnvironment();
 
   if constexpr (EnableFPE) {
     feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
@@ -97,8 +93,7 @@ int main(int argc, char** argv) {
     variant6::runBenchmarks(NumberOfCellsToStudy[i], timeStamp, timeStepSize, cellCenter, cellSize);
   }
 
-  tarch::shutdownNonCriticalAssertionEnvironment();
-  peano4::shutdownParallelEnvironment();
+  peano4::shutdown();
 
   // if (outcomeIsInvalid) {
   //   return EXIT_FAILURE; // Make sure the CI pipeline reports an error

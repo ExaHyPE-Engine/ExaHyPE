@@ -107,31 +107,6 @@ peano4::parallel::Node& peano4::parallel::Node::getInstance() {
   return _singleton;
 }
 
-
-int peano4::parallel::Node::getId(int rank, int localTreeId) const {
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  return numberOfRanks * localTreeId + rank;
-}
-
-
-int peano4::parallel::Node::getRank(int id) const {
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  return id % numberOfRanks;
-}
-
-
-int peano4::parallel::Node::getLocalTreeId(int treeId) const {
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  return treeId / numberOfRanks;
-}
-
-
-int peano4::parallel::Node::getGlobalTreeId(int treeId) const {
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  return treeId * numberOfRanks + tarch::mpi::Rank::getInstance().getRank();
-}
-
-
 int peano4::parallel::Node::reserveId(int rank, int forTreeId)  {
   int localThread = 0;
   int result = -1;

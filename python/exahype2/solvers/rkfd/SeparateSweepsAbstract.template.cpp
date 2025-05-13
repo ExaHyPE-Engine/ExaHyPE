@@ -193,12 +193,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   switch (_solverState) {
     case SolverState::GridConstruction:
       _solverState = SolverState::GridInitialisation;
@@ -381,12 +376,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRu
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
   if ( _solverState==SolverState::GridInitialisation ) {
     _solverState = SolverState::PlottingAfterGridInitialisation;
   }

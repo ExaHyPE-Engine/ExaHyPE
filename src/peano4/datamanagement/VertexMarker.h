@@ -2,11 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
-
 
 namespace peano4 {
   namespace datamanagement {
@@ -18,7 +16,7 @@ namespace peano4 {
      * Whenever we run into a vertex event, this event is triggered from a
      * cell's point of view. You can find out from the VertexMarker where
      * within this cell the vertex is for which you got a vertex event.
-     * Likewisely, you can also reconstruct the spatial arrangement of
+     * Likewise, you can also reconstruct the spatial arrangement of
      * this cell's parent cell. It is not a core vertex marker routine,
      * which is frequently used, so we outsource it into a separate function
      * of its own. At the moment, we are only aware of some debugging, tracing
@@ -29,12 +27,11 @@ namespace peano4 {
      *   integer, which will automatically be packed into a bitset then.
      */
     tarch::la::Vector<Dimensions, double> reconstructXOfParentVertex(
-      const VertexMarker&             marker,
-      const std::bitset<Dimensions>&  parentVertexPositionWithinParentCell
+      const VertexMarker&            marker,
+      const std::bitset<Dimensions>& parentVertexPositionWithinParentCell
     );
   } // namespace datamanagement
 } // namespace peano4
-
 
 namespace toolbox {
   namespace particles {
@@ -45,12 +42,10 @@ namespace toolbox {
       class MultiscaleTransitionsTest;
       class TestHelpers;
     } // namespace tests
-  }   // namespace particles
+  } // namespace particles
 } // namespace toolbox
 
-
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::VertexMarker& marker);
-
 
 /**
  * Vertex marker to provide information about selected vertex
@@ -107,19 +102,19 @@ private:
 
   int _select;
 
-  std::bitset<TwoPowerD>    _hasBeenRefined;
-  std::bitset<TwoPowerD>    _willBeRefined;
-  std::bitset<TwoPowerD>    _isLocal;
-  std::bitset<TwoPowerD>    _isHanging;
-  std::bitset<TwoPowerD>    _isParentVertexLocal;
-  std::bitset<ThreePowerD>  _isAdjacentCellLocal;
-  std::bitset<TwoPowerD>    _isParentOfSubtree;
+  std::bitset<TwoPowerD>   _hasBeenRefined;
+  std::bitset<TwoPowerD>   _willBeRefined;
+  std::bitset<TwoPowerD>   _isLocal;
+  std::bitset<TwoPowerD>   _isHanging;
+  std::bitset<TwoPowerD>   _isParentVertexLocal;
+  std::bitset<ThreePowerD> _isAdjacentCellLocal;
+  std::bitset<TwoPowerD>   _isParentOfSubtree;
 
   bool _isParentCellLocal;
 
   bool isParentLocal() const;
 
-  std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
+  std::bitset<TwoPowerD> _isAdjacentToParallelDomainBoundary;
 
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
@@ -130,7 +125,7 @@ private:
    * Number of adjacent trees per vertex. Obviously only relevant/valid
    * if the vertex is local.
    */
-  tarch::la::Vector<TwoPowerD,int>   _numberOfAdjacentTrees;
+  tarch::la::Vector<TwoPowerD, int> _numberOfAdjacentTrees;
 
   /**
    * Some unit tests prefer to construct a marker manually, so I offer a
@@ -170,7 +165,7 @@ public:
    * hide this routine from the user altogether and make the routine
    * explicitly available only to friends.
    */
-  int getSelectedVertexNumber() const;
+  int getSelectedVertexNumber() const { return _select; }
 
   /**
    * We do enumerate the vertices in a lexicographic way, i.e. we start with the
@@ -186,10 +181,10 @@ public:
    */
   tarch::la::Vector<Dimensions, double> x() const;
 
-  bool isParentOfSubtree(int i) const;
-  bool isParentOfSubtree() const;
+  inline bool isParentOfSubtree(int i) const { return _isParentOfSubtree[i]; }
+  inline bool isParentOfSubtree() const { return isParentOfSubtree(_select); }
 
-  tarch::la::Vector<Dimensions, double> h() const;
+  inline tarch::la::Vector<Dimensions, double> h() const { return _h; }
 
   std::string toString() const;
 
@@ -197,11 +192,11 @@ public:
    * A vertex is refined iff it is surrounded by @f$ 2^d @f$ cells which are
    * refined.
    */
-  bool hasBeenRefined() const;
-  bool hasBeenRefined(int i) const;
+  inline bool hasBeenRefined() const { return hasBeenRefined(_select); }
+  inline bool hasBeenRefined(int i) const { return _hasBeenRefined[i]; }
 
-  bool willBeRefined() const;
-  bool willBeRefined(int i) const;
+  inline bool willBeRefined() const { return willBeRefined(_select); }
+  inline bool willBeRefined(int i) const { return _willBeRefined[i]; }
 
   /**
    * Number of adjacent trees of current vertex
@@ -210,22 +205,25 @@ public:
    * non-hanging vertex. Otherwise, its behaviour is undefined (and
    * will actually trigger an assertion).
    */
-  int   getNumberOfAdjacentTrees() const;
-  int   getNumberOfAdjacentTrees(int i) const;
+  int getNumberOfAdjacentTrees() const;
+  int getNumberOfAdjacentTrees(int i) const;
 
   /**
    * @see isLocal(int) for currently selected/represented vertex
    */
-  bool isLocal() const;
+  inline bool isLocal() const { return isLocal(_select); }
 
   /**
    * Is a vertex local, i.e. not adjacent to any boundary or remote
    */
-  bool isLocal(int i) const;
+  inline bool isLocal(int i) const {
+    // assertion1( not _isLocal[i] or _numberOfAdjacentTrees[i]>0, toString() );
+    return _isLocal[i];
+  }
 
-  bool isHanging() const;
+  inline bool isHanging() const { return isHanging(_select); }
 
-  bool isHanging(int i) const;
+  inline bool isHanging(int i) const { return _isHanging[i]; }
 
   /**
    * Is currently selected/analysed vertex adjacent to parallel domain boundary
@@ -253,7 +251,7 @@ public:
    *
    * @see isParentVertexLocal()
    */
-  bool isParentCellLocal() const;
+  inline bool isParentCellLocal() const { return _isParentCellLocal; }
 
   /**
    * Is the parent vertex local
@@ -279,7 +277,6 @@ public:
    * It will always return if isParentCellLocal() does not hold.
    */
   bool isParentVertexLocal(int i) const;
-
 
   /**
    * Relative position within parent cell
@@ -343,7 +340,6 @@ public:
    */
   bool coincidesWithCoarseGridVertex() const;
 
-
   /**
    * Will return true if x is contained within the adjacent cells. You can use
    * shrink those cells via the additional parameter if you want.
@@ -359,7 +355,6 @@ public:
     double                                       scaleAdjacentCells = 1.0,
     double                                       tolerance          = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   ) const;
-
 
   /**
    * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,

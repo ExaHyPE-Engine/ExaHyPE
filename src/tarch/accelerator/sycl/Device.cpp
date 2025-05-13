@@ -36,9 +36,7 @@ namespace {
   }
 } // namespace
 
-tarch::accelerator::Device::Device() {}
-
-void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
+bool tarch::accelerator::Device::init() {
   auto platforms                    = sycl::platform::get_platforms();
   unsigned int physicalDeviceIndex  = 0;
   unsigned int logicalDeviceIndex   = 0;
@@ -52,26 +50,22 @@ void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
 
        // Skip devices that are not GPUs.
        if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
-        logInfo("configure()",
-                "Skipping physical device #" + std::to_string(physicalDeviceIndex) +
-                " (" + platformName + " / " + deviceName +
-                ") because it is not an accelerator");
+        logInfo(
+          "init()",
+          "Skipping physical device #" + std::to_string(physicalDeviceIndex) +
+          " (" + platformName + " / " + deviceName + ") because it is not an accelerator"
+        );
         ++physicalDeviceIndex;
         continue;
       }
 
-      if (devicesToUse.empty() || devicesToUse.count(physicalDeviceIndex) > 0) {
-        logInfo("configure()",
-                "Initialising physical device #" + std::to_string(physicalDeviceIndex) +
-                " (" + platformName + " / " + deviceName +
-                ") as logical device #" + std::to_string(logicalDeviceIndex));
-        syclQueues.insert({logicalDeviceIndex, sycl::queue(device)});
-        ++logicalDeviceIndex;
-      } else {
-        logInfo("configure()",
-                "Skipping physical device #" + std::to_string(physicalDeviceIndex) +
-                " (masked out)");
-      }
+      logInfo(
+        "init()",
+        "Initialising physical device #" + std::to_string(physicalDeviceIndex) +
+        " (" + platformName + " / " + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
+      );
+      syclQueues.insert({logicalDeviceIndex, sycl::queue(device)});
+      ++logicalDeviceIndex;
       ++physicalDeviceIndex;
     }
   }
@@ -81,6 +75,8 @@ void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
   }
 
   // listSYCLQueues();
+
+  return isInitialised();
 }
 
 void tarch::accelerator::Device::shutdown() {

@@ -257,23 +257,7 @@ void step() {
 
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
-  const int ExitCodeInvalidArguments = 2;
-  const int ExitCodeInvalidBuild     = 3;
-
-  peano4::initParallelEnvironment(&argc, &argv);
-  peano4::fillLookupTables();
-
-  tarch::la::Vector<Dimensions, double> x = {{DomainOffset}};
-  tarch::la::Vector<Dimensions, double> h = {{DomainSize}};
-
-  peano4::initSingletons(x, h);
-
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
-    logError("main()", "MPI runs without multithreading are not supported currently.");
-    return ExitCodeInvalidBuild;
-  }
+  peano4::init(&argc, &argv, DomainOffset, DomainSize);
 
   if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("mghype.log-filter")) {
     logWarning(
@@ -283,95 +267,50 @@ int main(int argc, char** argv) {
 
   {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
 
-  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
-  feenableexcept({{FENV_ARGS}} );
-  {% endif -%}
-
-#if PeanoDebug >= 2
-  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
-  unitTests->addTestCase(peano4::getUnitTests());
-  unitTests->addTestCase(tarch::getUnitTests());
-  unitTests->addTestCase(toolbox::finiteelements::getUnitTests());
-  unitTests->run();
-  if (unitTests->getNumberOfErrors() != 0) {
-    logError("main()", "unit tests failed. Quit.");
-    tarch::mpi::Rank::abort(ExitCodeUnitTestsFailed);
-  }
-  delete unitTests;
-#endif
-
   tarch::logging::Statistics::getInstance().clear();
 
   OTTER_INITIALISE();
 
-#if defined(SharedOMP)
-#pragma omp parallel
-  {
-#pragma omp master
-    {
-#endif
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    while (selectNextAlgorithmicStep()) {
+      step();
+    }
 
-#if defined(UseSmartMPI)
-      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-#else
-  const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
-#endif
-
-      if (isGlobalMaster) {
-        while (selectNextAlgorithmicStep()) {
-          step();
-        }
-
-        logInfo("main()", "terminated successfully");
-        logInfo(
-          "main()",
-          "grid construction:           " << createGridMeasurement.getAccumulatedValue(
-          ) << "s\t" << createGridMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "init:                        " << initMeasurement.getAccumulatedValue(
-          ) << "s\t" << initMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "solve:                       " << solveMeasurement.getAccumulatedValue(
-          ) << "s\t" << solveMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "plotting:                    " << plotMeasurement.getAccumulatedValue(
-          ) << "s\t" << plotMeasurement.toString()
-        );
-      } else if (isPeanoComputeNode) {
-        while (peano4::parallel::Node::getInstance().continueToRun()) {
-          step();
-        }
-      }
-#if defined(UseSmartMPI)
-      else {
-        while (smartmpi::continueToRun()) {
-          smartmpi::tick();
-        }
-      }
-#endif
-
-#if defined(SharedOMP)
+    logInfo("main()", "terminated successfully");
+    logInfo(
+      "main()",
+      "grid construction:           " << createGridMeasurement.getAccumulatedValue(
+      ) << "s\t" << createGridMeasurement.toString()
+    );
+    logInfo(
+      "main()",
+      "init:                        " << initMeasurement.getAccumulatedValue(
+      ) << "s\t" << initMeasurement.toString()
+    );
+    logInfo(
+      "main()",
+      "solve:                       " << solveMeasurement.getAccumulatedValue(
+      ) << "s\t" << solveMeasurement.toString()
+    );
+    logInfo(
+      "main()",
+      "plotting:                    " << plotMeasurement.getAccumulatedValue(
+      ) << "s\t" << plotMeasurement.toString()
+    );
+  } else {
+    while (peano4::parallel::Node::getInstance().continueToRun()) {
+      step();
     }
   }
-#endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
   OTTER_FINALISE();
 
-
-  peano4::shutdownSingletons();
   {{SUBNAMESPACE}}repositories::DataRepository::shutdownDatatypes();
-  peano4::shutdownParallelEnvironment();
 
-  return ExitCodeSuccess;
+  peano4::shutdown();
+
+  return EXIT_SUCCESS;
 }
 

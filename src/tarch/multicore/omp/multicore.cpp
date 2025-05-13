@@ -9,7 +9,7 @@
 #include "tarch/multicore/Task.h"
 
 namespace {
-  static tarch::logging::Log _log("tarch::multicore::native(omp)");
+  static tarch::logging::Log _log("tarch::multicore::omp");
 } // namespace
 
 void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {

@@ -6,17 +6,16 @@
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
 
-#include "tarch/UnitTests.h"
+#include "peano4/parallel/Node.h"
+#include "peano4/peano4.h"
+#include "peano4/UnitTests.h"
 #include "tarch/logging/ChromeTraceFileLogger.h"
 #include "tarch/logging/CommandLineLogger.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
-
-#include "peano4/peano4.h"
-#include "peano4/UnitTests.h"
-#include "peano4/parallel/Node.h"
+#include "tarch/UnitTests.h"
 
 #ifdef UseToolboxBlockstructured
 #include "toolbox/blockstructured/UnitTests.h"
@@ -45,7 +44,7 @@
 
 tarch::logging::Log _log("unittests");
 
-void runTests() {
+int runTests() {
   int                     unitTestsErrors = 0;
   tarch::tests::TestCase* tests           = nullptr;
 
@@ -107,9 +106,13 @@ void runTests() {
 #endif
 
   if (unitTestsErrors != 0) {
-    logError("main()", "unit tests failed. Quit.");
-    exit(-2);
+    logError("main()", unitTestsErrors << " unit tests failed. Quit.");
+    return EXIT_FAILURE;
+  } else {
+    logInfo("main()", "All unit tests passed.")
   }
+
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {
@@ -262,42 +265,21 @@ int main(int argc, char** argv) {
     )
   );
 
-  peano4::initParallelEnvironment(&argc, &argv);
-  peano4::fillLookupTables();
-
-#ifdef Parallel
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
-    logInfo(
-      "main()",
-      "it is recommended that you run the unit tests with more than one MPI rank, too"
-    );
-  }
+#if Dimensions == 2
+  auto DomainOffset = {0.0, 0.0};
+  auto DomainSize   = {1.0, 1.0};
+#else
+  auto DomainOffset = {0.0, 0.0, 0.0};
+  auto DomainSize   = {1.0, 1.0, 1.0};
 #endif
 
-  int cores = tarch::multicore::Core::UseDefaultNumberOfThreads;
-  if (argc != 2 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo(
-      "main()",
-      "usage: ./" + std::string(argv[0]) + " core-count"
-    );
-  } else if (argc == 2) {
-    cores = std::atoi(argv[1]);
-  }
-
-  tarch::multicore::Core::getInstance().configure(cores);
+  peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
 
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
-  runTests();
+  int returnCode = runTests();
 
-  if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    while (peano4::parallel::Node::getInstance().continueToRun()) {
-      // Do nothing. This is just to ensure that everything shuts down properly
-      // and is properly installed.
-    }
-  }
+  peano4::shutdown();
 
-  peano4::shutdownParallelEnvironment();
-
-  return 0;
+  return returnCode;
 }

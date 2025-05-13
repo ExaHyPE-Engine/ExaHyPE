@@ -179,7 +179,7 @@ bool swift2::parseCommandLineArguments(int argc, char** argv) {
   }}
 
   std::string   logFilterFile = "swift2.log-filter";
-  int           cores         = tarch::multicore::Core::UseDefaultNumberOfThreads;
+  int           cores         = 0;
   std::set<int> gpuDevices;
 
   for (int argument=1; argument<argc; argument+=2) {
@@ -240,8 +240,8 @@ bool swift2::parseCommandLineArguments(int argc, char** argv) {
     }
   }
 
-  tarch::multicore::Core::getInstance().configure( cores );
-  tarch::accelerator::Device::getInstance().configure( gpuDevices );
+  tarch::multicore::Core::getInstance().init();
+  tarch::accelerator::Device::getInstance().init();
 
   if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( logFilterFile ) ) {
     logWarning( "main()", "no exahype.log-filter file found or file has been corrupted. Use default logging configuration" );

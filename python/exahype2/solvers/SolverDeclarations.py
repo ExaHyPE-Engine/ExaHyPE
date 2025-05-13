@@ -130,7 +130,7 @@ class SolverDeclarations:
       [[maybe_unused]] const int                                    normal,
       [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
-      {% if MAX_EIGENVALUE_IMPLEMENTATION!="<empty>" %}
+      {% if FLUX_IMPLEMENTATION!="<empty>" %}
       {{FLUX_IMPLEMENTATION}}
       {% endif %}
     }
@@ -154,7 +154,7 @@ class SolverDeclarations:
       [[maybe_unused]] const int                                    normal,
       [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
-      {% if MAX_EIGENVALUE_IMPLEMENTATION!="<empty>" %}
+      {% if NCP_IMPLEMENTATION!="<empty>" %}
       {{NCP_IMPLEMENTATION}}
       {% endif %}
     }

@@ -8,9 +8,9 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/multicore/Lock.h"
 
-tarch::accelerator::Device::Device() {}
-
-void tarch::accelerator::Device::configure(const std::set<int>&) {}
+bool tarch::accelerator::Device::init() {
+  return isInitialised();
+}
 
 void tarch::accelerator::Device::shutdown() {
   checkForMemoryLeaks();

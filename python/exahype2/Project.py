@@ -49,10 +49,7 @@ class Project(object):
         self._load_balancer_name      = ""
         self._load_balancer_arguments = ""
         self._log_filter_file         = "exahype.log-filter"
-        self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
         self._print_time_step_interval_in_seconds = 10
-        self._timeout                 = 3600
-        self._gpus                    = []
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
                                           "tarch/accelerator/Device.h"
                                         ]
@@ -101,7 +98,6 @@ class Project(object):
         self._load_balancer_name = load_balancer_name
         self._load_balancer_arguments = load_balancer_arguments
 
-
     def set_log_filter_file(self, file_name):
         """! Set a log filter file name
         Pass in the empty string, if you want the code to use the hard-coded
@@ -109,36 +105,8 @@ class Project(object):
         """
         self._log_filter_file = file_name
 
-    def set_number_of_threads(self, value):
-        """! Set number of threads to use
-        Pass in number of threads (positive integer) or a string such as
-        "tarch::multicore::Core::UseDefaultNumberOfThreads".
-        """
-        self._number_of_threads = value
-
     def set_print_time_step_interval_in_seconds(self, value):
         self._print_time_step_interval_in_seconds = value
-
-    def set_timeout(self, value):
-        """! Set timeout
-        value has to be a number greater or equal to zero, this then sets the
-        timeout in seconds after which a node waiting for an MPI message shall
-        quit an shutdown the whole application with an error report.
-        If zero is passed, this feature is switched off and nodes will wait
-        indefinitely.
-        """
-        if value < 0:
-            raise Exception("Timeout has to be greater or equal to 0")
-        self._timeout = value
-
-
-    def set_gpus(self, value):
-        """! Set GPUs to be used
-        value is a list of integers or the empty list if you want the code to
-        use all GPUs that are visible to a rank.
-        """
-        self._gpus = value
-
 
     """
     The standard extensions that I use for both Peano and ExaHyPE.
@@ -459,10 +427,7 @@ thus appreciate any citation of the original release paper
             "PLOT_FILTER":              self._plot_filters,
             "TRACERS":                  [x.name for x in self._tracer_particles],
             "LOG_FILTER_FILE":          self._log_filter_file,
-            "NUMBER_OF_THREADS":        self._number_of_threads,
             "PRINT_TIME_STEP_INTERVAL_IN_SECONDS": self._print_time_step_interval_in_seconds,
-            "TIMEOUT":                  self._timeout,
-            "GPUS":                     self._gpus,
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 

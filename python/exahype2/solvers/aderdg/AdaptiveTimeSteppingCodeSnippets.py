@@ -67,6 +67,7 @@ class AdaptiveTimeSteppingCodeSnippets(
         tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)
       ) {
         const double minCellSize = _minCellHThisTimeStep;
+        _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
         // The max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction.
         _admissibleTimeStepSizeThisTimeStep = std::min(MinTerminalTime - _minTimeStampThisTimeStep, CFL * PNPM / _maxEigenvalueThisTimeStep);
         if (std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep)) {

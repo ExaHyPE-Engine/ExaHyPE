@@ -206,12 +206,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() 
   _solverState = SolverState::Suspended;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   switch (_solverState) {
   case SolverState::GridConstruction:
     _solverState = SolverState::GridInitialisation;
@@ -365,12 +360,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRu
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
   assertion(mayPlot());
   _solverState = SolverState::Plotting;
 }

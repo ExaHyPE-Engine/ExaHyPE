@@ -67,19 +67,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}

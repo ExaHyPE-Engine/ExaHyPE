@@ -61,10 +61,10 @@ void tarch::tests::TreeTestCaseCollection::run() {
 void tarch::tests::TreeTestCaseCollection::run( const std::string& prefix ) {
   std::string logInformation;
   if ( (prefix + _testCaseName).length()>0 ) {
-    logInformation = "running test case collection \"" + prefix + _testCaseName + "\" ...";
+    logInformation = "Running test case collection \"" + prefix + _testCaseName + "\" ...";
   }
   else {
-    logInformation = "running test case collection ...";
+    logInformation = "Running test case collection ...";
   }
 
   if (
@@ -72,7 +72,7 @@ void tarch::tests::TreeTestCaseCollection::run( const std::string& prefix ) {
     and
     _testCases.empty()
   ) {
-    logInformation += "... WARNING: no tests defined ... ";
+    logInformation += "... WARNING: No tests defined ... ";
   }
 
   // run nested test cases recursively

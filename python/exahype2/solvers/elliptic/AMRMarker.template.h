@@ -62,19 +62,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     void finishGridConstructionStep() final;
     void startGridInitialisationStep() final;
     void finishGridInitialisationStep() final;
-    void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) final;
+    void startTimeStep() final;
     void finishTimeStep() final;
-    void startPlottingStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) final;
+    void startPlottingStep() final;
     void finishPlottingStep() final;
 
     virtual double getMaxMeshSize() const override final;

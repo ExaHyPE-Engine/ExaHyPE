@@ -16,12 +16,9 @@ namespace {
   cudaStream_t activeStream = 0;
 } // namespace
 
-tarch::accelerator::Device::Device() {
+bool tarch::accelerator::Device::init() {
+  logDebug("init()", "-----------------------------------------");
   CHECK_CUDA_ERROR(cudaGetDeviceCount(&numberOfDevices));
-}
-
-void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
-  logDebug("configure()", "-----------------------------------------");
   for (int device = 0; device < numberOfDevices; device++) {
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(0));
@@ -30,22 +27,24 @@ void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
     CHECK_CUDA_ERROR(cudaMemGetInfo(&free, &total));
 
     constexpr int MB = 1024 * 1024;
-    logInfo("configure()", "[" << device << "]: " << prop->name);
-    logDebug("configure()", "  " << prop->major << "." << prop->minor << " CC");
-    logDebug("configure()", "  " << free / MB << " MB free of " << total / MB << " MB total global memory");
-    logDebug("configure()", "  " << prop->totalConstMem << " bytes constant memory");
-    logDebug("configure()", "  " << prop->multiProcessorCount << " SMs");
-    logDebug("configure()", "  " << prop->maxBlocksPerMultiProcessor << " blocks per SM");
-    logDebug("configure()", "  " << prop->maxThreadsPerMultiProcessor << " threads per SM");
-    logDebug("configure()", "  " << prop->regsPerMultiprocessor << " registers per SM");
-    logDebug("configure()", "  " << prop->sharedMemPerMultiprocessor << " bytes shared memory per SM");
-    logDebug("configure()", "  " << prop->maxThreadsPerBlock << " threads per block");
-    logDebug("configure()", "  " << prop->regsPerBlock << " registers per block");
-    logDebug("configure()", "  " << prop->sharedMemPerBlock << " bytes shared memory per block");
-    logDebug("configure()", "  " << prop->warpSize << " threads per warp");
-    logDebug("configure()", "  " << prop->asyncEngineCount << " asynchronous engines");
+    logInfo("init()", "[" << device << "]: " << prop->name);
+    logDebug("init()", "  " << prop->major << "." << prop->minor << " CC");
+    logDebug("init()", "  " << free / MB << " MB free of " << total / MB << " MB total global memory");
+    logDebug("init()", "  " << prop->totalConstMem << " bytes constant memory");
+    logDebug("init()", "  " << prop->multiProcessorCount << " SMs");
+    logDebug("init()", "  " << prop->maxBlocksPerMultiProcessor << " blocks per SM");
+    logDebug("init()", "  " << prop->maxThreadsPerMultiProcessor << " threads per SM");
+    logDebug("init()", "  " << prop->regsPerMultiprocessor << " registers per SM");
+    logDebug("init()", "  " << prop->sharedMemPerMultiprocessor << " bytes shared memory per SM");
+    logDebug("init()", "  " << prop->maxThreadsPerBlock << " threads per block");
+    logDebug("init()", "  " << prop->regsPerBlock << " registers per block");
+    logDebug("init()", "  " << prop->sharedMemPerBlock << " bytes shared memory per block");
+    logDebug("init()", "  " << prop->warpSize << " threads per warp");
+    logDebug("init()", "  " << prop->asyncEngineCount << " asynchronous engines");
   }
-  logDebug("configure()", "-----------------------------------------");
+  logDebug("init()", "-----------------------------------------");
+
+  return isInitialised();
 }
 
 void tarch::accelerator::Device::shutdown() {

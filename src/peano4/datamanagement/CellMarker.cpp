@@ -1,8 +1,9 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "CellMarker.h"
 
 #include "peano4/grid/TraversalObserver.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "peano4/utils/Globals.h"
 
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::CellMarker& marker) {
   out << marker.toString();
@@ -41,32 +42,18 @@ peano4::datamanagement::CellMarker::CellMarker(const peano4::grid::GridTraversal
   _hasBeenEnclave = couldBeEnclave and not _hasBeenRefined and not _isOneVertexCreatedOrDestroyed;
 }
 
-tarch::la::Vector<Dimensions, int> peano4::datamanagement::CellMarker::getRelativePositionWithinFatherCell() const {
-  return _relativePositionOfCellWithinFatherCell;
+bool peano4::datamanagement::CellMarker::isContained(
+  const tarch::la::Vector<Dimensions, double>& x,
+  double                                       tolerance
+) const {
+  return isContained(x, _centre, _h, tolerance);
 }
-
-#if PeanoDebug > 0
-void peano4::datamanagement::CellMarker::setRelativePositionWithinFatherCell(int axis, int value) {
-  _relativePositionOfCellWithinFatherCell(axis) = value;
-}
-#endif
-
-bool peano4::datamanagement::CellMarker::isContained(const tarch::la::Vector<Dimensions, double>& x, double tolerance)
-  const {
-  return isContained(
-    x,
-    _centre,
-    _h,
-    tolerance
-  );
-}
-
 
 bool peano4::datamanagement::CellMarker::isContained(
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& cellCentre,
   const tarch::la::Vector<Dimensions, double>& h,
-  double tolerance
+  double                                       tolerance
 ) {
   bool result = true;
   for (int d = 0; d < Dimensions; d++) {
@@ -76,9 +63,9 @@ bool peano4::datamanagement::CellMarker::isContained(
   return result;
 }
 
-
 bool peano4::datamanagement::CellMarker::overlaps(
-  const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size
+  const tarch::la::Vector<Dimensions, double>& offset,
+  const tarch::la::Vector<Dimensions, double>& size
 ) const {
   bool overlaps = true;
 
@@ -90,35 +77,19 @@ bool peano4::datamanagement::CellMarker::overlaps(
   return overlaps;
 }
 
-bool peano4::datamanagement::CellMarker::willBeRefined() const { return _willBeRefined; }
-
-bool peano4::datamanagement::CellMarker::hasBeenRefined() const { return _hasBeenRefined; }
-
-bool peano4::datamanagement::CellMarker::isLocal() const { return _isLocal; }
-
-bool peano4::datamanagement::CellMarker::isParentLocal() const { return _isParentLocal; }
-
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::x() const { return _centre; }
-
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getInvokingParentCellsCentre() const {
   tarch::la::Vector<Dimensions, double> result = _centre;
-  for (int d=0; d<Dimensions; d++) {
-    assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );
-    assertion1( _relativePositionOfCellWithinFatherCell(d)<=2, toString() );
-    if (_relativePositionOfCellWithinFatherCell(d)==0) {
+  for (int d = 0; d < Dimensions; d++) {
+    assertion1(_relativePositionOfCellWithinFatherCell(d) >= 0, toString());
+    assertion1(_relativePositionOfCellWithinFatherCell(d) <= 2, toString());
+    if (_relativePositionOfCellWithinFatherCell(d) == 0) {
       result(d) += _h(d);
     }
-    if (_relativePositionOfCellWithinFatherCell(d)==2) {
+    if (_relativePositionOfCellWithinFatherCell(d) == 2) {
       result(d) -= _h(d);
     }
   }
   return result;
-}
-
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::h() const { return _h; }
-
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getOffset() const {
-  return _centre - 0.5 * _h;
 }
 
 std::string peano4::datamanagement::CellMarker::toString() const {
@@ -133,19 +104,14 @@ std::string peano4::datamanagement::CellMarker::toString() const {
   return msg.str();
 }
 
-bool peano4::datamanagement::CellMarker::willBeEnclaveCell() const { return _willBeEnclave; }
-
-bool peano4::datamanagement::CellMarker::willBeSkeletonCell() const { return not _willBeEnclave; }
-
-bool peano4::datamanagement::CellMarker::hasBeenEnclaveCell() const { return _hasBeenEnclave; }
-
-bool peano4::datamanagement::CellMarker::hasBeenSkeletonCell() const { return not _hasBeenEnclave; }
-
 #ifdef Parallel
 MPI_Datatype peano4::datamanagement::CellMarker::Datatype;
 
 void peano4::datamanagement::CellMarker::sendAndPollDanglingMessages(
-  const peano4::datamanagement::CellMarker& message, int destination, int tag, MPI_Comm communicator
+  const peano4::datamanagement::CellMarker& message,
+  int                                       destination,
+  int                                       tag,
+  MPI_Comm                                  communicator
 ) {
   peano4::datamanagement::CellMarker::send(
     message,
@@ -156,11 +122,13 @@ void peano4::datamanagement::CellMarker::sendAndPollDanglingMessages(
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
     },
     [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning(
-        "peano4::datamanagement::CellMarker", "sendAndPollDanglingMessages()", destination, tag
-      );
+      tarch::mpi::Rank::getInstance()
+        .writeTimeOutWarning("peano4::datamanagement::CellMarker", "sendAndPollDanglingMessages()", destination, tag);
       tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut(
-        "peano4::datamanagement::CellMarker", "sendAndPollDanglingMessages()", destination, tag
+        "peano4::datamanagement::CellMarker",
+        "sendAndPollDanglingMessages()",
+        destination,
+        tag
       );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
@@ -169,7 +137,10 @@ void peano4::datamanagement::CellMarker::sendAndPollDanglingMessages(
 }
 
 void peano4::datamanagement::CellMarker::receiveAndPollDanglingMessages(
-  peano4::datamanagement::CellMarker& message, int source, int tag, MPI_Comm communicator
+  peano4::datamanagement::CellMarker& message,
+  int                                 source,
+  int                                 tag,
+  MPI_Comm                            communicator
 ) {
   peano4::datamanagement::CellMarker::receive(
     message,
@@ -180,12 +151,10 @@ void peano4::datamanagement::CellMarker::receiveAndPollDanglingMessages(
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
     },
     [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning(
-        "peano4::datamanagement::CellMarker", "receiveAndPollDanglingMessages()", source, tag
-      );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut(
-        "peano4::datamanagement::CellMarker", "receiveAndPollDanglingMessages()", source, tag
-      );
+      tarch::mpi::Rank::getInstance()
+        .writeTimeOutWarning("peano4::datamanagement::CellMarker", "receiveAndPollDanglingMessages()", source, tag);
+      tarch::mpi::Rank::getInstance()
+        .triggerDeadlockTimeOut("peano4::datamanagement::CellMarker", "receiveAndPollDanglingMessages()", source, tag);
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -196,10 +165,22 @@ void peano4::datamanagement::CellMarker::initDatatype() {
   peano4::grid::GridTraversalEvent dummyEvent;
 
   peano4::datamanagement::CellMarker instances[] = {
-    peano4::datamanagement::CellMarker(dummyEvent), peano4::datamanagement::CellMarker(dummyEvent)};
+    peano4::datamanagement::CellMarker(dummyEvent),
+    peano4::datamanagement::CellMarker(dummyEvent)
+  };
 
   MPI_Datatype subtypes[] = {
-    MPI_DOUBLE, MPI_DOUBLE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_INT};
+    MPI_DOUBLE,
+    MPI_DOUBLE,
+    MPI_BYTE,
+    MPI_BYTE,
+    MPI_BYTE,
+    MPI_BYTE,
+    MPI_BYTE,
+    MPI_BYTE,
+    MPI_BYTE,
+    MPI_INT
+  };
 
   int blocklen[] = {Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, Dimensions};
 
@@ -250,15 +231,13 @@ void peano4::datamanagement::CellMarker::initDatatype() {
 
 void peano4::datamanagement::CellMarker::shutdownDatatype() { MPI_Type_free(&Datatype); }
 
-void peano4::datamanagement::CellMarker::send(
-  const peano4::datamanagement::CellMarker& buffer, int destination, int tag, MPI_Comm communicator
-) {
+void peano4::datamanagement::CellMarker::
+  send(const peano4::datamanagement::CellMarker& buffer, int destination, int tag, MPI_Comm communicator) {
   MPI_Send(&buffer, 1, Datatype, destination, tag, communicator);
 }
 
-void peano4::datamanagement::CellMarker::receive(
-  peano4::datamanagement::CellMarker& buffer, int source, int tag, MPI_Comm communicator
-) {
+void peano4::datamanagement::CellMarker::
+  receive(peano4::datamanagement::CellMarker& buffer, int source, int tag, MPI_Comm communicator) {
   MPI_Status status;
   MPI_Recv(&buffer, 1, Datatype, source, tag, communicator, &status);
   // buffer._senderDestinationRank = status.MPI_SOURCE;

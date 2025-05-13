@@ -2,16 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
+#include "tarch/Assertions.h"
 #include "tarch/logging/Log.h"
 
 #include <ctime>
 #include <functional>
 
-
 #include "mpi.h"
-
-
 
 namespace tarch {
   namespace mpi {
@@ -425,10 +422,12 @@ class tarch::mpi::Rank {
     MPI_Comm getCommunicator() const;
     #endif
 
-    /**
-     * @return Number of Nodes Available
-     */
-    int getNumberOfRanks() const;
+    inline int getNumberOfRanks() const {
+      #ifdef Parallel
+      assertion(_initIsCalled);
+      #endif
+      return _numberOfProcessors;
+    }
 
     /**
      * Is this node the global master process, i.e. does its rank equal get

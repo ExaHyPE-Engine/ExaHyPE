@@ -426,12 +426,8 @@ void runBenchmarks(int numberOfCells) {
 }
 
 int main(int argc, char** argv) {
-  peano4::initParallelEnvironment(&argc, &argv);
-  // Do this early, so people can use logInfo properly.
+  peano4::init(&argc, &argv, benchmarks::exahype2::kernelbenchmarks::DomainOffset, benchmarks::exahype2::kernelbenchmarks::DomainSize);
   repositories::initLogFilters();
-  tarch::initNonCriticalAssertionEnvironment();
-  peano4::fillLookupTables();
-  repositories::initSharedMemoryAndGPUEnvironment();
 
   if constexpr (EnableFPE) {
     feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
@@ -504,8 +500,7 @@ int main(int argc, char** argv) {
 //   }
 // #endif
 
-  tarch::shutdownNonCriticalAssertionEnvironment();
-  peano4::shutdownParallelEnvironment();
+  peano4::shutdown();
 
   if (outcomeIsInvalid) {
     return EXIT_FAILURE; // Make sure the CI pipeline reports an error

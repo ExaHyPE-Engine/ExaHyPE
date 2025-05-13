@@ -14,14 +14,13 @@
 #include <sycl/sycl.hpp>
 #pragma pop_macro("Dimensions")
 
-/**
- * Native mapping of a task loop onto a SYCL loop
- *
- * @see spawnTask()
- *
- */
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+namespace {
+  static tarch::logging::Log _log("tarch::multicore::sycl");
+} // namespace
+
+void tarch::multicore::native::spawnTasks(const std::vector<Task*>& tasks) {
   assertion(not tasks.empty());
+  logDebug("spawnTasks()", "Spawn " << tasks.size() << " tasks as taskloop");
 
   for (auto& p : tasks) {
     static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
@@ -34,88 +33,43 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   static_cast<sycl::queue*>(getHostSYCLQueue())->wait();
 }
 
-
-/**
- * Read spawnAndWaitAsTaskLoop() first.
- *
- * ## Implementation details
- *
- * The tasks here are always spawned into the host queue. Consequently, they
- * will run on the CPU and thus should be able to invoke virtual functions and
- * access global variables. Our experiments with Intel DPC++ however suggest
- * that this is not the case and that SYCL/DPC++ refuses to translate this
- * code: you have to spawn explicitly as host task.
- *
- * @author Andrew Mallinson
- * @author Tobias Weinzierl
- *
- * @see spawnAndWaitAsTaskLoop()
- */
-void tarch::multicore::native::spawnTask(
-  Task*                       job,
-  const std::set<TaskNumber>& /*inDependencies*/,
-  const TaskNumber&           /*taskNumber*/
-) {
+void tarch::multicore::native::spawnTask(Task* task, const void* const, const void* const) {
   sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
-      while (job->run()) {
+      while (task->run()) {
       }
-      delete job;
+      delete task;
     });
   });
+  e.wait();
 }
 
-
-void tarch::multicore::native::spawnTask(
-  Task*                       job,
-  const TaskNumber&           /*taskNumber*/
-) {
+void tarch::multicore::native::spawnTask(Task* task, const void* const) {
   sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
-      while (job->run()) {
+      while (task->run()) {
       }
-      delete job;
+      delete task;
     });
   });
+  e.wait();
 }
 
-
-void tarch::multicore::native::spawnTask(
-  Task*                        job,
-  const double*                outData
-) {
-  assert(outData);
-
+void tarch::multicore::native::spawnTask(Task* task) {
   sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
     h.host_task([=]() {
-      while (job->run()) {
+      while (task->run()) {
       }
-      delete job;
+      delete task;
     });
   });
+  e.wait();
 }
 
+void tarch::multicore::native::waitForTask(const void* const) {}
 
-void tarch::multicore::native::spawnTask(Task* job) {
-  sycl::event e = static_cast<sycl::queue*>(getHostSYCLQueue())->submit([&](auto& h) {
-    h.host_task([=]() {
-      while (job->run()) {
-      }
-      delete job;
-    });
-  });
+void tarch::multicore::native::waitForAllTasks() {
+  static_cast<sycl::queue*>(getHostSYCLQueue())->wait();
 }
-
-
-void tarch::multicore::native::waitForTasks(const std::set<int>& /*inDependencies*/) { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
-
-
-void tarch::multicore::native::waitForTask(const TaskNumber& /*taskNumber*/) { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
-
-
-void tarch::multicore::native::waitForTask(const double* /*inData*/) { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
-
-
-void tarch::multicore::native::waitForAllTasks() { static_cast<sycl::queue*>(getHostSYCLQueue())->wait(); }
 
 #endif // defined(SharedSYCL)

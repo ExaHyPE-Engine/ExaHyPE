@@ -22,34 +22,25 @@ namespace tarch::accelerator {
  * switched on, Peano provides a default Device implementation that does
  * nothing.
  *
- * If you don't configure the Device explicitly, it will try to use some
- * meaningful defaults.
- *
- * @see configure()
- *
  * @author Tobias Weinzierl
  */
 class tarch::accelerator::Device {
 private:
-  /**
-   * Logging device
-   */
   static tarch::logging::Log _log;
 
   std::map<void*, std::size_t> _memoryBlockTable;
   multicore::BooleanSemaphore _memoryBlockSemaphore;
 
-  Device();
+  // Is default. We use init() instead.
+  Device() = default;
 
   void checkForMemoryLeaks();
 
 public:
   static constexpr int DefaultDevice = 0;
 
-  /**
-   * Destructor
-   */
-  ~Device();
+  // Is default. We use shutdown() instead.
+  ~Device() = default;
 
   /**
    * @return Singleton instance
@@ -62,29 +53,7 @@ public:
   multicore::BooleanSemaphore& getMemoryBlockSemaphore();
   const multicore::BooleanSemaphore& getMemoryBlockSemaphore() const;
 
-  /**
-   *
-   * ## TBB
-   *
-   * In the TBB context, the GPU setting are ignored. If you however combine
-   * TBB with SYCL, then the SYCL policies (see below) hold.
-   *
-   * ## OpenMP
-   *
-   * By default, OpenMP makes all devices visible to the user.
-   *
-   * ## SYCL
-   *
-   * In SYCL, you cannot alter the core count atm on the node. Obviously,
-   * we could split the queue on the host according to this spec, but then
-   * we'd end up with some cores idling. So we do not support resetting the
-   * thread count on the host with SYCL.
-   *
-   * By default, SYCL makes no device visible to the user. You have to call
-   * configure() manually to make GPUs available to Peano.
-   *
-   */
-  void configure(const std::set<int>& devicesToUse = {});
+  bool init();
 
   /**
    * Shutdown accelerator environment.

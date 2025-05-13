@@ -89,7 +89,10 @@ class peano4::parallel::Node {
      * this routine. To identify a global stack number, please use this
      * function and add it to your local stack number.
      */
-    int getId(int rank, int localTreeId) const;
+    inline int getId(int rank, int localTreeId) const {
+      const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+      return numberOfRanks * localTreeId + rank;
+    }
 
     /**
      * The operation is not thread-safe as we call it only internally,
@@ -111,12 +114,17 @@ class peano4::parallel::Node {
      * do represent.
      */
     static std::bitset<2*Dimensions> getPeriodicBoundaryNumber(const tarch::la::Vector<TwoPowerD,int>& flags);
+
   public:
-    /**
-     * @see getId(int,int)
-     */
-    int getLocalTreeId(int treeId) const;
-    int getGlobalTreeId(int treeId) const;
+    inline int getLocalTreeId(int treeId) const {
+      const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+      return treeId / numberOfRanks;
+    }
+
+    inline int getGlobalTreeId(int treeId) const {
+      const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+      return treeId * numberOfRanks + tarch::mpi::Rank::getInstance().getRank();
+    }
 
     /**
      * I originally wanted to embed these guys into the singleton's
@@ -172,7 +180,10 @@ class peano4::parallel::Node {
      * tree is hosted.
      * @see getId(int,int)
      */
-    int getRank(int treeId) const;
+    inline int getRank(int treeId) const {
+      const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+      return treeId % numberOfRanks;
+    }
 
     /**
      * Only the SpacetreeSet should call this operation.
