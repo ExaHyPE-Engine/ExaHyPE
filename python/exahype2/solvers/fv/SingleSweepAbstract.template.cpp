@@ -117,12 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
-  [[maybe_unused]] double globalMinTimeStamp,
-  [[maybe_unused]] double globalMaxTimeStamp,
-  [[maybe_unused]] double globalMinTimeStepSize,
-  [[maybe_unused]] double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   // [nk] Checks if _solverState is in the Suspended state and return.
   // Prevents nullification of eigenvalues if the solver is suspended
   if (_solverState == SolverState::Suspended) {
@@ -249,13 +244,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::printTimeStep(bool ofCurrentlyRu
   {{PRINT_TIME_STEP_IMPLEMENTATION}}
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
-  [[maybe_unused]] double globalMinTimeStamp,
-  [[maybe_unused]] double globalMaxTimeStamp,
-  [[maybe_unused]] double globalMinTimeStepSize,
-  [[maybe_unused]] double globalMaxTimeStepSize
-) {
-  if (_solverState== SolverState::GridInitialisation) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
+  if ( _solverState== SolverState::GridInitialisation) {
     _solverState = SolverState::PlottingAfterGridInitialisation;
   } else {
     assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());

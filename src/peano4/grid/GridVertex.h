@@ -36,93 +36,101 @@ public:
     Delete              = 8
   };
 
-  GridVertex() {}
+  GridVertex() = default;
   GridVertex(
-    State                                 __state,
-    tarch::la::Vector<TwoPowerD, int>     __adjacentRanks,
-    tarch::la::Vector<TwoPowerD, int>     __backupOfAdjacentRanks,
-    bool                                  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
-    bool                                  __isAntecessorOfRefinedVertexInCurrentTreeSweep,
-    bool                                  __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
-    bool                                  __isParentOfSubtreeVertexInCurrentTreeSweep,
-    int                                   __numberOfAdjacentRefinedLocalCells,
-    tarch::la::Vector<Dimensions, double> __x,
-    int                                   __level
+    const State                                  __state,
+    const tarch::la::Vector<TwoPowerD, int>&     __adjacentRanks,
+    const tarch::la::Vector<TwoPowerD, int>&     __backupOfAdjacentRanks,
+    const bool                                   __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
+    const bool                                   __isAntecessorOfRefinedVertexInCurrentTreeSweep,
+    const bool                                   __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
+    const bool                                   __isParentOfSubtreeVertexInCurrentTreeSweep,
+    const int                                    __numberOfAdjacentRefinedLocalCells,
+    const tarch::la::Vector<Dimensions, double>& __x,
+    const int                                    __level
   );
-
-  peano4::grid::GridVertex::State   getState() const;
-  void                              setState(State value);
-  tarch::la::Vector<TwoPowerD, int> getAdjacentRanks() const;
-  void                              setAdjacentRanks(const tarch::la::Vector<TwoPowerD, int>& value);
-  int                               getAdjacentRanks(int index) const;
-  void                              setAdjacentRanks(int index, int value);
-  tarch::la::Vector<TwoPowerD, int> getBackupOfAdjacentRanks() const;
-  void                              setBackupOfAdjacentRanks(const tarch::la::Vector<TwoPowerD, int>& value);
-  int                               getBackupOfAdjacentRanks(int index) const;
-  void                              setBackupOfAdjacentRanks(int index, int value);
-  bool                              getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep() const;
-  void                              setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(bool value);
-  bool                              getIsAntecessorOfRefinedVertexInCurrentTreeSweep() const;
-  void                              setIsAntecessorOfRefinedVertexInCurrentTreeSweep(bool value);
-  bool                              getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() const;
-  void                              setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(bool value);
-  bool                              getIsParentOfSubtreeVertexInCurrentTreeSweep() const;
-  void                              setIsParentOfSubtreeVertexInCurrentTreeSweep(bool value);
-  int                               getNumberOfAdjacentRefinedLocalCells() const;
-  void                              setNumberOfAdjacentRefinedLocalCells(int value);
-#if PeanoDebug > 0
-  tarch::la::Vector<Dimensions, double> getX() const;
-  void                                  setX(const tarch::la::Vector<Dimensions, double>& value);
-  double                                getX(int index) const;
-  void                                  setX(int index, double value);
-#endif
-  int  getLevel() const;
-  void setLevel(int value);
   GridVertex(const GridVertex& copy);
   GridVertex& operator=(const GridVertex& other);
 
+  inline peano4::grid::GridVertex::State getState() const { return _state; }
+  inline void                            setState(State value) { _state = value; }
+
+  inline tarch::la::Vector<TwoPowerD, int> getAdjacentRanks() const { return _adjacentRanks; }
+  inline void setAdjacentRanks(const tarch::la::Vector<TwoPowerD, int>& value) { _adjacentRanks = value; }
+  inline int  getAdjacentRanks(int index) const { return _adjacentRanks[index]; }
+  inline void setAdjacentRanks(int index, int value) { _adjacentRanks[index] = value; }
+
+  inline tarch::la::Vector<TwoPowerD, int> getBackupOfAdjacentRanks() const { return _backupOfAdjacentRanks; }
+  inline void                              setBackupOfAdjacentRanks(const tarch::la::Vector<TwoPowerD, int>& value) {
+    _backupOfAdjacentRanks = value;
+  }
+  inline int  getBackupOfAdjacentRanks(int index) const { return _backupOfAdjacentRanks(index); }
+  inline void setBackupOfAdjacentRanks(int index, int value) { _backupOfAdjacentRanks(index) = value; }
+
+  inline bool getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep() const {
+    return _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
+  }
+  inline void setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(bool value) {
+    _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = value;
+  }
+
+  inline bool getIsAntecessorOfRefinedVertexInCurrentTreeSweep() const {
+    return _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+  }
+  inline void setIsAntecessorOfRefinedVertexInCurrentTreeSweep(bool value) {
+    _isAntecessorOfRefinedVertexInCurrentTreeSweep = value;
+  }
+
+  inline bool getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() const {
+    return _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
+  }
+  inline void setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(bool value) {
+    _hasBeenParentOfSubtreeVertexInPreviousTreeSweep = value;
+  }
+
+  inline bool getIsParentOfSubtreeVertexInCurrentTreeSweep() const {
+    return _isParentOfSubtreeVertexInCurrentTreeSweep;
+  }
+  inline void setIsParentOfSubtreeVertexInCurrentTreeSweep(bool value) {
+    _isParentOfSubtreeVertexInCurrentTreeSweep = value;
+  }
+
+  inline int  getNumberOfAdjacentRefinedLocalCells() const { return _numberOfAdjacentRefinedLocalCells; }
+  inline void setNumberOfAdjacentRefinedLocalCells(int value) { _numberOfAdjacentRefinedLocalCells = value; }
+
+#if PeanoDebug > 0
+  inline tarch::la::Vector<Dimensions, double> getX() const { return _x; }
+  inline void                                  setX(const tarch::la::Vector<Dimensions, double>& value) { _x = value; }
+  inline double                                getX(int index) const { return _x(index); }
+  inline void                                  setX(int index, double value) { _x(index) = value; }
+#endif
+
+  inline int  getLevel() const { return _level; }
+  inline void setLevel(int value) { _level = value; }
+
 #ifdef Parallel
-    /**
-     * Hands out MPI datatype if we work without the LLVM MPI extension.
-     * If we work with this additional feature, this is the routine where
-     * the lazy initialisation is done and the datatype is also cached.
-     */
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getForkDatatype();
+  /**
+   * Hands out MPI datatype if we work without the LLVM MPI extension.
+   * If we work with this additional feature, this is the routine where
+   * the lazy initialisation is done and the datatype is also cached.
+   */
+  static MPI_Datatype getForkDatatype();
+  static MPI_Datatype getJoinDatatype();
+  static MPI_Datatype getBoundaryExchangeDatatype();
+  static MPI_Datatype getMultiscaleDataExchangeDatatype();
+  static MPI_Datatype getGlobalCommunciationDatatype();
 
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getJoinDatatype();
+  static void freeForkDatatype();
+  static void freeJoinDatatype();
+  static void freeBoundaryExchangeDatatype();
+  static void freeMultiscaleDataExchangeDatatype();
+  static void freeGlobalCommunciationDatatype();
 
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getGlobalCommunciationDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeForkDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeJoinDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeBoundaryExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeMultiscaleDataExchangeDatatype();
-
-    [[clang::map_mpi_datatype]]
-    static void  freeGlobalCommunciationDatatype();
-
-    /**
-     * @return The rank of the sender of an object. It only make ssense to call
-     *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-     */
-    int
-    getSenderRank() const;
+  /**
+   * @return The rank of the sender of an object. It only make ssense to call
+   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
+   */
+  int getSenderRank() const;
 
   /**
    * Wrapper around getDatatype() to trigger lazy evaluation if we
@@ -173,7 +181,7 @@ public:
   enum ObjectConstruction { NoData };
 
   GridVertex(ObjectConstruction):
-  GridVertex() {}
+    GridVertex() {}
 
 #ifdef Parallel
   static void sendAndPollDanglingMessages(
@@ -193,29 +201,20 @@ public:
   std::string toString() const;
 
 private:
-  [[clang::pack]] State _state;
-#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  [[clang::pack_range(-1, std::numeric_limits<int>::max())]] int _adjacentRanks[TwoPowerD];
-#endif
-#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  State                             _state;
   tarch::la::Vector<TwoPowerD, int> _adjacentRanks;
-#endif
-  tarch::la::Vector<TwoPowerD, int>       _backupOfAdjacentRanks;
-  [[clang::pack]] bool                    _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
-  [[clang::pack]] bool                    _isAntecessorOfRefinedVertexInCurrentTreeSweep;
-  [[clang::pack]] bool                    _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
-  [[clang::pack]] bool                    _isParentOfSubtreeVertexInCurrentTreeSweep;
-  [[clang::pack_range(0, TwoPowerD)]] int _numberOfAdjacentRefinedLocalCells;
+  tarch::la::Vector<TwoPowerD, int> _backupOfAdjacentRanks;
+  bool                              _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
+  bool                              _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+  bool                              _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
+  bool                              _isParentOfSubtreeVertexInCurrentTreeSweep;
+  int                               _numberOfAdjacentRefinedLocalCells;
+
 #if PeanoDebug > 0
-#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  [[clang::truncate_mantissa(48)]] double _x[Dimensions];
-#endif
-#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
   tarch::la::Vector<Dimensions, double> _x;
 #endif
-#endif
 
-    int _level;
+  int _level;
 
 #ifdef Parallel
 private:

@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch.h"
 
-#include "config.h"
-#include "tarch/logging/Log.h"
-#include "tarch/CompilerSpecificSettings.h"
+#include "logging/Log.h"
 
 #include <limits.h>
 #include <iostream>

@@ -140,12 +140,6 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Number of trees (partitions) per rank after initial decomposition.",
         )
         self.add_argument(
-            "--threads",
-            type=int,
-            default=0,
-            help="Number of threads per rank.",
-        )
-        self.add_argument(
             "-ti",
             "--print-time-interval",
             type=int,

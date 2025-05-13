@@ -74,7 +74,7 @@ public:
    *
    * @see willBeRefined()
    */
-  bool hasBeenRefined() const;
+  inline bool hasBeenRefined() const { return _hasBeenRefined; }
 
   /**
    * Will the cell be refined in the subsequent iteration
@@ -95,7 +95,7 @@ public:
    * cell is refined, but it will be coarsened in the very mesh traversal in
    * which we run through the mesh.
    */
-  bool willBeRefined() const;
+  inline bool willBeRefined() const { return _willBeRefined; }
 
   /**
    * Centre of a cell
@@ -105,13 +105,14 @@ public:
    * know the number of the vertex as a bitset:
    *
    * ~~~~~~~~~~~~~~~~~~~~~~~~~
-   * marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions,double>(targetVertex),marker.h())
+   * marker.x() - 0.5 * marker.h() +
+   * tarch::la::multiplyComponents(tarch::la::Vector<Dimensions,double>(targetVertex),marker.h())
    * ~~~~~~~~~~~~~~~~~~~~~~~~~
    *
    *
    * @return Centre of cell.
    */
-  tarch::la::Vector<Dimensions, double> x() const;
+  inline tarch::la::Vector<Dimensions, double> x() const { return _centre; }
 
   /**
    * See getInvokingCellCentre(). This routine gives you the centre of its
@@ -147,7 +148,10 @@ public:
    * @param tolerance Absolute tolerance when we compare two values.
    *
    */
-  bool isContained(const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE) const;
+  bool isContained(
+    const tarch::la::Vector<Dimensions, double>& x,
+    double                                       tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
+  ) const;
 
   /**
    * Is point contained in cell
@@ -165,20 +169,24 @@ public:
   static bool isContained(
     const tarch::la::Vector<Dimensions, double>& x,
     const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& h, double tolerance
+    const tarch::la::Vector<Dimensions, double>& h,
+    double                                       tolerance
   );
 
-  bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size) const;
+  bool overlaps(
+    const tarch::la::Vector<Dimensions, double>& offset,
+    const tarch::la::Vector<Dimensions, double>& size
+  ) const;
 
   /**
    * @return Size of cell
    */
-  tarch::la::Vector<Dimensions, double> h() const;
+  inline tarch::la::Vector<Dimensions, double> h() const { return _h; }
 
   /**
    * @return Offset of cell, i.e. the bottom left vertex's coordinate
    */
-  tarch::la::Vector<Dimensions, double> getOffset() const;
+  inline tarch::la::Vector<Dimensions, double> getOffset() const { return _centre - 0.5 * _h; }
 
   std::string toString() const;
 
@@ -186,7 +194,7 @@ public:
    * Usually if you have an event of a cell, then the cell is alo local.
    * Otherwise, an event not be called.
    */
-  bool isLocal() const;
+  inline bool isLocal() const { return _isLocal; }
 
   /**
    * A cell can be local and its parent still might not be local. This happens
@@ -196,7 +204,7 @@ public:
    *
    * @see isLocal()
    */
-  bool isParentLocal() const;
+  inline bool isParentLocal() const { return _isParentLocal; }
 
   /**
    * Define enclave cell
@@ -222,32 +230,36 @@ public:
    *
    * @see page_exahype_solvers_enclave_solvers for a high-level description
    */
-  bool hasBeenEnclaveCell() const;
+  inline bool hasBeenEnclaveCell() const { return _hasBeenEnclave; }
 
   /**
    * @see hasBeenEnclaveCell()
    */
-  bool willBeEnclaveCell() const;
+  inline bool willBeEnclaveCell() const { return _willBeEnclave; }
 
   /**
    * A skeleton cell is a not-enclave cell
    *
    * @see hasBeenEnclaveCell()
    */
-  bool hasBeenSkeletonCell() const;
+  inline bool hasBeenSkeletonCell() const { return not _hasBeenEnclave; }
 
   /**
    * @see hasBeenEnclaveCell()
    */
-  bool willBeSkeletonCell() const;
+  inline bool willBeSkeletonCell() const { return not _willBeEnclave; }
 
-  tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const;
+  inline tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const {
+    return _relativePositionOfCellWithinFatherCell;
+  }
 
 #if PeanoDebug > 0
   /**
    * Used for debugging
    */
-  void setRelativePositionWithinFatherCell(int axis, int value);
+  inline void setRelativePositionWithinFatherCell(int axis, int value) {
+    _relativePositionOfCellWithinFatherCell(axis) = value;
+  }
 #endif
 
 #ifdef Parallel
@@ -274,8 +286,22 @@ public:
    * the message went through. In systems with heavy MPI usage, this can
    * help to avoid deadlocks.
    */
-  static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator);
-  static void receive(CellMarker& buffer, int source, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator);
+  static void send(
+    const CellMarker&     buffer,
+    int                   destination,
+    int                   tag,
+    std::function<void()> startCommunicationFunctor,
+    std::function<void()> waitFunctor,
+    MPI_Comm              communicator
+  );
+  static void receive(
+    CellMarker&           buffer,
+    int                   source,
+    int                   tag,
+    std::function<void()> startCommunicationFunctor,
+    std::function<void()> waitFunctor,
+    MPI_Comm              communicator
+  );
 
   static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator);
   static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator);

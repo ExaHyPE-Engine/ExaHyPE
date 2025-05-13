@@ -2,18 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/utils/Globals.h"
 #include "tarch/Assertions.h"
 
-
 namespace peano4 {
   namespace datamanagement {
-    template <class Face>
-    class FaceEnumerator;
-  }
-}
-
+    template <class Face> class FaceEnumerator;
+  } // namespace datamanagement
+} // namespace peano4
 
 /**
  * Enumerator over an array of faces
@@ -34,55 +30,52 @@ namespace peano4 {
  *
  * @see peano4::datamanagement::VertexEnumerator for the same discussion for vertices.
  */
-template <class Face>
-class peano4::datamanagement::FaceEnumerator {
-  private:
-    Face* _faces[ TwoTimesD ];
+template <class Face> class peano4::datamanagement::FaceEnumerator {
+private:
+  Face* _faces[TwoTimesD];
 
-  public:
-    /**
-     * Usually is only used by the observers, i.e. users should not interact
-     * with this routine.
-     */
-    FaceEnumerator() {
-      #if PeanoDebug>0
-      for (int i=0; i<TwoTimesD; i++) {
-    	_faces[i] = nullptr;
-      }
-      #endif
+public:
+  /**
+   * Usually is only used by the observers, i.e. users should not interact
+   * with this routine.
+   */
+  FaceEnumerator() {
+#if PeanoDebug > 0
+    for (int i = 0; i < TwoTimesD; i++) {
+      _faces[i] = nullptr;
     }
+#endif
+  }
 
-
-    /**
-     * Face enumerator with standard ordering of faces within a consecutive
-     * array.
-     */
-    FaceEnumerator(Face* firstFace) {
-      assertion(firstFace!=nullptr);
-      for (int i=0; i<TwoTimesD; i++) {
-        _faces[i] = firstFace+i;
-      }
+  /**
+   * Face enumerator with standard ordering of faces within a consecutive
+   * array.
+   */
+  FaceEnumerator(Face* firstFace) {
+    assertion(firstFace != nullptr);
+    for (int i = 0; i < TwoTimesD; i++) {
+      _faces[i] = firstFace + i;
     }
+  }
 
-	/**
-	 * Usually is only used by the observers, i.e. users should not interact
-	 * with this routine.
-	 */
-	void setPointer(int i, Face* value) {
-	  assertion(i>=0);
-	  assertion(i<TwoTimesD);
-	  assertion(value!=nullptr);
-	  _faces[i] = value;
-	}
+  /**
+   * Usually is only used by the observers, i.e. users should not interact
+   * with this routine.
+   */
+  void setPointer(int i, Face* value) {
+    assertion(i >= 0);
+    assertion(i < TwoTimesD);
+    assertion(value != nullptr);
+    _faces[i] = value;
+  }
 
-	/**
-	 * Get a certain face.
-	 */
-	Face& operator()(int i) const {
-	  assertion1(i>=0,i);
-	  assertion1(i<TwoTimesD,i);
-	  assertion1( _faces[i]!=nullptr,i );
-	  return *(_faces[i]);
-	}
+  /**
+   * Get a certain face.
+   */
+  Face& operator()(int i) const {
+    assertion1(i >= 0, i);
+    assertion1(i < TwoTimesD, i);
+    assertion1(_faces[i] != nullptr, i);
+    return *(_faces[i]);
+  }
 };
-

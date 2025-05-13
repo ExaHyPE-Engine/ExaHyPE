@@ -182,12 +182,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) override;
+    virtual void startTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -201,12 +196,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void startPlottingStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) override;
+    virtual void startPlottingStep() override;
 
 
     /**

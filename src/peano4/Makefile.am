@@ -44,7 +44,8 @@ Peano4Core_SOURCES = \
 	parallel/tests/NodeTest.cpp \
 	stacks/stacks.cpp \
 	stacks/STDVectorStack.cpp \
-	utils/Loop.cpp
+	utils/Linearised.cpp \
+	utils/tests/LinearisedTest.cpp
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)

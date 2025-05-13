@@ -141,8 +141,6 @@ if args.load_balancing_strategy != "None":
     )
     project.set_load_balancing(strategy, configuration)
 
-project.set_number_of_threads(args.threads)
-project.set_timeout(3600)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 if args.fpe:

@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/Core.h"
 
 #include "tarch/CompilerSpecificSettings.h"
@@ -7,6 +9,10 @@
 #ifdef CompilerHasSysinfo
 #include <sched.h>
 #endif
+
+tarch::logging::Log tarch::multicore::Core::_log(
+  "tarch::multicore::Core"
+);
 
 std::string tarch::multicore::printUnmaskedThreads() {
   std::stringstream out;
@@ -47,18 +53,16 @@ int tarch::multicore::getNumberOfUnmaskedThreads() {
 #endif
 }
 
-#ifndef SharedMemoryParallelisation
-
-tarch::multicore::Core::Core() {}
-
-tarch::multicore::Core::~Core() {}
-
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   static Core instance;
   return instance;
 }
 
-void tarch::multicore::Core::configure(int /*numberOfThreads*/) {}
+#ifndef SharedMemoryParallelisation
+
+bool tarch::multicore::Core::init() {
+  return isInitialised();
+}
 
 void tarch::multicore::Core::shutdown() {}
 

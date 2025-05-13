@@ -2,11 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "config.h"
+#include "tarch/logging/Log.h"
+
 #include <set>
 #include <string>
 #include <thread>
-
-#include "tarch/logging/Log.h"
 
 namespace tarch {
   namespace multicore {
@@ -40,62 +41,25 @@ namespace tarch {
  * qualified name is tarch::multicore::Core. If no shared memory variant is
  * switched on, Peano provides a default Core implementation that does nothing.
  *
- * If you don't configure the core explicitly, it will try to use some
- * meaningful default.
- *
- * @see configure()
- *
  * @author Tobias Weinzierl
  */
 class tarch::multicore::Core {
 private:
-  /**
-   * Logging device
-   */
   static tarch::logging::Log _log;
 
-  Core();
+  Core() = default;
 
   int _numberOfThreads;
 
 public:
-  /**
-   * The default is what the system management typically gives you. So if
-   * you run four ranks on a 24 core node, then each MPI rank will get 6
-   * threads if you choose this constant.
-   *
-   * Multiply with two to exploit hyperthreading.
-   */
-  static constexpr int UseDefaultNumberOfThreads = 0;
-
-  /**
-   * Destructor
-   */
-  ~Core();
+  ~Core() = default;
 
   /**
    * @return Singleton instance
    */
   static Core& getInstance();
 
-  /**
-   * Configure the whole node, i.e. all cores available on a node. If
-   * numberOfThreads equals the default, the routine will use the hardware
-   * concurrency to determine the number of threads that should be used.
-   * On SLURM-based HPC platforms, this will be wrong if multiple MPI ranks
-   * are placed on one node. It is also a bad choice if hyperthreading
-   * should not/can not be used. Use the helper function
-   * getNumberOfUnmaskedThreads().
-   *
-   *
-   *
-   *
-   * @param numberOfThreads Number of threads that shall be used. This
-   *        parameter either is greater than zero (which defines the number
-   *        of threads) or it equals DefaultNumberOfThreads which means that the code should
-   *        use the default number of threads.
-   */
-  void configure(int numberOfThreads = UseDefaultNumberOfThreads);
+  bool init();
 
   /**
    * Shutdown parallel environment.

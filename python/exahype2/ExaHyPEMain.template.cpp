@@ -285,10 +285,8 @@ void step() {
 
     watch.start();
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
-
     {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
@@ -299,10 +297,8 @@ void step() {
 
     watch.start();
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
-
     {{SUBNAMESPACE}}observers::CreateGrid observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
@@ -342,10 +338,8 @@ void step() {
 
     watch.start();
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
-
     {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
@@ -373,36 +367,29 @@ void step() {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("init-grid");
     printNextAlgorithmicStep(stepName);
     {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
-    toolbox::loadbalancing::dumpStatistics();
 
     watch.start();
     {{SUBNAMESPACE}}repositories::startGridInitialisationStep();
-
     {{SUBNAMESPACE}}observers::InitGrid observer;
     {{SUBNAMESPACE}}observers::InitGrid::prepareTraversal();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     {{SUBNAMESPACE}}observers::InitGrid::unprepareTraversal();
-
     {{SUBNAMESPACE}}repositories::finishGridInitialisationStep();
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
+
+    toolbox::loadbalancing::dumpStatistics();
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("plot-solution");
     printNextAlgorithmicStep(stepName);
-    const double minTimeStamp    = {{SUBNAMESPACE}}repositories::getMinTimeStamp();
-    const double maxTimeStamp    = {{SUBNAMESPACE}}repositories::getMaxTimeStamp();
-    const double minTimeStepSize = {{SUBNAMESPACE}}repositories::getMinTimeStepSize();
-    const double maxTimeStepSize = {{SUBNAMESPACE}}repositories::getMaxTimeStepSize();
 
     watch.start();
-    {{SUBNAMESPACE}}repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
-
+    {{SUBNAMESPACE}}repositories::startPlottingStep();
     {{SUBNAMESPACE}}observers::PlotSolution observer;
     {{SUBNAMESPACE}}observers::PlotSolution::prepareTraversal();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     {{SUBNAMESPACE}}observers::PlotSolution::unprepareTraversal();
-
     {{SUBNAMESPACE}}repositories::finishPlottingStep();
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
@@ -410,19 +397,13 @@ void step() {
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CheckpointSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("checkpoint-solution");
     printNextAlgorithmicStep(stepName);
-    const double minTimeStamp    = {{SUBNAMESPACE}}repositories::getMinTimeStamp();
-    const double maxTimeStamp    = {{SUBNAMESPACE}}repositories::getMaxTimeStamp();
-    const double minTimeStepSize = {{SUBNAMESPACE}}repositories::getMinTimeStepSize();
-    const double maxTimeStepSize = {{SUBNAMESPACE}}repositories::getMaxTimeStepSize();
 
     watch.start();
-    {{SUBNAMESPACE}}repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
-
+    {{SUBNAMESPACE}}repositories::startPlottingStep();
     {{SUBNAMESPACE}}observers::CheckpointSolution observer;
     {{SUBNAMESPACE}}observers::CheckpointSolution::prepareTraversal();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     {{SUBNAMESPACE}}observers::CheckpointSolution::unprepareTraversal();
-
     {{SUBNAMESPACE}}repositories::finishPlottingStep();
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
@@ -436,21 +417,12 @@ void step() {
       toolbox::loadbalancing::dumpStatistics();
     }
 
-    const double minTimeStamp    = {{SUBNAMESPACE}}repositories::getMinTimeStamp();
-    const double maxTimeStamp    = {{SUBNAMESPACE}}repositories::getMaxTimeStamp();
-    const double minTimeStepSize = {{SUBNAMESPACE}}repositories::getMinTimeStepSize();
-    const double maxTimeStepSize = {{SUBNAMESPACE}}repositories::getMaxTimeStepSize();
-    const double minMeshSize     = {{SUBNAMESPACE}}repositories::getMinMeshSize();
-    const double maxMeshSize     = {{SUBNAMESPACE}}repositories::getMaxMeshSize();
-
     watch.start();
-    {{SUBNAMESPACE}}repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
-
+    {{SUBNAMESPACE}}repositories::startTimeStep();
     {{SUBNAMESPACE}}observers::TimeStep observer;
     {{SUBNAMESPACE}}observers::TimeStep::prepareTraversal();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     {{SUBNAMESPACE}}observers::TimeStep::unprepareTraversal();
-
     {{SUBNAMESPACE}}repositories::finishTimeStep();
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
@@ -482,28 +454,18 @@ void step() {
 
 int main(int argc, char** argv) {
   int returnCode = EXIT_SUCCESS;
-
-  peano4::initParallelEnvironment(&argc, &argv);
+  peano4::init(&argc, &argv, {{SUBNAMESPACE}}DomainOffset, {{SUBNAMESPACE}}DomainSize, {{SUBNAMESPACE}}PeriodicBC);
 
 #ifdef UseTargetDART
   td_init((void *) &main);
 #endif
 
-  // Do this early, so people can use logInfo properly.
-  {{SUBNAMESPACE}}repositories::initLogFilters();
-
-  tarch::initNonCriticalAssertionEnvironment();
-  peano4::fillLookupTables();
-
-  peano4::initSingletons({{SUBNAMESPACE}}DomainOffset, {{SUBNAMESPACE}}DomainSize, {{SUBNAMESPACE}}PeriodicBC);
-
-  {{SUBNAMESPACE}}repositories::initSharedMemoryAndGPUEnvironment();
-  {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
-
   {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
   feenableexcept({{FENV_ARGS}});
   {% endif -%}
 
+  {{SUBNAMESPACE}}repositories::initLogFilters();
+  {{SUBNAMESPACE}}repositories::DataRepository::initDatatypes();
   {{SUBNAMESPACE}}repositories::startSimulation();
 
   tarch::logging::Statistics::getInstance().clear();
@@ -523,7 +485,7 @@ int main(int argc, char** argv) {
       int returnCode = EXIT_SUCCESS;
     }
 
-    if (timeStepMeasurement.getNumberOfMeasurements()) {
+    if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
       logInfo(
         "main()",
         "Average cell updates per second: " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue()
@@ -563,11 +525,9 @@ int main(int argc, char** argv) {
   tarch::logging::Statistics::getInstance().writeToCSV();
 
   {{SUBNAMESPACE}}repositories::finishSimulation();
-
-  peano4::shutdownSingletons();
   {{SUBNAMESPACE}}repositories::DataRepository::shutdownDatatypes();
-  tarch::shutdownNonCriticalAssertionEnvironment();
-  peano4::shutdownParallelEnvironment();
+
+  peano4::shutdown();
 
   return returnCode;
 }

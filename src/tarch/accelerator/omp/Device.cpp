@@ -14,11 +14,10 @@ namespace {
   int numberOfDevices = 0;
 } // namespace
 
-tarch::accelerator::Device::Device() {
+bool tarch::accelerator::Device::init() {
   numberOfDevices = omp_get_num_devices();
+  return isInitialised();
 }
-
-void tarch::accelerator::Device::configure(const std::set<int>&) {}
 
 void tarch::accelerator::Device::shutdown() {
   checkForMemoryLeaks();

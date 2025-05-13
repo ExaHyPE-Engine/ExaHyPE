@@ -184,12 +184,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   switch (_solverState) {
     case SolverState::GridConstruction:
       _solverState = SolverState::GridInitialisation;
@@ -349,12 +344,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
-) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
   assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );
   _solverState = SolverState::Plotting;
 }

@@ -10,10 +10,6 @@ tarch::logging::Log tarch::accelerator::Device::_log(
   "tarch::accelerator::Device"
 );
 
-tarch::accelerator::Device::~Device() {
-  shutdown();
-}
-
 tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   static Device instance;
   return instance;
@@ -54,9 +50,9 @@ void tarch::accelerator::Device::checkForMemoryLeaks() {
 
 #if defined(GPUOffloadingOff)
 
-tarch::accelerator::Device::Device() {}
-
-void tarch::accelerator::Device::configure(const std::set<int>&) {}
+bool tarch::accelerator::Device::init() {
+  return isInitialised();
+}
 
 void tarch::accelerator::Device::shutdown() {
   checkForMemoryLeaks();

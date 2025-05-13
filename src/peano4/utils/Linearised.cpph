@@ -1,0 +1,151 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+inline GPUCallableMethod int peano4::utils::getKeyForDLinearisedLookup(
+  const tarch::la::Vector<Dimensions, int>& counter,
+  int                                       max
+) {
+  int result = 0;
+  int key    = 1;
+  for (int d = 0; d < Dimensions; d++) {
+    result += key * counter(d);
+    key *= MaxTable;
+  }
+
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  assertionEquals(key, MaxIndexOfLinearisation);
+  assertion2(max >= 2 && max <= MaxTable, max, MaxTable);
+#endif
+
+  // Nothing to be held for max=0 and max=1, so decrement the offset
+  result += (max - 2) * MaxIndexOfLinearisation;
+  return result;
+}
+
+inline GPUCallableMethod int peano4::utils::getKeyForDDeLinearisedLookup(int value, int max) {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  assertion2(max >= 2 && max <= MaxTable, max, MaxTable);
+  assertion1(value >= 0 && value < tarch::la::aPowI(Dimensions, max), value);
+#endif
+  // Nothing to be held for max=0 and max=1, so decrement the offset
+  return value + (max - 2) * MaxIndexOfLinearisation;
+}
+
+inline GPUCallableMethod int peano4::utils::dLinearised(const std::bitset<Dimensions>& counter) {
+  int result = 0;
+  int base   = 1;
+  for (int d = 0; d < Dimensions; d++) {
+    result += (counter[d] ? 1 : 0) * base;
+    base *= 2;
+  }
+  return result;
+}
+
+inline GPUCallableMethod int peano4::utils::dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max) {
+#ifdef DLINEAR_USE_LOOKUP
+  if (max > MaxTable) {
+    return dLinearisedWithoutLookup(counter, max);
+  } else {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    assertionEquals3(
+      lookupTableDLinearised[getKeyForDLinearisedLookup(counter, max)],
+      dLinearisedWithoutLookup(counter, max),
+      counter,
+      max,
+      getKeyForDLinearisedLookup(counter, max)
+    );
+#endif
+    return lookupTableDLinearised[getKeyForDLinearisedLookup(counter, max)];
+  }
+#else
+  return dLinearisedWithoutLookup(counter, max);
+#endif
+}
+
+inline GPUCallableMethod int peano4::utils::dLinearisedWithoutLookup(
+  const tarch::la::Vector<Dimensions, int>& counter,
+  int                                       max
+) {
+  int result = counter(Dimensions - 1);
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  assertion2(counter(Dimensions - 1) >= 0, counter, max);
+  assertion2(counter(Dimensions - 1) < max, counter, max);
+#endif
+  for (int d = Dimensions - 2; d >= 0; d--) {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    assertion2(counter(d) >= 0, counter(d), max);
+    assertion2(counter(d) < max, counter(d), max);
+#endif
+    result = result * max + counter(d);
+  }
+  return result;
+}
+
+inline GPUCallableMethod int peano4::utils::d2Linearised(const tarch::la::Vector<2, int>& counter, int max) {
+  int result = counter(2 - 1);
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  assertion2(counter(2 - 1) >= 0, counter, max);
+  assertion2(counter(2 - 1) < max, counter, max);
+#endif
+  for (int d = 2 - 2; d >= 0; d--) {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    assertion3(counter(d) >= 0, counter, d, max);
+    assertion3(counter(d) < max, counter, d, max);
+#endif
+    result = result * max + counter(d);
+  }
+  return result;
+}
+
+inline GPUCallableMethod int peano4::utils::d3Linearised(const tarch::la::Vector<3, int>& counter, int max) {
+  int result = counter(3 - 1);
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  assertion2(counter(3 - 1) >= 0, counter, max);
+  assertion2(counter(3 - 1) < max, counter, max);
+#endif
+  for (int d = 3 - 2; d >= 0; d--) {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    assertion2(counter(d) >= 0, counter(d), max);
+    assertion2(counter(d) < max, counter(d), max);
+#endif
+    result = result * max + counter(d);
+  }
+  return result;
+}
+
+inline GPUCallableMethod tarch::la::Vector<Dimensions, int> peano4::utils::dDelinearised(int value, int max) {
+#ifdef DLINEAR_USE_LOOKUP
+  if (max > MaxTable) {
+    return dDelinearisedWithoutLookup(value, max);
+  } else {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+    for (int d = 0; d < Dimensions; d++) {
+      assertionEquals2(
+        lookupTableDDeLinearised[getKeyForDDeLinearisedLookup(value, max)](d),
+        dDelinearisedWithoutLookup(value, max)(d),
+        value,
+        max
+      );
+    }
+#endif
+    return lookupTableDDeLinearised[getKeyForDDeLinearisedLookup(value, max)];
+  }
+#else
+  return dDelinearisedWithoutLookup(value, max);
+#endif
+}
+
+inline GPUCallableMethod tarch::la::Vector<Dimensions, int> peano4::utils::dDelinearisedWithoutLookup(
+  int value,
+  int max
+) {
+#if defined(GPUOffloadingOff) and !defined(SharedSYCL)
+  assertion2(value >= 0, value, max);
+#endif
+  tarch::la::Vector<Dimensions, int> result(0);
+  for (int d = Dimensions - 1; d >= 0; d--) {
+    result(d) = value / tarch::la::aPowI(d, max);
+    value -= result(d) * tarch::la::aPowI(d, max);
+  }
+  return result;
+}

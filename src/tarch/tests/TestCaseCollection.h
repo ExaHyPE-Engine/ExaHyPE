@@ -45,7 +45,7 @@ class tarch::tests::TestCaseCollection: public tarch::tests::TestCase {
     static tarch::logging::Log _log;
 
     /**
-     * Tells whether the testcases contained should be deleted uppon destruction of this object.
+     * Tells whether the testcases contained should be deleted upon destruction of this object.
      */
     bool _deleteTestCases;
 

@@ -3,12 +3,10 @@
 #pragma once
 
 #include "config.h"
-
 #include "peano4/utils/Globals.h"
-
-#include "tarch/la/Vector.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/MemoryManager.h"
+#include "tarch/la/Vector.h"
 
 #include <functional>
 #include <string>
@@ -23,15 +21,14 @@ namespace exahype2 {
    * in the constructor and freed in the destructor, it does not provide a copy
    * constructor. This one is explicitly deleted.
    */
-  template <typename inType = double, typename outType = double>
-  struct CellData {
-    inType**                                QIn;
-    inType*                                 QIn1D;
-    tarch::la::Vector<Dimensions, double>*  cellCentre;
-    tarch::la::Vector<Dimensions, double>*  cellSize;
-    outType**                               QOut;
-    outType*                                QOut1D;
-    outType*                                maxEigenvalue;
+  template <typename inType, typename outType> struct CellData {
+    inType**                               QIn;
+    inType*                                QIn1D;
+    tarch::la::Vector<Dimensions, double>* cellCentre;
+    tarch::la::Vector<Dimensions, double>* cellSize;
+    outType**                              QOut;
+    outType*                               QOut1D;
+    outType*                               maxEigenvalue;
 
     // Assuming global time stepping
     double t;
@@ -52,23 +49,23 @@ namespace exahype2 {
     const int targetDevice;
 
     CellData(
-      inType* const                                 QIn_,
-      const tarch::la::Vector<Dimensions, double>&  cellCentre_,
-      const tarch::la::Vector<Dimensions, double>&  cellSize_,
-      double                                        t_,
-      double                                        dt_,
-      outType* const                                QOut_,
-      tarch::MemoryLocation                         memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                                           targetDevice_   = tarch::accelerator::Device::DefaultDevice
+      inType* const                                QIn_,
+      const tarch::la::Vector<Dimensions, double>& cellCentre_,
+      const tarch::la::Vector<Dimensions, double>& cellSize_,
+      double                                       t_,
+      double                                       dt_,
+      outType* const                               QOut_,
+      tarch::MemoryLocation                        memoryLocation_ = tarch::MemoryLocation::Heap,
+      int                                          targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
     CellData(
-      int                                           numberOfCells_,
-      tarch::MemoryLocation                         memoryLocation_ = tarch::MemoryLocation::Heap,
-      int                                           targetDevice_   = tarch::accelerator::Device::DefaultDevice
+      int                   numberOfCells_,
+      tarch::MemoryLocation memoryLocation_ = tarch::MemoryLocation::Heap,
+      int                   targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
-    CellData(const CellData& copy) = delete;
+    CellData(const CellData& copy)       = delete;
     CellData& operator=(const CellData&) = delete;
 
     ~CellData();
