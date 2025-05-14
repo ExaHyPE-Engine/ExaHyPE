@@ -29,7 +29,10 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         const Particle&                             localParticle
       ) {
-        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(
+          marker,
+          localParticle
+        );
       }
 
       template <typename Particle>
@@ -37,7 +40,9 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        assertion(prepareHydroForceUpdateParticlePredicate(marker, localParticle));
+        assertion(
+          prepareHydroForceUpdateParticlePredicate(marker, localParticle)
+        );
         hydro_prepare_force(localParticle);
       }
 
@@ -55,7 +60,10 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         const Particle&                             localParticle
       ) {
-        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(
+          marker,
+          localParticle
+        );
       }
 
       template <typename Particle>
@@ -63,7 +71,9 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        assertion(resetAccelerationUpdateParticlePredicate(marker, localParticle));
+        assertion(
+          resetAccelerationUpdateParticlePredicate(marker, localParticle)
+        );
         hydro_reset_acceleration(localParticle);
       }
 
@@ -83,10 +93,13 @@ namespace swift2 {
 
       template <typename Particle>
       bool endHydroForceCalculationUpdateParticlePredicate(
-        const peano4::datamanagement::VertexMarker&  marker,
-        const Particle&                              localParticle
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
       ) {
-        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(
+          marker,
+          localParticle
+        );
       }
 
       template <typename Particle>
@@ -94,7 +107,9 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        assertion(endHydroForceCalculationUpdateParticlePredicate(marker, localParticle));
+        assertion(
+          endHydroForceCalculationUpdateParticlePredicate(marker, localParticle)
+        );
         hydro_end_force(localParticle);
       }
 
@@ -103,8 +118,10 @@ namespace swift2 {
        * active particle, and updates the local particle.
        *
        *
-       * In this kernel, we accumulate the sums necessary for the force interactions
-       * between particles. In the "Minimal" SPH, by the end of it we're updating
+       * In this kernel, we accumulate the sums necessary for the force
+       interactions
+       * between particles. In the "Minimal" SPH, by the end of it we're
+       updating
        * the velocity and the internal energy via
        *
        * @f$ \frac{d\mathbf{v}_i}{dt} =
@@ -119,21 +136,26 @@ namespace swift2 {
        *
        * @f$ \frac{du_i}{dt} =
        *  \sum_j m_j \left[
-       *    \frac{f_i P_i}{\rho_i^2} \mathbf{v}_{ij} \cdot \nabla_x W(\mathbf{x}_{ij}, h_i)
-       *    + \frac{1}{2} \nu_{ij} \mathbf{v}_{ij} \cdot \overline{\nabla_x W_{ij}}
+       *    \frac{f_i P_i}{\rho_i^2} \mathbf{v}_{ij} \cdot \nabla_x
+       W(\mathbf{x}_{ij}, h_i)
+       *    + \frac{1}{2} \nu_{ij} \mathbf{v}_{ij} \cdot \overline{\nabla_x
+       W_{ij}}
        *  \right]
        * @f$
        *
        * where
        *
-       * @f$ \nu_{ij} = -\frac{1}{2} \frac{\alpha \mu_{ij} v_{sig,ij}}{\overline{\rho}_{ij}}@f$
+       * @f$ \nu_{ij} = -\frac{1}{2} \frac{\alpha \mu_{ij}
+       v_{sig,ij}}{\overline{\rho}_{ij}}@f$
        *
        * @f$ v_{sig,ij} = c_i + c_j - \beta \mu_{ij}@f$
        *
-       * @f$ \mu_{ij} = \frac{\mathbf{v}_{ij} \cdot \mathbf{x}_{ij}}{|\mathbf{x}_{ij}|}@f$
+       * @f$ \mu_{ij} = \frac{\mathbf{v}_{ij} \cdot
+       \mathbf{x}_{ij}}{|\mathbf{x}_{ij}|}@f$
        * if @f$ \mathbf{v}_{ij} \cdot \mathbf{x}_{ij} < 0@f$, or 0 otherwise
        *
-       * @f$ f_i = \left( 1 + \frac{h_i}{3 \rho_i} \frac{\partial \rho_i}{\partial h_i} \right)^{-1} @f$
+       * @f$ f_i = \left( 1 + \frac{h_i}{3 \rho_i} \frac{\partial
+       \rho_i}{\partial h_i} \right)^{-1} @f$
        *
        * @f$ c_i@f$: soundspeed of particle i
        *
@@ -143,11 +165,13 @@ namespace swift2 {
        *
        * @f$ \mathbf{v}_{ij} = \mathbf{v}_{i} - \mathbf{v}_{j} @f$
        *
-       * @f$ \alpha, \beta @f$: user set viscosity coefficient. Usually 0 and 3, respectively.
+       * @f$ \alpha, \beta @f$: user set viscosity coefficient. Usually 0 and 3,
+       respectively.
        *
        * @f$ \overline{\rho}_{ij} = \frac{1}{2} (\rho_i + \rho_j) @f$
        *
-       * @f$ \overline{\nabla_x W}_{ij} = \frac{1}{2} (\nabla_x W_i + \nabla_x W_j) @f$
+       * @f$ \overline{\nabla_x W}_{ij} = \frac{1}{2} (\nabla_x W_i + \nabla_x
+       W_j) @f$
        *
        * For a kernel
        *
@@ -158,7 +182,8 @@ namespace swift2 {
        * in @f$ d @f$ dimensions, we have
        *
        * @f$ \nabla_x W(\mathbf{x}_{ij}, h) =
-       *   \frac{1}{h^{d+1}} \frac{\partial f(q)}{\partial q} \frac{\mathbf{x}_{ij}}{|\mathbf{x}_{ij}|} @f$
+       *   \frac{1}{h^{d+1}} \frac{\partial f(q)}{\partial q}
+       \frac{\mathbf{x}_{ij}}{|\mathbf{x}_{ij}|} @f$
        *
        *
        * ## Vectorisation
@@ -187,12 +212,16 @@ namespace swift2 {
 
       template <typename Particle>
       bool forceKernelUpdateParticlePredicate(
-        const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
+        const peano4::datamanagement::CellMarker& marker,
+        const bool&     localParticleIsContainedInCell,
+        const Particle& localParticle
       );
 
       template <typename Particle>
       bool forceKernelEvaluatePairInteractionPredicate(
-        const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+        const peano4::datamanagement::CellMarker& marker,
+        const Particle&                           localParticle,
+        const Particle&                           activeParticle
       );
 
       /**
@@ -206,8 +235,8 @@ namespace swift2 {
       template <typename ParticleA, typename ParticleB = ParticleA>
       void forceKernel(
         const peano4::datamanagement::CellMarker& marker,
-        ParticleA&                                 localParticle,
-        const ParticleB&                           activeParticle
+        ParticleA&                                localParticle,
+        const ParticleB&                          activeParticle
       );
 
       /**
@@ -220,10 +249,13 @@ namespace swift2 {
 
       template <typename Particle>
       bool predictHydroUpdateParticlePredicate(
-        const peano4::datamanagement::VertexMarker&  marker,
-        const Particle&                              localParticle
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
       ) {
-        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(
+          marker,
+          localParticle
+        );
       }
 
 

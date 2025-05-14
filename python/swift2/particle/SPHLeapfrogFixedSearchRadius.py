@@ -126,7 +126,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
             _spacetreeId
           );
         },
-        @todo Attribute missing 
+        @todo Attribute missing
       >(
          marker,
          assignedParticles,

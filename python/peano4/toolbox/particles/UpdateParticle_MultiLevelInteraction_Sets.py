@@ -94,8 +94,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 
         self.d["ADDITIONAL_INCLUDES"] = additional_includes
 
-        self.d["SET_IMPLEMENTATION"] = "std::unordered_set"
-
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
@@ -120,17 +118,19 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 
     __Template_TouchCellFirstTime = jinja2.Template(
         """
-  {{SET_IMPLEMENTATION}}< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
-  std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
-  std::vector< int >                            _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
-  std::vector< bool >                           localParticleIsContainedInCell;
+  // all are vectors, as they are all ordered so we can match the local flags
+  // with particles
+  std::list< globaldata::{{LOCAL_PARTICLE}}* >    localParticles;
+  std::vector< int >                              numberOfCoalescedLocalParticlesPerVertex( TwoPowerD );
+  std::vector< int >                              _numberOfActiveParticlesPerVertex( TwoPowerD ); // stay compatible with coalesced version
+  std::vector< bool >                             localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
 
   for (int i=0; i<TwoPowerD; i++) {
     numberOfCoalescedActiveParticlesPerVertex[i] = -1;
     numberOfCoalescedLocalParticlesPerVertex[i]  = -1;
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
-      _activeParticles.insert( p );
+      _activeParticles.push_back( p );
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       std::bitset<TwoPowerD> mask = 0;
@@ -142,12 +142,12 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
         marker.toString(), p->toString(), i, mask
       );
       localParticleIsContainedInCell.push_back( isLocal );
-      localParticles.insert( p );
+      localParticles.push_back( p );
     }
   }
 
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
-  {{SET_IMPLEMENTATION}}< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
+  std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
   {% endif %}
 """
@@ -156,9 +156,10 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     __Template_TouchCellLastTime = jinja2.Template(
         """
   for (int i=0; i<TwoPowerD; i++) {
-    for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
-      _activeParticles.erase( p );
-    }
+    _activeParticles.erase( 
+      std::prev(_activeParticles.end(),fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() ),
+      _activeParticles.end()
+    );
   }
 """
     )
@@ -214,7 +215,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     def get_attributes(self):
         result = jinja2.Template(
             """
-  {{SET_IMPLEMENTATION}}< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
+  std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   int  _spacetreeId;
 """
         )
