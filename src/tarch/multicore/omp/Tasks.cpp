@@ -1,6 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/Task.h"
+#include "Tasks.h"
 #include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
@@ -17,17 +18,11 @@
 namespace {
   static tarch::logging::Log _log( "tarch::multicore::native(omp)" );
 
-  /**
-   * We need this counter not for reporting (even though it is useful there),
-   * but to find out if it is safe to grow the memory region that we use to
-   * administer task numbers.
-   *
-   * @see canServeDependencyEntry()
-   */
-  // @todo remove
-  int numberOfSpawnedTasks = 0;
-
   using DependencyTrackingDataType = unsigned char;
+
+  #ifndef DefaultSizeOfMemoryRegionUsedForDependencyTracking
+  constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 65536;
+  #endif
 
   /**
    * Memory region to administer dependencies
@@ -38,22 +33,31 @@ namespace {
    * with semantics. However, it has to be owned by the application code. To
    * ensure this is the case, we allocate some chunk only for the dependency
    * tracking and hold its baseline address in this variable.
+   *
+   * # Flaw
+   *
+   * I tried to allocate this array at startup time through
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * DependencyTrackingDataType* dependencyTrackingBaseAddress = new DependencyTrackingDataType[DefaultSizeOfMemoryRegionUsedForDependencyTracking];
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * but that failed somehow. Now, I allocate it lazyly in spawnTask().
    */
-  DependencyTrackingDataType* dependencyTrackingBaseAddress{nullptr};
+  DependencyTrackingDataType* dependencyTrackingBaseAddress = new DependencyTrackingDataType[DefaultSizeOfMemoryRegionUsedForDependencyTracking];
+  //DependencyTrackingDataType* dependencyTrackingBaseAddress{nullptr};
 
   /**
    * Memorize size of dependency tracking. Is initially 0 as the pointer
    * dependencyTrackingBaseAddress is a nullptr.
    */
-  int sizeOfMemoryRegionUsedForDependencyTracking{0};
+  int sizeOfMemoryRegionUsedForDependencyTracking{DefaultSizeOfMemoryRegionUsedForDependencyTracking};
 
   /**
    * Maximal size that we'd like to have for the memory region. Is updated
-   * on-the-fly. A reasonable initial value ensures that the first allocation
-   * is already quite big and can serve some tasking.
+   * on-the-fly. I use this value only for reporting.
    */
-//  int maxSizeOfMemoryRegionUsedForDependencyTracking{65536};
-  int maxSizeOfMemoryRegionUsedForDependencyTracking{4};
+  int maxSizeOfMemoryRegionUsedForDependencyTracking = DefaultSizeOfMemoryRegionUsedForDependencyTracking;
 
   /**
    * We need a multi-read, single-write semaphores around the dependency
@@ -73,94 +77,13 @@ namespace {
    *
    * The last or catches the initial case.
    */
-  bool shouldGrowDependencyMemory(int taskNumber) {
+  void updateMemoryStatistics(int taskNumber) {
     int requiredDependencyMemorySize = taskNumber + 1;
 
     #pragma omp atomic compare
     maxSizeOfMemoryRegionUsedForDependencyTracking = maxSizeOfMemoryRegionUsedForDependencyTracking<requiredDependencyMemorySize
                                                    ? requiredDependencyMemorySize
                                                    : maxSizeOfMemoryRegionUsedForDependencyTracking;
-
-    int currentSizeOfMemoryRegionUsedForDependencyTracking;
-    #pragma omp atomic read
-    currentSizeOfMemoryRegionUsedForDependencyTracking = sizeOfMemoryRegionUsedForDependencyTracking;
-
-    int currentNumberOfSpawnedTasks;
-    #pragma omp atomic read
-    currentNumberOfSpawnedTasks = numberOfSpawnedTasks;
-
-    return (currentNumberOfSpawnedTasks==0
-            and
-            maxSizeOfMemoryRegionUsedForDependencyTracking > currentSizeOfMemoryRegionUsedForDependencyTracking
-           )
-           or
-           (dependencyTrackingBaseAddress==nullptr);
-  }
-
-  /**
-   * Grow the memory region used for the dependency tracking
-   *
-   * Addresses that represent dependencies in OpenMP have to correspond to
-   * allocated, user-owned memory. To ensure this is the case, I hold one
-   * big memory block for all the dependencies.
-   *
-   * Unfortunately, I do not know how big this memory block has to be. So I
-   * use any check if an out condition can be served as an
-   * opportunity to grow the memory region which arises always if
-   * there are no more tasks pending that might use the dependency tracking.
-   * This happens in shouldGrowDependencyMemory().
-   *
-   * ## Thread safety
-   *
-   * No new tasks with dependencies can not be spawned while I grow the memory
-   * region. This means we need a critical section in the routine around this
-   * one: multiple threads can read, but if one decides to write, no other
-   * thread should do anything related.
-   *
-   * ## Dependencies
-   *
-   * I originally had this idea that each task could increment/decrement a
-   * counter, so I can check if tasks are still pending. If so, I'd increment.
-   * But this does not work: If a task decrements the counter and signals
-   * "I'm done", OpenMP might not have tidied up the underlying memory region.
-   * So if I now free the memory (as I think no tasks are there anymore), this
-   * might happen at exactly the point in time where OpenMP still updates its
-   * out-dependencies. Therefore I loop over all potential in-dependencies
-   * (many of them will be antidependencies) to ensure that OpenMP really has
-   * done all of its work. A simple wait will btw not work: It only works on
-   * directly children.
-   *
-   * ## Maximum memory size
-   */
-  void reserveDependencyTrackingMemory() {
-    int currentNumberOfSpawnedTasks;
-    #pragma omp atomic read
-    currentNumberOfSpawnedTasks = numberOfSpawnedTasks;
-
-    assertion(currentNumberOfSpawnedTasks>=1);
-
-    constexpr int MaxSizeOfMemoryRegionUsedForDependencyTracking = 65536;
-
-    if (
-      currentNumberOfSpawnedTasks==0
-      and
-      dependencyTrackingBaseAddress!=nullptr
-      and
-      sizeOfMemoryRegionUsedForDependencyTracking < MaxSizeOfMemoryRegionUsedForDependencyTracking
-    ) {
-      #pragma omp taskwait depend(iterator(j=0:sizeOfMemoryRegionUsedForDependencyTracking), in: dependencyTrackingBaseAddress[j])
-
-      delete[] dependencyTrackingBaseAddress;
-      dependencyTrackingBaseAddress = nullptr;
-      logInfo( "canServeDependencyEntry(int)", "free preallocated memory for task dependency management" );
-    }
-
-    if ( dependencyTrackingBaseAddress==nullptr ) {
-      maxSizeOfMemoryRegionUsedForDependencyTracking = std::min(maxSizeOfMemoryRegionUsedForDependencyTracking,MaxSizeOfMemoryRegionUsedForDependencyTracking);
-      sizeOfMemoryRegionUsedForDependencyTracking = maxSizeOfMemoryRegionUsedForDependencyTracking;
-      dependencyTrackingBaseAddress = new DependencyTrackingDataType[sizeOfMemoryRegionUsedForDependencyTracking];
-      logInfo( "canServeDependencyEntry(int)", "allocated memory for task dependency management for up to " << sizeOfMemoryRegionUsedForDependencyTracking << " tasks" );
-    }
   }
 
 
@@ -176,14 +99,29 @@ namespace {
    *
    */
   bool canServeDependencyEntry(int taskNumber) {
-    int currentSizeOfMemoryRegionUsedForDependencyTracking;
-
-    #pragma omp atomic read
-    currentSizeOfMemoryRegionUsedForDependencyTracking = sizeOfMemoryRegionUsedForDependencyTracking;
-
-    return taskNumber < currentSizeOfMemoryRegionUsedForDependencyTracking;
+    return taskNumber < sizeOfMemoryRegionUsedForDependencyTracking;
   }
 } // empty (internal) namespace
+
+
+/**
+ * This routine is not thread-safe. You have to be sure that there are no
+ * race conditions and that noone else accesses any dependencies still.
+ */
+void tarch::multicore::omp::reserveDependencyTrackingMemory() {
+  if (maxSizeOfMemoryRegionUsedForDependencyTracking>sizeOfMemoryRegionUsedForDependencyTracking) {  
+    if (dependencyTrackingBaseAddress!=nullptr) {
+      delete[] dependencyTrackingBaseAddress;
+      dependencyTrackingBaseAddress = nullptr;
+      logInfo( "canServeDependencyEntry(int)", "free preallocated memory for task dependency management" );
+    }
+    
+    dependencyTrackingBaseAddress = new DependencyTrackingDataType[maxSizeOfMemoryRegionUsedForDependencyTracking];
+    logInfo( "canServeDependencyEntry(int)", "allocated memory for task dependency management for up to " << maxSizeOfMemoryRegionUsedForDependencyTracking << " tasks" );
+
+    sizeOfMemoryRegionUsedForDependencyTracking = maxSizeOfMemoryRegionUsedForDependencyTracking;
+  }
+}
 
 
 // #define OpenMPHighThroughputWaiting
@@ -338,13 +276,24 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  const bool shouldAcquireWriteLock = shouldGrowDependencyMemory(taskNumber);
+  updateMemoryStatistics(taskNumber);
+
+/*
+  const bool shouldAcquireWriteLock = true;
+  
+  @todo a multiple-read once write semaphore in the grow-mem region would help
 
   tarch::multicore::MultiReadSingleWriteLock lock( dependencyTrackingSemaphore, not shouldAcquireWriteLock );
 
-  if (shouldAcquireWriteLock) {
-    reserveDependencyTrackingMemory();
+  // @todo have to check again, as it might have changed meanwhile
+  if (
+    shouldAcquireWriteLock
+    and
+    dependencyTrackingBaseAddress==nullptr
+  ) {
+    tarch::multicore::omp::reserveDependencyTrackingMemory();
   }
+*/
 
   // Administer in-dependencies
   std::vector<TaskNumber>  iterableExistingInDepencencies;
@@ -358,18 +307,12 @@ void tarch::multicore::native::spawnTask(
   if (taskNumber == NoOutDependencies) {
     logDebug( "spawnTask(...)", "fire totally independent task with " << iterableExistingInDepencencies.size() << " in dependencies" );
 
-    #pragma omp atomic
-    numberOfSpawnedTasks++;
-
     OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) untied
     {
       OTTER_TASK_START(task);
       job->run();
       delete job;
-
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
       OTTER_TASK_END();
     }
   }
@@ -379,12 +322,8 @@ void tarch::multicore::native::spawnTask(
       "fire task " << taskNumber <<
       " with outgoing task dependency and " << iterableExistingInDepencencies.size() <<
       " incoming dependencies (max no=" << maxSizeOfMemoryRegionUsedForDependencyTracking <<
-      ", #spawned tasks=" << numberOfSpawnedTasks <<
       ")"
     );
-
-    #pragma omp atomic
-    numberOfSpawnedTasks++;
 
     OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
     // Please consult canServeDependencyEntry() for this critical section
@@ -393,9 +332,6 @@ void tarch::multicore::native::spawnTask(
       OTTER_TASK_START(task);
       job->run();
       delete job;
-
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
       OTTER_TASK_END();
     } // end of critical section, i.e. now memory region might change again
   }
@@ -404,9 +340,7 @@ void tarch::multicore::native::spawnTask(
       "spawnTask(...)",
       "cannot administer outgoing task number " << taskNumber <<
       " and hence execute immediately after blocking wait for " << iterableExistingInDepencencies.size() <<
-      " incoming dependencies (max no=" << maxSizeOfMemoryRegionUsedForDependencyTracking <<
-      ", #spawned tasks=" << numberOfSpawnedTasks <<
-      ")"
+      " incoming dependencies (max no=" << maxSizeOfMemoryRegionUsedForDependencyTracking << ")"
     );
     OTTER_TASK_WAIT_START(children); //! (AT) Note - otter doesn't currently support taskwait with dependencies
 
@@ -420,8 +354,6 @@ void tarch::multicore::native::spawnTask(
 
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  tarch::multicore::MultiReadSingleWriteLock lock( dependencyTrackingSemaphore, true /* if read lock */ );
-
   // Administer in-dependencies
   std::vector<TaskNumber>  iterableExistingInDepencencies;
   iterableExistingInDepencencies.reserve( inDependencies.size() );
@@ -443,8 +375,7 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 void tarch::multicore::native::waitForAllTasks() {
   #pragma omp taskwait
 
-  tarch::multicore::MultiReadSingleWriteLock lock( dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteLock::Write );
-  reserveDependencyTrackingMemory();
+  tarch::multicore::omp::reserveDependencyTrackingMemory();
 }
 
 #endif
