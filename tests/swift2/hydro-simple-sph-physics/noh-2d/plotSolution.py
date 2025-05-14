@@ -30,10 +30,10 @@ v0 = 1
 import matplotlib
 
 matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from scipy import stats
 import numpy as np
-import h5py
 import sys
 
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
@@ -49,7 +49,7 @@ partData = reader.load()
 time = reader.get_snapshot_time()
 
 # show me what particle fields are stored
-partData.show_attribute_list()
+#  partData.show_attribute_list()
 
 x = partData.x[:, 0]
 y = partData.x[:, 1]
@@ -175,5 +175,6 @@ plt.ylim(-0.05, 0.8)
 
 plt.tight_layout()
 
-plt.savefig("NohProfile.png", dpi=200)
-print("saved NohProfile.png")
+fname = f"NohProfile{time:.4f}.png"
+plt.savefig(fname, dpi=200)
+print("saved", fname)

@@ -105,9 +105,17 @@ public:
    * Set both min and max time stamp.
    */
   void setTimeStamp(double t, bool reduceInsteadOfOverwrite = true);
-  void setTimeStamp(double tMin, double tMax, bool reduceInsteadOfOverwrite = true);
+  void setTimeStamp(
+    double tMin,
+    double tMax,
+    bool   reduceInsteadOfOverwrite = true
+  );
   void setTimeStepSize(double dt, bool reduceInsteadOfOverwrite = true);
-  void setTimeStepSize(double dtMin, double dtMax, bool reduceInsteadOfOverwrite = true);
+  void setTimeStepSize(
+    double dtMin,
+    double dtMax,
+    bool   reduceInsteadOfOverwrite = true
+  );
 
   /**
    * Set the maximum velocity that has been observed in a cell. This routine

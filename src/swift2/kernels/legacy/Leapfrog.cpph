@@ -27,7 +27,7 @@ template <typename Particle>
 void swift2::kernels::legacy::hydro_predict_extra(Particle& localParticle) {
 
   const int    hydroDimensions = localParticle.getHydroDimensions();
-  const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  const double timeStepSize    = Particle::getSpecies().getMinTimeStepSize();
   // When integrating in time with cosmology, the three times below will all
   // have different factors/powers of the expansion factor `a` absorbed in them.
   // For now, without cosmology, they are identical.
@@ -44,9 +44,7 @@ void swift2::kernels::legacy::hydro_predict_extra(Particle& localParticle) {
   // Predict additional particle fields forward in time after the Drift step
 
   // Predict the internal energy
-  localParticle.setU(
-    localParticle.getU() + localParticle.getUDot() * dt_therm
-  );
+  localParticle.setU(localParticle.getU() + localParticle.getUDot() * dt_therm);
 
   // Predict smoothing length
   const double h_inv = 1.0 / localParticle.getSmoothingLength();
@@ -93,9 +91,7 @@ void swift2::kernels::legacy::leapfrog_kick_global_time_step_size(
                                   * Particle::getSpecies().getMinTimeStepSize();
 
   /* Kick the particle */
-  particle.setV_full(
-    particle.getV_full() + timeStepSizeKick * particle.getA()
-  );
+  particle.setV_full(particle.getV_full() + timeStepSizeKick * particle.getA());
 
   swift2::kernels::legacy::hydro_kick_extra_global_time_step_size(particle);
 }

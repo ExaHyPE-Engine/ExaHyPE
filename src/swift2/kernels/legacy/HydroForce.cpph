@@ -5,21 +5,34 @@
 
 template <typename Particle>
 bool swift2::kernels::legacy::forceKernelUpdateParticlePredicate(
-  const peano4::datamanagement::CellMarker& marker, const bool& localParticleIsContainedInCell, const Particle& localParticle
+  const peano4::datamanagement::CellMarker& marker,
+  const bool&                               localParticleIsContainedInCell,
+  const Particle&                           localParticle
 ) {
-  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(marker, localParticleIsContainedInCell, localParticle);
+  return ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(
+    marker,
+    localParticleIsContainedInCell,
+    localParticle
+  );
 }
 
 
 template <typename Particle>
 bool swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate(
-  const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
+  const peano4::datamanagement::CellMarker& marker,
+  const Particle&                           localParticle,
+  const Particle&                           activeParticle
 ) {
-  assertion3(marker.isContained(
+  assertion3(
+    marker.isContained(
       localParticle.getX(),
-      toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+      toolbox::particles::internal::
+          relativeGrabOwnershipSpatialSortingTolerance(marker)
+        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
     ),
-    marker.toString(), localParticle.toString(), activeParticle.toString()
+    marker.toString(),
+    localParticle.toString(),
+    activeParticle.toString()
   );
   return &localParticle != &activeParticle;
 }
@@ -27,16 +40,18 @@ bool swift2::kernels::legacy::forceKernelEvaluatePairInteractionPredicate(
 
 template <typename ParticleA, typename ParticleB>
 void swift2::kernels::legacy::forceKernel(
-  const peano4::datamanagement::CellMarker&  marker,
-  ParticleA&                                 localParticle,
-  const ParticleB&                           activeParticle
+  const peano4::datamanagement::CellMarker& marker,
+  ParticleA&                                localParticle,
+  const ParticleB&                          activeParticle
 ) {
   assertion2(
     ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
       marker,
       localParticle,
       activeParticle
-    ), localParticle.toString(), activeParticle.toString()
+    ),
+    localParticle.toString(),
+    activeParticle.toString()
   );
   force_kernel(localParticle, activeParticle);
 }
@@ -96,8 +111,7 @@ void swift2::kernels::legacy::hydro_prepare_force(Particle& localParticle) {
    * meaning that this cached grad_h_term gives:
    *
    * f_ij = 1.f - grad_h_term_i / m_j */
-  const double common_factor = h_i / hydroDimensions
-                               / localParticle.getWcount();
+  const double common_factor = h_i / hydroDimensions / localParticle.getWcount();
 
   float grad_h_term;
   // Ignore changing-kernel effects when h ~= h_max
@@ -267,8 +281,8 @@ void swift2::kernels::legacy::force_kernel(
   if ((tarch::la::smaller(r, iactRi) or (tarch::la::smaller(r, iactRj))) and tarch::la::greater(r, 0.0)) {
 
 #if PeanoDebug > 0
-    localParticle->setForceNeighbourCount(
-      localParticle->getForceNeighbourCount() + 1
+    localParticle.setForceNeighbourCount(
+      localParticle.getForceNeighbourCount() + 1
     );
 #endif
 
@@ -391,7 +405,7 @@ void swift2::kernels::legacy::force_kernel(
     // Update the signal velocity
     localParticle.setV_sig_AV(std::max(localParticle.getV_sig_AV(), v_sig));
 
-  assertion6(
+    assertion6(
       not std::isnan(localParticle.getHDot()),
       localParticle.toString(),
       dvdr,
@@ -399,8 +413,8 @@ void swift2::kernels::legacy::force_kernel(
       dwi_dr,
       f_ij,
       f_ji
-  );
-  assertion6(
+    );
+    assertion6(
       not tarch::la::isEntryNan(localParticle.getA()),
       localParticle.toString(),
       sph_acc_term,
