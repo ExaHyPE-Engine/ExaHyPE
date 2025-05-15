@@ -678,8 +678,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         marker.isLocal()
       ) {
         // Take care about the coarse grid accesses: Faces and cells are not yet loaded.
-        // Therefore we don't use the usual shift of @f$ 2 \cdot 2d @f$ or @f$ 2 \cdot 2^d @f$
-        // but only half of it.
+        // Therefore we don't use the usual shift of 2*2d or 2*2**d (don't use LaTeX here
+        // as this is within a Python document and the Python interpreter doesn't fancy 
+        // escape chars here, even though these escape chars are actually within a TeX
+        // formula) but only half of it.
         {{ACTIVE_ACTION_SET}}.createPersistentVertex(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}

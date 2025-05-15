@@ -31,7 +31,8 @@ namespace {
 tarch::multicore::taskfusion::ReadyFusableTasks::ReadyFusableTasks(int type_):
   type(type_),
   numberOfPendingReadyTasksPerProcessTaskExecution(),
-  probabilityThatTaskIsCompleted(256)
+  probabilityThatTaskIsCompleted(256),
+  lastProcessReadyTask(-1)
 {}
 
 
@@ -95,15 +96,17 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
       taskQueue->tasks.size()*2 < instruction.maxTasks
       and
       taskNumber != NoOutDependencies
+      and
+      taskQueue->lastProcessReadyTask >= 0
     ) {
-      logDebug( "translateFusableTaskIntoTaskSequence(...)", "partially serialise as we have only " << taskQueue->tasks.size() << " tasks" );
+      logDebug( "translateFusableTaskIntoTaskSequence(...)", "partially serialise process ready tasks as we have only " << taskQueue->tasks.size() << " real tasks in queue" );
       inDependencies.insert( taskQueue->lastProcessReadyTask );
-      taskQueue->lastProcessReadyTask = taskNumber;
     }
 
     Task* processTask = new ProcessReadyTask(taskNumber, taskQueue);
     processTask->setPriority(task->getPriority()/2);
     tarch::multicore::native::spawnTask( processTask, processReadTaskInDependencyNumber, taskNumber);
+    taskQueue->lastProcessReadyTask = taskNumber;
   }
 }
 
