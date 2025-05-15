@@ -196,6 +196,7 @@ list(APPEND AVAILABLE_ACCELERATORS
   #"hip"
   "cuda"
   "cpp"
+  "kokkos"
 )
 set(WITH_GPU "no" CACHE STRING "${AVAILABLE_ACCELERATORS}")
 option(WITH_USM "Build with unified shared memory support" OFF)
@@ -237,6 +238,8 @@ elseif(WITH_GPU STREQUAL "hip")
   include(HIP)
 elseif(WITH_GPU STREQUAL "cpp")
   include(StdPar)
+elseif(WITH_GPU STREQUAL "kokkos")
+  include(Kokkos)
 else()
   set(ONLY_IF_GPU_FIND_DEPENDENCY "# GPU not used")
 endif()

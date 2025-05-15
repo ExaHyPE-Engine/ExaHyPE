@@ -60,51 +60,6 @@ std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
  * and hence should be done with care. Peano for example does this if and
  * only if it has to hand over raw pointers to MPI, e.g.
  *
- *
- * ## GPGPU offloading
- *
- * ### OpenMP
- *
- * To make the vector operations available on the GPU, they have to be labelled
- * as offloadable according to Section 4.5.2 (page 117) of the standard
- * (https://www.openmp.org/wp-content/uploads/openmp-examples-4.5.0.pdf).
- * There, the text highlights that declare target is a declaration thing, i.e.,
- * should not be applied to the definition.
- *
- * However, it is not clear whether the compiler expects the
- * function definition to be within the declaration, too, and if this makes a
- * difference here at all: As the vector is a template, it is header-only
- * anyway. Therefore, the compiler implicitly should have the definition at
- * hand and should be able to identify that code for the GPU has to be
- * generated, too. We only have to be sure that no explicit instantiation of
- * a vector ignores this context, i.e. do not use explicit instantiation if you
- * employ GPUs (through OpenMP).
- *
- * With GCC, I struggled using the Vector's copy constructors. That is,
- * my impression is that the GCC compiler struggles to handle templates plus
- * overloading if these are implicitly used within a map clause.
- * Therefore, I often offload code through the standard constructor, deploy
- * the vector components manually, thus avoid all copy constructor
- * invocations explicitly, and finally repuzzle the vector together on the
- * GPU. This implies that GPU routines may never return
- * a Vector instance. See the Rusanov kernels for examples where this
- * leads to uglier code than necessary. But it works.
- *
- *
- * ## SYCL
- *
- * Our SYCL kernels seem to be fine without explicit support of the vector,
- * but this is mainly due to the fact that SYCL offers its own range class,
- * and we construct our vectors typically from this range class. The other
- * application domain is the double vectors within the cell descriptors,
- * but we map those onto specialised variants before we offload anyway, so
- * they are on the GPU prior to the kernel launch. However, when we run our
- * parallel for loops with SYCL on the host, then we also need to make sure
- * that the vector class is device copyable (i.e. trivially copyable). We
- * mark our copy assignment operator and copy constructor as default to let
- * the compiler generated these for us. As the class contains no dynamic
- * memory, we can safely do so: https://en.cppreference.com/w/cpp/language/classes#Trivially_copyable_class
- *
  */
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target

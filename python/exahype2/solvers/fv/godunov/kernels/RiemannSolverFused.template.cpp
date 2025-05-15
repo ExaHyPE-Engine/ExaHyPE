@@ -32,6 +32,8 @@
 #undef Dimensions
 #include <sycl/sycl.hpp>
 #pragma pop_macro("Dimensions")
+{% elif GPU == "kokkos" %}
+#include "Kokkos_Core.hpp"
 {% endif %}
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemannFused(

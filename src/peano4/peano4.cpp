@@ -136,8 +136,6 @@ void peano4::init(
 }
 
 void peano4::shutdown() {
-  tarch::accelerator::Device::getInstance().shutdown();
-  tarch::multicore::Core::getInstance().shutdown();
   peano4::parallel::Node::getInstance().shutdown();
   peano4::parallel::Node::shutdownMPIDatatypes();
   peano4::parallel::SpacetreeSet::getInstance().shutdown();
@@ -145,5 +143,6 @@ void peano4::shutdown() {
   tarch::services::ServiceRepository::getInstance().shutdown();
   tarch::shutdownNonCriticalAssertionEnvironment();
   tarch::accelerator::Device::getInstance().shutdown();
+  tarch::multicore::Core::getInstance().shutdown();
   tarch::mpi::Rank::getInstance().shutdown();
 }

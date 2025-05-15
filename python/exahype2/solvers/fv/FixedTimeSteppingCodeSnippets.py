@@ -32,7 +32,7 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
       assertion(_minVolumeH >= 0.0);
       assertion(MaxAdmissibleVolumeH > 0.0);
       if (_minVolumeHThisTimeStep <= MaxAdmissibleVolumeH) {
-        _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minVolumeHThisTimeStep / MaxAdmissibleVolumeH;
+        _timeStepSize = """ + str(self._normalised_time_step_size) + """ * _minVolumeHThisTimeStep / MaxAdmissibleVolumeH;
       } else {
         _timeStepSize = 0.0;
       }
