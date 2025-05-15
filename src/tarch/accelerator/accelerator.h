@@ -9,6 +9,10 @@
 #include "cuda/Device.h" // To get access to the __device__ keyword
 #endif
 
+#if defined(GPUOffloadingKokkos)
+#include "kokkos/Device.h" // To get access to the KOKKOS_FUNCTION keyword
+#endif
+
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
@@ -25,6 +29,8 @@ namespace tarch {
     #pragma omp declare target
     void gpuAbort();
     #pragma omp end declare target
+  #elif defined(GPUOffloadingKokkos)
+    #define GPUCallableMethod KOKKOS_FUNCTION
   #else
     #define GPUCallableMethod
     #define GPUOffloadingOff // No device accelerator chosen

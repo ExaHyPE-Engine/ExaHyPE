@@ -42,6 +42,8 @@ Tarch_SOURCES = \
 	accelerator/cuda/DevicePropertiesCache.cpp \
 	accelerator/cuda/ErrorCheck.cpp \
 	accelerator/cuda/ExecutionPolicy.cpp \
+	accelerator/kokkos/accelerator.cpp \
+	accelerator/kokkos/Device.cpp \
 	accelerator/hip/accelerator.cpp \
 	multicore/BooleanSemaphore.cpp \
 	multicore/multicore.cpp \

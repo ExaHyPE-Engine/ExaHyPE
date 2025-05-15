@@ -43,9 +43,9 @@ if(NOT ${AdaptiveCpp_FOUND})
       -DCMAKE_BUILD_TYPE=Release
       -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
       -DACPP_COMPILER_FEATURE_PROFILE=full
-      RESULT_VARIABLE result
-      OUTPUT_QUIET
-      ERROR_QUIET
+    RESULT_VARIABLE result
+    OUTPUT_QUIET
+    ERROR_QUIET
   )
   if(result)
     message(FATAL_ERROR "CMake step for AdaptiveCpp failed: ${result}")
