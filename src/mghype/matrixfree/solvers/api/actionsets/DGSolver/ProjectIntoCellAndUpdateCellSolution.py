@@ -36,7 +36,7 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     // update global residual before multiplying by the preconditioner
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
       double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
+      _solverStatistics.updateGlobalResidual(res, marker.h());
     }
 
     // multiply by "smoother" / preconditioner
@@ -52,8 +52,8 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
       fineGridCell{{SOLVER_NAME}}.setSolution( i,
         fineGridCell{{SOLVER_NAME}}.getSolution( i ) + du
       );
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
-      repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
+      _solverStatistics.updateGlobalSolutionUpdates(du, marker.h()(0));
+      _solverStatistics.updateMinMaxMeshSize( marker.h() );
     }
 
     logTraceOutWith2Arguments( "ProjectOntoCells", fineGridCell{{SOLVER_NAME}}.getResidual(), fineGridCell{{SOLVER_NAME}}.getSolution() );
@@ -77,6 +77,15 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      result = jinja2.Template("""
+  _solverStatistics.clearGlobalPrecondResidualUpdate();
+  _solverStatistics.clearGlobalResidualAndSolutionUpdate();
+""").render(**self.d)      
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      result = jinja2.Template("""
+  repositories::{{SOLVER_INSTANCE}}.merge( _solverStatistics );
+""").render(**self.d)
     return result
 
   def get_action_set_name(self):
@@ -115,4 +124,16 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
 #include "peano4/utils/Loop.h"
 """
 
+  def get_attributes(self):
+        """!
+
+        Return attributes as copied and pasted into the generated class.
+
+        Please note that action sets are not persistent, i.e. there is one
+        object creation per grid sweep per tree.
+
+        """
+        return """
+  ::mghype::matrixfree::solvers::SolverStatistics _solverStatistics;        
+"""        
 
