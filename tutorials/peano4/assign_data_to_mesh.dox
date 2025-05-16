@@ -1,0 +1,99 @@
+/**
+
+ @page tutorials_peano4_assign_data_to_mesh Assigning data to mesh entities
+ 
+ \tableofcontents
+ 
+ In Peano, cells, vertices and facets can hold data. At the moment, we have no 
+ support for data on edges in 3d, as noone as ever requested them. 
+ 
+ # DaStGen
+ 
+ In principle, you can model your data type with whatever tool you like. You 
+ can notably write them as plain old C++ classes. However, it is very reasonable
+ to use the package DaStGen 2. Every Peano data object has to to provide 
+ certain routines (e.g. for data exchange). Life is easier if those are 
+ auto-generated.
+ 
+ Historically, DaStGen (data structure generator) had been a Java tool which 
+ injected all kinds of semantics into the generated code such as automatic 
+ packing of bits or MPI data types as well as floating point compression. With 
+ DaStGen 2, we have rewritten everything in Python, and most of the functionality
+ is gradually moving into the compiler. It is not the job of the data generation
+ anymore to inject such functionality. What still is in there however is that the
+ generator can inject certain code snippets (aspects in OO terminology) which 
+ add some core functionality.
+ 
+ The DaStGen data model is automatically lowered into plain C++ if it is 
+ attached to a Peano 4 project.
+  
+ 
+ # Python data model
+ 
+ Adding data to your project with DaStGen always follows certain steps:
+ 
+ 1. Create the data:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+data_object = peano4.datamodel.DaStGen2( "myFancyName" )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    At this point, we do not distinguish whether these data is attached to a
+    cell, vertex or facet.
+ 2. Add the attributes to the data object. This resembles calls similar to
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+data_object.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    A data object can hold an arbitrary number of attributes. However, there 
+    are specialisations of DaStGen2 classes for certain properties that do
+    not allow for this.
+ 3. Add the data model to Peano's data model. This is done through a code
+    snippet similar to
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+project = peano4.Project(namespace, project_name, directory, subdirectory)
+project.datamodel.add_vertex(data_object) # or
+project.datamodel.add_face(data_object) # or
+project.datamodel.add_cell(data_object)
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    From hereon, the data object is tied to the project and the Peano 4 project
+    will ensure that the data C++ class is put into vertexdata, facedata or 
+    celldata subdirectories, respectively. It will also ensure that the class 
+    is properly initialised (we expect each data model to hold some static
+    MPI attributes for example).
+ 4. Each and every observer now has to be told that this data model is to be 
+    used:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+my_observer.use_face(data_object)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+    If you omit this statement, the observer will not know that it has to move
+    data over the data containers, and it does not know that these data models
+    (faces in the example) have to be added to the action set signatures. 
+    
+In theory, not every observer has to handle all data. You can use A,B,C,D in 
+a first sweep, and then only A,B in the second. Howevever, due to the data
+management algorithms in use (cmp the SISC Peano paper by Weinzierl and Mehl), 
+we always need an even number of "left-out" mesh traversals, i.e.
+
+- A,B,C,D
+- A,B
+- A,B
+- A,B,C,D
+
+works but one more injected mesh traversal with only A,B will certainly mess up
+things. Even in this case, it is not clear how MPI boundary exchange is actually
+modelled, so I generally do not recommend that you implement such patterns. Make
+every observer use all data.
+
+ # Required operations per data entity
+ 
+ @todo Something on store/load predicates
+ 
+ @todo Something on send and receives
+  
+ # Stack containers
+ 
+ @todo Something on specialisations (heap, smartpointers, ...)
+ 
+
+
+ */
+ 
+ 

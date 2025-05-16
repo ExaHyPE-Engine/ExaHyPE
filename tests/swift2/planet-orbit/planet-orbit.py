@@ -284,9 +284,12 @@ EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 #
 ###############################################################################
 particle_force = """
+// Template in tests/swift2/planet-orbit.py
+
 ::swift2::kernels::forAllParticles(
   marker,
   localParticles,
+  numberOfCoalescedLocalParticlesPerVertex,
   [=](
     const peano4::datamanagement::CellMarker& marker,
     globaldata::Planet&                       localParticle
@@ -324,8 +327,11 @@ particle_force = """
         localParticle.setEnergyTot( - ( E_kin + E_pot ) );
       } // end of radius check
     } // end of "may I update" check
-  } // end of functor
+  }, // end of functor
+  ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::Planet>
 );
+
+// end template
 """
 
 particle.cell_kernel = particle_force

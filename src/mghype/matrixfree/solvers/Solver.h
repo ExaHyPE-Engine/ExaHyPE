@@ -43,6 +43,16 @@ class mghype::matrixfree::solvers::Solver {
       double residual,
       const tarch::la::Vector<Dimensions,double>&  h
     );
+    
+    /*
+     * 
+     * @todo This name is not good. We should argue over a cycle
+     * residual or something similar. But in any case, it is not 
+     * a good name. 
+     */
+    void updateGlobalPrecondResidual(
+      double residual
+    );
     void updateGlobalSolutionUpdates(
       double deltaU,
       const tarch::la::Vector<Dimensions,double>&  h
@@ -51,9 +61,13 @@ class mghype::matrixfree::solvers::Solver {
       const tarch::la::Vector<Dimensions,double>&  h
     );
 
+    void clearGlobalPrecondResidualUpdate();
+
     double getGlobalResidualMaxNorm() const;
+    std::array<double, 2> getGlobalPrecondResidualNorms() const;
 
     virtual std::string toString() const;
+    virtual std::string reportPrecondNorms() const;
 
     /**
      * End the traversal
@@ -110,6 +124,9 @@ class mghype::matrixfree::solvers::Solver {
     double     _globalDeltaUMaxNorm;
     double     _globalDeltaUEukledianNormSquared;
     double     _globalDeltaUHNormSquared;
+
+    double _globalPrecondResidualMaxNorm;
+    double _globalPrecondResidualEukledianNormSquared;
 
     /**
      * Semaphore for global residual values

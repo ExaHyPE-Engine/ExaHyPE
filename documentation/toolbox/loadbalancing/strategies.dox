@@ -24,16 +24,23 @@ Let @f$ C: \mathcal{T} \mapsto \mathcal{P} @f$ assign each tree node to a comput
 
 ## Tree manipulation
 
-There is only one operation available: @f$ split(p_i, p_j, n) @f$ operates on @f$ \{ n_k: C(n_k)=p_i \} \neq \emptyset @f$
+There is only one operation available: @f$ split(p_i, p_j, n, N) @f$ operates on @f$ \{ n_k: C(n_k)=p_i \} \neq \emptyset @f$
 and @f$ \{ n_l: C(n_l)=p_j \} = \emptyset @f$.
-It takes @f$ \hat n \geq n @f$ nodes assigned to @f$ p_i @f$ and
+It takes @f$ n \leq \hat n @f$ leaf nodes assigned to @f$ p_i @f$ and
 assigns them to @f$ p_j @f$.
-Hereby, @f$ n @f$ is the number of leaf nodes associated to @f$ p_i @f$.
-The split consequently might also reassign some non-leaf nodes.
+Hereby, @f$ \hat n @f$ is the number of leaf nodes associated to @f$ p_i @f$.
+The split consequently might also reassign some non-leaf nodes. @f$ N @f$ is the total
+size of the current tree. The movement of the non-leaf nodes must following the tree topology: if
+the parent and at least one child of a node are both associated to @f$ p_i @f$, then this non-leaf node
+must be associated to @f$ p_i @f$ as well.
+
 
 W.l.g. we may assume that the root @f$ n_0 @f$ is originally assigned to the
 first available compute resource: @f$ C(n_0) = p_0 @f$.
 
+Notice we can not merge subtrees, i.e., split is not allowed to operate if 
+@f$ \{ n_l: C(n_l)=p_j \} \neq \emptyset @f$. The splitted subtree can continue to 
+construct to following levels without any further cost (see next section, and the example section).
 
 ## Tree construction
 
@@ -68,29 +75,53 @@ The @f$ \approx @f$ sign is used, as we work with integers and hence cannot ensu
 exact equality.
 We might also be willing to accept a small, fixed deterioration from the optimum.
 
+For a more advance metric of measuring the quality of the splitting, we introduce the 
+splitting quality score @f$ w=C_2 \cdot \text{SplitCost}+C_1 \cdot \text{Imbalance} @f$,
+where @f$ \text{SplitCost}=\sum F(split(...)) @f$ is the sum up of costmetric output for 
+every split operation (see next section), and @f$ \text{Imbalance}=MAX(\mathcal{T}_{leaves}(p_i)+C_3 \text{Surface}(p_i)) - MIN(\mathcal{T}_{leaves}(p_i)+C_3 \text{Surface}(p_i)) @f$.
+@f$\text{Surface}(p_i)@f$ is the spatial boundaries for the subtree associated with @f$ p_i @f$, as the tree 
+represents an adaptive refinement of a spatial domain. The smaller the quality score is, the better the splitting algorithm is.
+
+In the current problem, @f$ C_3 \ll 1 @f$. i.e., for now, we do not care too much about the surface size as long as
+all leaves are spatially connected. For online problem where we do not know the tree structure in advance, We also set
+@f$ C_2 \ll C_1 @f$ (holds even for the superlinear model of splitting cost), i.e., the balance among compute resources is the top priority.
+For offline problem it does not hold anymore and we would like a low-cost spliting process as well.
+
+
 ## Challenge
 
 This challenge in principle is very simple: We take the whole tree, count the number
 of leaves and issue a series of splitting calls. However, we want to
 make the splitting as cheap as possible:
-There is a cost function @f$ F( split(p_i, p_j, n) ) @f$ which scales (superlinearly)
-in the number @f$ n @f$.
-This parameter from above is the number of leaves of the tree at this point.
+There is a cost function @f$ F( split(p_i, p_j, n, N) ) @f$ which depend on
+both in the number @f$ n @f$ (the number of leaves moved) and @f$ N @f$ (toal size of current tree).
 Due to the cost function, it consequently might be reasonable to issue splits while
-the tree is constructed and not at the very end.
-In this case, @f$ n @f$ denotes the number of leaves at this point of the tree
-construction.
-If we wait until the tree is constructed, @f$ n @f$ within each split call corresponds to "real"
-leaves of the final tree.
+the tree is constructed and not at the very end, where @f$ N @f$ would become rather big.
 
-Unfortunately, we do not know what the tree eventually will look like. We have
+In online problem, unfortunately, we do not know what the tree eventually will look like. We have
 guarantees regarding the minimum and maximum level of each node, but no further
-domain knowledge.
-Consequently, the development of an "optimal" splitting strategy is not straightforward.
+domain knowledge. On the other hand, in offline problem we know the complete structure of the tree, thus
+make lives much easier.
+Conclusively, the development of an "optimal" splitting strategy is not straightforward.
 We permanently have to balance between an eager decision to split, which is cheap yet
 might introduce the wrong splits that we cannot undo later, or waiting for further
 information which might make future splits more accurate but excessively expensive.
 
+# Offline Problem Summary
+An offline problem means that we first construct the tree once without any splitting. And then restart
+from the beginning to do the split with the information of the whole tree. It can avoid the biggest problem 
+in the online version: we can not make clever decisions as we know nothing about the future. Achieving low imbalance is easy 
+in this case, and thus, the leading measure of split quality would be split cost. 
+Several important remarks for the offline version of splitting:
+1. we can still only split subtree as described above, so not merge or delete subtree.
+2. The split cost function depends on both @f$ n @f$ and @f$ N @f$, a simple model would be @f$ F( split(p_i, p_j, n, N) )=A_1 n + A_2 N @f$, though we do not know the ratio between @f$ A_1 @f$ and @f$ A_2 @f$.
+3. the formulation of the quality score above still holds, however, as an offline problem, finding a minimum of @f$ \text{Imbalance} @f$ is always possible using a bottom-up algorithm (e.g., SFC-based traversal), therefore
+the goal of a good algorithm would be reducing splitcost.
+4. The surface term is still in low priority as long as leaves in one subtree are connected (@f$ C_3 \ll 1 @f$).
+5. The idea of offline is to utilize the information of the whole tree to do the splitting operation as early as possible.
+6. It is because the tree is constructed layers by layers, thus an early split at a lower level costs much less than a later split.
+
+The example section below can be helpful in understanding the offline splitting further. 
 
 # Observations
 
@@ -141,5 +172,58 @@ it allows an algorithm to query more information about the tree before it
 continues, i.e. it can hold back with splitting decisions and instead tell
 the algorithm to continue to construct the tree (in certain areas) before it
 comes to its next decision.
+
+# Example
+
+## Online Two Spliting
+We provide an example of (online) tree splitting. Below is a tree of four levels, where 
+only the first nodes on levels 1 and 2 have children. The tree is constructed level by
+level, going through stages (I) to (IV). As we only have the split operation, the three good 
+two-split candidates can be 
+
+@image html visualise_tree_split_example0.png
+
+(1) split the first node in stage (II) to the second tree and finish the following 
+construct. The imbalancing would be @f$ |7C_1-3C_1|=4C_1 @f$ (omit the surface term), with a split cost of @f$ C_2(A_1 + 4A_2) @f$
+(assuming linear costmetric). The total quality score would be @f$ 4C_1+C_2(A_1 + 4A_2) @f$ (the smaller the better).
+
+@image html visualise_tree_split_example1.png
+
+(2) split the first two nodes in stage (III) to the second tree and finish the following
+construct. The imbalancing would be @f$ |5C_1-5C_1|=0 @f$, with a split cost of @f$ C_2(2A_1 + 7A_2) @f$.
+The total quality score would be @f$ 2C_2(2A_1 + 7A_2) @f$.
+
+@image html visualise_tree_split_example2.png
+
+(3) Split the first two nodes on level 2 and all in level 3 in stage (IV) to the 
+second tree. The imbalance would be @f$ |5C_1-5C_1|=0 @f$, with a split cost of @f$ C_2(5A_1 + 10A_2) @f$ (number of leaves
+moved). The total quality score would be @f$ C_2(5A_1 + 10A_2) @f$.
+
+It is quite clear that option (1) is not good as it chooses an early, aggressive tree splitting,
+though the splitting cost is cheap, the heavy imbalance indicates it is not a good strategy. Comparing 
+options (2) and (3) is a little more tricky: (2) has a smaller score, however, it has to 
+"foresee" that the first node is going to be refined to make this clever decision. (3), on the other
+hand, does not have this issue, as at stage (IV) the tree has been constructed completely. Of course, it 
+then has to pay the price for moving more nodes in the split operation. 
+
+To summarise, option (1) is not acceptable, option (3) is acceptable but expensive, and option (2) is best but 
+requires a clever splitting strategy. For the corresponding offline version of this example, (3) is quite easy to find and we
+hope a good algorhitm to find (2) efficiently. It is more practical in offline version because we do know the future at stage (III)
+in this case.
+
+## Offline Triple Spliting
+Here we provide a example of splitting on the same tree, but now triple splitting from an offline problem prespective.
+
+@image html visualise_tree_split_example3.png
+
+There are multiple ways to split the tree with minimum leaf imbalance (again we drop surface term), which is @f$ 3:3:4 @f$. However they are
+from different splitting processes:
+1. Start with green, split 4 yellow at level 2, split 3 red at level 3. Total cost @f$ C_2(4A_1 + 7A_2 + 3A_1 + 10A_2) = C_2(7A_1 + 17A_2) @f$
+2. Start with red, split 4 yellow at level 2, split 3 green at level 3. Total cost @f$ C_2(4A_1 + 7A_2 + 3A_1 + 10A_2) = C_2(7A_1 + 17A_2) @f$
+3. Start with yellow, split 1 red at level 1, split 3 green at level 3. Total cost @f$ C_2(1A_1 + 4A_2 + 3A_1 + 10A_2) = C_2(4A_1 + 14A_2) @f$
+4. Start with yellow, split 1 red at level 1, split 1 green at level 2. Total cost @f$ C_2(1A_1 + 4A_2 + 1A_1 + 7A_2) = C_2(2A_1 + 11A_2) @f$
+
+It is obvious (4) have the lowest cost of splitting, and it is because it makes better split decisions at early stage of tree construction, while 
+keep the leaves imbalance unchanged. Now the problem is: given the structure of an arbitrary tree, can we find an algorithm to find the good splitting like (4)? 
 
 */

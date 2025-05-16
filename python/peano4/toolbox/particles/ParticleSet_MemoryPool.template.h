@@ -21,7 +21,7 @@
 #include "toolbox/particles/memorypool/VertexWiseContinuousMemoryPool.h"
 #include "toolbox/particles/memorypool/GlobalContinuousMemoryPool.h"
 
-// Template: peano4/toolbox/particles/ParticleSet_MemoryPool.template.h
+// Template: python/peano4/toolbox/particles/ParticleSet_MemoryPool.template.h
 
 {% for item in NAMESPACE -%}
   {% if not loop.last %}

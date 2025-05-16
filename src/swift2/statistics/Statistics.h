@@ -16,24 +16,15 @@ namespace swift2 {
      * This
      */
     template <typename Particle>
-    void reduceVelocityAndSearchRadius_without_check(
-      Particle*        particle
-    );
-
-    template <typename Particle>
-    void reduceVelocityAndSearchRadius(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-      if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
-        reduceVelocityAndSearchRadius_without_check(&localParticle);
-      }
+    bool reduceVelocityAndSearchRadiusUpdateParticlePredicate(
+      const peano4::datamanagement::VertexMarker& marker,
+      const Particle& localParticle
+    ) {
+      return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle);
     }
 
-    /**
-     * @todo This version is not yet available and likely will never vectorise anyway
-     */
     template <typename Particle>
-    void reduceVelocityAndSearchRadiusWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-      reduceVelocityAndSearchRadius(marker, localParticle);
-    }
+    void reduceVelocityAndSearchRadius(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle);
   } // namespace statistics
 } // namespace swift2
 

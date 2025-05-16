@@ -135,6 +135,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
             (*p)->getX(),
             partID,
             (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+            marker.x(),
             marker.h(),
             _spacetreeId,
             "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"
@@ -173,6 +174,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
           (*p)->getX(),
           partID,
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+          marker.x(),
           marker.h(),
           _spacetreeId,
           "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles"

@@ -3,13 +3,13 @@
 
 #include "GlidingAverageMeasurement.h"
 
-#include <cmath>
-#include <limits>
-#include <sstream>
-
 #include "tarch/Assertions.h"
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
+
+#include <cmath>
+#include <limits>
+#include <sstream>
 
 
 tarch::logging::Log tarch::timing::GlidingAverageMeasurement::_log("tarch::timing::GlidingAverageMeasurement");
@@ -119,3 +119,11 @@ double tarch::timing::GlidingAverageMeasurement::min() const {
   }
   return result;
 }
+
+
+bool tarch::timing::GlidingAverageMeasurement::hasFullSetOfMeasurements() const {
+  return _values.size() == _maxEntries;
+}
+
+
+int tarch::timing::GlidingAverageMeasurement::getObservationSpan() const { return _maxEntries; }

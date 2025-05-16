@@ -303,7 +303,10 @@ src/unittests/UnitTests*
 *patch-file*
 *.vtu
 *.pvd
+*.h5
 *.hdf5
+*.xmf
+*.xdmf
 *.nc
 *.bak
 *.err
