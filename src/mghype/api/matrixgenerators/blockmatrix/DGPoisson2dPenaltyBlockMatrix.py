@@ -33,12 +33,12 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         self._fs_labels_F = ["q+", "q-", "qf", "u+", "u-", "uf"] # projections of the normal derivative onto facets and "flux"
 
         # Penalty method parameters
-        self._theta = 1.0
-        self._gamma_F = 2 # this gives 2/h when scaled
+        # Parameters from 10.1016/j.jcp.2019.06.001: Matrix-free multigrid block-preconditioners for higher order discontinuous Galerkin discretisations
+        self._theta = -1.0
+        self._gamma_F = 1.25 * r_press * (r_press + 1) # this should be 1.25 * degree * (degree + 1) / h when scaled
+                                                       # We remove /h here because the contribution of this penalty term cannot be scaled separately from the first penalty term at the moment
 
-        # self._gamma_F = r_press * (r_press + 1) # this should be degree * (degree + 1) / h. 
-        #                                         # We remove /h here because the contribution of this penalty term cannot be scaled separately from the first penalty term at the moment
- 
+
         # All pairs of function spaces that couple
         self._coupling_CC = [(0, 0)] # _u_u
         

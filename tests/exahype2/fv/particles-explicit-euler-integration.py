@@ -75,6 +75,9 @@ fvSolver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     time_step_relaxation=time_step_relaxation_,
     unknowns=dimensions_,
     auxiliary_variables=0,
+)
+
+fvSolver.set_implementation(
     initial_conditions=initial_conditions_,
     boundary_conditions=boundary_conditions_,
     max_eigenvalue=eigenvalues_,
@@ -159,7 +162,7 @@ tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
 """,)
 
 tracing_action_set.descend_invocation_order = (
-    fvSolver._action_set_update_cell.descend_invocation_order + 1
+    fvSolver._action_set_update_patch.descend_invocation_order + 1
 )
 project.add_action_set_to_timestepping(tracing_action_set)
 project.add_action_set_to_initialisation(tracing_action_set)
@@ -169,7 +172,7 @@ project.set_load_balancing(
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 
-project = project.generate_Peano4_project("False")
+project = project.generate_Peano4_project(verbose=False)
 project.build(make_clean_first=True)
 
 print(fvSolver)

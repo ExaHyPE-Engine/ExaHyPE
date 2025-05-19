@@ -23,7 +23,8 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
       faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
 
     // next, we need to project solution on face onto the cell...
-    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
+    auto projection = repositories::{{SOLVER_INSTANCE}}.applyCellFromFaceMatrix(marker.x(), marker.h(), faceSol);
+
     // loop over each face, finish updating residual as we go
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
@@ -32,11 +33,18 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
         fineGridCell{{SOLVER_NAME}}.getResidual(f)- projection(f));
     }
 
+    // update global residual before multiplying by the preconditioner
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
+      double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
+    }
+
     // multiply by "smoother" / preconditioner
-    fineGridCell{{SOLVER_NAME}}.setResidual(
-      repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) 
-      * fineGridCell{{SOLVER_NAME}}.getResidual()
-    );
+    fineGridCell{{SOLVER_NAME}}.setResidual( repositories::{{SOLVER_INSTANCE}}.applyInvertedApproxSystemMatrix(
+      marker.x(),
+      marker.h(),
+      fineGridCell{{SOLVER_NAME}}.getResidual()
+    ));
 
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++) {
       double res = fineGridCell{{SOLVER_NAME}}.getResidual( i );
@@ -44,7 +52,6 @@ class ProjectIntoCellAndUpdateCellSolution(ActionSet):
       fineGridCell{{SOLVER_NAME}}.setSolution( i,
         fineGridCell{{SOLVER_NAME}}.getSolution( i ) + du
       );
-      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(res, marker.h());
       repositories::{{SOLVER_INSTANCE}}.updateGlobalSolutionUpdates(du, marker.h()(0));
       repositories::{{SOLVER_INSTANCE}}.updateMinMaxMeshSize( marker.h() );
     }

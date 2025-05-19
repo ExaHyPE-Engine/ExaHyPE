@@ -1,0 +1,231 @@
+/**
+
+@page documentation_tarch_task_fusion_strategies Task fusion strategies
+
+\tableofcontents
+
+Task fusion is one of the many magic knobs that can make a huge difference in 
+your application performance: If you use it too aggressively, it will hamper
+the speed of your code. If you don't use it properly, you'll suffer from high
+overhead - notably if you employ GPUs.
+
+## Prepare  
+
+To be able to fuse tasks, we have to assign tasks are unique number. A very 
+simple way to do this is to create a static marker. While it is possible to
+hardcode a task number, it is not particularly elegant and reasonable: If 
+you later combine two different applications, you have to be absolutely sure
+that they do not use the same index for different tasks. It is safer to 
+rely on the peano4::parallel::getTaskType() factory method to produce unique
+identifiers:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+static int residualTaskType     = peano4::parallel::getTaskType("UpdateResidualTask");
+tarch::multicore::TaskWithCopyOfFunctor* updateResidualTask = new tarch::multicore::TaskWithCopyOfFunctor(
+  residualTaskType,
+  tarch::multicore::Task::DefaultPriority,
+  updateResidualFunctor
+);  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+This is absolutely fine and works. However, it becomes convenient later on, if
+we have a way to access this task type number, i.e. if it is not embedded 
+somewhere in a function. In a proper task class, you can make it a static 
+field. We'll demonstrate workarounds for this later on.
+</div>
+
+As soon as your task type is not tarch::multicore::Task::DontFuse, the task's
+canFuse() routine will return true. Consequently, Peano's technical architecture
+will embed the spawned tasks into a queue and try to fuse the tasks from there.
+
+
+## Pick a task orchestration
+
+The task orchestration is controlled through tarch::multicore::setOrchestration().
+For every instance of a fusable task, we either insert this task into a queue
+(if it is ready) or we launch a helper task of type tarch::multicore::taskfusion::LogReadyTask
+which inserts the task as soon as all in-dependencies are met.
+
+@image html src/tarch/multicore/taskfusion/multicore_task_flow-01.png
+
+One the task is in the queue we spawn an instance of ProcessReadyTask.
+When this instance's run() is called, it checks if the underlying task has 
+already been completed. If so, it returns immediately. 
+
+If not, we check if we can do a whole set fo tasks in one rush (task fusion) or 
+we pick out that one relevant task and process this one, leaving all the 
+other tasks in the queue. The hope is that, at one point, there are enough
+tasks remaining, so another instance of ProcessReadyTask will trigger task 
+fusion.
+
+The default orchestration is determined through tarch::multicore::orchestration::createDefaultStrategy().
+You can reset the strategy manually. Most extension's Python interfaces provide
+a routine for this (e.g. exahype2.project.Project.set_multicore_orchestration()).
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+Before you continue, it is reasonable to enable the statistics mode of Peano 
+and to track how many tasks there are, on average, in the queue whenever an
+instance of ProcessReadyTask fires off, i.e. doesn't see that its underlying
+task has already completed. You get a feeling of the business of the system.
+</div>
+
+
+## Tweak the fusion kernel
+
+One of the purposes of task fusion - besides a reduction of overheads - is the
+capability to introduce bespoke compute kernels that handle a whole set of 
+tasks instead of a single one. They might even take them and ship them to a 
+GPU. For this, you have to overwrite tarch::multicore::Tasks::fuse(). The 
+default is just a while loop over tasks.
+
+
+## Tailor the task orchestration
+
+The default orchestration strategies do not distinguish different task types
+and they are not particularly bespoke. In most cases, you will have to tweak
+them to get good performance.
+Below are a few natural tweaks.
+To implement them, I recommend to create a new subclass of tarch::multicore::orchestration::Strategy
+based upon an existing default strategy and to amend it to your needs.
+
+
+An example of such a bespoke, tailored orchestration is 
+mghype::MultigridDefaultMulticoreOrchestration.
+
+
+### Status
+
+Whenever tarch::multicore::taskfusion::ProcessReadyTask::run() kicks off, it 
+invokes updateFuseStatistics() on the orchestration. We receive
+
+- the task type,
+- the current number of tasks in queue, and  
+- the average number of tasks in there.
+
+This allows to make statements on the load, as the stats are only updated if 
+the underlying tasks is not processed yet.
+
+
+### Disable tasks
+
+Let the task return instruction.maxTasks=0 to disable the fusion completely.
+In this case, the fusable tasks are spawned as native tasks. 
+This reduces overhead, but has to be used carefully: 
+On the one hand, tasks will not enter their fuse() operation anymore.
+On the other hand, task queue stats (size of queues, average size of queues, 
+process statistics) won't be updated anymore.
+
+
+### Timeouts
+
+If the average number of ready tasks in the queue is always smaller than
+the minimum number of tasks we'd need to fuse properly every time we
+hit the scheduling point, the host code does handle the fused tasks
+too quickly or they are too cheap. That likely means that cores on the host are
+underutilised, i.e. every time we enqueue a task, its ProcessReadyTask
+almost immediately kicks in. 
+
+One strategy to mitigate this is to spawn some fusable tasks as real tasks.
+You leave some of the tasks you could fuse to the CPU, hence delaying
+some of the ProcessReadyTask instances. If this is not possible, you can
+alternatively equip the processing with a timeout: When it becomes active
+and there are not enough fusable tasks, let it wait for a few milliseconds
+to see if more fusable tasks drop in.
+
+
+### Reduce fused batch size
+
+If the average number of ready tasks in the queue is higher than the
+max fused tasks every time a process ready task is invoked, the
+handling of the fused tasks is too slow. Again, we have two options.
+
+We could start to spawn more tasks as native tasks on the host. The CPU
+will be "more busy" with work, and the fused processing will get fewer
+tasks overall to process. In return, they have more time to handle their
+bunch of tasks, e.g. on an accelerator.
+
+
+
+
+### Distinguish different tasks types
+
+If you have only one single type of tasks, decisions are easy. However, most
+codes feature different (fusable) task types and hence want to make different
+fusion decisions depending on the type. In this case, your fuse() routine 
+resembles
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+tarch::multicore::orchestration::Strategy::FuseInstruction ...::fuse(int taskType) {
+  switch( taskType ) {
+    case 0:
+      return FuseInstruction(...);
+    case 1:
+      return FuseInstruction(...);
+  }
+  assertion(false);  
+  return FuseInstruction(tarch::multicore::Task::Host, 0, 1);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is obviously bad style. It is way more elegant to use static values of 
+classes rather than hard-coded constants.
+
+If you don't know the task numbers, you have to use a solution similar to the 
+one in mghype::MultigridDefaultMulticoreOrchestration:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+  private:
+    std::set< int >  _residualComputationTasks;
+     std::set< int >  _operatorInversionTasks;
+    
+[...]
+
+tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefaultMulticoreOrchestration::fuse(int taskType) {
+  if (
+    not _residualComputationTasks.contains(taskType)
+    and
+    not _operatorInversionTasks.contains(taskType)
+  ) {
+    if ( peano4::parallel::getClassNameOfType(taskType).find("UpdateResidualTask")!=std::string::npos ) {
+      _residualComputationTasks.insert( taskType );
+    }
+    if ( peano4::parallel::getClassNameOfType(taskType).find("InvertTask")!=std::string::npos ) {
+      _operatorInversionTasks.insert( taskType );
+    }
+  }
+[...]
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+## Further links
+
+- The namespace tarch::multicore::orchestration features a couple of 
+  pre-defined, hardcoded orchestration strategies.
+- The paper
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@InProceedings{10.1007/978-3-642-31464-3_68,
+author="Nogina, Svetlana and Unterweger, Kristof and Weinzierl, Tobias",
+editor="Wyrzykowski, Roman and Dongarra, Jack and Karczewski, Konrad and Wa{\'{s}}niewski, Jerzy",
+title="Autotuning of Adaptive Mesh Refinement PDE Solvers on Shared Memory Architectures",
+booktitle="Parallel Processing and Applied Mathematics",
+year="2012",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="671--680",
+isbn="978-3-642-31464-3"
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  provides some ideas how to find good parameters automatically. However, none
+  of these is implemented in the current code generation. 
+- In MGHyPE, we use
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    self._multicore_orchestration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  in mghype.matrixfree.api.Project to hard-code a configuration.  
+
+
+     
+*/

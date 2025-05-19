@@ -137,6 +137,16 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells(
   return result;
 }
 
+bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCellsByDimension(
+  const tarch::la::Vector<Dimensions, double>& x,
+  const int                                    dim,
+  double                                       scaleAdjacentCells,
+  double                                       tolerance
+) const {
+  bool result = tarch::la::smallerEquals(std::abs(x(dim) - (this->x())(dim)), scaleAdjacentCells * _h(dim), tolerance);
+  return result;
+}
+
 tarch::la::Vector<Dimensions, int> peano4::datamanagement::VertexMarker::getRelativeAdjacentCell(
   const tarch::la::Vector<Dimensions, double>& x
 ) const {

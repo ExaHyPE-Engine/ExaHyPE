@@ -45,6 +45,19 @@ namespace tarch {
     template<int Rows, int Cols, typename Scalar>
     Vector<Rows,Scalar> col(const Matrix<Rows,Cols,Scalar>& matrix, int whichColumn);
 
+    /**
+     * Inverts each individual entry
+     *
+     * Works if and only if the matrix does not contain any zeroes, as this
+     * routine yields
+     *
+     * @f$ A_{ij} \gets A_{ij}^{-1} @f4
+     *
+     * which is not @f$ A^{-1} @f$. If you want to have the inverse, you have
+     * to look, for example, into LUDecomposition.
+     *
+     * @see tarch::la::invert()
+     */
     template<int Rows, int Cols, typename Scalar>
     Matrix<Rows,Cols,Scalar> invertEntries (
       const Matrix<Rows,Cols,Scalar>&  matrix

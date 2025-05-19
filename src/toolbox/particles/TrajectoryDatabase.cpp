@@ -3,6 +3,7 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 
+#include <algorithm>
 #include <fstream>
 
 

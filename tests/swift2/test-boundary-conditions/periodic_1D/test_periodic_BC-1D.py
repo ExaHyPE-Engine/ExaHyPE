@@ -71,12 +71,20 @@ parser.add_argument(
     help="Peano4 directory",
 )
 parser.add_argument(
-    "-asserts",
+    "-a",
     "--asserts",
     dest="asserts",
     action="store_true",
     default=False,
     help="Switch on assertions",
+)
+parser.add_argument(
+    "-d",
+    "--debug",
+    dest="debug",
+    action="store_true",
+    default=False,
+    help="Switch on debug assertions",
 )
 args = parser.parse_args()
 
@@ -99,7 +107,7 @@ project = swift2.Project(
 
 particle = swift2.particle.LeapfrogFixedSearchRadius(
     name="GenericParticle",
-    cfl_factor=1.0,
+    cfl_factor=0.999,
     initial_time_step_size=args.timestep_size,
     particles_per_cell=0,
     min_h=args.cell_size,
@@ -109,9 +117,10 @@ particle = swift2.particle.LeapfrogFixedSearchRadius(
 particle_set = project.add_particle_species(particle)
 
 
-if args.asserts:
+if args.debug:
+    build_mode = peano4.output.CompileMode.Debug
+elif args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
-    #  build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
 
@@ -169,12 +178,12 @@ initialisation_snippet = (
   particle->setSearchRadius("""
     + str(search_radius)
     + """);
-  particle->setA( {0, 0, 0} );
+  particle->setA( {0.} );
 
   if( particle->getX(0) > 0.5 ){
-    particle->setV( {1, 0, 0} );
+    particle->setV( {-1.} );
   } else {
-    particle->setV( {-1, 0, 0} );
+    particle->setV( {1.} );
   }
 
   // hack to get a somewhat flexible, but always unique

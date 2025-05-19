@@ -73,4 +73,18 @@ then you'll get a page with the identifier
   paths are used. As long as pics reside within the same directory or a
   subdirectory, all should be fine.
 
+# What goes where
+
+It is always tricky to decide what documentation should go into tutorials and 
+what type of information does not fit in there. Our rule of thumb reads as 
+follows:
+
+- How parts of Peano, ExaHyPE, Swift, MGHyPE, ... are used belong into the tutorials.
+- How things are implemented is documented within the source code directly.
+- How the code is designed, the overarching architecture, how components 
+  interact, and so forth all goes into documentation.  
+
+
+ are in tutorials. How things are implemented go into documentation if they are high level. Otherwise they go straight into the in source docu. Numerics is a grey area but I decided to move them to the tutorials. 
+
 */

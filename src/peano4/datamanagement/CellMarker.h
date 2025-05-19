@@ -145,6 +145,9 @@ public:
    * This variant uses relativeEps() as defined in tarch/la/Scalar.h.
    *
    *
+   * @see   The routine calls the static isContained() routine and passes the
+   *        local attributes in.
+   *
    * @param tolerance Absolute tolerance when we compare two values.
    *
    */
@@ -159,6 +162,10 @@ public:
    * Evaluate if x is in a h/2 environment around cellCentre. We use
    * tarch::la comparison functions as we operate with floating point
    * values. tolerance is the tolerance we pass into these functions.
+   *
+   * See the other isContained() routine for a description, but keep in
+   * mind that this other routine refers to this place, i.e. this routine
+   * provides the actual behaviour.
    *
    * @param x          Point to query
    * @param cellCentre Centre of cell of interest

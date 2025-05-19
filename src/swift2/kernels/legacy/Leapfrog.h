@@ -51,12 +51,18 @@ namespace swift2 {
       void leapfrog_drift_global_time_step_size(Particle* particle);
 
       template <typename Particle>
-      void leapfrogDriftWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, localParticle)) {
-          leapfrog_drift_global_time_step_size(&localParticle);
-        }
+      bool leapfrogDriftWithGlobalTimeStepSizeParticleUpdatePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle& localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, localParticle);
       }
 
+      template <typename Particle>
+      void leapfrogDriftWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        assertion2(leapfrogDriftWithGlobalTimeStepSizeParticleUpdatePredicate(marker, localParticle), marker.toString(), localParticle.toString());
+        leapfrog_drift_global_time_step_size(&localParticle);
+      }
 
       /**
        * @brief Predict additional particle fields forward in time when drifting
@@ -70,28 +76,17 @@ namespace swift2 {
       void hydro_predict_extra(Particle* localParticle);
 
       template <typename Particle>
+      bool hydroPredictExtraUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle& localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle);
+      }
+
+      template <typename Particle>
       void hydroPredictExtra(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
-          hydro_predict_extra(&localParticle);
-        }
-      }
-
-
-      /**
-       * @todo No masking yet
-       */
-      template <typename Particle>
-      void hydroPredictExtraWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        hydroPredictExtra(marker, localParticle);
-      }
-
-
-      /**
-       * @todo No masking in here yet
-       */
-      template <typename Particle>
-      void leapfrogDriftWithGlobalTimeStepSizeWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        leapfrogDriftWithGlobalTimeStepSize(marker, localParticle);
+        assertion( hydroPredictExtraUpdateParticlePredicate(marker,localParticle) );
+        hydro_predict_extra(&localParticle);
       }
 
       /**
@@ -154,20 +149,18 @@ namespace swift2 {
       void leapfrog_kick_global_time_step_size(Particle* particle);
 
       template <typename Particle>
-      void leapfrogKickWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          leapfrog_kick_global_time_step_size(&localParticle);
-        }
+      bool leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle& localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
       }
 
-      /**
-       * @todo No maksing
-       */
       template <typename Particle>
-      void leapfrogKickWithGlobalTimeStepSizeWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        leapfrogKickWithGlobalTimeStepSize(marker, localParticle);
+      void leapfrogKickWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        assertion(leapfrogKickWithGlobalTimeStepSizeUpdateParticlePredicate(marker, localParticle));
+        leapfrog_kick_global_time_step_size(&localParticle);
       }
-
 
       /**
        * @brief Kick the additional variables
@@ -185,18 +178,17 @@ namespace swift2 {
       void hydro_kick_extra_global_time_step_size(Particle* localParticle);
 
       template <typename Particle>
-      void leapfrogKickExtraWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
-          hydro_kick_extra_global_time_step_size(&localParticle);
-        }
+      bool leapfrogKickExtraWithGlobalTimeStepSizeUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle& localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle);
       }
 
-      /**
-       * @Todo No masking yet
-       */
       template <typename Particle>
-      void leapfrogKickExtraWithGlobalTimeStepSizeWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        leapfrogKickExtraWithGlobalTimeStepSize(marker, localParticle);
+      void leapfrogKickExtraWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        assertion(leapfrogKickExtraWithGlobalTimeStepSizeUpdateParticlePredicate(marker,localParticle));
+        hydro_kick_extra_global_time_step_size(&localParticle);
       }
 
       /**
@@ -207,18 +199,14 @@ namespace swift2 {
       void hydro_reset_predicted_values(Particle* localParticle);
 
       template <typename Particle>
-      void resetPredictedValues(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
-          hydro_reset_predicted_values(&localParticle);
-        }
+      bool resetPredictedValuesUpdateParticlePredicate(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle);
       }
 
-      /**
-       * @todo No masking yet
-       */
       template <typename Particle>
-      void resetPredictedValuesWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        resetPredictedValues(marker, localParticle);
+      void resetPredictedValues(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        assertion(resetPredictedValuesUpdateParticlePredicate(marker,localParticle));
+        hydro_reset_predicted_values(&localParticle);
       }
     }
   } // namespace timestepping

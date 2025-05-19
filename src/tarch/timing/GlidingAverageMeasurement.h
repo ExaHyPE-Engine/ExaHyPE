@@ -4,10 +4,10 @@
 #pragma once
 
 
+#include "tarch/logging/Log.h"
+
 #include <string>
 #include <vector>
-
-#include "tarch/logging/Log.h"
 
 
 namespace tarch::timing {
@@ -30,8 +30,8 @@ private:
   /**
    * The weights q determine the weight via $q^0,q^1,q^2,...$.
    */
-  double _weight;
-  int    _maxEntries;
+  const double _weight;
+  const int    _maxEntries;
 
   /**
    * Data
@@ -57,6 +57,12 @@ public:
   double getStandardDeviation() const;
 
   /**
+   * @return Number of setValue() calls has exceeded the maxEntries argument
+   *   from the constructor
+   */
+  bool hasFullSetOfMeasurements() const;
+
+  /**
    * Is value accurate
    *
    * A value is accurate if its standard deviation divided by its mean is smaller than the factor.
@@ -76,4 +82,10 @@ public:
   double min() const;
 
   void erase();
+
+  /**
+   * @return How many values do feed into a single result, i.e. how many
+   *         entries do we keep track of?
+   */
+  int getObservationSpan() const;
 };
