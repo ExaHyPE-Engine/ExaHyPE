@@ -130,7 +130,7 @@ def create_constructor_implementation_for_error_measurement(
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
     _errorDatabase.setOutputFileName("{{FILENAME}}");
-    _errorDatabase.setDataName("l0-error,l2-error,l_inf-error");
+    _errorDatabase.setDataName("l1-error,l2-error,l_inf-error");
     // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
     _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});
     _errorDatabase.setTimeDeltaBetweenTwoSnapshots({{TIME_DELTA}});
