@@ -168,7 +168,7 @@ toolbox::blockstructured::GlobalDatabase::AddSnapshotAction toolbox::blockstruct
       return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Append;
   }
   else if(tarch::la::equals(_data.front().timestamp,timestamp)){
-      logWarning( "getAction(...)", "There were two values for same time stamp " << timestamp << ". This is inconsistent");
+      logWarning( "getAction()", "There were two values for same time stamp " << timestamp << ". This is inconsistent");
       return toolbox::blockstructured::GlobalDatabase::AddSnapshotAction::Replace;
   }
   else if(timestamp - _data.front().timestamp >=_timeDelta and _timeDelta>=0.0 ){
@@ -254,7 +254,7 @@ void toolbox::blockstructured::GlobalDatabase::addGlobalSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addSnapshot(...)", "Flushed database file (temporary flush - simulation has not terminated yet)" );
+    logInfo( "addGlobalSnapshot()", "Flushed database file (temporary flush - simulation has not terminated yet)" );
     _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
   }
 }
@@ -293,7 +293,7 @@ void toolbox::blockstructured::GlobalDatabase::addGlobalSnapshot(
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
-    logInfo( "addSnapshot(...)", "Flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
+    logInfo( "addGlobalSnapshot()", "Flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
     _thresholdForNextDatabaseFlush = _deltaBetweenTwoDatabaseFlushes;
   }
 }

@@ -20,56 +20,56 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   const tarch::la::Vector<Dimensions, double>&    cellSize,
   double                                          timeStamp,
   double                                          timeStepSize,
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS    Q,
+  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS         Q,
   double                                          errors[3]
 ) {
   errors[0] = 0.0;
   errors[1] = 0.0;
   errors[2] = 0.0;
 
-{% if DIMENSIONS==2 %}
+  {% if DIMENSIONS==2 %}
   const double cellVolume = cellSize[0] * cellSize[1];
-{% else %}
+  {% else %}
   const double cellVolume = cellSize[0] * cellSize[1] * cellSize[2];
-{% endif %}
+  {% endif %}
 
   double solution[{{NUMBER_OF_UNKNOWNS_PADDED}}];
   int linearisedIndex = 0;
 
   // Iterate over all quadrature points in the cell
   dfor(index, {{NUMBER_OF_DOF}}) {
-{% if DIMENSIONS==2 %}
-      double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]]
-        * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
-{% else %}
-      double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]]
-        * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]]
-        * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
-{% endif %}
+    {% if DIMENSIONS==2 %}
+    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]]
+      * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
+    {% else %}
+    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]]
+      * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]]
+      * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
+    {% endif %}
 
-      // Compute the exact solution
-      exactSolutionFunctor(
-        ::exahype2::dg::getQuadraturePoint(
-          cellCentre,
-          cellSize,
-          index,
-          {{NUMBER_OF_DOF}},
-          Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
-        ),
-        timeStamp,
-        timeStepSize,
-        &Q[linearisedIndex],
-        solution
-      );
+    // Compute the exact solution
+    exactSolutionFunctor(
+      ::exahype2::dg::getQuadraturePoint(
+        cellCentre,
+        cellSize,
+        index,
+        {{NUMBER_OF_DOF}},
+        Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
+      ),
+      timeStamp,
+      timeStepSize,
+      &Q[linearisedIndex],
+      solution
+    );
 
-      // Increment the respective errors
-      for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS_PADDED}}; unknown++) {
-        double error = std::abs(Q[linearisedIndex + unknown] - solution[unknown]);
-        errors[0] += weight * error; // L1 norm
-        errors[1] += weight * error * error; // L2 norm
-        errors[2] = std::max(errors[2], error); // L_inf norm
-      }
-
-      linearisedIndex += {{NUMBER_OF_DATA_PADDED}};
+    // Increment the respective errors
+    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS_PADDED}}; unknown++) {
+      double error = std::abs(Q[linearisedIndex + unknown] - solution[unknown]);
+      errors[0] += weight * error; // L1 norm
+      errors[1] += weight * error * error; // L2 norm
+      errors[2] = std::max(errors[2], error); // L_{inf} norm
     }
+
+    linearisedIndex += {{NUMBER_OF_DATA_PADDED}};
+  }
 }
