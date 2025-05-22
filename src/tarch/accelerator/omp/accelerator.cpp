@@ -4,6 +4,10 @@
 
 #if defined(GPUOffloadingOMP)
 
+#ifndef _OPENMP
+#error "_OPENMP is not defined. Please compile with OpenMP support enabled."
+#endif
+
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 

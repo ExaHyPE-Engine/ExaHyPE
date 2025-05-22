@@ -22,7 +22,7 @@
 #include "repositories/StepRepository.h"
 {%- endif %}
 
-{% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+{% if FENV == True -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
@@ -108,8 +108,8 @@ int main(int argc, char** argv) {
   peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
   {{NAMESPACE | join("::")}}::repositories::DataRepository::initDatatypes();
 
-  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
-  feenableexcept({{FENV_ARGS}});
+  {% if FENV == True -%}
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
   {% endif -%}
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {

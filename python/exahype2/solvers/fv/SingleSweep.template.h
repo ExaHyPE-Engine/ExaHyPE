@@ -5,7 +5,7 @@
 #include "Abstract{{CLASSNAME}}.h"
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
+namespace {{ item }} {
 {%- endfor %}
   class {{CLASSNAME}};
 {% for item in NAMESPACE -%}

@@ -7,7 +7,6 @@ import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
-from sweargs import SWEArgumentParser
 from FrictionLaws import *
 from ComputeFirstDerivatives import *
 
@@ -42,19 +41,21 @@ refinement_criterion = """
   return result;
 """
 
-parser = SWEArgumentParser()
+parser = exahype2.ArgumentParser()
 parser.set_defaults(
     end_time=1.0,
-    width=[1.58, 0.70],
 )
 args = parser.parse_args()
 
-max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
+size = [1.58, 0.70]
+max_h = (1.1 * min(size) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
-args.patch_size = args.dg_order * 2 + 1
 
-unknowns={"h": 1, "hu": 1, "hv": 1}
-auxiliary_variables={
+riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVRusanovSolver",
+    patch_size=args.degrees_of_freedom,
+    unknowns={"h": 1, "hu": 1, "hv": 1},
+    auxiliary_variables={
     "b": 1, # Elevation
     "hx": 1,
     "hy": 1,
@@ -70,13 +71,7 @@ auxiliary_variables={
     "vxy": 1,
     "bx": 1,
     "by": 1,
-}
-
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="FVRusanovSolver",
-    patch_size=args.patch_size,
-    unknowns=unknowns,
-    auxiliary_variables=auxiliary_variables,
+},
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
@@ -93,8 +88,6 @@ riemann_solver.set_implementation(
 )
 
 riemann_solver.set_plotter(args.plotter)
-riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
-riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 #riemann_solver._preprocess_reconstructed_patch = extrapolate_halo + compute_first_derivatives # TODO: Should be replaced by proper derivative computation within the solver
 
 project = exahype2.Project(
@@ -113,8 +106,8 @@ else:
 
 project.set_global_simulation_parameters(
     dimensions=2,
-    size=args.width,
-    offset=args.offset,
+    size=size,
+    offset=[0.0, 0.0],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -143,8 +136,6 @@ if args.load_balancing_strategy != "None":
 
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-if args.fpe:
-    project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
+project.set_fenv_handler(args.fpe)
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

@@ -79,6 +79,11 @@ class ADERDG(object):
         "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
         self._plotter_option = "PeanoPatch"
 
+        # Whether or not to plot information about the grid as well as information about the content of the patches
+        self._plot_grid_properties = plot_grid_properties
+        self._plot_description = ""
+        self._select_dofs_to_print = None
+
         """
         self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
         auxiliary variables in the equation to be computed. Unknowns are variables that change over
@@ -110,7 +115,7 @@ class ADERDG(object):
             self._unknowns = unknowns
         else:
             raise Exception(
-                "not a valid type for parameter unknowns, needs to be int or dictionary."
+                "Not a valid type for parameter unknowns, needs to be int or dictionary."
             )
 
         if type(auxiliary_variables) is dict:
@@ -123,8 +128,10 @@ class ADERDG(object):
             self._auxiliary_variables = auxiliary_variables
         else:
             raise Exception(
-                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
+                "Not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
             )
+
+        self._plot_description = ", ".join(self._variable_names)
 
         """
         Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
@@ -154,13 +161,6 @@ class ADERDG(object):
         self._solution_persistent_storage_precision = PrecisionType["double"]
         self._precompute_picard_precision           = False
         self._use_half_precision                    = False
-
-        # Whether or not to plot information about the grid as well as information about the content of the patches
-        self._plot_grid_properties = plot_grid_properties
-        self.plot_description = ""
-
-        self.plot_metadata = ""
-        self.select_dofs_to_print = None
 
         # Used by children classes or setters in order to add constants or includes to the corresponding part
         self._solver_constants = ""
@@ -824,9 +824,9 @@ Material parameters:    """
                   filename=output_path + "solution-" + self._name,
                   patch=self._previous_time_step,
                   dataset_name=self._unknown_identifier()+"_old",
-                  description=self.plot_description,
+                  description=self._plot_description,
                   mapping=mapping,
-                  select_dofs=self.select_dofs_to_print,
+                  select_dofs=self._select_dofs_to_print,
                   guard="repositories::plotFilter.plotPatch(marker) and "
                   + self._load_cell_data_default_guard(),
                   additional_includes="""
@@ -845,9 +845,9 @@ Material parameters:    """
                   filename=output_path + "solution-" + self._name,
                   patch=self._previous_time_step,
                   dataset_name=self._unknown_identifier()+"_old",
-                  description=self.plot_description,
+                  description=self._plot_description,
                   mapping=mapping,
-                  select_dofs=self.select_dofs_to_print,
+                  select_dofs=self._select_dofs_to_print,
                   guard="repositories::plotFilter.plotPatch(marker) and "
                   + self._load_cell_data_default_guard(),
                   additional_includes="""
@@ -895,7 +895,7 @@ Material parameters:    """
         step.add_action_set(self._action_set_postprocess_solution)
 
     def set_plot_description(self, description):
-        self.plot_description = description
+        self._plot_description = description
 
     def _generate_kernels(self, namespace, output, subdirectory, dimensions):
         if (not self._is_linear) and (

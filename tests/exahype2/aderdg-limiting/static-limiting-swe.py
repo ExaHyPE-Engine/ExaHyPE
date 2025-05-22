@@ -145,5 +145,5 @@ project.set_load_balancing(
 )
 project.set_Peano4_installation("../../../", build_mode)
 project = project.generate_Peano4_project(verbose=False)
-# project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")  # TODO: Static limiter crashes with this
+# project.set_fenv_handler(True)  # TODO: Static limiter crashes with this
 project.build(make_clean_first=True)

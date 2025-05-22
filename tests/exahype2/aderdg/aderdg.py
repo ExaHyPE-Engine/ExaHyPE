@@ -1,21 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import argparse
-
 import peano4
 import exahype2
 
 import scenarios
 
-modes = {
-    "release": peano4.output.CompileMode.Release,
-    "trace": peano4.output.CompileMode.Trace,
-    "assert": peano4.output.CompileMode.Asserts,
-    "stats": peano4.output.CompileMode.Stats,
-    "debug": peano4.output.CompileMode.Debug,
-}
-
-available_prec = {
+available_precisions = {
     "bf16", "fp16", "fp32", "fp64"
 }
 
@@ -29,63 +19,20 @@ available_scenarios = {
     "SWERestingLake": scenarios.SWERestingLake(),
 }
 
-parser = argparse.ArgumentParser(description="ExaHyPE 2 - ADER-DG Testing Script")
-
-parser.add_argument(
-    "-md",
-    "--mesh-depth",
-    type=int,
-    default=3,
-    help="Depth of coarsest mesh level, i.e if 2 is specified there will be 9 cells per dimension",
+parser = exahype2.ArgumentParser("ExaHyPE 2 - ADER-DG Testing Script")
+parser.add_argument("-pr", "--precision", default="fp64", help="|".join(available_precisions))
+parser.add_argument("-s", "--scenario", default=None, help="|".join(available_scenarios.keys()))
+parser.set_defaults(
+    min_depth=3,
+    degrees_of_freedom=3,  # order
 )
-parser.add_argument(
-    "-amr",
-    "--adaptivity-levels",
-    type=int,
-    default=0,
-    help="Number of AMR grid levels on top of hmax (0 by default)",
-)
-parser.add_argument(
-    "-o",
-    "--order",
-    type=int,
-    default=3,
-    help="DG Order"
-)
-parser.add_argument(
-    "-p",
-    "--polynomials",
-    type=int,
-    default=1,
-    help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
-)
-parser.add_argument(
-    "-m", "--mode", default="release", help="|".join(modes.keys())
-)
-parser.add_argument(
-    "-pr", "--precision", default="fp64", help="|".join(available_prec)
-)
-parser.add_argument(
-    "-s",
-    "--scenario",
-    default=None,
-    help="|".join(available_scenarios.keys()),
-)
-parser.add_argument(
-    "-pl",
-    "--plotter",
-    type=str,
-    default="PeanoPatch",
-    help="Choose which plotter to use: 'HDF5' or 'PeanoPatch'.",
-)
-
 args = parser.parse_args()
 
 if args.scenario is None:
     while True:
         try:
             s = input(
-                "Which of the following scenarios would you like to try out?\n"
+                "Which of the following scenarios would you like to test?\n"
                 + " - ".join(available_scenarios.keys())
                 + "\n"
             )
@@ -98,15 +45,11 @@ if args.scenario is None:
 else:
     scenario = available_scenarios[args.scenario]
 
-order = args.order
-max_h = 1.1 * scenario._domain_size / (3.0**args.mesh_depth)
-min_h = max_h * 3.0 ** (-args.adaptivity_levels)
+order = args.degrees_of_freedom
+max_h = 1.1 * scenario._domain_size / (3.0**args.min_depth)
+min_h = max_h * 3.0 ** (-args.amr_levels)
 
-polynomials = (
-    exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
-    if args.polynomials == 0
-    else exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto
-)
+polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
@@ -155,8 +98,7 @@ project.set_load_balancing(
     "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
-project.set_Peano4_installation("../../../", modes[args.mode])
+project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
+project.set_fenv_handler(True)
 project.build(make_clean_first=True)

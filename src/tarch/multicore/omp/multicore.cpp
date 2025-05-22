@@ -4,6 +4,10 @@
 
 #if defined(SharedOMP)
 
+#ifndef _OPENMP
+#error "_OPENMP is not defined. Please compile with OpenMP support enabled."
+#endif
+
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Task.h"

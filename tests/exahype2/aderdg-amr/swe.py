@@ -94,6 +94,6 @@ project.set_load_balancing(
 )
 project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
 project = project.generate_Peano4_project(verbose=False)
-#project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+#project.set_fenv_handler(True)
 
 project.build(make_clean_first=True)

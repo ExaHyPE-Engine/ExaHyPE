@@ -27,7 +27,7 @@
     Kokkos::MemoryTraits<Kokkos::Unmanaged>
   >;
 
-  const int viewSizeIn = numberOfPatches* {% if DIMENSIONS == 3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %};
+  const int viewSizeIn = numberOfPatches * {% if DIMENSIONS == 3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %};
   const int viewSizeOut = numberOfPatches * {% if DIMENSIONS == 3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %};
 
   double maxEigenvalueAfterTimeStep = 0.0;

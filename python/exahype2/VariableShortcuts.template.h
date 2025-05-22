@@ -3,11 +3,11 @@
 #pragma once
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
+namespace {{ item }} {
 {%- endfor %}
   class VariableShortcuts{{SOLVER_NAME}};
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
 
 /**
@@ -24,7 +24,7 @@
 #endif
 class {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}} {
 public:
-  static constexpr int NumberOfDistinctVariables  = {{VARIABLE_NAMES|length}};
+  static constexpr int NumberOfDistinctVariables = {{VARIABLE_NAMES|length}};
 
   // Positions of fields inside the unknown vector (solution vector) Q
   static constexpr int Q[NumberOfDistinctVariables + 1] = { {% for VARIABLE_NO in range(0, VARIABLE_NAMES|length-1) -%}

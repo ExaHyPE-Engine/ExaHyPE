@@ -28,7 +28,8 @@ GCC:
                             --enable-swift \
                             --enable-particles \
                             --enable-mghype \
-                            --enable-finiteelements"
+                            --enable-finiteelements \
+                            --with-netcdf"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -51,6 +52,7 @@ GCC_SharedOMP_MPI:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
+                            --with-netcdf \
                             --with-multithreading=omp \
                             --with-mpi=mpicxx"
   trigger:
@@ -74,7 +76,8 @@ Intel:
                             --enable-swift \
                             --enable-particles \
                             --enable-mghype \
-                            --enable-finiteelements"
+                            --enable-finiteelements \
+                            --with-netcdf"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -97,6 +100,7 @@ Intel_SharedOMP_MPI:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
+                            --with-netcdf \
                             --with-multithreading=omp \
                             --with-mpi=mpiicpx"
   trigger:
@@ -121,6 +125,7 @@ Intel_SharedOMP_MPI:
 #                             --enable-particles \
 #                             --enable-mghype \
 #                             --enable-finiteelements \
+#                             --with-netcdf \
 #                             --with-multithreading=sycl \
 #                             --with-mpi=mpiicpx"
 #   trigger:
@@ -144,7 +149,8 @@ LLVM:
                             --enable-swift \
                             --enable-particles \
                             --enable-mghype \
-                            --enable-finiteelements"
+                            --enable-finiteelements \
+                            --with-netcdf"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -167,6 +173,7 @@ LLVM_SharedOMP_MPI:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
+                            --with-netcdf \
                             --with-multithreading=omp \
                             --with-mpi=mpicxx"
   trigger:
@@ -190,7 +197,8 @@ NVIDIA:
                             --enable-swift \
                             --enable-particles \
                             --enable-mghype \
-                            --enable-finiteelements"
+                            --enable-finiteelements \
+                            --with-netcdf"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -212,7 +220,8 @@ AMD:
                             --enable-swift \
                             --enable-particles \
                             --enable-mghype \
-                            --enable-finiteelements"
+                            --enable-finiteelements \
+                            --with-netcdf"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
@@ -235,6 +244,7 @@ AMD_SharedOMP_MPI:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
+                            --with-netcdf \
                             --with-multithreading=omp \
                             --with-mpi=mpicxx"
   trigger:

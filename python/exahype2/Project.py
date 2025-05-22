@@ -13,7 +13,6 @@ import exahype2.solvers
 
 class Project(object):
     """!
-
     ExaHyPE 2 project
 
     Represents an ExaHyPE 2 project. An ExaHyPE 2 project is a Peano 4

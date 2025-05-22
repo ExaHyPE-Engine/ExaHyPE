@@ -15,7 +15,6 @@ import peano4.runner
 
 class Project (object):
   """!
-
   Represents a Peano 4 project.
 
   namespace Sequence of strings representing the (nested) namespace. Pass in
@@ -28,7 +27,6 @@ class Project (object):
   If you want to alter some global constants, you should manipulate
   the constants attribute. It will eventually feed into the generated
   file Constants.h. See peano4.output.Constants for further info.
-
   """
 
   def __init__(self, namespace, project_name, directory = ".", subdirectory = "", executable = ""):
@@ -87,8 +85,8 @@ class Project (object):
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
 
-  def set_fenv_handler(self, args):
-    self.main.d[ "FENV_ARGS" ] = args
+  def set_fenv_handler(self, value):
+    self.main.d["FENV"] = bool(value)
 
   def cleanup(self):
     """!

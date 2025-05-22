@@ -24,7 +24,7 @@
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
+namespace {{ item }} {
 {%- endfor %}
   class {{CLASSNAME}};
 {% for item in NAMESPACE -%}
@@ -35,8 +35,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
     {% if USE_VARIABLE_SHORTCUT is sameas True %}
     /*
-    * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
-    */
+     * Enables the usage of shortcuts to access variables, e.g. use Q[s::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+     */
     using s = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
     {% endif %}
 

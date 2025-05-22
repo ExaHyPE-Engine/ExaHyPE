@@ -2,16 +2,21 @@
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
 
-import peano4
-import exahype2
+import peano4.output.CompileMode
 
-
-class SWEArgumentParser(argparse.ArgumentParser):
-    def __init__(self):
-        super(SWEArgumentParser, self).__init__(
-            description="ExaHyPE 2 - Shallow Water Application Argument Parser"
+class ArgumentParser(argparse.ArgumentParser):
+    def __init__(self, title=None):
+        super(ArgumentParser, self).__init__(
+            description=title if title is not None else "ExaHyPE 2 Argument Parser"
         )
 
+        self.add_argument(
+            "-d",
+            "--dimensions",
+            type=int,
+            default=2,
+            help="Number of space dimensions.",
+        )
         self.add_argument(
             "-dt",
             "--time-step-size",
@@ -25,21 +30,6 @@ class SWEArgumentParser(argparse.ArgumentParser):
             type=float,
             default=0.5,
             help="Time step relaxation safety factor for adaptive time-stepping.",
-        )
-
-        self.add_argument(
-            "-width",
-            "--width",
-            type=str,
-            help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]).",
-        )
-
-        self.add_argument(
-            "-offset",
-            "--offset",
-            type=str,
-            default=[0, 0],
-            help="Specify offset of domain in meters as [x, y] as string (e.g. [-10, -10], [-7e6, -4e6]).",
         )
 
         self.add_argument(
@@ -62,6 +52,12 @@ class SWEArgumentParser(argparse.ArgumentParser):
             action="store_true",
             help="Use periodic boundary conditions in the y-axis.",
         )
+        self.add_argument(
+            "-pbc-z",
+            "--periodic-boundary-conditions-z",
+            action="store_true",
+            help="Use periodic boundary conditions in the z-axis.",
+        )
 
         self.add_argument(
             "-m",
@@ -75,7 +71,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
             "-et",
             "--end-time",
             type=float,
-            default=5.0,
+            default=0.5,
             help="End time of the simulation.",
         )
         self.add_argument(
@@ -87,24 +83,17 @@ class SWEArgumentParser(argparse.ArgumentParser):
         )
 
         self.add_argument(
-            "-ps",
-            "--patch-size",
+            "-dofs",
+            "--degrees-of-freedom",
             type=int,
-            default=16,
-            help="Number of finite volumes per axis (dimension) per patch.",
-        )
-        self.add_argument(
-            "-dg",
-            "--dg-order",
-            type=int,
-            default=5,
-            help="Order of discretisation for Discontinuous Galerkin.",
+            default=4,
+            help="Degrees of freedom of a patch. For FV: Number of finite volumes per axis (dimension) per patch. For DG: Order of discretisation.",
         )
         self.add_argument(
             "-md",
             "--min-depth",
             type=float,
-            default=5,
+            default=6,
             help="Determines maximum size of a single cell on each axis.",
         )
         self.add_argument(
@@ -140,6 +129,12 @@ class SWEArgumentParser(argparse.ArgumentParser):
             help="Number of trees (partitions) per rank after initial decomposition.",
         )
         self.add_argument(
+            "--threads",
+            type=int,
+            default=0,
+            help="Number of threads per rank.",
+        )
+        self.add_argument(
             "-ti",
             "--print-time-interval",
             type=int,
@@ -154,7 +149,7 @@ class SWEArgumentParser(argparse.ArgumentParser):
         )
         self.add_argument(
             "-e",
-            "--use_enclave_tasking",
+            "--use-enclave-tasking",
             default=False,
             action="store_true",
             help="Use enclave tasking.",
