@@ -327,7 +327,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 #pragma clang loop unroll(disable)
     for (int k = 0; k < 3; k++)
     for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++) dtgamma[i][j] += g_cov[k][i]*BB[j][k] + g_cov[k][j]*BB[i][k] - 2./3. *g_cov[i][j]*BB[k][k] + 2.*beta[k]*DD[k][i][j];
+    for (int i = 0; i < 3; i++) dtgamma[i][j] += g_cov[k][i]*BB[j][k] + g_cov[k][j]*BB[i][k] - 2./3. *g_cov[i][j]*BB[k][k] + (1-CCZ4SO)*2.*beta[k]*DD[k][i][j]; 
+    //Han-24-03-2025: if SO is enabled this term is advection. thus need to be treated differently 
 
     // MATMUL(Aex,Amix)
     double Atemp[3][3]={0,0,0,0,0,0,0,0,0};
@@ -355,10 +356,11 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     double dtTraceK = -nablanablaalphaSrc + alpha*(RPlusTwoNablaZSrc + traceK*traceK - 2.0*CCZ4c*Theta*traceK) - 3.0*alpha*CCZ4k1*(1.+CCZ4k2)*Theta/alpha;
 
     // Baojiu-01-08-22: multiplied the second term on the RHS by phi in the equation below
-    double dtchi = beta[0]*PP[0] + beta[1]*PP[1] + beta[2]*PP[2] + np/3.*(alpha*traceK-traceB)*chi; // Baojiu-13-06-23: changed to chi=phi^n
+    double dtchi = (1-CCZ4SO)*(beta[0]*PP[0] + beta[1]*PP[1] + beta[2]*PP[2]) + np/3.*(alpha*traceK-traceB)*chi; // Baojiu-13-06-23: changed to chi=phi^n
+    //Han-24-03-2025: if SO is enabled this term is advection. thus need to be treated differently 
 
     // Baojiu-01-08-22: multiplied the first term on the RHS by alpha in the equation below
-    double dtalpha = -alpha*alpha*fa*(traceK-K0-2.*CCZ4c*Theta)+beta[0]*AA[0]+beta[1]*AA[1]+beta[2]*AA[2];
+    double dtalpha = -alpha*alpha*fa*(traceK-K0-2.*CCZ4c*Theta)+ (1-CCZ4SO)*(beta[0]*AA[0]+beta[1]*AA[1]+beta[2]*AA[2]); //Han-24-03-2025: if SO is enabled this term is advection. thus need to be treated differently 
 
     double Aupdown = 0;
     #pragma clang loop unroll(disable)
@@ -414,7 +416,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     double dtbeta[3];
 #pragma clang loop unroll(disable)
     for (int i = 0; i < 3; i++) dtbeta[i] = CCZ4f*myb[i];
-    for (int i = 0; i < 3; i++) dtbeta[i] += CCZ4bs*(beta[0]*BB[0][i] + beta[1]*BB[1][i] + beta[2]*BB[2][i]);
+    for (int i = 0; i < 3; i++) dtbeta[i] += CCZ4bs*(1-CCZ4SO)*(beta[0]*BB[0][i] + beta[1]*BB[1][i] + beta[2]*BB[2][i]); //Han-24-03-2025: if SO is enabled this term is advection. thus need to be treated differently 
     for (int i = 0; i < 3; i++) dtbeta[i] *= CCZ4sk;
 
     // Auxiliary variables
