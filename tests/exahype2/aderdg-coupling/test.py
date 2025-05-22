@@ -188,11 +188,7 @@ project.set_load_balancing(
     "new ::exahype2::LoadBalancingConfiguration(0.98)",
 )
 project.set_Peano4_installation("../../../", modes[args.mode])
-project = project.generate_Peano4_project("False")
-project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+project = project.generate_Peano4_project(verbose=False)
+project.set_fenv_handler(True)
 
 project.build(make_clean_first=True)
-
-print(args)
-print(solver)
-print(project)

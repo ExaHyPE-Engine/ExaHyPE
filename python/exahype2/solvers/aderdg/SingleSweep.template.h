@@ -14,7 +14,6 @@ namespace {{ item }} {
 }
 {%- endfor %}
 
-
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   private:
     static tarch::logging::Log _log;

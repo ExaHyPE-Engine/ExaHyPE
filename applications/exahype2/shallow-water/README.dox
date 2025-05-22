@@ -86,7 +86,7 @@ We require the NetCDF library and Git LFS.
     cd myPeanoDirectory
     pip3 install -e .
     mkdir build && cd build
-    CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp -DWITH_NETCDF=ON
+    CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_NETCDF=ON
     make -j && make test
     cd ../applications/exahype2/shallow-water/scenario/
     python3 scenario.py
@@ -95,10 +95,8 @@ We require the NetCDF library and Git LFS.
 
     cd myPeanoDirectory
     pip3 install -e .
-    export NETCDF_INCLUDE_DIR=$(pkg-config --cflags-only-I netcdf)
-    export NETCDF_LIBRARY_DIR=$(pkg-config --libs-only-L --libs-only-l netcdf)
     libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-    CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp --with-netcdf CXXFLAGS="-std=c++20 -O3 -fopenmp -Wno-attributes $NETCDF_INCLUDE_DIR" LDFLAGS="-fopenmp $NETCDF_LIBRARY_DIR"
+    CC=gcc CXX=g++ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-netcdf CXXFLAGS="-std=c++20"
     make -j && make check
     cd applications/exahype2/shallow-water/scenario/
     python3 scenario.py

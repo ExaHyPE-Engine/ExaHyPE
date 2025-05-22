@@ -40,7 +40,7 @@
 
 #include <iomanip>
 
-{% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+{% if FENV == True -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
@@ -185,7 +185,9 @@ bool selectNextAlgorithmicStep() {
 
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
 
-      peano4::parallel::Node::getInstance().setNextProgramStep({{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution));
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution)
+      );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     } else if (
@@ -226,7 +228,9 @@ bool selectNextAlgorithmicStep() {
 
       nextMaxCheckpointTimeStamp = std::max(nextMaxCheckpointTimeStamp, nextMinCheckpointTimeStamp);
 
-      peano4::parallel::Node::getInstance().setNextProgramStep({{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::CheckpointSolution));
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::CheckpointSolution)
+      );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     } else if ({{SUBNAMESPACE}}repositories::getMinTimeStamp() < {{SUBNAMESPACE}}MinTerminalTime and {{SUBNAMESPACE}}repositories::getMaxTimeStamp() < {{SUBNAMESPACE}}MaxTerminalTime) {
@@ -460,8 +464,8 @@ int main(int argc, char** argv) {
   td_init((void *) &main);
 #endif
 
-  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
-  feenableexcept({{FENV_ARGS}});
+  {% if FENV == True -%}
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
   {% endif -%}
 
   {{SUBNAMESPACE}}repositories::initLogFilters();
@@ -486,34 +490,15 @@ int main(int argc, char** argv) {
     }
 
     if (timeStepMeasurement.getNumberOfMeasurements() > 0) {
-      logInfo(
-        "main()",
-        "Average cell updates per second: " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue()
-      );
-      logInfo(
-        "main()",
-        "Average time per mesh sweep:     " << timeStepMeasurement.getValue() <<
-        "s\t"
-      );
-      logInfo(
-        "main()",
-        "Time stepping:                   " << timeStepMeasurement.getAccumulatedValue() <<
-        "s\t" << timeStepMeasurement.toString()
-      );
+      logInfo("main()", "Average cell updates per second: " << repositories::loadBalancer.getGlobalNumberOfInnerUnrefinedCells() / timeStepMeasurement.getValue());
+      logInfo("main()", "Average time per mesh sweep:     " << timeStepMeasurement.getValue() << "s\t");
+      logInfo("main()", "Time stepping:                   " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
     }
     if (gridConstructionMeasurement.getNumberOfMeasurements() > 0) {
-      logInfo(
-        "main()",
-        "Initial grid construction:       " << gridConstructionMeasurement.getAccumulatedValue() <<
-        "s\t" << gridConstructionMeasurement.toString()
-      );
+      logInfo("main()", "Initial grid construction:       " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
     }
     if (plotMeasurement.getNumberOfMeasurements() > 0) {
-      logInfo(
-        "main()",
-        "Plotting:                        " << plotMeasurement.getAccumulatedValue() <<
-        "s\t" << plotMeasurement.toString()
-      );
+      logInfo("main()", "Plotting:                        " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
     }
   } else {
     while (peano4::parallel::Node::getInstance().continueToRun()) {

@@ -49,6 +49,7 @@ except ImportError:
 if havematplotlib:
     import exahype2.postprocessing
 
+from .ArgumentParser import ArgumentParser
 from .Project import Project
 from .ExaHyPEMain import ExaHyPEMain
 

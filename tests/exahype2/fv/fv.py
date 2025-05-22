@@ -1,133 +1,14 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import argparse
-
 import peano4
 import exahype2
-
-parser = argparse.ArgumentParser(
-    description="ExaHyPE 2 - Finite Volumes Testing Script"
-)
 
 available_precisions = [
     "float", "double"
 ]
 
-parser.add_argument(
-    "-pr",
-    "--precision",
-    default="float",
-    choices=available_precisions,
-    help="|".join(available_precisions),
-)
-parser.add_argument(
-    "-d",
-    "--dimensions",
-    type=int,
-    default=2,
-    help="Number of space dimensions.",
-)
-parser.add_argument(
-    "-m",
-    "--build-mode",
-    choices=peano4.output.CompileModes,
-    default=peano4.output.CompileModes[0], # Release
-    help="|".join(peano4.output.CompileModes),
-)
-parser.add_argument(
-    "-et",
-    "--end-time",
-    type=float,
-    default=1.0,
-    help="End time of the simulation.",
-)
-parser.add_argument(
-    "-ns",
-    "--number-of-snapshots",
-    type=int,
-    default=20,
-    help="Number of snapshots (plots).",
-)
-parser.add_argument(
-    "-ps",
-    "--patch-size",
-    type=int,
-    default=16,
-    help="Number of finite volumes per axis (dimension) per patch.",
-)
-parser.add_argument(
-    "-md",
-    "--min-depth",
-    type=float,
-    default=6,
-    help="Determines maximum size of a single cell on each axis.",
-)
-parser.add_argument(
-    "-amr",
-    "--amr-levels",
-    type=int,
-    default=0,
-    help="Number of AMR grid levels on top of max. size of a cell.",
-)
-available_load_balancing_strategies = [
-    "SpreadOut",
-    "SpreadOutOnceGridStagnates",
-]
-parser.add_argument(
-    "-lbs",
-    "--load-balancing-strategy",
-    choices=available_load_balancing_strategies,
-    default="SpreadOut",
-    help="|".join(available_load_balancing_strategies),
-)
-parser.add_argument(
-    "-lbq",
-    "--load-balancing-quality",
-    type=float,
-    default=0.99,
-    help="The quality of the load balancing.",
-)
-parser.add_argument(
-    "--trees",
-    type=int,
-    default=-1,
-    help="Number of trees (partitions) per rank after initial decomposition.",
-)
-parser.add_argument(
-    "-fpe",
-    "--fpe",
-    action="store_true",
-    help="Enable a floating-point exception handler.",
-)
-parser.add_argument(
-    "-pbc-x",
-    "--periodic-boundary-conditions-x",
-    action="store_true",
-    default=True,
-    help="Use periodic boundary conditions in the x-axis.",
-)
-parser.add_argument(
-    "-pbc-y",
-    "--periodic-boundary-conditions-y",
-    action="store_true",
-    default=False,
-    help="Use periodic boundary conditions in the y-axis.",
-)
-parser.add_argument(
-    "-pbc-z",
-    "--periodic-boundary-conditions-z",
-    action="store_true",
-    default=False,
-    help="Use periodic boundary conditions in the z-axis.",
-)
-parser.add_argument(
-    "-o",
-    "--output",
-    type=str,
-    default="solutions",
-    help="Output path for project solutions output. The project will create a new folder at the given path. Default is 'solutions'.",
-)
-
+parser = exahype2.ArgumentParser("ExaHyPE 2 - Finite Volumes Testing Script")
+parser.add_argument("-pr", "--precision", default="float", help="|".join(available_precisions))
 args = parser.parse_args()
 
 initial_conditions = """
@@ -163,7 +44,7 @@ min_h = max_h * 3.0**(-args.amr_levels)
 
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
-    patch_size=16,
+    patch_size=args.degrees_of_freedom,
     unknowns={"v": args.dimensions},
     auxiliary_variables=0,
     min_volume_h=min_h,
@@ -183,8 +64,6 @@ fv_solver.set_implementation(
 """,
     max_eigenvalue="return 1.0;",
 )
-
-fv_solver.plot_description = ", ".join({"v": args.dimensions}.keys())
 
 fv_solver.set_solver_precisions(
   storage_precision = args.precision,
@@ -239,7 +118,5 @@ if args.load_balancing_strategy != "None":
 
 project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-if args.fpe:
-    project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
+project.set_fenv_handler(args.fpe)
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

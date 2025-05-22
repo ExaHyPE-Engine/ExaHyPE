@@ -7,8 +7,7 @@ import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
-from sweargs import SWEArgumentParser
-from SWE import *
+from PDE import *
 from HLLEM import hllem
 
 define_radial_dam = """
@@ -60,23 +59,20 @@ limiting_criterion = define_radial_dam + """
   return distanceFromOrigin < DAM_RADIUS * 2; // Everything outside the dam (includes the dry ring) shall be limited
 """
 
-parser = SWEArgumentParser()
+parser = exahype2.ArgumentParser()
 parser.set_defaults(
     end_time=1.0,
-    width=[10.0, 10.0],
 )
 args = parser.parse_args()
 
-max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
+size = [10.0, 10.0]
+max_h = (1.1 * min(size) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
-args.patch_size = args.dg_order * 2 + 1
-
-unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1}
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
-    order=args.dg_order,
-    unknowns=unknowns,
+    order=args.degrees_of_freedom,
+    unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1},
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
@@ -88,18 +84,15 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     ncp=nonconservative_product,
     eigenvalues=max_eigenvalue,
 )
-aderdg_solver.set_plotter(args.plotter)
-aderdg_solver.plot_description = ", ".join(unknowns.keys())
-aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
-unknowns = {"h": 1, "hu": 1, "hv": 1}
-auxiliary_variables = {"b": 1}
+aderdg_solver.set_plotter(args.plotter)
+aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
 riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="HLLEMSolver",
-    patch_size=args.patch_size,
-    unknowns=unknowns,
-    auxiliary_variables=auxiliary_variables,
+    patch_size=args.degrees_of_freedom * 2 + 1,
+    unknowns={"h": 1, "hu": 1, "hv": 1},
+    auxiliary_variables={"b": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
@@ -112,8 +105,6 @@ riemann_solver.set_implementation(
 )
 
 riemann_solver.set_plotter(args.plotter)
-riemann_solver.plot_description = ", ".join(unknowns.keys()) + ", "
-riemann_solver.plot_description += ", ".join(auxiliary_variables.keys())
 
 limiting_solver = exahype2.solvers.limiting.StaticLimiting(
     name="LimitingSolver",
@@ -140,8 +131,8 @@ else:
 
 project.set_global_simulation_parameters(
     dimensions=2,
-    size=args.width,
-    offset=args.offset,
+    size=size,
+    offset=[0.0, 0.0],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -170,8 +161,6 @@ if args.load_balancing_strategy != "None":
 
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
-if args.fpe:
-    project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
+project.set_fenv_handler(args.fpe)
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

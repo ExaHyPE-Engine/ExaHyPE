@@ -7,11 +7,7 @@ import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
-from args import NavierStokesArgumentParser
-from pde import max_eigenvalue, flux
-
-size = [1.0, 1.0, 1.0]
-offset = [0.0, 0.0, 0.0]
+from PDE import max_eigenvalue, flux
 
 initial_conditions = """
   Q[s::rho] = 0.1;
@@ -48,18 +44,17 @@ refinement_criterion = """
   return result;
 """
 
-parser = NavierStokesArgumentParser()
+parser = exahype2.ArgumentParser("ExaHyPE 2 Navier-Stokes Breaking Dam Argument Parser")
 args = parser.parse_args()
 
+size = [1.0, 1.0, 1.0]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
-unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1}
-
 riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
-    patch_size=args.patch_size,
-    unknowns=unknowns,
+    patch_size=args.degrees_of_freedom,
+    unknowns={"rho": 1, "rhoU": args.dimensions, "rhoE": 1},
     auxiliary_variables=0,
     min_volume_h=min_h,
     max_volume_h=max_h,
@@ -77,13 +72,12 @@ riemann_solver.set_implementation(
 )
 
 riemann_solver.set_plotter(args.plotter)
-riemann_solver.plot_description = ", ".join(unknowns.keys())
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "navierstokes"],
     project_name="BreakingDam",
     directory=".",
-    executable=f"BreakingDam.{args.build_mode}",
+    executable=f"BreakingDam{args.dimensions}D.{args.build_mode}",
 )
 project.add_solver(riemann_solver)
 
@@ -96,7 +90,7 @@ else:
 project.set_global_simulation_parameters(
     dimensions=args.dimensions,
     size=size[0:args.dimensions],
-    offset=offset[0:args.dimensions],
+    offset=[0.0, 0.0, 0.0][0:args.dimensions],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -126,9 +120,7 @@ if args.load_balancing_strategy != "None":
 
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
+project.set_fenv_handler(args.fpe)
 project.output.makefile.set_target_device(args.target_device)
-if args.fpe:
-    project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
 project.output.makefile.add_CXX_flag("-DGAMMA=1.4")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

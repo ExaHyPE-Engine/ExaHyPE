@@ -196,7 +196,7 @@ The type of load balancer can greatly impact the speedup and overall performance
 For an overview of available load balancers refer to the documentation.
 """
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    "toolbox::loadbalancing::strategies::SpreadOut",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 
@@ -206,8 +206,6 @@ This helps us to resolve any dependencies.
 Additionally, we specify the build mode which you can also change to a different mode.
 """
 my_project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(compile_mode))
-
-#my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 """
 We generate and grab the underlying core project of 'Peano4'.

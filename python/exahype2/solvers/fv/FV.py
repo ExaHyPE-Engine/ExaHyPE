@@ -187,9 +187,12 @@ class FV(object):
         "Set from the project script to choose between PlotPatchesInPeanoBlockFormat and PlotPatchesInHDF5Format"
         self._plotter_option = "PeanoPatch"
 
+        self._plot_grid_properties = plot_grid_properties
+        self._plot_description = ""
+        self._select_dofs_to_print = None
+
         self._min_volume_h = min_volume_h
         self._max_volume_h = max_volume_h
-        self._plot_grid_properties = plot_grid_properties
 
         self._patch_size = patch_size
         self._overlap = overlap
@@ -244,6 +247,8 @@ class FV(object):
                 "Not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
             )
 
+        self._plot_description = ", ".join(self._variable_names)
+
         self._solver_constants = ""
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
@@ -258,9 +263,6 @@ class FV(object):
             )
 
         self._solver_template_file_class_name = None
-
-        self._plot_description = ""
-        self.select_dofs_to_print = None
 
         self._action_set_initial_conditions = None
         self._action_set_initial_conditions_for_grid_construction = None
@@ -1223,7 +1225,7 @@ The finest mesh width of """
 """,
             precision="PlotterPrecision",
             dataType=self._storage_precision,
-            select_dofs=self.select_dofs_to_print,
+            select_dofs=self._select_dofs_to_print,
             # restart_preprocess=restart_from_checkpoint
         )
         elif self._plotter_option == "PeanoPatch":
@@ -1241,7 +1243,7 @@ The finest mesh width of """
             precision="PlotterPrecision",
             dataType=self._storage_precision,
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            select_dofs=self.select_dofs_to_print,
+            select_dofs=self._select_dofs_to_print,
         )
 
         plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order

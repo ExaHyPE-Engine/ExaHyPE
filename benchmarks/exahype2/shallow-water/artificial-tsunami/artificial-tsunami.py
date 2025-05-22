@@ -7,10 +7,10 @@ import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath("../../../../applications/exahype2/shallow-water"))
-from SWE import *
+from PDE import *
 
 end_time = 10.0
-width = [10000, 10000]  # [m]
+size = [10000, 10000]  # [m]
 offset = [-5000, -5000]  # [m]
 min_depth = 4
 amr_levels = 0
@@ -60,7 +60,7 @@ refinement_criterion = """
   return result;
 """
 
-max_h = 1.1 * min(width) / (3.0**min_depth)
+max_h = 1.1 * min(size) / (3.0**min_depth)
 min_h = max_h * 3.0 ** (-amr_levels)
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
@@ -78,7 +78,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     ncp=nonconservative_product,
     eigenvalues=max_eigenvalue,
 )
-aderdg_solver.plot_description = ", ".join({"h": 1, "hu": 1, "hv": 1, "b": 1}.keys())
+
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 
 project = exahype2.Project(
@@ -97,7 +97,7 @@ else:
 
 project.set_global_simulation_parameters(
     dimensions=2,
-    size=width,
+    size=size,
     offset=offset,
     min_end_time=end_time,
     max_end_time=end_time,
@@ -118,11 +118,8 @@ if load_balancing_strategy != "None":
     )
     project.set_load_balancing(strategy, configuration)
 
-project.set_Peano4_installation(
-    "../../../../", mode=peano4.output.string_to_mode(build_mode)
-)
+project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(build_mode))
 project = project.generate_Peano4_project(verbose=False)
-project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-
+project.set_fenv_handler(True)
 project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
