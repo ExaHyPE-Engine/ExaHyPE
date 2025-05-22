@@ -245,19 +245,6 @@ void applications::exahype2::ccz4::CCZ4::boundaryConditions(
 }
 
 
-double applications::exahype2::ccz4::CCZ4::maxEigenvalue(
-  const double * __restrict__ Q, // Q[59+0],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal
-)
-{
-   return maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes);
-}
-
-
 void applications::exahype2::ccz4::CCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[59+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -268,9 +255,8 @@ void applications::exahype2::ccz4::CCZ4::maxEigenvalue(
   double* __restrict__                         maxEigenvalue
 )
 {
-   maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue, Offloadable::Yes);
+   applications::exahype2::ccz4::CCZ4::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, maxEigenvalue, Offloadable::Yes);
 }
-
 
 void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
