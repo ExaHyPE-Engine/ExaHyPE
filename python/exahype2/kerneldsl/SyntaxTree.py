@@ -315,8 +315,8 @@ class Integer(Expression):
     def __add__(self, rhs):
         if self._value == 0:
             return rhs
-        if type(rhs) is Integer and rhs._value == 0:
-            return self
+        if type(rhs) is Integer:
+            return Integer(self._value + rhs._value)
         return BinaryOperation("+", self, rhs)
 
     def __sub__(self, rhs):
@@ -326,10 +326,8 @@ class Integer(Expression):
             if type(rhs) is UnaryOperation and rhs._operation == "-":
                 return rhs._operand
             return -rhs
-        if type(rhs) is Integer and rhs._value == 0:
-            return self
-        if type(rhs) is Integer and rhs._value == self._value:
-            return Integer(0)
+        if type(rhs) is Integer:
+            return Integer(self._value - rhs._value)
         return BinaryOperation("-", self, rhs)
     
     def __mul__(self, rhs):
@@ -533,8 +531,8 @@ class DataBlock(Expression):
         index_list = indices[0:-1]
         for i in range(0, len(dimensions) - 1):
             factors.append(factors[-1] * (self._memory_range[i][1]))
-        if dimensions[-len(index_list)][0] == Integer(0) and type(dimensions[-len(index_list)][1]) is not BinaryOperation and dimensions[-len(index_list)][1] == Integer(1):
-            index = Integer(0)
+        if type(dimensions[-len(index_list)][1] - dimensions[-len(index_list)][0]) is Integer and (dimensions[-len(index_list)][1] - dimensions[-len(index_list)][0])._value == 1:
+            index = self._offset[offset_start_index]
         else:
             if type(self._offset[offset_start_index + 0].get_type()) is TDataBlock:
                 index = index_list[0] + self._offset[offset_start_index + 0].multidimensional_index(index_list, offset_start_index)
@@ -544,8 +542,6 @@ class DataBlock(Expression):
         index = factors[-len(index_list)] * index
         for i in range(1, len(index_list)):
             if type(self._offset[offset_start_index + i].get_type()) is TDataBlock:
-                print ("Here")
-                print(type(self._offset[offset_start_index + i]))
                 temp = index_list[i] + self._offset[offset_start_index + i].multidimensional_index(indices, offset_start_index)
             else:
                 temp = index_list[i] + self._offset[offset_start_index + i]
@@ -645,6 +641,9 @@ class Subscript(Expression):
         self._value = value
         self._index = index
     
+    def __neg__(self):
+        return UnaryOperation("-", self)
+
     def get_type(self):
         return self._value.get_type()
 
@@ -1030,7 +1029,9 @@ class DataBlockBinaryOperation(Expression):
         if type(self._lhs.get_type()) is TDataBlock and type(self._rhs.get_type()) is TDataBlock:
             self._iteration_range = copy.deepcopy(self._lhs._iteration_range)
             self._memory_range = copy.deepcopy(self._lhs._memory_range)
-            if type(self._rhs._iteration_range[0][1]) is not BinaryOperation and  type(self._iteration_range[0][1]) is not BinaryOperation and self._rhs._iteration_range[0][1] > self._iteration_range[0][1]:
+            if len(self._iteration_range) == 1:
+                self._iteration_range = copy.deepcopy(self._rhs._iteration_range)
+            elif type(self._rhs._iteration_range[0][1]) is not BinaryOperation and  type(self._iteration_range[0][1]) is not BinaryOperation and self._rhs._iteration_range[0][1] > self._iteration_range[0][1]:
                 self._iteration_range[0][1] = self._rhs._iteration_range[0][1]
             elif type(self._iteration_range[0][1]) is not BinaryOperation and self._iteration_range[0][1] == Integer(1):
                 self._iteration_range[0][1] = self._rhs._iteration_range[0][1]
@@ -1078,6 +1079,12 @@ class DataBlockBinaryOperation(Expression):
             return TDataBlock(self._iteration_range, String("double"))
         else:
             return TDataBlock(self._iteration_range, String("int"))
+
+    def __sub__(self, rhs):
+        return DataBlockBinaryOperation("-", self, rhs)
+    
+    def __add__(self, rhs):
+        return DataBlockBinaryOperation("+", self, rhs)
 
     def print_cpp(self, indent_level = 0):
         pass
@@ -1492,11 +1499,9 @@ class Max(Statement):
 {self._rhs.print_tree(indent_level + 1)}"""
 
 class MemoryAllocation(Statement):
-    globalMemoryAllocated = []
-    localMemoryAllocated = []
-    scopeIsGlobal = False
+    memoryAllocated = []
 
-    def __init__(self,  name: Name, object_type: Type, dimensions, specify_type = True):
+    def __init__(self,  name: Name, object_type: Type, dimensions, specify_type = True, add_to_stack=True):
         self._type = object_type
         if type(dimensions[0]) is list:
             self._dimensions = [dimension[1] for dimension in dimensions]
@@ -1504,10 +1509,18 @@ class MemoryAllocation(Statement):
             self._dimensions = dimensions
         self._name = name
         self._specify_type = specify_type
-        if MemoryAllocation.scopeIsGlobal:
-            MemoryAllocation.globalMemoryAllocated.append(self)
-        else:
-            MemoryAllocation.localMemoryAllocated.append(self)
+
+        if add_to_stack == True:
+            MemoryAllocation.memoryAllocated[-1].append(self)
+
+        if len(self._dimensions) > 1:
+            size = self._dimensions[-2]
+            for i in range(len(self._dimensions) - 3, -1, -1):
+                size = size * self._dimensions[i]
+
+            self._loop = For([Integer(0), self._dimensions[-1]])
+            self._loop.add_statement(MemoryAllocation(Subscript(self._name, self._loop.get_iteration_variable()), self._type, [size], False, False))
+            self._loop.close_scope()
     
     def print_cpp(self, indent_level=0):
         if len(self._dimensions) == 1:
@@ -1517,40 +1530,22 @@ class MemoryAllocation(Statement):
             for i in range(len(self._dimensions) - 3, -1, -1):
                 size = size * self._dimensions[i]
 
-            loop = For([Integer(0), self._dimensions[-1]])
-            loop.add_statement(MemoryAllocation(Subscript(self._name, loop.get_iteration_variable()), self._type, [size], False))
-            loop.close_scope()
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_cpp()}** {self._name.print_cpp()} = new {self._type.print_cpp()}*[{self._dimensions[-1].print_cpp()}];
-{loop.print_cpp(indent_level)}"""
+{self._loop.print_cpp(indent_level)}"""
         
     def print_omp(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp() + "* " if self._specify_type else ""}{self._name.print_omp()} = new {self._type.print_omp()}[{self._dimensions[0].print_omp()}];"""
         else:
-            size = self._dimensions[-2]
-            for i in range(len(self._dimensions) - 3, -1, -1):
-                size = size * self._dimensions[i]
-
-            loop = For([Integer(0), self._dimensions[-1]])
-            loop.add_statement(MemoryAllocation(Subscript(self._name, loop.get_iteration_variable()), self._type, [size], False))
-            loop.close_scope()
-            #return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()} {self._name.print_omp()}[32][{size.print_omp()}] = {{0.0}};"""
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_omp()}** {self._name.print_omp()} = new {self._type.print_omp()}*[{self._dimensions[-1].print_omp()}];
-{loop.print_omp(indent_level)}"""
+{self._loop.print_omp(indent_level)}"""
         
     def print_sycl(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl() + "* " if self._specify_type else ""}{self._name.print_sycl()} = new {self._type.print_sycl()}[{self._dimensions[0].print_sycl()}];"""
         else:
-            size = self._dimensions[-2]
-            for i in range(len(self._dimensions) - 3, -1, -1):
-                size = size * self._dimensions[i]
-
-            loop = For([Integer(0), self._dimensions[-1]])
-            loop.add_statement(MemoryAllocation(Subscript(self._name, loop.get_iteration_variable()), self._type, [size], False))
-            loop.close_scope()
             return ' ' * indent_level * Node.spaces_per_tab + f"""{self._type.print_sycl()}** {self._name.print_sycl()} = new {self._type.print_sycl()}*[{self._dimensions[-1].print_sycl()}];
-{loop.print_sycl(indent_level)}"""
+{self._loop.print_sycl(indent_level)}"""
         
     def print_mlir(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""{self._name.print_mlir()} = memref.alloc() : {self._name.get_type().print_mlir()}"""
@@ -1565,46 +1560,34 @@ class MemoryDeallocation(Statement):
         self._dimensions = allocation._dimensions
         self._name = allocation._name
 
-    def print_cpp(self, indent_level=0):
-        if len(self._dimensions) == 1:
-            return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_cpp()};"""
-        else:
+        if len(self._dimensions) > 1:
             size = self._dimensions[-2]
             for i in range(len(self._dimensions) - 3, -1, -1):
                 size = size * self._dimensions[i]
 
-            loop = For([Integer(0), self._dimensions[-1]])
-            loop.add_statement(MemoryDeallocation(MemoryAllocation(Subscript(self._name, loop.get_iteration_variable()), None, [size], False)))
-            loop.close_scope()
-            return f"""{loop.print_cpp(indent_level)}
+            self._loop = For([Integer(0), self._dimensions[-1]])
+            self._loop.add_statement(MemoryDeallocation(MemoryAllocation(Subscript(self._name, self._loop.get_iteration_variable()), None, [size], False, False)))
+            self._loop.close_scope()
+
+    def print_cpp(self, indent_level=0):
+        if len(self._dimensions) == 1:
+            return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_cpp()};"""
+        else:
+            return f"""{self._loop.print_cpp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_cpp()};"""
 
     def print_omp(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_omp()};"""
         else:
-            size = self._dimensions[-2]
-            for i in range(len(self._dimensions) - 3, -1, -1):
-                size = size * self._dimensions[i]
-
-            loop = For([Integer(0), self._dimensions[-1]])
-            loop.add_statement(MemoryDeallocation(MemoryAllocation(Subscript(self._name, loop.get_iteration_variable()), None, [size], False)))
-            loop.close_scope()
-            return f"""{loop.print_omp(indent_level)}
+            return f"""{self._loop.print_omp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_omp()};"""
 
     def print_sycl(self, indent_level=0):
         if len(self._dimensions) == 1:
             return ' ' * indent_level * Node.spaces_per_tab + f"""delete[] {self._name.print_sycl()};"""
         else:
-            size = self._dimensions[-2]
-            for i in range(len(self._dimensions) - 3, -1, -1):
-                size = size * self._dimensions[i]
-
-            loop = For([Integer(0), self._dimensions[-1]])
-            loop.add_statement(MemoryDeallocation(MemoryAllocation(Subscript(self._name, loop.get_iteration_variable()), None, [size], False)))
-            loop.close_scope()
-            return f"""{loop.print_sycl(indent_level)}
+            return f"""{self._loop.print_sycl(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab}delete[] {self._name.print_sycl()};"""
 
     def print_mlir(self, indent_level=0):
@@ -1841,7 +1824,13 @@ class DataBlockAssignment(Statement):
             index.append(loops[i].get_iteration_variable())              
 
         if type(self._rhs.get_type()) is TDataBlock:
-            rhs_offset = [self._lhs._iteration_range[i][0] - self._rhs._iteration_range[i][0] for i in range(len(self._lhs._iteration_range))]
+            rhs_offset = []
+            for i in range(len(self._lhs._iteration_range)):
+                lhs_start = self._lhs._iteration_range[i][0]
+                rhs_start = self._rhs._iteration_range[i][0]
+                if type(rhs_start.get_type()) is TDataBlock:
+                    rhs_start = Subscript(rhs_start, lhs_start)
+                rhs_offset.append(lhs_start - rhs_start)
         else:
             rhs_offset = [Integer(0) for i in self._lhs._iteration_range]
 
