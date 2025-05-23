@@ -113,6 +113,7 @@ option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" ON)
 option(WITH_NETCDF "Build with NetCDF support" ON)
 option(WITH_ASAGI "Build with ASAGI support" OFF)
+option(WITH_SCOREP_USER "Build with Score-P user regions instrumentation" OFF)
 
 option(ENABLE_PARTICLES "Enable the particles toolbox" ON)
 option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
@@ -335,6 +336,10 @@ endif()
 
 if(WITH_USM)
   target_compile_definitions(PeanoOptions INTERFACE UseUSM)
+endif()
+
+if(WITH_SCOREP_USER)
+  target_compile_definitions(PeanoOptions INTERFACE UseScorePUser)
 endif()
 
 if(ENABLE_LOADBALANCING)
