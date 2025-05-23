@@ -46,6 +46,14 @@
 #pragma STDC FENV_ACCESS ON
 {% endif -%}
 
+#ifdef UseScorePUser
+#include <scorep/SCOREP_User.h>
+#else
+#define SCOREP_USER_REGION_DEFINE(handle)
+#define SCOREP_USER_REGION_BEGIN(handle, name, type)
+#define SCOREP_USER_REGION_END(handle)
+#endif
+
 using namespace {{NAMESPACE | join("::")}};
 
 tarch::logging::Log _log("");
@@ -282,16 +290,51 @@ void step() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
+  SCOREP_USER_REGION_DEFINE(CreateGrid)
+  SCOREP_USER_REGION_DEFINE(CreateGrid_startGridConstructionStep)
+  SCOREP_USER_REGION_DEFINE(CreateGrid_traverse)
+  SCOREP_USER_REGION_DEFINE(CreateGrid_finishGridConstructionStep)
+  SCOREP_USER_REGION_DEFINE(InitGrid)
+  SCOREP_USER_REGION_DEFINE(InitGrid_startGridInitialisationStep)
+  SCOREP_USER_REGION_DEFINE(InitGrid_prepareTraversal)
+  SCOREP_USER_REGION_DEFINE(InitGrid_traverse)
+  SCOREP_USER_REGION_DEFINE(InitGrid_unprepareTraversal)
+  SCOREP_USER_REGION_DEFINE(InitGrid_finishGridInitialisationStep)
+  SCOREP_USER_REGION_DEFINE(PlotSolution)
+  SCOREP_USER_REGION_DEFINE(PlotSolution_startPlottingStep)
+  SCOREP_USER_REGION_DEFINE(PlotSolution_prepareTraversal)
+  SCOREP_USER_REGION_DEFINE(PlotSolution_traverse)
+  SCOREP_USER_REGION_DEFINE(PlotSolution_unprepareTraversal)
+  SCOREP_USER_REGION_DEFINE(PlotSolution_finishPlottingStep)
+  SCOREP_USER_REGION_DEFINE(TimeStep)
+  SCOREP_USER_REGION_DEFINE(TimeStep_startTimeStep)
+  SCOREP_USER_REGION_DEFINE(TimeStep_prepareTraversal)
+  SCOREP_USER_REGION_DEFINE(TimeStep_traverse)
+  SCOREP_USER_REGION_DEFINE(TimeStep_unprepareTraversal)
+  SCOREP_USER_REGION_DEFINE(TimeStep_finishTimeStep)
+
   switch (stepName) {
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridButPostponeRefinement: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-but-postpone-refinement");
     printNextAlgorithmicStep(stepName);
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(CreateGrid, "CreateGrid", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_startGridConstructionStep, "startGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
+    SCOREP_USER_REGION_END(CreateGrid_startGridConstructionStep)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(CreateGrid_traverse)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_finishGridConstructionStep, "finishGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
+    SCOREP_USER_REGION_END(CreateGrid_finishGridConstructionStep)
+
+    SCOREP_USER_REGION_END(CreateGrid)
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
   } break;
@@ -300,10 +343,22 @@ void step() {
     printNextAlgorithmicStep(stepName);
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(CreateGrid, "CreateGrid", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_startGridConstructionStep, "startGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
+    SCOREP_USER_REGION_END(CreateGrid_startGridConstructionStep)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::CreateGrid observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(CreateGrid_traverse)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_finishGridConstructionStep, "finishGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
+    SCOREP_USER_REGION_END(CreateGrid_finishGridConstructionStep)
+
+    SCOREP_USER_REGION_END(CreateGrid)
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
@@ -341,10 +396,22 @@ void step() {
     }
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(CreateGrid, "CreateGrid", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_startGridConstructionStep, "startGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startGridConstructionStep();
+    SCOREP_USER_REGION_END(CreateGrid_startGridConstructionStep)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::CreateGridButPostponeRefinement observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(CreateGrid_traverse)
+
+    SCOREP_USER_REGION_BEGIN(CreateGrid_finishGridConstructionStep, "finishGridConstructionStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishGridConstructionStep();
+    SCOREP_USER_REGION_END(CreateGrid_finishGridConstructionStep)
+
+    SCOREP_USER_REGION_END(CreateGrid)
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
@@ -373,12 +440,30 @@ void step() {
     {{SUBNAMESPACE}}repositories::loadBalancer.enable(false);
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(InitGrid, "InitGrid", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(InitGrid_startGridInitialisationStep, "startGridInitialisationStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startGridInitialisationStep();
-    {{SUBNAMESPACE}}observers::InitGrid observer;
+    SCOREP_USER_REGION_END(InitGrid_startGridInitialisationStep)
+
+    SCOREP_USER_REGION_BEGIN(InitGrid_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::InitGrid::prepareTraversal();
+    SCOREP_USER_REGION_END(InitGrid_prepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(InitGrid_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
+    {{SUBNAMESPACE}}observers::InitGrid observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(InitGrid_traverse)
+
+    SCOREP_USER_REGION_BEGIN(InitGrid_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::InitGrid::unprepareTraversal();
+    SCOREP_USER_REGION_END(InitGrid_unprepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(InitGrid_finishGridInitialisationStep, "finishGridInitialisationStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishGridInitialisationStep();
+    SCOREP_USER_REGION_END(InitGrid_finishGridInitialisationStep)
+
+    SCOREP_USER_REGION_END(InitGrid)
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
 
@@ -389,12 +474,30 @@ void step() {
     printNextAlgorithmicStep(stepName);
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(PlotSolution, "PlotSolution", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_startPlottingStep, "startPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startPlottingStep();
-    {{SUBNAMESPACE}}observers::PlotSolution observer;
+    SCOREP_USER_REGION_END(PlotSolution_startPlottingStep)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::PlotSolution::prepareTraversal();
+    SCOREP_USER_REGION_END(PlotSolution_prepareTraversal)
+
+     SCOREP_USER_REGION_BEGIN(PlotSolution_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
+    {{SUBNAMESPACE}}observers::PlotSolution observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(PlotSolution_traverse)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::PlotSolution::unprepareTraversal();
+    SCOREP_USER_REGION_END(PlotSolution_unprepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_finishPlottingStep, "finishPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishPlottingStep();
+    SCOREP_USER_REGION_END(PlotSolution_finishPlottingStep)
+
+    SCOREP_USER_REGION_END(PlotSolution)
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
   } break;
@@ -403,12 +506,30 @@ void step() {
     printNextAlgorithmicStep(stepName);
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(PlotSolution, "PlotSolution", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_startPlottingStep, "startPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startPlottingStep();
-    {{SUBNAMESPACE}}observers::CheckpointSolution observer;
+    SCOREP_USER_REGION_END(PlotSolution_startPlottingStep)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::CheckpointSolution::prepareTraversal();
+    SCOREP_USER_REGION_END(PlotSolution_prepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
+    {{SUBNAMESPACE}}observers::CheckpointSolution observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(PlotSolution_traverse)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::CheckpointSolution::unprepareTraversal();
+    SCOREP_USER_REGION_END(PlotSolution_unprepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(PlotSolution_finishPlottingStep, "finishPlottingStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishPlottingStep();
+    SCOREP_USER_REGION_END(PlotSolution_finishPlottingStep)
+
+    SCOREP_USER_REGION_END(PlotSolution)
     watch.stop();
     plotMeasurement.setValue(watch.getCalendarTime());
   } break;
@@ -422,12 +543,30 @@ void step() {
     }
 
     watch.start();
+    SCOREP_USER_REGION_BEGIN(TimeStep, "TimeStep", SCOREP_USER_REGION_TYPE_COMMON)
+
+    SCOREP_USER_REGION_BEGIN(TimeStep_startTimeStep, "startTimeStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::startTimeStep();
-    {{SUBNAMESPACE}}observers::TimeStep observer;
+    SCOREP_USER_REGION_END(TimeStep_startTimeStep)
+
+    SCOREP_USER_REGION_BEGIN(TimeStep_prepareTraversal, "prepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::TimeStep::prepareTraversal();
+    SCOREP_USER_REGION_END(TimeStep_prepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(TimeStep_traverse, "traverse", SCOREP_USER_REGION_TYPE_COMMON)
+    {{SUBNAMESPACE}}observers::TimeStep observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    SCOREP_USER_REGION_END(TimeStep_traverse)
+
+    SCOREP_USER_REGION_BEGIN(TimeStep_unprepareTraversal, "unprepareTraversal", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}observers::TimeStep::unprepareTraversal();
+    SCOREP_USER_REGION_END(TimeStep_unprepareTraversal)
+
+    SCOREP_USER_REGION_BEGIN(TimeStep_finishTimeStep, "finishTimeStep", SCOREP_USER_REGION_TYPE_COMMON)
     {{SUBNAMESPACE}}repositories::finishTimeStep();
+    SCOREP_USER_REGION_END(TimeStep_finishTimeStep)
+
+    SCOREP_USER_REGION_END(TimeStep)
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
