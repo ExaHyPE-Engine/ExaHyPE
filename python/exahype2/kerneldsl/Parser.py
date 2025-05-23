@@ -169,13 +169,14 @@ class Parser:
 
     def _parse_if(self, statement: ast.If):
         if_node = SyntaxTree.If(self._parse_expression(statement.test))
-        SyntaxTree.MemoryAllocation.scopeIsGlobal = False
+        SyntaxTree.MemoryAllocation.memoryAllocated.append([])
+
         for s in statement.body:
             if_node.add_statement(self._parse_statement(s))
-        for allocation in SyntaxTree.MemoryAllocation.localMemoryAllocated:
-            if_node.add_statement(SyntaxTree.MemoryDeallocation(allocation))
-        SyntaxTree.MemoryAllocation.localMemoryAllocated.clear()
-        SyntaxTree.MemoryAllocation.scopeIsGlobal = True
+        for allocation in SyntaxTree.MemoryAllocation.memoryAllocated[-1]:
+                if_node.add_statement(SyntaxTree.MemoryDeallocation(allocation))
+
+        SyntaxTree.MemoryAllocation.memoryAllocated.pop()
         return if_node
 
     def _parse_statement(self, statement: ast.Expr):  
@@ -204,17 +205,18 @@ class Parser:
         else:
             for functor in functor_arguments:
                 parsed_function.add_argument(functor)
-            
+        
+        SyntaxTree.MemoryAllocation.memoryAllocated.append([])
         for statement in function.body:
             parsed_function.add_statement(self._parse_statement(statement))
-        for allocation in SyntaxTree.MemoryAllocation.globalMemoryAllocated:
+        for allocation in SyntaxTree.MemoryAllocation.memoryAllocated[-1]:
             parsed_function.add_statement(SyntaxTree.MemoryDeallocation(allocation))
+        SyntaxTree.MemoryAllocation.memoryAllocated.pop()
+
         return parsed_function
 
     def parse(self, function, template_arguments, functor_arguments, namespace = [], stateless = False, use_accelerator = False):
         SyntaxTree.Name.variables.clear()
-        SyntaxTree.MemoryAllocation.globalMemoryAllocated.clear()
-        SyntaxTree.MemoryAllocation.localMemoryAllocated.clear()
         SyntaxTree.For._inuse_iteration_variables.clear()
 
         module = ast.parse(inspect.getsource(function))
@@ -225,6 +227,8 @@ class Parser:
                 SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Integer(99)})
             if type(argument._type) is SyntaxTree.TBoolean:
                 SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Boolean(False)})
+            if type(argument._type) is SyntaxTree.TFloat:
+                SyntaxTree.Name.variables.update({argument.id: SyntaxTree.Float(99.0)})
             
         template_arguments_copy = copy.deepcopy(template_arguments)
         root = self._parse_function(function_definition, template_arguments_copy, functor_arguments, namespace, stateless, use_accelerator)
