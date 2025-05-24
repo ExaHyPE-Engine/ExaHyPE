@@ -28,21 +28,30 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
-  #if PeanoDebug>=1
-  _debugX( other._debugX ),
-  _debugH( other._debugH ),
-  #endif
   _dataSmartPointer( other._dataSmartPointer ) {
   value = other.value==nullptr ? nullptr : _dataSmartPointer.get();
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
-  _debugX = other._debugX;
-  _debugH = other._debugH;
-  #endif
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}({{CLASSNAME}}&& other) noexcept:
+  _dataSmartPointer(std::move(other._dataSmartPointer)) {
 
+  value = other.value;
+  other.value = nullptr;  // Leave source in a valid state
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=({{CLASSNAME}}&& other) noexcept {
+  if (this != &other) {
+    _dataSmartPointer = std::move(other._dataSmartPointer);
+    value = other.value;
+    other.value = nullptr;  // Leave source in a valid state
+  }
+  return *this;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
   assertion2( value==nullptr, toString(), other.toString() );
 
   if (other.value!=nullptr) {
@@ -72,11 +81,6 @@ std::shared_ptr< {{FLOAT_TYPE}}[] > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::g
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
-  _debugX = other._debugX;
-  _debugH = other._debugH;
-  #endif
-
   _dataSmartPointer = other._dataSmartPointer;
   value = _dataSmartPointer.get();
   
@@ -87,12 +91,6 @@ std::shared_ptr< {{FLOAT_TYPE}}[] > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::g
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream result;
   result << "(";
-  #if PeanoDebug>=1
-  result << "x=" << _debugX;
-  result << ",";
-  result << "h=" << _debugH;
-  result << ",";
-  #endif
   if ( value==nullptr ) {
     result << "no-data";
   }
@@ -102,34 +100,6 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   result << ")";
   return result.str();
 }
-
-
-#if PeanoDebug>=1
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
-  _debugX = data;
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
-  assertion2(data(0) > 0.0, data, toString());
-  assertion2(data(1) > 0.0, data, toString());
-  #if Dimensions==3
-  assertion2(data(2) > 0.0, data, toString());
-  #endif
-  _debugH = data;
-}
-
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
-  return _debugX;
-}
-
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
-  return _debugH;
-}
-#endif
 
 
 {% if DATA_ASSOCIATION == 1 -%}

@@ -14,9 +14,7 @@ namespace peano4 {
   } // namespace datamanagement
 } // namespace peano4
 
-
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::FaceMarker& marker);
-
 
 /**
  * Provide information about selected face

@@ -37,36 +37,39 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
   const std::set<int>&      joining
 ) const {
   std::bitset<TwoTimesD> result;
-  for (int faceNumber = 0; faceNumber < 2 * Dimensions; faceNumber++) {
+
+  for (int faceNumber = 0; faceNumber < TwoTimesD; faceNumber++) {
     bool isLocal = false;
 
     const int normal = faceNumber % Dimensions;
+    const bool upper = faceNumber >= Dimensions;
+
     for (int i = 0; i < TwoPowerD; i++) {
-      std::bitset<Dimensions> studiedVertex = i;
-      studiedVertex.set(normal, faceNumber >= Dimensions);
-      std::bitset<Dimensions> studiedEntry = TwoPowerD - studiedVertex.to_ulong() - 1;
+      std::bitset<Dimensions> studiedVertex(i);
+      studiedVertex.set(normal, upper);
+      const int vertexIndex = static_cast<int>(studiedVertex.to_ulong());
+      const GridVertex& vertex = vertices[vertexIndex];
+
+      std::bitset<Dimensions> studiedEntry = TwoPowerD - vertexIndex - 1;
 
       studiedEntry.set(normal, 0);
-      int currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks(studiedEntry.to_ulong());
-      if (vertices[studiedVertex.to_ulong()].getState() != GridVertex::State::HangingVertex
-          or faceNumber >= Dimensions) {
-        isLocal |= currentRank == _id;
-        isLocal |= splitTriggered.count(currentRank) > 0;
-        isLocal |= splitting.count(currentRank) > 0;
+      int currentRank = vertex.getAdjacentRanks(static_cast<int>(studiedEntry.to_ulong()));
+      if (vertex.getState() != GridVertex::State::HangingVertex or upper) {
+        isLocal |= currentRank == _id or splitTriggered.count(currentRank) > 0 or splitting.count(currentRank) > 0;
       }
 
       studiedEntry.set(normal, 1);
-      if (vertices[studiedVertex.to_ulong()].getState() != GridVertex::State::HangingVertex
-          or faceNumber < Dimensions) {
-        currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks(studiedEntry.to_ulong());
-        isLocal |= currentRank == _id;
-        isLocal |= splitTriggered.count(currentRank) > 0;
-        isLocal |= splitting.count(currentRank) > 0;
+      currentRank = vertex.getAdjacentRanks(static_cast<int>(studiedEntry.to_ulong()));
+      if (vertex.getState() != GridVertex::State::HangingVertex or not upper) {
+        isLocal |= currentRank == _id or splitTriggered.count(currentRank) > 0 or splitting.count(currentRank) > 0;
       }
+
+      if (isLocal) break;
     }
 
-    result[faceNumber] = isLocal;
+    result.set(faceNumber, isLocal);
   }
+
   return result;
 }
 
@@ -79,26 +82,26 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
   bool                      splittingIsConsideredLocal,
   bool                      joiningIsConsideredLocal
 ) const {
-  /*
-    if (vertex.getState()==GridVertex::State::HangingVertex) {
-      return false;
-    }
-    else {
-  */
-  bool result = false;
   for (int i = 0; i < TwoPowerD; i++) {
-    assertion(splitTriggered.count(vertex.getAdjacentRanks(i)) <= 1);
-    assertion(splitting.count(vertex.getAdjacentRanks(i)) <= 1);
+    const auto adjacentRank = vertex.getAdjacentRanks(i);
 
-    result |= vertex.getAdjacentRanks(i) == _id;
+    assertion(splitTriggered.count(adjacentRank) <= 1);
+    assertion(splitting.count(adjacentRank) <= 1);
 
-    result |= splitTriggered.count(vertex.getAdjacentRanks(i)) == 1;
-    result |= (splittingIsConsideredLocal and splitting.count(vertex.getAdjacentRanks(i)) == 1);
-
-    result |= (joiningIsConsideredLocal and joining.count(vertex.getAdjacentRanks(i)) == 1);
+    if (
+      adjacentRank == _id
+      or
+      splitTriggered.count(adjacentRank) == 1
+      or
+      (splittingIsConsideredLocal and splitting.count(adjacentRank) == 1)
+      or
+      (joiningIsConsideredLocal and joining.count(adjacentRank) == 1)
+    ) {
+      return true;
+    }
   }
-  return result;
-  //  }
+
+  return false;
 }
 
 bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
@@ -110,28 +113,22 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
   bool                      splittingIsConsideredLocal,
   bool                      joiningIsConsideredLocal
 ) const {
-  bool isLocal = true;
   dfor2(k)
-    isLocal &= (
-      (vertices[kScalar].getState()==GridVertex::State::HangingVertex)
-      or
-      (
-        vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1)==_id
-      )
-      or
-      ( splitTriggered.count(vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1)) > 0)
-      or
-      (
-        splittingIsConsideredLocal and splitting.count(vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1))>0
-      )
-      or
-      (
-        joiningIsConsideredLocal and joining.count(vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1))>0
-      )
-    );
+    const int rank = vertices[kScalar].getAdjacentRanks(TwoPowerD - kScalar - 1);
+    const auto isHanging = vertices[kScalar].getState() == GridVertex::State::HangingVertex;
+
+    if (
+      not isHanging and rank != _id and splitTriggered.find(rank) == splitTriggered.end()
+      and
+      (not splittingIsConsideredLocal or splitting.find(rank) == splitting.end())
+      and
+      (not joiningIsConsideredLocal or joining.find(rank) == joining.end())
+    ) {
+      return false;
+    }
   enddforx
 
-    return isLocal;
+  return true;
 }
 
 std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(
@@ -220,13 +217,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setWillBeRefined(willVerticesBeRefined(fineGridVertices));
   event.setRelativePositionToFather(relativePositionToFather);
 
-  event.setIsCellLocal(
-    isSpacetreeNodeLocal(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true)
-  );
-  event.setIsParentCellLocal(
-    state.getLevel() > 1
-    and isSpacetreeNodeLocal(coarseGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true)
-  );
+  event.setIsCellLocal(isSpacetreeNodeLocal(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true));
+  event.setIsParentCellLocal(state.getLevel() > 1 and isSpacetreeNodeLocal(coarseGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true));
   event.setIsFaceLocal(areFacesLocal(fineGridVertices, splitTriggered, splitting, joinTriggered, joining));
   event.setIsVertexLocal(areVerticesLocal(fineGridVertices, splitTriggered, splitting, joinTriggered, joining));
 
@@ -254,7 +246,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   }
   enddforx
 
-    dfor2(k) {
+  dfor2(k) {
     std::set<int> neighbourIds;
 
     for (int i = 0; i < TwoPowerD; i++) {
@@ -267,7 +259,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   }
   enddforx
 
-    return event;
+  return event;
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createLeaveCellTraversalEvent(
@@ -850,43 +842,30 @@ tarch::la::Vector<TwoPowerD, int> peano4::grid::GridTraversalEventGenerator::
   getAdjacentRanksOfFace(GridVertex fineGridVertices[TwoPowerD], int faceNumber, bool calledByReceivingProcess) const {
   tarch::la::Vector<TwoPowerD, int> adjacentRanksOfFace(InvalidRank);
 
-  int       counter = 0;
+  int counter = 0;
   const int normal  = faceNumber % Dimensions;
-  dfore(i, 2, normal, faceNumber < Dimensions ? 0 : 1) {
-    int currentVertex = peano4::utils::dLinearised(i, 2);
+  const bool isLowerFace = faceNumber < Dimensions;
 
-    std::bitset<Dimensions> studiedEntry = TwoPowerD - currentVertex - 1;
-    studiedEntry[normal]                 = 0;
-    assertion3(studiedEntry.to_ullong() >= 0, studiedEntry, currentVertex, i);
-    assertion3(studiedEntry.to_ullong() < TwoPowerD, studiedEntry, currentVertex, i);
-    int rankEntry = calledByReceivingProcess
-                      ? fineGridVertices[currentVertex].getBackupOfAdjacentRanks(studiedEntry.to_ullong())
-                      : fineGridVertices[currentVertex].getAdjacentRanks(studiedEntry.to_ullong());
+  dfore(i, 2, normal, isLowerFace ? 0 : 1) {
+    const int currentVertexIndex = peano4::utils::dLinearised(i, 2);
+    const GridVertex& vertex = fineGridVertices[currentVertexIndex];
+    const GridVertex::State state = vertex.getState();
 
-    if ((fineGridVertices[currentVertex].getState() == GridVertex::State::HangingVertex)
-        or (calledByReceivingProcess and fineGridVertices[currentVertex].getState() == GridVertex::State::New)
-        or (not calledByReceivingProcess and fineGridVertices[currentVertex].getState() == GridVertex::State::Delete)) {
-      rankEntry = InvalidRank;
-    };
+    bool isInvalid = (state == GridVertex::State::HangingVertex)
+      or (calledByReceivingProcess and state == GridVertex::State::New)
+      or (not calledByReceivingProcess and state == GridVertex::State::Delete);
 
-    adjacentRanksOfFace(counter) = rankEntry;
-    counter++;
+    for (int bit = 0; bit <= 1; ++bit) {
+      std::bitset<Dimensions> studiedEntry = TwoPowerD - currentVertexIndex - 1;
+      studiedEntry.set(normal, bit);
 
-    studiedEntry[normal] = 1;
-    assertion3(studiedEntry.to_ullong() >= 0, studiedEntry, currentVertex, i);
-    assertion3(studiedEntry.to_ullong() < TwoPowerD, studiedEntry, currentVertex, i);
-    rankEntry = calledByReceivingProcess
-                  ? fineGridVertices[currentVertex].getBackupOfAdjacentRanks(studiedEntry.to_ullong())
-                  : fineGridVertices[currentVertex].getAdjacentRanks(studiedEntry.to_ullong());
+      const int entryIndex = static_cast<int>(studiedEntry.to_ulong());
+      int rank = calledByReceivingProcess
+               ? vertex.getBackupOfAdjacentRanks(entryIndex)
+               : vertex.getAdjacentRanks(entryIndex);
 
-    if ((fineGridVertices[currentVertex].getState() == GridVertex::State::HangingVertex)
-        or (calledByReceivingProcess and fineGridVertices[currentVertex].getState() == GridVertex::State::New)
-        or (not calledByReceivingProcess and fineGridVertices[currentVertex].getState() == GridVertex::State::Delete)) {
-      rankEntry = InvalidRank;
-    };
-
-    adjacentRanksOfFace(counter) = rankEntry;
-    counter++;
+      adjacentRanksOfFace(counter++) = isInvalid ? InvalidRank : rank;
+    }
   }
 
   return adjacentRanksOfFace;

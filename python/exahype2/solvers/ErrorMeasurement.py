@@ -127,6 +127,7 @@ def create_constructor_implementation_for_error_measurement(
 ):
     Template = jinja2.Template(
         """
+  // TODO: MPI might be not be initialised here. Neeeds to be moved somewhere else.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
     _errorDatabase.setOutputFileName("{{FILENAME}}");

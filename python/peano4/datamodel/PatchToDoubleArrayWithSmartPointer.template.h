@@ -49,11 +49,6 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static MPI_Datatype   Datatype;
     #endif
 
-    #if PeanoDebug>=1
-    tarch::la::Vector<Dimensions,double> _debugX;
-    tarch::la::Vector<Dimensions,double> _debugH;
-    #endif
-
     /**
      * Pointer to array.
      *
@@ -81,13 +76,6 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int Cardinality = {{CARDINALITY_3D}};
     #endif
 
-    #if PeanoDebug>=1
-    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-    tarch::la::Vector<Dimensions,double> getDebugX() const;
-    tarch::la::Vector<Dimensions,double> getDebugH() const;
-    #endif
-
   /**
    * This is an alias to the actual data stored within _dataSmartPointer. We
    * need this alias, as a lot of code snippets in Peano work with raw pointers
@@ -101,8 +89,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    * Create new instance
    *
    * The routine creates a new smart pointer data set and then sets the value
-   * pointer to the smart pointer's raw data. It does not set the debug values,
-   * which you have to initialise separately.
+   * pointer to the smart pointer's raw data.
    *
    * This routine is used by all creational events, i.e. create a vertex for
    * example uses it as well as create a hanging vertex.
@@ -157,6 +144,10 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    * smart pointer. See peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock().
    */
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
+
+  {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept;
+
+  {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) noexcept;
 
   /**
    * Clone content.

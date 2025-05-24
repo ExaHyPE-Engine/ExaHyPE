@@ -252,7 +252,7 @@ public:
    *
    * The treatment of hanging nodes in the action sets digesting the
    * events thus differs from how we handle hanging nodes within the core
-   * spacetree. For the lattern, hanging vertices are never local to the
+   * spacetree. For the latter, hanging vertices are never local to the
    * current spacetree.
    *
    * @see Spacetree::isVertexAdjacentToLocalSpacetree() for further remarks
@@ -314,7 +314,7 @@ public:
    * will pick data and stream it over. So we have to use the iteration after
    * splitting to get rid of data. Getting rid means simply: load it but do not
    * store it anymore. It helps us in this context that data streams are
-   * monotoneous. We throw away stuff but we never re-create stuff (cmp joining
+   * monotonous. We throw away stuff but we never re-create stuff (cmp. joining
    * below which poses an exception).
    *
    * So, when we decide whether to load data, we first of all check whether a grid
@@ -362,7 +362,7 @@ public:
    * However, despite the fact that they are local, we should not invoke
    * any user event on them. We should move data over the stacks, and we
    * should (maybe) exchange data, but we should never call user code within
-   * the observers, as the reponsibility of the user operations remains with
+   * the observers, as the responsibility of the user operations remains with
    * the original owner prior to the fork or join. See links below.
    *
    * Therefore, we need a pruned version of the event
@@ -428,7 +428,6 @@ public:
     GridVertex                         coarseGridVertices[TwoPowerD],
     tarch::la::Vector<Dimensions, int> position
   );
-
 
   /**
    * We run over the @f$ 2^d @f$ adjacent vertices of the cell and look at
