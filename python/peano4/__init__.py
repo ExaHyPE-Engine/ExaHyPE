@@ -12,4 +12,4 @@ try:
 
     from .Project import Project
 except ImportError as error:
-    print("Peano core project files cannot be loaded: {}".format(error))
+    raise Exception("Peano core project files cannot be loaded: {}".format(error))

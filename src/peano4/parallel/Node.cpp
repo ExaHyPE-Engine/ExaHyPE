@@ -25,8 +25,7 @@ peano4::parallel::Node   peano4::parallel::Node::_singleton;
 
 
 void peano4::parallel::Node::initMPIDatatypes() {
-  #ifdef Parallel
-  logTraceIn( "initMPIDatatypes()" );
+#ifdef Parallel
   StartTraversalMessage::initDatatype();
   TreeManagementMessage::initDatatype();
 
@@ -36,14 +35,12 @@ void peano4::parallel::Node::initMPIDatatypes() {
   peano4::grid::GridVertex::initDatatype();
   peano4::grid::GridStatistics::initDatatype();
   peano4::grid::GridControlEvent::initDatatype();
-  logTraceOut( "initMPIDatatypes()" );
-  #endif
+#endif
 }
 
 
 void peano4::parallel::Node::shutdownMPIDatatypes() {
-  #ifdef Parallel
-  logTraceIn( "shutdownMPIDatatypes()" );
+#ifdef Parallel
   StartTraversalMessage::shutdownDatatype();
   TreeManagementMessage::shutdownDatatype();
 
@@ -53,8 +50,7 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
   peano4::grid::GridVertex::shutdownDatatype();
   peano4::grid::GridControlEvent::shutdownDatatype();
   peano4::grid::GridStatistics::shutdownDatatype();
-  logTraceOut( "shutdownMPIDatatypes()" );
-  #endif
+#endif
 }
 
 
@@ -142,14 +138,12 @@ void peano4::parallel::Node::registerId(int id, int masterId) {
   assertion( isGlobalMaster(id) or _treeEntries.count(masterId)==1 );
   #endif
 
-  logTraceInWith2Arguments( "registerId(int,int)", id, masterId );
   TreeEntry newEntry;
 
   newEntry.setId( id );
   newEntry.setMaster( masterId );
 
   _treeEntries.insert( std::pair<int,TreeEntry>(id, newEntry) );
-  logTraceOut( "registerId(int,int)" );
 }
 
 
@@ -164,7 +158,7 @@ void peano4::parallel::Node::deregisterId(int id) {
   tarch::multicore::Lock lock(_semaphore);
   _treeEntries.erase(id);
 
-  logDebug( "deregisterId(int)", "removed tree " << id << " from list of trees" );
+  logDebug( "deregisterId()", "Removed tree " << id << " from list of trees" );
 }
 
 

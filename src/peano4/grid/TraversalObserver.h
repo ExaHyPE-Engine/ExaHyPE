@@ -35,7 +35,7 @@ namespace peano4 {
  */
 class peano4::grid::TraversalObserver {
 public:
-  virtual ~TraversalObserver() {}
+  virtual ~TraversalObserver() = default;
 
   static constexpr int NoRebalancing = -1;
 
@@ -242,7 +242,7 @@ return controlEvents;
 
   virtual void receiveAndMergeVertex(int /*position*/, int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
   virtual void receiveAndMergeFace(int /*position*/, int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
-  virtual void receiveAndMergeCell(int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/){};
+  virtual void receiveAndMergeCell(int /*fromStack*/, SendReceiveContext /*context*/, const GridTraversalEvent& /*event*/) {};
 
   virtual void deleteAllStacks() {};
 };

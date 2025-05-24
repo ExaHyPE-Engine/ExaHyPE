@@ -285,7 +285,6 @@ public:
   );
 #endif
 
-
   std::string toString() const;
 
 private:

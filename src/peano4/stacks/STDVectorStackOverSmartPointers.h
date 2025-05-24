@@ -117,14 +117,6 @@ private:
    */
   int*                 _gatheredMetaData;
 
-  /**
-   * Debug data
-   *
-   * Is only used in debug mode to store the x and h values tied to each entry
-   * on the stack.
-   */
-  double*              _gatheredDebugMetaData;
-
   IOMode _ioMode;
   int    _ioRank;
   int    _ioTag;
@@ -132,7 +124,6 @@ private:
 #ifdef Parallel
   MPI_Request* _ioMPIRequest;
   MPI_Request* _ioMetaDataMPIRequest;
-  MPI_Request* _ioDebugMetaDataMPIRequest;
 #endif
 
   /**
@@ -168,15 +159,7 @@ private:
    */
   void gatherMetaData();
 
-  /**
-   * Mere alloc. We use the tarch's allocation. Therefore, we can have
-   * aligned data here. Without tarch, the call would be
-   *
-   *         _gatheredDebugMetaData = new double[ Dimensions*2*size() ];
-   *
-   */
   void prepareMetaDataBuffers();
-  void scatterDebugMetaData();
 
 public:
   STDVectorStackOverSmartPointers();

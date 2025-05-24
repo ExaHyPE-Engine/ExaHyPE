@@ -123,7 +123,6 @@ public:
   );
 #endif
 
-
   enum ObjectConstruction { NoData };
 
   GridControlEvent(ObjectConstruction):
@@ -143,7 +142,6 @@ public:
     MPI_Comm                        communicator = tarch::mpi::Rank::getInstance().getCommunicator()
   );
 #endif
-
 
   std::string toString() const;
 

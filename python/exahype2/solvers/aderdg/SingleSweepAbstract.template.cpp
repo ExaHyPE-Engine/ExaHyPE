@@ -35,7 +35,6 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   {% endfor %}
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
-
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
@@ -83,29 +82,29 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize) {
   tarch::multicore::Lock lock(_semaphore);
 
-  if ( tarch::la::greater(timeStepSize,0.0) ) {
-    assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
-    assertion1(timeStepSize>=0.0,timeStepSize);
-    _minTimeStepSizeThisTimeStep = std::min(timeStepSize,_minTimeStepSizeThisTimeStep);
-    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize,_maxTimeStepSizeThisTimeStep);
-    assertion2(_minTimeStepSizeThisTimeStep<=_maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
+  if (tarch::la::greater(timeStepSize, 0.0)) {
+    assertion1(timeStepSize < std::numeric_limits<double>::max() / 10.0,timeStepSize);
+    assertion1(timeStepSize >= 0.0,timeStepSize);
+    _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
+    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
+    assertion2(_minTimeStepSizeThisTimeStep <= _maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   }
 
-  assertion1(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
-  assertion1(timeStamp>=0.0,timeStamp);
-  _maxTimeStampThisTimeStep = std::max(timeStamp,_maxTimeStampThisTimeStep);
-  _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
-  assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, cellSize );
+  assertion1(timeStamp < std::numeric_limits<double>::max() / 10.0,timeStamp);
+  assertion1(timeStamp >= 0.0,timeStamp);
+  _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
+  _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
+  assertion7(tarch::la::smallerEquals(_minTimeStamp, _maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minCellSize, maxCellSize);
 
-  assertion1(maxCellSize<std::numeric_limits<double>::max()/10.0,maxCellSize);
-  assertion1(minCellSize>0.0,minCellSize);
-  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,maxCellSize);
-  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,minCellSize);
+  assertion1(maxCellSize < std::numeric_limits<double>::max() / 10.0,maxCellSize);
+  assertion1(minCellSize > 0.0,minCellSize);
+  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep, maxCellSize);
+  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep, minCellSize);
 
-  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize << ": t(new)=" << _minTimeStampThisTimeStep );
+  logDebug("update()", "Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize << ": t(new)=" << _minTimeStampThisTimeStep );
 }
 
 
@@ -119,11 +118,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
-	double                                       t
+  double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
 
   return result;
   {% else %}
