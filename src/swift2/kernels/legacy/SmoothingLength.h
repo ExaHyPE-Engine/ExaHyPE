@@ -63,6 +63,14 @@ namespace swift2 {
         Particle* localParticle
       );
 
+      template <typename Particle>
+      bool updateSmoothingLengthAndRerunIfRequiredUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker& marker,
+        const Particle&                             localParticle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle);
+      }
+
       /**
        * Wrapper around hydro_update_smoothing_length_and_rerun_if_required()
        * with only one argument. Further to that, it also adds some consistency
@@ -74,65 +82,41 @@ namespace swift2 {
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   localParticle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_update_smoothing_length_and_rerun_if_required(&localParticle);
-          assertion2(
+        assertion( updateSmoothingLengthAndRerunIfRequiredUpdateParticlePredicate(marker,localParticle) );
+        hydro_update_smoothing_length_and_rerun_if_required(&localParticle);
+        assertion2(
             localParticle.getSearchRadius() <= tarch::la::min(marker.h()),
             marker.toString(),
             localParticle.toString()
-          );
-          assertion2(
+        );
+        assertion2(
             localParticle.getSmoothingLength() <= localParticle.getSearchRadius(
             ),
             marker.toString(),
             localParticle.toString()
-          );
-        }
-      }
-
-      /**
-       * @todo No masking yet. This one is tricky, as it might alter the global
-       *       state. It is very likely that we have to introduce a new
-       *       iterator which handles the reduction for us.
-       */
-      template <typename Particle>
-      void updateSmoothingLengthAndRerunIfRequiredWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        updateSmoothingLengthAndRerunIfRequired(marker, localParticle);
+        );
       }
 
       /**
        * Reset smoothing length iteration related flags on a particle.
        */
       template <typename Particle>
+      bool resetSmoothingLengthIterationCounterUpdateParticlePredicate(
+        const peano4::datamanagement::VertexMarker&  marker,
+        const Particle&                              particle
+      ) {
+        return ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, particle);
+      }
+
+      template <typename Particle>
       void resetSmoothingLengthIterationCounter(
         const peano4::datamanagement::VertexMarker& marker,
         Particle&                                   particle
       ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
-          particle.setSmoothingLengthConverged(false);
-          particle.setSmoothingLengthIterCount(0);
-        }
+        assertion(resetSmoothingLengthIterationCounterUpdateParticlePredicate(marker, particle));
+        particle.setSmoothingLengthConverged(false);
+        particle.setSmoothingLengthIterCount(0);
       }
-
-      /**
-       * At this point, we just reset some flags and counters that are only
-       * required during a single time step. So we don't need to pass any checks
-       * whether to work on a particle.
-       */
-      template <typename Particle>
-      void resetSmoothingLengthIterationCounterWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   particle
-      ) {
-        resetSmoothingLengthIterationCounter(marker, particle);
-      }
-
-
     } // namespace legacy
   }   // namespace kernels
 } // namespace swift2

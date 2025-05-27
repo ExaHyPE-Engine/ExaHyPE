@@ -13,6 +13,7 @@ namespace applications::exahype2::swe {
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
+
   static inline GPUCallableMethod
   void eigenvalues(
     const double* const __restrict__             Q,
@@ -23,13 +24,7 @@ namespace applications::exahype2::swe {
     const int                                    normal,
     double* const __restrict__                   L
   ) InlineMethod;
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
 
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
   static inline GPUCallableMethod
   double maxEigenvalue(
     const double* const __restrict__             Q,
@@ -38,6 +33,17 @@ namespace applications::exahype2::swe {
     const double                                 t,
     const double                                 dt,
     const int                                    normal
+  ) InlineMethod;
+
+  static inline GPUCallableMethod
+  void maxEigenvalue(
+    const double* const __restrict__             Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    double* const __restrict__                   maxEigenvalue
   ) InlineMethod;
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
@@ -56,13 +62,7 @@ namespace applications::exahype2::swe {
     const int                                    normal,
     double* const __restrict__                   F
   ) InlineMethod;
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
 
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
   static inline GPUCallableMethod
   void nonconservativeProduct(
     const double* const __restrict__             Q,
@@ -74,6 +74,7 @@ namespace applications::exahype2::swe {
     const int                                    normal,
     double* const __restrict__                   BTimesDeltaQ
   ) InlineMethod;
+
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif

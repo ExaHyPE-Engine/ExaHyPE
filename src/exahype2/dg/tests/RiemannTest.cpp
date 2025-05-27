@@ -16,7 +16,11 @@ void exahype2::dg::tests::RiemannTest::run() {
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
   const int order        = 3;
   const int nodesPerAxis = order+1;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  #if Dimensions==2
+  const int nodesPerCell = nodesPerAxis * nodesPerAxis;
+  #else
+  const int nodesPerCell = nodesPerAxis * nodesPerAxis * nodesPerAxis;
+  #endif
   const int nodesPerFace = nodesPerCell/nodesPerAxis;
 
   // 1 unknown, 1 auxiliary variable

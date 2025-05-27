@@ -3,17 +3,18 @@
 
 
 void tarch::reader::readInCheckpointFiles(
-      std::vector<std::string> CheckpointFilesOfSolver,
-      std::vector<double>& domainDataFromFiles,
-      std::vector<double>& offsetIndex,
-      int numberOfUnknowns,
-      int numberOfAuxiliaries,
-      int dimension,
-      int patchSize){
-  domainDataFromFiles.empty();
-  offsetIndex.empty();
-  //int a=0;
-  for (const auto& filename : CheckpointFilesOfSolver) {
+  const std::vector<std::string>&  checkpointFilesOfSolver,
+  std::vector<double>&             domainDataFromFiles,
+  std::vector<double>&             offsetIndex,
+  int numberOfUnknowns,
+  int numberOfAuxiliaries,
+  int dimension,
+  int patchSize
+) {
+  domainDataFromFiles.clear();
+  offsetIndex.clear();
+
+  for (const auto& filename : checkpointFilesOfSolver) {
     std::ifstream file(filename);
     std::string line;
     bool InAPatch=false;
@@ -22,7 +23,13 @@ void tarch::reader::readInCheckpointFiles(
         std::istringstream iss(line);
         std::string token;
 
+        #if defined(__cpp_exceptions)
         while (iss >> token) { try {offsetIndex.push_back(std::stod(token)); } catch (...){ } }
+        #else
+        while (iss >> token) {
+          offsetIndex.push_back(std::stod(token));
+        }
+        #endif
         InAPatch=true;
       }
 
@@ -49,10 +56,10 @@ void tarch::reader::readInCheckpointFiles(
 //      tarch::reader::readInCheckpointOffsetIndex(OffsetIndexMap, CheckpointFilesOfCCZ4);
 void tarch::reader::readInCheckpointOffsetIndex(
       std::map< tarch::la::Vector<3,double> , std::string, tarch::la::VectorCompare<3> >& offsetIndexMap,
-      std::vector<std::string> CheckpointFilesOfSolver){
+      std::vector<std::string> checkpointFilesOfSolver){
   //do nothing yet
   //std::cout<<"print sth as it is called."<<std::endl;
-  for (const auto& filename : CheckpointFilesOfSolver) {
+  for (const auto& filename : checkpointFilesOfSolver) {
     std::ifstream file(filename);
     std::string line;
 
@@ -63,7 +70,14 @@ void tarch::reader::readInCheckpointOffsetIndex(
         int i=0;
 
         tarch::la::Vector<3,double> tempOffset;
+        #if defined(__cpp_exceptions)
         while (iss >> token) { try {tempOffset[i]=std::stod(token); i++; } catch (...){ } }
+        #else
+        while (iss >> token) {
+          tempOffset[i]=std::stod(token);
+          i++;
+        }
+        #endif
         offsetIndexMap[tempOffset]=filename;
 
       }

@@ -416,7 +416,27 @@ class peano4::grid::GridTraversalEventGenerator {
     static VertexType getVertexType(
       GridVertex                         coarseGridVertices[TwoPowerD],
       tarch::la::Vector<Dimensions,int>  position,
-      int                                dimension = Dimensions-1
+      int                                dimension
+    );
+
+    /**
+     * Wrapper around getVertexType() passing in Dimensions-1
+     *
+     * I originally omitted this routine and specified
+     *
+     *           dimensions = Dimensions-1
+     *
+     * as default in the signature of the other routine. However, it turns out
+     * that the present routine can become a bottleneck for parallel execution,
+     * where we spend too much time in administration of (empty) trees. See the
+     * section on "Redundant (administrative) work" in our SHAREing write-up.
+     *
+     * Therefore, I use this wrapper where I catch the most common case: All
+     * vertices are refined, and we hence can omit the recursive evaluation.
+     */
+    static VertexType getVertexType(
+      GridVertex                         coarseGridVertices[TwoPowerD],
+      tarch::la::Vector<Dimensions,int>  position
     );
 
     /**

@@ -24,56 +24,68 @@ namespace tarch::timing {
  * @author Tobias Weinzierl
  */
 class tarch::timing::GlidingAverageMeasurement {
-private:
-  static tarch::logging::Log _log;
+  private:
+    static tarch::logging::Log _log;
 
-  /**
-   * The weights q determine the weight via $q^0,q^1,q^2,...$.
-   */
-  double _weight;
-  int    _maxEntries;
+    /**
+     * The weights q determine the weight via $q^0,q^1,q^2,...$.
+     */
+    const double _weight;
+    const int    _maxEntries;
 
-  /**
-   * Data
-   */
-  std::vector<double> _values;
+    /**
+     * Data
+     */
+    std::vector<double> _values;
 
-public:
-  GlidingAverageMeasurement(double weight = 0.7, int maxEntries = 16);
-  ~GlidingAverageMeasurement() = default;
+  public:
+    GlidingAverageMeasurement(double weight = 0.7, int maxEntries = 16);
+    ~GlidingAverageMeasurement() = default;
 
-  /**
-   * @return Averaged value (mean value) of all measurements.
-   */
-  double getValue() const;
+    /**
+     * @return Averaged value (mean value) of all measurements.
+     */
+    double getValue() const;
 
-  /**
-   * To compute the standard deviation, we rely on the formula
-   *
-   * sigma =sqrt( E(x^2) - E(x)^2 )
-   *
-   * with E being the weighted mean value.
-   */
-  double getStandardDeviation() const;
+    /**
+     * To compute the standard deviation, we rely on the formula
+     *
+     * sigma =sqrt( E(x^2) - E(x)^2 )
+     *
+     * with E being the weighted mean value.
+     */
+    double getStandardDeviation() const;
 
-  /**
-   * Is value accurate
-   *
-   * A value is accurate if its standard deviation divided by its mean is smaller than the factor.
-   */
-  bool isAccurateValue(double factor = 0.1) const;
+    /**
+     * @return Number of setValue() calls has exceeded the maxEntries argument
+     *   from the constructor
+     */
+    bool hasFullSetOfMeasurements() const;
 
-  /**
-   * Set the value. If the measurement already holds a value, this value is
-   * not overwritten. Instead, the measurement accumulates all values and
-   * returns the average.
-   */
-  void setValue(const double& value);
+    /**
+     * Is value accurate
+     *
+     * A value is accurate if its standard deviation divided by its mean is smaller than the factor.
+     */
+    bool isAccurateValue(double factor = 0.1) const;
 
-  std::string toString() const;
+    /**
+     * Set the value. If the measurement already holds a value, this value is
+     * not overwritten. Instead, the measurement accumulates all values and
+     * returns the average.
+     */
+    void setValue(const double& value);
 
-  double max() const;
-  double min() const;
+    std::string toString() const;
 
-  void erase();
+    double max() const;
+    double min() const;
+
+    void erase();
+
+    /**
+     * @return How many values do feed into a single result, i.e. how many
+     *         entries do we keep track of?
+     */
+    int getObservationSpan() const;
 };

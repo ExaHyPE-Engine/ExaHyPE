@@ -2,6 +2,7 @@
 
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #ifdef CompilerHasSysinfo
@@ -86,6 +87,7 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 
 void tarch::multicore::Core::yield() {
+  tarch::multicore::taskfusion::processAllReadyTasks();
   #pragma omp taskyield
 }
 #endif

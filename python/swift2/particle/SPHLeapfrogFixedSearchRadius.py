@@ -339,7 +339,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
             # The difference between kick1 and kick2 is that we reset some
             # additional quantities at the end. Since this is the first
             # time we're calling it, it needs to be kick2.
-            #  self.algorithm_steps_dict["SPH_Kick2"],
+            self.algorithm_steps_dict["SPH_Kick2"],
         ]
 
         # return deep copies of algorithms steps. Otherwise,

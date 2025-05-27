@@ -1,20 +1,22 @@
 #include "LUDecomposition.h"
 #include <cstring>
+#include <limits>
 
 void tarch::la::backSubstitution(
   const DynamicMatrix& R,
   const double* f,
   double* x
-){
+) {
   for(int k = R.cols()-1; k >= 0; k--){
     x[k] = f[k];
     for(int i = k+1; i < R.cols(); i++){
       x[k] -= R(k, i)*x[i];
     }
+    assertion2( not tarch::la::equals( R(k,k), 0.0 ), R.toString(), k );
     x[k] = x[k]/R(k, k);
   }
-
 }
+
 
 tarch::la::DynamicMatrix tarch::la::invertUpperTriangular(
   const tarch::la::DynamicMatrix& R
@@ -24,9 +26,9 @@ tarch::la::DynamicMatrix tarch::la::invertUpperTriangular(
   double* col = new double[R.cols()];
 
   for (int i = 0; i < R.cols(); i++){
-    std::memset(e, 0, R.cols() * sizeof(double));
-    e[i] = 1;
-
+    std::memset(e, 0.0, R.cols() * sizeof(double));
+    e[i] = 1.0;
+    
     backSubstitution(R, e, col);
     for (int j = 0; j <= i; j++){
       inverseR(j, i) = col[j];

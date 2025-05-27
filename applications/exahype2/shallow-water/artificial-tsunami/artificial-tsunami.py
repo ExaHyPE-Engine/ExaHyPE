@@ -42,22 +42,19 @@ parser = SWEArgumentParser()
 parser.set_defaults(
     end_time=50.0,
     width=[10000, 10000],  # [m]
-    offset=[0.0, 0.0],
-    min_depth=4,
-    amr_levels=0,
-    dg_order=5,
-    number_of_snapshots=20,
-    peano_dir="../../../../",
 )
 args = parser.parse_args()
 
 max_h = (1.1 * min(args.width) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
+args.patch_size = args.dg_order * 2 + 1
+
+unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1}
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDG" + str(args.dg_order),
     order=args.dg_order,
-    unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1},
+    unknowns=unknowns,
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
@@ -69,7 +66,7 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     ncp="applications::exahype2::swe::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
     eigenvalues="return applications::exahype2::swe::maxEigenvalue(Q, x, h, t, dt, normal);",
 )
-aderdg_solver.plot_description = ", ".join({"h": 1, "hu": 1, "hv": 1, "b": 1}.keys())
+aderdg_solver.plot_description = ", ".join(unknowns.keys())
 aderdg_solver.switch_storage_scheme(exahype2.solvers.Storage[args.storage], exahype2.solvers.Storage[args.storage])
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
 aderdg_solver.add_user_solver_includes(
@@ -84,7 +81,9 @@ TopologyParser topologyParser = TopologyParser(
   \"artificial_bath_1000.nc\",
   \"artificial_displ_1000.nc\",
   DomainSize(0),
-  DomainSize(1)
+  DomainSize(1),
+  DomainOffset(0),
+  DomainOffset(1)
 );
 """
 )
@@ -134,14 +133,15 @@ if args.load_balancing_strategy != "None":
     project.set_load_balancing(strategy, configuration)
 
 project.set_number_of_threads(args.threads)
-project.set_timeout(args.timeout)
-project.set_Peano4_installation(args.peano_dir, mode=peano4.output.string_to_mode(args.build_mode))
+project.set_timeout(3600)
+project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=True)
 if args.fpe:
     project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 project.output.makefile.add_cpp_file("../NetCDFReader.cpp")
 project.output.makefile.add_cpp_file("../TopologyParser.cpp")
+project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
 
 print(args)

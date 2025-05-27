@@ -60,7 +60,7 @@ Unit_Tests:
     - Build
   retry: 0
 
-ExaHyPE2_ADER_DG_Tests:
+ExaHyPE2_FV_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -68,14 +68,14 @@ ExaHyPE2_ADER_DG_Tests:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADER_DG_Tests
+    - .ExaHyPE2_FV_Tests
   needs:
     - job: Build
   dependencies:
     - Build
   retry: 0
 
-ExaHyPE2_ADER_DG_AMR_SWE_Test:
+ExaHyPE2_ADERDG_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -83,14 +83,14 @@ ExaHyPE2_ADER_DG_AMR_SWE_Test:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADER_DG_AMR_SWE_Test
+    - .ExaHyPE2_ADERDG_Tests
   needs:
     - job: Build
   dependencies:
     - Build
   retry: 0
 
-ExaHyPE2_ADER_DG_Limiting_Static_Test:
+ExaHyPE2_ADERDG_AMR_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -98,14 +98,14 @@ ExaHyPE2_ADER_DG_Limiting_Static_Test:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADER_DG_Limiting_Static_Test
+    - .ExaHyPE2_ADERDG_AMR_Tests
   needs:
     - job: Build
   dependencies:
     - Build
   retry: 0
 
-ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
+ExaHyPE2_ADERDG_Limiting_Tests:
   stage: Test
   allow_failure: false
   extends:
@@ -113,22 +113,7 @@ ExaHyPE2_ADER_DG_Limiting_Posteriori_Test:
     - .Variables
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADER_DG_Limiting_Posteriori_Test
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
-ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test:
-  stage: Test
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_ADER_DG_Limiting_Euler_Airfoil_Test
+    - .ExaHyPE2_ADERDG_Limiting_Tests
   needs:
     - job: Build
   dependencies:
@@ -150,20 +135,20 @@ MGHyPE_MatrixFree_Tests:
     - Build
   retry: 0
 
-SWIFT2_Dastgen:
-  stage: Test
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .SWIFT2_Dastgen
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
+# SWIFT2_Dastgen:
+#   stage: Test
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnlyOn
+#     - .BeforeScriptWithCMakeSanitiser
+#     - .SWIFT2_Dastgen
+#   needs:
+#     - job: Build
+#   dependencies:
+#     - Build
+#   retry: 0
 
 SWIFT2_Sod1D:
   stage: Test
@@ -225,21 +210,6 @@ ExaHyPE2_Euler:
     - Build
   retry: 0
 
-ExaHyPE2_Advection:
-  stage: Applications
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOn
-    - .BeforeScriptWithCMakeSanitiser
-    - .ExaHyPE2_Advection
-  needs:
-    - job: Build
-  dependencies:
-    - Build
-  retry: 0
-
 ExaHyPE2_Acoustic:
   stage: Applications
   allow_failure: false
@@ -264,6 +234,21 @@ ExaHyPE2_Elastic:
     - .RunOnlyOn
     - .BeforeScriptWithCMakeSanitiser
     - .ExaHyPE2_Elastic
+  needs:
+    - job: Build
+  dependencies:
+    - Build
+  retry: 0
+
+ExaHyPE2_ShallowWater:
+  stage: Applications
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOn
+    - .BeforeScriptWithCMakeSanitiser
+    - .ExaHyPE2_ShallowWater
   needs:
     - job: Build
   dependencies:

@@ -9,7 +9,7 @@ import peano4
 import jinja2
 
 class ComputeFinalLinearCombination(AbstractRKFDActionSet):
-  """!
+  r"""!
   
   We solve the ODE
   
@@ -96,9 +96,10 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
         const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
-        int                                          normal
-      )->double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, gridCellCentre, gridCellH, t, dt, normal );
+        int                                          normal,
+        double* __restrict__                         maxEigenvalue
+      )->void {
+        repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, gridCellCentre, gridCellH, t, dt, normal, maxEigenvalue);
       }
     );
 

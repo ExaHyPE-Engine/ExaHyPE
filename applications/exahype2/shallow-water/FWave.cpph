@@ -90,11 +90,10 @@ double applications::exahype2::swe::fWave(
   }
 
   // Compute eigenvalues of the Jacobian matrices in states Q_{i-1} and Q_{i}
-  constexpr double g = 9.81;
   const double hRoe = 0.5 * (hRight + hLeft);
   const double uRoe = (uLeft * std::sqrt(hLeft) + uRight * std::sqrt(hRight)) / (std::sqrt(hLeft) + std::sqrt(hRight));
-  const double roeSpeeds[2] = {uRoe - std::sqrt(g * hRoe), uRoe + std::sqrt(g * hRoe)};
-  const double characteristicSpeeds[2] = {uLeft - std::sqrt(g * hLeft), uRight + std::sqrt(g * hRight)};
+  const double roeSpeeds[2] = {uRoe - std::sqrt(GRAV * hRoe), uRoe + std::sqrt(GRAV * hRoe)};
+  const double characteristicSpeeds[2] = {uLeft - std::sqrt(GRAV * hLeft), uRight + std::sqrt(GRAV * hRight)};
   const double einfeldtSpeeds[2] = {std::fmin(characteristicSpeeds[0], roeSpeeds[0]), std::fmax(characteristicSpeeds[1], roeSpeeds[1])};
 
   // Set wave speeds (lambda Roe)
@@ -127,8 +126,8 @@ double applications::exahype2::swe::fWave(
   };
 
   // Right hand side
-  const double fluxLeft[2] {huLeft, huLeft * uLeft + 0.5 * g * hLeft * hLeft};
-  const double fluxRight[2] {huRight, huRight * uRight + 0.5 * g * hRight * hRight};
+  const double fluxLeft[2] {huLeft, huLeft * uLeft + 0.5 * GRAV * hLeft * hLeft};
+  const double fluxRight[2] {huRight, huRight * uRight + 0.5 * GRAV * hRight * hRight};
 
   // Alternatively using the input parameters FL and FR gives the same results
   // Then we need to also call the corresponding flux function in the solver before
@@ -137,7 +136,7 @@ double applications::exahype2::swe::fWave(
   //const double fluxRight[2] {FR[s::h], FR[normal + 1]};
 
   // Add source term (bathymetry) into the decomposition of the jump in the flux function
-  const double deltaxPsi = -g * (bRight - bLeft) * hRoe;
+  const double deltaxPsi = -GRAV * (bRight - bLeft) * hRoe;
   // Calculate flux difference f(Q_i) - f(Q_{i-1})
   const double deltaFlux[2] {fluxRight[0] - fluxLeft[0], fluxRight[1] - fluxLeft[1] - deltaxPsi};
 

@@ -5,6 +5,8 @@
 
 #include "ParticleUpdatePredicates.h"
 
+#include "swift2/CellMetaData.h"
+
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
@@ -327,45 +329,14 @@ namespace swift2 {
      *                 particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<PCParticle<LocalParticleContainer>>
      * ~~~~~~~~~~~~~~~~~~~~~~~
      *
-     *
-     * ### Hydro Force calculation particle-particle kernel
-     *
-     * @todo This documentation is likely outdated
-     *
-     * Non-symmetric force interaction between two particles (as per
-     * Swift terminology). In this, only the Local particle is updated (in the
-     * symmetric case, both are updated at the same time). Time derivative of
-     * the internal energy, du/dt, is also updated here. Subscripts a and b
-     * represent indices of Local and Active particles, respectively:
-     *
-     * h_a: Smoothing length of Local particle
-     * h_b: Smoothign length of Active particle
-     * dx : Vector separating the two particles (x_loc - x_act)
-     * r  : Distance between the two particles  (|| dx ||)
-     *
-     * To inject the hydro force, we typically use the code snippet similar to
-     *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * cell_kernel_for_force_calculation = "::swift2::forAllParticlePairs(marker, localParticles, activeParticles,::swift2::kernels::forceKernel<globaldata::HydroPart>);"
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * As we have to know the particle type for the injected functor, the SPH
-     * particle for example replaces this similar to
-     *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * cell_kernel_for_force_calculation = "::swift2::forAllParticlePairs(marker, localParticles, activeParticles,::swift2::kernels::forceKernel<globaldata::{}>);".format(self.name)
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
      * @param LocalParticleContainer  A subtype of std::list<Particle *>
      * @param ActiveParticleContainer A subtype of std::list<Particle *>
      */
     template <typename LocalParticleContainer, typename ActiveParticleContainer>
     void forAllParticlePairs(
-      const peano4::datamanagement::CellMarker&  marker,
+      const swift2::CellMetaData&                cellMetaData,
       LocalParticleContainer&                    localParticles,
       ActiveParticleContainer&                   activeParticles,
-      const std::vector<int>&                    numberOfCoalescedLocalParticlesPerVertex,
-      const std::vector<int>&                    numberOfCoalescedActiveParticlesPerVertex,
       ParticleBinaryOperator<PCParticle<LocalParticleContainer>, PCParticle<ActiveParticleContainer>> auto f,
       UpdateParticleAssignedToCellPredicate<PCParticle<LocalParticleContainer>>
           localParticlePredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<PCParticle<LocalParticleContainer>>,

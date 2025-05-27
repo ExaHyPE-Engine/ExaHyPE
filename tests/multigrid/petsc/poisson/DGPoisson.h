@@ -41,7 +41,7 @@ class benchmarks::multigrid::petsc::poisson::DGPoisson: public benchmarks::multi
      * Initialise a degree of freedom
      *
      * This routine will be called only for interior DoFs. See the correlation
-     * to getCellDoFType() in the superclass.
+     * to getCellType() in the superclass.
      *
      * @todo Please add your documentation here
      */

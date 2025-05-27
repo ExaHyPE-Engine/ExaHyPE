@@ -23,22 +23,27 @@
 namespace tarch {
   namespace reader {
     /**
-     * Read Peano Patch file back into the memory for certain
-     * features, e.g. checkpoint.
-     */
-
-    /** accept the list of checkpoint files and then read in 
-     *  the coordinates and patch data from them. Quite memory
-     *  intensive and need optimization.
+     * Read Peano patch files back into the memory
+     *
+     * This routine accept the list of checkpoint files and then reads in
+     * the coordinates and patch data from them. This routine is essential for
+     * certain features, e.g. checkpointing.
+     *
+     * The current implementation is quite memory-intensive and might benefit
+     * from some optimization.
+     *
+     * @param offsetIndex Output data. Anything piped in will be cleared.
+     * @param offsetIndex Output data. Anything passed in will be cleared.
      */
     void readInCheckpointFiles(
-      std::vector<std::string> CheckpointFilesOfSolver,
-      std::vector<double>& domainDataFromFiles,
-      std::vector<double>& offsetIndex,
+      const std::vector<std::string>&   checkpointFilesOfSolver,
+      std::vector<double>&              domainDataFromFiles,
+      std::vector<double>&              offsetIndex,
       int numberOfUnknowns,
       int numberOfAuxiliaries,
       int dimension,
-      int patchSize);
+      int patchSize
+    );
 
     struct offsetHash {
       std::size_t operator()(const std::tuple<double, double, double>& offset) const {

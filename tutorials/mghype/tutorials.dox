@@ -39,6 +39,7 @@ instructions!
   - \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
   - \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
 - Adding features
+  - \subpage tutorials_multigrid_matrixfree_jumping_coefficients_and_optimisation
 
 
 ## How to add your own tutorial

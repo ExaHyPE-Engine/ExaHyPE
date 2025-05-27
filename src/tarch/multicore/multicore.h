@@ -84,68 +84,10 @@ namespace tarch {
    on some systems, as we rely heavily on nested parallelism.
 
 
-   ## Statistics
+   ## Documentation
 
-   If the Peano statistics are enabled, the tasking back-end will sample several
-   quantities such as "tarch::multicore::bsp-concurrency-level" or
-   "tarch::multicore::spawned-tasks".
-   Depending on the chosen back-end, you might get additional counters on top.
-   Please start to look into tarch/multicore/Tasks.cpp for an overview of the
-   most generic counters.
-
-
-   ## Tasking model in Peano
-
-   Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
-   tarch::multicore::Task. However, these classes might not be mapped 1:1 onto
-   native tasks. In line with other APIs such as OneTBB, we distinguish different
-   task types or task graph types, respectively:
-
-   - ***Tasks***. The most generic type of tasks is submitted via spawnTask().
-     Each task can be assigned a unique number and incoming dependencies. The
-     number in return can be used to specify outgoing dependencies.
-   - ***Fork-join tasks***. These are created via tarch::multicore::spawnAndWait()
-     which accepts a sequence of tasks. They are all run in parallel but then
-     wait for each other, i.e. we define a tree (sub)task graph. With fork-join
-     calls, we mirror the principles behind bulk-synchronous programming (BSP).
-   - ***Fusable tasks***. A subtype of the normal tasks.
-
-
-   ### Tasks with dependencies
-
-   In Peano, task DAGs are built up along the task workflow. That is, each task
-   that is not used within a fork-join region or is totally free is assigned a
-   unique number when we spawn it.
-
-   Whenever we define a task, we can also define its dependencies. This is a sole
-   completion dependency: you tell the task system which task has to be completed
-   before the currently submitted one is allowed to start. A DAG thus can be built
-   up layer by layer. We start with the first task. This task might be
-   immediately executed - we do not care - and then we continue to work our way
-   down through the graph adding node by node.
-
-   In line with OpenMP and TBB - where we significantly influenced the development
-   of the dynamic task API - outgoing dependencies should be declared before we
-   use them.
-
-
-   ### Orchestration and (auto-)tuning
-
-   The task orchestration is controlled via an implementation of
-   tarch::multicore::orchestration::Strategy that you set via
-   tarch::multicore::setOrchestration().
-   With the strategy you can control the fusion of tasks and its shipping onto
-   GPUs.
-   Whenever we hit a fork-join section, i.e. encounter tarch::multicore::spawnAndWait(),
-   you can also pick from different scheduling variants:
-
-   1. Execute the tasks serially. Do not exploit any concurrency.
-   2. Handle the tasks parallel. Any fusion is done within the runtime.
-   3. Run through the forked tasks in parallel and afterwards fuse those tasks
-      created manually. So you enforce when the fusion is happening.
-
-   The orchestration of choice can control this behaviour via
-   tarch::multicore::orchestration::Strategy::paralleliseForkJoinSection().
+   The core documentation of Peano's multicore layer is part of the generic
+   @ref page_tarch_multicore documentation.
 
    */
   namespace multicore {
@@ -189,28 +131,6 @@ namespace tarch {
      * Ownership goes over to Peano's job namespace, i.e. you don't have
      * to delete the pointer.
      *
-     * ## Handling tasks without outgoing dependencies
-     *
-     * If taskNumber equals NoDependency, we know that noone is (directly)
-     * waiting for this task, i.e. we won't add dependencies to the task
-     * graph afterwards. In this case, the realisation is straightforward:
-     *
-     * 1. If SmartMPI is enabled and the task should be sent away, do so.
-     * 2. If the current orchestration strategy (an implementation of
-     *    tarch::multicore::orchestration::Strategy says that we should
-     *    hold back tasks, but the current number of tasks in the
-     *    thread-local queue exceeds already this threshold, invoke
-     *    the native tarch::multicore::native::spawnTask(task).
-     * 3. If none of these ifs apply, enqueue the task in the thread-local
-     *    queue.
-     * 4. If we came through route (3), doublecheck if we should fuse
-     *    tasks into GPUs.
-     *
-     * spawnTask() will ***never*** commit a task to the global task
-     * queue and therefore is inherently thread-safe.
-     *
-     * ## Tasks with a task number and incoming dependencies
-     *
      * Spawn a task that depends on one other task. Alternatively, pass in
      * NoDependency. In this case, the task can kick off immediately. You have
      * to specify a task number. This number allows other, follow-up tasks to
@@ -224,11 +144,37 @@ namespace tarch {
      * ever waiting for it later on (at least not via task dependencies).
      *
      *
-     * @see tarch::multicore and the section "Tasks with dependencies" therein
-     *   for further documentation.
-     * @see tarch::multicore::spawnAndWait() for details what happens with
-     *   tasks that have no outgoing dependencies.
-     * @see processPendingTasks(int) describing how we handle pending tasks.
+     * ## OpenMP variant
+     *
+     * The OpenMP variant has to jump through a number of hoops:
+     *
+     * 1. We check if we have enough addresses to administer the task
+     *    dependencies. We basically ask: should we grow this big table
+     *    that holds the dependencies (dependencyTrackingBaseAddress).
+     * 2. If that analysis says "yes", we acquire a write lock on the
+     *    whole tasking. Otherwise, we acquire a read lock over a
+     *    MultiReadSingleWriteSemaphore instance.
+     * 3. We grow the task dependency management memory region if we
+     *    have got a write lock.
+     * 4. We look for each involved task number if this can be modelled
+     *    via an OpenMP dependency, i.e. if the task number is one that
+     *    we can manage. Otherwise, we move this dependency (we know
+     *    that the number of tasks managed is monotonously growing, i.e.
+     *    we can assume that this dependency's task has never been used).
+     * 5. If there are no out dependencies, we can just spawn this task.
+     *    It goes straight into the background.
+     * 6. If we have an out dependency (task number) and if we can serve
+     *    this one, we spawn a proper task.
+     * 7. Otherwise, we complete the task immediately.
+     *
+     * @see The page @ref page_tarch_multicore contains some high level
+     *      overview of the multithreading.
+     * @see The documentation of tarch::multicore::taskfusion for details
+     *      how we handle task fusion.
+     * @see tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence()
+     *      for details how we react if task->canFuse() holds.
+     * @see tarch::native::spawnTask() for implementation details if a task
+     *      cannot be fused.
      *
      * @param task Pointer to a task. The responsibility for this task is
      *   handed over to the tasking system, i.e. you are not allowed to delete
@@ -255,6 +201,17 @@ namespace tarch {
      * implementation, as we basically run through each task in
      * inDependencies and invoke waitForTask() for it. We don't have to rely on
      * some backend-specific implementation.
+     *
+     * ## Usage
+     *
+     * You can obviously construct a task set explicitly. If you know the
+     * number of tasks, you can however directly use the bracket notation
+     * to invoke this function:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *    int taskNumber = ...;
+     *    tarch::multicore::waitForTasks({taskNumber+0,taskNumber+1});
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * ## Serial code
      *
@@ -395,32 +352,6 @@ namespace tarch {
        * @param tasks Set of tasks. Is guaranteed to be non-empty.
        */
       void spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks);
-
-      /**
-       * Process a fused task
-       *
-       * A fused task is a task (which can be fused) and a list of further
-       * tasks which are of the same type and, hence, can be fused, too. The
-       * list can be empty. Efficient implementations should spawn the fused
-       * tasks as a further ready task and return immediately.
-       *
-       * ## No multithreading
-       *
-       * If no multithreading is enabled, then we map it onto a plain task via
-       * a spawnTask(). This spawn has no dependencies.
-       *
-       *
-       *
-       * @param firstTask First task. This is a task which can be fused. The pointer
-       *   is valid. The ownership of firstTask is handed over to the called routine,
-       *   i.e. processFusedTask() has to ensure that it is deleted.
-       * @param otherTasks List of tasks of the same type. The list can be empty.
-       *   processFusedTask() has to ensure that all tasks stored within the list are
-       *   executed and subsequently destroyed.
-       * @param device Target device on which the fused tasks should be executed. Can
-       *   be host if the tasks should end up on the host.
-       */
-      void processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device);
 
       /**
        * Spawn a new task into the tasking backend
@@ -580,6 +511,26 @@ namespace tarch {
        *    bookmarked in there and is already complete. In this case, we
        *    remove the entry. We kind of run an on-the-fly immediate garbage
        *    collection to slim down our map of spawned tasks.
+       *
+       * ## OpenMP
+       *
+       * Joachim Jenke has flagged that there are some OpenMP versions that
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * might fail with some (older) OpenMP versions. A workaround is the
+       * construct through an empty task:
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * #pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) if (0)
+       * {}
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * Here, we model a task which is actually never spawned as task due to
+       * if statement that evaluates to false. However, the in-dependencies
+       * will be resolved nevertheless.
        */
       void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
@@ -602,9 +553,56 @@ namespace tarch {
        * iteratively wait for one task after another to finish. This implies
        * that we give the runtime system a lot of freedom in which order and
        * how parallel to tidy up all tasks.
+       *
+       * ## OpenMP
+       *
+       * In OpenMP, we do a generic taskwait, but then we use the opportunity
+       * as well to grow the memory used for dependency tracking by calling
+       * reserveDependencyTrackingMemory(). We still need the generic taskwait
+       * first, as there's no guarantee that reserveDependencyTrackingMemory()
+       * will actually expand the memory and wait for all other tasks.
        */
       void waitForAllTasks();
     } // namespace native
+
+
+    /**
+     * Wait for all tasks notably has to take fused tasks into account.
+     */
     void waitForAllTasks();
+
+
+    /**
+     * Process a fused task
+     *
+     * A fused task is a task (which can be fused) and a list of further
+     * tasks which are of the same type and, hence, can be fused, too. This
+     * routine has to process all tasks, delete all the instances, i.e. both
+     * myTask and all pointers stored in tasksOfSameType, and return. It is
+     * blocking in the sense that we are guaranteed that tasks have completed
+     * once this function returns. For the execution, we rely on myTask's
+     * fuse() operation, i.e. this routine is solely there for the memory
+     * management.
+     *
+     * ## Generic efficiency remarks
+     *
+     * It is generally not clear if it is better to spawn all tasks again as
+     * a big parallel for, or to process them sequentially without any further
+     * tasking. After all, the task fusion has been introduced to reduce task
+     * management overhead. If we now take a set of tasks and again map them
+     * onto a set of physical tasks, it is really not clear what we gain in
+     * the end, as we again introduce overhead.
+     *
+     * @param firstTask First task. This is a task which can be fused. The pointer
+     *   is valid. The ownership of firstTask is handed over to the called routine,
+     *   i.e. processFusedTask() has to ensure that it is deleted.
+     * @param otherTasks List of tasks of the same type. The list can be empty.
+     *   processFusedTask() has to ensure that all tasks stored within the list are
+     *   executed and subsequently destroyed.
+     * @param device Target device on which the fused tasks should be executed. Can
+     *   be host if the tasks should end up on the host.
+     */
+    void processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device);
+
   } // namespace multicore
 } // namespace tarch

@@ -56,9 +56,6 @@ class Prolongation(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
       pass 
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-    #   result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
-    #   pass
     return result
 
   def user_should_modify_template(self):
@@ -96,5 +93,5 @@ class Prolongation(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_Prolongation"
+    return __name__.replace(".py", "").replace(".", "_")
 

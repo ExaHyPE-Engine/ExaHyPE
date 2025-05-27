@@ -11,5 +11,8 @@ from .GlobalAdaptiveTimeStepWithEnclaveTasking      import GlobalAdaptiveTimeSte
 #from .SubcyclingAdaptiveTimeStepWithEnclaveTasking  import SubcyclingAdaptiveTimeStepWithEnclaveTasking
 #from .LocalTimeStepWithEnclaveTasking               import LocalTimeStepWithEnclaveTasking
 
+from .RusanovDSLKernel2D import timeStepWithRusanov as timeStepWithRusanov2d
+from .RusanovDSLKernel3D import timeStepWithRusanov as timeStepWithRusanov3d
+
 from .kernels import SolverVariant
 from .kernels import KernelVariant

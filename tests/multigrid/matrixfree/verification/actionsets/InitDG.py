@@ -15,7 +15,7 @@ class InitDofsDGTest1(ActionSet):
 
   //logTraceInWith3Arguments("InitDofsDG::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -85,7 +85,7 @@ class InitDofsDGTest1(ActionSet):
 
   auto indexIsOnBoundary = [&indicesOnBoundary](int i) -> bool { return not( indicesOnBoundary.empty() ) and std::find( indicesOnBoundary.begin(), indicesOnBoundary.end(), i ) != indicesOnBoundary.end() ; };
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
   /*
   extremely hacky static random number generator
@@ -176,7 +176,7 @@ class InitDofsDGTest1(ActionSet):
   templateTouchFaceFirstTime = """
   logTraceInWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
-  facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
+  facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -510,7 +510,7 @@ class InitDofsDGTest6(InitDofsDGTest1):
 
   auto indexIsOnBoundary = [&indicesOnBoundary](int i) -> bool { return not( indicesOnBoundary.empty() ) and std::find( indicesOnBoundary.begin(), indicesOnBoundary.end(), i ) != indicesOnBoundary.end() ; };
 
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
   /*
   extremely hacky static random number generator
@@ -686,7 +686,7 @@ class InitDofsDGTest4(InitDofsDGTest1):
 
     
   templateTouchCellFirstTime="""
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
   /*
   extremely hacky static random number generator
@@ -751,7 +751,7 @@ class InitDofsDGTest4(InitDofsDGTest1):
 class InitDofsDGTest5(InitDofsDGTest1):
 
   templateTouchCellFirstTime="""
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
   switch(dofType)
   {
@@ -803,7 +803,7 @@ class InitDofsDGTest7(InitDofsDGTest1):
         {% endfor %}
     };
 
-  celldata::{{DG_SOLVER_NAME}}::Type dofType = repositories::{{DG_SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{DG_SOLVER_NAME}}::Type dofType = repositories::{{DG_SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
   switch(dofType)
   {

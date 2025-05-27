@@ -114,42 +114,12 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   ::tbb::task_group taskGroup;
   for (auto& p : tasks) {
     taskGroup.run([&tasks, p]() -> void {
-      while (p->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
+      p->run();
       delete p;
     });
   }
 
   taskGroup.wait();
-}
-
-
-
-/**
- * Process a fused task (an assembly of multiple tasks of the same type)
- *
- * It is not clear what happens if I use tasksOfSameType directly within the task.
- * It is clear that a pure reference cannot be used within a task, as the task uses
- * firstprivate by default. Therefore, it would copy something which ceases to exist.
- * It is not clear what happens with const references, but we had some memory issues
- * with the newer Intel/LLVM versions. Therefore, I manually copy the list and pass
- * this one into fuse(). The firstprivate annotation is not required, as this is the
- * default. But I leave it in here to highlight that three variables are copied,
- * but tasksOfSameType is not copied and not used within the task.
- */
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
-  std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  globalTaskGroup.run([&, myTask, copyOfTasksOfSameType] {
-    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
-    if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
-    } else {
-      delete myTask;
-    }
-  });
 }
 
 
@@ -201,8 +171,7 @@ void tarch::multicore::native::spawnTask(
   ::oneapi::tbb::task_handle*  handle = new ::oneapi::tbb::task_handle(
       globalTaskGroup.defer(
         [job]() -> void {
-          while (job->run()) {
-          }
+          job->run();
           delete job;
         }
       )
@@ -210,8 +179,7 @@ void tarch::multicore::native::spawnTask(
   #elif PeanoDebug>0
     ::tbb::dynamic_task_graph_node* handle = new ::tbb::dynamic_task_graph_node(
       [job]() -> void {
-        while (job->run()) {
-        }
+        job->run();
         delete job;
       },
       job->toString()
@@ -219,8 +187,7 @@ void tarch::multicore::native::spawnTask(
   #else
     ::tbb::dynamic_task_graph_node* handle = new ::tbb::dynamic_task_graph_node(
       [job]() -> void {
-        while (job->run()) {
-        }
+        job->run();
         delete job;
       }
     );

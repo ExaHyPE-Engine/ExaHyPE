@@ -47,6 +47,7 @@ double tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::getL
   for (auto line : lines) {
     if (line.find(Token_TimeStamp) != std::string::npos) {
       std::string timeStampToken = line.substr(line.find(Token_TimeStamp) + Token_TimeStamp.length());
+      #if defined(__cpp_exceptions)
       try {
         double timeStamp = std::stod(timeStampToken);
         result           = std::max(result, timeStamp);
@@ -56,6 +57,10 @@ double tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::getL
         );
         result = std::numeric_limits<double>::max();
       }
+      #else
+      double timeStamp = std::stod(timeStampToken);
+      result           = std::max(result, timeStamp);
+      #endif
     }
   }
 
@@ -248,13 +253,21 @@ int tarch::plotter::griddata::blockstructured::restartPreprocess(const std::stri
     std::istringstream iss2(line);
     while (iss2>>token){
       double tempTime;
+      #if defined(__cpp_exceptions)
       try {
         tempTime=std::stod(token);
         if ( (tarch::la::equals(tempTime,restartTime,1e-5) or (tempTime>restartTime)) and currentLine>5){
           //std::cout<<"target time is "<<restartTime <<" and current time is " << tempTime << std::endl;
           isCurrentTime=true; break;
         }
-      } catch (...){} 
+      } catch (...){}
+      #else
+      tempTime=std::stod(token);
+      if ( (tarch::la::equals(tempTime,restartTime,1e-5) or (tempTime>restartTime)) and currentLine>5) {
+        isCurrentTime=true;
+        break;
+      }
+      #endif
     }
 
     //find the target timestamp, break from the loop

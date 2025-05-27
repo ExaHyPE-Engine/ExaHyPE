@@ -12,7 +12,7 @@ stages:
 # Define one sub-pipeline per toolchain:
 ########################################################
 
-GCC_OpenMP:
+GCC_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -29,13 +29,14 @@ GCC_OpenMP:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=omp"
+                            --with-multithreading=omp \
+                            --with-mpi=mpicxx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-Intel_OpenMP:
+Intel_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -52,13 +53,14 @@ Intel_OpenMP:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=omp"
+                            --with-multithreading=omp \
+                            --with-mpi=mpiicpx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml
     strategy: depend
 
-LLVM_OpenMP:
+LLVM_SharedOMP_MPI:
   extends: .Variables
   stage: Compiler
   variables:
@@ -75,7 +77,8 @@ LLVM_OpenMP:
                             --enable-particles \
                             --enable-mghype \
                             --enable-finiteelements \
-                            --with-multithreading=omp"
+                            --with-multithreading=omp \
+                            --with-mpi=mpicxx"
   trigger:
     include:
       - .continuous_integration/pipelines/automake.yml

@@ -144,6 +144,9 @@ public:
    * This variant uses relativeEps() as defined in tarch/la/Scalar.h.
    *
    *
+   * @see   The routine calls the static isContained() routine and passes the
+   *        local attributes in.
+   *
    * @param tolerance Absolute tolerance when we compare two values.
    *
    */
@@ -156,6 +159,10 @@ public:
    * tarch::la comparison functions as we operate with floating point
    * values. tolerance is the tolerance we pass into these functions.
    *
+   * See the other isContained() routine for a description, but keep in
+   * mind that this other routine refers to this place, i.e. this routine
+   * provides the actual behaviour.
+   *
    * @param x          Point to query
    * @param cellCentre Centre of cell of interest
    * @param h          Mesh size on this level
@@ -163,9 +170,10 @@ public:
    *
    */
   static bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& h, double tolerance
+    const tarch::la::Vector<Dimensions, double>&   x,
+    const tarch::la::Vector<Dimensions, double>&   cellCentre,
+    const tarch::la::Vector<Dimensions, double>&   h,
+    double                                         tolerance
   );
 
   bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size) const;

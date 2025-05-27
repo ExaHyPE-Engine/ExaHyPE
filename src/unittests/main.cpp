@@ -1,16 +1,24 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "config.h"
-#include "peano4/parallel/Node.h"
-#include "peano4/peano.h"
-#include "peano4/UnitTests.h"
+
+/*
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+*/
+
+#include "tarch/UnitTests.h"
 #include "tarch/logging/ChromeTraceFileLogger.h"
 #include "tarch/logging/CommandLineLogger.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/UnitTests.h"
+
+#include "peano4/peano.h"
+#include "peano4/UnitTests.h"
+#include "peano4/parallel/Node.h"
 
 #ifdef UseToolboxBlockstructured
 #include "toolbox/blockstructured/UnitTests.h"
@@ -281,6 +289,7 @@ int main(int argc, char** argv) {
   }
 
   tarch::multicore::Core::getInstance().configure(cores);
+
 
   runTests();
 

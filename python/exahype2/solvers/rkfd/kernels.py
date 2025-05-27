@@ -43,13 +43,14 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
+    static GPUCallableMethod void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
+      double* __restrict__                         maxEigenvalue,
       Offloadable
     )
     #if defined(GPUOffloadingSYCL)
@@ -71,13 +72,14 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double* __restrict__                         maxEigenvalue
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     {% endif %}
     
@@ -239,13 +241,14 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double* __restrict__                         maxEigenvalue
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
@@ -309,13 +312,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #pragma omp declare target
 #endif
 #if !defined(GPUOffloadingSYCL)
-GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
       int                                          normal,
+      double* __restrict__                         maxEigenvalue,
       Offloadable
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
@@ -442,13 +446,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double* __restrict__                         maxEigenvalue
     ) override;
     {% endif %}
 
@@ -531,12 +536,13 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
+    static GPUCallableMethod void maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       int                                          normal,
+      double* __restrict__                         maxEigenvalue
       Offloadable
     );
     #if defined(GPUOffloadingOMP)
@@ -625,13 +631,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double* __restrict__                         maxEigenvalue
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, gridCellH, t, normal );
   // @todo implement
@@ -703,12 +710,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   int                                          normal,
+  double* __restrict__                         maxEigenvalue,
   Offloadable
 )  {
   // @todo implement

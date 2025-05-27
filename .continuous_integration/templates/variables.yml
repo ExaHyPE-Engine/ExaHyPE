@@ -4,7 +4,7 @@
     # https://docs.gitlab.com/ee/user/project/repository/monorepos/
     # https://docs.gitlab.com/ee/ci/runners/configure_runners.html#git-fetch-extra-flags
     GIT_DEPTH: 1
-    GIT_STRATEGY: fetch # clone
+    GIT_STRATEGY: clone # fetch
     GIT_FETCH_EXTRA_FLAGS: "--no-tags"
     IMAGE_BASE: "base.sif"
     IMAGE_GCC: "gcc.sif"

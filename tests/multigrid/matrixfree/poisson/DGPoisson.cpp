@@ -13,39 +13,19 @@ tests::multigrid::matrixfree::poisson::DGPoisson::~DGPoisson() {
 
 
 //! [Set initial guess and rhs]
-void tests::multigrid::matrixfree::poisson::DGPoisson::initCell(
+void tests::multigrid::matrixfree::poisson::DGPoisson::initCellDoF(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< CellUnknowns, double >&  value,
-  tarch::la::Vector< CellUnknowns, double >&  rhs
+  tarch::la::Vector< UnknownsPerCellNode, double >&    value,
+  tarch::la::Vector< UnknownsPerCellNode, double >&    rhs,
+  tarch::la::Vector< Dimensions, int >&         node
 ) {
-  logTraceInWith4Arguments("initCell", x, h, value, rhs);
+  logTraceInWith4Arguments("initCellDoF(...)", x, h, value, rhs);
 
-  auto bottomLeft = x - 0.5 * h;
+  rhs[0]   = getPointWiseRhs(x);
+  value[0] = 0;
 
-  // we only have one cell unknown, so we can reuse this macro
-  int counter = 0;
-  dfor( k, PolyDegree + 1 )
-  {
-    // convert k to double
-    tarch::la::Vector<Dimensions, double> kDouble = tarch::la::convertScalar<double, Dimensions, int>(k);
-    auto dofPosition = bottomLeft + h(0)*kDouble / (double)repositories::instanceOfDGPoisson.PolyDegree;
-    rhs[counter]   = getPointWiseRhs(dofPosition);
-    value[counter] = 0;
-    counter++;
-  }
-
-  logTraceOutWith4Arguments("initCell", x, h, value, rhs);
+  logTraceOutWith4Arguments("initCellDoF(...)", x, h, value, rhs);
 }
 //! [Set initial guess and rhs]
 
-
-void tests::multigrid::matrixfree::poisson::DGPoisson::initFace(
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  tarch::la::Vector< FaceUnknownsSolution,   double >&  solution,
-  tarch::la::Vector< FaceUnknownsProjection, double >&  projection
-) {
-  for (int i=0; i < solution.size(); i++)   solution[i]   = 0;
-  for (int i=0; i < projection.size(); i++) projection[i] = 0;
-}
