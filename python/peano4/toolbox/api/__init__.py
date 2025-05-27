@@ -6,3 +6,5 @@ from .EnumerateCellsAndVertices import ClearNumbersOnMesh
 from .EnumerateCellsAndVertices import create_cell_marker
 from .EnumerateCellsAndVertices import create_vertex_marker
 
+from .AssignNumbersToCells import AssignNumbersToCells
+

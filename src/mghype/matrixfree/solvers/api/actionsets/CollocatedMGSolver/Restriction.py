@@ -16,9 +16,9 @@ class Restriction(ActionSet):
   ) {
     for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
       // set oldU to 0
-      fineGridVertex{{SOLVER_NAME}}.setOldU( i, 0.0 );
-      fineGridVertex{{SOLVER_NAME}}.setU(    i, 0.0 );
-      fineGridVertex{{SOLVER_NAME}}.setRhs(  i, 0.0 );   
+      fineGridVertex{{SOLVER_NAME}}.setOldU(   i, 0.0 );
+      fineGridVertex{{SOLVER_NAME}}.setU(      i, 0.0 );
+      fineGridVertex{{SOLVER_NAME}}.setRhs(    i, 0.0 );   
     }
   }
   """
@@ -97,5 +97,5 @@ class Restriction(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_") + "_Restrict"
+    return __name__.replace(".py", "").replace(".", "_")
 

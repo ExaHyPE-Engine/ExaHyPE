@@ -2,14 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <functional> // needed for std::less
-#include <map>
-#include <vector>
-
 #include "MeshSweepData.h"
 #include "ParticleIdentifier.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
+
+#include <functional> // needed for std::less
+#include <map>
+#include <vector>
 
 
 #if !defined(AssignmentChecks) and !defined(noAssignmentChecks) \
@@ -29,20 +29,15 @@ namespace toolbox {
          * @class Database
          * @brief stores the actual particle histories.
          *
-         * Particles are traced via a map, where the keys are
-         * instances of the ParticleIdentifier class. The database itself
-         * is implemented as a singleton. To access it, use the getInstance()
-         * method.
+         * Particles are traced via a map, where the keys are instances of the
+         * ParticleIdentifier class. The database itself is implemented as a
+         * singleton. To access it, use the getInstance() method.
          *
-         * The database will track all events on all spacetrees on this
-         * MPI rank. Per particle, we store up to
-         * _maxParticleSnapshotsToKeepTrackOf particle events. Once that number
+         * The database will track all events on all spacetrees on this MPI
+         * rank. Per particle (and per spacetree), we store up to
+         * _maxParticleEventsToKeepTrackOf particle events. Once that number
          * is exceeded, the past history will be condensed into a single event,
          * signifying that it had been compacted.
-         *
-         * Important: Make sure that _maxParticleSnapshotsToKeepTrackOf is >=
-         * number of spacetrees in your run. @TODO: add a runtime check for this
-         * during startup.
          *
          * Additionally, something we come across very often is that particles,
          * once assigned to a vertex, very often stay assigned to the same
@@ -51,7 +46,8 @@ namespace toolbox {
          * the database will mark consecutive move events using a special event
          * type, Event::Type::ConsecutiveMoveEvent. It will also keep track the
          * original position of the particle, before the first move event of
-         * that sequence has occurred, as well as the current particle position.
+         * that sequence has occurred, as well as the current particle
+         * position.
          */
 
         class Database {
@@ -72,12 +68,10 @@ namespace toolbox {
         private:
           // Make constructor private so nobody can make one by accident.
           Database() {
-            setMaxParticleSnapshotsToKeepTrackOf(32);
+            setMaxParticleSnapshotsToKeepTrackOf(8);
             this->reset();
           };
 
-
-        private:
           tarch::multicore::MultiReadSingleWriteSemaphore _semaphore;
 
           std::vector<MeshSweepData> _meshSweepData;
@@ -100,13 +94,10 @@ namespace toolbox {
            * Set it to std::numerics<int>::max() to disable this type of
            * garbage collection on the history.
            */
-          size_t _maxParticleSnapshotsToKeepTrackOf;
+          size_t _maxParticleEventsToKeepTrackOf;
 
         public:
-          // TODO: is this still used?
-          static constexpr int SearchWholeDatabase                    = 0;
-          static constexpr int AnyTree                                = -1;
-          static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
+          static constexpr int AnyTree = -1;
 
           /**
            * Sets the number of snapshots to keep in the database.
@@ -132,10 +123,8 @@ namespace toolbox {
            * semaphore is lifted, the state of the history remains accurate.
            *
            * @return The history of the particle.
-           *
            */
-          ParticleEvents getParticleHistory(
-            const ParticleSearchIdentifier& identifier
+          ParticleEvents getParticleHistory(const ParticleIdentifier& identifier
           );
 
           /**
@@ -143,8 +132,7 @@ namespace toolbox {
            *
            * Cannot be const as we have a semaphore to be thread-safe.
            */
-          std::string particleHistory(const ParticleSearchIdentifier& identifier
-          );
+          std::string particleHistory(const ParticleIdentifier& identifier);
 
           /**
            * Returns the recorded events of the latest mesh sweep.
@@ -156,8 +144,7 @@ namespace toolbox {
            *
            * Cannot be const as we have a semaphore to be thread-safe.
            */
-          int getTotalParticleEntries(const ParticleSearchIdentifier& identifier
-          );
+          int getTotalParticleEntries(const ParticleIdentifier& identifier);
 
           /**
            * Return number of snapshots
@@ -177,7 +164,7 @@ namespace toolbox {
            * i.e. throw away irrelevant old data.
            *
            * If the number of events for a particle exceeds the limit set
-           * by _maxParticleSnapshotsToKeepTrackOf, this routine will
+           * by _maxParticleEventsToKeepTrackOf, this routine will
            * squash them together into a single event signifying that
            * this compression has occurred, while keeping the event type
            * of the last recorded event. The other events in the history
@@ -186,11 +173,7 @@ namespace toolbox {
            * @return the last event on the spacetree with id treeId before
            * the newly added one.
            */
-          Event addEvent(
-            ParticleSearchIdentifier identifier,
-            Event&                   event,
-            const int                treeId
-          );
+          Event addEvent(ParticleIdentifier identifier, Event& event);
 
           /**
            * Replace an (old) particle event with a new one.
@@ -203,19 +186,19 @@ namespace toolbox {
            * the newEvent.
            */
           void replaceEvent(
-            ParticleSearchIdentifier identifier,
-            Event&                   oldEvent,
-            Event&                   newEvent
+            ParticleIdentifier identifier,
+            Event&             oldEvent,
+            Event&             newEvent
           );
 
           /**
-           * Change the particle's coordinates used to identify it if it moved
-           * too much compared to the coordinates stored in its identifier in
-           * the database.
-           */
-          void shiftIdentifierCoordinates(
-            ParticleSearchIdentifier              identifier,
-            tarch::la::Vector<Dimensions, double> newParticleX
+           * Change the particle's vertexIndex in the map identifier.
+           * Particle must be findable with the passed identifier.
+           * */
+          void shiftIdentifierVertexInd(
+            ParticleIdentifier&                       identifier,
+            tarch::la::Vector<Dimensions, long long>& newVertexInd,
+            const int                                 newVertexDepth
           );
 
           /**

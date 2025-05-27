@@ -126,19 +126,6 @@ void tarch::multicore::native::spawnTask(
 }
 
 
-void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
-  std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  std::future<void>                  dontWait              = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
-    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
-    if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoOutDependencies);
-    } else {
-      delete myTask;
-    }
-  });
-}
-
-
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   for (auto& p : inDependencies) {
     std::shared_future<void>* checkFuture = nullptr;

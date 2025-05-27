@@ -2,6 +2,19 @@
 
 
 #include <iomanip>
+#include <cstring>
+
+
+template<int Rows, int Cols, typename Scalar>
+tarch::la::Matrix<Rows,Cols,Scalar> tarch::la::buildMatrix(const Scalar* values) {
+  tarch::la::Matrix<Rows,Cols,Scalar> result;
+  std::memcpy(
+    result._values,
+    values,
+    sizeof(Scalar)*Rows*Cols
+  );
+  return result;
+}
 
 
 template<int Rows, int Cols, typename Scalar>

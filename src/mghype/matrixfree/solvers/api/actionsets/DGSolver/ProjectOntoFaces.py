@@ -27,36 +27,40 @@ class ProjectOntoFaces(ActionSet):
     // no tricky indexing needed here, since the whole of the cell
     // solution vector is in scope here.
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double > faceProjections = 
-      repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
+      repositories::{{SOLVER_INSTANCE}}. applyFaceFromCellMatrix(
+        marker.x(), 
+        marker.h(),
+        fineGridCell{{SOLVER_NAME}}.getSolution()
+      );
 
     logTraceInWith3Arguments("ProjectOntoFace", marker.toString(), faceProjections, fineGridCell{{SOLVER_NAME}}.getSolution());
     
-    // write these values into the faces themselves
-    for (int f=0; f<TwoTimesD; f++)
-    {
-      logTraceInWith2Arguments("ProjectOntoFaces::FaceLoop", f, fineGridFaces{{SOLVER_NAME}}(f).getProjection())
-      /*
-      This loop is crucial - we have a lot of redundant zeros and we don't wanna overwrite eg negative
-      projections when we are dealing with face 0. So, some tricky indexing needed
-      */
-      // skip halfway along the projection vector if we are on face 0 or 1
-      int startIndexProjection = 
-        f < Dimensions ?
-        repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
-        0;
+    // first D faces - only care about right-side projection
+    for (int f=0; f<Dimensions; f++) {
+      // the projection vector should be twice as long as the number of solutions, so jump 
+      // ahead by this number. NOTE THAT THIS CODE CAN BE REFACTORED TO REMOVE THE REDUNDANCY NOW
+      const int offset = repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution;
 
-      // previously, this loop would go up to total number of projections.
-      // but we only want half this number, since we skip the projections
-      // that should be written to by the other face
       for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++)
       {
-        fineGridFaces{{SOLVER_NAME}}(f).setProjection(
-          p + startIndexProjection,
-          faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p + startIndexProjection )
+        fineGridFaces{{SOLVER_NAME}}(f).setRProjection(
+          p,
+          faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p + offset )
         );
       }
-      logTraceOutWith2Arguments("ProjectOntoFaces::FaceLoop", f, fineGridFaces{{SOLVER_NAME}}(f).getProjection())
-      
+
+    }
+
+    // second D faces - left side this time
+    for (int f=Dimensions; f<TwoTimesD; f++) {
+      for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++)
+      {
+        fineGridFaces{{SOLVER_NAME}}(f).setLProjection(
+          p,
+          faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p )
+        );
+      }
+
     }
 
     logTraceOut("ProjectOntoFace");

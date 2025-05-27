@@ -62,7 +62,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
     ) = 0;
 
-    virtual vertexdata::{{SOLVER_NAME}}PETScData::Type getVertexDoFType(
+    virtual vertexdata::{{SOLVER_NAME}}PETScData::Type getVertexType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     ) final;
@@ -71,7 +71,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     In this experiement, we have data only on vertices, so the following
     method returns Outside
     */
-    virtual facedata::{{SOLVER_NAME}}PETScData::Type getFaceDoFType(
+    virtual facedata::{{SOLVER_NAME}}PETScData::Type getFaceType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
@@ -80,7 +80,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     We need the cells to be marked Interior. Only cells marked interior
     are ones that we add elements to PETSc matrix.
     */
-    virtual celldata::{{SOLVER_NAME}}PETScData::Type getCellDoFType(
+    virtual celldata::{{SOLVER_NAME}}PETScData::Type getCellType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );

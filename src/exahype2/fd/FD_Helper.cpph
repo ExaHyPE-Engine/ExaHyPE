@@ -37,15 +37,24 @@ namespace {
    * but the LLVM compiler strand seems to accept them.
    *
    *
+   * ## Realisation
+   *
+   * This routine had been marked with InlineMethod, but this leads to compiler
+   * warnings. It is also not required, as the definition is in the header,
+   * i.e. the compiler inlines anyway.
    */
-  tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;
     return result;
   }
 
-  tarch::la::Vector<Dimensions,int> gridCellIndex3d( int x, int y, int z ) InlineMethod {
+
+  /**
+   * @see gridCellIndex2d()
+   */
+  tarch::la::Vector<Dimensions,int> gridCellIndex3d( int x, int y, int z ) {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;

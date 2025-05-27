@@ -78,6 +78,14 @@ parser.add_argument(
     default=False,
     help="Switch on assertions",
 )
+parser.add_argument(
+    "-d",
+    "--debug",
+    dest="debug",
+    action="store_true",
+    default=False,
+    help="Switch on debug assertions",
+)
 args = parser.parse_args()
 
 
@@ -98,7 +106,7 @@ project = swift2.Project(
 
 particle = swift2.particle.LeapfrogFixedSearchRadius(
     name="GenericParticle",
-    cfl_factor=1.0,
+    cfl_factor=0.9,
     initial_time_step_size=args.timestep_size,
     particles_per_cell=0,
     min_h=args.cell_size,
@@ -108,7 +116,9 @@ particle = swift2.particle.LeapfrogFixedSearchRadius(
 particle_set = project.add_particle_species(particle)
 
 
-if args.asserts:
+if args.debug:
+    build_mode = peano4.output.CompileMode.Debug
+elif args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
 else:
     build_mode = peano4.output.CompileMode.Release
@@ -166,7 +176,7 @@ initialisation_snippet = (
   particle->setSearchRadius("""
     + str(search_radius)
     + """);
-  particle->setA( {0, 0, 0} );
+  particle->setA( {0., 0.} );
 
   const double boxsize_x = """
     + str(domain_size[0])
@@ -180,15 +190,15 @@ initialisation_snippet = (
   const double offset_y = """
     + str(offset[1])
     + """;
-  const double sq2 = std::sqrt(2);
+  const double sq2_inv = std::sqrt(0.5);
 
 
   if( particle->getX(0) < offset_x + 1./ 3. * boxsize_x ) {
 
     if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
       // Low left square
-      particle->setV(0, -sq2);
-      particle->setV(1, -sq2);
+      particle->setV(0, -sq2_inv);
+      particle->setV(1, -sq2_inv);
 
     } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
       // Mid left square
@@ -197,8 +207,8 @@ initialisation_snippet = (
 
     } else {
       // Top left square
-      particle->setV(0, -sq2);
-      particle->setV(1, sq2);
+      particle->setV(0, -sq2_inv);
+      particle->setV(1, sq2_inv);
     }
   } else if( particle->getX(0) < offset_x + 2./ 3. * boxsize_x ) {
 
@@ -222,8 +232,8 @@ initialisation_snippet = (
 
     if (particle->getX(1) < offset_y + 1./3. * boxsize_y) {
       // Low right square
-      particle->setV(0, sq2);
-      particle->setV(1, -sq2);
+      particle->setV(0, sq2_inv);
+      particle->setV(1, -sq2_inv);
 
     } else if (particle->getX(1) < offset_y + 2./3. * boxsize_y) {
       // Mid right square
@@ -232,8 +242,8 @@ initialisation_snippet = (
 
     } else {
       // Top right square
-      particle->setV(0,sq2);
-      particle->setV(1,sq2);
+      particle->setV(0,sq2_inv);
+      particle->setV(1,sq2_inv);
     }
   }
 

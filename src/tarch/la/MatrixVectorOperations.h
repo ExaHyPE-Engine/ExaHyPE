@@ -21,6 +21,17 @@ namespace tarch {
     );
 
     /**
+     * Compute r = r + alpha * M * v in-situ
+     */
+    template <int Rows, int Cols, typename Scalar>
+    void matVec(
+      const Matrix<Rows, Cols, Scalar>& matrix,
+      Scalar                            alpha,
+      const Vector<Cols, Scalar>&       v,
+      Vector<Rows, Scalar>&             r
+    );
+
+    /**
      * Performs a matrix x vector multiplication.
      *
      * The result vector is created inside, multiply is used to execute the

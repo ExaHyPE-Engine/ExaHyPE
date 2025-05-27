@@ -30,7 +30,11 @@ namespace toolbox {
      *   iterator pointing to existing particle.
      */
     template <typename Iterator>
-    Iterator particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end);
+    Iterator particleIsDuplicate(
+      const typename Iterator::value_type& particle,
+      Iterator                             begin,
+      const Iterator&                      end
+    );
 
     /**
      * Return true if and only if
@@ -41,7 +45,9 @@ namespace toolbox {
      */
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
-      const Particle& particle, const tarch::la::Vector<Dimensions, double>& domainOffset, const tarch::la::Vector<Dimensions, double>& domainWidth
+      const Particle&                              particle,
+      const tarch::la::Vector<Dimensions, double>& domainOffset,
+      const tarch::la::Vector<Dimensions, double>& domainWidth
     );
 
 
@@ -93,14 +99,80 @@ namespace toolbox {
      */
     template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
-      const peano4::datamanagement::CellMarker& marker, Particle* newParticles, peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices, int spacetreeId
+      const peano4::datamanagement::CellMarker&              marker,
+      Particle*                                              newParticles,
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
+      int                                                    spacetreeId
     );
 
-
-    bool particleAssignedToVertexWillBeLocal(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+    /**
+     * Update helper flag per particle for cell
+     *
+     * Each particle is associated with a vertex of a cell. This vertex is
+     * identified by assignedVertex. We now compute a bitset that tells us,
+     * from the vertex' point of view, which of the adjacent cells will
+     * host this particle. This might not be unique, as we work with a
+     * fuzzy geometric ownership.
+     *
+     * @see the explanation in Particle.py
+     */
+    void updateContainedInAdjacentCellProperty(
+      const peano4::datamanagement::CellMarker&  marker,
+      const std::bitset<Dimensions>&             assignedVertex,
+      auto&                                      particle
+    );
 
     /**
-     * Mirror a particle along the periodic domain boundaries
+     * We are
+     */
+    void updateContainedInAdjacentCellProperty(
+      const peano4::datamanagement::VertexMarker&  marker,
+      auto&                                        particle
+    );
+
+    /**
+     * Update internal marker of particle
+     *
+     * Each particle is associated to a vertex. The vertex is identified by
+     * its position x and the surrounding cells with size h. Each vertex has
+     * @f$ 2^d @f$ adjacent cells. The particle's
+     * ContainedInAdjacentCellProperty bitset flags which of these adjacent
+     * cells consider the particle to fall in their area.
+     *
+     * As we work with a weak ownership, there can be more than two bits (if
+     * the particle sits exactly on the face between two adjacent cells).
+     *
+     *
+     * ## Particle movement
+     *
+     * We have to call updateContainedInAdjacentCellProperty() after each
+     * particle movement. Even if we don't change the vertex association as a
+     * particle drifts, it might stay with the same vertex and still move from
+     * one cell into another one and hence require an update of the flags.
+     *
+     * @see the explanation in toolbox.particles.Particle
+     */
+    void updateContainedInAdjacentCellProperty(
+      const tarch::la::Vector< Dimensions, double >&  x,
+      const tarch::la::Vector< Dimensions, double >&  h,
+      auto&                                           particle
+    );
+
+    bool particleAssignedToVertexWillBeLocal(
+      const tarch::la::Vector<Dimensions, double>& x,
+      const peano4::datamanagement::VertexMarker&  marker
+    );
+
+    /**
+     * Mirror a particle along the periodic domain boundaries.
+     *
+     * We check for every boundary whether it is periodic. Furthermore, we check
+     * whether the particle would be already contained within a vertex along
+     * each dimension. This is necessary for vertices in corners of the domain:
+     * In these cases, we need to mirror the particle only along the boundary
+     * that isn't contained in the vertex. Otherwise, the particle is displaced
+     * too far away. E.g. For a vertex at (0, 0) a particle at (0.95, 0.) would
+     * be displaced to (-0.05, -1.) instead of (-0.5, 0.).
      *
      * @param x Position of the particle as received along a periodic boundary
      *   exchange.
@@ -110,11 +182,11 @@ namespace toolbox {
      * @param Position of particle as "seen" from receiving side
      */
     tarch::la::Vector<Dimensions, double> mirrorParticleAlongPeriodicDomains(
-        const tarch::la::Vector<Dimensions, double>& x,
-        const peano4::datamanagement::VertexMarker&  marker,
-        const tarch::la::Vector<Dimensions,double>   domainOffset,
-        const tarch::la::Vector<Dimensions,double>   domainSize,
-        const std::bitset<Dimensions>                periodicBC
+      const tarch::la::Vector<Dimensions, double>& x,
+      const peano4::datamanagement::VertexMarker&  marker,
+      const tarch::la::Vector<Dimensions, double>  domainOffset,
+      const tarch::la::Vector<Dimensions, double>  domainSize,
+      const std::bitset<Dimensions>                periodicBC
     );
 
     /**
@@ -128,10 +200,10 @@ namespace toolbox {
      * lists, such as is used e.g. in exchangeSieveListsGlobally().
      */
     tarch::la::Vector<Dimensions, double> applyPeriodicBoundaryConditions(
-        const tarch::la::Vector<Dimensions, double>& x,
-        const tarch::la::Vector<Dimensions,double>   domainOffset,
-        const tarch::la::Vector<Dimensions,double>   domainSize,
-        const std::bitset<Dimensions>                periodicBC
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>  domainOffset,
+      const tarch::la::Vector<Dimensions, double>  domainSize,
+      const std::bitset<Dimensions>                periodicBC
     );
   } // namespace particles
 } // namespace toolbox

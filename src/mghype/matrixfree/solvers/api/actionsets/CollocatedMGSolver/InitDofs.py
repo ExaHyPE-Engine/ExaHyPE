@@ -36,7 +36,7 @@ class InitDofsCollocatedMG(ActionSet):
     coarseGridCell{{SOLVER_NAME}}.getLevel() + 1
   );
   
-  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   switch(dofType)
   {
     case celldata::{{SOLVER_NAME}}::Type::Outside:
@@ -68,7 +68,7 @@ class InitDofsCollocatedMG(ActionSet):
   fineGridVertex{{SOLVER_NAME}}.setOldU( zeroes );
   fineGridVertex{{SOLVER_NAME}}.setDiag( zeroes );
 
-  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexType(marker.x(),marker.h());
 
   switch(dofType)
   {
@@ -129,6 +129,11 @@ class InitDofsCollocatedMG(ActionSet):
 
 
   """
+
+  templateEndTraversal="""
+  repositories::{{SOLVER_INSTANCE}}.validateRefinementLevel();
+  """
+
   def __init__(self,
                solver):
     super( InitDofsCollocatedMG, self ).__init__()
@@ -145,6 +150,8 @@ class InitDofsCollocatedMG(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      result = jinja2.Template(self.templateEndTraversal).render(**self.d)
     return result
 
   def get_action_set_name(self):

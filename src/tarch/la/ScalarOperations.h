@@ -57,10 +57,29 @@ namespace tarch {
      *
      * The static here is required to avoid multiple definition errors.
      *
+     * We originally had the signature
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * static bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod {
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * but that one gives a compiler warning:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * ./tarch/la/ScalarOperations.h:63:96: warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * It seems that the inlining flag has to be used prior to the result data
+     * type, if we also add the implementation to the header.
+     *
+     * Further to that, we add maybe_unused, as the compiler otherwise warns
+     * about the inline function unused if no extension is enabled that uses
+     * it.
+     *
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    [[maybe_unused]] // Compiler warns about the inline function unused if no extension is enabled that uses it
-    static bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod {
+    [[maybe_unused]]
+    static InlineMethod bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) {
       return lhs - rhs < -tolerance;
     }
 

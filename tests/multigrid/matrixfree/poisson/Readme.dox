@@ -1,0 +1,29 @@
+/**
+
+ @page tests_multigrid_matrixfree_poisson Poisson tests
+ 
+ This is a collection of standard benchmarks for multigrid for the Poisson equation
+ 
+ @f$ - \Delta u = f @f$
+ 
+ We employ @f$ f= @f$.
+ 
+ 
+ To prepare these tests, please first set the environment variable as
+ 
+      export PYTHONPATH=../../../python:../../../src
+
+
+ ## Test single-level low order CG solver (d-linear shape functions)
+ 
+ @todo
+ 
+ ## Test single-level DG solver
+ 
+ @todo
+ 
+ ## Test ...
+
+
+ */
+ 

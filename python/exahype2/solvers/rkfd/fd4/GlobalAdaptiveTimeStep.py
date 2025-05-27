@@ -73,7 +73,8 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
       boundary_conditions=boundary_conditions, 
       refinement_criterion=refinement_criterion, 
       initial_conditions=initial_conditions, 
-      source_term=source_term )
+      source_term=source_term,
+      reconstruction_with_rk=reconstruction_with_rk )
 
 
   def set_implementation(self,
@@ -82,7 +83,8 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     memory_location         = None,
     additional_action_set_includes = "",
     additional_user_includes       = "",
-    KOSigma                 = None
+    KOSigma                 = None,
+    reconstruction_with_rk= False
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -110,6 +112,18 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
       kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
       KOSigma                                  = self._KO_Sigma
     )
+
+    if reconstruction_with_rk:
+      self._reconstruction_kernel_call = """reconstruct_first_derivatives(
+            patchData,
+            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 
+            {{HALO_SIZE}}, 
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          );
+      """
+      self._primary_variables_indices = "int primaryVarsIndices[25]={ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 53, 54};" 
+      self._auxiliary_variables_indices = "int auxiliaryVarsIndices[34]={23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,55,56,57,58}; "
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation, adaptive_starting_timeStep_size="soft")
 

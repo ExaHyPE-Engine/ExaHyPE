@@ -5,6 +5,5 @@ import mghype.api.matrixgenerators.blockmatrix
 
 from .DLinear             import DLinear
 from .DLinearMassIdentity import DLinearMassIdentity
-from .GaussLobatto        import GaussLobatto
-from .GaussLobatto        import GLMatrixFree
 from .StencilToElement    import StencilToElement
+from .GaussLobatto        import GaussLobattoMatrixFree

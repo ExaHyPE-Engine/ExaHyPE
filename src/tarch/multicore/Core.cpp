@@ -2,6 +2,7 @@
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/taskfusion/taskfusion.h"
 #include "tarch/multicore/Task.h"
 
 #ifdef CompilerHasSysinfo
@@ -77,6 +78,8 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const { return 0; }
 
-void tarch::multicore::Core::yield() {}
+void tarch::multicore::Core::yield() {
+  tarch::multicore::taskfusion::processAllReadyTasks();
+}
 
 #endif

@@ -296,7 +296,7 @@ class Test5Coupling(Test4Coupling):
     fineGridVertices{{CG_SOLVER_NAME}}(v).setVrestrictADG( fineGridVertices{{CG_SOLVER_NAME}}(v).getVrestrictADG(0) + v_restrict_ADG(v) );
 
   // finally, steps 9 and 10
-  auto mdg_p = repositories::{{DG_SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h()) * fineGridCell{{DG_SOLVER_NAME}}.getVcell();
+  auto mdg_p = repositories::{{DG_SOLVER_INSTANCE}}.getRhsMatrix(marker.x(), marker.h()) * fineGridCell{{DG_SOLVER_NAME}}.getVcell();
 
   fineGridCell{{DG_SOLVER_NAME}}.setMdgp(
     mdg_p

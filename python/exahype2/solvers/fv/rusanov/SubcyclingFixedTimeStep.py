@@ -5,11 +5,12 @@ from exahype2.solvers.fv.SingleSweep import SingleSweep
 
 import jinja2
 
-from .kernels import create_compute_Riemann_kernel_for_Rusanov
 from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
+from .kernels import create_rusanov_kernel_definitions
+from .kernels import create_compute_Riemann_kernel_for_Rusanov_dsl
 
 from exahype2.solvers.fv.FixedSubcyclingTimeSteppingCodeSnippets import FixedSubcyclingTimeSteppingCodeSnippets
 
@@ -91,7 +92,9 @@ class SubcyclingFixedTimeStep(SingleSweep):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
+    create_rusanov_kernel_definitions()
+
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov_dsl(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -100,7 +103,7 @@ class SubcyclingFixedTimeStep(SingleSweep):
       kernel_variant = KernelVariant.PatchWiseAoS
     )
 
-    self._compute_kernel_call_stateless = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call_stateless = create_compute_Riemann_kernel_for_Rusanov_dsl(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -128,7 +131,7 @@ class SubcyclingFixedTimeStep(SingleSweep):
 
     self._user_action_set_includes += """
 #include "exahype2/TimeStepping.h"
-#include "exahype2/fv/rusanov/rusanov.h"
+#include "kernels/rusanov.h"
 """
 
     super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)

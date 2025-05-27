@@ -17,6 +17,22 @@ namespace tarch {
     template <int Size, typename Scalar>
     struct Vector;
 
+    /**
+     * Convert the scalar type underlying a vector
+     *
+     * This routine takes a vector of size Size over type Scalar and returns a
+     * new vector of the same size but with type NewScalarType. A typical usage
+     * looks similar to
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * tarch::la::Vector< Dimensions, int > myVector = ...
+     * tarch::la::Vector< Dimensions, double > converted = tarch::la::convertScalar<double>( myVector );
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * The conversion assumes that C++ natively supports a conversion from
+     * Scalar to NewScalarType. We do not employ any explicit typecasting under
+     * the hood.
+     */
     template <typename NewScalarType, int Size, typename Scalar>
     tarch::la::Vector<Size,NewScalarType> convertScalar(const tarch::la::Vector<Size,Scalar>&  vector);
   }

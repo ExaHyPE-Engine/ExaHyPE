@@ -25,7 +25,7 @@ for different patch sizes, orders or dimensions.
 To build the executables you can run following commands:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    export PYTHONPATH=../../../python
+    export PYTHONPATH=../../../../python
 
     python3 kernel-benchmarks.py --dim 2 --patch-size 4 --num-patches 512
     python3 kernel-benchmarks.py --dim 2 --patch-size 6 --num-patches 512

@@ -18,11 +18,23 @@ class DataModel(object):
         has_nondefault_constructor=True,
         embed_attributes_into_data_store=False,
     ):
+        """!
+
+        Construct the data modell
+        
+        public_fields: C++ string
+          This will be used to add public fields to the class, and each 
+          attribute can feed into this string. However, you can also 
+          modify it yourself.
+          
+        """
         self._full_qualified_name = full_qualified_name
         self._attributes = []
         self._aspects = []
         self.has_nondefault_constructor = has_nondefault_constructor
         self._embed_attributes_into_data_store = embed_attributes_into_data_store
+        self.public_fields = ""
+        self.additional_includes = ""
 
     def set_full_qualified_name(self, full_qualified_name):
         self._full_qualified_name = full_qualified_name
@@ -65,6 +77,7 @@ class DataModel(object):
 
 {ATTRIBUTE_INCLUDES}
 {ASPECT_INCLUDES}
+{ADDITIONAL_INCLUDES}       
 
 {OPEN_NAMESPACES}
   struct {UNQUALIFIED_CLASS_NAME};
@@ -182,12 +195,13 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         d["FULL_QUALIFIED_CLASS_NAME"] = self._full_qualified_name
         d["OPEN_NAMESPACES"] = ""
         d["CLOSE_NAMESPACES"] = ""
+        d["ADDITIONAL_INCLUDES"] = self.additional_includes    
         d["SETTER_GETTER_DECLARATIONS"] = ""
         for i in dastgen2.get_namespaces(self._full_qualified_name):
             d["OPEN_NAMESPACES"] += "namespace " + i + "{\n"
             d["CLOSE_NAMESPACES"] += "}\n"
 
-        d["PUBLIC_FIELDS"] = ""
+        d["PUBLIC_FIELDS"] = self.public_fields
         for attribute in self._attributes:
             d["PUBLIC_FIELDS"] += attribute.get_public_fields()
 
@@ -411,6 +425,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
 """
             )
+
+            # inserting include statements that the compiler will not accept in the header file
+            for aspect in self._aspects:
+                if hasattr(aspect, "implementation_file_includes"):
+                    output.write( aspect.implementation_file_includes )
 
             if self.has_nondefault_constructor:
                 self.__generate_constructor_definition(output)

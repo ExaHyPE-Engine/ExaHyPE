@@ -12,7 +12,7 @@ class UpdateFaceSolution(ActionSet):
   """
 
 
-  templatetouchFaceFirstTime="""
+  templateTouchFaceFirstTime="""
   if ( 
     fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior 
     and
@@ -21,15 +21,26 @@ class UpdateFaceSolution(ActionSet):
     logTraceInWith2Arguments( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution(), marker.toString() );
 
     // project the u^\pm into a temporary vector
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
-      repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
+    tarch::la::Vector< 2*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projections;
+    // alias for number of solutions
+    const int nSols = repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution;
+    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++) {
+      projections[i]       = fineGridFace{{SOLVER_NAME}}.getLProjection(i);
+      projections[i+nSols] = fineGridFace{{SOLVER_NAME}}.getRProjection(i);
+    }
+
+    // multiply by riemann matrix
+    auto faceSolutionUpdate = repositories::{{SOLVER_INSTANCE}}.applyRiemannMatrix( projections );
 
     for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
       fineGridFace{{SOLVER_NAME}}.setSolution(
         i,
         (1-repositories::{{SOLVER_INSTANCE}}.OmegaFace)*fineGridFace{{SOLVER_NAME}}.getSolution(i)
-         + repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
+         + repositories::{{SOLVER_INSTANCE}}.OmegaFace * faceSolutionUpdate(i)
       );
+
+    fineGridFace{{SOLVER_NAME}}.setLProjection( 0.0 );
+    fineGridFace{{SOLVER_NAME}}.setRProjection( 0.0 );
     logTraceOutWith1Argument( "updateFaceSolution::Interior", fineGridFace{{SOLVER_NAME}}.getSolution() );
   }
 
@@ -38,7 +49,7 @@ class UpdateFaceSolution(ActionSet):
     and
     repositories::{{SOLVER_INSTANCE}}.updateFace()
   ) {
-    logTraceInWith1Argument( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
+    logTraceInWith2Arguments( "updateFaceSolution::InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getLProjection(), fineGridFace{{SOLVER_NAME}}.getRProjection() );
     // Essentially what we do here is fix the solution on the boundary to be 
     // the inner-side projection.
 
@@ -48,24 +59,19 @@ class UpdateFaceSolution(ActionSet):
       repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
       0;
 
-    auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+    if ( marker.getSelectedFaceNumber() < Dimensions )
+      fineGridFace{{SOLVER_NAME}}.setSolution(
+        repositories::{{SOLVER_INSTANCE}}.applyBoundaryConditionMatrix(
+          fineGridFace{{SOLVER_NAME}}.getRProjection()
+        )
+      );
 
-    /*
-    Here we do slightly messy matrix multiplication. We would just multiply the boundary matrix
-    by the projection vector, and place that into the solution, but here we only want to capture
-    half of the projection vector; the other half lies outside the computational domain and
-    should be fixed to 0.
-    */
-    for (int row=0; row<boundaryMatrix.rows(); row++)
-    {
-      double rowSolution = 0;
-      for (int col=0; col<boundaryMatrix.cols(); col++)
-      {
-        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{SOLVER_NAME}}.getProjection( col + startIndexProjection );
-      }
-      // place this solution into the face
-      fineGridFace{{SOLVER_NAME}}.setSolution( row, rowSolution );
-    }
+    else
+      fineGridFace{{SOLVER_NAME}}.setSolution(
+        repositories::{{SOLVER_INSTANCE}}.applyBoundaryConditionMatrix(
+          fineGridFace{{SOLVER_NAME}}.getLProjection()
+
+        ));
 
     logTraceOut( "updateFaceSolution::InteriorPenalty");
   }
@@ -89,7 +95,7 @@ class UpdateFaceSolution(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.templatetouchFaceFirstTime).render(**self.d)
+      result = jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
       pass
     return result
 
