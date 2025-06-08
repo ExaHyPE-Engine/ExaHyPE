@@ -19,7 +19,7 @@
 namespace {
   static tarch::logging::Log _log( "tarch::multicore::native(omp)" );
 
-  using DependencyTrackingDataType = bool;
+  using DependencyTrackingDataType = unsigned unsigned int;
 
   #ifndef DefaultSizeOfMemoryRegionUsedForDependencyTracking
   constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 16;
@@ -53,7 +53,7 @@ namespace {
    * ensure this is the case, we allocate some chunk only for the dependency
    * tracking and hold its baseline address in this variable.
    */
-  DependencyTrackingDataType* dependencyTrackingBaseAddress = new DependencyTrackingDataType[DefaultSizeOfMemoryRegionUsedForDependencyTracking];
+  DependencyTrackingDataType* dependencyTrackingBaseAddress = new DependencyTrackingDataType[DefaultSizeOfMemoryRegionUsedForDependencyTracking](0);
 
   /**
    * Memorize size of dependency tracking.
@@ -125,7 +125,7 @@ namespace {
         logInfo( "canServeDependencyEntry(int)", "free preallocated memory for task dependency management" );
       }
 
-      dependencyTrackingBaseAddress = new DependencyTrackingDataType[maxSizeOfMemoryRegionUsedForDependencyTracking];
+      dependencyTrackingBaseAddress = new DependencyTrackingDataType[maxSizeOfMemoryRegionUsedForDependencyTracking](0);
       logInfo( "canServeDependencyEntry(int)", "allocated memory for task dependency management for up to " << maxSizeOfMemoryRegionUsedForDependencyTracking << " tasks" );
 
       sizeOfMemoryRegionUsedForDependencyTracking = maxSizeOfMemoryRegionUsedForDependencyTracking;
@@ -151,8 +151,16 @@ namespace {
     optimisticLock.free();
 
     if (tryToIncreaseMemory) {
-      tarch::multicore::MultiReadSingleWriteSemaphore::Lock conservativeLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write);
-      reserveDependencyTrackingMemory();
+      tarch::multicore::MultiReadSingleWriteSemaphore::Lock conservativeLock(dependencyTrackingSemaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write,false);
+
+      bool currentNumberOfPendingTasks;
+
+      #pragma omp atomic read
+      currentNumberOfPendingTasks = numberOfPendingTasks;
+
+      if (currentNumberOfPendingTasks==0) {
+        reserveDependencyTrackingMemory();
+      }
     }
   }
 } // empty (internal) namespace
@@ -236,6 +244,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
       tasks[i]->run();
       delete tasks[i];
 
+      // @todo This does not work if there are no children tasks
       if (TransparentTaskDependenciesAreSupported) {
         #pragma omp taskwait
       }
@@ -281,6 +290,10 @@ void tarch::multicore::native::spawnTask(
 
     #pragma omp atomic
     numberOfPendingTasks++;
+
+    if (not TransparentTaskDependenciesAreSupported) {
+      #pragma omp taskwait
+    }
 
     OTTER_DEFINE_TASK(task, otterGetActiveTask(), otter_no_add_to_pool, __func__);
     #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) untied
