@@ -3,8 +3,7 @@
 #pragma once
 
 
-#include <unordered_set>
-#include <list>
+#include <map>
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -63,36 +62,44 @@ namespace tarch {
      *   for recommendations and hints on task fusion strategies.
      */
     namespace taskfusion {
-      /**
-       * Task queue of tasks which we hold back
-       *
-       * @see tarch::multicore::strategy::Strategy::updateFuseStatistics()
-       */
-      struct ReadyFusableTasks {
-        ~ReadyFusableTasks()                       = default;
-        ReadyFusableTasks(const ReadyFusableTasks&) = delete;
+      struct FusableTasksQueue;
 
+      enum class FusionImplementation {
         /**
-         * Each task in the queue is identified through a pointer to the
-         * task plus a task (dependency) number.
+         * Completely disable any fusion and map each task that can be fused on
+         * a normal task due to a call to native::spawnTask() in
+         * translateFusableTaskIntoTaskSequence().
+         * ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
+         * nop.
          */
-        using Tasks = std::list< std::pair<tarch::multicore::Task*, int> >;
-        using FinishedTaskNumbers = std::unordered_set<int>;
-
-        Tasks                                      tasks;
-        FinishedTaskNumbers                        completedTaskNumbers;
-        tarch::multicore::BooleanSemaphore         readyTasksSemaphore;
-        tarch::multicore::BooleanSemaphore         completedTasksSemaphore;
-        tarch::multicore::BooleanSemaphore         statisticsSemaphore;
-        int                                        type;
-        tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
-        tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
-        int                                        lastProcessReadyTask;
-
-        ReadyFusableTasks(int type_);
+        DisableFusionAndMapOntoNativeTask,
+        DisableFusionAndProcessImmediately,
+        /**
+         * All fusable tasks are parked in a big queue. If the
+         */
+        LazyEvaluation,
+        LazyConsumerTasks,
+        ProducerConsumerTaskPairs
       };
 
       /**
+       * Delegates to implementation-specific variants.
+       */
+      void translateFusableTaskIntoTaskSequence(
+        Task*                  task,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber
+      );
+
+      /**
+       * Name is not good, as routine does not process all ready tasks.
+       * Instead, it tries to complete one ready task per queue.
+       */
+      void processAllReadyTasks();
+
+      /**
+       * Realisation for translateFusableTaskIntoTaskSequence() for ProducerConsumerTaskPairs
+       *
        * Translate a single task into a sequence of (fusable tasks)
        *
        * This routine makes a decision if to spawn a task as native task
@@ -144,13 +151,50 @@ namespace tarch {
        * tasks. So it makes sense to serialise the ProcessReadyTask instances
        * if there are less than two times the max tasks in the queue.
        */
-      void translateFusableTaskIntoTaskSequence(
+      void translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(
         Task*                  task,
+        FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
-        const TaskNumber&      taskNumber
+        const TaskNumber&      taskNumber,
+        const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
       );
 
-      void processAllReadyTasks();
+      /**
+       * Implementation of translateFusableTaskIntoTaskSequence() if we use LazyEvaluation.
+       *
+       */
+      void translateFusableTaskIntoTaskSequence_LazyEvaluation(
+        Task*                  task,
+        FusableTasksQueue&     taskQueue,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber,
+        const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
+      );
+
+      /**
+       * Delegates to implementation-specific variants.
+       */
+      void ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& inDependencies);
+
+      /**
+       * Implementation of waitForTasks() if we use LazyEvaluation.
+       *
+       * We don't know, at this point, what the type of each in dependency is.
+       * Therefore, we simply loop over all queues, i.e. all task types that we
+       * are aware of.
+       *
+       * First, we look in each queue if it hosts the right task. If not, we
+       * try to invoke the fusion. If that fails, i.e. the task is not completed
+       * yet, we issue another loop over all task types, i.e. queues, and process
+       * one task at a time. This is a while loop, i.e. by the time we return
+       * we know that we have found the right task.
+       *
+       * @see ProcessReadyTask::processTasks() to trigger the actual lazy
+       *      fusion of tasks.
+       * @see ProcessReadyTask::hasTaskBeenProcessed() which is used to check
+       *      if a particular task has completed already.
+       */
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }

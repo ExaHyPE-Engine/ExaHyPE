@@ -14,13 +14,32 @@ namespace tarch {
     namespace taskfusion {
       class LogReadyTask;
       class ProcessReadyTask;
+      struct FusableTasksQueue;
     }
   }
 }
 
 
 /**
- * Task plugging into state transition once task becomes ready
+ * Wrapper task around fusable tasks that is not ready yet
+ *
+ * This task takes a fusable task and "inherits" its in-dependencies. Once it
+ * becomes ready ready, it takes its fusable task and inserts this one into the
+ * ready queue. The task therefore is a mere wrapper: It ensure that a fusable
+ * task is not inserted into the ready queue before it really becomes ready.
+ * Other than that, it does not do anything.
+ *
+ * ## Lazy evaluation strategies
+ *
+ * If the fusion is implemented lazily, the spawning of a new fusable task with
+ * in-dependencies should lead to the creation of this task. The fusable routine
+ * then has to wait before the lazy evaluation is due, so we know that the right
+ * tasks are inserted.
+ *
+ * @see
+ *
+ *
+ * ## @todo
  *
  * This task is always paired up with an instance of ProcessReadyTask. This
  * task takes the task _task and puts it into the _taskQueue. After that, it
@@ -30,7 +49,7 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
   private:
     Task*               _task;
     const int           _taskNumber;
-    ReadyFusableTasks&  _taskQueue;
+    FusableTasksQueue&  _taskQueue;
 
     static const std::string SubmitFusedTasksStatisticsIdentifier;
 
@@ -44,7 +63,7 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * @param taskNumber out dependency (no) of outgoing task
      * @param taskQueue  Reference to task queue
      */
-    LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks& taskQueue );
+    LogReadyTask( Task* task, int taskNumber, FusableTasksQueue& taskQueue );
 
     /**
      * Run task
@@ -57,14 +76,4 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * done here. No more work.
      */
     virtual void run() override;
-
-    /**
-     * Insert a new ready task into the local queues
-     *
-     * Is used by run() but we might also want to use it externally.
-     * Before we insert the actual task, we also remove the task's
-     * completedTaskNumbers, so noone thinks ahead of time that we are
-     * done already.
-     */
-    static void insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks& taskQueue );
 };
