@@ -9,7 +9,7 @@ const std::string tarch::multicore::taskfusion::LogReadyTask::SubmitFusedTasksSt
 tarch::logging::Log tarch::multicore::taskfusion::LogReadyTask::_log( "tarch::multicore::taskfusion::LogReadyTask" );
 
 
-tarch::multicore::taskfusion::LogReadyTask::LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue ):
+tarch::multicore::taskfusion::LogReadyTask::LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks& taskQueue ):
   Task(DontFuse,DefaultPriority),
   _task(task),
   _taskNumber(taskNumber),
@@ -26,15 +26,15 @@ void tarch::multicore::taskfusion::LogReadyTask::run() {
 }
 
 
-void tarch::multicore::taskfusion::LogReadyTask::insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue ) {
-  tarch::multicore::Lock completedTasksLock(taskQueue->completedTasksSemaphore);
-  ReadyFusableTasks::FinishedTaskNumbers::iterator p = taskQueue->completedTaskNumbers.find( taskNumber );
-  if ( p != taskQueue->completedTaskNumbers.end() ) {
-    taskQueue->completedTaskNumbers.erase(p);
+void tarch::multicore::taskfusion::LogReadyTask::insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks& taskQueue ) {
+  tarch::multicore::Lock completedTasksLock(taskQueue.completedTasksSemaphore);
+  ReadyFusableTasks::FinishedTaskNumbers::iterator p = taskQueue.completedTaskNumbers.find( taskNumber );
+  if ( p != taskQueue.completedTaskNumbers.end() ) {
+    taskQueue.completedTaskNumbers.erase(p);
   }
 
 
-  tarch::multicore::Lock readyTasksLock(taskQueue->readyTasksSemaphore);
-  taskQueue->tasks.push_back( std::pair<tarch::multicore::Task*, int>(task, taskNumber) );
+  tarch::multicore::Lock readyTasksLock(taskQueue.readyTasksSemaphore);
+  taskQueue.tasks.push_back( std::pair<tarch::multicore::Task*, int>(task, taskNumber) );
 }
 

@@ -30,7 +30,7 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
   private:
     Task*               _task;
     const int           _taskNumber;
-    ReadyFusableTasks*  _taskQueue;
+    ReadyFusableTasks&  _taskQueue;
 
     static const std::string SubmitFusedTasksStatisticsIdentifier;
 
@@ -44,7 +44,7 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * @param taskNumber out dependency (no) of outgoing task
      * @param taskQueue  Reference to task queue
      */
-    LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue );
+    LogReadyTask( Task* task, int taskNumber, ReadyFusableTasks& taskQueue );
 
     /**
      * Run task
@@ -66,5 +66,5 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * completedTaskNumbers, so noone thinks ahead of time that we are
      * done already.
      */
-    static void insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks* taskQueue );
+    static void insertReadyTask( Task* task, int taskNumber, ReadyFusableTasks& taskQueue );
 };
