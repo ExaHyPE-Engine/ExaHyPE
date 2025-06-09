@@ -263,7 +263,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 
   tryToReserveDependencyTrackingMemory();
 }
-#endif
 
 
 void tarch::multicore::native::spawnTask(
@@ -375,3 +374,4 @@ void tarch::multicore::native::waitForAllTasks() {
 
   reserveDependencyTrackingMemory();
 }
+#endif
