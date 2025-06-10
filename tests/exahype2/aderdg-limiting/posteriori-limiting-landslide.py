@@ -20,7 +20,7 @@ curr_build_mode = "Release"
 dimensions = 2
 min_level = 4
 max_depth = 0
-ndof = 5  # number of nodes per dim
+ndof = 5
 order = ndof - 1
 end_time = 0.1
 plot_interval = 0.00  # 0.05
@@ -429,14 +429,8 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False, False][0:dimensions],
 )
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOut",
-    "new ::exahype2::LoadBalancingConfiguration()",
-)
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", build_modes[curr_build_mode])
 project = project.generate_Peano4_project(verbose=False)
 # project.set_fenv_handler(True)
-
 project.build(make_clean_first=True)
-
-print(project)

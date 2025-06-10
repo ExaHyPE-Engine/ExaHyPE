@@ -89,13 +89,7 @@ project.set_global_simulation_parameters(
   max_iterations                   = 2000
 )
 
-'''
-The first attempt to parallelise this code was a failure. So we comment out the load balancing.
-'''
-# project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, 8, 50)" )
-
 project.set_Peano4_installation( args.peanodir, build_mode )
-
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file( "Scenario.cpp" )
 peano4_project.generate()

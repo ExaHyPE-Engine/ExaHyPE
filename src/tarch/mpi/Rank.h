@@ -529,13 +529,6 @@ class tarch::mpi::Rank {
      */
     void setDeadlockTimeOut( int valueInSeconds );
 
-    #ifdef Parallel
-    /**
-     * Set communicator to be used by Peano
-     */
-    void setCommunicator( MPI_Comm communicator, bool recomputeRankAndWorld=true );
-    #endif
-
     void suspendTimeouts( bool timeoutsDisabled );
 
     /**
@@ -546,4 +539,3 @@ class tarch::mpi::Rank {
      */
     static void abort(int errorCode);
 };
-

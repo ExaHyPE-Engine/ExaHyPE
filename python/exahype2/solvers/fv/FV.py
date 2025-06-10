@@ -1208,7 +1208,6 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_project_patch_onto_faces)
-        # step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
         if self._plotter_option == "HDF5":
            plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInHDF5Format(
@@ -1296,7 +1295,6 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_project_patch_onto_faces)
-        # step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
         plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
             filename=output_path + "checkpoint-" + self._name,

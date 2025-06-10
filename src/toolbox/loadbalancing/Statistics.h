@@ -2,22 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include "tarch/mpi/mpi.h"
-#include "tarch/logging/Log.h"
-#include "tarch/mpi/Rank.h"
-
-
 #include "State.h"
 
+#include "tarch/logging/Log.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
-namespace toolbox {
-  namespace loadbalancing {
-    class Statistics;
-  }
-}
-
-
+namespace toolbox::loadbalancing {
+  class Statistics;
+} // namespace toolbox::loadbalancing
 
 /**
  * Statistics helper routine for load balancing
@@ -28,105 +21,83 @@ namespace toolbox {
  *
  */
 class toolbox::loadbalancing::Statistics {
-  public:
-    /**
-     * Set all the MPI requests to nullptr.
-     */
-    Statistics();
+public:
+  /**
+   * Set all the MPI requests to nullptr.
+   */
+  Statistics();
+  ~Statistics() = default;
 
-    std::string toString() const;
+  void updateGlobalView();
 
-    /**
-     * Typically called by
-     *
-     * - finishSimulation() and
-     * - finishStep()
-     *
-     * but we also call it from updateGlobalView() before we issue new
-     * collective MPI calls.
-     */
-    void waitForGlobalDataExchange();
+  int getLocalNumberOfInnerUnrefinedCells() const;
+  int getGlobalNumberOfInnerUnrefinedCells() const;
 
-    void updateGlobalView();
+  int getLocalNumberOfTrees() const;
+  int getGlobalNumberOfTrees() const;
 
-    int getLocalNumberOfInnerUnrefinedCells() const;
-    int getGlobalNumberOfInnerUnrefinedCells() const;
-    int getGlobalNumberOfRanksWithEnabledLoadBalancing() const;
-    int getGlobalNumberOfTrees() const;
-    int getNumberOfStateUpdatesWithoutAnySplit() const;
-    int getMaximumTreesPerRank() const;
+  void incLocalNumberOfSplits(int delta = 1);
+  int  getNumberOfStateUpdatesWithoutAnySplit() const;
 
-    void incLocalNumberOfSplits( int delta=1 );
+  int getGlobalNumberOfRanksWithEnabledLoadBalancing() const;
 
-    void notifyOfStateChange( State state );
+  /**
+   * If the stats spot some inconsistencies (local number of cells is bigger
+   * than global number, e.g.) this means that the non-blocking data exchange
+   * is lagging behind. In this case, this routine returns false;
+   */
+  bool hasConsistentViewOfWorld() const;
+  void notifyOfStateChange(State state);
 
-    /**
-     * If the stats spot some inconsistencies (local number of cells is bigger
-     * than global number, e.g.) this means that the non-blocking data exchange
-     * is lagging behind. In this case, this routine returns false;
-     */
-    bool hasConsistentViewOfWorld() const;
+  std::string toString() const;
 
-  private:
-    static tarch::logging::Log _log;
+private:
+  static tarch::logging::Log _log;
 
-    /**
-     * Required for local stats, but also replicated in cell count metrics
-     */
-    int _localNumberOfInnerUnrefinedCells;
+  int _localNumberOfInnerUnrefinedCells;
+  int _globalNumberOfInnerUnrefinedCells;
 
-    /**
-     * Required for local stats, but also replicated in cell count metrics
-     */
-    int _globalNumberOfInnerUnrefinedCells;
+  int _localNumberOfTrees;
+  int _globalNumberOfTrees;
 
-    int _globalNumberOfTrees;
+  bool _isLocalLoadBalancingEnabled;
+  int  _globalNumberOfRanksWithEnabledLoadBalancing;
 
-    int _globalNumberOfRanksWithEnabledLoadBalancing;
+  /**
+   * This is my local accumulator where I keep track of how often I did
+   * split in this iteration. At the end of each iteration, I roll this
+   * one over into global or send it out.
+   */
+  int _localNumberOfSplits;
 
-    bool _localLoadBalancingEnabled;
+  /**
+   * Lags behind global number by one iteration in an MPI world as data
+   * will arrive with one iteration delay.
+   */
+  int _globalNumberOfSplits;
 
-    /**
-     * This is my local accumulator where I keep track of how often I did
-     * split in this iteration. At the end of each iteration, I roll this
-     * one over into global or send it out.
-     */
-    int _localNumberOfSplits;
+  int _numberOfStateUpdatesWithoutAnySplit;
 
-    /**
-     * Lags behind global number by one iteration in an MPI world as data
-     * will arrive with one iteration delay.
-     */
-    int _globalNumberOfSplits;
+  bool _isViewConsistent;
 
-    int _numberOfStateUpdatesWithoutAnySplit;
+#ifdef Parallel
+  /**
+   * Required for local stats, but also replicated in cell count metrics
+   */
+  MPI_Request* _globalNumberOfInnerUnrefinedCellsRequest;
+  MPI_Request* _globalNumberOfSplitsRequest;
+  MPI_Request* _globalNumberOfTreesRequest;
+  MPI_Request* _globalNumberOfRanksWithEnabledLoadBalancingRequest;
+#endif
 
-    int _maximumTreesPerRank;
+  int _globalNumberOfInnerUnrefinedCellsBufferIn;
+  int _globalNumberOfInnerUnrefinedCellsBufferOut;
+  int _globalNumberOfSplitsIn;
+  int _globalNumberOfSplitsOut;
+  int _globalNumberOfTreesIn;
+  int _globalNumberOfTreesOut;
+  int _globalNumberOfRanksWithEnabledLoadBalancingIn;
+  int _globalNumberOfRanksWithEnabledLoadBalancingOut;
 
-    bool _viewConsistent;
-
-    #ifdef Parallel
-    /**
-     * Required for local stats, but also replicated in cell count metrics
-     */
-    MPI_Request*    _globalSumRequest;
-    MPI_Request*    _globalNumberOfSplitsRequest;
-    MPI_Request*    _globalNumberOfTreesRequest;
-    MPI_Request*    _globalNumberOfRanksWithEnabledLoadBalancingRequest;
-    MPI_Request*    _globalMaximumTreesPerRankRequest;
-    #endif
-
-    int             _globalNumberOfInnerUnrefinedCellsBufferIn;
-    int             _globalNumberOfInnerUnrefinedCellsBufferOut;
-    int             _numberOfSplitsIn;
-    int             _numberOfSplitsOut;
-    int             _numberOfTreesIn;
-    int             _numberOfTreesOut;
-    int             _numberOfRanksWithEnabledLoadBalancingIn;
-    int             _numberOfRanksWithEnabledLoadBalancingOut;
-    int             _numberOfMaximumTreesOut;
-    int             _maximumTreesIn;
-
+  void waitForGlobalDataExchange();
 };
-
-

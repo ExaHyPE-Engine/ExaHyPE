@@ -82,10 +82,6 @@ ExaHyPE configuration offers:
   to add $3^d$ as fourth argument to ExaHyPE's load balancing configuration.
 - Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
   you obtain an understanding of your code's behaviour.
-- Once you are reasonably satisfied with the MPI behaviour, try out other 
-  parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition
-  for example seems to give reasonable result.
-
 
 
 ## Task parallelism
@@ -93,8 +89,6 @@ ExaHyPE configuration offers:
 Some ExaHyPE solvers add further task parallelism to this decomposition. 
 In general, the enclave solvers tend to perform better on massively parallel
 systems.
-
-
 
 
 ## Writing your own parallel extensions

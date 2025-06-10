@@ -8,7 +8,6 @@
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
-
 #include "swift2/UserInterface.h"
 
 
@@ -22,15 +21,13 @@
   namespace {{ item }} {
 {%- endfor %}
 
-
 tarch::logging::Log _log( "{{NAMESPACE | join("::")}}::GlobalState" );
 
-{% if LOAD_BALANCER!="" -%}
-{{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
-{% else -%}
-toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
-{% endif -%}
-
+{% if LOAD_BALANCER_CONFIGURATION!="" %}
+toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
+{% else %}
+toolbox::loadbalancing::LoadBalancer loadBalancer;
+{% endif %}
 
 bool rerunPreviousGridSweep() {
   bool result = false;
@@ -158,7 +155,7 @@ void finishTimeStep() {
   logInfo("finishTimeStep()", vertexdata::{{PARTICLE}}Set::printParticleStateStatistics() );
   {%- endfor %}
 
-  loadBalancer.finishStep();
+  loadBalancer.update();
 
   logInfo("finishTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
   logInfo("finishTimeStep()",
@@ -180,7 +177,7 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
-  loadBalancer.finishStep();
+  loadBalancer.update();
   logTraceOut( "GridConstructionStep()" );
 }
 
@@ -191,7 +188,7 @@ void finishInitialisationStep() {
   vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
   {%- endfor %}
 
-  loadBalancer.finishStep();
+  loadBalancer.update();
   logTraceOut( "InitialisationStep()" );
 }
 
@@ -202,7 +199,7 @@ void finishInitialConditionStep() {
   vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
 
-  loadBalancer.finishStep();
+  loadBalancer.update();
   logTraceOut( "InitialConditionStep()" );
 }
 

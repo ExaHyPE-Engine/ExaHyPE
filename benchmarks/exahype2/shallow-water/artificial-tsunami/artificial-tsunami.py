@@ -18,9 +18,6 @@ dg_order = 5
 number_of_snapshots = 0
 build_mode = "Release"
 output = "solutions"
-load_balancing_strategy = "SpreadOut"
-load_balancing_quality = 0.99
-trees = -2
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -32,7 +29,7 @@ initial_conditions = """
 
   Q[s::h] = INITIAL_WATER_HEIGHT;
 
-  auto displacementX = [](double x) { return std::sin((x / 500.0 + 1.0) * std::numbers::pi); };
+  auto displacementX = [](double x) { return std::sin((x / 500.0 + 1.0) * tarch::la::PI); };
   auto displacementY = [](double y) { return -std::pow(y / 500.0, 2) + 1.0; };
   auto displacement = [&](double x, double y) { return 5.0 * displacementX(x) * displacementY(y); };
 
@@ -106,18 +103,7 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False],
 )
 
-if load_balancing_strategy != "None":
-    strategy = f"toolbox::loadbalancing::strategies::{load_balancing_strategy}"
-    configuration = (
-        f"new ::exahype2::LoadBalancingConfiguration("
-        f"{load_balancing_quality},"
-        f"0,"
-        f"{'false'},"
-        f"{trees},"
-        f"{trees})"
-    )
-    project.set_load_balancing(strategy, configuration)
-
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(True)

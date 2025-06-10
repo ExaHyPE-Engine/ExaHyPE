@@ -187,11 +187,6 @@ project.set_global_simulation_parameters(
     plotter_precision=8,  # plotter precision
 )
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOut",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
-)
-
 project.set_Peano4_installation(args.peanodir, build_mode)
 #! [tutorials swift2 planet-orbit Configure project]
 

@@ -165,9 +165,7 @@ project.set_global_simulation_parameters(
   max_iterations        = 2
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
-
 peano4_project = project.generate_Peano4_project(args.verbose)
 # peano4_project.output.makefile.add_cpp_file( "Scenario.cpp" )
 peano4_project.generate()

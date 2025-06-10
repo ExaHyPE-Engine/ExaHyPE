@@ -393,8 +393,9 @@ bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
 
 void tarch::mpi::Rank::shutdown() {
   logTraceIn( "shutdown()" );
-  #ifdef Parallel
-  assertion( _rank!=-1 );
+
+#ifdef Parallel
+  assertion(_rank!=-1);
 
   IntegerMessage::shutdownDatatype();
 
@@ -402,9 +403,7 @@ void tarch::mpi::Rank::shutdown() {
   if (errorCode) {
     logError( "shutdown()", MPIReturnValueToString(errorCode) );
   }
-
-  _communicator = MPI_COMM_WORLD;
-  #endif
+#endif
 
   _rank         = -1;
   logTraceOut( "shutdown()" );
@@ -518,11 +517,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
 
 int tarch::mpi::Rank::getRank() const {
-/*
-  #ifdef Parallel
   assertion(_initIsCalled);
-  #endif
-*/
   return _rank;
 }
 
@@ -553,24 +548,6 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
     logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks" );
   }
 }
-
-
-#ifdef Parallel
-void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, [[maybe_unused]] bool recomputeRankAndWorld ) {
-  _communicator = communicator;
-
-  int result = MPI_Comm_size( _communicator, &_numberOfProcessors );
-  if (result!=MPI_SUCCESS) {
-    logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
-  }
-
-  result = MPI_Comm_rank( _communicator, &_rank );
-  if (result!=MPI_SUCCESS) {
-    logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
-  }
-}
-#endif
-
 
 void tarch::mpi::Rank::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();

@@ -16,7 +16,7 @@
 
 bool tarch::multicore::Core::init() {
   if (omp_get_num_procs() != omp_get_max_threads()) {
-    logInfo(
+    logDebug(
       "init()",
       "omp_get_num_procs() reports "
         << omp_get_num_procs() << " while omp_get_max_threads() reports " << omp_get_max_threads()
@@ -28,12 +28,12 @@ bool tarch::multicore::Core::init() {
   _numberOfThreads = omp_get_max_threads();
 
   if (_numberOfThreads > getNumberOfUnmaskedThreads()) {
-    logWarning(
+    logDebug(
       "init()",
       "Number of configured threads ("
         << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")"
     );
-    logWarning("init()", "Unmasked threads: " << printUnmaskedThreads());
+    logDebug("init()", "Unmasked threads: " << printUnmaskedThreads());
   }
 
   return isInitialised();

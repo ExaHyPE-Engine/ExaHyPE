@@ -50,8 +50,7 @@ class Project(object):
         self._max_terminal_time = 0.0
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
-        self._load_balancer_name = ""
-        self._load_balancer_arguments = ""
+        self._load_balancer_configuration = ""
         self._Peano_src_directory = "."
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
@@ -77,22 +76,12 @@ class Project(object):
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_scattered_memory
         )
 
-    def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
+    def set_load_balancer(self, load_balancer_configuration=""):
         """
-        load_balancer_name: string
-          Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::strategies::SpreadOut",
-          but you might be well-advices to study different classes within the namespace toolbox::loadbalancing.
-
-        load_balancer_arguments: string
-          If your load balancing requires parameters, add them
-          here. It is a string that will be copied into the C++ class instantiation.
-          Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not.
-          The only exception is the empty parameter list. Here, you can/should simply
-          add the empty string.
+        load_balancer_configuration: string
+          User-defined load balancer configuration that shall be used.
         """
-        self._load_balancer_name = load_balancer_name
-        self._load_balancer_arguments = load_balancer_arguments
+        self._load_balancer_configuration = load_balancer_configuration
 
     """
     The standard extensions that I use for both Peano and ExaHyPE.
@@ -366,8 +355,7 @@ levels.
     def __generate_global_state_files(self):
         solverRepositoryDictionary = {
             "PARTICLE_SPECIES": [x.name for x in self._particle_species],
-            "LOAD_BALANCER": self._load_balancer_name,
-            "LOAD_BALANCER_ARGUMENTS": self._load_balancer_arguments,
+            "LOAD_BALANCER_CONFIGURATION": self._load_balancer_configuration,
         }
 
         templatefile_prefix = os.path.dirname(__file__)

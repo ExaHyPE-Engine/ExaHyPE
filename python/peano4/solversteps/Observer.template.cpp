@@ -37,7 +37,7 @@ std::vector<peano4::grid::GridControlEvent> {{FULL_QUALIFIED_CLASSNAME}}::getGri
 
   std::vector<std::vector<peano4::grid::GridControlEvent>> allActionResults = {
     {%- for action_set in ACTIVE_ACTION_SETS %}
-    {{ action_set.name }}.getGridControlEvents(){{ "," if not loop.last }}
+    {{ action_set.name }}.getGridControlEvents(){{ "," if not loop.last else "" }}
     {%- endfor %}
   };
 
@@ -951,7 +951,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
 
 {% if CELLS %}
 void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {
-  logTraceInWith3Arguments("sendCell(", toStack, event.toString(), _spacetreeId);
+  logTraceInWith3Arguments("sendCell()", toStack, event.toString(), _spacetreeId);
 
   peano4::datamanagement::CellMarker marker(event);
   repositories::DataRepository::DataKey key(_spacetreeId, peano4::grid::PeanoCurve::CallStack);

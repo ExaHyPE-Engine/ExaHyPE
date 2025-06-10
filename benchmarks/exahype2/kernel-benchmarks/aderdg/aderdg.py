@@ -132,10 +132,6 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False]
 )
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
-)
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=True)
 

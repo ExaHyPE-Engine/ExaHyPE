@@ -1,5 +1,4 @@
 #include "SolverRepository.h"
-#include "exahype2/LoadBalancingConfiguration.h"
 #include "peano4/grid/grid.h"
 #include "tarch/multicore/Core.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -16,11 +15,6 @@ namespace {{N}} {
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
 
-    {% if LOAD_BALANCER != "" %}
-    {{LOAD_BALANCER}}  loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
-    {% else %}
-    toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
-    {% endif %}
     {% for SOLVER in AUX_SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
@@ -57,10 +51,8 @@ namespace {{N}} {
       {% endfor %}
     }
 
-    void endCreateGrid() {
-      loadBalancer.finishStep();
-    }
-    
+    void endCreateGrid() {}
+
     void incrementPlotCounter() {plotCounter++;}
     int getPlotCounter() {
       return plotCounter;

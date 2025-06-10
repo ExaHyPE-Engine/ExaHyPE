@@ -199,12 +199,8 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False, False][0:dimensions],
 )
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOut",
-    "new ::exahype2::LoadBalancingConfiguration()",
-)
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", build_modes[curr_build_mode])
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(True)
-
 project.build(make_clean_first=True)

@@ -120,16 +120,8 @@ class Observer(object):
         if not os.path.exists(directory + "/" + self.subdirectory):
             os.mkdir(directory + "/" + self.subdirectory)
 
-        headerfile_template = (
-            os.path.realpath(__file__)
-            .replace(".pyc", ".template.h")
-            .replace(".py", ".template.h")
-        )
-        cppfile_template = (
-            os.path.realpath(__file__)
-            .replace(".pyc", ".template.cpp")
-            .replace(".py", ".template.cpp")
-        )
+        headerfile_template = os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.h"
+        cppfile_template = os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.cpp"
 
         generated_implementation_file_pair = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=headerfile_template,

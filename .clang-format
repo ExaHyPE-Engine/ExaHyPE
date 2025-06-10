@@ -82,21 +82,14 @@ IfMacros:
   - KJ_IF_MAYBE
 IncludeBlocks:   Regroup
 IncludeCategories:
-  # Special includes (if any) that must come first.
-  - Regex:           '"StdAfx\\.(h|hpp)"'
-    Priority:        -1
-    SortPriority:    -1
-    CaseSensitive:   false
-  # User includes: quoted headers.
-  - Regex:           '^".*"$'
-    Priority:        2
-    SortPriority:    2
-    CaseSensitive:   false
-  # System includes: angle-bracket headers come last.
-  - Regex:           '^<.*>$'
-    Priority:        3
-    SortPriority:    3
-    CaseSensitive:   false
+  - Regex: '^".*/.*"$'
+    Priority: 1
+    SortPriority: 1
+    CaseSensitive: false
+  - Regex: '^<.*>$'
+    Priority: 2
+    SortPriority: 2
+    CaseSensitive: false
 IncludeIsMainRegex: '(_test)?$'
 IncludeIsMainSourceRegex: ''
 IndentAccessModifiers: false
@@ -140,7 +133,7 @@ ReflowComments:  true
 RemoveBracesLLVM: false
 SeparateDefinitionBlocks: Leave
 ShortNamespaceLines: 0
-SortIncludes:    CaseInsensitive
+SortIncludes:    true
 SortJavaStaticImport: Before
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false

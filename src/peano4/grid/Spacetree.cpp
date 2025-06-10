@@ -26,6 +26,7 @@ peano4::grid::Spacetree::Spacetree(
   _id(0),
   _spacetreeState(SpacetreeState::NewRoot),
   _root(),
+  _statistics(),
   _masterId(-1),
   _periodicBC(periodicBC),
   _gridTraversalEventGenerator(0) {
@@ -74,10 +75,8 @@ peano4::grid::Spacetree::Spacetree(
   _statistics.setStationarySweeps(-NumberOfStationarySweepsToWaitAtLeastTillJoin - 2);
   clear(_statistics, _id == 0);
 
-  logDebug("Spacetree()", "Created spacetree " << _id << " with master tree " << masterId);
+  logDebug("Spacetree()", "Created spacetree " << _id << " with master tree " << masterId << ": " << _root.toString());
 }
-
-peano4::grid::Spacetree::~Spacetree() {}
 
 bool peano4::grid::Spacetree::isVertexAdjacentToLocalSpacetree(
   GridVertex vertex, bool splittingIsConsideredLocal, bool joiningIsConsideredLocal

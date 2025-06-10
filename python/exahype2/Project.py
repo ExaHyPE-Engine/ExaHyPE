@@ -45,8 +45,7 @@ class Project(object):
         self._time_in_between_plots = 0.1
         self._first_checkpoint_time_stamp = 0.0
         self._time_in_between_checkpoints = 0.0
-        self._load_balancer_name      = ""
-        self._load_balancer_arguments = ""
+        self._load_balancer_configuration = ""
         self._log_filter_file         = "exahype.log-filter"
         self._print_time_step_interval_in_seconds = 10
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h",
@@ -67,35 +66,23 @@ class Project(object):
         self._checkpoint_path="./"
         self._solvers_file_collection=[]
 
-
         self._particle_unknowns = 0
         self._particle_variable_names = []
         self._particle_variable_pos = [0]
         self._use_particle_var_shortcut = False
-        self.create_grid = peano4.solversteps.Step("CreateGrid", False)
+        self.create_grid_with_refinement = peano4.solversteps.Step("CreateGridWithRefinement", False)
+        self.create_grid_without_refinement = peano4.solversteps.Step("CreateGridWithoutRefinement", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
-        self.create_grid_but_postpone_refinement = peano4.solversteps.Step("CreateGridButPostponeRefinement", False)
-        self.create_grid_and_converge_lb = peano4.solversteps.Step("CreateGridAndConvergeLoadBalancing", False)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.checkpoint_solution = peano4.solversteps.Step("CheckpointSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
-
-    def set_load_balancing(self, load_balancer_name, load_balancer_arguments=""):
+    def set_load_balancer(self, load_balancer_configuration=""):
         """
-        load_balancer_name: string
-          Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::strategies::RecursiveSubdivision".
-
-        load_balancer_arguments: string
-          If your load balancing requires parameters, add them
-          here. It is a string that will be copied into the C++ class instantiation.
-          Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not.
-          The only exception is the empty parameter list. Here, you can/should simply
-          add the empty string.
+        load_balancer_configuration: string
+          User-defined load balancer configuration that shall be used.
         """
-        self._load_balancer_name = load_balancer_name
-        self._load_balancer_arguments = load_balancer_arguments
+        self._load_balancer_configuration = load_balancer_configuration
 
     def set_log_filter_file(self, file_name):
         """! Set a log filter file name
@@ -421,8 +408,7 @@ thus appreciate any citation of the original release paper
     def __set_solver_repository_dict(self):
         self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
-            "LOAD_BALANCER":            self._load_balancer_name,
-            "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
+            "LOAD_BALANCER_CONFIGURATION": self._load_balancer_configuration,
             "PLOT_FILTER":              self._plot_filters,
             "TRACERS":                  [x.name for x in self._tracer_particles],
             "LOG_FILTER_FILE":          self._log_filter_file,
@@ -618,9 +604,8 @@ thus appreciate any citation of the original release paper
         self.checkpoint_solution.use_vertex(particles)
         self.init_grid.use_vertex(particles)
         self.perform_time_step.use_vertex(particles)
-        self.create_grid.use_vertex(particles)
-        self.create_grid_but_postpone_refinement.use_vertex(particles)
-        self.create_grid_and_converge_lb.use_vertex(particles)
+        self.create_grid_with_refinement.use_vertex(particles)
+        self.create_grid_without_refinement.use_vertex(particles)
 
         #
         # Initialisation
@@ -745,13 +730,11 @@ thus appreciate any citation of the original release paper
         creation routine. After all, we distinguish three flavours of it
 
         - with refinement;
-        - without refinement as we've just refined or split up domain;
-        - without refinement to let load balancing converge.
+        - without refinement as we've just refined or split up domain and to let load balancing converge.
 
         """
-        self.create_grid.add_action_set(action_set)
-        self.create_grid_but_postpone_refinement.add_action_set(action_set)
-        self.create_grid_and_converge_lb.add_action_set(action_set)
+        self.create_grid_with_refinement.add_action_set(action_set)
+        self.create_grid_without_refinement.add_action_set(action_set)
 
     def generate_Peano4_project(self, verbose=False):
         """!
@@ -775,10 +758,9 @@ thus appreciate any citation of the original release paper
         self._project.output.makefile.set_mode(self._build_mode)
         self.__export_constants()
 
-        self._project.solversteps.add_step(self.create_grid)
+        self._project.solversteps.add_step(self.create_grid_with_refinement)
+        self._project.solversteps.add_step(self.create_grid_without_refinement)
         self._project.solversteps.add_step(self.init_grid)
-        self._project.solversteps.add_step(self.create_grid_but_postpone_refinement)
-        self._project.solversteps.add_step(self.create_grid_and_converge_lb)
         self._project.solversteps.add_step(self.plot_solution)
         self._project.solversteps.add_step(self.checkpoint_solution)
         self._project.solversteps.add_step(self.perform_time_step)
@@ -792,21 +774,15 @@ thus appreciate any citation of the original release paper
 
             solver.add_to_Peano4_datamodel(self._project.datamodel, verbose)
 
-            solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid)
+            solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_with_refinement)
+            solver.add_use_data_statements_to_Peano4_solver_step(self.create_grid_without_refinement)
             solver.add_use_data_statements_to_Peano4_solver_step(self.plot_solution)
             solver.add_use_data_statements_to_Peano4_solver_step(self.checkpoint_solution)
             solver.add_use_data_statements_to_Peano4_solver_step(self.perform_time_step)
             solver.add_use_data_statements_to_Peano4_solver_step(self.init_grid)
-            solver.add_use_data_statements_to_Peano4_solver_step(
-                self.create_grid_but_postpone_refinement
-            )
-            solver.add_use_data_statements_to_Peano4_solver_step(
-                self.create_grid_and_converge_lb
-            )
 
-            solver.add_actions_to_create_grid(
-                self.create_grid, evaluate_refinement_criterion=True
-            )
+            solver.add_actions_to_create_grid(self.create_grid_with_refinement, evaluate_refinement_criterion=True)
+            solver.add_actions_to_create_grid(self.create_grid_without_refinement, evaluate_refinement_criterion=False)
 
             if self._restart_from_checkpoint: #avoid error when use solver without checkpoint feature
                 solver.add_actions_to_init_grid(self.init_grid, self._restart_from_checkpoint)
@@ -818,14 +794,6 @@ thus appreciate any citation of the original release paper
                 if ( (self._time_in_between_checkpoints != 0) or (self._first_checkpoint_time_stamp != 0) ):
                     solver.add_actions_to_checkpoint_solution(self.checkpoint_solution, self._output_path)
 
-            solver.add_actions_to_create_grid(
-                self.create_grid_but_postpone_refinement,
-                evaluate_refinement_criterion=False,
-            )
-            solver.add_actions_to_create_grid(
-                self.create_grid_and_converge_lb, evaluate_refinement_criterion=False
-            )
-            
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
             if self._abstract_overwrite==False:

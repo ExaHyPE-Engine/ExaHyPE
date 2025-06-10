@@ -4,6 +4,7 @@ import argparse
 
 import peano4.output.CompileMode
 
+
 class ArgumentParser(argparse.ArgumentParser):
     def __init__(self, title=None):
         super(ArgumentParser, self).__init__(
@@ -104,17 +105,6 @@ class ArgumentParser(argparse.ArgumentParser):
             help="Number of AMR grid levels on top of max. size of a cell.",
         )
 
-        available_load_balancing_strategies = [
-            "SpreadOut",
-            "SpreadOutOnceGridStagnates",
-        ]
-        self.add_argument(
-            "-lbs",
-            "--load-balancing-strategy",
-            choices=available_load_balancing_strategies,
-            default="SpreadOut",
-            help="|".join(available_load_balancing_strategies),
-        )
         self.add_argument(
             "-lbq",
             "--load-balancing-quality",
@@ -124,16 +114,15 @@ class ArgumentParser(argparse.ArgumentParser):
         )
         self.add_argument(
             "--trees",
-            type=int,
-            default=-1,
+            default="::exahype2::LoadBalancingConfiguration::UseNumberOfThreads",
             help="Number of trees (partitions) per rank after initial decomposition.",
         )
         self.add_argument(
-            "--threads",
-            type=int,
-            default=0,
-            help="Number of threads per rank.",
+            "--trees-init",
+            default="::exahype2::LoadBalancingConfiguration::UseNumberOfThreads",
+            help="Number of trees (partitions) per rank for initial decomposition.",
         )
+
         self.add_argument(
             "-ti",
             "--print-time-interval",
@@ -141,12 +130,14 @@ class ArgumentParser(argparse.ArgumentParser):
             default=10,
             help="Time interval to print time step information.",
         )
+
         self.add_argument(
             "-td",
             "--target-device",
             default="tarch::accelerator::Device::DefaultDevice",
             help="Target device for GPU offloading.",
         )
+
         self.add_argument(
             "-e",
             "--use-enclave-tasking",
@@ -160,12 +151,14 @@ class ArgumentParser(argparse.ArgumentParser):
             default=1,
             help="Number of fused enclave tasks to offload asynchronously.",
         )
+
         self.add_argument(
             "-fpe",
             "--fpe",
             action="store_true",
             help="Enable a floating-point exception handler.",
         )
+
         self.add_argument(
             "-pl",
             "--plotter",
