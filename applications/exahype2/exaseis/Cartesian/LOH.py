@@ -9,11 +9,11 @@ import Elastic
 min_level           = 3
 max_depth           = 0
 order               = 5
-precision           = "float"
+precision           = "double"
 e_t                 = 2.0
 plot_dt             = 0.1
 polynomials         = "legendre"
-use_tracers         = True
+use_tracers         = False
 
 size    = [ 9.0, 9.0, 9.0]  # thousand meters
 offset  = [-4.5, 0., -4.5]  # thousand meters
@@ -130,9 +130,7 @@ project.set_global_simulation_parameters(
   time_in_between_plots = plot_dt,
 )
 
-project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut", "new ::exahype2::LoadBalancingConfiguration()")
-
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation("../../../../", peano4.output.CompileMode.Release)
 peano4_project = project.generate_Peano4_project(verbose=False)
-
 peano4_project.build(make_clean_first=True)

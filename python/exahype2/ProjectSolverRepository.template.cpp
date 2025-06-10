@@ -17,10 +17,9 @@
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}Set.h"
 #include "globaldata/{{ item }}.h"
-{# Comment to ensure that jinja2 adds a new line#}
-{%- endfor %}
+{% endfor %}
 
-{% for INCLUDE in ADDITIONAL_INCLUDES %}
+{% for INCLUDE in ADDITIONAL_INCLUDES -%}
 #include "{{INCLUDE}}"
 {% endfor %}
 
@@ -28,7 +27,7 @@
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
-{%- endfor %}
+{% endfor %}
 
 int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
 
@@ -37,11 +36,11 @@ tarch::logging::Log _log("{{NAMESPACE | join("::")}}::SolverRepository");
 ::exahype2::PlotFilter         plotFilter;
 peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
-{% if LOAD_BALANCER!="" -%}
-{{LOAD_BALANCER}} loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
-{% else -%}
-toolbox::loadbalancing::strategies::NoLoadBalancing loadBalancer;
-{% endif -%}
+{% if LOAD_BALANCER_CONFIGURATION!="" %}
+toolbox::loadbalancing::LoadBalancer loadBalancer({{LOAD_BALANCER_CONFIGURATION}});
+{% else %}
+toolbox::loadbalancing::LoadBalancer loadBalancer(new ::exahype2::LoadBalancingConfiguration);
+{% endif %}
 
 {% for item in SOLVERS -%}
 {{ item[0] }} {{ item[1] }};
@@ -199,7 +198,9 @@ void finishTimeStep() {
   {%- endfor %}
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
-  loadBalancer.finishStep();
+
+  loadBalancer.update();
+
   {% for item in TRACERS -%}
   logInfo("finishTimeStep()", vertexdata::{{ item }}Set::printParticleStateStatistics());
   {%- endfor %}
@@ -212,7 +213,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
-  loadBalancer.finishStep();
+  loadBalancer.update();
 
   gridStatisticsAfterGridConstruction = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
   #ifdef Parallel
@@ -266,7 +267,7 @@ void finishGridInitialisationStep() {
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
-  loadBalancer.finishStep();
+  loadBalancer.update();
 }
 
 void finishPlottingStep() {
@@ -302,7 +303,7 @@ void finishSimulation() {
   {{ item[1] }}.finishSimulation();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
-  loadBalancer.finishStep();
+  loadBalancer.update();
   ::exahype2::RefinementControlService::getInstance().finishStep();
 }
 

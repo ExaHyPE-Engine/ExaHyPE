@@ -1,31 +1,16 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Configuration.h"
 
-#include "peano4/parallel/Node.h"
-
-std::string toolbox::loadbalancing::Configuration::toString() const {
-  return "<toString() undef>";
-}
-
-
-toolbox::loadbalancing::DefaultConfiguration::DefaultConfiguration(int maxTreesPerRank):
-  _maxTreesPerRank(maxTreesPerRank<=0 ? peano4::parallel::Node::MaxSpacetreesPerRank : maxTreesPerRank)
-{}
-
-bool toolbox::loadbalancing::DefaultConfiguration::makeSplitDependOnMemory(State) {
-  return false;
-}
+#include "tarch/multicore/Core.h"
 
 int toolbox::loadbalancing::DefaultConfiguration::getMaxLocalTreesPerRank(State) {
-  return _maxTreesPerRank;
+  return tarch::multicore::Core::getInstance().getNumberOfThreads();
 }
 
-double toolbox::loadbalancing::DefaultConfiguration::getWorstCaseBalancingRatio(State) {
-  return 0.9;
-}
+double toolbox::loadbalancing::DefaultConfiguration::getWorstCaseBalancingRatio(State) { return 0.9; }
 
-int toolbox::loadbalancing::DefaultConfiguration::getMinTreeSize(State) {
-  return 0;
-}
+int toolbox::loadbalancing::DefaultConfiguration::getMinTreeSize(State) { return 1; }
 
 peano4::SplitInstruction::Mode toolbox::loadbalancing::DefaultConfiguration::getMode(State) {
   return peano4::SplitInstruction::Mode::BottomUp;

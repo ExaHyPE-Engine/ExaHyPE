@@ -738,19 +738,7 @@ if __name__ == "__main__":
     probe_point = [-12, -12, 0.0]
     project.add_plot_filter(probe_point, [24.0, 24.0, 0.01], 1)
 
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95,500,16))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOut",
-        "(new ::exahype2::LoadBalancingConfiguration(0.95,1000,16))",
-    )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.98,1000,16))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOutOnceGridStagnates_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    # project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-    #    "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
+    project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 
     ########################################################################################
     # linking stuff

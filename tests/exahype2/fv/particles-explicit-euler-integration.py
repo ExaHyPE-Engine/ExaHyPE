@@ -166,12 +166,7 @@ tracing_action_set.descend_invocation_order = (
 )
 project.add_action_set_to_timestepping(tracing_action_set)
 project.add_action_set_to_initialisation(tracing_action_set)
-
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration()",
-)
-
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project = project.generate_Peano4_project(verbose=False)
 project.build(make_clean_first=True)
 

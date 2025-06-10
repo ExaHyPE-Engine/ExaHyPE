@@ -6,7 +6,7 @@ import exahype2
 order = 3
 max_h = 1.0 / 9.0
 min_h = 0.9 / 27.0  # 0.9 / 81.0
-plot_interval = 0.0  # 0.01
+plot_interval = 0.00  # 0.01
 end_time = 0.1
 
 polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
@@ -88,12 +88,8 @@ project.set_global_simulation_parameters(
     periodic_BC=[False, False],
 )
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
-)
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
 project = project.generate_Peano4_project(verbose=False)
 #project.set_fenv_handler(True)
-
 project.build(make_clean_first=True)

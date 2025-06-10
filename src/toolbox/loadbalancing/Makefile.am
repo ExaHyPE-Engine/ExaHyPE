@@ -9,21 +9,11 @@ lib_LIBRARIES = libToolboxLoadBalancing2d.a libToolboxLoadBalancing2d_stats.a  l
 endif
 
 ToolboxLoadBalancing_SOURCES = \
-  AbstractLoadBalancing.cpp \
   Blacklist.cpp \
   Configuration.cpp \
-  CostMetrics.cpp \
-  loadbalancing.cpp \
   State.cpp \
   Statistics.cpp \
-  metrics/CellCount.cpp \
-  metrics/CustomCellWeight.cpp \
-  strategies/NoLoadBalancing.cpp \
-  strategies/RecursiveBipartition.cpp \
-  strategies/SplitOversizedTree.cpp \
-  strategies/SpreadOut.cpp \
-  strategies/SpreadOutOnceGridStagnates.cpp \
-  strategies/RecursiveSplit.cpp
+  LoadBalancer.cpp
 
 libToolboxLoadBalancing2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE)
 libToolboxLoadBalancing2d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)

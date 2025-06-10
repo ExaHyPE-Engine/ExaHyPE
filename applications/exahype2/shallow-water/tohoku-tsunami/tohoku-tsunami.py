@@ -107,22 +107,7 @@ project.set_global_simulation_parameters(
     ],
 )
 
-if args.load_balancing_strategy != "None":
-    strategy = f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}"
-    assume_periodic_boundary_conditions = any([
-        args.periodic_boundary_conditions_x,
-        args.periodic_boundary_conditions_y,
-    ])
-    configuration = (
-        f"new ::exahype2::LoadBalancingConfiguration("
-        f"{args.load_balancing_quality},"
-        f"0,"
-        f"{'true' if assume_periodic_boundary_conditions else 'false'},"
-        f"{args.trees},"
-        f"{args.trees})"
-    )
-    project.set_load_balancing(strategy, configuration)
-
+project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees_init}, {args.trees})")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.output.makefile.set_target_device(args.target_device)

@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "SpacetreeSet.h"
 
 #include "config.h"
@@ -168,7 +170,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       assertion(_state == SpacetreeSetState::Waiting);
       logInfo(
         "receiveDanglingMessages()",
-        "learned that remote child tree "
+        "Learned that remote child tree "
           << p.getWorkerSpacetreeId() << " of local tree " << p.getMasterSpacetreeId()
           << " is degenerated thus had been removed"
       );
@@ -214,7 +216,7 @@ void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
 
 
 void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
-  logTraceInWith2Arguments("addSpacetree(int,int)", masterId, newTreeId);
+  logTraceInWith2Arguments("addSpacetree()", masterId, newTreeId);
   if (peano4::parallel::Node::getInstance().getRank(masterId) != peano4::parallel::Node::getInstance().getRank(newTreeId)) {
 #ifdef Parallel
     const int targetRank = peano4::parallel::Node::getInstance().getRank(newTreeId);
@@ -225,23 +227,17 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     message.setAction(TreeManagementMessage::Action::CreateNewRemoteTree);
     TreeManagementMessage::sendAndPollDanglingMessages(message, targetRank, _requestMessageTag);
 
-    TreeManagementMessage::receive(
-      message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator()
-    );
+    TreeManagementMessage::receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
     assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 
     peano4::grid::AutomatonState state = _spacetrees.begin()->_root;
-    logDebug("addSpacetree(int,int)", "send state " << state.toString() << " to rank " << targetRank);
-    peano4::grid::AutomatonState::send(
-      state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator()
-    );
+    logDebug("addSpacetree()", "Send state " << state.toString() << " to rank " << targetRank);
+    peano4::grid::AutomatonState::send(state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
 
-    TreeManagementMessage::receive(
-      message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator()
-    );
+    TreeManagementMessage::receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
     assertion1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
 #else
-    assertionMsg(false, "should never enter this branch without -DParallel");
+    assertionMsg(false, "Parallel build disabled");
 #endif
   } else {
     peano4::grid::Spacetree newTree(
@@ -254,7 +250,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     tarch::multicore::Lock lock(_semaphore);
     _spacetrees.push_back(std::move(newTree));
   }
-  logTraceOut("addSpacetree(int,int)");
+  logTraceOut("addSpacetree()");
 }
 
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
@@ -365,21 +361,18 @@ void peano4::parallel::SpacetreeSet::exchangeVerticalDataBetweenTrees(peano4::gr
   for (auto& p : _spacetrees) {
     logDebug(
       "exchangeVerticalDataBetweenTrees(TraversalObserver&)",
-      "manage data transfer of tree " << p._id << " in state " << peano4::grid::toString(p._spacetreeState)
+      "Manage data transfer of tree " << p._id << " in state " << peano4::grid::toString(p._spacetreeState)
     );
 
     streamLocalVertexInformationToMasterThroughVerticalStacks(p._id, p._masterId, p._joining);
-
     exchangeAllVerticalDataExchangeStacks(peano4::grid::Spacetree::_vertexStack, p._id, p._masterId);
-
     createObserverCloneIfRequired(observer, p._id);
-
     _clonedObserver[p._id]->exchangeAllVerticalDataExchangeStacks(p._masterId);
   }
 
   logDebug(
     "exchangeVerticalDataBetweenTrees(TraversalObserver&)",
-    "all local data exchange realised, all MPI message exchange triggered. Wait for MPI to terminate"
+    "All local data exchange realised, all MPI message exchange triggered. Wait for MPI communication."
   );
 
   for (auto& p : _spacetrees) {
@@ -395,22 +388,13 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
   logTraceInWith1Argument("streamDataFromSplittingTreesToNewTrees()", _spacetrees.size());
 
   for (auto& parent : _spacetrees) {
+      const int sourceStack = grid::PeanoCurve::getInputStackNumber(parent._root);
     for (auto& worker : parent._hasSplit) {
-      const int temporaryOutStackForVertices = Node::getOutputStackNumberForVerticalDataExchange(worker);
-      const int sourceStackForVertices       = peano4::grid::PeanoCurve::getInputStackNumber(parent._root);
-      assertion3(
-        peano4::grid::Spacetree::_vertexStack.getForPush(parent._id, temporaryOutStackForVertices)->empty(),
-        parent._id,
-        temporaryOutStackForVertices,
-        sourceStackForVertices
-      );
-      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id, temporaryOutStackForVertices)
-        ->clone(*peano4::grid::Spacetree::_vertexStack.getForPop(parent._id, sourceStackForVertices));
-
+      const int destinationStack = Node::getOutputStackNumberForVerticalDataExchange(worker);
+      assertion3(peano4::grid::Spacetree::_vertexStack.getForPush(parent._id, destinationStack)->empty(), parent._id, destinationStack, sourceStack);
+      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id, destinationStack)->clone(*peano4::grid::Spacetree::_vertexStack.getForPop(parent._id, sourceStack));
       streamDataFromSplittingTreeToNewTree(peano4::grid::Spacetree::_vertexStack, parent._id, worker);
-
       createObserverCloneIfRequired(observer, parent._id);
-
       _clonedObserver[parent._id]->streamDataFromSplittingTreeToNewTree(worker);
     }
   }
@@ -418,9 +402,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
   for (auto& p : _spacetrees) {
     if (p._spacetreeState == peano4::grid::SpacetreeState::EmptyRun) {
       streamDataFromSplittingTreeToNewTree(peano4::grid::Spacetree::_vertexStack, p._masterId, p._id);
-
       createObserverCloneIfRequired(observer, p._masterId);
-
       _clonedObserver[p._masterId]->streamDataFromSplittingTreeToNewTree(p._id);
     }
   }
@@ -509,6 +491,8 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
     answerQuestions();
   });
   logDebug("traverse()", "Rank has passed barrier");
+
+  Node::getInstance().createPendingCommunicators();
 
   _state = SpacetreeSetState::TraverseTreesAndExchangeData;
 
@@ -755,14 +739,14 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const peano4::SplitInstru
 
     if (tarch::mpi::Rank::getInstance().getRank() != targetRank) {
 #ifdef Parallel
-      logDebug("split()", "request new tree on rank " << targetRank);
+      logDebug("split()", "Request new tree on rank " << targetRank);
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);
       requestMessage.setWorkerSpacetreeId(-1);
       requestMessage.setAction(peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTree);
       TreeManagementMessage::sendAndPollDanglingMessages(requestMessage, targetRank, _requestMessageTag);
 
-      logDebug("split()", "message " << requestMessage.toString() << " sent - wait for answer");
+      logDebug("split()", "Message " << requestMessage.toString() << " sent - wait for answer");
 
       peano4::parallel::TreeManagementMessage answerMessage;
       TreeManagementMessage::receiveAndPollDanglingMessages(answerMessage, targetRank, getAnswerTag(treeId));
@@ -770,7 +754,7 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const peano4::SplitInstru
       newSpacetreeId = answerMessage.getWorkerSpacetreeId();
 #else
       newSpacetreeId = -1;
-      assertionMsg(false, "can't split into tree on a different rank if not compiled with mpi");
+      assertionMsg(false, "Can't split into tree on a different rank if not compiled with parallel support");
 #endif
     } else {
       newSpacetreeId = peano4::parallel::Node::getInstance().reserveId(
@@ -780,16 +764,6 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, const peano4::SplitInstru
 
     if (newSpacetreeId >= 0) {
       tree.split(newSpacetreeId, instruction);
-      if (tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte) * 2 > tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte)) {
-        logDebug(
-          "split()",
-          "Peano 4 uses "
-            << tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte) << " MB on rank "
-            << tarch::mpi::Rank::getInstance().getRank() << " and is asked to split. Total memory is "
-            << tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) << " MB, i.e. we might run out of memory"
-        );
-      }
-
       logDebug(
         "split()",
         "Trigger split of tree " << treeId << " into tree " << newSpacetreeId << " on rank " << targetRank << " with instruction " << instruction

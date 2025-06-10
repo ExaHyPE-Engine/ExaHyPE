@@ -180,16 +180,9 @@ If you omit this, output files are automatically put into the application's fold
 my_project.set_output_path("solutions")
 
 """
-If you only target a sequential execution, you can omit the load balancing.
-However, for a parallel build and execution you need to set load balancing.
-This requires the 'LoadBalancing' toolbox to be built.
-The type of load balancer can greatly impact the speedup and overall performance.
-For an overview of available load balancers refer to the documentation.
+Configure load balancer for parallel execution.
 """
-my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOut",
-    "new ::exahype2::LoadBalancingConfiguration()",
-)
+my_project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 
 """
 We need to set the location of our core libraries ('Peano4').

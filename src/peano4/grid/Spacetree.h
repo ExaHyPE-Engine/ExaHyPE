@@ -67,7 +67,7 @@ class peano4::grid::Spacetree {
      * though the spacetree set wants to split a tree. Please read through
      * @ref peano_domain_decomposition "Peano's domain decomposition" discussion
      * and the two splitting constraints therein to understand why this
-     * routine may or may not label a cell as splitable.
+     * routine may or may not label a cell as splittable.
      *
      * Cells that disqualify for splitting are
      *
@@ -1013,6 +1013,7 @@ class peano4::grid::Spacetree {
      * case, ensure that the internal counter does not underrun zero.
      */
     void updateSplittingCounter( int treeId );
+
   public:
     Spacetree(
       const tarch::la::Vector<Dimensions,double>&  offset,
@@ -1020,7 +1021,7 @@ class peano4::grid::Spacetree {
       const std::bitset<Dimensions>&               periodicBC = 0
     );
 
-    ~Spacetree();
+    ~Spacetree() = default;
 
     /**
      * @see GridTraversalEvent for a discussion of the arising actions. The traversal

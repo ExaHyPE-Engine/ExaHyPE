@@ -7,34 +7,24 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PlotFilter.h"
 
-{% if LOAD_BALANCER!="" -%}
-#include "{{LOAD_BALANCER | replace('::', '/') }}.h"
-{% else -%}
-#include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
-{% endif -%}
+#include "toolbox/loadbalancing/LoadBalancer.h"
 
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
-{# Comment to ensure that jinja2 adds a new line#}
 {% endfor %}
 
 {% for item in NAMESPACE -%}
-  namespace {{ item }} {
-{%- endfor %}
+namespace {{ item }} {
+{% endfor %}
 
   {% for item in SOLVERS -%}
   extern {{ item[0] }} {{ item[1] }};
-  {# Comment to ensure that jinja2 adds a new line#}
-  {%- endfor %}
+  {% endfor %}
 
   extern ::exahype2::RefinementControl  refinementControl;
   extern ::exahype2::PlotFilter         plotFilter;
 
-  {% if LOAD_BALANCER!="" -%}
-  extern {{LOAD_BALANCER}} loadBalancer;
-  {% else -%}
-  extern toolbox::loadbalancing::strategies::NoLoadBalancing loadBalancer;
-  {% endif -%}
+  extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 
   extern peano4::grid::GridStatistics gridStatisticsAfterGridConstruction;
 
@@ -99,7 +89,7 @@
   void finishTimeStep();
   void finishPlottingStep();
 
-  void printTimeStep(bool ofCurrentlyRunningGridSweep);
+  void printTimeStep(bool ofCurrentlyRunningGridSweep = false);
 
   void startSimulation();
   void finishSimulation();
@@ -151,7 +141,5 @@
   std::string getSolverStateDescriptions();
 
 {% for item in NAMESPACE -%}
-  }
+}
 {%- endfor %}
-
-

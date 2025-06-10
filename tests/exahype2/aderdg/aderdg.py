@@ -24,7 +24,7 @@ parser.add_argument("-pr", "--precision", default="fp64", help="|".join(availabl
 parser.add_argument("-s", "--scenario", default=None, help="|".join(available_scenarios.keys()))
 parser.set_defaults(
     min_depth=3,
-    degrees_of_freedom=3,  # order
+    degrees_of_freedom=4,
 )
 args = parser.parse_args()
 
@@ -45,7 +45,7 @@ if args.scenario is None:
 else:
     scenario = available_scenarios[args.scenario]
 
-order = args.degrees_of_freedom
+order = args.degrees_of_freedom - 1
 max_h = 1.1 * scenario._domain_size / (3.0**args.min_depth)
 min_h = max_h * 3.0 ** (-args.amr_levels)
 
@@ -94,10 +94,7 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
 project.add_solver(solver)
 project.set_output_path("solutions")
 scenario.set_global_simulation_parameters(project)
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-    "new ::exahype2::LoadBalancingConfiguration(0.98)",
-)
+project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
 project.set_fenv_handler(True)
