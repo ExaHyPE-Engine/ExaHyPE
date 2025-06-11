@@ -87,7 +87,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //****** Picard ******
   //********************
 
-  const pCompType invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
+  const double invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
     {% if DIMENSIONS == 3 %}
       , 1.0 / cellSize[2]
     {% endif %}
@@ -389,13 +389,13 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   const pCompType* Kxi    = DGMatrices<pCompType>::Kxi;
   const pCompType* iK1_T  = DGMatrices<pCompType>::iK1_T;
 
-  const pCompType invDx[Dimensions] = {1. / cellSize[0], 1. / cellSize[1]
+  const double invDx[Dimensions] = {1. / cellSize[0], 1. / cellSize[1]
     {% if DIMENSIONS == 3 %}
       , 1. / cellSize[2]
     {% endif %}
   };
 
-  const pCompType dtByDx[Dimensions] = {timeStepSize * invDx[0], timeStepSize * invDx[1]
+  const double dtByDx[Dimensions] = {timeStepSize * invDx[0], timeStepSize * invDx[1]
     {% if DIMENSIONS == 3 %}
       , timeStepSize * invDx[2]
     {% endif %}

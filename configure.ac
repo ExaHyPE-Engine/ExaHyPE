@@ -718,7 +718,7 @@ AM_CONDITIONAL([UseToolboxParticles],[test "x$toolbox_particles" = xtrue])
 # ExaHyPE 2
 #
 AC_ARG_ENABLE(exahype,
-  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE2 [default=false]]),
+  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE 2 [default=false]]),
   [ AC_MSG_CHECKING(for exahype)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_exahype=false ;;
@@ -729,10 +729,24 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 
 
 #
+# Curvi
+#
+AC_ARG_ENABLE(curvi,
+  AS_HELP_STRING([--enable-curvi],[enable Curvi [default=false]]),
+  [ AC_MSG_CHECKING(for curvi)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_curvi=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_curvi=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for curvi); AC_MSG_RESULT(no); toolbox_curvi=false ])
+AM_CONDITIONAL([UseToolboxCurvi],[test "x$toolbox_curvi" = xtrue])
+
+
+#
 # SWIFT 2
 #
 AC_ARG_ENABLE(swift,
-  AS_HELP_STRING([--enable-swift],[enable SWIFT2 [default=false]]),
+  AS_HELP_STRING([--enable-swift],[enable SWIFT 2 [default=false]]),
   [ AC_MSG_CHECKING(for swift)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_swift=false ;;
@@ -977,6 +991,32 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
+fi
+
+
+#
+# Curvi
+#
+if test "$toolbox_curvi" != false; then
+  AC_DEFINE([UseToolboxCurvi], [1], [UseToolboxCurvi])
+
+  LDADD_PEANO_2D_RELEASE=" -lToolboxCurvi2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxCurvi2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxCurvi2d_asserts $LDADD_PEANO_2D_ASSERTS "
+  LDADD_PEANO_2D_TRACE="   -lToolboxCurvi2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxCurvi2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lToolboxCurvi3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxCurvi3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxCurvi3d_asserts $LDADD_PEANO_3D_ASSERTS "
+  LDADD_PEANO_3D_TRACE="   -lToolboxCurvi3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxCurvi3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/curvi "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/curvi "
 fi
 
 
@@ -1376,6 +1416,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/finiteelements/Makefile
   src/toolbox/loadbalancing/Makefile
   src/toolbox/particles/Makefile
+  src/toolbox/curvi/Makefile
   src/tbb/Makefile
   src/exahype2/Makefile
   src/mghype/Makefile

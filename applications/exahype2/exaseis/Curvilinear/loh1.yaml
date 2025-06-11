@@ -1,6 +1,6 @@
 domain: 
-  offset: [-2.28662,  0.0, -2.28662]
-  size:   [ 16.333, 16.333,  16.333]
+  offset: [-2.025, 0.0, -2.025]
+  size:   [ 12.15, 12.15, 12.15]
   mode:   [ 4, 4, 4 ]
 topography: !Analytic  
   coordinates: ["Z","X"]
@@ -11,7 +11,6 @@ topography: !Analytic
   split:
     coordinates: ["Z","X"]
     position: 1.0
-    index: 6
     perturbation: !ConstantMap
       map:
         y : 0

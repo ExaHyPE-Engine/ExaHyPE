@@ -1,7 +1,7 @@
 domain: 
   offset: [-2.0, 0.0,  -2.0]
   size:   [40.5, 40.5, 40.5]
-  mode:   [ 6,    6,    6  ]
+  mode:   [ 6, 6, 6  ]
   
 topography: !Analytic  
   coordinates: ["Z","X"]

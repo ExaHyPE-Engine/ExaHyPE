@@ -316,25 +316,25 @@ void ContextCurvilinearPMLSlipWeakening<Shortcuts, basisSize, numberOfVariables,
       T rho_m,cp_m,cs_m,mu_m,lam_m;
       T rho_p,cp_p,cs_p,mu_p,lam_p;
 
-      ::Numerics::compute_parameters<exahype2::elastic::VariableShortcutselastic>(Q_m,rho_m,cp_m,cs_m,mu_m,lam_m);
-      ::Numerics::compute_parameters<exahype2::elastic::VariableShortcutselastic>(Q_p,rho_p,cp_p,cs_p,mu_p,lam_p);
+      ::Numerics::compute_parameters<Shortcuts>(Q_m,rho_m,cp_m,cs_m,mu_m,lam_m);
+      ::Numerics::compute_parameters<Shortcuts>(Q_p,rho_p,cp_p,cs_p,mu_p,lam_p);
 
       T n_m[3],m_m[3],l_m[3];
       T n_p[3],m_p[3],l_p[3];
       T norm_p,norm_m;
 
-      ::Numerics::get_normals<exahype2::elastic::VariableShortcutselastic>(Q_m,direction,norm_m,n_m);
-      ::Numerics::get_normals<exahype2::elastic::VariableShortcutselastic>(Q_p,direction,norm_p,n_p);
+      ::Numerics::get_normals<Shortcuts>(Q_m,direction,norm_m,n_m);
+      ::Numerics::get_normals<Shortcuts>(Q_p,direction,norm_p,n_p);
 
       T Tx_m,Ty_m,Tz_m;
       T Tx_p,Ty_p,Tz_p;
-      ::Numerics::compute_tractions<exahype2::elastic::VariableShortcutselastic>(Q_p,n_p,Tx_p,Ty_p,Tz_p);
-      ::Numerics::compute_tractions<exahype2::elastic::VariableShortcutselastic>(Q_m,n_m,Tx_m,Ty_m,Tz_m);
+      ::Numerics::compute_tractions<Shortcuts>(Q_p,n_p,Tx_p,Ty_p,Tz_p);
+      ::Numerics::compute_tractions<Shortcuts>(Q_m,n_m,Tx_m,Ty_m,Tz_m);
 
       T vx_m,vy_m,vz_m;
       T vx_p,vy_p,vz_p;
-      ::Numerics::get_velocities<exahype2::elastic::VariableShortcutselastic>(Q_p,vx_p,vy_p,vz_p);	
-      ::Numerics::get_velocities<exahype2::elastic::VariableShortcutselastic>(Q_m,vx_m,vy_m,vz_m); 
+      ::Numerics::get_velocities<Shortcuts>(Q_p,vx_p,vy_p,vz_p);	
+      ::Numerics::get_velocities<Shortcuts>(Q_m,vx_m,vy_m,vz_m); 
           
       ::Numerics::create_local_basis(n_p, m_p, l_p);
       ::Numerics::create_local_basis(n_m, m_m, l_m);

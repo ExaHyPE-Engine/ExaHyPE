@@ -16,8 +16,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
   const double                                  timeStamp,
   const double                                  timeStepSize
 ) {
-  //Inverse of the smallest cell size
-  const double invDx = 1. / tarch::la::min(cellSize);
+  // Inverse of the smallest cell size
+  const double invDx = 1.0 / tarch::la::min(cellSize);
 
   double maxEigenvalue = 0.0;
   for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {

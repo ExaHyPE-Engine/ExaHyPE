@@ -38,9 +38,19 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
 
             if self.d["USE_POINT_SOURCE"]:
                 # Assembling the basis function for the point source
-                QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
+                if self.d["POLYNOMIAL_TYPE"] == "legendre":
+                  QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
+                      self.d["NUMBER_OF_DOF"]
+                  )
+                elif self.d["POLYNOMIAL_TYPE"] == "lobatto":
+                  QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(
                     self.d["NUMBER_OF_DOF"]
-                )
+                  )
+                else:
+                  raise ValueError(
+                      "Quadrature type " + self.d["POLYNOMIAL_TYPE"] + " not supported."
+                  )
+
                 self.d["BASIS_FUNCTIONS"] = MathUtils.assembleBasisFunction(
                     QuadratureNodes
                 )

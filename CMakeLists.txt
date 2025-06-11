@@ -112,16 +112,17 @@ option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" ON)
 option(WITH_NETCDF "Build with NetCDF support" ON)
-option(WITH_ASAGI "Build with ASAGI support" OFF)
+option(WITH_EASI "Build with easi support" OFF)
 option(WITH_SCOREP_USER "Build with Score-P user regions instrumentation" OFF)
 
 option(ENABLE_PARTICLES "Enable the particles toolbox" ON)
 option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" ON)
+option(ENABLE_CURVI "Enable the Curvi toolbox" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE 2" ON)
 option(ENABLE_MGHYPE "Enable MGHyPE" OFF)
-option(ENABLE_SWIFT "Enable Swift 2" OFF)
+option(ENABLE_SWIFT "Enable SWIFT 2" OFF)
 
 list(APPEND AVAILABLE_TOOLCHAINS
   "no"
@@ -325,13 +326,13 @@ if(WITH_NETCDF)
   target_compile_definitions(PeanoOptions INTERFACE UseNetCDF)
 endif()
 
-if(WITH_ASAGI)
+if(WITH_EASI)
   find_package(easi REQUIRED)
   target_link_libraries(PeanoOptions INTERFACE easi::easi)
-  target_compile_definitions(PeanoOptions INTERFACE UseASAGI)
-  set(ONLY_IF_ASAGI_FIND_DEPENDENCY "find_dependency(easi)")
+  target_compile_definitions(PeanoOptions INTERFACE UseEASI)
+  set(ONLY_IF_EASI_FIND_DEPENDENCY "find_dependency(easi)")
 else()
-  set(ONLY_IF_ASAGI_FIND_DEPENDENCY "# ASAGI not used")
+  set(ONLY_IF_EASI_FIND_DEPENDENCY "# easi not used")
 endif()
 
 if(WITH_USM)
@@ -360,6 +361,10 @@ endif()
 
 if(ENABLE_FINITEELEMENTS)
   target_compile_definitions(PeanoOptions INTERFACE UseToolboxFiniteElements)
+endif()
+
+if(ENABLE_CURVI)
+  target_compile_definitions(PeanoOptions INTERFACE UseToolboxCurvi)
 endif()
 
 if(ENABLE_EXAHYPE)

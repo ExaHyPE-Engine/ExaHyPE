@@ -50,6 +50,10 @@
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/shallow-water/$scenario; PYTHONPATH=$CI_PROJECT_DIR/python python3 $scenario.py;"
 
+.ExaHyPE2_ExaSeis:
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exahype2/exaseis/Cartesian; PYTHONPATH=$CI_PROJECT_DIR/python python3 LOH.py;"
+
 .ExaHyPE2_ArtificialTsunami:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd benchmarks/exahype2/shallow-water/artificial-tsunami; PYTHONPATH=$CI_PROJECT_DIR/python python3 artificial-tsunami.py;"

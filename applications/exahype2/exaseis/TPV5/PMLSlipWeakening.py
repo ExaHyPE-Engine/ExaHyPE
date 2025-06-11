@@ -126,7 +126,7 @@ public:
   double QuadraturePoints1d[Order+1];
   
 private:
-  ContextCurvilinearPMLSlipWeakening<VariableShortcutselastic, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
+  ContextCurvilinearPMLSlipWeakening<VariableShortcutsElasticSolver, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>* context;
 
   int                                                              pml_cell_width;
   double                                                           pml_alpha_const;
@@ -185,7 +185,7 @@ def abstractConstructor():
 
   logTraceOutWith1Argument("Freesurface set at ", std::to_string(_TOP * 2));
 
-  context = new ContextCurvilinearPMLSlipWeakening<VariableShortcutselastic, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextCurvilinearPMLSlipWeakening<VariableShortcutsElasticSolver, Order + 1, NumberOfUnknowns, NumberOfAuxiliaryVariables, {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     // filename_rupture_model,
     coarsestMeshLevel,
