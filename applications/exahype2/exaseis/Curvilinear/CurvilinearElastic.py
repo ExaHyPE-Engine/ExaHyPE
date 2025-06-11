@@ -243,7 +243,7 @@ def riemann_solver():
     std::copy_n(FIn, NumberOfUnknowns+NumberOfAuxiliaryVariables, FOut);
   }
 
-  Numerics::riemannSolver<VariableShortcutselastic, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
+  Numerics::riemannSolver<VariableShortcutsElasticSolver, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """
@@ -265,7 +265,7 @@ def abstractDeclarations():
 public:
   double QuadraturePoints1d[Order+1];
 private:
-  ContextCurvilinear<VariableShortcutselastic, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
+  ContextCurvilinear<VariableShortcutsElasticSolver, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
 """
 
 def abstractConstructor():
@@ -309,7 +309,7 @@ def abstractConstructor():
     minDSize /= 3.0;
   }
 
-  context = new ContextCurvilinear<VariableShortcutselastic, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
+  context = new ContextCurvilinear<VariableShortcutsElasticSolver, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
     topography_string,
     coarsestMeshLevel,
     realCoarsestMeshSize,

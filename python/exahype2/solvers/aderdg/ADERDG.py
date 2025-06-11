@@ -224,6 +224,9 @@ class ADERDG(object):
         self._constructor_implementation = ""
         self._destructor_implementation = ""
 
+        self._start_simulation_implementation = ""
+        self._finish_simulation_implementation = ""
+
         """
         These are ADER-DG CFL factors, they help determine the maximal stable timestep size.
         Up to order 4, computed via von Neumann analysis [1].
@@ -1278,6 +1281,13 @@ Material parameters:    """
         ).render(**d)
         d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["START_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._start_simulation_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FINISH_SIMULATION_IMPLEMENTATION"] = jinja2.Template(
+            self._finish_simulation_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["PREPROCESS_RECONSTRUCTED_PATCH"] = jinja2.Template(

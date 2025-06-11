@@ -8,9 +8,6 @@ from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 import PMLElastic
 
-project = exahype2.Project(["exahype2", "elastic"], "pml", executable="LOH1")
-
-
 unknowns = {"v": 3, "sigma": 6, "pml": 27}
 auxiliary_variables = {
     "rho": 1, "cp": 1, "cs": 1,
@@ -19,17 +16,22 @@ auxiliary_variables = {
     "curve_grid": 3,
 }
 
-offset = [-2.28662, 0.0, -2.28662]
-size = [16.3333, 16.3333, 16.3333]
-end_time = 1.0  # 10.0
-order = 5
-min_level = 2
+# offset = [-2.28662, 0.0, -2.28662]
+# size = [16.3333, 16.3333, 16.3333]
+offset = [-2.025, 0.0, -2.025]
+size = [12.15, 12.15, 12.15]
+
+end_time = 10.0  # 10.0
+order = 3
+min_level = 3
 max_depth = 0
 max_h = 1.1 * min(size) / (3.0**min_level)
 min_h = max_h / (3.0**max_depth)
 
-precision = "double"
+precision = "fp64"
 use_tracers = True
+
+project = exahype2.Project(["exahype2", "elastic"], "pml", executable="LOH1_l_"+str(min_level)+"_o_"+str(order)+"_pr_"+precision)
 
 theSolver = GlobalAdaptiveTimeStep(
     name="ElasticSolver",
@@ -54,14 +56,14 @@ theSolver.add_kernel_optimisations(
 )
 
 theSolver.set_implementation(
-  initial_conditions    = PMLElastic.initial(),
-  boundary_conditions   = PMLElastic.boundary(),
-  eigenvalues           = PMLElastic.eigenvalue(),
-  refinement_criterion  = PMLElastic.refinement_criterion(),
-  flux                  = PMLElastic.flux(),
-  ncp                   = PMLElastic.ncp(),
-  material_parameters   = PMLElastic.multiplyMaterialParameterMatrix(),
-  source_term           = PMLElastic.algebraic_source()
+initial_conditions    = PMLElastic.initial(),
+boundary_conditions   = PMLElastic.boundary(),
+eigenvalues           = PMLElastic.eigenvalue(),
+refinement_criterion  = PMLElastic.refinement_criterion(),
+flux                  = PMLElastic.flux(),
+ncp                   = PMLElastic.ncp(),
+material_parameters   = PMLElastic.multiplyMaterialParameterMatrix(),
+source_term           = PMLElastic.algebraic_source()
 )
 
 theSolver._abstract_solver_user_declarations += PMLElastic.abstractDeclarations()
@@ -72,14 +74,14 @@ project.add_solver(theSolver)
 
 if use_tracers:
     project.add_action_set_to_timestepping(
-      exahype2.tracer.NewDGTracer(
+    exahype2.tracer.NewDGTracer(
         coordinates=[
-          [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
-          [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
-          [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
+        [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
+        [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
+        [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
         ],
         solver=theSolver,
-        filename="PML_level_"+str(min_level)+"-order-"+str(order)+"-precision-"+str(precision),
+        filename="new_PML_level_"+str(min_level)+"-order-"+str(order)+"-precision-"+str(precision),
         data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
         output_precision=10, clear_database_after_flush=False
     ))
@@ -96,13 +98,11 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration()")
-project.set_Peano4_installation( "../../../../", peano4.output.CompileMode.Release )
-peano4_project = project.generate_Peano4_project("False")
-
+project.set_Peano4_installation("../../../../", peano4.output.CompileMode.Release)
+peano4_project = project.generate_Peano4_project(verbose=False)
 peano4_project.output.makefile.set_CXX_compiler("mpicxx")
 peano4_project.output.makefile.add_CXX_flag("-fopenmp -DUSE_ASAGI")
 peano4_project.output.makefile.add_library(
-    "-fopenmp -lcurvi -leasi -lyaml-cpp -limpalajit -lasagi -lnetcdf -lnuma -lmpi -DUSE_ASAGI"
+    "-fopenmp -leasi -llua -lyaml-cpp -limpalajit -lasagi -lnetcdf -lnuma -lmpi -DUSE_ASAGI"
 )
-
 peano4_project.build(make_clean_first=True)

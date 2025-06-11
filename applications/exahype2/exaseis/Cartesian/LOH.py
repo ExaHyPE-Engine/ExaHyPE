@@ -13,7 +13,7 @@ precision           = "double"
 e_t                 = 2.0
 plot_dt             = 0.1
 polynomials         = "legendre"
-use_tracers         = False
+use_tracers         = True
 
 size    = [ 9.0, 9.0, 9.0]  # thousand meters
 offset  = [-4.5, 0., -4.5]  # thousand meters

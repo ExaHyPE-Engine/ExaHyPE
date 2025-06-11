@@ -1,4 +1,4 @@
-FROM ubuntu:24.10
+FROM ubuntu:25.04
 
 LABEL peano-framework.org=http://www.peano-framework.org/
 

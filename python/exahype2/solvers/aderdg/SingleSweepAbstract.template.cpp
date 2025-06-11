@@ -409,8 +409,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
   return _solverState == SolverState::TimeStep;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+  {{START_SIMULATION_IMPLEMENTATION}}
+}
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+  {{FINISH_SIMULATION_IMPLEMENTATION}}
+}
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

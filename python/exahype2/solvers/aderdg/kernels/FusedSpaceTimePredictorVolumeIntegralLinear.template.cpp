@@ -62,9 +62,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType* gradQ = memory + getGradQShift();
   {% endif %}
 
-  const pCompType invDt = 1.0 / timeStepSize;
-
-  const pCompType invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
+  const double invDt = 1.0 / timeStepSize;
+  const double invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
     {% if DIMENSIONS == 3 %}
       , 1.0 / cellSize[2]
     {% endif %}

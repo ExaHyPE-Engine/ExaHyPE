@@ -19,6 +19,7 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
+	toolbox/curvi \
 	exahype2 \
 	mghype \
 	petsc \

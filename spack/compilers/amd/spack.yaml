@@ -5,7 +5,7 @@ spack:
     - llvm-amdgpu@6.3.3 %gcc
     - rocm-openmp-extras@6.3.3 %gcc
     - libxsmm@1.17 +generator %gcc
-    - easi@1.5.2 jit=lua %gcc
+    - easi@1.6.1 jit=lua %gcc
     - boost@1.87.0 +filesystem +fiber +context %gcc
     - memkind@1.14.0 %gcc
     - openblas@0.3.28 %gcc

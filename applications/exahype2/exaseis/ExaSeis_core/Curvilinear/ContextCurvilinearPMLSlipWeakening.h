@@ -4,8 +4,8 @@
 
 #include "asagi_reader.h"
 
-#include "curvi/kdTree/innerNode.h"
-#include "curvi/kdTree/root.h"
+#include "toolbox/curvi/kdTree/innerNode.h"
+#include "toolbox/curvi/kdTree/root.h"
 
 template <class Shortcuts, int basisSize, int numberOfVariables, int numberOfParameters, typename T>
 class ContextCurvilinearPMLSlipWeakening: public ContextCurvilinear<Shortcuts, basisSize, numberOfVariables+numberOfParameters, T> {
@@ -121,11 +121,23 @@ public:
   easi::Component* model;
 
   //rupture parameters
-  T S_c;
-  T mu_d;
-  T mu_s;
-  T t0_rupture;
+  T S_c;  //Slip-weakening critical distance (meters)
+  T mu_d; //Dynamic coefficient of friction (dimensionless)
+  T mu_s; //Static coefficient of friction (dimensionless)
 
+  //duration of forced rupture (seconds)
+  // the forces holding the fault together will decrease linearly for this duration starting at the forced rupture time.
+  T t0_rupture; 
+
+  /**
+   * These define the position of the area with frictional cohesion.
+   * Specifically, these define a rectangle of size 2*f_wy x 2*f_wz
+   * in the y-z axis centered around the point f_cy x f_cz.
+   * If within this rectangle, frictional cohesion applies, otherwise
+   * it does not.
+   * i.e. if -f_wy < y - f_cy < f_wy and -f_wz < z - f_cz < f_wz,
+   * frictional cohesion applies.
+   */
   T f_cy;
   T f_wy;
   T f_cz;
