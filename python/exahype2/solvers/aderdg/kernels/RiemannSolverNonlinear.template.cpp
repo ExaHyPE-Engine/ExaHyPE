@@ -13,16 +13,16 @@
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  cCompType* NOALIAS                       FL,
-  cCompType* NOALIAS                       FR,
-  const cCompType* NOALIAS const           QL,
-  const cCompType* NOALIAS const           QR,
-  const double                                  timeStamp,
-  const double                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&  faceCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const int                                     direction
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
+  cCompType* NOALIAS                                FL,
+  cCompType* NOALIAS                                FR,
+  const cCompType* NOALIAS const                    QL,
+  const cCompType* NOALIAS const                    QR,
+  const double                                      timeStamp,
+  const double                                      timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&      faceCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const int                                         direction
 ) {
   cCompType* tmp_bnd = static_cast<cCompType *>(_mm_malloc({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(cCompType), {{ALIGNMENT}}));
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
@@ -38,7 +38,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     }
   }
 
+{% if STATELESS_MAX_EIGENVALUE %}
+  cCompType smaxL = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+{% else %}
   cCompType smaxL = solver.maxEigenvalue(
+{% endif %}
     &QavL[0],
     faceCentre,
     cellSize,
@@ -46,7 +50,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     timeStepSize,
     direction
   );
+{% if STATELESS_MAX_EIGENVALUE %}
+  cCompType smaxR = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+{% else %}
   cCompType smaxR = solver.maxEigenvalue(
+{% endif %}
     &QavR[0],
     faceCentre,
     cellSize,
@@ -54,7 +62,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     timeStepSize,
     direction
   );
-  cCompType smax = std::max(smaxL, smaxR);
+
+  cCompType smax = std::fmax(smaxL, smaxR);
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     #ifdef SharedOMP
@@ -92,7 +101,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA_PADDED}} + n] + QR[xy * {{NUMBER_OF_DATA_PADDED}} + n]);
     }
 {% endif %}
-    solver.nonconservativeProduct(
+{% if STATELESS_NCP %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
+{% else %}
+  solver.nonconservativeProduct(
+{% endif %}
       Qavg,
       gradQ,
       faceCentre,
@@ -115,14 +128,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&                               solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             FL,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             FR,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS QL,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS QR,
-  const double                                                  timeStamp,
-  const double                                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&                  faceCentre,
-  const tarch::la::Vector<Dimensions, double>&                  cellSize,
-  const int                                                     direction
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                           solver,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS              FL,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS              FR,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  QL,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  QR,
+  const double                                              timeStamp,
+  const double                                              timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&              faceCentre,
+  const tarch::la::Vector<Dimensions, double>&              cellSize,
+  const int                                                 direction
 );

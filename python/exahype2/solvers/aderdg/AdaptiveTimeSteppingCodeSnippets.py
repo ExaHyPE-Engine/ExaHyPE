@@ -21,10 +21,6 @@ class AdaptiveTimeSteppingCodeSnippets(
     );
 
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
-
-    // This is a value set for stats reasons. We'll ignore it later as we
-    // ask for a new valid time step size from getAdmissibleTimeStepSize().
-    //const double newTimeStepSize = 0.0;
     const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) > 0.0 ?
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * tarch::la::min(marker.h()) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
       0.0;

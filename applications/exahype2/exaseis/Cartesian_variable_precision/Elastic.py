@@ -148,9 +148,9 @@ def point_source():
 """
 def init_point_source():
   return """
-  pointSourceLocation[0][0] = 0.0;
-  pointSourceLocation[0][1] = 2.0;
-  pointSourceLocation[0][2] = 0.0;
+  location[0][0] = 0.0;
+  location[0][1] = 2.0;
+  location[0][2] = 0.0;
 """
 
 def riemann_solver():

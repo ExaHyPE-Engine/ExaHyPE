@@ -109,10 +109,12 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     time_step_relaxation=0.5,
     unknowns=4,
     auxiliary_variables=1,
+)
+aderdg_solver.set_implementation(
     initial_conditions=init,
     boundary_conditions=boundaryCondition,
     flux=flux,
-    eigenvalues=eigenvalues
+    max_eigenvalue=eigenvalues
     + """
     return std::max(std::abs(u-c), std::abs(u+c));""",
 )

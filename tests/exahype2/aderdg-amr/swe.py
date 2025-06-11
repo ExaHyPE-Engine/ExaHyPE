@@ -26,6 +26,9 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     time_step_relaxation=0.8,
     unknowns=4,
     auxiliary_variables=0,
+)
+
+solver.set_implementation(
     initial_conditions="""
   double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
   Q[0] = 1.;
@@ -43,7 +46,7 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   }
   return result;
 """,
-    eigenvalues="""
+    max_eigenvalue="""
   constexpr double grav = 9.81;
   const double u = Q[1 + normal] / Q[0];
   const double c = std::sqrt(grav * Q[0]);
@@ -73,7 +76,6 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 """,
 )
 
-# solver._split_sweeps = True
 project.add_solver(solver)
 project.set_output_path("solutions")
 

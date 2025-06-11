@@ -27,25 +27,22 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   errors[1] = 0.0;
   errors[2] = 0.0;
 
-  {% if DIMENSIONS==2 %}
+{% if DIMENSIONS==2 %}
   const double cellVolume = cellSize[0] * cellSize[1];
-  {% else %}
+{% else %}
   const double cellVolume = cellSize[0] * cellSize[1] * cellSize[2];
-  {% endif %}
+{% endif %}
 
   double solution[{{NUMBER_OF_UNKNOWNS_PADDED}}];
   int linearisedIndex = 0;
 
   // Iterate over all quadrature points in the cell
   dfor(index, {{NUMBER_OF_DOF}}) {
-    {% if DIMENSIONS==2 %}
-    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]]
-      * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
-    {% else %}
-    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]]
-      * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]]
-      * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
-    {% endif %}
+{% if DIMENSIONS==2 %}
+    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
+{% else %}
+    double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
+{% endif %}
 
     // Compute the exact solution
     exactSolutionFunctor(

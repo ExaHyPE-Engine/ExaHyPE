@@ -11,15 +11,15 @@ import peano4.datamodel
 import peano4.toolbox.blockstructured
 
 import exahype2.grid
+
 import exahype2.solvers.aderdg.kernels
 import exahype2.solvers.aderdg.actionsets
 
 from exahype2.solvers.Storage import Storage
 from exahype2.solvers.PDETerms import PDETerms
+
 from exahype2.solvers.aderdg.Architectures import Architectures
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
-
-from exahype2.solvers.Storage import Storage
 
 """
 Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
@@ -148,6 +148,8 @@ class ADERDG(object):
                 + ")"
             )
 
+        self._dimensions    = 2
+        self._namespace     = ""
         self._is_linear     = False
         self._polynomials   = Polynomials.Gauss_Legendre
         self._basis         = GaussLegendreBasis(order + 1)
@@ -174,34 +176,34 @@ class ADERDG(object):
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
 
-        """
-        These are all the optional and mandatory plugins that can be specified by the user.
-        eigenvalues, boundary conditions, refinement criteria and initial conditions must
-        all be specified, all others are optional but can be added via the set_implementation() function.
-        There are four choices for these, three of which are specified in PDETerms:
-        User_Defined_Implementation creates empty stubs that the user must then manually fill.
-        None_implementation leaves out this optional stub and ensures the kernels don't use this function.
-        Empty_implementation does... the same thing as user_defined I think?
-        The final option is to fill these with a string, in which case this string is directly taken as
-        C++ code and used as the implementation of this function. The user is trusted to provide code that
-        compiles and runs properly, it is never checked.
-        """
-        self._flux_implementation               = PDETerms.None_Implementation
-        self._ncp_implementation                = PDETerms.None_Implementation
-        self._source_term_implementation        = PDETerms.None_Implementation
-        self._point_sources_implementation      = PDETerms.None_Implementation
-        self._init_point_sources_implementation = PDETerms.None_Implementation
-        self._eigenvalues_implementation        = PDETerms.None_Implementation
-        self._adjust_solution_implementation    = PDETerms.None_Implementation
-        self._material_param_implementation     = PDETerms.None_Implementation
-
-        self._refinement_criterion_implementation = PDETerms.None_Implementation
-        self._initial_conditions_implementation   = PDETerms.None_Implementation
-        self._boundary_conditions_implementation  = PDETerms.None_Implementation
-
+        self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+        self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
+        self._refinement_criterion_implementation = PDETerms.Empty_Implementation
+        self._flux_implementation                 = PDETerms.None_Implementation
+        self._ncp_implementation                  = PDETerms.None_Implementation
+        self._source_term_implementation          = PDETerms.None_Implementation
+        self._point_sources_implementation        = PDETerms.None_Implementation
+        self._init_point_sources_implementation   = PDETerms.None_Implementation
+        self._max_eigenvalue_implementation       = PDETerms.None_Implementation
+        self._adjust_solution_implementation      = PDETerms.None_Implementation
+        self._material_param_implementation       = PDETerms.None_Implementation
         self._precision_criterion_implementation  = PDETerms.None_Implementation
         self._riemann_solver_implementation       = PDETerms.None_Implementation
-        self._number_of_point_sources = 0
+        self._number_of_point_sources             = 0
+
+        self._can_fuse = True
+        self._use_stateless_initial_conditions = False
+        self._use_stateless_boundary_conditions = False
+        self._use_stateless_refinement_criterion = False
+        self._use_stateless_flux = False
+        self._use_stateless_ncp = False
+        self._use_stateless_max_eigenvalue = False
+        self._use_stateless_riemann_solver = False
+        self._use_stateless_source_term = False
+        self._use_stateless_point_source = False
+        self._use_stateless_init_point_sources = False
+        self._use_stateless_adjust_solution = False
+        self._use_stateless_material_parameters = False
 
         """
         These will be used by children of this class to fill them with the declaration and definition of the
@@ -282,8 +284,11 @@ Name:                   """
 Type:                   """
             + self.__class__.__module__
             + """
-Storage schemes:        """
-            + str(self._cell_data_storage) + ", " + str(self._face_data_storage)
+Dimensions:             """
+            + str(self._dimensions)
+            + """
+Can fuse:               """
+            + str(self._can_fuse)
             + """
 DG order:               """
             + str(self._order)
@@ -321,8 +326,8 @@ Boundary conditions:    """
 Refinement criterion:   """
             + str(self._refinement_criterion_implementation)
             + """
-Eigenvalues:            """
-            + str(self._eigenvalues_implementation)
+Max eigenvalue:         """
+            + str(self._max_eigenvalue_implementation)
             + """
 Flux:                   """
             + str(self._flux_implementation)
@@ -1081,8 +1086,10 @@ Material parameters:    """
 
         output: peano4.output.Output
         """
-        templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
+        self._dimensions = dimensions
+        self._namespace = namespace
 
+        templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         if self._solver_template_file_class_name is None:
             templatefile_prefix += self.__class__.__name__
         else:
@@ -1194,7 +1201,10 @@ Material parameters:    """
     information from the solver or which was specified by the user.
     """
     def _init_dictionary_with_default_parameters(self, d):
+        d["DIMENSIONS"]         = self._dimensions
+        d["NAMESPACE"]          = self._namespace
         d["SOLVER_NAME"]        = self._name
+        d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(self._namespace) + "::" + self._name
         d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
 
@@ -1240,12 +1250,6 @@ Material parameters:    """
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"]  = self.get_user_solver_includes()
-
-        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
-        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
-        d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
-        d["ADAPTIVE_PRECISION_IMPLEMENTATION"] = self._precision_criterion_implementation
-        d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
@@ -1297,13 +1301,44 @@ Material parameters:    """
             self._postprocess_updated_patch, undefined=jinja2.DebugUndefined
         ).render(**d)
 
+        d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
+        d["ADAPTIVE_PRECISION_IMPLEMENTATION"] = self._precision_criterion_implementation
+        d["FLUX_IMPLEMENTATION"] = self._flux_implementation
+        d["NCP_IMPLEMENTATION"] = self._ncp_implementation
+        d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
+        d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
+        d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
+        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
+        d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
+        d["POINT_SOURCES_IMPLEMENTATION"] = self._point_sources_implementation
+        d["INIT_POINT_SOURCES_IMPLEMENTATION"] = self._init_point_sources_implementation
+        d["MATERIAL_PARAM_IMPLEMENTATION"] = self._material_param_implementation
+
         d["USE_FLUX"]                 = self._flux_implementation != PDETerms.None_Implementation
         d["USE_NCP"]                  = self._ncp_implementation != PDETerms.None_Implementation
+        d["USE_MAX_EIGENVALUE"]       = self._max_eigenvalue_implementation != PDETerms.None_Implementation
+        d["USE_RIEMANN_SOLVER"]       = self._riemann_solver_implementation != PDETerms.None_Implementation
         d["USE_SOURCE"]               = self._source_term_implementation != PDETerms.None_Implementation
         d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation != PDETerms.None_Implementation
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
-        d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation
-        d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
+        d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
+
+        d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
+        d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
+        d["STATELESS_REFINEMENT_CRITERION"] = self._use_stateless_refinement_criterion
+        d["STATELESS_FLUX"] = self._use_stateless_flux
+        d["STATELESS_NCP"] = self._use_stateless_ncp
+        d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
+        d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
+        d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
+        d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
+        d["STATELESS_POINT_SOURCE"] = self._use_stateless_point_source
+        d["STATELESS_INIT_POINT_SOURCES"] = self._use_stateless_init_point_sources
+        d["STATELESS_MATERIAL_PARAMETERS"] = self._use_stateless_material_parameters
+
+        d["CAN_FUSE"] = self._can_fuse
 
         d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
         d["VARIABLE_NAMES"]         = self._variable_names
@@ -1318,58 +1353,108 @@ Material parameters:    """
 
     def set_implementation(
         self,
-        flux,
-        ncp,
-        eigenvalues,
-        boundary_conditions,
-        refinement_criterion,
-        initial_conditions,
-        adjust_solution,
-        source_term,
-        material_parameters,
-        point_source,
-        additional_action_set_includes,
-        additional_user_includes,
+        initial_conditions=None,
+        boundary_conditions=None,
+        refinement_criterion=None,
+        flux=None,
+        ncp=None,
+        max_eigenvalue=None,
+        riemann_solver=None,
+        source_term=None,
+        adjust_solution=None,
+        material_parameters=None,
+        number_of_point_sources=0,
+        point_source=None,
+        init_point_source_location=None
     ):
-        """
-        If you pass in User_Defined, then the generator will create C++ stubs
-        that you have to befill manually. If you pass in None_Implementation, it
-        will create nop, i.e., no implementation or defaults. Any other string
-        is copied 1:1 into the implementation. If you pass in None, then the
-        set value so far won't be overwritten.
-        """
-        if boundary_conditions is not None:
-            self._boundary_conditions_implementation = boundary_conditions
-        if refinement_criterion is not None:
-            self._refinement_criterion_implementation = refinement_criterion
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
+            if initial_conditions is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_initial_conditions = True
+            else:
+                self._can_fuse = False  # We can only fuse if all terms are stateless
+
+        if refinement_criterion is not None:
+            self._refinement_criterion_implementation = refinement_criterion
+            if refinement_criterion is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_refinement_criterion = True
+            else:
+                self._can_fuse = False
+
+        if boundary_conditions is not None:
+            self._boundary_conditions_implementation = boundary_conditions
+            if boundary_conditions is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_boundary_conditions = True
+            else:
+                self._can_fuse = False
 
         if flux is not None:
             self._flux_implementation = flux
+            if flux is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_flux = True
+            else:
+                self._can_fuse = False
+
         if ncp is not None:
             self._ncp_implementation = ncp
-        if eigenvalues is not None:
-            self._eigenvalues_implementation = eigenvalues
+            if ncp is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_ncp = True
+            else:
+                self._can_fuse = False
+
+        if max_eigenvalue is not None:
+            self._max_eigenvalue_implementation = max_eigenvalue
+            if max_eigenvalue is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_max_eigenvalue = True
+            else:
+                self._can_fuse = False
+
+        if riemann_solver is not None:
+            self._riemann_solver_implementation = riemann_solver
+            if riemann_solver is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_riemann_solver = True
+            else:
+                self._can_fuse = False
+
         if source_term is not None:
             self._source_term_implementation = source_term
+            if source_term is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_source_term = True
+            else:
+                self._can_fuse = False
+
         if adjust_solution is not None:
             self._adjust_solution_implementation = adjust_solution
+            if adjust_solution is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_adjust_solution = True
+            else:
+                self._can_fuse = False
+
         if material_parameters is not None:
-            self._material_param_implementation = material_parameters
+            self._material_parameters_implementation = material_parameters
+            if material_parameters is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_material_parameters = True
+            else:
+                self._can_fuse = False
 
-        if type(point_source) != int:
-            raise Exception(
-                "point_source needs to be an integer, this determines the number of point sources that will be used."
-            )
+        assert(type(number_of_point_sources) == int)
+        assert(number_of_point_sources >= 0)
+        self._number_of_point_sources = number_of_point_sources
 
-        if point_source > 0:
-            self._init_point_sources_implementation = PDETerms.User_Defined_Implementation
-            self._point_sources_implementation      = PDETerms.User_Defined_Implementation
-            self._number_of_point_sources = point_source
+        if number_of_point_sources > 0:
+            if point_source is not None:
+                self._point_sources_implementation = point_source
+                if point_source is not PDETerms.User_Defined_Implementation:
+                    self._use_stateless_point_source = True
+                else:
+                    self._can_fuse = False
 
-        self.user_action_set_includes += additional_action_set_includes
-        self.user_solver_includes += additional_user_includes
+            if init_point_source_location is not None:
+                self._init_point_sources_implementation = init_point_source_location
+                if init_point_source_location is not PDETerms.User_Defined_Implementation:
+                    self._use_stateless_init_point_sources = True
+                else:
+                    self._can_fuse = False
 
         self.create_data_structures()
         self.create_action_sets()
@@ -1385,7 +1470,6 @@ Material parameters:    """
         solution_persistent_storage_precision = False,
         precompute_picard_precision           = False,
         precision_criterion_implementation    = PDETerms.User_Defined_Implementation,
-        riemann_solver_implementation         = PDETerms.None_Implementation,
         architecture                          = "noarch",
         initialise_patches                    = False
     ):
@@ -1454,9 +1538,6 @@ Material parameters:    """
         if len(self._predictor_computation_precisions) > 1:
             self._precision_criterion_implementation = precision_criterion_implementation
 
-        if riemann_solver_implementation is not PDETerms.None_Implementation:
-            self._riemann_solver_implementation = riemann_solver_implementation
-
         self._architecture = architecture
 
         self._initialise_patches = initialise_patches
@@ -1492,11 +1573,11 @@ def get_face_overlap_merge_implementation(patch_overlap):
         "UNKNOWNS": patch_overlap.no_of_unknowns,
     }
     Template = """
-  #if Dimensions == 2
+#if Dimensions == 2
   constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {UNKNOWNS}; // Order + 1
-  #else
+#else
   constexpr int SpaceFaceSize = {DOFS_PER_AXIS} * {DOFS_PER_AXIS} * {UNKNOWNS}; // (Order + 1)^2
-  #endif
+#endif
 
   const int faceDimension = marker.getSelectedFaceNumber() % Dimensions;
   // If the outer normal is positive, the normal points to the right so the face is on the right.

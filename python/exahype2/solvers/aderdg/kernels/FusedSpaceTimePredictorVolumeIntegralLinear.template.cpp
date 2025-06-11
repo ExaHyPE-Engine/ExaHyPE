@@ -33,16 +33,16 @@ namespace {{ item }} {
  */
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pStoreType* NOALIAS                      lQhbnd[2*Dimensions],
-  pStoreType* NOALIAS                      lFhbnd[2*Dimensions],
-  cStoreType* const NOALIAS                luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const double                                  timeStamp,
-  const double                                  timeStepSize
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
+  pStoreType* NOALIAS                               lQhbnd[2 * Dimensions],
+  pStoreType* NOALIAS                               lFhbnd[2 * Dimensions],
+  cStoreType* const NOALIAS                         luh,
+  const tarch::la::Vector<Dimensions, double>&      cellCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const double                                      timeStamp,
+  const double                                      timeStepSize
 {% if USE_POINT_SOURCE %}
-  ,const std::vector<int>&                      pointSources
+  , const std::vector<int>&                         pointSources
 {% endif %}
 ) {
   pCompType memory[getFusedSTPVISize()] __attribute__((aligned({{ALIGNMENT}})));
@@ -53,14 +53,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType* lFi   = memory + getlFiShift();
   pCompType* lFhi  = memory + getlFhiShift();
 
-  {% if USE_SOURCE %}
+{% if USE_SOURCE %}
   pCompType* lSi   = memory + getlSiShift();
   pCompType* lShi  = memory + getlShiShift();
-  {% endif %}
+{% endif %}
 
-  {% if USE_NCP %}
+{% if USE_NCP %}
   pCompType* gradQ = memory + getGradQShift();
-  {% endif %}
+{% endif %}
 
   const double invDt = 1.0 / timeStepSize;
   const double invDx[Dimensions] = {1.0 / cellSize[0], 1.0 / cellSize[1]
@@ -92,7 +92,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType dtavFac = 1.0;
 
 {% if USE_POINT_SOURCE %}
-
   pCompType PSi[getPSiSize()] __attribute__((aligned({{ALIGNMENT}})));
 
   { // 1.5: Compute point source contribution
@@ -119,7 +118,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             // Loop over all point sources
             for (int p : pointSources) {
               // Get the source vector located at quadrature node x at time tn
+{% if STATELESS_POINT_SOURCE %}
+              {{FULL_QUALIFIED_SOLVER_NAME}}::pointSource(
+{% else %}
               solver.pointSource(
+{% endif %}
                 luh + ((z * {{NUMBER_OF_DOF_3D}} + y)*{{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}},
                 x1,
                 tn,
@@ -129,7 +132,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
               );
 
               // Map point source location onto reference element
+{% if STATELESS_INIT_POINT_SOURCES %}
+              const double* const pointSourceLocation = {{FULL_QUALIFIED_SOLVER_NAME}}::pointSourceLocation[p];
+{% else %}
               const double* const pointSourceLocation = solver.pointSourceLocation[p];
+{% endif %}
 
               const pCompType update = basisFunction[x]((pointSourceLocation[0] - cellCentre[0]) * invDx[0] + 0.5)
                                      * basisFunction[y]((pointSourceLocation[1] - cellCentre[1]) * invDx[1] + 0.5)
@@ -183,7 +190,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}
 
       for (int d = 0; d < Dimensions; d++) {
+{% if STATELESS_FLUX %}
+        {{FULL_QUALIFIED_SOLVER_NAME}}::flux(
+{% else %}
         solver.flux(
+{% endif %}
           lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
           cellCentre,
           cellSize,
@@ -305,7 +316,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         std::memset(tmpArray, 0, {{DIMENSIONS*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType)); // Zero out ncpResult (stored in tmpArray)
 
         for (int d = 0; d < {{DIMENSIONS}}; d++) {
+{% if STATELESS_NCP %}
+          {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
+{% else %}
           solver.nonconservativeProduct(
+{% endif %}
             lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
             G[d],
             cellCentre,
@@ -320,8 +335,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           #pragma omp simd aligned(lFi,tmpArray:{{ALIGNMENT}})
           #endif
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lFi[(d * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
-              += tmpArray[d * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+            lFi[(d * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += tmpArray[d * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
           }
         }
       }
@@ -332,14 +346,18 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     {
       pCompType* F[{{DIMENSIONS}}];
       for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-        F[0]      = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}};
-        F[1]      = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
+        F[0] = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}};
+        F[1] = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
 {% if DIMENSIONS==3 %}
-        F[2]      = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
+        F[2] = lFi + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}};
 {% endif %}
 
         for (int d = 0; d < Dimensions; d++) {
+{% if STATELESS_MATERIAL_PARAMETERS %}
+          {{FULL_QUALIFIED_SOLVER_NAME}}::multiplyMaterialParameterMatrix(
+{% else %}
           solver.multiplyMaterialParameterMatrix(
+{% endif %}
             lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
             cellCentre,
             cellSize,
@@ -355,7 +373,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
 {% if USE_SOURCE %}
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
+{% if STATELESS_SOURCE_TERM %}
+      {{FULL_QUALIFIED_SOLVER_NAME}}::algebraicSource(
+{% else %}
       solver.algebraicSource(
+{% endif %}
         lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
         cellCentre,
         cellSize,
@@ -372,17 +394,13 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       #pragma omp simd aligned(lFhi,lFi{{',lShi,lSi' if USE_SOURCE else ''}}:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-        lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
-          += dtavFac * lFi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
-        lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}]
-          += dtavFac * lFi[{{1 * (NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}} + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+        lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += dtavFac * lFi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+        lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] += dtavFac * lFi[{{1 * (NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}} + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
 {% if DIMENSIONS==3 %}
-        lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}]
-          += dtavFac * lFi[{{2 * (NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}} + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+        lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] += dtavFac * lFi[{{2 * (NUMBER_OF_DOF**DIMENSIONS) * NUMBER_OF_UNKNOWNS_PADDED}} + xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
 {% endif %}
 {% if USE_SOURCE %}
-        lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
-          += dtavFac * lSi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+        lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += dtavFac * lSi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
 {% endif %}
       }
     }
@@ -419,8 +437,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         #pragma omp simd aligned(lQi,PSi,derPS:{{ALIGNMENT}})
         #endif
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-          lQi[xyz * {{NUMBER_OF_DATA_PADDED}} + n]
-            += derPS[t] * PSi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
+          lQi[xyz * {{NUMBER_OF_DATA_PADDED}} + n] += derPS[t] * PSi[(t * {{NUMBER_OF_DOF**DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
         }
       }
     }
@@ -479,8 +496,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   //***********************
   //**** Extrapolation ****
   //***********************
-
-  for(int i=0; i<2*Dimensions; i++){
+  for(int i = 0; i < 2 * Dimensions; i++) {
     std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
@@ -493,22 +509,18 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       #endif
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         // Left
-        lQhbnd[0][yz * {{NUMBER_OF_DATA}} + n]
-          += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
+        lQhbnd[0][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
         // Right
-        lQhbnd[Dimensions][yz * {{NUMBER_OF_DATA}} + n]
-          += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
-        }
+        lQhbnd[Dimensions][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
+      }
       #ifdef SharedOMP
       #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         // Left
-        lFhbnd[0][yz * {{NUMBER_OF_UNKNOWNS}} + n]
-          += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
+        lFhbnd[0][yz * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
         // Right
-        lFhbnd[Dimensions][yz * {{NUMBER_OF_UNKNOWNS}} + n]
-          += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
+        lFhbnd[Dimensions][yz * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
       }
     }
   }
@@ -522,22 +534,18 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         #endif
         for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
           // Left
-          lQhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n]
-            += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[y];
+          lQhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[y];
           // Right
-          lQhbnd[1+Dimensions][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n]
-            += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[y];
+          lQhbnd[1+Dimensions][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[y];
         }
         #ifdef SharedOMP
         #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
         #endif
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           // Left
-          lFhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n]
-            += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[y];
+          lFhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[y];
           // Right
-          lFhbnd[1+Dimensions][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n]
-            += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FRCoeff[y];
+          lFhbnd[1+Dimensions][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FRCoeff[y];
         }
       }
     }
@@ -552,22 +560,18 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       #endif
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         // Left
-        lQhbnd[2][xy * {{NUMBER_OF_DATA}} + n]
-          += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[z];
+        lQhbnd[2][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[z];
         // Right
-        lQhbnd[2+Dimensions][xy * {{NUMBER_OF_DATA}} + n]
-          += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[z];
+        lQhbnd[2+Dimensions][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[z];
       }
       #ifdef SharedOMP
       #pragma omp simd aligned(lFhbnd,lFhi:{{ALIGNMENT}})
       #endif
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         // Left
-        lFhbnd[2][xy * {{NUMBER_OF_UNKNOWNS}} + n]
-          += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[z];
+        lFhbnd[2][xy * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[z];
         // Right
-        lFhbnd[2+Dimensions][xy * {{NUMBER_OF_UNKNOWNS}} + n]
-          += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FRCoeff[z];
+        lFhbnd[2+Dimensions][xy * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FRCoeff[z];
       }
     }
   }
@@ -606,16 +610,16 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
 template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&                                   solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS                 lQhbnd[2*Dimensions],
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS                 lFhbnd[2*Dimensions],
-  {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS                luh,
-  const tarch::la::Vector<Dimensions, double>&                      cellCentre,
-  const tarch::la::Vector<Dimensions, double>&                      cellSize,
-  const double                                                      timeStamp,
-  const double                                                      timeStepSize
+  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS  lQhbnd[2 * Dimensions],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS  lFhbnd[2 * Dimensions],
+  {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luh,
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize
 {% if USE_POINT_SOURCE %}
-  ,const std::vector<int>&                                          pointSources
+  , const std::vector<int>&                     pointSources
 {% endif %}
 );
 {% endfor %}

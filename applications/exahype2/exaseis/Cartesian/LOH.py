@@ -9,7 +9,7 @@ import Elastic
 min_level           = 3
 max_depth           = 0
 order               = 5
-precision           = "double"
+precision           = "float"
 e_t                 = 2.0
 plot_dt             = 0.1
 polynomials         = "legendre"
@@ -31,26 +31,25 @@ theSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="elastic",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
-  point_source = 1
 )
-
-theSolver._init_point_sources_implementation = Elastic.init_point_source()
-theSolver._point_sources_implementation      = Elastic.point_source()
 
 theSolver.add_kernel_optimisations(
   is_linear=True, polynomials=(Polynomials.Gauss_Lobatto if polynomials=="lobatto" else Polynomials.Gauss_Legendre)
   ,solution_persistent_storage_precision=precision
   ,predictor_computation_precisions=[precision]
   ,corrector_computation_precision=precision
-  ,riemann_solver_implementation=Elastic.riemann_solver()
 )
 
 theSolver.set_implementation(
   initial_conditions    = Elastic.initial(),
   boundary_conditions   = Elastic.boundary(),
-  eigenvalues   = Elastic.eigenvalue(),
+  max_eigenvalue   = Elastic.eigenvalue(),
   flux          = Elastic.flux(),
-  refinement_criterion = Elastic.refinement_criterion()
+  refinement_criterion = Elastic.refinement_criterion(),
+  riemann_solver=Elastic.riemann_solver(),
+  number_of_point_sources = 1,
+  point_source=Elastic.point_source(),
+  init_point_source_location=Elastic.init_point_source()
 )
 
 theSolver.add_user_solver_includes("""

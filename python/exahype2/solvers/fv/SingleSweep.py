@@ -2,12 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .FV import FV
 
+from .AbstractSolverDeclarations import AbstractSolverDeclarations
+from .SolverDeclarations import SolverDeclarations
+from .SolverDefinitions import SolverDefinitions
+
 from exahype2.solvers.PDETerms import PDETerms
-
-from exahype2.solvers.AbstractSolverDeclarations import AbstractSolverDeclarations
-from exahype2.solvers.SolverDeclarations import SolverDeclarations
-from exahype2.solvers.SolverDefinitions import SolverDefinitions
-
 from exahype2.solvers.fv.actionsets import UpdatePatch
 from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
 

@@ -79,14 +79,13 @@ class SWE_WO_Bathymetry(Equation):
     F[normal+1] += 0.5 * grav * Q[0] * Q[0];
 """
 
-    def riemann_solver():
+    def riemann_solver(self):
         return """
   //Compute max eigenvalue over face
   double smax = 0.0;
   for(int xy=0; xy<Order+1; xy++){
     smax = std::max(smax, maxEigenvalue(&QL[xy*4], x, h, t, dt, direction));
     smax = std::max(smax, maxEigenvalue(&QR[xy*4], x, h, t, dt, direction));
-
   }
 
   for(int xy=0; xy<Order+1; xy++){
@@ -105,6 +104,5 @@ class SWE_WO_Bathymetry(Equation):
     //Contribution from NCP
     FL[xy*4+direction+1] += 0.5*9.81*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
     FR[xy*4+direction+1] -= 0.5*9.81*0.5*(QL[xy*4+0]+QR[xy*4+0])*(QR[xy*4+3]+QR[xy*4+0]-QL[xy*4+3]-QL[xy*4+0]);
-
   }
 """

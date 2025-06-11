@@ -114,16 +114,16 @@ ader_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 ader_solver.add_kernel_optimisations(
     polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
     is_linear=scenario._equation.is_linear,
-    riemann_solver_implementation=scenario._equation.riemann_solver(),
     precision=args.precision,
 )
 
 ader_solver.set_implementation(
     initial_conditions=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    eigenvalues=scenario._equation.eigenvalues(),
+    max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
+    riemann_solver=scenario._equation.riemann_solver(),
 )
 
 project = exahype2.Project(

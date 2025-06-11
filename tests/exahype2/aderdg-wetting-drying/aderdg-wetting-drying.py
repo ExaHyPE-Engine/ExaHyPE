@@ -1,14 +1,11 @@
 import os, sys
 import peano4, exahype2
 
-from exahype2.solvers.PDETerms import PDETerms
-
 project = exahype2.Project(["exahype", "limiting", "swe"], ".", executable="SWE")
 
-dimensions          = 2
-min_level           = 4
+min_level           = 3
 max_depth           = 0
-order               = 3
+order               = 5
 
 # scenario = "simple_beach"
 scenario = "oscillating_lake"
@@ -67,7 +64,7 @@ elif scenario=="oscillating_lake":
   constexpr double a      = 1.0;
   constexpr double h0     = 0.1;
   constexpr double sigma  = 0.5;
-  constexpr double omega  = sqrt(2*9.81*h0)/a;
+  const double omega  = std::sqrt(2*9.81*h0)/a;
 
   Q[3] = (h0 / (a*a)) * (x[0]*x[0] + x[1]*x[1]) ;
   Q[0] = std::max(0.0, (sigma*h0/(a*a)) * (2 * x[0] * cos(omega * 0) + 2 * x[1] * sin(omega * 0) - sigma) + h0 - Q[3]);
@@ -91,22 +88,25 @@ aderSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   time_step_relaxation  = 0.9,
   unknowns              = 4,
   auxiliary_variables   = 0,
-  initial_conditions    = init,
-  boundary_conditions   = boundary_conditions,
-  eigenvalues = PDETerms.User_Defined_Implementation,
-  flux        = PDETerms.User_Defined_Implementation,
-  ncp         = PDETerms.User_Defined_Implementation,
-  refinement_criterion = PDETerms.User_Defined_Implementation
 )
 
-# aderSolver.add_kernel_optimisations(
-#   polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto,
-#   riemann_solver_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation
-# )
+aderSolver.set_implementation(
+  initial_conditions    = init,
+  boundary_conditions   = boundary_conditions,
+  max_eigenvalue = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  flux        = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  ncp         = exahype2.solvers.PDETerms.User_Defined_Implementation,
+#  refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation,
+)
+
+aderSolver.add_kernel_optimisations(
+  polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto,
+)
 
 project.add_solver(aderSolver)
 
-fvSolver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
+fvSolver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
   name = "fvSWE",
   patch_size = 2*order+1,
   min_volume_h          = min_h,
@@ -114,11 +114,13 @@ fvSolver = exahype2.solvers.fv.riemann.GlobalAdaptiveTimeStep(
   time_step_relaxation  = 0.9,
   unknowns              = 3,
   auxiliary_variables   = 1,
+)
+fvSolver.set_implementation(
   initial_conditions    = "", #get set by ader solver
   boundary_conditions   = boundary_conditions,
-  eigenvalues           = PDETerms.User_Defined_Implementation,
-  flux                  = PDETerms.User_Defined_Implementation,
-  riemann_solver        = PDETerms.User_Defined_Implementation
+  eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  riemann_solver        = exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 project.add_solver(fvSolver)
 
@@ -133,7 +135,7 @@ limiter = exahype2.solvers.limiting.PosterioriLimiting(
   physical_admissibility_criterion = """
   if(Q[0] == 0.0)
       return true;
-  if(Q[0] <= 20 * 1e-5)
+  if(Q[0] <= 20 * 1e-3)
       return false;
   return true;"""
 )
@@ -145,9 +147,6 @@ project.set_output_path(
     + "_d_" + str(max_depth)
 )
 
-# project._project.output.makefile.set_Fortran_compiler("gfortran")
-# project._project.output.makefile.add_Fortran_file("rpn2_testing.f90")
-
 dimensions = 2
 build_mode = peano4.output.CompileMode.Release
 
@@ -158,11 +157,16 @@ project.set_global_simulation_parameters(
     min_end_time = e_t,
     max_end_time = e_t,
     first_plot_time_stamp = 0.0,
-    time_in_between_plots = 0.05,
+    time_in_between_plots = 0.1,
     periodic_BC=[False, False, False][0:dimensions]
 )
 
+project._project.output.makefile.set_Fortran_compiler("gfortran")
+# project._project.output.makefile.add_Fortran_file("rpn2_testing.f90")
+project._project.output.makefile.add_cpp_file("fvSWE.cpp")
+project._project.output.makefile.add_cpp_file("aderSWE.cpp")
+
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../", build_mode)
-peano4_project = project.generate_Peano4_project("False")
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=32)
+peano4_project = project.generate_Peano4_project(verbose=False)
+peano4_project.build(make_clean_first=True)

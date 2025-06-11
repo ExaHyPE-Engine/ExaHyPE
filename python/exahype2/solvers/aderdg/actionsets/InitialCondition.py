@@ -9,7 +9,6 @@ import peano4.solversteps
 class InitialCondition(AbstractADERDGActionSet):
     _Template_InitialCondition = """
   if ({{PREDICATE}}) {
-    logTraceIn("touchCellFirstTime(...)---InitialCondition");
     int linearisedIndex = 0;
 
     {% if INITIALISE_PATCHES is sameas True %}
@@ -17,7 +16,6 @@ class InitialCondition(AbstractADERDGActionSet):
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       marker.x(),
       marker.h(),
-      //0,
       {{GRID_IS_CONSTRUCTED}}
     );
     {% else %}
@@ -32,18 +30,17 @@ class InitialCondition(AbstractADERDGActionSet):
           kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
         ),
         marker.h(),
-        //index,
         {{GRID_IS_CONSTRUCTED}}
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
     {% endif %}
 
-    #if Dimensions==2
+#if Dimensions==2
     constexpr int SpaceBasisSize     = {{ORDER+1}} * {{ORDER+1}} * {{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
-    #else
+#else
     constexpr int SpaceBasisSize     = {{ORDER+1}} * {{ORDER+1}} * {{ORDER+1}} * {{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
-    #endif
+#endif
 
     std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
 
@@ -58,8 +55,6 @@ class InitialCondition(AbstractADERDGActionSet):
 
     // Relevant for tracing et al which kicks in if and only if cell has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-
-    logTraceOut("touchCellFirstTime(...)---InitialCondition");
   }
 """
 

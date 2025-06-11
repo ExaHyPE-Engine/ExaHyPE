@@ -68,12 +68,15 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_relaxation=0.5,
+)
+
+aderdg_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     flux=flux,
     ncp=nonconservative_product,
-    eigenvalues=max_eigenvalue,
+    max_eigenvalue=max_eigenvalue,
 )
 
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)

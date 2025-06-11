@@ -57,8 +57,7 @@ class Prediction(AbstractADERDGActionSet):
 
     _Template_TouchCellFirstTime_Epilogue = """
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-
-    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp+timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp /*+timeStepSize*/, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
   }
 """
 
