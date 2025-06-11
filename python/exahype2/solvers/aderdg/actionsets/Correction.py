@@ -24,11 +24,11 @@ class Correction(AbstractADERDGActionSet):
     // Needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    #if Dimensions == 2
+#if Dimensions == 2
     constexpr int SpaceFaceSize      = {{ORDER}} + 1;
-    #else
+#else
     constexpr int SpaceFaceSize      = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-    #endif
+#endif
 
     constexpr int FluxElementsPerFace   = SpaceFaceSize * {{NUMBER_OF_UNKNOWNS}};
     constexpr int BasisElementsPerFace  = SpaceFaceSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
@@ -103,7 +103,7 @@ class Correction(AbstractADERDGActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
   }
 """
 

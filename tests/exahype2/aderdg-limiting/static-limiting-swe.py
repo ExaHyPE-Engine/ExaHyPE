@@ -86,9 +86,11 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_relaxation=0.9,
+)
+aderdg_solver.set_implementation(
     flux=flux,
     ncp=ncp,
-    eigenvalues=max_eval,
+    max_eigenvalue=max_eval,
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
 )

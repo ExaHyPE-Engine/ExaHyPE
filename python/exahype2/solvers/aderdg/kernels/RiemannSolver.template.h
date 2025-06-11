@@ -13,10 +13,10 @@ namespace {{ item }} {
 template <typename cCompType>
 void riemannSolver(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  cCompType* NOALIAS                       FL,
-  cCompType* NOALIAS                       FR,
-  const cCompType* NOALIAS const           QL,
-  const cCompType* NOALIAS const           QR,
+  cCompType* NOALIAS                            FL,
+  cCompType* NOALIAS                            FR,
+  const cCompType* NOALIAS const                QL,
+  const cCompType* NOALIAS const                QR,
   const double                                  timeStamp,
   const double                                  timeStepSize,
   const tarch::la::Vector<Dimensions, double>&  faceCentre,

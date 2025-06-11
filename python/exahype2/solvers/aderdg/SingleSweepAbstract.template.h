@@ -2,19 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <algorithm>
-
 #include "Constants.h"
 
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
 
+#include "peano4/utils/Globals.h"
+
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
+#include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-#include "peano4/utils/Globals.h"
 
 #include "kernels/{{SOLVER_NAME}}/Quadrature.h"
 #include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
@@ -28,6 +27,8 @@
 {% endif %}
 
 {{SOLVER_INCLUDES}}
+
+#include <algorithm>
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
@@ -49,30 +50,34 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
+
       InitialPrediction,
       PredictionOnHangingCells,
+
       TimeStep,
+
       Plotting,
+
       Suspended
     };
 
     static std::string toString(SolverState);
 
-    static constexpr int    Order                      = {{ORDER}};
-    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    //static constexpr int    MaxPicardIterations        = {{ORDER}} + 1; // TODO: Not used (maybe use in nonlinear FSTPVI?)
-    //static constexpr bool   UseMaxPicardIterations     = true; // TODO: Not used (maybe use in nonlinear FSTPVI?)
-    //static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}}; // TODO: Not used
-    static constexpr double CFL                        = {{CFL_SAFETY_FACTOR}};
-    static constexpr double PNPM                       = {{CFL_ADER}};
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static constexpr int Order                      = {{ORDER}};
+    static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
+    static constexpr double PNPM                    = {{CFL_ADER}};
 
     // User-defined solver constants
     {{SOLVER_CONSTANTS}}
 
     {% if USE_POINT_SOURCE %}
-    static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
-    double pointSourceLocation[NumberOfPointSources][Dimensions];
+    static constexpr int NumberOfPointSources = {{NUMBER_OF_POINT_SOURCES}};
+    static double pointSourceLocation[NumberOfPointSources][Dimensions];
     {% endif %}
 
     /**
@@ -80,7 +85,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * has to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
      * which is coarser than its MaxH value.
      */
-    static constexpr double MaxAdmissibleCellH  = {{MAX_CELL_H}};
+    static constexpr double MaxAdmissibleCellH = {{MAX_CELL_H}};
 
     /**
      * Minimum mesh size that this solver wants to support. Peano 4 tries
@@ -91,6 +96,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * coarser MinH.
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
@@ -104,73 +112,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
-
-    /**
-     * Evaluate refinement criterion over cell
-     *
-     * @param Q Vector of unknowns
-     * @param x Centre of underlying cell
-     * @param h Size of underlying cell
-     * @param t Time
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      double                                       t
-    ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
-    /**
-     *
-     * @param x     Position of point that is to be initialised within computational domain.
-     * @param h     Size of cell within which the point is placed.
-     * @param index Index of point within cell. This one can be used to look up which shape
-     *              function is tied to the point. You just have to scale it with h. By
-     *              translating the shape function's centre to x, you can reconstruct where
-     *              the shape function is placed within the computational domain.
-     * @param gridIsConstructed Boolean holds if grid is completely constructed.
-     *              initialCondition() is invoked both by the grid construction and the
-     *              initialisation, and you might want to do different things depending on
-     *              the context. For most applications, they initialise data if and only if
-     *              gridIsConstructed holds, but others might also initialise data throughout
-     *              the construction to guide AMR criteria.
-     *
-     */
-    virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      //const tarch::la::Vector<Dimensions, int>&     index,
-      bool                                          gridIsConstructed
-    ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
-    /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values though most BCs only modify the outside ones. Please
-     * note that the boundary conditions you set here are after that subject
-     * to the Riemann solver, i.e. flux and eigenvalues.
-     *
-     * \param[in]    t         the start of the time interval.
-     * \param[in]    x         the physical coordinate on the face or indexing of the face (0 -- {x[0]=xmin}, 1 -- {x[1]=xmax}, 2 -- {x[1]=ymin}, 3 -- {x[2]=ymax}, and so on,
-     *                         where xmin,xmax,ymin,ymax are the bounds of the cell containing point x.
-     * \param[in]    d         the coordinate direction the face normal is pointing to.
-     * \param[in]    QIn       the conserved variables at point x from inside of the domain
-     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
-     * \param[in]    FIn       the normal fluxes at point x from inside of the domain
-     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
-     * \param[inout] QOut      the conserved variables at point x from outside of the domain
-     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
-     * \param[inout] FOut      the normal fluxes at point x from outside of the domain
-     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
-     */
-    virtual void boundaryConditions(
-      const {{CORRECTOR_COMPUTATION_PRECISION}} * NOALIAS                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{CORRECTOR_COMPUTATION_PRECISION}} * NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      double                                       t,
-      int                                          normal
-    ){% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
     {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>" %}
     /**
@@ -189,30 +130,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double                                              t,
       SolverState                                         currentState
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
-    {% endif %}
-
-    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    /**
-     * Evaluate precision criterion over cell
-     *
-     * @param Q             Vector of unknowns
-     * @param x             Centre of underlying cell
-     * @param h             Size of underlying cell
-     * @param t             Time
-     * @param currentState  State of the solver at time of calling
-     */
-    virtual void riemannSolver(
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const FL, // FL[{{NUMBER_OF_UNKNOWNS}}
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const FR, // FR[{{NUMBER_OF_UNKNOWNS}}
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double t,
-      const double dt, 
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
-      const int direction, 
-      bool isBoundaryFace, 
-      int faceIndex) {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
     /**

@@ -148,8 +148,11 @@ if use_aderdg:
         min_cell_h=min_h,
         max_cell_h=max_h,
         time_step_relaxation=CFL,
+
+    )
+    aderdg_solver.set_implementation(
         flux=flux,
-        eigenvalues=max_eval,
+        max_eigenvalue=max_eval,
         initial_conditions=initial_conditions,
         boundary_conditions=boundary_conditions,
     )

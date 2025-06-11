@@ -10,7 +10,6 @@
 #include "peano4/utils/Globals.h"
 
 #include "tarch/NonCriticalAssertions.h"
-#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -88,8 +87,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     #pragma omp end declare target
     #endif
 
-
     {{CLASSNAME}}();
+    ~{{CLASSNAME}}() = default;
 
     /**
      * Alias for periodic boundary conditions.

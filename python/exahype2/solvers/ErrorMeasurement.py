@@ -99,23 +99,12 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(double* error) 
 }
 """
 
+        solver._abstract_solver_user_declarations += create_solver_user_abstract_declarations()
+        solver._solver_user_declarations += create_solver_user_declarations()
         if error_measurement_implementation == PDETerms.User_Defined_Implementation:
-            print(error_measurement_implementation)
-            print(PDETerms.User_Defined_Implementation)
-            solver._solver_user_declarations += create_solver_user_declarations()
-            solver._solver_user_definitions += create_solver_user_definitions()
-            solver._abstract_solver_user_declarations += (
-                create_solver_user_abstract_declarations(True)
-            )
+            solver._solver_user_definitions += create_solver_user_definitions(True, error_measurement_implementation)
         else:
-            solver._abstract_solver_user_definitions += (
-                create_solver_user_abstract_definitions(
-                    error_measurement_implementation
-                )
-            )
-            solver._abstract_solver_user_declarations += (
-                create_solver_user_abstract_declarations(False)
-            )
+            solver._solver_user_definitions += create_solver_user_definitions(False, error_measurement_implementation)
 
 
 def create_constructor_implementation_for_error_measurement(
@@ -199,8 +188,7 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
 """
     )
 
-
-def create_solver_user_abstract_declarations(user_defined):
+def create_solver_user_abstract_declarations():
     return (
         """
     /**
@@ -217,14 +205,25 @@ def create_solver_user_abstract_declarations(user_defined):
       const double                                  dt,
       const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
-    )"""
-        + (" = 0" if user_defined else " final")
-        + ";"
+    ) = 0;
+"""
     )
 
+def create_solver_user_declarations():
+    return """
+      virtual void analyticalSolution(
+        const tarch::la::Vector<Dimensions, double>&  x,
+        const double                                  t,
+        const double                                  dt,
+        const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+        double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
+      ) override;
+"""
 
-def create_solver_user_abstract_definitions(error_measurement_implementation):
-    return (
+
+def create_solver_user_definitions(user_defined, error_measurement_implementation):
+    if not user_defined:
+        return(
         """
     void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
       const tarch::la::Vector<Dimensions, double>&  x,
@@ -238,23 +237,9 @@ def create_solver_user_abstract_definitions(error_measurement_implementation):
         + """
 }
 """
-    )
-
-
-def create_solver_user_declarations():
-    return """
-    virtual void analyticalSolution(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const double                                  t,
-      const double                                  dt,
-      const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
-    ) override;
-"""
-
-
-def create_solver_user_definitions():
-    return """
+        )
+    else:
+        return """
     void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::analyticalSolution(
       const tarch::la::Vector<Dimensions, double>&  x,
       const double                                  t,
@@ -262,10 +247,6 @@ def create_solver_user_definitions():
       const double*                                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double*                                       solution // solution[{{NUMBER_OF_UNKNOWNS}}]
     ) {
-      logTraceInWith2Arguments("analyticalSolution()", x, t);
-
-      // @todo Implement your stuff here
-
-      logTraceOut("analyticalSolution()");
+      // @todo Implement
     }
 """

@@ -11,16 +11,16 @@
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  cCompType* NOALIAS                       FL,
-  cCompType* NOALIAS                       FR,
-  const cCompType* NOALIAS const           QL,
-  const cCompType* NOALIAS const           QR,
-  const double                                  timeStamp,
-  const double                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&  faceCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const int                                     direction
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
+  cCompType* NOALIAS                                FL,
+  cCompType* NOALIAS                                FR,
+  const cCompType* NOALIAS const                    QL,
+  const cCompType* NOALIAS const                    QR,
+  const double                                      timeStamp,
+  const double                                      timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&      faceCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const int                                         direction
 ) {
   /*
    * For the linear kernels, we need the material parameters in the
@@ -45,7 +45,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     }
   }
 
+{% if STATELESS_MAX_EIGENVALUE %}
+  cCompType smaxL = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+{% else %}
   cCompType smaxL = solver.maxEigenvalue(
+{% endif %}
     &QavL[0],
     faceCentre,
     cellSize,
@@ -53,7 +57,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     timeStepSize,
     direction
   );
+{% if STATELESS_MAX_EIGENVALUE %}
+  cCompType smaxR = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+{% else %}
   cCompType smaxR = solver.maxEigenvalue(
+{% endif %}
     &QavR[0],
     faceCentre,
     cellSize,
@@ -61,7 +69,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     timeStepSize,
     direction
   );
-  cCompType smax = std::max(smaxL, smaxR);
+
+  cCompType smax = std::fmax(smaxL, smaxR);
 
   cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}})));
 
@@ -96,7 +105,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     }
 
 {% if USE_NCP %}
+{% if STATELESS_NCP %}
+    {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
+{% else %}
     solver.nonconservativeProduct(
+{% endif %}
       Qavg,
       Qdiff,
       faceCentre,
@@ -108,7 +121,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 
 {% if USE_MATERIAL_PARAMETERS %}
+{% if STATELESS_MATERIAL_PARAMETERS %}
+    {{FULL_QUALIFIED_SOLVER_NAME}}::multiplyMaterialParameterMatrix(
+{% else %}
     solver.multiplyMaterialParameterMatrix(
+{% endif %}
       Qavg,
       faceCentre,
       cellSize,
@@ -128,7 +145,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 {% endif %}{# USE_NCP #}
 
 {% if USE_FLUX %}
+{% if STATELESS_FLUX %}
+    {{FULL_QUALIFIED_SOLVER_NAME}}::flux(
+{% else %}
     solver.flux(
+{% endif %}
       Qdiff,
       faceCentre,
       cellSize,
@@ -139,7 +160,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 
 {% if USE_MATERIAL_PARAMETERS %}
+{% if STATELESS_MATERIAL_PARAMETERS %}
+    {{FULL_QUALIFIED_SOLVER_NAME}}::multiplyMaterialParameterMatrix(
+{% else %}
     solver.multiplyMaterialParameterMatrix(
+{% endif %}
       Qavg,
       faceCentre,
       cellSize,
@@ -169,14 +194,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&                               solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             FL,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             FR,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS QL,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS QR,
-  const double                                                  timeStamp,
-  const double                                                  timeStepSize,
-  const tarch::la::Vector<Dimensions, double>&                  faceCentre,
-  const tarch::la::Vector<Dimensions, double>&                  cellSize,
-  const int                                                     direction
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                           solver,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS              FL,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS              FR,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  QL,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  QR,
+  const double                                              timeStamp,
+  const double                                              timeStepSize,
+  const tarch::la::Vector<Dimensions, double>&              faceCentre,
+  const tarch::la::Vector<Dimensions, double>&              cellSize,
+  const int                                                 direction
 );

@@ -9,12 +9,12 @@
 #include "peano4/utils/Loop.h"
 
 double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  const {{SOLUTION_STORAGE_PRECISION}}* const   luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const double                                  timeStamp,
-  const double                                  timeStepSize
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
+  const {{SOLUTION_STORAGE_PRECISION}}* const       luh,
+  const tarch::la::Vector<Dimensions, double>&      cellCentre,
+  const tarch::la::Vector<Dimensions, double>&      cellSize,
+  const double                                      timeStamp,
+  const double                                      timeStepSize
 ) {
   // Inverse of the smallest cell size
   const double invDx = 1.0 / tarch::la::min(cellSize);
@@ -33,25 +33,27 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
 
         double denominator = 0.0;
         for (int d = 0; d < Dimensions; d++) {
-          denominator
-            += solver.maxEigenvalue(
-                 &luh[linearisedIndex * {{NUMBER_OF_DATA_PADDED}}],
-                 ::exahype2::dg::getQuadraturePoint(
-                   cellCentre,
-                   cellSize,
-                   index, // index
-                   {{NUMBER_OF_DOF}} - 1,
-                   Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
-                 ), // faceCentre
-                 cellSize,
-                 timeStamp,
-                 timeStepSize,
-                 d
-               )
-               * invDx;
+{% if STATELESS_MAX_EIGENVALUE %}
+          denominator += {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+{% else %}
+          denominator += solver.maxEigenvalue(
+{% endif %}
+            &luh[linearisedIndex * {{NUMBER_OF_DATA_PADDED}}],
+            ::exahype2::dg::getQuadraturePoint(
+              cellCentre,
+              cellSize,
+              index,
+              {{NUMBER_OF_DOF}} - 1,
+              Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
+            ), // faceCentre
+            cellSize,
+            timeStamp,
+            timeStepSize,
+            d
+          ) * invDx;
         }
 
-        maxEigenvalue = std::max(maxEigenvalue, denominator);
+        maxEigenvalue = std::fmax(maxEigenvalue, denominator);
 {% if DIMENSIONS == 3 %}
       }
 {% endif %}

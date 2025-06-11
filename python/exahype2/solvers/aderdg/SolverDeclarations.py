@@ -4,308 +4,406 @@ import jinja2
 
 
 class SolverDeclarations:
-    def __init__(
-        self,
-        flux_implementation,
-        ncp_implementation,
-        eigenvalues_implementation,
-        source_term_implementation,
-        adjust_solution_implementation,
-        material_parameters_implementation,
-        point_source_implementation,
-        init_point_source_implementation,
-        is_linear,
-        computation_precisions,
-    ):
-        self._flux_implementation = flux_implementation
-        self._ncp_implementation = ncp_implementation
-        self._eigenvalues_implementation = eigenvalues_implementation
-        self._source_term_implementation = source_term_implementation
-        self._adjust_solution_implementation = adjust_solution_implementation
-        self._material_parameters_implementation = material_parameters_implementation
-        self._point_source_implementation = point_source_implementation
-        self._init_point_source_implementation = init_point_source_implementation
-        self._is_linear = is_linear
-        self._computation_precisions = computation_precisions
+    def __init__(self, dictionary):
+        self.d = dictionary
 
     def create_solver_user_declarations(self):
-        Template_SinglePrecisions = jinja2.Template(
+        Template = jinja2.Template(
             """
-  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    virtual double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q,
-      const tarch::la::Vector<Dimensions, double>&      x,
-      const tarch::la::Vector<Dimensions, double>&      h,
-      double                                            t,
-      double                                            dt,
-      int                                               normal
-    ) override;
-  {% endif %}
+    {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
+    static inline
+    void initialCondition(
+      [[maybe_unused]] {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const bool                                     gridIsConstructed
+    ) InlineMethod {
+      {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<empty>" %}
+      {{INITIAL_CONDITIONS_IMPLEMENTATION}}
+      {% endif %}
+    }
+    {% endif %}
 
-  {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    void flux(
-      const {{COMPUTATION_PRECISIONS[0]}}* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&      x,
-      const tarch::la::Vector<Dimensions, double>&      h,
-      double                                            t,
-      double                                            dt,
-      int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}} * NOALIAS      F // F[{{NUMBER_OF_UNKNOWNS}}]
-    ) override;
-  {% endif %}
+    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    void boundaryConditions(
+      [[maybe_unused]] const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const int                                      normal
+    ) InlineMethod {
+      {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<empty>" %}
+      {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[0]}}*NOALIAS  Q,
-      const {{COMPUTATION_PRECISIONS[0]}}*NOALIAS  deltaQ,
-      const tarch::la::Vector<Dimensions, double>&      x,
-      const tarch::la::Vector<Dimensions, double>&      h,
-      double                                            t,
-      double                                            dt,
-      int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}}*NOALIAS        BTimesDeltaQ
-    ) override;
-  {% endif %}
+    {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    ::exahype2::RefinementCommand refinementCriterion(
+      [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t
+    ) InlineMethod {
+      {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<empty>" %}
+      {{REFINEMENT_CRITERION_IMPLEMENTATION}}
+      {% else %}
+      auto result = ::exahype2::RefinementCommand::Keep;
+      return result;
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void algebraicSource(
-      const {{COMPUTATION_PRECISIONS[0]}}* const        Q,
-      const tarch::la::Vector<Dimensions, double>&      x,
-      const tarch::la::Vector<Dimensions, double>&      h,
-      double                                            t,
-      double                                            dt,
-      {{COMPUTATION_PRECISIONS[0]}}*                    S
-    ) override;
-  {% endif %}
-
-  {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
-    void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[0]}}* const        Q,
-      const tarch::la::Vector<Dimensions, double>&      x,
-      const tarch::la::Vector<Dimensions, double>&      h,
-      double                                            t,
-      double                                            dt,
-      int                                               normal,
-      {{COMPUTATION_PRECISIONS[0]}}* const rhs
-    ) override;
-  {% endif %}
-
-  {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    void pointSource(
-      const {{COMPUTATION_PRECISIONS[0]}}* const        Q,
-      const double* const                               x,
-      const double                                      t,
-      const double                                      dt,
-      {{COMPUTATION_PRECISIONS[0]}}* const              forceVector,
-      int                                               n
-    ) override;
-  {% endif %}
-
-  {% if INIT_POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    void initPointSourceLocations(
-      double sourceLocation[NumberOfPointSources][Dimensions]
-    ) override;
-  {% endif %}
-
-  {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" %}
-    virtual void adjustSolution(
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      const tarch::la::Vector<Dimensions, double>&                  h,
-      double                                                        t,
-      double                                                        dt,
-      double* const NOALIAS                                    Q,
-    ) override;
-  {% endif %}
-""",
-            undefined=jinja2.DebugUndefined,
-        )
-
-        Template_MultiplePrecisions = jinja2.Template(
-            """
-  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    template <typename T>
+    {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+    {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
     double maxEigenvalue(
-      const T* NOALIAS                         Q,
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      double                                        t,
-      double                                        dt,
-      int                                           normal
-    );
-  {% endif %}
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] const int                                      normal
+    ) InlineMethod {
+      {% if MAX_EIGENVALUE_IMPLEMENTATION!="<empty>" %}
+      {{MAX_EIGENVALUE_IMPLEMENTATION}}
+      {% else %}
+      return 0.0;
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    template <typename T>
+    {% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
     void flux(
-      const T* NOALIAS                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      double                                        t,
-      double                                        dt,
-      int                                           normal,
-      T* NOALIAS                               F // F[{{NUMBER_OF_UNKNOWNS}}]
-    );
-  {% endif %}
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] const int                                      normal,
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   F // F[{{NUMBER_OF_UNKNOWNS}}]
+    ) InlineMethod {
+      {% if FLUX_IMPLEMENTATION!="<empty>" %}
+      {{FLUX_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    template <typename T>
+    {% if NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
     void nonconservativeProduct(
-      const T*NOALIAS                          Q,
-      const T*NOALIAS                          deltaQ,
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      double                                        t,
-      double                                        dt,
-      int                                           normal,
-      T*NOALIAS                                BTimesDeltaQ
-    );
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] const int                                      normal,
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+    ) InlineMethod {
+      {% if NCP_IMPLEMENTATION!="<empty>" %}
+      {{NCP_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% endif %}
-  {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    template <typename T>
+    {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
     void algebraicSource(
-      const T* const                                Q,
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      double                                        t,
-      double                                        dt,
-      T*                                            S
-    );
-  {% endif %}
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   S // S[{{NUMBER_OF_UNKNOWNS}}]
+    ) InlineMethod {
+      {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+      {{SOURCE_TERM_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
-    template <typename T>
-    void multiplyMaterialParameterMatrix(
-      const T* const                                Q,
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      double                                        t,
-      double                                        dt,
-      int                                           normal,
-      T* const                                      rhs
-    );
-  {% endif %}
+    {% if MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    double multiplyMaterialParameterMatrix(
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] const int                                      normal,
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   rhs
+    ) InlineMethod {
+      {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" %}
+      {{MATERIAL_PARAM_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
 
-  {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    template <typename T>
+    {% if POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
     void pointSource(
-      const T* const                                Q,
-      const double* const                           x,
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
+      [[maybe_unused]] const double* const                            x,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        forceVector,
+      const int                                                       n
+    ) {
+      {% if POINT_SOURCES_IMPLEMENTATION!="<empty>" %}
+      {{POINT_SOURCES_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
+    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    void riemannSolver(
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FL, // FL[{{NUMBER_OF_UNKNOWNS}}
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FR, // FR[{{NUMBER_OF_UNKNOWNS}}
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const double                                       t,
+      [[maybe_unused]] const double                                       dt,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&       x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&       h,
+      [[maybe_unused]] const int                                          direction,
+      [[maybe_unused]] const bool                                         isBoundaryFace,
+      [[maybe_unused]] const int                                          faceIndex
+    ) {
+      {% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" %}
+      {{RIEMANN_SOLVER_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
+    {% if ADJUST_SOLUTION_IMPLEMENTATION!="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    void adjustSolution(
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&  h,
+      [[maybe_unused]] const double                                  t,
+      [[maybe_unused]] const double                                  dt,
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    ) {
+      {% if ADJUST_SOLUTION_IMPLEMENTATION!="<empty>" %}
+      {{ADJUST_SOLUTION_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+    {% endfor %}
+
+    {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    void initPointSourceLocations([[maybe_unused]] double location[NumberOfPointSources][Dimensions]) {
+      {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<empty>" %}
+      {{INIT_POINT_SOURCES_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
+    {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+    void initialCondition(
+      {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      const bool                                   gridIsConstructed
+    ) override final;
+    {% endif %}
+
+    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
+    void boundaryConditions(
+      const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const int                                      normal
+    ) override final;
+    {% endif %}
+
+    {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
+    ::exahype2::RefinementCommand refinementCriterion(
+      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t
+    ) override final;
+    {% endif %}
+
+    {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
+    double maxEigenvalue(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const double                                   dt,
+      const int                                      normal
+    ) override final;
+    {% endif %}
+
+    {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
+    void flux(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const double                                   dt,
+      const int                                      normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   F // F[{{NUMBER_OF_UNKNOWNS}}]
+    ) override final;
+    {% endif %}
+
+    {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
+    void nonconservativeProduct(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const double                                   dt,
+      const int                                      normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+    ) override final;
+    {% endif %}
+
+    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    void algebraicSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const double                                   dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   S // S[{{NUMBER_OF_UNKNOWNS}}]
+    ) override final;
+    {% endif %}
+
+    {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
+    double multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const double                                   dt,
+      const int                                      normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   rhs
+    ) override final;
+    {% endif %}
+
+    {% if POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+    void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
+      const double* const                            x,
+      const double                                   t,
+      const double                                   dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   forceVector,
+      const int                                      n
+    ) override final;
+    {% endif %}
+
+    {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
+    void riemannSolver(
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FL, // FL[{{NUMBER_OF_UNKNOWNS}}
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FR, // FR[{{NUMBER_OF_UNKNOWNS}}
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double                                       t,
+      const double                                       dt,
+      const tarch::la::Vector<Dimensions, double>&       x,
+      const tarch::la::Vector<Dimensions, double>&       h,
+      const int                                          direction,
+      const bool                                         isBoundaryFace,
+      const int                                          faceIndex
+    ) override final;
+    {% endif %}
+
+    {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
+    void adjustSolution(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
       const double                                  t,
       const double                                  dt,
-      T* const                                      forceVector,
-      int                                           n
-    );
-  {% endif %}
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    ) override final;
+    {% endif %}
+    {% endfor %}
 
-  {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-    void initPointSourceLocations(
-      double sourceLocation[NumberOfPointSources][Dimensions]
-    ) override;
-  {% endif %}
-
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-
-  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      const tarch::la::Vector<Dimensions, double>&                  h,
-      double                                                        t,
-      double                                                        dt,
-      int                                                           normal
-    ) {
-      return maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}> (Q, x, h, t, dt, normal);
-    }
-  {% endif %}
-
-  {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      const tarch::la::Vector<Dimensions, double>&                  h,
-      double                                                        t,
-      double                                                        dt,
-      int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS       F
-    ) {
-      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, F);
-    }
-  {% endif %}
-
-  {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *NOALIAS Q,
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *NOALIAS deltaQ,
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      const tarch::la::Vector<Dimensions, double>&                  h,
-      double                                                        t,
-      double                                                        dt,
-      int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *NOALIAS       BTimesDeltaQ
-    ) override {
-      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
-    }
-  {% endif %}
-
-  {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void algebraicSource(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const        Q,
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      const tarch::la::Vector<Dimensions, double>&                  h,
-      double                                                        t,
-      double                                                        dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*                    S
-    ) override {
-      algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, S);
-    }
-  {% endif %}
-
-  {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
-    void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const        Q,
-      const tarch::la::Vector<Dimensions, double>&                  x,
-      const tarch::la::Vector<Dimensions, double>&                  h,
-      double                                                        t,
-      double                                                        dt,
-      int                                                           normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const              rhs
-    ) override {
-      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, rhs);
-    }
-  {% endif %}
-
-  {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    void pointSource(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const        Q,
-      const double* const                                           x,
-      const double                                                  t,
-      const double                                                  dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const              forceVector,
-      int                                                           n
-    ) override {
-      pointSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, t, dt, forceVector, n);
-    }
-  {% endif %}
-
-  {% endfor %}
+    {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+    void initPointSourceLocations(double location[NumberOfPointSources][Dimensions]) override final;
+    {% endif %}
 """,
             undefined=jinja2.DebugUndefined,
         )
 
-        d = {}
-        d["FLUX_IMPLEMENTATION"] = self._flux_implementation
-        d["NCP_IMPLEMENTATION"] = self._ncp_implementation
-        d["EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
-        d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
-        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
-        d["MATERIAL_PARAM_IMPLEMENTATION"] = self._material_parameters_implementation
-        d["POINT_SOURCE_IMPLEMENTATION"] = self._point_source_implementation
-        d["INIT_POINT_SOURCE_IMPLEMENTATION"] = self._init_point_source_implementation
-        d["IS_LINEAR"] = self._is_linear
-        d["COMPUTATION_PRECISIONS"] = self._computation_precisions
-
-        if len(self._computation_precisions) > 1:
-            return Template_MultiplePrecisions.render(**d)
-        else:
-            return Template_SinglePrecisions.render(**d)
+        return Template.render(**self.d)

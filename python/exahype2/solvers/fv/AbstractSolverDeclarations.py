@@ -99,7 +99,7 @@ class AbstractSolverDeclarations:
     {% endif %}
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
-    virtual void nonconservativeCOMPUTE_PRECISIONoduct(
+    virtual void nonconservativeProduct(
       const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{COMPUTE_PRECISION}}* const NOALIAS    deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&  x,
@@ -123,7 +123,7 @@ class AbstractSolverDeclarations:
     {% endif %}
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    virtual double solveRiemannCOMPUTE_PRECISIONoblem(
+    virtual double solveRiemannProblem(
       const {{COMPUTE_PRECISION}}* const NOALIAS    QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{COMPUTE_PRECISION}}* const NOALIAS    QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions, double>&  x,

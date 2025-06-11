@@ -4,8 +4,6 @@
 
 #include "Abstract{{CLASSNAME}}.h"
 
-#include "tarch/logging/Log.h"
-
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}
@@ -15,83 +13,9 @@ namespace {{ item }} {
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
-  private:
-    static tarch::logging::Log _log;
+private:
+  static tarch::logging::Log _log;
 
-  public:
-    {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
-    /**
-     * Refinement criterion
-     *
-     * ExaHyPE 2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e., if your
-     * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
-     * automatically refine. If you try to refine further than the
-     * minimum mesh size, ExaHyPE 2 will ignore any refinement.
-     *
-     * Consequently, you are fine if you work with a regular mesh:
-     * You set the maximum mesh size, and you leave everything else
-     * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
-     * use this routine to implement the refinement pattern.
-     *
-     * @param Q This is the (current) solution. The data is not set
-     *  to a valid value throughout grid construction. In this case,
-     *  it is nullptr.
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}}* NOALIAS  Q,    //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&        x,
-      const tarch::la::Vector<Dimensions, double>&        h,
-      double                                              t
-    ) override;
-    {% endif %}
-
-    {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %}
-    ::exahype2::PrecisionCommand precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}}* NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&        x,
-      const tarch::la::Vector<Dimensions, double>&        h,
-      double                                              t,
-      SolverState                                         currentState
-    ) override;
-    {% endif %}
-
-    {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      //const tarch::la::Vector<Dimensions, int>&     index,
-      bool                                          gridIsConstructed
-    ) override;
-    {% endif %}
-
-    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    virtual void boundaryConditions(
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS       Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions, double>&            x,
-      const tarch::la::Vector<Dimensions, double>&            h,
-      double                                                  t,
-      int                                                     normal
-    ) final override;
-    {% endif %}
-
-    {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
-    void riemannSolver(
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const        FL, // FL[{{NUMBER_OF_UNKNOWNS}}
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const        FR, // FR[{{NUMBER_OF_UNKNOWNS}}
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double                                      t,
-      const double                                      dt,
-      const tarch::la::Vector<Dimensions, double>&      x,
-      const tarch::la::Vector<Dimensions, double>&      h,
-      const int                                         direction,
-      bool                                              isBoundaryFace,
-      int                                               faceIndex
-    ) final override;
-    {% endif %}
-
-    {{SOLVER_USER_DECLARATIONS}}
+public:
+  {{SOLVER_USER_DECLARATIONS}}
 };

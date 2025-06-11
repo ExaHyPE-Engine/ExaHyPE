@@ -118,16 +118,16 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 
 solver.add_kernel_optimisations(
     polynomials=polynomials, is_linear=scenario._equation.is_linear,
-    riemann_solver_implementation = scenario._equation.riemann_solver(),
     precision = args.precision
 )
 
 solver.set_implementation(
     initial_conditions=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    eigenvalues=scenario._equation.eigenvalues(),
+    max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
+    riemann_solver=scenario._equation.riemann_solver(),
 )
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
@@ -153,16 +153,16 @@ solver2 = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
 
 solver2.add_kernel_optimisations(
     polynomials=polynomials, is_linear=scenario._equation.is_linear,
-    riemann_solver_implementation = scenario._equation.riemann_solver(),
     precision = args.precision
 )
 
 solver2.set_implementation(
     initial_conditions=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    eigenvalues=scenario._equation.eigenvalues(),
+    max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
     ncp=scenario._equation.ncp(),
+    riemann_solver=scenario._equation.riemann_solver(),
 )
 
 if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:

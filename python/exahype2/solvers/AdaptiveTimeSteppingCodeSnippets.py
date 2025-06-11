@@ -57,7 +57,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize(bo
 
     def create_compute_time_step_size(self):
         return """
-    double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+    const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
     def create_compute_new_time_step_size(self):

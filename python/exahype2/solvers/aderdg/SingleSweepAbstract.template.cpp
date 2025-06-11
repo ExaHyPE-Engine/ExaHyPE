@@ -13,6 +13,10 @@ tarch::logging::Log     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
+{% if USE_POINT_SOURCE %}
+double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][Dimensions]{};
+{% endif %}
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
@@ -112,49 +116,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   return _solverState;
 }
 
-
-{% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
-::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t
-) {
-  {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  return result;
-  {% else %}
-  {{REFINEMENT_CRITERION_IMPLEMENTATION}}
-  {% endif %}
-}
-{% endif %}
-
-{% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  {{SOLUTION_STORAGE_PRECISION}}* NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h,
-  //const tarch::la::Vector<Dimensions, int>&      index,
-  bool                                          gridIsConstructed
-) {
-  {{INITIAL_CONDITIONS_IMPLEMENTATION}}
-}
-{% endif %}
-
-{% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const {{CORRECTOR_COMPUTATION_PRECISION}} * NOALIAS                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{CORRECTOR_COMPUTATION_PRECISION}} * NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t,
-  int                                          normal
-) {
-  {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
-}
-{% endif %}
-
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
     exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
       const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -164,23 +125,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
       SolverState                                         currentState
     ) {
   {{ADAPTIVE_PRECISION_IMPLEMENTATION}}
-}
-{% endif %}
-
-{% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" and RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>"%}
-    void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const FL, // FL[{{NUMBER_OF_UNKNOWNS}}
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const FR, // FR[{{NUMBER_OF_UNKNOWNS}}
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double t,
-      const double dt,
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
-      const int direction,
-      bool isBoundaryFace,
-      int faceIndex) {
-  {{RIEMANN_SOLVER_IMPLEMENTATION}}
 }
 {% endif %}
 
@@ -212,7 +156,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   case SolverState::GridInitialisation:
     _solverState = SolverState::InitialPrediction;
     break;
-    // [nk] Checks if _solverState is in the Suspended state and return.
+    // [nk] Checks if _solverState is in the suspended state and return.
     // Prevents nullification of eigenvalues if the solver is suspended
   case SolverState::Suspended:
     {% if USE_SEPARATE_SWEEPS is sameas True %}

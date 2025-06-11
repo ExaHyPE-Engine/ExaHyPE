@@ -371,15 +371,15 @@ if use_aderdg:
         min_cell_h=min_h,
         max_cell_h=max_h,
         time_step_relaxation=CFL,
+    )
+    aderdg_solver.set_implementation(
         flux=flux,
-        eigenvalues=eigenvalues,
+        max_eigenvalue=eigenvalues,
         initial_conditions=initial_conditions,
         boundary_conditions=boundary_conditions,
         ncp=ncp,
         source_term=source_term,
-    )
-    aderdg_solver.add_kernel_optimisations(
-        riemann_solver_implementation=riemann_solver_aderdg
+        riemann_solver=riemann_solver_aderdg
     )
     project.add_solver(aderdg_solver)
 

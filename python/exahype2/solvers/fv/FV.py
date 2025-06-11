@@ -1535,9 +1535,6 @@ The finest mesh width of """
         d["MIN_VOLUME_H"] = self._min_volume_h
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.user_solver_includes
-        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
-        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
-        d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
