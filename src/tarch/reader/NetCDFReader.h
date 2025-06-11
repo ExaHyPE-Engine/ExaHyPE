@@ -1,4 +1,4 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
@@ -106,13 +106,7 @@ public:
    * @param cols count of columns of the array.
    * @return 0 if successful, -1 otherwise.
    */
-  int readVariable2D(
-    int         ncid,
-    const char* key,
-    double**    variable,
-    std::size_t rows,
-    std::size_t cols
-  );
+  int readVariable2D(int ncid, const char* key, double** variable, std::size_t rows, std::size_t cols);
 
   /**
    * @brief Reads contents of a 2D double variable from netCDF file into 1D

@@ -1,4 +1,4 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "NetCDFReader.h"
 
@@ -22,7 +22,6 @@ int tarch::reader::NetCDFReader::open(const std::string& filename) {
   return ncid;
 }
 
-
 int tarch::reader::NetCDFReader::close(int ncid) {
   if (nc_close(ncid) != NC_NOERR) {
     return -1;
@@ -30,11 +29,7 @@ int tarch::reader::NetCDFReader::close(int ncid) {
   return 0;
 }
 
-
-std::size_t tarch::reader::NetCDFReader::getDimension(
-  int         ncid,
-  const char* key
-) {
+std::size_t tarch::reader::NetCDFReader::getDimension(int ncid, const char* key) {
   int         dimidkey = -1;
   std::size_t dim      = 0;
 
@@ -48,11 +43,7 @@ std::size_t tarch::reader::NetCDFReader::getDimension(
   return dim;
 }
 
-
-int* tarch::reader::NetCDFReader::getGlobalAttInt(
-  int         ncid,
-  const char* name
-) {
+int* tarch::reader::NetCDFReader::getGlobalAttInt(int ncid, const char* name) {
   std::size_t len = 0;
   if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
     return nullptr;
@@ -66,11 +57,7 @@ int* tarch::reader::NetCDFReader::getGlobalAttInt(
   return tmp;
 }
 
-
-float* tarch::reader::NetCDFReader::getGlobalAttFloat(
-  int         ncid,
-  const char* name
-) {
+float* tarch::reader::NetCDFReader::getGlobalAttFloat(int ncid, const char* name) {
   std::size_t len = 0;
   if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
     return nullptr;
@@ -84,11 +71,7 @@ float* tarch::reader::NetCDFReader::getGlobalAttFloat(
   return tmp;
 }
 
-
-double* tarch::reader::NetCDFReader::getGlobalAttDouble(
-  int         ncid,
-  const char* name
-) {
+double* tarch::reader::NetCDFReader::getGlobalAttDouble(int ncid, const char* name) {
   std::size_t len = 0;
   if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
     return nullptr;
@@ -102,11 +85,7 @@ double* tarch::reader::NetCDFReader::getGlobalAttDouble(
   return tmp;
 }
 
-
-char* tarch::reader::NetCDFReader::getGlobalAttText(
-  int         ncid,
-  const char* name
-) {
+char* tarch::reader::NetCDFReader::getGlobalAttText(int ncid, const char* name) {
   std::size_t len;
   if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
     return nullptr;
@@ -120,8 +99,7 @@ char* tarch::reader::NetCDFReader::getGlobalAttText(
   return tmp;
 }
 
-int tarch::reader::NetCDFReader::
-  readVariable1D(int ncid, const char* key, double* variable) {
+int tarch::reader::NetCDFReader::readVariable1D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -135,14 +113,8 @@ int tarch::reader::NetCDFReader::
   return 0;
 }
 
-
-int tarch::reader::NetCDFReader::readVariable2D(
-  int         ncid,
-  const char* key,
-  double**    variable,
-  std::size_t rows,
-  std::size_t cols
-) {
+int tarch::reader::NetCDFReader::
+  readVariable2D(int ncid, const char* key, double** variable, std::size_t rows, std::size_t cols) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -167,9 +139,7 @@ int tarch::reader::NetCDFReader::readVariable2D(
   return 0;
 }
 
-
-int tarch::reader::NetCDFReader::
-  readVariable2D(int ncid, const char* key, double* variable) {
+int tarch::reader::NetCDFReader::readVariable2D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -182,7 +152,6 @@ int tarch::reader::NetCDFReader::
 
   return 0;
 }
-
 
 int tarch::reader::NetCDFReader::readVariable2DHyperslab(
   int         ncid,
@@ -218,7 +187,6 @@ int tarch::reader::NetCDFReader::readVariable2DHyperslab(
 
   return 0;
 }
-
 
 int tarch::reader::NetCDFReader::readVariable3DHyperslab(
   int         ncid,
