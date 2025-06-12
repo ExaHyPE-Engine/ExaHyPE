@@ -285,9 +285,9 @@ class FV(object):
         self._postprocess_updated_patch = ""
 
         self._compute_kernel_call = "#error Not yet defined"
-        self._can_fuse = True
         self._fused_compute_kernel_call = "#error Not yet defined"
 
+        self._can_fuse = True
         self._use_enclave_tasking = use_enclave_tasking
         self._number_of_enclave_tasks = number_of_enclave_tasks
         self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
@@ -893,6 +893,7 @@ The finest mesh width of """
 
         self._action_set_update_patch = None
         self._action_set_reconstruct_patch = None
+        self._action_set_enclave_tasking = None
 
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
@@ -1340,24 +1341,19 @@ The finest mesh width of """
         It is important that we do the inter-grid transfer operators before we
         apply the boundary conditions.
         """
-        d = {}
-        self._init_dictionary_with_default_parameters(d)
-        self.add_entries_to_text_replacement_dictionary(d)
-
         step.add_action_set(self._action_set_preprocess_solution)
-        step.add_action_set(
-            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
-        )
+        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
         step.add_action_set(self._action_set_roll_over_update_of_faces)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_reconstruct_patch)
         step.add_action_set(self._action_set_update_patch)
+        if self._use_enclave_tasking:
+            step.add_action_set(self._action_set_enclave_tasking)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
-
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
@@ -1368,6 +1364,9 @@ The finest mesh width of """
         self._namespace = namespace
 
         self._generate_kernels(output, subdirectory)
+        self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
+        if self._use_enclave_tasking and self._can_fuse:
+            self._action_set_reconstruct_patch.generate_fused_kernels(namespace, output, dimensions, subdirectory)
 
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         if self._solver_template_file_class_name is None:
@@ -1435,10 +1434,6 @@ The finest mesh width of """
             output.makefile.add_h_file(subdirectory + "VariableShortcuts" + self._name + ".h", generated=True)
 
         if self._use_enclave_tasking:
-            # Some includes might logically belong into the action sets, but now they are
-            # 'outsourced' into the enclave task. So we manually add it here.
-            #d["SOLVER_INCLUDES"] += self.user_solver_includes
-            d["SOLVER_INCLUDES"] += self.user_action_set_includes
             generated_enclave_task = (
                 peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                     headfile_template=os.path.dirname(os.path.realpath(__file__))
@@ -1528,6 +1523,13 @@ The finest mesh width of """
             d["NUMBER_OF_VARIABLES_IN_VOLUME"]
         )
 
+        d["FACE_CARDINALITY_2D"] = (
+            int(self._patch_overlap_new.no_of_unknowns * self._patch_overlap_new.dim[0] * self._patch_overlap_new.dim[1])
+        )
+        d["FACE_CARDINALITY_3D"] = (
+            int(self._patch_overlap_new.no_of_unknowns * self._patch_overlap_new.dim[0] * self._patch_overlap_new.dim[1] * self._patch_overlap_new.dim[2])
+        )
+
         if self._min_volume_h > self._max_volume_h:
             raise Exception("min/max h are inconsistent")
 
@@ -1598,11 +1600,11 @@ The finest mesh width of """
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
 
+        d["CAN_FUSE"] = self._can_fuse
         d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
         d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
         d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
         d["ENCLAVE_TASK_TYPE"] = f"{self._name}EnclaveTask"
-        d["CAN_FUSE"] = self._can_fuse
 
         d["COMPUTE_KERNEL_CALL"] = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render(**d)
         d["FUSED_COMPUTE_KERNEL_CALL"] = jinja2.Template(self._fused_compute_kernel_call, undefined=jinja2.DebugUndefined).render(**d)

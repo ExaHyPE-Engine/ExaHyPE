@@ -57,8 +57,8 @@
   __global__ static void
   {% if DIMENSIONS==3 %} __launch_bounds__(512) {% else %} __launch_bounds__(256) {% endif %}
   kernel(
-    const {{STORAGE_PRECISION}}* const NOALIAS QIns,
-    {{STORAGE_PRECISION}}* const NOALIAS       QOuts,
+    const {{STORAGE_PRECISION}}* const NOALIAS QInFlattened,
+    {{STORAGE_PRECISION}}* const NOALIAS       QOutFlattened,
     const double* const NOALIAS                patchCentres,
     const double* const NOALIAS                patchSizes,
     const double                               timeStamp,
@@ -69,8 +69,8 @@
     {% endif %}
   ) {
     const int patchIndex                   = blockIdx.x;
-    const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
-    {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
+    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
+    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
     const tarch::la::Vector<Dimensions, double> patchCentre {
       patchCentres[patchIndex * {{DIMENSIONS}}],
@@ -132,8 +132,8 @@
   CHECK_CUDA_ERROR(cudaSetDevice(targetDevice));
 
   kernel<<<dimGrid, dimBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
-    patchData.QIn1D,
-    patchData.QOut1D,
+    patchData.QInFlattened,
+    patchData.QOutFlattened,
     patchData.cellCentre[0].data(),
     patchData.cellSize[0].data(),
     patchData.t,

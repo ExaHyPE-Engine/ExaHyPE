@@ -41,12 +41,12 @@
   auto patchSizesDevice = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), patchSizesHost);
   Kokkos::deep_copy(patchSizesDevice, patchSizesHost);
 
-  UnmanagedView qInsHost(patchData.QIn1D, viewSizeIn);
-  auto qIns = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), qInsHost);
-  Kokkos::deep_copy(qIns, qInsHost);
+  UnmanagedView QInFlattenedHost(patchData.QInFlattened, viewSizeIn);
+  auto QInFlattened = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), QInFlattenedHost);
+  Kokkos::deep_copy(QInFlattened, QInFlattenedHost);
 
-  UnmanagedView qOutsHost(patchData.QOut1D, viewSizeOut);
-  auto qOuts = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), qOutsHost);
+  UnmanagedView QOutFlattenedHost(patchData.QOutFlattened, viewSizeOut);
+  auto QOutFlattened = Kokkos::create_mirror(Kokkos::DefaultExecutionSpace::memory_space(), QOutFlattenedHost);
 
   Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> teamPolicy(numberOfPatches, Kokkos::AUTO);
   Kokkos::parallel_reduce(
@@ -57,8 +57,8 @@
     const tarch::la::Vector<Dimensions, double> patchCentre = patchCentresDevice(patchIndex);
     const tarch::la::Vector<Dimensions, double> patchSize   = patchSizesDevice(patchIndex);
 
-    {{COMPUTE_PRECISION}}* const QIn  = qIns.data() + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %});
-    {{COMPUTE_PRECISION}}* QOut = qOuts.data() + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %});
+    {{COMPUTE_PRECISION}}* const QIn  = QInFlattened.data() + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %});
+    {{COMPUTE_PRECISION}}* QOut       = QOutFlattened.data() + (patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %});
     {% if DIMENSIONS == 3 %}
     Kokkos::parallel_for(
       Kokkos::TeamThreadMDRange(
@@ -92,7 +92,7 @@
     });
   }, Kokkos::Max<{{COMPUTE_PRECISION}}>(maxEigenvalueAfterTimeStep));
 
-  Kokkos::deep_copy(qOutsHost, qOuts);
+  Kokkos::deep_copy(QOutFlattenedHost, QOutFlattened);
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   return maxEigenvalueAfterTimeStep;

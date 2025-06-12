@@ -9,8 +9,8 @@
 
 double {{FULL_QUALIFIED_NAMESPACE}}::updateSolutionWithRiemann(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
-  const {{STORAGE_PRECISION}}* NOALIAS const   QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const         QOut,
+  const {{STORAGE_PRECISION}}* NOALIAS const        QIn,
+  {{STORAGE_PRECISION}}* NOALIAS const              QOut,
   const double                                      timeStamp,
   const double                                      timeStepSize,
   const tarch::la::Vector<Dimensions, double>&      patchCentre,

@@ -87,21 +87,21 @@
 {% endmacro %}
 
 {% macro loopOverPatches() %}
-  const int numberOfPatches               = patchData.numberOfCells;
-  const {{COMPUTE_PRECISION}}* const QIns = patchData.QIn1D;
-  {{COMPUTE_PRECISION}}* const QOuts      = patchData.QOut1D;
-  const double* const patchCentres        = patchData.cellCentre[0].data();
-  const double* const patchSizes          = patchData.cellSize[0].data();
-  const double timeStamp                  = patchData.t;
-  const double timeStepSize               = patchData.dt;
+  const int numberOfPatches                       = patchData.numberOfCells;
+  const {{COMPUTE_PRECISION}}* const QInFlattened = patchData.QInFlattened;
+  {{COMPUTE_PRECISION}}* const QOutFlattened      = patchData.QOutFlattened;
+  const double* const patchCentres                = patchData.cellCentre[0].data();
+  const double* const patchSizes                  = patchData.cellSize[0].data();
+  const double timeStamp                          = patchData.t;
+  const double timeStepSize                       = patchData.dt;
 
   {% if COMPUTE_MAX_EIGENVALUE==True %}
   double maxEigenvalueAfterTimeStep = 0.0;
   {% endif %}
 
   for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
-    {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
+    const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
+    {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
     const tarch::la::Vector<Dimensions, double> patchCentre {
       patchCentres[patchIndex * {{DIMENSIONS}}],

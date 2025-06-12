@@ -52,8 +52,9 @@ protected:
   const peano4::datamanagement::CellMarker _marker;
   const double                             _t;
   const double                             _dt;
-  /*const*/ T* __restrict__ const          _QIn;
-  T* __restrict__ const                    _QOut;
+  T* NOALIAS const                         _QIn;
+  T* NOALIAS                               _faces[TwoTimesD];
+  T* NOALIAS const                         _QOut;
   Functor                                  _functor;
 
 public:
@@ -74,19 +75,20 @@ public:
    * @param QOut Has to be created on heap before passing to the task
    */
   EnclaveTask(
-    int                                         enclaveTaskTypeId,
-    const peano4::datamanagement::CellMarker&   marker,
-    double                                      t,
-    double                                      dt,
-    /*const*/ T* __restrict__ const             QIn,
-    T* __restrict__ const                       QOut,
-    Functor                                     functor
+    int                                       enclaveTaskTypeId,
+    const peano4::datamanagement::CellMarker& marker,
+    double                                    t,
+    double                                    dt,
+    T* NOALIAS const                          QIn,
+    T* NOALIAS const                          faces[TwoTimesD],
+    T* NOALIAS const                          QOut,
+    Functor                                   functor
   );
 
-  EnclaveTask(const EnclaveTask&)  = delete;
+  EnclaveTask(const EnclaveTask&)            = delete;
   EnclaveTask& operator=(const EnclaveTask&) = delete;
-  EnclaveTask(EnclaveTask&&) = delete;
-  EnclaveTask& operator=(EnclaveTask&&) = delete;
+  EnclaveTask(EnclaveTask&&)                 = delete;
+  EnclaveTask& operator=(EnclaveTask&&)      = delete;
 
   virtual ~EnclaveTask() override = default;
 

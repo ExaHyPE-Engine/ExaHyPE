@@ -23,11 +23,13 @@ namespace exahype2 {
    */
   template <typename inType, typename outType> struct CellData {
     inType**                               QIn;
-    inType*                                QIn1D;
+    inType*                                QInFlattened;
+    inType*                                (*faces)[TwoTimesD];
+    inType*                                facesFlattened;
     tarch::la::Vector<Dimensions, double>* cellCentre;
     tarch::la::Vector<Dimensions, double>* cellSize;
     outType**                              QOut;
-    outType*                               QOut1D;
+    outType*                               QOutFlattened;
     outType*                               maxEigenvalue;
 
     // Assuming global time stepping
@@ -50,6 +52,18 @@ namespace exahype2 {
 
     CellData(
       inType* const                                QIn_,
+      const tarch::la::Vector<Dimensions, double>& cellCentre_,
+      const tarch::la::Vector<Dimensions, double>& cellSize_,
+      double                                       t_,
+      double                                       dt_,
+      outType* const                               QOut_,
+      tarch::MemoryLocation                        memoryLocation_ = tarch::MemoryLocation::Heap,
+      int                                          targetDevice_   = tarch::accelerator::Device::DefaultDevice
+    );
+
+    CellData(
+      inType* const                                QIn_,
+      inType* const                                faces_[TwoTimesD],
       const tarch::la::Vector<Dimensions, double>& cellCentre_,
       const tarch::la::Vector<Dimensions, double>& cellSize_,
       double                                       t_,

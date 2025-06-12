@@ -4,8 +4,6 @@
 
 #include "{{SOLVER_NAME}}.h"
 
-#include "tarch/la/Vector.h"
-
 #include "exahype2/CellData.h"
 
 {% for item in NAMESPACE -%}

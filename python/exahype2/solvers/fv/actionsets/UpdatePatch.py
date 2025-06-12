@@ -10,8 +10,8 @@ class UpdatePatch(AbstractFVActionSet):
     _Template_UpdatePatch = jinja2.Template(
         """
   if ({{GUARD}}) {
-    auto* /*const*/ newQ = {{NEW_ACCESSOR}}.value;
-    auto* /*const*/ oldQWithHalo = {{OLD_ACCESSOR}}.value;
+    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
+    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.value;
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(false);
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -20,16 +20,16 @@ class UpdatePatch(AbstractFVActionSet):
     assertion2(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
     assertion2(tarch::la::greaterEquals(timeStepSize, 0.0), timeStamp, timeStepSize);
 
-    if ({{ENCLAVE_GUARD}}) {
+    if ({{ENCLAVE_GUARD}}) { // is skeleton cell
 #if PeanoDebug > 0
       ::exahype2::fv::validatePatch(
-        oldQWithHalo,
+        QIn,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{HALO_SIZE}}, // Halo size
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-      ); // // Previous time step has to be valid
+      ); // Previous time step has to be valid
 #endif
 
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
@@ -42,7 +42,7 @@ class UpdatePatch(AbstractFVActionSet):
 
 #if PeanoDebug > 0
       ::exahype2::fv::validatePatch(
-        newQ,
+        QOut,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -54,26 +54,6 @@ class UpdatePatch(AbstractFVActionSet):
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
       repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.h()), tarch::la::max(marker.h()));
-    } else { // is an enclave cell
-      {% if USE_ENCLAVE_TASKING %}
-      {% if CAN_FUSE %}
-      ::exahype2::EnclaveBookkeeping::getInstance().bookmarkTask(new tasks::{{ENCLAVE_TASK_TYPE}}(
-        marker,
-        timeStamp,
-        timeStepSize,
-        oldQWithHalo,
-        newQ
-      ));
-      {% else %}
-      tarch::multicore::spawnTask(new tasks::{{ENCLAVE_TASK_TYPE}}(
-        marker,
-        timeStamp,
-        timeStepSize,
-        oldQWithHalo,
-        newQ
-      ));
-      {% endif %}
-      {% endif %}
     }
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
@@ -101,7 +81,7 @@ class UpdatePatch(AbstractFVActionSet):
         d["OLD_ACCESSOR"] = self.old_accessor
         d["NEW_ACCESSOR"] = self.new_accessor
 
-    def get_body_of_operation(self,operation_name):
+    def get_body_of_operation(self, operation_name):
         result = ""
         if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
           d = {}
@@ -112,22 +92,11 @@ class UpdatePatch(AbstractFVActionSet):
           pass
         return result
 
-    def get_body_of_unprepareTraversal(self):
-        result = ""
-        if self._solver._use_enclave_tasking and self._solver._can_fuse:
-            result += "::exahype2::EnclaveBookkeeping::getInstance().fusePendingTasks();"
-        return result
-
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_includes(self):
         result = super(UpdatePatch, self).get_includes()
-        if self._solver._use_enclave_tasking:
-            result += """
-#include "tasks/""" + self._solver._name + """EnclaveTask.h"
-#include "exahype2/EnclaveBookkeeping.h"
-"""
         result += """
 #include "exahype2/fv/PatchUtils.h"
 """

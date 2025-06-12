@@ -8,8 +8,6 @@ import exahype2
 
 import jinja2
 
-from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
-
 
 class SeparateSweeps(RungeKuttaDG):
   """
