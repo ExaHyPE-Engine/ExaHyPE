@@ -441,22 +441,13 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         )
 
     def create_action_sets(self):
-        """
-
-        Call superclass routine and then reconfigure the update cell call.
-        Only the UpdateCell action set is specific to a single sweep.
-
-        This operation is implicity called via the superconstructor.
-
-        Each guard here should combine the storage predicate with the
-        actual solver phase.
-
-        """
         super(SeparateSweeps, self).create_action_sets()
         self._action_set_reconstruct_patch = ReconstructPatch(
             patch=self._patch,
             patch_overlap=self._patch_overlap_new,
             patch_reconstructed=self._patch_reconstructed,
+            solver_name=self._name,
+            precision="double",
             guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
             add_assertions_to_halo_exchange=True
         )

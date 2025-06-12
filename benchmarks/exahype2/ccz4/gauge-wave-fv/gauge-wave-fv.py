@@ -207,7 +207,7 @@ if __name__ == "__main__":
             self.postprocess_updated_patch = """
     int index = 0;
     for (int i = 0; i < {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}}; i++) {
-      applications::exahype2::ccz4::enforceCCZ4constraints(newQ + index);
+      applications::exahype2::ccz4::enforceCCZ4constraints(QOut + index);
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
 """

@@ -7,7 +7,7 @@ from .SolverDeclarations import SolverDeclarations
 from .SolverDefinitions import SolverDefinitions
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.fv.actionsets import UpdatePatch
+from exahype2.solvers.fv.actionsets import UpdatePatch, EnclaveTasking
 from peano4.toolbox.blockstructured.ReconstructPatch import ReconstructPatch
 
 
@@ -110,21 +110,15 @@ class SingleSweep(FV):
         """
         super(SingleSweep, self).create_action_sets()
         self._action_set_update_patch = UpdatePatch(self)
+        self._action_set_enclave_tasking = EnclaveTasking(self)
         self._action_set_reconstruct_patch = ReconstructPatch(
             patch=self._patch,
             patch_overlap=self._patch_overlap_new,
             patch_reconstructed=self._patch_reconstructed,
-            guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
+            solver_name=self._name,
+            precision=self._storage_precision,
+            guard="not marker.willBeRefined() and not marker.hasBeenRefined()" + (" and marker.willBeSkeletonCell()" if self._use_enclave_tasking else ""),
             add_assertions_to_halo_exchange=True
-        )
-
-    @property
-    def user_action_set_includes(self):
-        return (
-            """
-#include "exahype2/CellData.h"
-"""
-            + super(SingleSweep, self).user_action_set_includes
         )
 
     def set_implementation(

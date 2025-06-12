@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "config.h"
+
 #include "exahype2/EnclaveTask.h"
 
 #include "peano4/datamanagement/CellMarker.h"
-
-{{SOLVER_INCLUDES}}
 
 #include <vector>
 #include <memory>
@@ -39,10 +39,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
      */
      static void applyKernelToPatch(
       const peano4::datamanagement::CellMarker&       marker,
-      double                                          timeStamp,
-      double                                          timeStepSize,
-      /*const*/ {{STORAGE_PRECISION}}* NOALIAS const  oldQWithHalo,
-      {{STORAGE_PRECISION}}* NOALIAS const            newQ
+      const double                                    timeStamp,
+      const double                                    timeStepSize,
+      {{STORAGE_PRECISION}}* NOALIAS                  QIn,
+      {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+      {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 
   public:
@@ -50,10 +51,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
 
     {{CLASSNAME}}(
       const peano4::datamanagement::CellMarker&       marker,
-      double                                          timeStamp,
-      double                                          timeStepSize,
-      /*const*/ {{STORAGE_PRECISION}}* NOALIAS const  oldQWithHalo,
-      {{STORAGE_PRECISION}}* NOALIAS const            newQ
+      const double                                    timeStamp,
+      const double                                    timeStepSize,
+      {{STORAGE_PRECISION}}* NOALIAS                  QIn,
+      {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+      {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 
     ~{{CLASSNAME}}() override final = default;

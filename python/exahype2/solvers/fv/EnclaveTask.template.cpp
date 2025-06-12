@@ -2,8 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#include "config.h"
 #include "repositories/SolverRepository.h"
+
+#include "kernels/{{SOLVER_NAME}}/ReconstructPatch.h"
+#include "kernels/{{SOLVER_NAME}}/RiemannSolver.h"
 
 #include "exahype2/CellData.h"
 #include "exahype2/fv/PatchUtils.h"
@@ -22,20 +24,25 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const peano4::datamanagement::CellMarker&       marker,
-  double                                          timeStamp,
-  double                                          timeStepSize,
-  /*const*/ {{STORAGE_PRECISION}}* NOALIAS const  oldQWithHalo,
-  {{STORAGE_PRECISION}}* NOALIAS const            newQ
+  const double                                    timeStamp,
+  const double                                    timeStepSize,
+  {{STORAGE_PRECISION}}* NOALIAS                  QIn,
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+  {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ) {
+  std::swap(QIn, QOut);
+  kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces, QOut);
+  std::swap(QIn, QOut);
+
 #if PeanoDebug > 0
   ::exahype2::fv::validatePatch(
-    oldQWithHalo,
+    QIn,
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     {{HALO_SIZE}}, // Halo size
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-  ); // // Previous time step has to be valid
+  ); // Previous time step has to be valid
 #endif
 
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
@@ -48,7 +55,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
 
 #if PeanoDebug > 0
   ::exahype2::fv::validatePatch(
-    newQ,
+    QOut,
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -63,24 +70,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const peano4::datamanagement::CellMarker&       marker,
-  double                                          timeStamp,
-  double                                          timeStepSize,
-  /*const*/ {{STORAGE_PRECISION}}* NOALIAS const  oldQWithHalo,
-  {{STORAGE_PRECISION}}* NOALIAS const            newQ
+  const double                                    timeStamp,
+  const double                                    timeStepSize,
+  {{STORAGE_PRECISION}}* NOALIAS                  QIn,
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+  {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ):
   ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
     _enclaveTaskTypeId,
     marker,
     timeStamp,
     timeStepSize,
-    oldQWithHalo,
-    newQ,
+    QIn,
+    faces,
+    QOut,
     [&]() -> void {
       applyKernelToPatch(
         _marker,
         _t,
         _dt,
         _QIn,
+        _faces,
         _QOut
       );
     }
@@ -90,6 +100,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
 }
 
 {% if CAN_FUSE %}
+
+#include "kernels/{{SOLVER_NAME}}/ReconstructPatchFused.h"
+#include "kernels/{{SOLVER_NAME}}/RiemannSolverFused.h"
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks) {
   const int numberOfPatches = otherTasks.size() + 1;
 
@@ -106,71 +120,108 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   int patchIndex = 0;
   for (auto& otherTask: otherTasks) {
-    patchData.QIn[patchIndex]             = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
-    patchData.QOut[patchIndex]            = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
-    patchData.cellCentre[patchIndex]      = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.x();
-    patchData.cellSize[patchIndex]        = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
-    patchData.maxEigenvalue[patchIndex]   = 0.0;
-    patchIndex++;
+    patchData.QIn[patchIndex]               = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
+    for (int f = 0; f < TwoTimesD; ++f) {
+      patchData.faces[patchIndex][f]        = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[f];
+    }
+    patchData.QOut[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
+    patchData.cellSize[patchIndex]          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
+    patchData.cellCentre[patchIndex]        = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.x();
+    patchData.maxEigenvalue[patchIndex]     = 0.0;
     delete otherTask;
+    patchIndex++;
   }
   patchData.t                             = _t;
   patchData.dt                            = _dt;
   patchData.QIn[patchIndex]               = _QIn;
+  for (int f = 0; f < TwoTimesD; ++f) {
+    patchData.faces[patchIndex][f]        = _faces[f];
+  }
   patchData.QOut[patchIndex]              = _QOut;
   patchData.cellCentre[patchIndex]        = _marker.x();
   patchData.cellSize[patchIndex]          = _marker.h();
   patchData.maxEigenvalue[patchIndex]     = 0.0;
 
-  patchData.QIn1D = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+  patchData.QInFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
-  patchData.QOut1D = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+  patchData.facesFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
+    numberOfPatches * TwoTimesD * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
+    tarch::MemoryLocation::Pinned,
+    TARGET_DEVICE
+  );
+  patchData.QOutFlattened = tarch::accelerator::MemoryManager::getInstance().allocate<{{STORAGE_PRECISION}}>(
     numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
   );
+
+  // Before swap: QIn is with halo, QOut is without halo
+  // After swap: QIn is without halo, QOut is with halo (that is reconstructed as next step)
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
-    auto* const oldQWithHalo = patchData.QIn[patchIndex];
+    std::swap(patchData.QIn[patchIndex], patchData.QOut[patchIndex]);
+
+    std::copy_n(
+      patchData.QIn[patchIndex],
+      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
+      &patchData.QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}]
+    );
+
+    for (int f = 0; f < TwoTimesD; ++f) {
+      std::copy_n(
+        patchData.faces[patchIndex][f],
+        {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
+        &patchData.facesFlattened[
+          patchIndex * TwoTimesD * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Skip whole patches
+          + f * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Move to the f-th face inside the patch
+        ]
+      );
+    }
+  }
+
+  kernels::{{SOLVER_NAME}}::reconstructPatchFused(patchData, TARGET_DEVICE);
+
+  // QOut of patch reconstruction is now QIn for the Riemann solver
+  // QIn for patch reconstruction is now QOut of the Riemann solver
+  std::swap(patchData.QInFlattened, patchData.QOutFlattened);
+
+  for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
+    auto* const QIn = &patchData.QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
 #if PeanoDebug > 0
     ::exahype2::fv::validatePatch(
-      oldQWithHalo,
+      QIn,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{HALO_SIZE}}, // Halo size
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-    ); // // Previous time step has to be valid
+    ); // Previous time step has to be valid
 #endif
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
-
-    std::copy_n(
-      patchData.QIn[patchIndex],
-      {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %},
-      &patchData.QIn1D[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}]
-    );
   }
 
   const auto maxEigenvalue = {{FUSED_COMPUTE_KERNEL_CALL}}
 
   for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
+    std::swap(patchData.QIn[patchIndex], patchData.QOut[patchIndex]);
     std::copy_n(
-      &patchData.QOut1D[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}],
+      &patchData.QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}],
       {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %},
       patchData.QOut[patchIndex]
     );
 
-    auto* const newQ = patchData.QOut[patchIndex];
+    auto* const QOut = patchData.QOut[patchIndex];
 
     {{POSTPROCESS_UPDATED_PATCH}}
 
 #if PeanoDebug > 0
     ::exahype2::fv::validatePatch(
-      newQ,
+      QOut,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -180,8 +231,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
   }
 
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.QIn1D, TARGET_DEVICE);
-  tarch::accelerator::MemoryManager::getInstance().free(patchData.QOut1D, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.QInFlattened, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.facesFlattened, TARGET_DEVICE);
+  tarch::accelerator::MemoryManager::getInstance().free(patchData.QOutFlattened, TARGET_DEVICE);
 
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.h()), tarch::la::max(_marker.h()));

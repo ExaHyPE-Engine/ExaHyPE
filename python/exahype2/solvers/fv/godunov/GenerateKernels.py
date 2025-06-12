@@ -14,13 +14,13 @@ def generate_kernels(
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = subdirectory + "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
+
     if not os.path.exists(kernels_output_path):
         os.makedirs(kernels_output_path)
 
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["KERNELS_NAMESPACE"] = "::".join(kernels_namespace)
 
     riemann_solver_file = "RiemannSolver"
 
@@ -49,10 +49,10 @@ def generate_kernels(
 
     solver._compute_kernel_call = jinja2.Template(
         """
-    {{KERNELS_NAMESPACE}}::updateSolutionWithRiemann(
+    kernels::{{SOLVER_NAME}}::updateSolutionWithRiemann(
       repositories::{{SOLVER_INSTANCE}},
-      oldQWithHalo,
-      newQ,
+      QIn,
+      QOut,
       timeStamp,
       timeStepSize,
       marker.x(),
@@ -71,13 +71,13 @@ def generate_fused_kernels(
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = subdirectory + "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
+
     if not os.path.exists(kernels_output_path):
         os.makedirs(kernels_output_path)
 
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["KERNELS_NAMESPACE"] = "::".join(kernels_namespace)
 
     riemann_solver_file = "RiemannSolverFused"
 
@@ -106,7 +106,7 @@ def generate_fused_kernels(
 
     solver._fused_compute_kernel_call = jinja2.Template(
         """
-    {{KERNELS_NAMESPACE}}::updateSolutionWithRiemannFused(
+    kernels::{{SOLVER_NAME}}::updateSolutionWithRiemannFused(
       repositories::{{SOLVER_INSTANCE}},
       patchData,
       TARGET_DEVICE

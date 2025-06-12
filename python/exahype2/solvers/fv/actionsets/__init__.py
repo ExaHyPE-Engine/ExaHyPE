@@ -12,3 +12,4 @@ from .PostprocessSolution   import VolumeWisePostprocessSolution
 from .PreprocessSolution    import EmptyPreprocessSolution
 from .PreprocessSolution    import VolumeWisePreprocessSolution
 from .UpdatePatch           import UpdatePatch
+from .EnclaveTasking        import EnclaveTasking

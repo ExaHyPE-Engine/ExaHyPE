@@ -66,61 +66,61 @@
     const int endPatch   = (task + 1) * (patchData.numberOfCells / {{NUMBER_OF_ENCLAVE_TASKS}}) + std::min(task + 1, patchData.numberOfCells % {{NUMBER_OF_ENCLAVE_TASKS}});
     const int numberOfPatches = endPatch - startPatch;
 
-    const {{COMPUTE_PRECISION}}* const QIns     = patchData.QIn1D + startPatch * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %};
-    {{COMPUTE_PRECISION}}* const QOuts          = patchData.QOut1D + startPatch * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %};
-    const double* const patchCentres            = patchData.cellCentre[0].data() + startPatch * {{DIMENSIONS}};
-    const double* const patchSizes              = patchData.cellSize[0].data() + startPatch * {{DIMENSIONS}};
+    const {{COMPUTE_PRECISION}}* const QInFlattened     = patchData.QInFlattened + startPatch * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %};
+    {{COMPUTE_PRECISION}}* const QOutFlattened          = patchData.QOutFlattened + startPatch * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %};
+    const double* const patchCentres                    = patchData.cellCentre[0].data() + startPatch * {{DIMENSIONS}};
+    const double* const patchSizes                      = patchData.cellSize[0].data() + startPatch * {{DIMENSIONS}};
     {% if COMPUTE_MAX_EIGENVALUE==True %}
-    {{COMPUTE_PRECISION}}* const maxEigenvalues = patchData.maxEigenvalue + startPatch;
+    {{COMPUTE_PRECISION}}* const maxEigenvalues         = patchData.maxEigenvalue + startPatch;
     {% endif %}
-    const double timeStamp                      = patchData.t;
-    const double timeStepSize                   = patchData.dt;
+    const double timeStamp                              = patchData.t;
+    const double timeStepSize                           = patchData.dt;
 
     {% if GPU == "omp" %}
     #ifdef UseTargetDART // Use nowait to spawn tasks asynchronously
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     #pragma omp target teams distribute device(targetDevice) nowait \
     map(to: \
-      QIns[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
+      QInFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
       patchCentres[0: numberOfPatches * {{DIMENSIONS}}], \
       patchSizes[0: numberOfPatches * {{DIMENSIONS}}] \
     ) \
     map(from: \
-      QOuts[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}], \
+      QOutFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}], \
       maxEigenvalues[0: numberOfPatches] \
     )
     {% else %}
     #pragma omp target teams distribute device(targetDevice) nowait \
     map(to: \
-      QIns[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
+      QInFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
       patchCentres[0: numberOfPatches * {{DIMENSIONS}}], \
       patchSizes[0: numberOfPatches * {{DIMENSIONS}}] \
     ) \
     map(from: \
-      QOuts[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}] \
+      QOutFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}] \
     )
     {% endif %}
     #else
     {% if COMPUTE_MAX_EIGENVALUE==True %}
     #pragma omp target teams distribute device(targetDevice) \
     map(to: \
-      QIns[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
+      QInFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
       patchCentres[0: numberOfPatches * {{DIMENSIONS}}], \
       patchSizes[0: numberOfPatches * {{DIMENSIONS}}] \
     ) \
     map(from: \
-      QOuts[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}], \
+      QOutFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}], \
       maxEigenvalues[0: numberOfPatches] \
     )
     {% else %}
     #pragma omp target teams distribute device(targetDevice) \
     map(to: \
-      QIns[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
+      QInFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}], \
       patchCentres[0: numberOfPatches * {{DIMENSIONS}}], \
       patchSizes[0: numberOfPatches * {{DIMENSIONS}}] \
     ) \
     map(from: \
-      QOuts[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}] \
+      QOutFlattened[0: numberOfPatches * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}] \
     )
     {% endif %}
     #endif
@@ -128,8 +128,8 @@
     #pragma omp parallel for
     {% endif %}
     for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-      const {{COMPUTE_PRECISION}}* const QIn = &QIns[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
-      {{COMPUTE_PRECISION}}* const QOut      = &QOuts[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
+      const {{COMPUTE_PRECISION}}* const QIn = &QInFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}} {% endif %}];
+      {{COMPUTE_PRECISION}}* const QOut      = &QOutFlattened[patchIndex * {% if DIMENSIONS==3 %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}} {% else %} {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}} {% endif %}];
 
       const tarch::la::Vector<Dimensions, double> patchCentre {
         patchCentres[patchIndex * {{DIMENSIONS}}],

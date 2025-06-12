@@ -1314,16 +1314,8 @@ The finest mesh width of """
         pass
 
     def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
-        """
+        self._action_set_reconstruct_patch.generate_kernels(namespace, output, dimensions, subdirectory)
 
-        The ExaHyPE2 project will call this operation when it sets
-        up the overall environment.
-
-        This routine is typically not invoked by a user.
-
-        output: peano4.output.Output
-
-        """
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
         if self._solver_template_file_class_name is None:

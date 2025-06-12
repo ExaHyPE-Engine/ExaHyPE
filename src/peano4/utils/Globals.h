@@ -2,12 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-template <int base, int exponent> class BasePowerExponent {
+template <int Base, int Exponent>
+class BasePowerExponent {
 public:
-  enum { value = base * BasePowerExponent<base, exponent - 1>::value };
+  enum { value = Base * BasePowerExponent<Base, Exponent - 1>::value };
 };
 
-template <int base> class BasePowerExponent<base, 0> {
+template <int Base>
+class BasePowerExponent<Base, 0> {
 public:
   enum { value = 1 };
 };
