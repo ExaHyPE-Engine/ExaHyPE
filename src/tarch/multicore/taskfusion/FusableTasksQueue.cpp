@@ -81,12 +81,18 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
 ) {
   tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
 
+<<<<<<< HEAD
   if ( readyTasks.count(taskNumber)>0 ) {
     tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
     runningTasks.insert( taskNumber );
     runningTaskLock.free();
 
     Task* task = readyTasks[taskNumber];
+=======
+  if ( taskNumber!=AnyTask and readyTasks.count(taskNumber)>0 ) {
+    readyTasks[taskNumber]->run();
+    delete readyTasks[taskNumber];
+>>>>>>> branch 'multigrid-weak-scaling' of https://gitlab.lrz.de/hpcsoftware/Peano.git
     readyTasks.erase(taskNumber);
     readyTaskLock.free();
 
@@ -95,6 +101,12 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
 
     runningTaskLock.lock();
     runningTasks.erase( taskNumber );
+  }
+  else if ( taskNumber==AnyTask and not readyTasks.empty() ) {
+    auto [taskNumber, taskPointer] = *readyTasks.begin();
+    taskPointer->run();
+    delete taskPointer;
+    readyTasks.erase(taskNumber);
   }
 }
 

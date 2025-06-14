@@ -4,6 +4,7 @@
 
 #include "tarch/Assertions.h"
 
+#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 
 #include "tarch/logging/Statistics.h"
@@ -26,14 +27,6 @@ namespace {
   tarch::logging::Log _log("tarch::multicore::taskfusion");
 
   const std::string SubmitFusedTaskStatisticsIdentifier("tarch::multicore::taskfusion::submit-fused-tasks");
-
-  // 56.1246s
-//  constexpr tarch::multicore::taskfusion::FusionImplementation ImplementationVariant = tarch::multicore::taskfusion::FusionImplementation::DisableFusionAndProcessImmediately;
-  //  Buggy in OpenMP
-//  constexpr tarch::multicore::taskfusion::FusionImplementation ImplementationVariant = tarch::multicore::taskfusion::FusionImplementation::DisableFusionAndMapOntoNativeTask;
-  constexpr tarch::multicore::taskfusion::FusionImplementation ImplementationVariant = tarch::multicore::taskfusion::FusionImplementation::LazyEvaluation;
-// constexpr tarch::multicore::taskfusion::FusionImplementation ImplementationVariant = tarch::multicore::taskfusion::FusionImplementation::LazyConsumerTasks;
-//  constexpr tarch::multicore::taskfusion::FusionImplementation ImplementationVariant = tarch::multicore::taskfusion::FusionImplementation::ProducerConsumerTaskPairs;
 }
 
 
@@ -53,10 +46,10 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
   assertion1(instruction.minTasks>=0, instruction.toString());
   assertion1(instruction.maxTasks>instruction.minTasks, instruction.toString());
 
-  if (ImplementationVariant==tarch::multicore::taskfusion::FusionImplementation::DisableFusionAndMapOntoNativeTask) {
+  if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask) {
     native::spawnTask(task, inDependencies, taskNumber);
   }
-  else if (ImplementationVariant==tarch::multicore::taskfusion::FusionImplementation::DisableFusionAndProcessImmediately) {
+  else if (tarch::multicore::getOrchestration().getFusionImplementation()==tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately) {
     task->run();
     delete task;
   }
@@ -77,16 +70,20 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence(
     FusableTasksQueue* taskQueue = fusableTaskQueue.at( task->getTaskType() );
     lock.free();
 
-    switch (ImplementationVariant) {
-      case FusionImplementation::DisableFusionAndMapOntoNativeTask:
-      case FusionImplementation::DisableFusionAndProcessImmediately:
+    switch (tarch::multicore::getOrchestration().getFusionImplementation()) {
+      case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask:
+      case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately:
         assertion(false);
         break;
-      case FusionImplementation::LazyEvaluation:
-      case FusionImplementation::LazyConsumerTasks:
+      case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
+      case tarch::multicore::orchestration::FusionImplementation::LazyConsumerTasks:
         translateFusableTaskIntoTaskSequence_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
-      case FusionImplementation::ProducerConsumerTaskPairs:
+      case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
+        translateFusableTaskIntoTaskSequence_LazyEvaluation(task, *taskQueue, inDependencies, taskNumber, instruction);
+        translateFusableTaskIntoTaskSequence_EagerConsumerTasks(task, *taskQueue, inDependencies, taskNumber, instruction);
+        break;
+      case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
         translateFusableTaskIntoTaskSequence_ProducerConsumerTaskPairs(task, *taskQueue, inDependencies, taskNumber, instruction);
         break;
     }
@@ -111,6 +108,20 @@ void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_LazyEval
     Task* readyTask   = new LogReadyTask(task, taskNumber, taskQueue);
     readyTask->setPriority(task->getPriority());
     tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
+  }
+}
+
+
+void tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
+  Task*                  task,
+  FusableTasksQueue&     taskQueue,
+  std::set<TaskNumber>   inDependencies,
+  const TaskNumber&      taskNumber,
+  const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
+) {
+  if (taskQueue.readyTasks.size()>=fuseInstruction.minTasks) {
+    Task* processTask = new ProcessReadyTask(taskNumber, taskQueue);
+    tarch::multicore::native::spawnTask( processTask, tarch::multicore::NoInDependencies, taskNumber);
   }
 }
 
@@ -160,14 +171,17 @@ void tarch::multicore::taskfusion::processAllReadyTasks() {
 
 
 void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(const std::set<TaskNumber>& inDependencies) {
-  switch (ImplementationVariant) {
-    case FusionImplementation::ProducerConsumerTaskPairs:
-    case FusionImplementation::DisableFusionAndProcessImmediately:
-    case FusionImplementation::DisableFusionAndMapOntoNativeTask:
+  switch (tarch::multicore::getOrchestration().getFusionImplementation()) {
+    case tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs:
+    case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately:
+    case tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask:
       break;
-    case FusionImplementation::LazyEvaluation:
-    case FusionImplementation::LazyConsumerTasks:
+    case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
       ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation( inDependencies );
+      break;
+    case tarch::multicore::orchestration::FusionImplementation::LazyConsumerTasks:
+    case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
+      ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks( inDependencies );
       break;
   }
 }
@@ -185,9 +199,26 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
   if (tasksArePending) {
     for (auto taskNumber: inDependencies) {
       for (auto queue: fusableTaskQueue) {
+<<<<<<< HEAD
         if (queue.second->isTaskPending(taskNumber, false) ) {
+=======
+        if (not queue.second->hasTaskBeenProcessed(taskNumber, false) ) {
+          queue.second->processTasks();
+>>>>>>> branch 'multigrid-weak-scaling' of https://gitlab.lrz.de/hpcsoftware/Peano.git
           queue.second->processOneTask(taskNumber);
         }
+      }
+    }
+  }
+}
+
+
+void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies) {
+  for (auto taskNumber: inDependencies) {
+    for (auto queue: fusableTaskQueue) {
+      if (not queue.second->hasTaskBeenProcessed(taskNumber, false) ) {
+        Task* processTask = new ProcessReadyTask(taskNumber, *(queue.second));
+        tarch::multicore::native::spawnTask( processTask, tarch::multicore::NoInDependencies, taskNumber);
       }
     }
   }

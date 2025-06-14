@@ -2,7 +2,7 @@
 
 @page documentation_tarch_task_fusion_strategies Task fusion strategies
 
-\tableofcontents
+@tableofcontents
 
 Task fusion is one of the many magic knobs that can make a huge difference in 
 your application performance: If you use it too aggressively, it will hamper
@@ -44,21 +44,11 @@ will embed the spawned tasks into a queue and try to fuse the tasks from there.
 ## Pick a task orchestration
 
 The task orchestration is controlled through tarch::multicore::setOrchestration().
-For every instance of a fusable task, we either insert this task into a queue
-(if it is ready) or we launch a helper task of type tarch::multicore::taskfusion::LogReadyTask
-which inserts the task as soon as all in-dependencies are met.
-
-@image html src/tarch/multicore/taskfusion/multicore_task_flow-01.png
-
-One the task is in the queue we spawn an instance of ProcessReadyTask.
-When this instance's run() is called, it checks if the underlying task has 
-already been completed. If so, it returns immediately. 
-
-If not, we check if we can do a whole set fo tasks in one rush (task fusion) or 
-we pick out that one relevant task and process this one, leaving all the 
-other tasks in the queue. The hope is that, at one point, there are enough
-tasks remaining, so another instance of ProcessReadyTask will trigger task 
-fusion.
+The code uses the orchestrations' getFusionImplementation() to find out which 
+implementation for the task fusion to pick. More details on the variants can be 
+found below. Besides the implementation variant, the orchestration is also the 
+global instance that decides how many tasks to pack into one fusable task, onto
+which device to deploy the new meta task, and so forth.
 
 The default orchestration is determined through tarch::multicore::orchestration::createDefaultStrategy().
 You can reset the strategy manually. Most extension's Python interfaces provide
@@ -198,6 +188,95 @@ tarch::multicore::orchestration::Strategy::FuseInstruction mghype::MultigridDefa
 [...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+## Task fusion variants
+
+Peano comes along with several variants how to implement the fusion.
+
+
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+As it stands, all variants are fully implemented if you use our OneTBB, either the preview version supporting dynamic task graphs or and older TBB version subject to our extensions.
+For this, you have to compile with
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--with-multithreading=tbb_extension
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For OpenMP, all variants are supported starting from OpenMP 6, as we heavily rely on transparent task graphs.
+For some applications that do not share task dependencies between mesh traversals, older OpenMP versions work too.
+If you don't have a compiler that supports OpenMP 6, then you have to pick your implementation variant carefully.
+</div>
+
+
+### Variant tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask
+
+Supported for all backends. 
+Created for debugging only, as it disables the fusion.
+
+
+### Variant tarch::multicore::orchestration::FusionImplementation::DisableFusionAndProcessImmediately
+
+Might crash with older OpenMP variants.
+This option effectively disables fusion as well and all fusable tasks are eagerly executed.
+Mainly there for debugging reasons.
+
+
+### Variant tarch::multicore::orchestration::FusionImplementation::LazyEvaluation
+
+All fusable tasks are enqueued into a separate queue. 
+When a new task with in-dependencies is launched, we doublecheck if the predecessing tasks is still pending in a fusable queue.
+If so, we trigger the fusion (if there are enough tasks in there already) and definintely ensure that all in-tasks have been processed before we continue.
+The core routines to study how this is all implemented are tarch::multicore::taskfusion::translateFusableTaskIntoTaskSequence_LazyEvaluation() and
+tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation().
+
+
+### Variant tarch::multicore::orchestration::FusionImplementation::LazyConsumerTasks
+
+This variant is very similar to LazyEvaluation, but it differs in that the lazy 
+fusion is deployed to separate tasks. This can massively increase the concurrency.
+
+
+### Variant tarch::multicore::orchestration::FusionImplementation::ProducerConsumerTaskPairs
+ 
+Whenever we get a task (in the example below we get three yellow tasks)
+with dependencies that can be fused, we split each task up into two
+tasks each:
+
+@image html multicore_task_flow-00.png
+
+One task is a preparation task (red), and the other one is the actual
+processing (green). The prep task has all the complex incoming dependencies. The
+processing task is part of a straight task sequence. Both the prep task
+and the processing task know the actual task, which is not part of the
+actual task graph anymore. It is associated with these two wrapper
+classes.
+
+@image html multicore_task_flow-01.png
+
+If the prep task becomes active, we do not evaluate the task. Instead,
+we dump the task into the queue of ready tasks.
+
+@image html multicore_task_flow-02.png
+@image html multicore_task_flow-03.png
+
+The preparation is done through tarch::multicore::taskfusion::LogReadyTask,
+which is rather trivial. The actual task execution and fusion is then
+realised through and instance of ProcessReadyTask which holds also all
+race condition logic. See the class documentation. This processing task
+finally also serves as placeholder for outgoing dependencies.
+
+To ensure that fusion is only applied to tasks of the same type, we store
+the fusable tasks in a map indexed by the task type. This map is called
+pendingTasksThatCanBeFused.
+
+
+### Variant tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks
+
+This is a total hybrid between lazy evaluation and producer-consumer tasks.
+By default, we enqueue all tasks into the respective task queues. 
+This is the same strategy we followed for the lazy schemes.
+However, we also check how many tasks are already in there and if this number if big enough, we spawn one of our consumer tasks.
+So consumer tasks can either be spawned lazily when we realise that we need the outcome of a fusable tasks - this is the same implementation as for LazyConsumerTasks - or they can be issued early as we have enough fusable tasks pending already.
 
 
 ## Further links

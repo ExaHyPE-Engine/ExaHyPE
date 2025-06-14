@@ -13,6 +13,28 @@ namespace tarch {
        * The default strategy is AllOnGPU at the moment.
        */
       Strategy* createDefaultStrategy();
+
+      /**
+       * Control how the fusion is implemented
+       */
+      enum class FusionImplementation {
+        /**
+         * Completely disable any fusion and map each task that can be fused on
+         * a normal task due to a call to native::spawnTask() in
+         * translateFusableTaskIntoTaskSequence().
+         * ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
+         * nop.
+         */
+        DisableFusionAndMapOntoNativeTask,
+        DisableFusionAndProcessImmediately,
+        /**
+         * All fusable tasks are parked in a big queue. If the
+         */
+        LazyEvaluation,
+        LazyConsumerTasks,
+        ProducerConsumerTaskPairs,
+        EagerConsumerTasks
+      };
     } // namespace orchestration
   }   // namespace multicore
 } // namespace tarch
@@ -20,6 +42,7 @@ namespace tarch {
 #include <string>
 #include <utility>
 #include <chrono>
+
 
 
 /**
@@ -167,4 +190,12 @@ public:
    *   a unique identifier.
    */
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) = 0;
+
+  /**
+   * Determine how the implementation handles fusable tasks
+   *
+   * In theory, you can change the strategy at runtime. However, such a
+   * switching is not well-defined and might lead to errors.
+   */
+  virtual FusionImplementation getFusionImplementation() const = 0;
 };

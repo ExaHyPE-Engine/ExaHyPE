@@ -60,3 +60,8 @@ void tarch::multicore::orchestration::AllOnGPU::updateFuseStatistics(
 ) {
   // empty on purpose
 }
+
+
+tarch::multicore::orchestration::FusionImplementation tarch::multicore::orchestration::AllOnGPU::getFusionImplementation() const {
+  return tarch::multicore::orchestration::FusionImplementation::LazyEvaluation;
+}
