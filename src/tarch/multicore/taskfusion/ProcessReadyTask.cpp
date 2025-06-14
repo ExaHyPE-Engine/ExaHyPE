@@ -22,13 +22,9 @@ tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber
 void tarch::multicore::taskfusion::ProcessReadyTask::run() {
   logDebug( "run(...)", "process all tasks of type " << _taskQueue.type << " (initial queue size=" << _taskQueue.readyTasks.size() << ")" );
 
-  const bool hasTaskBeenProcessedWhenFunctionInvoked = _taskQueue.hasTaskBeenProcessed(_taskNumber, true);
+  const bool isTaskStillPending = _taskQueue.isTaskPending(_taskNumber, true);
 
-  if ( hasTaskBeenProcessedWhenFunctionInvoked ) {
-    tarch::multicore::Lock lock(_taskQueue.statisticsSemaphore);
-    _taskQueue.probabilityThatTaskIsCompleted.setValue(1.0);
-  }
-  else {
+  if ( isTaskStillPending ) {
     tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue.type);
 
     if (
@@ -41,7 +37,7 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
       while (
         std::chrono::system_clock::now() < deadline
         and
-        not _taskQueue.hasTaskBeenProcessed(_taskNumber, false)
+        _taskQueue.isTaskPending(_taskNumber, false)
         and
         instruction.minTasks>=taskQueueSize
       ) {
@@ -71,6 +67,10 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
     }
 
     _taskQueue.processOneTask(_taskNumber);
+  }
+  else {
+    tarch::multicore::Lock lock(_taskQueue.statisticsSemaphore);
+    _taskQueue.probabilityThatTaskIsCompleted.setValue(1.0);
   }
 }
 

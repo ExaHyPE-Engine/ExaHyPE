@@ -174,19 +174,18 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(c
 
 
 void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies) {
-  bool hasBeenProcessed = true;
+  bool tasksArePending  = false;
 
   for (auto taskNumber: inDependencies) {
     for (auto queue: fusableTaskQueue) {
-      hasBeenProcessed &= not queue.second->hasTaskBeenProcessed(taskNumber, true);
+      tasksArePending |= queue.second->isTaskPending(taskNumber, true);
     }
   }
 
-  while (not hasBeenProcessed) {
-    hasBeenProcessed = true;
+  if (tasksArePending) {
     for (auto taskNumber: inDependencies) {
       for (auto queue: fusableTaskQueue) {
-        if (not queue.second->hasTaskBeenProcessed(taskNumber, false) ) {
+        if (queue.second->isTaskPending(taskNumber, false) ) {
           queue.second->processOneTask(taskNumber);
         }
       }

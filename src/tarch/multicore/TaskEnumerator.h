@@ -3,29 +3,30 @@
 #pragma once
 
 
-#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/Enumerator.h"
 #include <set>
 #include <string>
 
 
 namespace tarch {
-  class Enumerator;
+  namespace multicore {
+    class TaskEnumerator;
+  }
 }
 
 /**
- * Simple rank-global enumerator
+ * Rank-global enumerator for tasks
  *
- * Very simple utility class to build up a global set of numbers on a rank. Is
- * used in various places to create task numbers for example or to enumerate
- * all vertices and cells properly.
- *
- * The object is thread-safe, i.e. all modifiers are protected via a semaphore.
+ * The "problem" with tasks is that we often have different solvers running in
+ * parallel which all need their own task numbers. And these should, obviously,
+ * not conflict. The present enumerator ensures exactly this, as it naturally
+ * truncates the range of numbers handed out.
  */
-class tarch::Enumerator {
+class tarch::multicore::TaskEnumerator {
   public:
     static constexpr int NoNumber = -1;
 
-    Enumerator();
+    TaskEnumerator();
     void reset();
 
     /**
@@ -48,7 +49,8 @@ class tarch::Enumerator {
     std::string toString() const;
 
   private:
-    tarch::multicore::BooleanSemaphore _semaphore;
-    std::set<int>                      _activeNumbers;
+    static std::vector< tarch::Enumerator* >  _enumerator;
+    static tarch::logging::Log                _log;
+    const int                                 _enumeratorNumber;
 };
 

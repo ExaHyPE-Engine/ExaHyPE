@@ -29,35 +29,15 @@ struct tarch::multicore::taskfusion::FusableTasksQueue {
     ~FusableTasksQueue()                        = default;
     FusableTasksQueue(const FusableTasksQueue&) = delete;
 
-    /**
-     * Each task in the queue is identified through a pointer to the
-     * task plus a task (dependency) number.
-     */
-    using Tasks                = std::map< int, tarch::multicore::Task* >;
-    using TaskNumbers          = std::unordered_set< int >;
-
-    /**
-     * Tasks that are raedy to go
-     */
-    Tasks                                      readyTasks;
-
-    /**
-     * Tasks which are currently tied to a LogTask instance but are not
-     * yet ready
-     */
-    TaskNumbers                                pendingTasks;
-
-    tarch::multicore::BooleanSemaphore         pendingTasksSemaphore;
-    tarch::multicore::BooleanSemaphore         readyTasksSemaphore;
-
-    tarch::multicore::BooleanSemaphore         statisticsSemaphore;
-    tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
-    tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
-
-    const int                                  type;
-
     void insertPendingTask( int taskNumber );
 
+    /**
+     *
+     * ## Assertions
+     *
+     * As the task taskNumber has been inserted through insertPendingTask()
+     * before, we know that it cannot be among the completed tasks yet.
+     */
     void movePendingTaskIntoReadyTaskQueue( Task* task, int taskNumber );
 
     /**
@@ -113,8 +93,41 @@ struct tarch::multicore::taskfusion::FusableTasksQueue {
      * @param tryLock If set, we use a try lock (not a lock) and return false
      *                if the try fails. If it is unset, we use a proper lock.
      */
-    bool hasTaskBeenProcessed(
+    bool isTaskPending(
       int                 taskNumber,
       bool                tryLock
     );
+
+    /**
+     * Each task in the queue is identified through a pointer to the
+     * task plus a task (dependency) number.
+     */
+    using Tasks                = std::map< int, tarch::multicore::Task* >;
+    using TaskNumbers          = std::unordered_set< int >;
+
+    /**
+     * Tasks that are ready to go
+     */
+    Tasks                                      readyTasks;
+
+    /**
+     * Tasks which are currently tied to a LogTask instance but are not
+     * yet ready
+     */
+    TaskNumbers                                pendingTasks;
+
+    /**
+     * Tasks that are complete
+     */
+    TaskNumbers                                runningTasks;
+
+    tarch::multicore::BooleanSemaphore         pendingTasksSemaphore;
+    tarch::multicore::BooleanSemaphore         readyTasksSemaphore;
+    tarch::multicore::BooleanSemaphore         runningTasksSemaphore;
+
+    tarch::multicore::BooleanSemaphore         statisticsSemaphore;
+    tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
+    tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
+
+    const int                                  type;
 };

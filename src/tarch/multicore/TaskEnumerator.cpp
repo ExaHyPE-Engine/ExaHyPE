@@ -1,4 +1,4 @@
-#include "Enumerator.h"
+#include "TaskEnumerator.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
@@ -6,49 +6,49 @@
 #include <limits>
 
 
-tarch::Enumerator::Enumerator():
-  _semaphore(),
-  _activeNumbers()
-{}
+std::vector< tarch::Enumerator* >   tarch::multicore::TaskEnumerator::_enumerator;
+tarch::logging::Log                 tarch::multicore::TaskEnumerator::_log( "tarch::multicore::TaskEnumerator" );
 
 
-void tarch::Enumerator::reset() {
-  tarch::multicore::Lock lock( _semaphore );
-  _activeNumbers.clear();
-}
+tarch::multicore::TaskEnumerator::TaskEnumerator():
+  _enumeratorNumber(_enumerator.size()) {
+  _enumerator.push_back( new Enumerator() );
 
-
-int tarch::Enumerator::size() const {
-  return _activeNumbers.size();
-}
-
-
-int tarch::Enumerator::getNumber() {
-  tarch::multicore::Lock lock( _semaphore );
-
-  int                    result = _activeNumbers.size();
-  constexpr int          Increment  = 23;
-  constexpr int          Max    = std::numeric_limits<int>::max() - 2 * Increment;
-
-  assertion2(Max % Increment != 0, Increment, Max);
-
-  while (_activeNumbers.count(result) > 0) {
-    result = result % Max;
-    result += Increment;
+  const int newMax = std::numeric_limits<int>::max() / _enumerator.size() - 2;
+  for (auto& p: _enumerator) {
+    p->setMax(newMax);
   }
-  _activeNumbers.insert(result);
-  return result;
+
+  logInfo( "TaskEnumerator()", newMax << " task numbers are available per enumerator" );
 }
 
 
-void tarch::Enumerator::releaseNumber( int number ) {
-  assertion1(number >= 0, number);
-  tarch::multicore::Lock lock( _semaphore );
-  assertionEquals(_activeNumbers.count(number), 1);
-  _activeNumbers.erase(number);
+void tarch::multicore::TaskEnumerator::reset() {
+  _enumerator.at(_enumeratorNumber)->reset();
 }
 
 
-std::string tarch::Enumerator::toString() const {
-  return "(size=" + std::to_string( size() ) + ")";
+int tarch::multicore::TaskEnumerator::size() const {
+  return _enumerator.at(_enumeratorNumber)->size();
+}
+
+
+int tarch::multicore::TaskEnumerator::getNumber() {
+  return _enumerator.at(_enumeratorNumber)->getNumber();
+}
+
+
+void tarch::multicore::TaskEnumerator::releaseNumber( int number ) {
+  _enumerator.at(_enumeratorNumber)->releaseNumber(number);
+}
+
+
+std::string tarch::multicore::TaskEnumerator::toString() const {
+  std::ostringstream msg;
+  msg << "{";
+  for (auto& p: _enumerator) {
+    msg << p->toString();
+  }
+  msg << "}";
+  return msg.str();
 }

@@ -17,16 +17,28 @@ tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type_):
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertPendingTask( int taskNumber ) {
-  tarch::multicore::Lock lock(pendingTasksSemaphore);
-  pendingTasks.insert( taskNumber );
+  {
+    tarch::multicore::Lock lock(runningTasksSemaphore);
+    runningTasks.erase(taskNumber);
+  }
+  {
+    tarch::multicore::Lock lock(pendingTasksSemaphore);
+    pendingTasks.insert( taskNumber );
+  }
 }
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::insertReadyTask( Task* task, int taskNumber ) {
-  tarch::multicore::Lock lock(readyTasksSemaphore);
-  readyTasks[taskNumber] = task;
+  {
+    tarch::multicore::Lock lock(runningTasksSemaphore);
+    runningTasks.erase(taskNumber);
+  }
+  {
+    tarch::multicore::Lock lock(readyTasksSemaphore);
+    readyTasks[taskNumber] = task;
 
-  assertion( pendingTasks.count(taskNumber)==0 );
+    assertion( pendingTasks.count(taskNumber)==0 );
+  }
 }
 
 
@@ -40,6 +52,7 @@ void tarch::multicore::taskfusion::FusableTasksQueue::movePendingTaskIntoReadyTa
   readyTasks[taskNumber] = task;
 
   assertion( pendingTasks.count(taskNumber)==0 );
+  assertion( runningTasks.count(taskNumber)==0 );
 }
 
 
@@ -47,8 +60,16 @@ void tarch::multicore::taskfusion::FusableTasksQueue::drainReadyTasks() {
   tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
 
   for (auto& p: readyTasks) {
+    int taskNumber = p.first;
+    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
+    runningTasks.insert( taskNumber );
+    runningTaskLock.free();
+
     p.second->run();
     delete p.second;
+
+    runningTaskLock.lock();
+    runningTasks.erase( taskNumber );
   }
 
   readyTasks.clear();
@@ -61,9 +82,19 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
   tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
 
   if ( readyTasks.count(taskNumber)>0 ) {
-    readyTasks[taskNumber]->run();
-    delete readyTasks[taskNumber];
+    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
+    runningTasks.insert( taskNumber );
+    runningTaskLock.free();
+
+    Task* task = readyTasks[taskNumber];
     readyTasks.erase(taskNumber);
+    readyTaskLock.free();
+
+    task->run();
+    delete task;
+
+    runningTaskLock.lock();
+    runningTasks.erase( taskNumber );
   }
 }
 
@@ -96,35 +127,53 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processTasks() {
       extractedTaskPointers.push_back( iterator->second );
       iterator = readyTasks.erase( iterator );
     }
+
+    tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
+    runningTasks.insert( firstTaskNumber );
+    runningTasks.insert( extractedTaskNumbers.begin(), extractedTaskNumbers.end() );
+    runningTaskLock.free();
+
     readyTaskLock.free();
 
     tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTaskNumbers.size());
     processFusedTask(firstTask, extractedTaskPointers, instruction.device);
+
+    runningTaskLock.lock();
+    runningTasks.erase( firstTaskNumber );
+    for (auto& taskNumber: extractedTaskNumbers) {
+      runningTasks.erase( taskNumber );
+    }
+    runningTaskLock.free();
   }
 }
 
 
-bool tarch::multicore::taskfusion::FusableTasksQueue::hasTaskBeenProcessed(
+bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
   int                 taskNumber,
   bool                tryLock
 ) {
   tarch::multicore::Lock pendingLock(pendingTasksSemaphore, false);
   tarch::multicore::Lock readyLock(readyTasksSemaphore, false);
+  tarch::multicore::Lock runningLock(runningTasksSemaphore, false);
 
   if (tryLock) {
     if (
       not pendingLock.tryLock()
       or
       not readyLock.tryLock()
+      or
+      not runningLock.tryLock()
     ) {
-      return false;
+      return true;
     }
   }
   else {
     pendingLock.lock();
     readyLock.lock();
+    runningLock.lock();
   }
 
-  return pendingTasks.count(taskNumber) == 0
-     and readyTasks.count(taskNumber) == 0;
+  return pendingTasks.count(taskNumber) > 0
+      or readyTasks.count(taskNumber) > 0
+      or runningTasks.count(taskNumber) > 0;
 }
