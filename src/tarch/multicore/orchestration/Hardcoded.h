@@ -23,6 +23,7 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     int  _deviceForFusedTasks;
     int  _maxNestedConcurrency;
     std::chrono::microseconds  _timeout;
+    FusionImplementation       _fusionImplementation;
 
   public:
     /**
@@ -79,7 +80,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
       int  maxTasksToFuse,
       int  deviceForFusedTasks,
       int  maxNestedConcurrency,
-      std::chrono::microseconds  timeout
+      std::chrono::microseconds  timeout,
+      FusionImplementation fusionImplementation
     );
     virtual ~Hardcoded() = default;
 
@@ -95,4 +97,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
       double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
       double probabilityThatTaskIsCompleted
     ) override;
+
+    virtual FusionImplementation getFusionImplementation() const override;
 };

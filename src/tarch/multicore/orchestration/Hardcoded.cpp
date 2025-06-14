@@ -10,7 +10,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     1,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     NoNestedParallelism,
-    NoTimeout
+    NoTimeout,
+    FusionImplementation::LazyEvaluation
   );
 }
 
@@ -21,7 +22,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     1,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     NoNestedParallelism,
-    NoTimeout
+    NoTimeout,
+    FusionImplementation::LazyEvaluation
   );
 }
 
@@ -36,7 +38,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     numberOfTasksToFuse,               // tasksToFuse
     targetDevice,                      // deviceForFusedTasks
     NoNestedParallelism,
-    NoTimeout
+    NoTimeout,
+    FusionImplementation::LazyEvaluation
   );
 }
 
@@ -45,17 +48,23 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   int  maxTasksToFuse,
   int  deviceForFusedTasks,
   int  maxNestedConcurrency,
-  std::chrono::microseconds  timeout
+  std::chrono::microseconds  timeout,
+  FusionImplementation fusionImplementation
 ):
   _minTasksToFuse(minTasksToFuse),
   _maxTasksToFuse(maxTasksToFuse),
   _deviceForFusedTasks(deviceForFusedTasks),
   _maxNestedConcurrency(maxNestedConcurrency),
-  _timeout(timeout) {}
+  _timeout(timeout),
+  _fusionImplementation(fusionImplementation)
+{}
+
 
 void tarch::multicore::orchestration::Hardcoded::startBSPSection(int /*nestedParallelismLevel*/) {}
 
+
 void tarch::multicore::orchestration::Hardcoded::endBSPSection(int /*nestedParallelismLevel*/) {}
+
 
 tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::fuse(int /*taskType*/) {
 //  return FuseInstruction(tarch::multicore::Task::Host, 8, 2, _residualComputationTimeout );
@@ -63,6 +72,7 @@ tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::or
     _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse, _timeout
   );
 }
+
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::paralleliseForkJoinSection(
   [[maybe_unused]] int nestedParallelismLevel,
@@ -77,7 +87,6 @@ tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orc
 }
 
 
-
 void tarch::multicore::orchestration::Hardcoded::updateFuseStatistics(
   int    taskType,
   int    queueSize,
@@ -85,4 +94,9 @@ void tarch::multicore::orchestration::Hardcoded::updateFuseStatistics(
   double probabilityThatTaskIsCompleted
 ) {
   // empty on purpose
+}
+
+
+tarch::multicore::orchestration::FusionImplementation tarch::multicore::orchestration::Hardcoded::getFusionImplementation() const {
+  return _fusionImplementation;
 }
