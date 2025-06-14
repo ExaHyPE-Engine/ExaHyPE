@@ -60,9 +60,15 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
 ) {
   tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
 
-  if ( readyTasks.count(taskNumber)>0 ) {
+  if ( taskNumber!=AnyTask and readyTasks.count(taskNumber)>0 ) {
     readyTasks[taskNumber]->run();
     delete readyTasks[taskNumber];
+    readyTasks.erase(taskNumber);
+  }
+  else if ( taskNumber==AnyTask and not readyTasks.empty() ) {
+    auto [taskNumber, taskPointer] = *readyTasks.begin();
+    taskPointer->run();
+    delete taskPointer;
     readyTasks.erase(taskNumber);
   }
 }

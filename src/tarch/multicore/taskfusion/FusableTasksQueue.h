@@ -22,8 +22,11 @@ namespace tarch {
 }
 
 
-struct tarch::multicore::taskfusion::FusableTasksQueue {
+class tarch::multicore::taskfusion::FusableTasksQueue {
+  public:
     static const std::string ProcessFusedTasksStatisticsIdentifier;
+
+    static const int AnyTask = -1;
 
     FusableTasksQueue(int type_);
     ~FusableTasksQueue()                        = default;
@@ -74,7 +77,7 @@ struct tarch::multicore::taskfusion::FusableTasksQueue {
      * Search for the one task we are waiting for. If you find it, process it.
      *
      * @param taskNumber Task number that has to be processed. If you pass in
-     *   -1, then the routine simply takes the first task (if there is one) and
+     *   AnyTask, then the routine simply takes the first task (if there is one) and
      *   finishes that one.
      */
     void processOneTask(

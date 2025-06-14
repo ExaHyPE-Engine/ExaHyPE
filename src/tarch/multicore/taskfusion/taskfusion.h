@@ -24,39 +24,18 @@ namespace tarch {
      * large physical tasks instead of being processed one by one. This can
      * reduce task administration overheads, but it also allows the routine
      * handling a set of tasks to exploit commonalities or the larger intra-task
-     * concurrency.
+     * concurrency. Due to the latter argument, task fusion is Peano's favourite
+     * technique to keep GPUs busy.
      *
-     *
-     * Whenever we get a task (in the example below we get three yellow tasks)
-     * with dependencies that can be fused, we split each task up into two
-     * tasks each:
-     *
-     * @image html multicore_task_flow-00.png
-     *
-     * One task is a preparation task (red), and the other one is the actual
-     * processing (green). The prep task has all the complex incoming dependencies. The
-     * processing task is part of a straight task sequence. Both the prep task
-     * and the processing task know the actual task, which is not part of the
-     * actual task graph anymore. It is associated with these two wrapper
-     * classes.
-     *
-     * @image html multicore_task_flow-01.png
-     *
-     * If the prep task becomes active, we do not evaluate the task. Instead,
-     * we dump the task into the queue of ready tasks.
-     *
-     * @image html multicore_task_flow-02.png
-     * @image html multicore_task_flow-03.png
-     *
-     * The preparation is done through tarch::multicore::taskfusion::LogReadyTask,
-     * which is rather trivial. The actual task execution and fusion is then
-     * realised through and instance of ProcessReadyTask which holds also all
-     * race condition logic. See the class documentation. This processing task
-     * finally also serves as placeholder for outgoing dependencies.
+     * There are many ways how task fusion can be implemented. In Peano, the
+     * different strategies are controlled through FusionImplementation which
+     * in turn is set by the multicore orchestration. More information is
+     * provided in the context of @ref documentation_tarch_task_fusion_strategies.
+     * Here, we summarise more low-level implementation details.
      *
      * To ensure that fusion is only applied to tasks of the same type, we store
-     * the fusable tasks in a map indexed by the task type. This map is called
-     * pendingTasksThatCanBeFused.
+     * the fusable tasks in a map indexed by the task type. The most important
+     * type in the context of fusion therefore is FusableTaskQueue.
      *
      * @see Consult the page @ref documentation_tarch_task_fusion_strategies
      *   for recommendations and hints on task fusion strategies.
@@ -64,26 +43,9 @@ namespace tarch {
     namespace taskfusion {
       struct FusableTasksQueue;
 
-      enum class FusionImplementation {
-        /**
-         * Completely disable any fusion and map each task that can be fused on
-         * a normal task due to a call to native::spawnTask() in
-         * translateFusableTaskIntoTaskSequence().
-         * ensureHeldBackTasksAreMappedOntoNativeTasks() deteriorates to
-         * nop.
-         */
-        DisableFusionAndMapOntoNativeTask,
-        DisableFusionAndProcessImmediately,
-        /**
-         * All fusable tasks are parked in a big queue. If the
-         */
-        LazyEvaluation,
-        LazyConsumerTasks,
-        ProducerConsumerTaskPairs
-      };
-
       /**
-       * Delegates to implementation-specific variants.
+       * Delegates to implementation-specific variants, i.e. to the one
+       * selected by the orchestration.
        */
       void translateFusableTaskIntoTaskSequence(
         Task*                  task,
@@ -92,8 +54,7 @@ namespace tarch {
       );
 
       /**
-       * Name is not good, as routine does not process all ready tasks.
-       * Instead, it tries to complete one ready task per queue.
+       * Run over all known queues and invoke drainReadyTasks() on each one.
        */
       void processAllReadyTasks();
 
@@ -162,8 +123,17 @@ namespace tarch {
       /**
        * Implementation of translateFusableTaskIntoTaskSequence() if we use LazyEvaluation.
        *
+       * @see @ref documentation_tarch_task_fusion_strategies for some context for this routine.
        */
       void translateFusableTaskIntoTaskSequence_LazyEvaluation(
+        Task*                  task,
+        FusableTasksQueue&     taskQueue,
+        std::set<TaskNumber>   inDependencies,
+        const TaskNumber&      taskNumber,
+        const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
+      );
+
+      void translateFusableTaskIntoTaskSequence_EagerConsumerTasks(
         Task*                  task,
         FusableTasksQueue&     taskQueue,
         std::set<TaskNumber>   inDependencies,
@@ -195,6 +165,7 @@ namespace tarch {
        *      if a particular task has completed already.
        */
       void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }
