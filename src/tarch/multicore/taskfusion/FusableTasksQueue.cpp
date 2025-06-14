@@ -9,8 +9,8 @@
 const std::string tarch::multicore::taskfusion::FusableTasksQueue::ProcessFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::process-fused-tasks";
 
 
-tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type_):
-  type(type_),
+tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
+  _type(type),
   numberOfPendingReadyTasksPerProcessTaskExecution(),
   probabilityThatTaskIsCompleted(256)
 {}
@@ -81,18 +81,16 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
 ) {
   tarch::multicore::Lock readyTaskLock(readyTasksSemaphore);
 
-<<<<<<< HEAD
+  if ( taskNumber==AnyTask and not readyTasks.empty() ) {
+    taskNumber = readyTasks.begin()->first;
+  }
+
   if ( readyTasks.count(taskNumber)>0 ) {
     tarch::multicore::Lock runningTaskLock(runningTasksSemaphore);
     runningTasks.insert( taskNumber );
     runningTaskLock.free();
 
     Task* task = readyTasks[taskNumber];
-=======
-  if ( taskNumber!=AnyTask and readyTasks.count(taskNumber)>0 ) {
-    readyTasks[taskNumber]->run();
-    delete readyTasks[taskNumber];
->>>>>>> branch 'multigrid-weak-scaling' of https://gitlab.lrz.de/hpcsoftware/Peano.git
     readyTasks.erase(taskNumber);
     readyTaskLock.free();
 
@@ -102,17 +100,11 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processOneTask(
     runningTaskLock.lock();
     runningTasks.erase( taskNumber );
   }
-  else if ( taskNumber==AnyTask and not readyTasks.empty() ) {
-    auto [taskNumber, taskPointer] = *readyTasks.begin();
-    taskPointer->run();
-    delete taskPointer;
-    readyTasks.erase(taskNumber);
-  }
 }
 
 
 void tarch::multicore::taskfusion::FusableTasksQueue::processTasks() {
-  const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(type);
+  const tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(getType());
 
   assertion( instruction.minTasks>=1 );
   assertion( instruction.maxTasks>=1 );
@@ -188,4 +180,9 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
   return pendingTasks.count(taskNumber) > 0
       or readyTasks.count(taskNumber) > 0
       or runningTasks.count(taskNumber) > 0;
+}
+
+
+int tarch::multicore::taskfusion::FusableTasksQueue::getType() const {
+  return _type;
 }

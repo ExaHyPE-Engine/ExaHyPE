@@ -16,7 +16,7 @@
 namespace tarch {
   namespace multicore {
     namespace taskfusion {
-      struct FusableTasksQueue;
+      class FusableTasksQueue;
     }
   }
 }
@@ -24,8 +24,6 @@ namespace tarch {
 
 class tarch::multicore::taskfusion::FusableTasksQueue {
   public:
-    static const std::string ProcessFusedTasksStatisticsIdentifier;
-
     static const int AnyTask = -1;
 
     FusableTasksQueue(int type_);
@@ -101,6 +99,8 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
       bool                tryLock
     );
 
+    int getType() const;
+
     /**
      * Each task in the queue is identified through a pointer to the
      * task plus a task (dependency) number.
@@ -132,5 +132,8 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     tarch::timing::GlidingAverageMeasurement   numberOfPendingReadyTasksPerProcessTaskExecution;
     tarch::timing::GlidingAverageMeasurement   probabilityThatTaskIsCompleted;
 
-    const int                                  type;
+  private:
+    static const std::string                   ProcessFusedTasksStatisticsIdentifier;
+
+    const int                                  _type;
 };

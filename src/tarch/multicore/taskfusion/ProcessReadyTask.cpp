@@ -20,12 +20,10 @@ tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber
 
 
 void tarch::multicore::taskfusion::ProcessReadyTask::run() {
-  logDebug( "run(...)", "process all tasks of type " << _taskQueue.type << " (initial queue size=" << _taskQueue.readyTasks.size() << ")" );
-
   const bool isTaskStillPending = _taskQueue.isTaskPending(_taskNumber, true);
 
   if ( isTaskStillPending ) {
-    tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue.type);
+    tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue.getType());
 
     if (
       instruction.timeoutMicroSeconds>std::chrono::microseconds(0)
@@ -51,7 +49,7 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
 
     if (_taskQueue.numberOfPendingReadyTasksPerProcessTaskExecution.hasFullSetOfMeasurements()) {
       tarch::multicore::getOrchestration().updateFuseStatistics(
-        _taskQueue.type,
+        _taskQueue.getType(),
         _taskQueue.readyTasks.size(),
         _taskQueue.numberOfPendingReadyTasksPerProcessTaskExecution.getValue(),
         _taskQueue.probabilityThatTaskIsCompleted.getValue()

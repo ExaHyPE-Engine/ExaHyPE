@@ -199,12 +199,8 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
   if (tasksArePending) {
     for (auto taskNumber: inDependencies) {
       for (auto queue: fusableTaskQueue) {
-<<<<<<< HEAD
         if (queue.second->isTaskPending(taskNumber, false) ) {
-=======
-        if (not queue.second->hasTaskBeenProcessed(taskNumber, false) ) {
           queue.second->processTasks();
->>>>>>> branch 'multigrid-weak-scaling' of https://gitlab.lrz.de/hpcsoftware/Peano.git
           queue.second->processOneTask(taskNumber);
         }
       }
@@ -216,7 +212,7 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
 void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies) {
   for (auto taskNumber: inDependencies) {
     for (auto queue: fusableTaskQueue) {
-      if (not queue.second->hasTaskBeenProcessed(taskNumber, false) ) {
+      if (not queue.second->isTaskPending(taskNumber, true) ) {
         Task* processTask = new ProcessReadyTask(taskNumber, *(queue.second));
         tarch::multicore::native::spawnTask( processTask, tarch::multicore::NoInDependencies, taskNumber);
       }
