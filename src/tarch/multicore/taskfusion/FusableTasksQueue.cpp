@@ -8,6 +8,8 @@
 
 const std::string tarch::multicore::taskfusion::FusableTasksQueue::ProcessFusedTasksStatisticsIdentifier = "tarch::multicore::taskfusion::process-fused-tasks";
 
+tarch::logging::Log  tarch::multicore::taskfusion::FusableTasksQueue::_log( "tarch::multicore::taskfusion::FusableTasksQueue" );
+
 
 tarch::multicore::taskfusion::FusableTasksQueue::FusableTasksQueue(int type):
   _type(type),
@@ -142,6 +144,8 @@ void tarch::multicore::taskfusion::FusableTasksQueue::processTasks() {
     tarch::logging::Statistics::getInstance().log(ProcessFusedTasksStatisticsIdentifier, extractedTaskNumbers.size());
     processFusedTask(firstTask, extractedTaskPointers, instruction.device);
 
+    logDebug( "processTasks()", "processed " << (extractedTaskPointers.size()+1) << " tasks" );
+
     runningTaskLock.lock();
     runningTasks.erase( firstTaskNumber );
     for (auto& taskNumber: extractedTaskNumbers) {
@@ -157,13 +161,31 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
   bool                tryLock
 ) {
   tarch::multicore::Lock pendingLock(pendingTasksSemaphore, false);
+
+  if (tryLock) {
+    if (
+      not pendingLock.tryLock()
+    ) {
+      return true;
+    }
+  }
+  else {
+    pendingLock.lock();
+  }
+
+  return pendingTasks.count(taskNumber) > 0;
+}
+
+
+bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReadyOrRunning(
+  int                 taskNumber,
+  bool                tryLock
+) {
   tarch::multicore::Lock readyLock(readyTasksSemaphore, false);
   tarch::multicore::Lock runningLock(runningTasksSemaphore, false);
 
   if (tryLock) {
     if (
-      not pendingLock.tryLock()
-      or
       not readyLock.tryLock()
       or
       not runningLock.tryLock()
@@ -172,13 +194,11 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskPending(
     }
   }
   else {
-    pendingLock.lock();
     readyLock.lock();
     runningLock.lock();
   }
 
-  return pendingTasks.count(taskNumber) > 0
-      or readyTasks.count(taskNumber) > 0
+  return readyTasks.count(taskNumber) > 0
       or runningTasks.count(taskNumber) > 0;
 }
 

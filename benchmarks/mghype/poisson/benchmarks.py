@@ -125,7 +125,7 @@ project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::H
   8,256,
   tarch::multicore::Task::Host,
   ::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,
-  ::tarch::multicore::orchestration::Hardcoded::NoTimeout,::tarch::multicore::orchestration::FusionImplementation::LazyEvaluation
+  ::tarch::multicore::orchestration::Hardcoded::NoTimeout,::tarch::multicore::orchestration::FusionImplementation::DisableFusionAndMapOntoNativeTask
 )""" )
 
 

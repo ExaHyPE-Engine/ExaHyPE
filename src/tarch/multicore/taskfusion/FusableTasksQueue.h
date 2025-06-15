@@ -99,6 +99,11 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
       bool                tryLock
     );
 
+    bool isTaskReadyOrRunning(
+      int                 taskNumber,
+      bool                tryLock
+    );
+
     int getType() const;
 
     /**
@@ -134,6 +139,7 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
 
   private:
     static const std::string                   ProcessFusedTasksStatisticsIdentifier;
+    static tarch::logging::Log                 _log;
 
     const int                                  _type;
 };

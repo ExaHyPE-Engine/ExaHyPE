@@ -20,7 +20,9 @@ tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber
 
 
 void tarch::multicore::taskfusion::ProcessReadyTask::run() {
-  const bool isTaskStillPending = _taskQueue.isTaskPending(_taskNumber, true);
+  assertion( not _taskQueue.isTaskPending(_taskNumber, false) );
+
+  const bool isTaskStillPending = _taskQueue.isTaskReadyOrRunning(_taskNumber, true);
 
   if ( isTaskStillPending ) {
     tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue.getType());
@@ -35,7 +37,7 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
       while (
         std::chrono::system_clock::now() < deadline
         and
-        _taskQueue.isTaskPending(_taskNumber, false)
+        _taskQueue.isTaskReadyOrRunning(_taskNumber, false)
         and
         instruction.minTasks>=taskQueueSize
       ) {
