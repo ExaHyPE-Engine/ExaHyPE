@@ -193,7 +193,6 @@ plt.xlim(0, 0.5)
 #  plt.ylim(-0.05, 0.8)
 
 
-
 plt.tight_layout()
 
 fname = f"NohProfile{time:.4f}.png"

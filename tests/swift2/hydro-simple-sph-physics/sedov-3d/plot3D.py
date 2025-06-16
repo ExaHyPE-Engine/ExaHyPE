@@ -63,7 +63,6 @@ P = partData.pressure
 rho = partData.density
 
 
-
 def plot(quantity):
     """
     Plot the specified quantity. Options:
@@ -95,29 +94,29 @@ def plot(quantity):
     alpha = 0.4 + 0.6 * qarr / qarr.max()
     title += f"$t=${time:.2f}"
 
-
-
     fig = plt.figure(figsize=(6, 6), dpi=300)
     ax1 = fig.add_subplot(111, projection="3d", aspect="equal")
     ax1.set_title(title, fontsize=16)
 
-
     scatterkwargs = {
-            #  "s": 4,
-            "lw": 0,
-            "marker": "o",
-            #  "alpha": 0.6,
-            #  "depthshade": True,
-            "depthshade": False,
-            }
+        #  "s": 4,
+        "lw": 0,
+        "marker": "o",
+        #  "alpha": 0.6,
+        #  "depthshade": True,
+        "depthshade": False,
+    }
 
     sc = ax1.scatter(
-            x, y, z, c=qarr,
-            s = 2. + 4. * alpha/alpha.max(),
-            alpha = alpha,
-            norm=LogNorm(vmin=minval, vmax=maxval),
-            cmap = "hot",
-            **scatterkwargs
+        x,
+        y,
+        z,
+        c=qarr,
+        s=2.0 + 4.0 * alpha / alpha.max(),
+        alpha=alpha,
+        norm=LogNorm(vmin=minval, vmax=maxval),
+        cmap="hot",
+        **scatterkwargs,
     )
     #  ax1.view_init(elev=26, azim=81)
     #  ax1.view_init(elev=25, azim=13)
@@ -128,7 +127,6 @@ def plot(quantity):
     ax1.set_xlim(0, 1)
     ax1.set_ylim(0, 1)
     ax1.set_zlim(0, 1)
-
 
     plt.tight_layout()
     fname = quantity + "-" + f"_{time}.png"
