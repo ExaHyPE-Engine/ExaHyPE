@@ -193,7 +193,7 @@ std::size_t tarch::accelerator::MemoryManager::getUsedAllocatedMemoryInBytes(int
   return result;
 }
 
-void tarch::accelerator::MemoryManager::dumpStatistics() {
+std::string tarch::accelerator::MemoryManager::getStatistics() {
   std::ostringstream msg;
 
   if (not MemoryManager::getInstance().getMemoryPages().empty()) {
@@ -220,13 +220,11 @@ void tarch::accelerator::MemoryManager::dumpStatistics() {
     // TODO: Use memory locations to report device and host memory.
   }
 
-  // msg << "System: "
-  //     << getMemoryUsage(MemoryUsageFormat::MByte) << "/"
-  //     << getFreeMemory(MemoryUsageFormat::MByte) << "/"
-  //     << getTotalMemory(MemoryUsageFormat::MByte);
-  // msg << " MB (used/free/total)";
+  msg << "System: "
+      << getMemoryUsage(MemoryUsageFormat::MByte) << "/"
+      << getFreeMemory(MemoryUsageFormat::MByte) << "/"
+      << getTotalMemory(MemoryUsageFormat::MByte);
+  msg << " MB (used/free/total)";
 
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo("dumpStatistics()", msg.str());
-  }
+  return msg.str();
 }

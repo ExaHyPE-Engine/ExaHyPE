@@ -17,17 +17,14 @@
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/timing/Watch.h"
 
-
 tarch::logging::Log peano4::parallel::SpacetreeSet::_log("peano4::parallel::SpacetreeSet");
 
 peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
-
 
 tarch::multicore::BooleanSemaphore peano4::parallel::SpacetreeSet::_semaphore;
 
 peano4::parallel::SpacetreeSet::SpacetreeSet():
   _state(SpacetreeSetState::Waiting) {}
-
 
 peano4::parallel::SpacetreeSet& peano4::parallel::SpacetreeSet::getInstance() { return _singleton; }
 
@@ -37,9 +34,7 @@ void peano4::parallel::SpacetreeSet::init(
   const std::bitset<Dimensions>&               periodicBC
 ) {
   _requestMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - request message");
-  _answerMessageTag  = tarch::mpi::Rank::reserveFreeTag(
-    "peano4::parallel::SpacetreeSet - answer message", Node::MaxSpacetreesPerRank
-  );
+  _answerMessageTag  = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - answer message", Node::MaxSpacetreesPerRank);
   tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
 
 #ifdef Parallel
@@ -65,14 +60,9 @@ void peano4::parallel::SpacetreeSet::shutdown() {
   tarch::services::ServiceRepository::getInstance().removeService(this);
 }
 
-
-peano4::parallel::SpacetreeSet::~SpacetreeSet() {}
-
-
 int peano4::parallel::SpacetreeSet::getAnswerTag(int targetSpacetreeId) const {
   return _answerMessageTag + Node::getInstance().getLocalTreeId(targetSpacetreeId);
 }
-
 
 std::string peano4::parallel::SpacetreeSet::toString(SpacetreeSetState state) {
   switch (state) {
@@ -274,28 +264,18 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   return false;
 }
 
-
-void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(
-  peano4::grid::TraversalObserver& observer, int treeId
-) {
+void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid::TraversalObserver& observer, int treeId) {
   tarch::multicore::Lock lock(_semaphore);
-
   if (_clonedObserver.count(treeId) == 0) {
     _clonedObserver.insert(std::pair<int, peano4::grid::TraversalObserver*>(treeId, observer.clone(treeId)));
   }
   if (_clonedObserver[treeId] == nullptr) {
     _clonedObserver[treeId] = observer.clone(treeId);
   }
-  assertion2(
-    _clonedObserver.count(treeId) == 1 and _clonedObserver[treeId] != nullptr, treeId, _clonedObserver.count(treeId)
-  );
+  assertion2(_clonedObserver.count(treeId) == 1 and _clonedObserver[treeId] != nullptr, treeId, _clonedObserver.count(treeId));
 }
 
-void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks(
-  [[maybe_unused]] int spacetreeId,
-  [[maybe_unused]] int parentId,
-  [[maybe_unused]] const std::set<int>& joiningIds
-) {
+void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks(int spacetreeId, int parentId, const std::set<int>& joiningIds) {
   logTraceInWith2Arguments("streamLocalVertexInformationToMasterThroughVerticalStacks()", spacetreeId, parentId);
 
   /*

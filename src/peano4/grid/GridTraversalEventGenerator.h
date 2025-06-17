@@ -270,7 +270,7 @@ public:
   ) const;
 
   /**
-   * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
+   * A spacetree node has 2^d adjacent vertices. So there are 2^d integers
    * stored within these vertices that overlap with the current node. They
    * all have to be the same. If they identify the local _id, then the
    * node is local. They are also local if the markers are set to

@@ -316,19 +316,19 @@ std::string peano4::grid::toString(CellType type) {
 std::string peano4::grid::toString(SpacetreeState state) {
   switch (state) {
   case SpacetreeState::EmptyRun:
-    return "empty-run";
+    return "EmptyRun";
   case SpacetreeState::NewRoot:
-    return "new-root";
+    return "NewRoot";
   case SpacetreeState::NewFromSplit:
-    return "new-from-split";
+    return "NewFromSplit";
   case SpacetreeState::Running:
-    return "running";
+    return "Running";
   case SpacetreeState::JoinTriggered:
-    return "join-triggered";
+    return "JoinTriggered";
   case SpacetreeState::Joining:
-    return "joining";
+    return "Joining";
   case SpacetreeState::Joined:
-    return "joined";
+    return "Joined";
   }
   return "<undef>";
 }

@@ -254,6 +254,14 @@ void step() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum(stepIdentifier);
 
+  tarch::logging::Statistics::getInstance().log(
+    "load-balancing", toolbox::loadbalancing::LoadBalancer::getStatistics()
+  );
+
+  tarch::logging::Statistics::getInstance().log(
+    "memory", tarch::accelerator::MemoryManager::getStatistics()
+  );
+
   SCOREP_USER_REGION_DEFINE(CreateGrid)
   SCOREP_USER_REGION_DEFINE(CreateGrid_startGridConstructionStep)
   SCOREP_USER_REGION_DEFINE(CreateGrid_traverse)
@@ -358,8 +366,6 @@ void step() {
     SCOREP_USER_REGION_END(InitGrid)
     watch.stop();
     gridConstructionMeasurement.setValue(watch.getCalendarTime());
-
-    toolbox::loadbalancing::LoadBalancer::dumpStatistics();
   } break;
   case {{SUBNAMESPACE}}repositories::StepRepository::Steps::PlotSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("PlotSolution");
@@ -531,8 +537,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  tarch::accelerator::MemoryManager::dumpStatistics();
-  toolbox::loadbalancing::LoadBalancer::dumpStatistics();
   tarch::logging::Statistics::getInstance().writeToCSV();
 
   {{SUBNAMESPACE}}repositories::finishSimulation();
