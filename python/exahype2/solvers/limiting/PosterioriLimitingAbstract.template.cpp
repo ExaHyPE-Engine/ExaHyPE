@@ -13,7 +13,6 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_l
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
-  _admissibleTimeStepSize(0.0),
   _numberOfTroubledCells(0),
   _numberOfTroubledCellsThisTimeStep(0) {
 
@@ -50,10 +49,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return repositories::{{REGULAR_SOLVER_INSTANCE}}.getMinMeshSize();
 }
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
-  return _admissibleTimeStepSize;
-}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
   return _solverState;
 }
@@ -83,9 +78,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::RegularSolver:
-      // [nk] If the Plotting happened, the RegularSolver should starts its routine even if _numberOfTroubledCellsThisTimeStep != 0
-      // - It is done, because in that case the Plotting state happened right after the LimiterSolver state, where the same check is not performed.
-      // - Otherwise we are stuck in the LimiterSolver, since _numberOfTroubledCellsThisTimeStep is set to zero in the RegularSolver state after the Limiter.
+      // [nk] If the plotting happened, the regular solver should starts its routine even if _numberOfTroubledCellsThisTimeStep != 0
+      // - It is done, because in that case the plotting state happened right after the limiter solver state, where the same check is not performed.
+      // - Otherwise we are stuck in the limiter solver, since _numberOfTroubledCellsThisTimeStep is set to zero in the regular solver state after the limiter.
       _solverState = ((_numberOfTroubledCellsThisTimeStep == 0) or (_solverState == SolverState::Plotting) ?
         SolverState::RegularSolver : SolverState::LimiterStatusSpreadingToNeighbours);
       break;
@@ -96,8 +91,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       _solverState = SolverState::LimiterSolver;
       break;
     case SolverState::LimiterSolver:
-      // [nk] TODO: Potential bug if the LimiterSolver has more than one Grid Sweeps
-      // - It will change the state to the Regular solver even if only the first Sweep is finished
+      // [nk] TODO: Potential bug if the limiter solver has more than one grid sweeps
+      // - It will change the state to the regular solver even if only the first sweep is finished
       // - Potentially to fix it we can store isFinished status in each solver, which returns true as soon as all sweeps are done.
       _solverState = SolverState::RegularSolver;
       break;
@@ -105,11 +100,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
   _numberOfTroubledCells = _numberOfTroubledCellsThisTimeStep;
   if (_solverState == SolverState::RegularSolver) {
-    _admissibleTimeStepSize = repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() > 0.0 ?
-      std::min(
-        repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
-        repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize()
-      ) : repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
     _numberOfTroubledCellsThisTimeStep = 0;
   }
 

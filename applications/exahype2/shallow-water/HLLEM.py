@@ -37,15 +37,15 @@ hllem = r"""
   const double huRight = QR[s::hu];
   const double hvLeft  = QL[s::hv];
   const double hvRight = QR[s::hv];
-  const double bLeft   = QL[s::b];
-  const double bRight  = QR[s::b];
+  const double bLeft   = QL[s::z];
+  const double bRight  = QR[s::z];
 
   // Compute dry tolerance according to KURGANOV. Does not work!
   //const double dryTol = std::pow(h[0], 4);
-  const double dryTol = 1e-3;
+  const double dryTol = hThreshold;
 
-  const double cLeft  = std::sqrt(GRAV * hLeft);
-  const double cRight = std::sqrt(GRAV * hRight);
+  const double cLeft  = std::sqrt(g * hLeft);
+  const double cRight = std::sqrt(g * hRight);
 
   // Correction of particle velocities according to KURGANOV (modified version):
   const double uCorrectedLeft  = huLeft  * hLeft  * std::sqrt(2) / std::sqrt(std::pow(hLeft,  4) + std::pow(std::fmax(hLeft,  dryTol), 4));
@@ -99,7 +99,7 @@ hllem = r"""
   const double hRoe     = 0.5 * (hLeft + hRight);
 
   double dJump[3] = {0.0};
-  dJump[s::hu + normal] = 0.5 * GRAV * hRoe * deltaEta;
+  dJump[s::hu + normal] = 0.5 * g * hRoe * deltaEta;
 
   const double netUpdates[3] {
     0.5 * (fluxLeft[s::h]  + fluxRight[s::h])  - 0.5 * maxWaveSpeed * deltaEta,

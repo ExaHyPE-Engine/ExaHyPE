@@ -84,14 +84,14 @@ class StaticLimiting(object):
         Variants = ["REGULAR","REGULAR_TO_LIMITER","LIMITER_TO_REGULAR","TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants, initval="Troubled_Marker::REGULAR" ) )
-        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants, initval="Troubled_Marker::REGULAR" ) )
+        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration(name="Troubled_Marker", variants=Variants, initval="Troubled_Marker::REGULAR"))
+        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration(name="Troubled_Marker", variants=Variants, initval="Troubled_Marker::REGULAR"))
 
-        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n  _Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
+        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n_Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
 
         compute_time_step_size = """
-    double timeStepSize = std::min( repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
-                                    repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
+    double timeStepSize = std::min(repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
+                                   repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
 """
 
         self._limiter_solver._compute_time_step_size = compute_time_step_size

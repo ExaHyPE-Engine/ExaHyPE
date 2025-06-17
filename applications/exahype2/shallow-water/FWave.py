@@ -60,17 +60,16 @@ fWave = r"""
   double hRight = QR[s::h];
   double huLeft = QL[s::hu + normal];
   double huRight = QR[s::hu + normal];
-  double bLeft = QL[s::b];
-  double bRight = QR[s::b];
+  double bLeft = QL[s::z];
+  double bRight = QR[s::z];
 
   //! Wet/dry state of our Riemann-problem
   WetDryState wetDryState = WetDryState::WetWet; // Assume everything is wet
 
   // Determine the wet/dry state
-  constexpr double DRY_TOL = std::numeric_limits<double>::epsilon();
-  if (hLeft <= DRY_TOL && hRight <= DRY_TOL) { // Both cells are dry
+  if (hLeft <= hThreshold && hRight <= hThreshold) { // Both cells are dry
     wetDryState = WetDryState::DryDry;
-  } else if (hLeft <= DRY_TOL) { // Left cell dry, right cell wet
+  } else if (hLeft <= hThreshold) { // Left cell dry, right cell wet
     uRight = huRight / hRight;
     // Set wall boundary conditions (inundation is not supported!)
     hLeft = hRight;
@@ -78,7 +77,7 @@ fWave = r"""
     huLeft = -huRight;
     uLeft = -uRight;
     wetDryState = WetDryState::DryWetWall;
-  } else if (hRight <= DRY_TOL) { // Left cell wet, right cell dry
+  } else if (hRight <= hThreshold) { // Left cell wet, right cell dry
     uLeft = huLeft / hLeft;
     hRight = hLeft;
     bRight = bLeft;
@@ -105,8 +104,8 @@ fWave = r"""
   // Compute eigenvalues of the Jacobian matrices in states Q_{i-1} and Q_{i}
   const double hRoe = 0.5 * (hRight + hLeft);
   const double uRoe = (uLeft * std::sqrt(hLeft) + uRight * std::sqrt(hRight)) / (std::sqrt(hLeft) + std::sqrt(hRight));
-  const double roeSpeeds[2] = {uRoe - std::sqrt(GRAV * hRoe), uRoe + std::sqrt(GRAV * hRoe)};
-  const double characteristicSpeeds[2] = {uLeft - std::sqrt(GRAV * hLeft), uRight + std::sqrt(GRAV * hRight)};
+  const double roeSpeeds[2] = {uRoe - std::sqrt(g * hRoe), uRoe + std::sqrt(g * hRoe)};
+  const double characteristicSpeeds[2] = {uLeft - std::sqrt(g * hLeft), uRight + std::sqrt(g * hRight)};
   const double einfeldtSpeeds[2] = {std::fmin(characteristicSpeeds[0], roeSpeeds[0]), std::fmax(characteristicSpeeds[1], roeSpeeds[1])};
 
   // Set wave speeds (lambda Roe)
@@ -139,11 +138,11 @@ fWave = r"""
   };
 
   // Right hand side
-  const double fluxLeft[2] {huLeft, huLeft * uLeft + 0.5 * GRAV * hLeft * hLeft};
-  const double fluxRight[2] {huRight, huRight * uRight + 0.5 * GRAV * hRight * hRight};
+  const double fluxLeft[2] {huLeft, huLeft * uLeft + 0.5 * g * hLeft * hLeft};
+  const double fluxRight[2] {huRight, huRight * uRight + 0.5 * g * hRight * hRight};
 
   // Add source term (bathymetry) into the decomposition of the jump in the flux function
-  const double deltaxPsi = -GRAV * (bRight - bLeft) * hRoe;
+  const double deltaxPsi = -g * (bRight - bLeft) * hRoe;
   // Calculate flux difference f(Q_i) - f(Q_{i-1})
   const double deltaFlux[2] {fluxRight[0] - fluxLeft[0], fluxRight[1] - fluxLeft[1] - deltaxPsi};
 

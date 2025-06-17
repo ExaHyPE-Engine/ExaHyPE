@@ -19,21 +19,21 @@ initial_conditions = """
     DomainOffset(1)
   );
 
-  const double bathymetryBeforeEarthquake = topologyParser.sampleBathymetry(x(0), x(1));
+  const double bathymetryBeforeEarthquake = topologyParser.sampleTopology(x(0), x(1));
   const double displacement               = topologyParser.sampleDisplacement(x(0), x(1));
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 
   Q[s::h]  = -std::min(bathymetryBeforeEarthquake, 0.0);
   Q[s::hu] = 0.0;
   Q[s::hv] = 0.0;
-  Q[s::b]  = bathymetryAfterEarthquake;
+  Q[s::z]  = bathymetryAfterEarthquake;
 """
 
 boundary_conditions = """
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::b]  = Qinside[s::b];
+  Qoutside[s::z]  = Qinside[s::z];
 """
 
 refinement_criterion = """
@@ -46,9 +46,15 @@ refinement_criterion = """
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
+    min_depth=4,
     end_time=5000.0,
 )
 args = parser.parse_args()
+
+constants = {
+    "g": [9.81, "double"],
+    "hThreshold": [1e-5, "double"],
+}
 
 size = [7e6, 4e6]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
@@ -58,7 +64,7 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FWaveSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 1, "hv": 1},
-    auxiliary_variables={"b": 1},
+    auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
@@ -109,6 +115,10 @@ project.set_global_simulation_parameters(
 project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees_init}, {args.trees})")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
+for const_name, const_info in constants.items():
+    const_val, const_type = const_info
+    project.constants.export_constexpr_with_type(
+        const_name, str(const_val), const_type
+    )
 project.set_fenv_handler(args.fpe)
-project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

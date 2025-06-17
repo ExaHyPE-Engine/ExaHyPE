@@ -1,4 +1,4 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
@@ -7,7 +7,6 @@
 #ifdef UseNetCDF
 
 #include "NetCDFReader.h"
-
 #include "tarch/logging/Log.h"
 
 namespace tarch::reader {
@@ -20,19 +19,19 @@ private:
 
   NetCDFReader _netCDFReader;
 
-  double* _bathymetry   = nullptr;
+  double* _topology     = nullptr;
   double* _displacement = nullptr;
 
-  const char* _ncBathymetryKey  = nullptr;
-  const char* _ncBathymetryKeyX = nullptr;
-  const char* _ncBathymetryKeyY = nullptr;
+  const char* _ncTopologyKey  = nullptr;
+  const char* _ncTopologyKeyX = nullptr;
+  const char* _ncTopologyKeyY = nullptr;
 
   const char* _ncDisplacementKey  = nullptr;
   const char* _ncDisplacementKeyX = nullptr;
   const char* _ncDisplacementKeyY = nullptr;
 
-  std::size_t _lengthOfBathymetryInX   = 0;
-  std::size_t _lengthOfBathymetryInY   = 0;
+  std::size_t _lengthOfTopologyInX     = 0;
+  std::size_t _lengthOfTopologyInY     = 0;
   std::size_t _lengthOfDisplacementInX = 0;
   std::size_t _lengthOfDisplacementInY = 0;
 
@@ -41,17 +40,17 @@ private:
   double _offsetOfSimulationDomainInX = -1;
   double _offsetOfSimulationDomainInY = -1;
 
-  double _minXCoordinateInBathymetry = 1;
-  double _minYCoordinateInBathymetry = 1;
-  double _maxXCoordinateInBathymetry = -1;
-  double _maxYCoordinateInBathymetry = -1;
+  double _minXCoordinateInTopology = 1;
+  double _minYCoordinateInTopology = 1;
+  double _maxXCoordinateInTopology = -1;
+  double _maxYCoordinateInTopology = -1;
 
   double _minXCoordinateInDisplacement = 1;
   double _minYCoordinateInDisplacement = 1;
   double _maxXCoordinateInDisplacement = -1;
   double _maxYCoordinateInDisplacement = -1;
 
-  void parseBathymetryFile(const char* bathymetryFilePath);
+  void parseTopologyFile(const char* bathymetryFilePath);
   void parseDisplacementFile(const char* displacementFilePath);
 
   /**
@@ -93,9 +92,9 @@ public:
     double      lengthOfSimulationDomainInY,
     double      offsetOfSimulationDomainInX,
     double      offsetOfSimulationDomainInY,
-    const char* ncBathymetryKey    = "z",
-    const char* ncBathymetryKeyX   = "x",
-    const char* ncBathymetryKeyY   = "y",
+    const char* ncTopologyKey      = "z",
+    const char* ncTopologyKeyX     = "x",
+    const char* ncTopologyKeyY     = "y",
     const char* ncDisplacementKey  = "z",
     const char* ncDisplacementKeyX = "x",
     const char* ncDisplacementKeyY = "y"
@@ -107,14 +106,14 @@ public:
     double      lengthOfSimulationDomainInY,
     double      offsetOfSimulationDomainInX,
     double      offsetOfSimulationDomainInY,
-    const char* ncBathymetryKey  = "z",
-    const char* ncBathymetryKeyX = "x",
-    const char* ncBathymetryKeyY = "y"
+    const char* ncTopologyKey  = "z",
+    const char* ncTopologyKeyX = "x",
+    const char* ncTopologyKeyY = "y"
   );
 
   ~TopologyParser();
 
-  double sampleBathymetry(double x, double y);
+  double sampleTopology(double x, double y);
   double sampleDisplacement(double x, double y);
 };
 

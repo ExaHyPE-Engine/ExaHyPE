@@ -1,88 +1,84 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
-from exahype2.solvers.PDETerms import PDETerms
 
 import peano4.solversteps
+
 import jinja2
 
 from .kernels import check_troubledness
 
 class VerifyTroubledness(AbstractLimiterActionSet):
   TemplateVerifyTroubledness = """
-    if ( {{PREDICATE}} ) {
-        //[nk] the timeStamp is already updated in the Correction step
-        const double timeStepSize  = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize();
-        const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
-        
-        bool isUnTroubled = true;
+    if ({{PREDICATE}}) {
+      const double timeStepSize  = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize();
+      const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
 
-        auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
+      bool isUnTroubled = true;
 
-        {% if USE_PAC %}
-        isUnTroubled &= kernels::{{SOLVER_NAME}}::isPhysicallyAdmissible(
-          repositories::{{SOLVER_INSTANCE}},
-          luh,
-          marker.x(),
-          marker.h(),
-          timeStamp
-        );
-        {% endif %}
+      auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
 
-        {% if USE_DMP %}
-        constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-        double boundaryMinPerVariables[2*Dimensions*numberOfObservables];
-        double boundaryMaxPerVariables[2*Dimensions*numberOfObservables];
+      {% if USE_PAC %}
+      isUnTroubled &= kernels::{{SOLVER_NAME}}::isPhysicallyAdmissible(
+        repositories::{{SOLVER_INSTANCE}},
+        luh,
+        marker.x(),
+        marker.h(),
+        timeStamp
+      );
+      {% endif %}
 
-        for (int d=0; d<Dimensions; d++) {
-            std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value,                                 numberOfObservables, &boundaryMinPerVariables[d*numberOfObservables]);
-            std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+numberOfObservables,  numberOfObservables, &boundaryMinPerVariables[(d+Dimensions)*numberOfObservables]);
+      {% if USE_DMP %}
+      constexpr int NumberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
+      double boundaryMinPerVariables[2 * Dimensions * NumberOfObservables];
+      double boundaryMaxPerVariables[2 * Dimensions * NumberOfObservables];
 
-            std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+2*numberOfObservables,            numberOfObservables, &boundaryMaxPerVariables[d*numberOfObservables]);
-            std::copy_n(fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+3*numberOfObservables, numberOfObservables, &boundaryMaxPerVariables[(d+Dimensions)*numberOfObservables]);
+      for (int d = 0; d < Dimensions; d++) {
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value,                                        NumberOfObservables, &boundaryMinPerVariables[d * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + NumberOfObservables,     NumberOfObservables, &boundaryMinPerVariables[(d + Dimensions) * NumberOfObservables]);
+
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 2 * NumberOfObservables,              NumberOfObservables, &boundaryMaxPerVariables[d * NumberOfObservables]);
+        std::copy_n(fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + 3 * NumberOfObservables, NumberOfObservables, &boundaryMaxPerVariables[(d + Dimensions) * NumberOfObservables]);
+      }
+
+      isUnTroubled &= kernels::{{SOLVER_NAME}}::discreteMaximumPrincipleAndMinAndMaxSearch(
+        repositories::{{SOLVER_INSTANCE}},
+        luh,
+        repositories::{{SOLVER_INSTANCE}}.RelaxationParameter,
+        repositories::{{SOLVER_INSTANCE}}.DifferencesScaling,
+        boundaryMinPerVariables,
+        boundaryMaxPerVariables
+      );
+      {% endif %}
+
+      if (!isUnTroubled) {
+        repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
+        fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
+        for (int d = 0; d < 2 * Dimensions; d++) {
+          fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
         }
-
-        isUnTroubled &= kernels::{{SOLVER_NAME}}::discreteMaximumPrincipleAndMinAndMaxSearch(
-          repositories::{{SOLVER_INSTANCE}},
-          luh,
-          repositories::{{SOLVER_INSTANCE}}.RelaxationParameter, //const double relaxationParameter
-          repositories::{{SOLVER_INSTANCE}}.DifferencesScaling, //const double differenceScaling
-          boundaryMinPerVariables,
-          boundaryMaxPerVariables
-        );
-        {% endif %}
-
-        if(!isUnTroubled){
-          repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
-          fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::TROUBLED);
-          for(int d=0; d<2*Dimensions; d++){
-            fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::TROUBLED);
-          }
-        }
-  }
+      }
+    }
 """
 
   def __init__(self, solver, guard, use_PAC=False, use_DMP=False):
-    super(VerifyTroubledness,self).__init__(solver)
-    self.guard = guard
-
+    super(VerifyTroubledness, self).__init__(solver)
+    self.guard                      = guard
     self.use_PAC                    = use_PAC
     self.use_DMP                    = use_DMP
 
   def get_body_of_operation(self,operation_name):
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+    if operation_name == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d["PREDICATE" ]           = self.guard
-      d["USE_PAC"]              = self.use_PAC
-      d["USE_DMP"]              = self.use_DMP
+      d["PREDICATE"] = self.guard
+      d["USE_PAC"] = self.use_PAC
+      d["USE_DMP"] = self.use_DMP
       result = jinja2.Template(self.TemplateVerifyTroubledness).render(**d)
-      pass 
+      pass
     return result
-
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")

@@ -14,7 +14,7 @@ template <typename cStoreType, typename pCompType, typename pStoreType>
 int fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   pStoreType* NOALIAS                           lQhbnd[2 * Dimensions],
-  pStoreType* NOALIAS                           lFhbnd[2*Dimensions],
+  pStoreType* NOALIAS                           lFhbnd[2 * Dimensions],
   cStoreType* const NOALIAS                     luh,
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,

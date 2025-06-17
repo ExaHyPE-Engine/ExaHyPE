@@ -26,14 +26,14 @@ initial_conditions = """
   };
 
   Q[s::h] = h0 + (A / h0 * std::pow(1.0 / (std::cosh(gamma * (x(0) - 2.5))), 2));
-  Q[s::b] = r(x(0), x(1)) <= rc ? 0.93 * (1.0 - r(x(0), x(1)) / rc) : 0.0;
+  Q[s::z] = r(x(0), x(1)) <= rc ? 0.93 * (1.0 - r(x(0), x(1)) / rc) : 0.0;
 """
 
 boundary_conditions = """
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::b]  = Qinside[s::b];
+  Qoutside[s::z]  = Qinside[s::z];
 """
 
 refinement_criterion = """
@@ -52,9 +52,15 @@ refinement_criterion = """
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
+    min_depth=4,
     end_time=1.0,
 )
 args = parser.parse_args()
+
+constants = {
+    "g": [9.81, "double"],
+    "hThreshold": [1e-5, "double"],
+}
 
 size = [30.0, 30.0]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
@@ -63,7 +69,7 @@ min_h = max_h * 3.0 ** (-args.amr_levels)
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
     order=args.degrees_of_freedom,
-    unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1},
+    unknowns={"h": 1, "hu": 1, "hv": 1, "z": 1},
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
@@ -76,7 +82,9 @@ aderdg_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     flux=flux,
     ncp=nonconservative_product,
-    max_eigenvalue=max_eigenvalue,
+    max_eigenvalue=eigenvalue + """
+  return sFlux;
+""",
 )
 
 aderdg_solver.set_plotter(args.plotter)
@@ -113,6 +121,10 @@ project.set_global_simulation_parameters(
 project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees_init}, {args.trees})")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
+for const_name, const_info in constants.items():
+    const_val, const_type = const_info
+    project.constants.export_constexpr_with_type(
+        const_name, str(const_val), const_type
+    )
 project.set_fenv_handler(args.fpe)
-project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

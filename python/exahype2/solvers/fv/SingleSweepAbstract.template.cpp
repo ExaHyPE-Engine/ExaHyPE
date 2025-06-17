@@ -151,7 +151,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   _maxVolumeH = _maxVolumeHThisTimeStep;
 
   _maxVolumeHThisTimeStep      = 0.0;
-  _minVolumeHThisTimeStep      = std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch/2.0;
+  _minVolumeHThisTimeStep      = std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0;
 
   _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();

@@ -15,15 +15,159 @@
 
   {{COMPUTE_PRECISION}} leftGoingFluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
   {{COMPUTE_PRECISION}} rightGoingFluxGatheredLeft[{{NUMBER_OF_UNKNOWNS}}];
+
+  {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+  {{COMPUTE_PRECISION}} sourceGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {% endif %}
+
+  {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+  {{COMPUTE_PRECISION}} gradQGathered[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})];
+  {{COMPUTE_PRECISION}} sourceGathered[{{NUMBER_OF_UNKNOWNS}}];
+  {% endif %}
 {% endmacro %}
 
 {% macro gatherQ() %}
+  // Gather data
+  {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
   #if defined(SharedOMP)
   #pragma omp simd
   #else
   #pragma unroll
   #endif
-  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) { // Gather data
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QInGathered[unknown] = QIn[indexWithHalo];
+  }
+  {% if STATELESS_SOURCE_TERM==True %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
+  {% else %}
+  solver.sourceTerm(QInGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
+  {% endif %}
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(sourceGathered[unknown]));
+    #endif
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QOutGathered[unknown] = QIn[indexWithHalo] + timeStepSize * sourceGathered[unknown];
+  } // unknown
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = {{NUMBER_OF_UNKNOWNS}}; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QOutGathered[unknown] = QIn[indexWithHalo];
+  } // unknown
+  {% endif %}
+
+  {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int normal = 0; normal < {{DIMENSIONS}}; normal++) {
+    {% if DIMENSIONS==2 %}
+    const auto volumeLeft =
+      normal == 0 ? ::exahype2::volumeIndex(volume(0) - {{HALO_SIZE}}, volume(1))
+                  : ::exahype2::volumeIndex(volume(0),                 volume(1) - {{HALO_SIZE}});
+    const auto volumeRight =
+      normal == 0 ? ::exahype2::volumeIndex(volume(0) + {{HALO_SIZE}}, volume(1))
+                  : ::exahype2::volumeIndex(volume(0),                 volume(1) + {{HALO_SIZE}});
+    {% else %}
+    const auto volumeLeft =
+      normal == 0 ? ::exahype2::volumeIndex(volume(0) - {{HALO_SIZE}}, volume(1),                 volume(2)) :
+      normal == 1 ? ::exahype2::volumeIndex(volume(0),                 volume(1) - {{HALO_SIZE}}, volume(2))
+                  : ::exahype2::volumeIndex(volume(0),                 volume(1),                 volume(2) - {{HALO_SIZE}});
+    const auto volumeRight =
+      normal == 0 ? ::exahype2::volumeIndex(volume(0) + {{HALO_SIZE}}, volume(1),                 volume(2)) :
+      normal == 1 ? ::exahype2::volumeIndex(volume(0),                 volume(1) + {{HALO_SIZE}}, volume(2))
+                  : ::exahype2::volumeIndex(volume(0),                 volume(1),                 volume(2) + {{HALO_SIZE}});
+    {% endif %}
+    const auto volumeCentreLeft  = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeLeft);
+    const auto volumeCentreRight = ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, {{NUMBER_OF_VOLUMES_PER_AXIS}}, volumeRight);
+
+    #if defined(SharedOMP)
+    #pragma omp simd
+    #else
+    #pragma unroll
+    #endif
+    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+      const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(10) }}{##}
+      const int indexWithHaloLeft = {{ id.indexWithHalo('volumeLeft', 'unknown') | indent(6) }}{##}
+      const int indexWithHaloRight = {{ id.indexWithHalo('volumeRight', 'unknown') | indent(6) }}{##}
+      #ifdef GPUOffloadingOff
+      assertion(std::isfinite(QIn[indexWithHalo]));
+      assertion(std::isfinite(QIn[indexWithHaloLeft]));
+      assertion(std::isfinite(QIn[indexWithHaloRight]));
+      #endif
+      QInGathered[unknown] = QIn[indexWithHalo];
+      QInGatheredLeft[unknown] = QIn[indexWithHaloLeft];
+      QInGatheredRight[unknown] = QIn[indexWithHaloRight];
+      gradQGathered[normal * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}) + unknown] = 0.5 * (QInGatheredRight[unknown] - QInGathered[unknown]) / patchSize(normal) * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    } //unknown
+  } // normal
+
+  {% if STATELESS_DIFFUSIVE_SOURCE_TERM==True %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::diffusiveSourceTerm(QInGathered, gradQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
+  {% else %}
+  solver.diffusiveSourceTerm(QInGathered, gradQGathered, volumeCentre, volumeSize, timeStamp, timeStepSize, sourceGathered);
+  {% endif %}
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(sourceGathered[unknown]));
+    #endif
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QOutGathered[unknown] = QIn[indexWithHalo] + timeStepSize * sourceGathered[unknown];
+  } // unknown
+
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = {{NUMBER_OF_UNKNOWNS}}; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
+    #ifdef GPUOffloadingOff
+    assertion(std::isfinite(QIn[indexWithHalo]));
+    #endif
+    QOutGathered[unknown] = QIn[indexWithHalo];
+  } // unknown
+  {% endif %}
+
+  {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<none>" and SOURCE_TERM_IMPLEMENTATION=="<none>" %}
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #else
+  #pragma unroll
+  #endif
+  for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
     const int indexWithHalo = {{ id.indexWithHalo('volume', 'unknown') | indent(4) }}{##}
     #ifdef GPUOffloadingOff
     assertion(std::isfinite(QIn[indexWithHalo]));
@@ -31,6 +175,7 @@
     QInGathered[unknown] = QIn[indexWithHalo];
     QOutGathered[unknown] = QIn[indexWithHalo];
   } // unknown
+  {% endif %}
 {% endmacro %}
 
 {% macro scatterQ() %}

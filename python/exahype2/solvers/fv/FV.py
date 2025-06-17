@@ -301,6 +301,7 @@ class FV(object):
         self._max_eigenvalue_implementation = PDETerms.None_Implementation
         self._riemann_solver_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
+        self._diffusive_source_term_implementation = PDETerms.None_Implementation
         self._adjust_solution_implementation = PDETerms.None_Implementation
 
         self._use_stateless_initial_conditions = False
@@ -312,6 +313,7 @@ class FV(object):
         self._use_stateless_eigenvalues = False
         self._use_stateless_riemann_solver = False
         self._use_stateless_source_term = False
+        self._use_stateless_diffusive_source_term = False
         self._use_stateless_adjust_solution = False
 
         self._compute_eigenvalue = True
@@ -400,6 +402,9 @@ NCP:                    """
             + """
 Source term:            """
             + str(self._source_term_implementation)
+            + """
+Diffusive source term:  """
+            + str(self._diffusive_source_term_implementation)
             + """
 Adjust solution:        """
             + str(self._adjust_solution_implementation)
@@ -1587,6 +1592,7 @@ The finest mesh width of """
         d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
+        d["DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION"] = self._diffusive_source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
 
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
@@ -1598,6 +1604,7 @@ The finest mesh width of """
         d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
         d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
+        d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = self._use_stateless_diffusive_source_term
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
 
         d["CAN_FUSE"] = self._can_fuse

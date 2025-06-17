@@ -127,6 +127,18 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
+    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    virtual void diffusiveAlgebraicSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ,
+      const tarch::la::Vector<Dimensions, double>&                    x,
+      const tarch::la::Vector<Dimensions, double>&                    h,
+      const double                                                    t,
+      const double                                                    dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        S
+    ) = 0;
+    {% endif %}
+
     {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
     virtual void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
