@@ -2,12 +2,14 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
+import math
 
 import peano4
 import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
-from FrictionLaws import *
+from PDE import *
+from Rusanov import *
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -30,14 +32,14 @@ initial_conditions = """
   );
 
   Q[s::h] = topologyParser.sampleDisplacement(x(0), x(1));
-  Q[s::b] = topologyParser.sampleBathymetry(x(0), x(1));
+  Q[s::z] = topologyParser.sampleTopology(x(0), x(1));
 """
 
 boundary_conditions = """
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::b]  = Qinside[s::b];
+  Qoutside[s::z]  = Qinside[s::z];
 """
 
 refinement_criterion = """
@@ -45,51 +47,141 @@ refinement_criterion = """
   return result;
 """
 
+limiting_criterion = """
+  const auto Qh{Q[0]};
+  if (!std::isfinite(Qh)) {
+    return false;
+  }
+
+  // Try not to limit untouched cells initialised with 0.0
+  if ((Qh < hThreshold) and (Qh > -hThreshold)) {
+    return true;
+  }
+
+  // Low values of h are resolved on FV layer
+  if (Qh <= -hThreshold) {
+    return false;
+  }
+
+  // Limit close to boundaries
+  // x - 0
+  if (std::abs(x[0] - DomainOffset[0]) < h[0] or std::abs(x[0] - DomainOffset[0] - DomainSize[0]) < h[0]) {
+    return false;
+  }
+  // y - 1
+  if (std::abs(x[1] - DomainOffset[1]) < h[1] or std::abs(x[1] - DomainOffset[1] - DomainSize[1]) < h[1]) {
+    return false;
+  }
+
+  return true;
+"""
+
+adjust_solution = r"""
+  if (Q[s::h] < hThreshold) {
+    Q[s::h]  = std::fmax(0.0, Q[s::h]);
+    Q[s::hu] = 0.0;
+    Q[s::hv] = 0.0;
+  }
+"""
+
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
-    end_time=50.0,
+    min_depth=3,
+    end_time=40.0,
+    time_step_relaxation=0.45,
+    degrees_of_freedom=7,
 )
 args = parser.parse_args()
+
+constants = {
+    "g": [9.81, "double"],
+    "phi": [25.0, "double"],
+    "invXi": [1.0 / 200.0, "double"],
+    "hThreshold": [1e-1, "double"],
+}
+constants["mu"] = [
+    math.tan(math.pi / 180.0 * constants["phi"][0]),
+    "double",
+]
 
 size = [1900, 1950]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
 min_h = max_h * 3.0 ** (-args.amr_levels)
+dg_order = args.degrees_of_freedom - 1
 
-riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="FVRusanovSolver",
-    patch_size=args.degrees_of_freedom,
-    unknowns={"h": 1, "hu": 1, "hv": 1},
-    auxiliary_variables={
-    "b": 1, # Elevation
-    "bx": 1,
-    "by": 1,
-},
-    min_volume_h=min_h,
-    max_volume_h=max_h,
+regular_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    name="ADERDGSolver",
+    order=dg_order,
+    unknowns={"h": 1, "hu": 1, "hv": 1, "z": 1},
+    auxiliary_variables=0,
+    min_cell_h=min_h,
+    max_cell_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
-    number_of_enclave_tasks=args.ntasks,
 )
 
-riemann_solver.set_implementation(
+regular_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     flux=flux,
-    ncp="""
-  BTimesDeltaQ[s::h] = 0.0;
-  BTimesDeltaQ[s::hu] = 0.0;
-  BTimesDeltaQ[s::hv] = 0.0;
-  BTimesDeltaQ[s::hu + normal] += GRAV * Q[s::h] * deltaQ[s::b];
+    ncp=nonconservative_product,
+    max_eigenvalue=eigenvalue + stiff_eigenvalue + """
+  return std::fmax(sFlux, h[normal] * sSource);
 """,
-    max_eigenvalue=max_eigenvalue,
-    source_term=coulomb_friction,
+    diffusive_source_term=stiff_source_term_aderdg,
+    riemann_solver=rusanov_aderdg,
 )
 
-riemann_solver.set_plotter(args.plotter)
-riemann_solver.add_user_solver_includes(
+regular_solver.set_plotter(args.plotter)
+regular_solver.add_user_solver_includes(
     """
 #include "tarch/reader/TopologyParser.h"
 """
+)
+regular_solver.add_kernel_optimisations(
+     is_linear=False,
+     polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
+)
+
+limiting_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    name="FVSolver",
+    patch_size=dg_order * 2 + 1,
+    unknowns={"h": 1, "hu": 1, "hv": 1},
+    auxiliary_variables={"z": 1},
+    min_volume_h=min_h,
+    max_volume_h=max_h,
+    time_step_relaxation=args.time_step_relaxation,
+)
+
+limiting_solver.set_implementation(
+    initial_conditions=initial_conditions,
+    boundary_conditions=boundary_conditions,
+    refinement_criterion=refinement_criterion,
+    flux=flux,
+    max_eigenvalue=eigenvalue + """
+  return sFlux;
+""",
+    ncp=nonconservative_product + stiff_nonconservative_product,
+    riemann_solver=rusanov_fv,
+    diffusive_source_term=stiff_source_term_fv,
+    adjust_solution=adjust_solution,
+)
+
+limiting_solver.set_plotter(args.plotter)
+limiting_solver.add_user_solver_includes(
+    """
+#include "tarch/reader/TopologyParser.h"
+"""
+)
+
+limiter_solver = exahype2.solvers.limiting.PosterioriLimiting(
+    name="LimiterSolver",
+    regular_solver=regular_solver,
+    limiting_solver=limiting_solver,
+    number_of_dmp_observables=3,
+    dmp_relaxation_parameter=1.0,  # MD 3: BOTH FRICTIONS: 1.0, ONLY ONE FRICTION TERM OR ZERO: 0.5,
+    dmp_differences_scaling=0.01,  # MD 3: BOTH FRICTIONS: 0.01, ONLY ONE FRICTION TERM OR ZERO: 0.005,
+    physical_admissibility_criterion=limiting_criterion,
 )
 
 project = exahype2.Project(
@@ -98,7 +190,10 @@ project = exahype2.Project(
     directory=".",
     executable=f"TafjordLandslide.{args.build_mode}",
 )
-project.add_solver(riemann_solver)
+
+project.add_solver(regular_solver)
+project.add_solver(limiting_solver)
+project.add_solver(limiter_solver)
 
 if args.number_of_snapshots <= 0:
     time_in_between_plots = 0.0
@@ -123,7 +218,11 @@ project.set_global_simulation_parameters(
 project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees_init}, {args.trees})")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
+for const_name, const_info in constants.items():
+    const_val, const_type = const_info
+    project.constants.export_constexpr_with_type(
+        const_name, str(const_val), const_type
+    )
 project.output.makefile.set_target_device(args.target_device)
 project.set_fenv_handler(args.fpe)
-project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

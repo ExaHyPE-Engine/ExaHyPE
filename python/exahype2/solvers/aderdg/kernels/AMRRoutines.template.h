@@ -13,25 +13,25 @@ void faceUnknownsProlongation(
   {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lFhbndFine,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lQhbndCoarse,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndCoarse,
-  const tarch::la::Vector<Dimensions - 1, int>&                 subfaceIndex
+  const tarch::la::Vector<Dimensions - 1, int>&            subfaceIndex
 );
 
 void faceFluxRestriction(
   {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lFhbndCoarse,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndFine,
-  const tarch::la::Vector<Dimensions - 1, int>&                 subfaceIndex
+  const tarch::la::Vector<Dimensions - 1, int>&            subfaceIndex
 );
 
 void cellUnknownsProlongation(
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhFine,
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luhCoarse,
-  const tarch::la::Vector<Dimensions, int>&                subcellIndex
+  const tarch::la::Vector<Dimensions, int>&           subcellIndex
 );
 
 void cellUnknownsRestriction(
   const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luhFine,
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhCoarse,
-  const tarch::la::Vector<Dimensions, int>&                subcellIndex
+  const tarch::la::Vector<Dimensions, int>&           subcellIndex
 );
 
 {% for item in NAMESPACE -%}

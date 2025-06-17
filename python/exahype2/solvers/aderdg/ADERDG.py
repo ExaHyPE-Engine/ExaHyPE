@@ -182,6 +182,7 @@ class ADERDG(object):
         self._flux_implementation                 = PDETerms.None_Implementation
         self._ncp_implementation                  = PDETerms.None_Implementation
         self._source_term_implementation          = PDETerms.None_Implementation
+        self._diffusive_source_term_implementation= PDETerms.None_Implementation
         self._point_sources_implementation        = PDETerms.None_Implementation
         self._init_point_sources_implementation   = PDETerms.None_Implementation
         self._max_eigenvalue_implementation       = PDETerms.None_Implementation
@@ -200,6 +201,7 @@ class ADERDG(object):
         self._use_stateless_max_eigenvalue = False
         self._use_stateless_riemann_solver = False
         self._use_stateless_source_term = False
+        self._use_stateless_diffusive_source_term = False
         self._use_stateless_point_source = False
         self._use_stateless_init_point_sources = False
         self._use_stateless_adjust_solution = False
@@ -337,6 +339,9 @@ NCP:                    """
             + """
 Source term:            """
             + str(self._source_term_implementation)
+            + """
+Diffusive source term:  """
+            + str(self._diffusive_source_term_implementation)
             + """
 Point sources:          """
             + str(self._point_sources_implementation)
@@ -1310,6 +1315,7 @@ Material parameters:    """
         d["MAX_EIGENVALUE_IMPLEMENTATION"] = self._max_eigenvalue_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
+        d["DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION"] = self._diffusive_source_term_implementation
         d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
         d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
         d["POINT_SOURCES_IMPLEMENTATION"] = self._point_sources_implementation
@@ -1321,6 +1327,7 @@ Material parameters:    """
         d["USE_MAX_EIGENVALUE"]       = self._max_eigenvalue_implementation != PDETerms.None_Implementation
         d["USE_RIEMANN_SOLVER"]       = self._riemann_solver_implementation != PDETerms.None_Implementation
         d["USE_SOURCE"]               = self._source_term_implementation != PDETerms.None_Implementation
+        d["USE_DIFFUSIVE_SOURCE"]     = self._diffusive_source_term_implementation != PDETerms.None_Implementation
         d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation != PDETerms.None_Implementation
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
         d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
@@ -1333,6 +1340,7 @@ Material parameters:    """
         d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
         d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
+        d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = self._use_stateless_diffusive_source_term
         d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
         d["STATELESS_POINT_SOURCE"] = self._use_stateless_point_source
         d["STATELESS_INIT_POINT_SOURCES"] = self._use_stateless_init_point_sources
@@ -1361,6 +1369,7 @@ Material parameters:    """
         max_eigenvalue=None,
         riemann_solver=None,
         source_term=None,
+        diffusive_source_term=None,
         adjust_solution=None,
         material_parameters=None,
         number_of_point_sources=0,
@@ -1420,6 +1429,13 @@ Material parameters:    """
             self._source_term_implementation = source_term
             if source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_source_term = True
+            else:
+                self._can_fuse = False
+
+        if diffusive_source_term is not None:
+            self._diffusive_source_term_implementation = diffusive_source_term
+            if diffusive_source_term is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_diffusive_source_term = True
             else:
                 self._can_fuse = False
 

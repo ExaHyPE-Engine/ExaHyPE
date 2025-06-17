@@ -117,6 +117,20 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 }
 {% endif %}
 
+{% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   deltaQ, // deltaQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] {{COMPUTE_PRECISION}}* const NOALIAS         S // S[{{NUMBER_OF_UNKNOWNS}}]
+) {
+  // @todo Implement
+}
+{% endif %}
+
 {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
   [[maybe_unused]] const {{COMPUTE_PRECISION}}* const NOALIAS   QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

@@ -9,31 +9,6 @@ import jinja2
 class SaveNewCellData(AbstractLimiterActionSet):
   TemplateSaveNewCellData = """
   if ({{PREDICATE}}) {
-    /*
-    //[nk] TODO: This logic won't work for the fixed timestep solvers, since they do not have getAdmissibleTimeStepSize() methods.
-    //[nk] By default we use the regular solver's time step
-    double timeStepSize = repositories::{{LIMITER_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
-    //[nk] However, if we fall to the LimiterSolver layer, all cells will be marked as TROUBLED. Therefore we should use the timeStepSize
-    // from the Limiter Solver
-    // NOTE! It is assumed, that TROUBLED and LIMITER_TO_REGULAR cells have the biggest eigenvalues.
-    // If it is not true, eigenvalues should be recalculated right after the projection from Limiter to Regular
-    if (fineGridCell{{SOLVER_NAME}}CellLabel.getTroubled_Marker() == celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::REGULAR) {
-      timeStepSize = repositories::{{REGULAR_SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
-    }
-
-    //[nk] Store the time step inside the cell label
-    fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-    coarseGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-    fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-    coarseGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-
-    //[nk] Synchronise the time stamp for all solvers inside the cell label
-    const double timeStampSynchronised = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
-    coarseGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
-    fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
-    coarseGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStampSynchronised);
-    */
-
     {% if USE_DMP %}
     // Resetting local min and max
     constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
@@ -47,10 +22,10 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
     for (int d = 0; d < Dimensions; d++) {
       // Projection of cell local min and max
-      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+numberOfObservables);
-      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value);
-      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d).value+3*numberOfObservables);
-      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}Q_min_and_max(d+Dimensions).value+2*numberOfObservables);
+      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + numberOfObservables);
+      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value);
+      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 3 * numberOfObservables);
+      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + 2 * numberOfObservables);
     }
     {% endif %}
 
@@ -63,7 +38,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
     {% endif %}
 
     {% if TRAMSMIT_CELL_TIMESTAMPS %}
-    // Set timestamp for both cells to be the max of the two possible timestamps
+    // Set time stamp for both cells to be the max of the two possible time stamps
     const double timeStamp = std::max(
       fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.getTimeStamp(),
       fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp()
@@ -87,7 +62,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]              = self.guard
+      d["PREDICATE"]                = self.guard
       d["USE_DMP"]                  = self._use_DMP
       d["RESET_TROUBLED_MARKERS"]   = self._reset_troubled_markers
       d["TRAMSMIT_CELL_TIMESTAMPS"] = self._transmit_cell_timestamps

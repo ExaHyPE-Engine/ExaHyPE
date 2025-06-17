@@ -1,4 +1,4 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "TopologyParser.h"
 
@@ -12,22 +12,22 @@
 tarch::logging::Log tarch::reader::TopologyParser::_log("tarch::reader::TopologyParser");
 
 tarch::reader::TopologyParser::TopologyParser(
-  const char* bathymetryFilePath,
+  const char* topologyFilePath,
   const char* displacementFilePath,
   double      lengthOfSimulationDomainInX,
   double      lengthOfSimulationDomainInY,
   double      offsetOfSimulationDomainInX,
   double      offsetOfSimulationDomainInY,
-  const char* ncBathymetryKey,
-  const char* ncBathymetryKeyX,
-  const char* ncBathymetryKeyY,
+  const char* ncTopologyKey,
+  const char* ncTopologyKeyX,
+  const char* ncTopologyKeyY,
   const char* ncDisplacementKey,
   const char* ncDisplacementKeyX,
   const char* ncDisplacementKeyY
 ):
-  _ncBathymetryKey(ncBathymetryKey),
-  _ncBathymetryKeyX(ncBathymetryKeyX),
-  _ncBathymetryKeyY(ncBathymetryKeyY),
+  _ncTopologyKey(ncTopologyKey),
+  _ncTopologyKeyX(ncTopologyKeyX),
+  _ncTopologyKeyY(ncTopologyKeyY),
   _ncDisplacementKey(ncDisplacementKey),
   _ncDisplacementKeyX(ncDisplacementKeyX),
   _ncDisplacementKeyY(ncDisplacementKeyY),
@@ -36,97 +36,93 @@ tarch::reader::TopologyParser::TopologyParser(
   _offsetOfSimulationDomainInX(offsetOfSimulationDomainInX),
   _offsetOfSimulationDomainInY(offsetOfSimulationDomainInY) {
 
-  this->parseBathymetryFile(bathymetryFilePath);
+  this->parseTopologyFile(topologyFilePath);
   this->parseDisplacementFile(displacementFilePath);
 }
 
-
 tarch::reader::TopologyParser::TopologyParser(
-  const char* bathymetryFilePath,
+  const char* topologyFilePath,
   double      lengthOfSimulationDomainInX,
   double      lengthOfSimulationDomainInY,
   double      offsetOfSimulationDomainInX,
   double      offsetOfSimulationDomainInY,
-  const char* ncBathymetryKey,
-  const char* ncBathymetryKeyX,
-  const char* ncBathymetryKeyY
+  const char* ncTopologyKey,
+  const char* ncTopologyKeyX,
+  const char* ncTopologyKeyY
 ):
-  _ncBathymetryKey(ncBathymetryKey),
-  _ncBathymetryKeyX(ncBathymetryKeyX),
-  _ncBathymetryKeyY(ncBathymetryKeyY),
+  _ncTopologyKey(ncTopologyKey),
+  _ncTopologyKeyX(ncTopologyKeyX),
+  _ncTopologyKeyY(ncTopologyKeyY),
   _lengthOfSimulationDomainInX(lengthOfSimulationDomainInX),
   _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY),
   _offsetOfSimulationDomainInX(offsetOfSimulationDomainInX),
   _offsetOfSimulationDomainInY(offsetOfSimulationDomainInY) {
 
-  this->parseBathymetryFile(bathymetryFilePath);
+  this->parseTopologyFile(topologyFilePath);
 }
 
-
 tarch::reader::TopologyParser::~TopologyParser() {
-  delete[] this->_bathymetry;
+  delete[] this->_topology;
   delete[] this->_displacement;
 }
 
-
-void tarch::reader::TopologyParser::parseBathymetryFile(const char* bathymetryFilePath) {
-  logInfo("parseBathymetryFile()", "Parse bathymetry file with keys (" << _ncBathymetryKey << ", " << _ncBathymetryKeyX << ", " << _ncBathymetryKeyY << ")");
+void tarch::reader::TopologyParser::parseTopologyFile(const char* topologyFilePath) {
+  logDebug("parseTopologyFile()", "Parse topology file with keys (" << _ncTopologyKey << ", " << _ncTopologyKeyX << ", " << _ncTopologyKeyY << ")");
 
   int ncid = -1;
 
-  if ((ncid = _netCDFReader.open(bathymetryFilePath)) == -1) {
+  if ((ncid = _netCDFReader.open(topologyFilePath)) == -1) {
     std::stringstream ss;
-    ss << "Bathymetry file " << bathymetryFilePath << " could not be opened.";
+    ss << "Topology file " << topologyFilePath << " could not be opened.";
     throw std::runtime_error(ss.str());
   }
 
-  // Read x-dimension of bathymetry
-  if ((_lengthOfBathymetryInX = _netCDFReader.getDimension(ncid, _ncBathymetryKeyX)) == 0) {
-    throw std::runtime_error("Bathymetry x-dimension could not be read.");
+  // Read x-dimension of topology
+  if ((_lengthOfTopologyInX = _netCDFReader.getDimension(ncid, _ncTopologyKeyX)) == 0) {
+    throw std::runtime_error("Topology x-dimension could not be read.");
   }
 
-  // Read y-dimension of bathymetry
-  if ((_lengthOfBathymetryInY = _netCDFReader.getDimension(ncid, _ncBathymetryKeyY)) == 0) {
-    throw std::runtime_error("Bathymetry y-dimension could not be read.");
+  // Read y-dimension of topology
+  if ((_lengthOfTopologyInY = _netCDFReader.getDimension(ncid, _ncTopologyKeyY)) == 0) {
+    throw std::runtime_error("Topology y-dimension could not be read.");
   }
 
   // Get max and min x
   {
-    double tmp[_lengthOfBathymetryInX];
-    std::memset(tmp, 0, _lengthOfBathymetryInX * sizeof(double));
-    if (_netCDFReader.readVariable1D(ncid, _ncBathymetryKeyX, tmp) == -1) {
-      throw std::runtime_error("Bathymetry x-indices could not be read.");
+    double tmp[_lengthOfTopologyInX];
+    std::memset(tmp, 0, _lengthOfTopologyInX * sizeof(double));
+    if (_netCDFReader.readVariable1D(ncid, _ncTopologyKeyX, tmp) == -1) {
+      throw std::runtime_error("Topology x-indices could not be read.");
     }
-    _minXCoordinateInBathymetry = tmp[0];
-    _maxXCoordinateInBathymetry = tmp[_lengthOfBathymetryInX - 1];
+    _minXCoordinateInTopology = tmp[0];
+    _maxXCoordinateInTopology = tmp[_lengthOfTopologyInX - 1];
   }
 
   // Get max and min y
   {
-    double tmp[_lengthOfBathymetryInY];
-    std::memset(tmp, 0, _lengthOfBathymetryInY * sizeof(double));
-    if (_netCDFReader.readVariable1D(ncid, _ncBathymetryKeyY, tmp) == -1) {
-      throw std::runtime_error("Bathymetry y-indices could not be read.");
+    double tmp[_lengthOfTopologyInY];
+    std::memset(tmp, 0, _lengthOfTopologyInY * sizeof(double));
+    if (_netCDFReader.readVariable1D(ncid, _ncTopologyKeyY, tmp) == -1) {
+      throw std::runtime_error("Topology y-indices could not be read.");
     }
-    _minYCoordinateInBathymetry = tmp[0];
-    _maxYCoordinateInBathymetry = tmp[_lengthOfBathymetryInY - 1];
+    _minYCoordinateInTopology = tmp[0];
+    _maxYCoordinateInTopology = tmp[_lengthOfTopologyInY - 1];
   }
 
-  // Read bathymetry
-  _bathymetry = new double[_lengthOfBathymetryInX * _lengthOfBathymetryInY];
-  if (_netCDFReader.readVariable2D(ncid, _ncBathymetryKey, _bathymetry) == -1) {
-    throw std::runtime_error("Bathymetry could not be read.");
+  // Read topology
+  _topology = new double[_lengthOfTopologyInX * _lengthOfTopologyInY];
+  if (_netCDFReader.readVariable2D(ncid, _ncTopologyKey, _topology) == -1) {
+    throw std::runtime_error("Topology could not be read.");
   }
 
-  // Close bathymetry netCDF file
+  // Close topology netCDF file
   if (_netCDFReader.close(ncid) == -1) {
-    throw std::runtime_error("Bathymetry file could not be closed.");
+    throw std::runtime_error("Topology file could not be closed.");
   }
 }
 
-
 void tarch::reader::TopologyParser::parseDisplacementFile(const char* displacementFilePath) {
-  logInfo("parseDisplacementFile()", "Parse displacement file with keys (" << _ncDisplacementKey << ", " << _ncDisplacementKeyX << ", " << _ncDisplacementKeyY << ")");
+  logDebug("parseDisplacementFile()", "Parse displacement file with keys (" << _ncDisplacementKey << ", " << _ncDisplacementKeyX << ", " << _ncDisplacementKeyY << ")");
 
   int ncid = -1;
 
@@ -180,59 +176,57 @@ void tarch::reader::TopologyParser::parseDisplacementFile(const char* displaceme
   }
 }
 
-
-double tarch::reader::TopologyParser::sampleBathymetry(double x, double y) {
+double tarch::reader::TopologyParser::sampleTopology(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
-    _minXCoordinateInBathymetry,
-    _maxXCoordinateInBathymetry,
+    _minXCoordinateInTopology,
+    _maxXCoordinateInTopology,
     _offsetOfSimulationDomainInX
   );
   const auto yCDF = transformIndexSimulationToCDFRange(
     y,
     _lengthOfSimulationDomainInY,
-    _minYCoordinateInBathymetry,
-    _maxYCoordinateInBathymetry,
+    _minYCoordinateInTopology,
+    _maxYCoordinateInTopology,
     _offsetOfSimulationDomainInY
   );
 
-  // No defined bathymetry
+  // No defined topology
   if (
-    tarch::la::greater(xCDF, _maxXCoordinateInBathymetry) or
-    tarch::la::smaller(xCDF, _minXCoordinateInBathymetry) or
-    tarch::la::greater(yCDF, _maxYCoordinateInBathymetry) or
-    tarch::la::smaller(yCDF, _minYCoordinateInBathymetry)
+    tarch::la::greater(xCDF, _maxXCoordinateInTopology) or
+    tarch::la::smaller(xCDF, _minXCoordinateInTopology) or
+    tarch::la::greater(yCDF, _maxYCoordinateInTopology) or
+    tarch::la::smaller(yCDF, _minYCoordinateInTopology)
   ) {
     return 0.0;
   }
 
-  return _bathymetry[transformIndexCDFRangeToArray(
+  return _topology[transformIndexCDFRangeToArray(
     xCDF,
     yCDF,
-    _minXCoordinateInBathymetry,
-    _minYCoordinateInBathymetry,
-    _maxXCoordinateInBathymetry,
-    _maxYCoordinateInBathymetry,
-    _lengthOfBathymetryInX,
-    _lengthOfBathymetryInY
+    _minXCoordinateInTopology,
+    _minYCoordinateInTopology,
+    _maxXCoordinateInTopology,
+    _maxYCoordinateInTopology,
+    _lengthOfTopologyInX,
+    _lengthOfTopologyInY
   )];
 }
-
 
 double tarch::reader::TopologyParser::sampleDisplacement(double x, double y) {
   const auto xCDF = transformIndexSimulationToCDFRange(
     x,
     _lengthOfSimulationDomainInX,
-    _minXCoordinateInBathymetry,
-    _maxXCoordinateInBathymetry,
+    _minXCoordinateInTopology,
+    _maxXCoordinateInTopology,
     _offsetOfSimulationDomainInX
   );
   const auto yCDF = transformIndexSimulationToCDFRange(
     y,
     _lengthOfSimulationDomainInY,
-    _minYCoordinateInBathymetry,
-    _maxYCoordinateInBathymetry,
+    _minYCoordinateInTopology,
+    _maxYCoordinateInTopology,
     _offsetOfSimulationDomainInY
   );
 
@@ -258,7 +252,6 @@ double tarch::reader::TopologyParser::sampleDisplacement(double x, double y) {
   )];
 }
 
-
 double tarch::reader::TopologyParser::transformIndexSimulationToCDFRange(
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
@@ -276,7 +269,6 @@ double tarch::reader::TopologyParser::transformIndexSimulationToCDFRange(
 
   return m * coordinateOfDimensionZInSimulationSpace + b;
 }
-
 
 int tarch::reader::TopologyParser::transformIndexCDFRangeToArray(
   double      xCoordinateInCDFMesh,
@@ -298,7 +290,7 @@ int tarch::reader::TopologyParser::transformIndexCDFRangeToArray(
     // f(0) = b
     const double b = minXCoordinateInCDFMesh / dx;
     const double m = maxIndex / (maxXCoordinateInCDFMesh - minXCoordinateInCDFMesh);
-    xIndex = std::floor(m * xCoordinateInCDFMesh + b);
+    xIndex         = std::floor(m * xCoordinateInCDFMesh + b);
   }
 
   {
@@ -308,7 +300,7 @@ int tarch::reader::TopologyParser::transformIndexCDFRangeToArray(
     // f(0) = b
     const double b = minYCoordinateInCDFMesh / dy;
     const double m = maxIndex / (maxYCoordinateInCDFMesh - minYCoordinateInCDFMesh);
-    yIndex = std::floor(m * yCoordinateInCDFMesh + b);
+    yIndex         = std::floor(m * yCoordinateInCDFMesh + b);
   }
 
   return yIndex * lengthOfXDimensionInCDFMesh + xIndex;

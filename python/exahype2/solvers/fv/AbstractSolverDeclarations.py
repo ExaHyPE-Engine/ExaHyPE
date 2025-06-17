@@ -5,7 +5,7 @@ import jinja2
 
 class AbstractSolverDeclarations:
     def __init__(self, dictionary):
-      self.d = dictionary
+        self.d = dictionary
 
     def create_abstract_solver_user_declarations(self):
         Template = jinja2.Template(
@@ -114,6 +114,18 @@ class AbstractSolverDeclarations:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      const double                                  t,
+      const double                                  dt,
+      {{COMPUTE_PRECISION}}* const NOALIAS          S // S[{{NUMBER_OF_UNKNOWNS}}]
+    ) = 0;
+    {% endif %}
+
+    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    virtual void diffusiveSourceTerm(
+      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTE_PRECISION}}* const NOALIAS    deltaQ, // deltaQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       const double                                  t,

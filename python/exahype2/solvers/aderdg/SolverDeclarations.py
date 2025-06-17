@@ -147,15 +147,38 @@ class SolverDeclarations:
     #endif
     static inline GPUCallableMethod
     void algebraicSource(
-      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
       [[maybe_unused]] const double                                   t,
       [[maybe_unused]] const double                                   dt,
-      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   S // S[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) InlineMethod {
       {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
       {{SOURCE_TERM_IMPLEMENTATION}}
+      {% endif %}
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
+    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static inline GPUCallableMethod
+    void diffusiveAlgebraicSource(
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS deltaQ,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   x,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>&   h,
+      [[maybe_unused]] const double                                   t,
+      [[maybe_unused]] const double                                   dt,
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS S // S[{{NUMBER_OF_UNKNOWNS}}]
+    ) InlineMethod {
+      {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+      {{DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION}}
       {% endif %}
     }
     #if defined(GPUOffloadingOMP)
@@ -341,6 +364,18 @@ class SolverDeclarations:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     void algebraicSource(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>&   x,
+      const tarch::la::Vector<Dimensions, double>&   h,
+      const double                                   t,
+      const double                                   dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   S // S[{{NUMBER_OF_UNKNOWNS}}]
+    ) override final;
+    {% endif %}
+
+    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    void diffusiveAlgebraicSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ,
       const tarch::la::Vector<Dimensions, double>&   x,
       const tarch::la::Vector<Dimensions, double>&   h,
       const double                                   t,

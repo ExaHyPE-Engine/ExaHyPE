@@ -47,7 +47,7 @@ class PosterioriLimiting(object):
             scheme and neighbouring cells need their old solution to project values with.
           PAC: if not none, a user-defined physical admissibility criterion should be checked at the end of
             the correction step which verifies whether or not the produced solution is physically sensible.
-          number_of_pac_observables: number of variables which the physical admisibility criterion should consider
+          number_of_pac_observables: number of variables which the physical admissibility criterion should consider
           number_of_dmp_observables: if greater than zero, a discrete maximum principle should be checked at the
             end of the corrector step. This essentially verifies whether shocks have formed.
         """
@@ -59,10 +59,6 @@ class PosterioriLimiting(object):
 
         self._halo_size = int(limiting_solver._patch_overlap_old.dim[0]/2)
 
-        """
-    These will be used by children of this class to fill them with the declaration and definition of the
-    above mandatory and optional functions.
-    """
         self._solver_user_declarations  = ""
         self._solver_user_definitions   = ""
 
@@ -70,10 +66,10 @@ class PosterioriLimiting(object):
         self.user_solver_includes       = ""
 
         """
-    Used by child classes, will contain code to be executed at the start and end respectively of the
-    time step. Typically specifies some timestep variable and advances the overall timestamp of the
-    entire solver.
-    """
+        Used by child classes, will contain code to be executed at the start and end respectively of the
+        time step. Typically specifies some time step variable and advances the overall timestamp of the
+        entire solver.
+        """
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
         self._print_time_step_implementation = ""
@@ -81,32 +77,23 @@ class PosterioriLimiting(object):
         self._constructor_implementation = ""
 
         """
-    used if the user wants to add some function to postprocessing, meaning
-    it should be added after every other computation in ADER-DG is done.
-    """
+        Used if the user wants to add some function to postprocessing, meaning
+        it should be added after every other computation in ADER-DG is done.
+        """
         self._action_set_postprocess_solution = None
 
         self._regular_solver._split_sweeps = True
 
-        # create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified
         self.create_data_structures()
         self.create_action_sets()
 
-    """
-  Creates all the structures which are attached on the peano grid either in a cell or on the faces.
-  These are defined as peano patches which have given sizes to contain persistent data as well as 
-  conditions for when they should be merged, sent, received, stored, loaded, etc.
-  """
-
     @abstractmethod
     def create_data_structures(self):
-        regular_patch_size = self._regular_solver.order+1
-
         """
         This will serve as a face marker to communicate with neighbouring cells whether
         a given cell is troubled, is neighbouring a troubled cell, or is fine.
         Cells that are troubled or neighbouring a troubled cell must rollback their solution
-        to the previous one and perform one timestep using a more robust FV scheme.
+        to the previous one and perform one time step using a more robust FV scheme.
         Therefore these and their neighbours must convert the DG representation of their
         previous solution to an FV representation and project it to their faces so that these
         can be exchanged with their neighbours.
@@ -114,27 +101,25 @@ class PosterioriLimiting(object):
         Variants = ["REGULAR","REGULAR_TO_LIMITER","LIMITER_TO_REGULAR","TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants ) )
-        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker",      variants=Variants ) )
+        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker", variants=Variants ) )
+        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker", variants=Variants ) )
 
-        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n  _Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
-
+        self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n_Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
 
         # This will contain the projection of the face-local minima and maxima
         self._min_and_max_projection = peano4.datamodel.Patch(
             (2, 2, 1),
             self._number_of_dmp_observables,
-            self._unknown_identifier() + "_min_and_max"
+            self._unknown_identifier() + "MinAndMax"
         )
-        # if self._hold_face_data_on_heap_with_smart_pointer:
-        #   self._min_and_max_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-        #       self._min_and_max_projection,
-        #       self._corrector_computation_precision
-        # )
+        self._min_and_max_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+            self._min_and_max_projection,
+            "double"
+        )
 
         self._min_and_max_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._min_and_max_projection)
 
-        self._min_and_max_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        self._min_and_max_projection.generator.load_store_compute_flag = "peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
             self._load_face_data_default_guard(),
             self._store_face_data_default_guard()
@@ -142,11 +127,11 @@ class PosterioriLimiting(object):
 
         self._min_and_max_projection.generator.send_condition = (
             "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver"
-            " and " + "repositories::" + self._regular_solver.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"
+            " and repositories::" + self._regular_solver.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"
         )
         self._min_and_max_projection.generator.receive_and_merge_condition = (
             "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver"
-            " and " + "repositories::" + self._regular_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
+            " and repositories::" + self._regular_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
         )
 
         self._min_and_max_projection.generator.includes += """
@@ -154,80 +139,61 @@ class PosterioriLimiting(object):
 #include "repositories/SolverRepository.h"
 """
 
-        # [nk] The time step is recomputed in limiting solvers' SaveNewData action.
-        # Therefore in regular and limiter solver we should get it from the cell.
-#         self._regular_solver._compute_time_step_size = """
-#       const double timeStepSize  = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
-#   """
-#         self._limiter_solver._compute_time_step_size = """
-#     double timeStepSize = coarseGridCell""" + self._limiter_solver._name + """CellLabel.getTimeStepSize();
-# """
-
-#         compute_time_step_size = """
-#     double timeStepSize = std::min( repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
-#                                     repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
-# """
-        compute_time_step_size = "double timeStepSize = repositories::" + self.get_name_of_global_instance() + ".getAdmissibleTimeStepSize();"
+        compute_time_step_size = """
+    // We have to assume that the regular solver's time step size computation also considers troubled cells.
+    // Therefore, the minimal time step size of the regular solver is unnecessary small.
+    // Albeit mathematically correct, we compute the solution with a time step size that is way too small.
+    // Use std::max for now to choose the more optimistic time step size (which is almost always the limiter's time step size).
+    // TODO: Find a better way to compute the time step size without choosing a too small one.
+    double timeStepSize = std::max(repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
+                                   repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
+"""
 
         self._limiter_solver._compute_time_step_size = compute_time_step_size
         self._regular_solver._compute_time_step_size = compute_time_step_size
-
-
-    """
-    Creates the action sets, these are actions tied to the grid that are executed at given points of
-    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures that
-    contain data as well as operations that are executed on that data. These are the latter.
-    The guard here are the conditions for the execution of the operation, as in they are only executed
-    if the guard evaluates to true.
-    """
 
     @abstractmethod
     def create_action_sets(self):
         self._action_set_save_new_cell_data = SaveNewCellData(self,
             guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()"
               " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver" +
-              " and " + "repositories::" + self._regular_solver.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
+              " and repositories::" + self._regular_solver.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
             use_DMP=self._number_of_dmp_observables>0,
             reset_troubled_markers=True,
             transmit_cell_timestamps=True
         )
 
         self._action_set_check_troubledness = VerifyTroubledness(self,
-            guard = ("not marker.willBeRefined() and not marker.hasBeenRefined() and" +
-                " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver" +
-                " and " + "repositories::" + self._regular_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"),
+            guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()" +
+                " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RegularSolver" +
+                " and repositories::" + self._regular_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"),
             use_PAC=self._physical_admissibility_criterion!=PDETerms.None_Implementation,
             use_DMP=self._number_of_dmp_observables>0
         )
 
         self._action_set_spread_limiter_status = SpreadLimiterStatus(self,
-            guard = ("not marker.willBeRefined() and not marker.hasBeenRefined() and" +
-                " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterStatusSpreadingToNeighbours"
+            guard = ("not marker.willBeRefined() and not marker.hasBeenRefined()" +
+                " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterStatusSpreadingToNeighbours"
         ))
 
         self._action_set_copy_convert_and_project_data = CopyAndConvertPatch(self,
-            regularToLimiterGuard = ("not marker.willBeRefined() and not marker.hasBeenRefined() and" +
-                " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterStatusSpreadingToSecondNeighbours"),
-            # [nk] Regular cells are allowed to enter this step as a part of time-step synchronization between solvers.
-            limiterToRegularGuard = ( "not marker.willBeRefined() and not marker.hasBeenRefined() and"
-              + " repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
-              # + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()")
-              + " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver"
-              + " and " + "repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()"
-              + " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR")
-
+            regularToLimiterGuard = ("not marker.willBeRefined() and not marker.hasBeenRefined()" +
+                " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterStatusSpreadingToSecondNeighbours"),
+            limiterToRegularGuard = ("not marker.willBeRefined() and not marker.hasBeenRefined()" +
+                " and repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::LimiterSolver" +
+                " and repositories::" + self._limiter_solver.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep()" +
+                " and fineGridCell" + self._name + "CellLabel.getTroubled_Marker()>=celldata::" + self._name + "CellLabel::Troubled_Marker::LIMITER_TO_REGULAR")
         )
 
         """
-        saving cell needs to happen before the cell is used for any computations
-        checking troubledness needs to happen after any updates have been finalized
-        spreading limiter status is inconsequential, it can happen at any time since it has
-          its own dedicated timestep
-        copying and converting the data from regular to limiter can happen whenever as it
-          happens in a dedicated timestep, it needs to be followed up by a projection of
-          said data, which in the case of an fv limiter is done automatically
-          copying from limiter to regular needs to happen after the limiter is finished
-          computing the new solution within a given cell
+        Saving cell needs to happen before the cell is used for any computations.
+        Checking troubledness needs to happen after any updates have been finalised.
+        Spreading limiter status is inconsequential, it can happen at any time since it has its own dedicated time step.
+        Copying and converting the data from regular to limiter can happen whenever as it
+        happens in a dedicated time step, it needs to be followed up by a projection of
+        said data, which in the case of an FV limiter is done automatically.
+        Copying from limiter to regular needs to happen after the limiter is finished
+        computing the new solution within a given cell.
         """
         self._action_set_save_new_cell_data.descend_invocation_order            = 0
         self._action_set_check_troubledness.descend_invocation_order            = 1000
@@ -255,12 +221,7 @@ class PosterioriLimiting(object):
         return self.user_solver_includes
 
     def add_user_action_set_includes(self, value):
-        """
-        Add further includes to this property, if your action sets require some additional
-        routines from other header files.
-        """
         self.user_action_set_includes += value
-
 
     def _store_cell_data_default_guard(self):
         return (
@@ -381,12 +342,6 @@ class PosterioriLimiting(object):
 #include "repositories/SolverRepository.h"
 """
 
-    """
-  The following functions will be called by the peano4 project,
-  they tell peano which of our generated data it should attach
-  to each grid element and use.
-  """
-
     def __str__(self):
         result = (
             """
@@ -419,7 +374,6 @@ Type:                   """
     def add_actions_to_plot_solution(self, step, output_path):
         pass
 
-    # these actions are executed during each time step
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_save_new_cell_data)
         step.add_action_set(self._action_set_check_troubledness)
@@ -454,21 +408,7 @@ Type:                   """
             kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
         )
 
-    """
-    This tells peano to add the solver files to the project. It generates any files that are not
-    specifically cell or face data or grid actions such as the actionsets.
-    Currently it generates solver implementation and header files.
-    """
     def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
-        """
-        The ExaHyPE2 project will call this operation when it sets
-        up the overall environment.
-
-        This routine is typically not invoked by a user.
-
-        output: peano4.output.Output
-        """
-
         if(subdirectory):
             subdirectory += "/"
 
@@ -515,10 +455,6 @@ Type:                   """
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
-    """
-    Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
-    information from the solver or which was specified by the user.
-    """
     def _init_dictionary_with_default_parameters(self, d):
         d["SOLVER_INSTANCE"]         = self.get_name_of_global_instance()
         d["REGULAR_SOLVER_INSTANCE"] = self._regular_solver.get_name_of_global_instance()

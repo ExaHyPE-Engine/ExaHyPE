@@ -132,6 +132,7 @@ class SingleSweep(FV):
         max_eigenvalue=None,
         riemann_solver=None,
         source_term=None,
+        diffusive_source_term=None,
         adjust_solution=None,
     ):
         if initial_conditions is not None:
@@ -194,6 +195,13 @@ class SingleSweep(FV):
             self._source_term_implementation = source_term
             if source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_source_term = True
+            else:
+                self._can_fuse = False
+
+        if diffusive_source_term is not None:
+            self._diffusive_source_term_implementation = diffusive_source_term
+            if diffusive_source_term is not PDETerms.User_Defined_Implementation:
+                self._use_stateless_diffusive_source_term = True
             else:
                 self._can_fuse = False
 

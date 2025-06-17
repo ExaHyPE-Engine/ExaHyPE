@@ -36,9 +36,9 @@ initial_conditions = """
   const double bathymetryAfterEarthquake = INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE + displacement(x(0), x(1));
 
   if (std::abs(x(0)) <= 500 and std::abs(x(1)) <= 500) { // Center of domain is [0, 0]
-    Q[s::b] = bathymetryAfterEarthquake;
+    Q[s::z] = bathymetryAfterEarthquake;
   } else {
-    Q[s::b] = INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE;
+    Q[s::z] = INITIAL_BATHYMETRY_BEFORE_EARTHQUAKE;
   }
 """
 
@@ -46,7 +46,7 @@ boundary_conditions = """
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::b]  = Qinside[s::b];
+  Qoutside[s::z]  = Qinside[s::z];
 """
 
 refinement_criterion = """
@@ -57,13 +57,18 @@ refinement_criterion = """
   return result;
 """
 
+constants = {
+    "g": [9.81, "double"],
+    "hThreshold": [1e-5, "double"],
+}
+
 max_h = 1.1 * min(size) / (3.0**min_depth)
 min_h = max_h * 3.0 ** (-amr_levels)
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
     order=dg_order,
-    unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1},
+    unknowns={"h": 1, "hu": 1, "hv": 1, "z": 1},
     auxiliary_variables=0,
     min_cell_h=min_h,
     max_cell_h=max_h,
@@ -76,7 +81,9 @@ aderdg_solver.set_implementation(
     refinement_criterion=refinement_criterion,
     flux=flux,
     ncp=nonconservative_product,
-    max_eigenvalue=max_eigenvalue,
+    max_eigenvalue=eigenvalue + """
+  return sFlux;
+""",
 )
 
 aderdg_solver.add_kernel_optimisations(is_linear=False, polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre)
@@ -109,6 +116,10 @@ project.set_global_simulation_parameters(
 project.set_load_balancer("new ::exahype2::LoadBalancingConfiguration")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(build_mode))
 project = project.generate_Peano4_project(verbose=False)
+for const_name, const_info in constants.items():
+    const_val, const_type = const_info
+    project.constants.export_constexpr_with_type(
+        const_name, str(const_val), const_type
+    )
 project.set_fenv_handler(True)
-project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)

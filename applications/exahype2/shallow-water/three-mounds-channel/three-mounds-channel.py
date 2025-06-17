@@ -21,14 +21,14 @@ initial_conditions = """
   const double m3 = 1.0 - 0.28 * std::sqrt((x(0) - 30.0) * (x(0) - 30.0) + (x(1) - 15.0) * (x(1) - 15.0));
 
   Q[s::h] = x[0] <= 5.0 ? INITIAL_WATER_HEIGHT_DAM : 0.0;
-  Q[s::b] = std::max({0.0, m1, m2, m3});
+  Q[s::z] = std::max({0.0, m1, m2, m3});
 """
 
 boundary_conditions = """
   Qoutside[s::h]  = Qinside[s::h];
   Qoutside[s::hu] = -Qinside[s::hu];
   Qoutside[s::hv] = -Qinside[s::hv];
-  Qoutside[s::b]  = Qinside[s::b];
+  Qoutside[s::z]  = Qinside[s::z];
 """
 
 refinement_criterion = """
@@ -41,9 +41,15 @@ refinement_criterion = """
 
 parser = exahype2.ArgumentParser()
 parser.set_defaults(
+    min_depth=4,
     end_time=5.0,
 )
 args = parser.parse_args()
+
+constants = {
+    "g": [9.81, "double"],
+    "hThreshold": [1e-5, "double"],
+}
 
 size = [75.0, 30.0]
 max_h = (1.1 * min(size) / (3.0**args.min_depth))
@@ -53,7 +59,7 @@ riemann_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="HLLEMSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 1, "hv": 1},
-    auxiliary_variables={"b": 1},
+    auxiliary_variables={"z": 1},
     min_volume_h=min_h,
     max_volume_h=max_h,
     time_step_relaxation=args.time_step_relaxation,
@@ -99,6 +105,10 @@ project.set_global_simulation_parameters(
 project.set_load_balancer(f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, 1, {args.trees_init}, {args.trees})")
 project.set_Peano4_installation("../../../../", mode=peano4.output.string_to_mode(args.build_mode))
 project = project.generate_Peano4_project(verbose=False)
+for const_name, const_info in constants.items():
+    const_val, const_type = const_info
+    project.constants.export_constexpr_with_type(
+        const_name, str(const_val), const_type
+    )
 project.set_fenv_handler(args.fpe)
-project.output.makefile.add_CXX_flag("-DGRAV=9.81")
 project.build(make=True, make_clean_first=True, throw_away_data_after_build=True)
