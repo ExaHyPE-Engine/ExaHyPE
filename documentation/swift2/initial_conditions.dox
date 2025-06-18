@@ -43,6 +43,72 @@ grid, i.e. not a grid where you sometimes erase parts and sometimes add
 parts.
 
 
+## Altering the initial mesh size
+
+To alter the initial mesh size, you have to tell each individual particle 
+species that you are using what its maximum mesh size will be. Most codes set
+this quantity in the particle's definition in the Python script, i.e. through
+the Python constructor.
+
+As Peano uses three-partitioning, the mesh size choices can seem to appear 
+weird. Each Python script run produces a README-xxxx.md file which provides
+details on the arising mesh sizes. Alternatively, you can study the 
+implementation in swift2.Project.__compute_global_max_h().
+
+
+## Implementation
+
+The Swift 2 project object will export the arising global maximum mesh size
+into the Constants.h file as a simulation-global constant. It will also feed
+this quantity into the action set swift2.Project.action_set_create_regular_grid:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
+            self._global_max_h
+        )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here is what happens from hereon:
+
+- The global main file (cmp SWIFTMain.template.cpp) enters its phase 1. This 
+  means setting up the (initial) grid.
+- It then runs over the mesh in a while loop.
+- Per mesh traversal, the action set from action_set_create_regular_grid will
+  be invoked and asked whether to decide the mesh further.
+- Once the global main finds out that the global maximum mesh size constraint
+  is met, it sets its flag gridConstructed and consequently switches to phase 2
+  which is the actual particle insertion.
+
+
+## Load balancing
+
+At this moment, we enable any load balancing only throughout the grid 
+construction by default. That means: by default, we work with a static 
+domain decomposition. As soon as we insert the particles, we disable any
+mesh load balancing. More sophisticated code variants switch on the load
+balancing every few iterations or enable it to rebalance it after each 
+time step, but this is not enabled in the baseline version.
+
+It makes sense to play around with different load balancing schemes and 
+initial mesh construction strategies. Switching the load balancing scheme
+is done in the Python script vi the function swift2.Project.set_load_balancing().
+
+
+
+## Playing around with the maximum particle radius
+
+There is no direct reason why you cannot pick the maximum particle radius 
+relatively small, even though the particle radii eventually might become 
+bigger. If you do this, it can happen that the original mesh is too fine and
+particles are inserted into a fine mesh where a search radius overlaps more 
+than one neighbouring cell. In this case, the code will have to resort to a
+multiscale sorting approach, i.e. will have to move particles up within the 
+grid hierarchy. So you work with an overly refined mesh and introduce some 
+(initial) sorting overhead, but it might nevertheless be reasonable as it 
+gives the load balancing more granularity.
+
+
 # Initial conditions
 
 The initial conditions are added by one mesh sweep modelled by the project's
