@@ -32,7 +32,7 @@ public:
 
   std::string toString() const;
 
-  static void dumpStatistics();
+  static std::string getStatistics();
 
 private:
   static tarch::logging::Log _log;

@@ -541,14 +541,9 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     SpacetreeSet& operator=(const SpacetreeSet& ) = delete;
 
   public:
-    /**
-     * As the setis a singleton and a service, it has to deregister itself. Otherwise, the overall
-     * service landscape still might try to call receiveDanglingMessages().
-     */
-    ~SpacetreeSet();
+    ~SpacetreeSet() = default;
 
     static SpacetreeSet& getInstance();
-
 
     /**
      * Run through the set of unanswered questions and, well, answer them.

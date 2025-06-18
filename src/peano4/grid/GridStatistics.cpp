@@ -17,21 +17,21 @@ peano4::grid::GridStatistics::GridStatistics(int  __numberOfLocalUnrefinedCells,
 std::string peano4::grid::GridStatistics::toString() const {
   std::ostringstream out;
   out << "(";
-  out << "numberOfLocalUnrefinedCells=" << _numberOfLocalUnrefinedCells;
+  out << "NumberOfLocalUnrefinedCells=" << _numberOfLocalUnrefinedCells;
   out << ","; 
-  out << "numberOfRemoteUnrefinedCells=" << _numberOfRemoteUnrefinedCells;
+  out << "NumberOfRemoteUnrefinedCells=" << _numberOfRemoteUnrefinedCells;
   out << ","; 
-  out << "numberOfLocalRefinedCells=" << _numberOfLocalRefinedCells;
+  out << "NumberOfLocalRefinedCells=" << _numberOfLocalRefinedCells;
   out << ","; 
-  out << "numberOfRemoteRefinedCells=" << _numberOfRemoteRefinedCells;
+  out << "NumberOfRemoteRefinedCells=" << _numberOfRemoteRefinedCells;
   out << ","; 
-  out << "stationarySweeps=" << _stationarySweeps;
+  out << "StationarySweeps=" << _stationarySweeps;
   out << ","; 
-  out << "coarseningHasBeenVetoed=" << _coarseningHasBeenVetoed;
+  out << "CoarseningHasBeenVetoed=" << _coarseningHasBeenVetoed;
   out << ","; 
-  out << "removedEmptySubtree=" << _removedEmptySubtree;
+  out << "RemovedEmptySubtree=" << _removedEmptySubtree;
   out << ","; 
-  out << "minH=" << _minH;
+  out << "MinH=" << _minH;
   out << ")";
   return out.str();
 }

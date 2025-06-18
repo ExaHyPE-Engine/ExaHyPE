@@ -166,10 +166,11 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
 }
 #endif
 
-
-void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filename ) {
+void tarch::logging::Statistics::writeToCSV([[maybe_unused]] std::string filename) {
 #ifdef TrackStatistics
-  logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("writeToCSV()", "Write statistics to file(s) " << filename << "-rank-<rank>.csv");
+  }
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
     filename += "-rank-" + std::to_string( tarch::mpi::Rank::getInstance().getRank() );
@@ -185,7 +186,6 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
   for (auto& p: _logMessageMap) {
     totalNumberOfEntries += p.second._data.size();
   }
-  logInfo( "writeToCSV(string)", "write statistics to file " << filename << " (total no of entries=" << totalNumberOfEntries << ")" );
 
   std::ofstream file( filename );
   file << "t";

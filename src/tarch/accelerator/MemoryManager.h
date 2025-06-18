@@ -138,5 +138,5 @@ public:
   std::size_t getFreeAllocatedMemoryInBytes(int device) const;
   std::size_t getUsedAllocatedMemoryInBytes(int device) const;
 
-  static void dumpStatistics();
+  static std::string getStatistics();
 };

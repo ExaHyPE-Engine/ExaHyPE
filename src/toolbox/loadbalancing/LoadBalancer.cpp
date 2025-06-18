@@ -176,7 +176,7 @@ std::string toolbox::loadbalancing::LoadBalancer::toString() const {
   return msg.str();
 }
 
-void toolbox::loadbalancing::LoadBalancer::dumpStatistics() {
+std::string toolbox::loadbalancing::LoadBalancer::getStatistics() {
   std::ostringstream msg;
 
   int           sumLocal             = 0;
@@ -199,5 +199,5 @@ void toolbox::loadbalancing::LoadBalancer::dumpStatistics() {
     msg << " total=" << sumLocal << "/" << sumRemote << " (local/virtual)";
   }
 
-  logInfo("dumpStatistics()", msg.str());
+  return msg.str();
 }

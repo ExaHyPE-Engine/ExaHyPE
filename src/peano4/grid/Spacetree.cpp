@@ -134,7 +134,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
     assertion(_joining.empty() or _splitting.empty());
     logDebug(
       "traverse()",
-      _splitTriggered.size() << " Tree split triggered and " << _splitting.size() << " splitting trees on tree " << _id
+      _splitTriggered.size() << " tree splits triggered and " << _splitting.size() << " splitting trees on tree " << _id
     );
   }
 
@@ -161,7 +161,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
 
     if (not _gridControlEvents.empty()) {
       tarch::logging::Statistics::getInstance().log(
-        "grid-control-events", ::peano4::grid::toString(_gridControlEvents)
+        "grid-control-events", grid::toString(_gridControlEvents)
       );
     }
   }
@@ -228,6 +228,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
     _joining.insert(_joinTriggered.begin(), _joinTriggered.end());
     _joinTriggered.clear();
 
+    const auto oldState = _spacetreeState;
     switch (_spacetreeState) {
     case SpacetreeState::EmptyRun:
       _spacetreeState = SpacetreeState::NewFromSplit;
@@ -247,7 +248,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
       break;
     }
     logDebug(
-      "traverse()", "Switched tree " << _id << " into " << peano4::grid::toString(_spacetreeState)
+      "traverse()", "Switched tree " << _id << " from " << grid::toString(oldState) << " into " << grid::toString(_spacetreeState)
     );
   }
 
@@ -376,9 +377,7 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
     receiveAndMergeGridVertexAtHorizontalBoundary(vertex);
     receiveAndMergeGridVertexAtVerticalBoundary(vertex);
 
-    vertex.setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(
-      vertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep()
-    );
+    vertex.setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(vertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep());
     vertex.setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(vertex.getIsParentOfSubtreeVertexInCurrentTreeSweep());
 
     vertex.setIsAntecessorOfRefinedVertexInCurrentTreeSweep(false);
@@ -1624,9 +1623,7 @@ bool peano4::grid::Spacetree::isCellSplitCandidate(
   return result;
 }
 
-void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
-  GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]
-) {
+void peano4::grid::Spacetree::splitOrJoinCellBottomUp(GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]) {
   [[maybe_unused]] constexpr int NoSplit = -1;
 
   if (not _splitTriggered.empty() and _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::BottomUp) {
@@ -1635,8 +1632,8 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
 
     logDebug(
       "splitOrJoinCellBottomUp()",
-      "checked cell for bottom-up splits (first target tree=" << _splitTriggered.begin()->first
-        << "). is-refined=" << isRefined << ", is-split-candidate=" << isSplitCandidate
+      "Checked cell for bottom-up splits (first target tree=" << _splitTriggered.begin()->first
+        << "). IsRefined=" << isRefined << ", IsSplitCandidate=" << isSplitCandidate
         << " / " << fineGridVertices[0].toString()
     );
 
@@ -1670,22 +1667,16 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
     } else if (not isSplitCandidate and not isRefined) {
       _splittedCells.push_back(NoSplit);
     } else {
-      assertionMsg(false, "should not be entered as all combination are covered already");
+      assertionMsg(false, "Should not be entered as all combination are covered already");
     }
-  }
-  else if (
-    not _splitTriggered.empty()
-    and
-    _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::AggressiveTopDown
-    and
-    not _splittedCells.empty()
+  } else if (not _splitTriggered.empty() and _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::AggressiveTopDown and not _splittedCells.empty()
   ) {
     int targetSpacetreeId = _splittedCells.back();
     _splittedCells.pop_back();
 
-    logDebug(
+    logInfo(
       "splitOrJoinCellBottomUp()",
-      "checked cell for top-down splits (first split " << _splitTriggered.begin()->first << ")"
+      "Checked cell for top-down splits (first split " << _splitTriggered.begin()->first << ")"
     );
     assertion(isSpacetreeNodeLocal(fineGridVertices, false, false));
     assertion(isSpacetreeNodeLocal(coarseGridVertices, false, false));
@@ -1693,9 +1684,7 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
   }
 }
 
-void peano4::grid::Spacetree::splitCellTopDown(
-  GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]
-) {
+void peano4::grid::Spacetree::splitCellTopDown(GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]) {
   [[maybe_unused]] constexpr int NoSplit = -1;
 
   if (not _splitTriggered.empty() and _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::AggressiveTopDown) {
@@ -1720,8 +1709,7 @@ void peano4::grid::Spacetree::splitCellTopDown(
       assertion(isSpacetreeNodeLocal(coarseGridVertices, false, false));
       logDebug(
         "splitCellTopDown()",
-        "refined cell at "
-          << fineGridVertices[0].toString() << " should go with all children to tree " << targetSpacetreeId
+        "Refined cell at " << fineGridVertices[0].toString() << " should go with all children to tree " << targetSpacetreeId
       );
       _splittedCells.push_back(targetSpacetreeId);
     } else if (not isParentSplit and isSplitCandidate and not isRefined) {
@@ -1730,18 +1718,16 @@ void peano4::grid::Spacetree::splitCellTopDown(
       assertion(isSpacetreeNodeLocal(coarseGridVertices, false, false));
       _splittedCells.push_back(targetSpacetreeId);
     }
-    logDebug("splitOrJoinCellBottomUp()", "#splitted-cells=" << _splittedCells.size());
+    logDebug("splitCellTopDown()", "#SplittedCells=" << _splittedCells.size());
   }
 }
 
-void peano4::grid::Spacetree::mergeCellFromWorkerWithMasterThroughoutJoin(
-  GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]
-) {
+void peano4::grid::Spacetree::mergeCellFromWorkerWithMasterThroughoutJoin(GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]) {
   for (auto worker : _joining) {
     if (isSpacetreeNodeLocal(coarseGridVertices, false, false) and _gridTraversalEventGenerator.getTreeOwningSpacetreeNode(fineGridVertices, _splitTriggered, _splitting, _joinTriggered, _joining) == worker) {
       logDebug(
         "mergeCellFromWorkerWithMasterThroughoutJoin()",
-        "cell from worker " << worker << " is merged into master " << _id
+        "Cell from worker " << worker << " is merged into master " << _id
       );
       updateVertexRanksWithinCell(fineGridVertices, _id);
     } else {
@@ -1775,9 +1761,7 @@ int peano4::grid::Spacetree::getSplittingTree() const {
 
 peano4::grid::GridStatistics peano4::grid::Spacetree::getGridStatistics() const { return _statistics; }
 
-void peano4::grid::Spacetree::markVerticesAroundForkedCell(
-  GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]
-) const {
+void peano4::grid::Spacetree::markVerticesAroundForkedCell(GridVertex coarseGridVertices[TwoPowerD], GridVertex fineGridVertices[TwoPowerD]) const {
   dfor2(k) assertion1(
     coarseGridVertices[kScalar].getState() != GridVertex::State::HangingVertex, coarseGridVertices[kScalar].toString()
   );
@@ -1794,9 +1778,7 @@ void peano4::grid::Spacetree::split(int newSpacetreeId, const SplitInstruction& 
     instruction,
     toString()
   );
-  assertion3(
-    instruction.numberOfFineGridCells != std::numeric_limits<int>::max(), newSpacetreeId, instruction, toString()
-  );
+  assertion3(instruction.numberOfFineGridCells != std::numeric_limits<int>::max(), newSpacetreeId, instruction, toString());
   assertion3(instruction.numberOfFineGridCells >= 1, newSpacetreeId, instruction, toString());
 
   _splitTriggered.insert(std::pair<int, SplitInstruction>(newSpacetreeId, instruction));
@@ -1817,57 +1799,39 @@ void peano4::grid::Spacetree::split(int newSpacetreeId, const SplitInstruction& 
 
 std::string peano4::grid::Spacetree::toString() const {
   std::ostringstream msg;
-  msg << "(id=" << _id << ",master=" << _masterId << ",state=" << peano4::grid::toString(_spacetreeState)
-      << ",statistics=" << _statistics.toString();
-  if (_joinTriggered.empty()) {
-    msg << ",no-join-triggered-with-any-tree";
-  } else {
-    msg << ",join-triggered={";
+  msg << "(Id=" << _id << ",MasterId=" << _masterId << ",State=" << peano4::grid::toString(_spacetreeState)
+      << ",Statistics=" << _statistics.toString();
+
+  if (not _joinTriggered.empty()) {
+    msg << ",JoinTriggered={";
     for (const auto& p : _joinTriggered) {
       msg << "(" << p << ")";
     }
     msg << "}";
   }
-  if (_joining.empty()) {
-    msg << ",not-joining";
-  } else {
-    msg << ",joining={";
+  if (not _joining.empty()) {
+    msg << ",Joining={";
     for (const auto& p : _joining) {
       msg << "(" << p << ")";
     }
     msg << "}";
   }
-  /*
-    if (_hasJoined.empty()) {
-      msg << ",noone-has-joined-recently";
-    }
-    else {
-      msg << ",has-joined-recently={";
-      for (const auto& p: _hasJoined) {
-        msg << "(" << p << ")";
-      }
-      msg << "}";
-    }
-  */
-  if (_splitTriggered.empty()) {
-    msg << ",no-split-triggered";
-  } else {
-    msg << ",split-triggered={";
+
+  if (not _splitTriggered.empty()) {
+    msg << ",SplitTriggered={";
     for (const auto& p : _splitTriggered) {
       msg << "(" << p.first << "," << p.second << ")";
     }
     msg << "}";
   }
-  if (_splitting.empty()) {
-    msg << ",not-splitting";
-  } else {
-    msg << ",splitting={";
+  if (not _splitting.empty()) {
+    msg << ",Splitting={";
     for (const auto& p : _splitting) {
       msg << "(" << p << ")";
     }
     msg << "}";
   }
-  msg << ",stacks:" << _vertexStack.toString() << ")";
+  msg << ",Stacks:" << _vertexStack.toString() << ")";
   return msg.str();
 }
 
