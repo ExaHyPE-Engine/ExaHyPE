@@ -11,8 +11,8 @@ class SaveNewCellData(AbstractLimiterActionSet):
   if ({{PREDICATE}}) {
     {% if USE_DMP %}
     // Resetting local min and max
-    constexpr int numberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
-    double localMinPerVariables[numberOfObservables], localMaxPerVariables[numberOfObservables];
+    constexpr int NumberOfObservables = repositories::{{SOLVER_INSTANCE}}.NumberOfDMPObservables;
+    double localMinPerVariables[NumberOfObservables], localMaxPerVariables[NumberOfObservables];
 
     kernels::{{SOLVER_NAME}}::findCellLocalMinAndMax(
       repositories::{{SOLVER_INSTANCE}},
@@ -22,10 +22,10 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
     for (int d = 0; d < Dimensions; d++) {
       // Projection of cell local min and max
-      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + numberOfObservables);
-      std::copy_n(localMinPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value);
-      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 3 * numberOfObservables);
-      std::copy_n(localMaxPerVariables, numberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + 2 * numberOfObservables);
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + NumberOfObservables);
+      std::copy_n(localMinPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value);
+      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d).value + 3 * NumberOfObservables);
+      std::copy_n(localMaxPerVariables, NumberOfObservables, fineGridFaces{{SOLVER_NAME}}QMinAndMax(d + Dimensions).value + 2 * NumberOfObservables);
     }
     {% endif %}
 
@@ -39,10 +39,7 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
     {% if TRAMSMIT_CELL_TIMESTAMPS %}
     // Set time stamp for both cells to be the max of the two possible time stamps
-    const double timeStamp = std::max(
-      fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.getTimeStamp(),
-      fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp()
-    );
+    const double timeStamp = std::max(fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.getTimeStamp(), fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp());
     fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
     fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp);
     {% endif %}
@@ -51,12 +48,12 @@ class SaveNewCellData(AbstractLimiterActionSet):
 
   def __init__(self, solver, guard, use_DMP=False, reset_troubled_markers=False, transmit_cell_timestamps=False):
     super(SaveNewCellData, self).__init__(solver)
-    self.guard                      = guard
-    self._use_DMP                   = use_DMP
-    self._reset_troubled_markers    = reset_troubled_markers
-    self._transmit_cell_timestamps  = transmit_cell_timestamps
+    self.guard                     = guard
+    self._use_DMP                  = use_DMP
+    self._reset_troubled_markers   = reset_troubled_markers
+    self._transmit_cell_timestamps = transmit_cell_timestamps
 
-  def get_body_of_operation(self,operation_name):
+  def get_body_of_operation(self, operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       d = {}

@@ -11,17 +11,16 @@ from .kernels import check_troubledness
 class VerifyTroubledness(AbstractLimiterActionSet):
   TemplateVerifyTroubledness = """
     if ({{PREDICATE}}) {
-      const double timeStepSize  = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize();
-      const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
+      const double timeStamp = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
 
       bool isUnTroubled = true;
 
-      auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
+      auto* Q = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.value;
 
       {% if USE_PAC %}
       isUnTroubled &= kernels::{{SOLVER_NAME}}::isPhysicallyAdmissible(
         repositories::{{SOLVER_INSTANCE}},
-        luh,
+        Q,
         marker.x(),
         marker.h(),
         timeStamp
@@ -43,7 +42,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
       isUnTroubled &= kernels::{{SOLVER_NAME}}::discreteMaximumPrincipleAndMinAndMaxSearch(
         repositories::{{SOLVER_INSTANCE}},
-        luh,
+        Q,
         repositories::{{SOLVER_INSTANCE}}.RelaxationParameter,
         repositories::{{SOLVER_INSTANCE}}.DifferencesScaling,
         boundaryMinPerVariables,

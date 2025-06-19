@@ -64,7 +64,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
   }
 """
 
-  def __init__(self,solver, regularToLimiterGuard, limiterToRegularGuard):
+  def __init__(self, solver, regularToLimiterGuard, limiterToRegularGuard):
     super(CopyAndConvertPatch, self).__init__(solver)
     self.regularToLimiterGuard = regularToLimiterGuard
     self.limiterToRegularGuard = limiterToRegularGuard
@@ -93,6 +93,5 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
           super(CopyAndConvertPatch, self).get_includes()
           + """
 #include "kernels/"""  + self._solver._name + """/Limiter.h"
-#include "toolbox/blockstructured/Enumeration.h"
     """
       )

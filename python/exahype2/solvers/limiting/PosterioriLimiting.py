@@ -101,8 +101,8 @@ class PosterioriLimiting(object):
         Variants = ["REGULAR","REGULAR_TO_LIMITER","LIMITER_TO_REGULAR","TROUBLED"]
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
-        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker", variants=Variants ) )
-        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration( name="Troubled_Marker", variants=Variants ) )
+        self._cell_label.data.add_attribute(dastgen2.attributes.Enumeration(name="Troubled_Marker", variants=Variants))
+        self._face_label.data.add_attribute(dastgen2.attributes.Enumeration(name="Troubled_Marker", variants=Variants))
 
         self._face_label.peano4_mpi_and_storage_aspect.merge_implementation += "\n_Troubled_Marker = std::max(_Troubled_Marker, neighbour.getTroubled_Marker());"
 
@@ -112,10 +112,11 @@ class PosterioriLimiting(object):
             self._number_of_dmp_observables,
             self._unknown_identifier() + "MinAndMax"
         )
-        self._min_and_max_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-            self._min_and_max_projection,
-            "double"
-        )
+        # TODO: Using smart pointer here might lead to NaNs during the initial time step
+        # self._min_and_max_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+        #     self._min_and_max_projection,
+        #     "double"
+        # )
 
         self._min_and_max_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._min_and_max_projection)
 
@@ -139,14 +140,14 @@ class PosterioriLimiting(object):
 #include "repositories/SolverRepository.h"
 """
 
+        # We have to assume that the regular solver's time step size computation also considers troubled cells.
+        # Therefore, the minimal time step size of the regular solver is unnecessary small.
+        # Albeit mathematically correct, we compute the solution with a time step size that is way too small.
+        # Use std::max to choose the more optimistic time step size (which is almost always the limiter's time step size).
+        # TODO: Find a better way to compute the time step size without choosing a too small one.
         compute_time_step_size = """
-    // We have to assume that the regular solver's time step size computation also considers troubled cells.
-    // Therefore, the minimal time step size of the regular solver is unnecessary small.
-    // Albeit mathematically correct, we compute the solution with a time step size that is way too small.
-    // Use std::max for now to choose the more optimistic time step size (which is almost always the limiter's time step size).
-    // TODO: Find a better way to compute the time step size without choosing a too small one.
-    double timeStepSize = std::max(repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
-                                   repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
+    const double timeStepSize = std::max(repositories::""" + self._regular_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize(),
+                                         repositories::""" + self._limiter_solver.get_name_of_global_instance() + """.getAdmissibleTimeStepSize());
 """
 
         self._limiter_solver._compute_time_step_size = compute_time_step_size
