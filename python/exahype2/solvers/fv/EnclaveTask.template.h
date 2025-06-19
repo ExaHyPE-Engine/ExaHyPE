@@ -24,7 +24,7 @@ namespace {{ item }} {
  *
  * @author Tobias Weinzierl
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}> {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}, 1> {
   private:
     static tarch::logging::Log _log;
 
@@ -42,7 +42,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const double                                    timeStamp,
       const double                                    timeStepSize,
       {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-      {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+      {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TwoTimesD],
       {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 
@@ -54,7 +54,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::exahype2::Encla
       const double                                    timeStamp,
       const double                                    timeStepSize,
       {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-      {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+      {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TwoTimesD],
       {{STORAGE_PRECISION}}* NOALIAS                  QOut
     );
 

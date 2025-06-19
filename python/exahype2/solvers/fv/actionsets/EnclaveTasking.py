@@ -7,7 +7,7 @@ import peano4.solversteps
 import jinja2
 
 class EnclaveTasking(AbstractFVActionSet):
-    _Template_EnclaveTasking = jinja2.Template("""
+    _Template_TouchCellFirstTime = jinja2.Template("""
   if ({{GUARD}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -18,9 +18,9 @@ class EnclaveTasking(AbstractFVActionSet):
     auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
     auto* /*const*/ QOut = {{NEW_ACCESSOR}}.value;
 
-    {{STORAGE_PRECISION}}* faces[TwoTimesD];
+    {{STORAGE_PRECISION}}* faces[1][TwoTimesD];
     for (int d = 0; d < TwoTimesD; ++d) {
-      faces[d] = {{FACE_ACCESSOR}}(d).value;
+      faces[0][d] = {{FACE_ACCESSOR}}(d).value;
     }
 
     {% if CAN_FUSE %}
@@ -65,8 +65,7 @@ class EnclaveTasking(AbstractFVActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             self._add_action_set_entries_to_dictionary(d)
-            result = self._Template_EnclaveTasking.render(**d)
-            pass
+            result = self._Template_TouchCellFirstTime.render(**d)
         return result
 
     def get_body_of_unprepareTraversal(self):

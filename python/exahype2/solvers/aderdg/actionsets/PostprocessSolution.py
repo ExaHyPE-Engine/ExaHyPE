@@ -36,17 +36,8 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_includes(self):
-        return (
-            super(EmptyPostprocessSolution, self).get_includes()
-            + """
-#include "kernels/"""
-            + self._solver._name
-            + """/Quadrature.h"
-#include "kernels/"""
-            + self._solver._name
-            + """/CellErrorIntegral.h"
-"""
-        )
+        result = super(EmptyPostprocessSolution, self).get_includes()
+        return result
 
 
 class DoFWisePostprocessSolution(AbstractADERDGActionSet):
@@ -149,9 +140,6 @@ class DoFWisePostprocessSolution(AbstractADERDGActionSet):
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "kernels/"""
-            + self._solver._name
-            + """/Quadrature.h"
 """
         )
 

@@ -1,14 +1,14 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-template <typename T>
-exahype2::EnclaveTask<T>::EnclaveTask(
+template <typename T, int NumFaceTypes>
+exahype2::EnclaveTask<T, NumFaceTypes>::EnclaveTask(
   int                                         enclaveTaskTypeId,
   const peano4::datamanagement::CellMarker&   marker,
   double                                      t,
   double                                      dt,
   T* NOALIAS const                            QIn,
-  T* NOALIAS const                            faces[TwoTimesD],
+  T* NOALIAS const                            faces[NumFaceTypes][TwoTimesD],
   T* NOALIAS const                            QOut,
   Functor                                     functor
 ):
@@ -23,13 +23,18 @@ exahype2::EnclaveTask<T>::EnclaveTask(
   assertion(_QIn != nullptr);
   assertion(_QOut != nullptr);
 
-  for (int i = 0; i < TwoTimesD; ++i) {
-    _faces[i] = faces[i];
+  for (int type = 0; type < NumFaceTypes; ++type) {
+    for (int d = 0; d < TwoTimesD; ++d) {
+      _faces[type][d] = faces[type][d];
+    }
   }
 }
 
-template <typename T>
-bool exahype2::EnclaveTask<T>::run() {
+template <typename T, int NumFaceTypes>
+bool exahype2::EnclaveTask<T, NumFaceTypes>::run() {
+  assertion(_QIn != nullptr);
+  assertion(_QOut != nullptr);
+
   _functor();
   return false;
 }

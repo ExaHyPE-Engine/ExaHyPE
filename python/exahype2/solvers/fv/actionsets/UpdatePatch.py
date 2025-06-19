@@ -7,7 +7,7 @@ import peano4.solversteps
 import jinja2
 
 class UpdatePatch(AbstractFVActionSet):
-    _Template_UpdatePatch = jinja2.Template(
+    _Template_TouchCellFirstTime = jinja2.Template(
         """
   if ({{GUARD}}) {
     auto* /*const*/ QIn = {{OLD_ACCESSOR}}.value;
@@ -34,9 +34,9 @@ class UpdatePatch(AbstractFVActionSet):
 
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
       {% if COMPUTE_MAX_EIGENVALUE %}
-      const double maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
+      const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
       {% else %}
-      const double _ = {{COMPUTE_KERNEL_CALL}}
+      const auto _ = {{COMPUTE_KERNEL_CALL}}
       {% endif %}
       {{POSTPROCESS_UPDATED_PATCH}}
 
@@ -88,8 +88,7 @@ class UpdatePatch(AbstractFVActionSet):
           self._solver._init_dictionary_with_default_parameters(d)
           self._solver.add_entries_to_text_replacement_dictionary(d)
           self._add_action_set_entries_to_dictionary(d)
-          result = self._Template_UpdatePatch.render(**d)
-          pass
+          result = self._Template_TouchCellFirstTime.render(**d)
         return result
 
     def get_action_set_name(self):

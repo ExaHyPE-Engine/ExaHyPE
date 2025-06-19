@@ -13,14 +13,13 @@
 
 #include "exahype2/dg/DGUtils.h"
 
-//#include "tasks/FVRusanovEnclaveTask.h"
 #include "kernels/AderSolver/FusedSpaceTimePredictorVolumeIntegral.h"
 #include "kernels/AderSolver/FaceIntegral.h"
 #include "kernels/AderSolver/MaxScaledEigenvalue.h"
 #include "kernels/AderSolver/Quadrature.h"
 #include "kernels/AderSolver/DGMatrices.h"
 #include "kernels/AderSolver/RiemannSolver.h"
-#include "kernels/AderSolver/CellData.h"
+#include "kernels/AderSolver/BufferSizes.h"
 
 #include "peano4/peano4.h"
 
@@ -297,7 +296,9 @@ double runKernels(int device, exahype2::CellData<double, double>& cellData, int 
       TimeStepSize,
       faceCentre,
       CellSize,
-      direction
+      direction,
+      false,
+      0
     );
 
     const double inverseDxDirection = 1.0 / CellSize[d];

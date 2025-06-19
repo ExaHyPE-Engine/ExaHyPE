@@ -15,6 +15,8 @@ class SingleSweep(ADERDG):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
+        use_enclave_tasking: bool,
+        number_of_enclave_tasks: int,
         plot_grid_properties=False,
         split_sweeps=False,
     ):
@@ -25,6 +27,8 @@ class SingleSweep(ADERDG):
             auxiliary_variables=auxiliary_variables,
             min_cell_h=min_cell_h,
             max_cell_h=max_cell_h,
+            use_enclave_tasking=use_enclave_tasking,
+            number_of_enclave_tasks=number_of_enclave_tasks,
             plot_grid_properties=plot_grid_properties,
         )
 
@@ -140,7 +144,7 @@ class SingleSweep(ADERDG):
             )
         )
 
-        self._action_set_correction.riemann_guard = (
+        self._action_set_correction.face_guard = (
             self._store_cell_data_default_guard()
             + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
                 self.get_name_of_global_instance()

@@ -15,7 +15,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, subdirectory, template_prefix, output_path
     ):
         self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
 
@@ -90,6 +90,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     + ".cpp",
                     generated=True,
                 )
+                solver._user_action_set_includes += (f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral{d["NAME_SUFFIX"]}.h"\n')
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix
@@ -113,6 +114,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         output.makefile.add_cpp_file(
             output_path + "/FusedSpaceTimePredictorVolumeIntegral.cpp", generated=True
         )
+        solver._user_action_set_includes += (f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral.h"\n')
 
     def _build_gemms(self, namespace, output, subdirectory, template_prefix, output_path):
         # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type

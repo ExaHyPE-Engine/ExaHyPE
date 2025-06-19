@@ -4,7 +4,7 @@
 
 #include "DGMatrices.h"
 #include "Quadrature.h"
-#include "CellData.h"
+#include "BufferSizes.h"
 
 {% if USE_LIBXSMM %}
 #include "Gemms.h"
@@ -34,8 +34,8 @@ namespace {{ item }} {
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
-  pStoreType* NOALIAS                               lQhbnd[2 * Dimensions],
-  pStoreType* NOALIAS                               lFhbnd[2 * Dimensions],
+  pStoreType* const NOALIAS                         lQhbnd[TwoTimesD],
+  pStoreType* const NOALIAS                         lFhbnd[TwoTimesD],
   cStoreType* const NOALIAS                         luh,
   const tarch::la::Vector<Dimensions, double>&      cellCentre,
   const tarch::la::Vector<Dimensions, double>&      cellSize,
@@ -610,16 +610,16 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
 template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS  lQhbnd[2 * Dimensions],
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS  lFhbnd[2 * Dimensions],
-  {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS luh,
-  const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const double                                  timeStamp,
-  const double                                  timeStepSize
+  {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
+  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lQhbnd[TwoTimesD],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lFhbnd[TwoTimesD],
+  {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS       luh,
+  const tarch::la::Vector<Dimensions, double>&        cellCentre,
+  const tarch::la::Vector<Dimensions, double>&        cellSize,
+  const double                                        timeStamp,
+  const double                                        timeStepSize
 {% if USE_POINT_SOURCE %}
-  , const std::vector<int>&                     pointSources
+  , const std::vector<int>&                           pointSources
 {% endif %}
 );
 {% endfor %}

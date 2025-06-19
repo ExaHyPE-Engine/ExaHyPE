@@ -8,12 +8,11 @@ import jinja2
 
 import peano4.output
 import peano4.datamodel
-import peano4.toolbox.blockstructured
 
 import exahype2.grid
-
-import exahype2.solvers.aderdg.kernels
 import exahype2.solvers.aderdg.actionsets
+
+from .GenerateKernels import generate_kernels
 
 from exahype2.solvers.Storage import Storage
 from exahype2.solvers.PDETerms import PDETerms
@@ -66,6 +65,8 @@ class ADERDG(object):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
+        use_enclave_tasking: bool,
+        number_of_enclave_tasks: int,
         plot_grid_properties=False,
     ):
         self._name = name
@@ -137,8 +138,6 @@ class ADERDG(object):
         Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
         than the minimal size but will never be subdivided to be smaller than the minimal size.
         """
-        self._min_cell_h = min_cell_h
-        self._max_cell_h = max_cell_h
         if min_cell_h > max_cell_h:
             raise Exception(
                 "min_cell_h ("
@@ -147,6 +146,8 @@ class ADERDG(object):
                 + str(max_cell_h)
                 + ")"
             )
+        self._min_cell_h = min_cell_h
+        self._max_cell_h = max_cell_h
 
         self._dimensions    = 2
         self._namespace     = ""
@@ -166,8 +167,8 @@ class ADERDG(object):
 
         # Used by children classes or setters in order to add constants or includes to the corresponding part
         self._solver_constants = ""
-        self.user_action_set_includes = ""
-        self.user_solver_includes = ""
+        self._user_action_set_includes = ""
+        self._user_solver_includes = ""
 
         """
         These specify the time step, they must be set by child classes in order to advance the timestepping.
@@ -175,6 +176,10 @@ class ADERDG(object):
         """
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
+
+        self._space_time_predictor_call = "#error Not yet defined"
+        self._riemann_solver_call = "#error Not yet defined"
+        self._face_integral_call = "#error Not yet defined"
 
         self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
         self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
@@ -192,7 +197,6 @@ class ADERDG(object):
         self._riemann_solver_implementation       = PDETerms.None_Implementation
         self._number_of_point_sources             = 0
 
-        self._can_fuse = True
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
         self._use_stateless_refinement_criterion = False
@@ -206,6 +210,11 @@ class ADERDG(object):
         self._use_stateless_init_point_sources = False
         self._use_stateless_adjust_solution = False
         self._use_stateless_material_parameters = False
+
+        self._can_fuse = False
+        self._use_enclave_tasking = use_enclave_tasking
+        self._number_of_enclave_tasks = number_of_enclave_tasks
+        self._enclave_task_priority = "tarch::multicore::Task::DefaultPriority - 1"
 
         """
         These will be used by children of this class to fill them with the declaration and definition of the
@@ -288,6 +297,9 @@ Type:                   """
             + """
 Dimensions:             """
             + str(self._dimensions)
+            + """
+Use enclave tasking:    """
+            + str(self._use_enclave_tasking)
             + """
 Can fuse:               """
             + str(self._can_fuse)
@@ -548,19 +560,13 @@ Material parameters:    """
         self._action_set_update_cell_label.descend_invocation_order = 0
 
         # Sets initial conditions for the solution
-        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(
-            self, self._store_cell_data_default_guard(), "true"
-        )
+        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true")
         self._action_set_initial_conditions.descend_invocation_order = 1
 
-        self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.aderdg.actionsets.InitialCondition(
-            self, self._store_cell_data_default_guard(), "false"
-        )
+        self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
         self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
 
-        self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.HandleBoundary(
-            self, self._store_boundary_data_default_guard()
-        )
+        self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.HandleBoundary(self, self._store_boundary_data_default_guard())
         self._action_set_handle_boundary.descend_invocation_order = 1
 
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
@@ -575,17 +581,14 @@ Material parameters:    """
         # Predictor extrapolates the solution from time t onto time-nodes, then projects this
         # extrapolated solution to the faces.
         # Correction uses the extrapolated face solutions from the predictor and the neighboring
-        # cells to compute a solution at the next timestep.
-        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
-            self, self._store_cell_data_default_guard())
+        # cells to compute a solution at the next time step.
+        self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(self, self._store_cell_data_default_guard())
         self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
 
-        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
-            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
+        self._action_set_prediction = exahype2.solvers.aderdg.actionsets.Prediction(self, self._store_cell_data_default_guard())
         self._action_set_prediction.descend_invocation_order = 3
 
-        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
-            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
+        self._action_set_prediction_on_hanging_cells = exahype2.solvers.aderdg.actionsets.PredictionOnHangingCells(self, self._store_cell_data_default_guard())
         self._action_set_prediction_on_hanging_cells.descend_invocation_order = 3
 
         # Handles adaptive mesh refinement
@@ -638,24 +641,16 @@ Material parameters:    """
         )
 
     def get_user_action_set_includes(self):
-        return self.user_action_set_includes
+        return self._user_action_set_includes
 
     def get_user_solver_includes(self):
-        return self.user_solver_includes
+        return self._user_solver_includes
 
     def add_user_action_set_includes(self, value):
-        """
-        Add further includes to this property, if your action sets require some additional
-        routines from other header files.
-        """
-        self.user_action_set_includes += value
+        self._user_action_set_includes += value
 
     def add_user_solver_includes(self, value):
-        """
-        Add further includes to this property, if your solver requires some additional
-        routines from other header files.
-        """
-        self.user_solver_includes += value
+        self._user_solver_includes += value
 
     def _store_cell_data_default_guard(self):
         return (
@@ -769,11 +764,6 @@ Material parameters:    """
 #include "repositories/SolverRepository.h"
 """ + "#include <stdfloat>" if self._use_half_precision else ""
 
-    """
-    The following functions will be called by the Peano 4 project,
-    they tell Peano which of our generated data it should attach
-    to each grid element and use.
-    """
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         if verbose:
           print("Patch data")
@@ -874,7 +864,6 @@ Material parameters:    """
               )
           )
 
-
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 
         if self._plot_grid_properties:
@@ -893,7 +882,6 @@ Material parameters:    """
             )
         pass
 
-    # These actions are executed during each time step
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -910,7 +898,10 @@ Material parameters:    """
     def set_plot_description(self, description):
         self._plot_description = description
 
-    def _generate_kernels(self, namespace, output, subdirectory, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory="", abstract_overwrite=True):
+        self._dimensions = dimensions
+        self._namespace = namespace
+
         if (not self._is_linear) and (
             self._material_param_implementation != PDETerms.None_Implementation
             or self._point_sources_implementation != PDETerms.None_Implementation
@@ -919,180 +910,7 @@ Material parameters:    """
                 "Material parameters and point sources are currently only available for linear generated kernels."
             )
 
-        d = {}
-        self._init_dictionary_with_default_parameters(d)
-        self.add_entries_to_text_replacement_dictionary(d)
-        d["DIMENSIONS"] = dimensions
-        d["NUMBER_OF_DOF_3D"] = 1 if dimensions == 2 else d["NUMBER_OF_DOF"]
-        d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(namespace) + "::" + self._name
-
-        kernels_namespace = namespace + ["kernels", self._name]
-        kernels_output_path = subdirectory + "kernels/" + self._name
-        kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
-
-        if not os.path.exists(kernels_output_path):
-           os.makedirs(kernels_output_path)
-
-        generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "CellErrorIntegral.template.h",
-                cppfile_template=kernels_templates_prefix + "CellErrorIntegral.template.cpp",
-                classname=kernels_output_path + "/CellErrorIntegral",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(kernels_output_path + "/CellErrorIntegral.h", generated=True)
-        output.makefile.add_cpp_file(kernels_output_path + "/CellErrorIntegral.cpp", generated=True)
-
-        generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.h",
-                cppfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.cpp",
-                classname=kernels_output_path + "/MaxScaledEigenvalue",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(kernels_output_path + "/MaxScaledEigenvalue.h", generated=True)
-        output.makefile.add_cpp_file(kernels_output_path + "/MaxScaledEigenvalue.cpp", generated=True)
-
-        generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "FaceIntegral.template.h",
-                cppfile_template=kernels_templates_prefix + "FaceIntegral.template.cpp",
-                classname=kernels_output_path + "/FaceIntegral",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(kernels_output_path + "/FaceIntegral.h", generated=True)
-        output.makefile.add_cpp_file(kernels_output_path + "/FaceIntegral.cpp", generated=True)
-
-        generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "RiemannSolver.template.h",
-                cppfile_template=kernels_templates_prefix + "RiemannSolverLinear.template.cpp" if self._is_linear
-                else kernels_templates_prefix + "RiemannSolverNonlinear.template.cpp",
-                classname=kernels_output_path + "/RiemannSolver",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(kernels_output_path + "/RiemannSolver.h", generated=True)
-        output.makefile.add_cpp_file(kernels_output_path + "/RiemannSolver.cpp", generated=True)
-
-        exahype2.solvers.aderdg.kernels.AMRRoutines(d).generate_kernels(
-            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
-        )
-        exahype2.solvers.aderdg.kernels.CellData(d).generate_kernels(
-            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
-        )
-        exahype2.solvers.aderdg.kernels.DGMatrices(d).generate_kernels(
-            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
-        )
-        exahype2.solvers.aderdg.kernels.Quadrature(d).generate_kernels(
-            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
-        )
-        exahype2.solvers.aderdg.kernels.FusedSpaceTimePredictorVolumeIntegral(d).generate_kernels(
-            kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
-        )
-
-        if self._point_sources_implementation != PDETerms.None_Implementation:
-          generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "PointSources.template.h",
-                cppfile_template=kernels_templates_prefix + "PointSources.template.cpp",
-                classname=kernels_output_path + "/PointSources",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-          )
-          output.add(generated_kernels)
-          output.makefile.add_h_file(kernels_output_path + "/PointSources.h", generated=True)
-          output.makefile.add_cpp_file(kernels_output_path + "/PointSources.cpp", generated=True)
-
-        if self._use_libxsmm:
-          generated_kernels = (
-            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                headfile_template=kernels_templates_prefix + "Gemms.template.h",
-                cppfile_template=kernels_templates_prefix + "Gemms.template.cpp",
-                classname=kernels_output_path + "/Gemms",
-                namespace=kernels_namespace,
-                subdirectory=subdirectory + ".",
-                dictionary=d,
-                default_overwrite=True,
-                apply_iteratively=True,
-            )
-          )
-          output.add(generated_kernels)
-          output.makefile.add_h_file(kernels_output_path + "/Gemms.h", generated=True)
-          output.makefile.add_cpp_file(kernels_output_path + "/Gemms.cpp", generated=True)
-
-        """"
-        This is a very ugly fix that should be replaced asap.
-        Essentially, the libxsmm kernel generator generates faulty code if
-        'noarch' is specified. This code works fine except that it contains a
-        #ifdef which is missing its corresponding #endif.
-        This code just inserts that missing #endif.
-        """
-        if self._use_libxsmm and self._architecture == "noarch":
-            file = open("kernels/" + self._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "r")
-            content = file.read()
-            file.close()
-            file = open("kernels/" + self._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "w")
-            content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
-            file.write(content)
-            file.close()
-
-            file = open("kernels/" + self._name + "/AMRRoutines_libxsmm.c", "r")
-            content = file.read()
-            file.close()
-            file = open("kernels/" + self._name + "/AMRRoutines_libxsmm.c", "w")
-            content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
-            file.write(content)
-            file.close()
-
-    """
-    This tells Peano to add the solver files to the project. It generates any files that are not
-    specifically cell or face data or grid actions such as the actionsets.
-    Currently it generates solver implementation and header files as well as abstract solver
-    implementation and header files.
-    In addition to this if the user has specified that they would like to use shortcuts to refer
-    to their variable (e.g., specified their unknowns or aux. variables through a dict) it generates
-    a VariableShortcuts file which is then connected to the solver so that users can specify their
-    variables through name.
-    """
-    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
-        """
-        The ExaHyPE2 project will call this operation when it sets
-        up the overall environment.
-
-        This routine is typically not invoked by a user.
-
-        output: peano4.output.Output
-        """
-        self._dimensions = dimensions
-        self._namespace = namespace
+        generate_kernels(solver=self, output=output, subdirectory=subdirectory)
 
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
         if self._solver_template_file_class_name is None:
@@ -1103,12 +921,9 @@ Material parameters:    """
         if subdirectory:
             subdirectory += "/"
 
-        abstractHeaderDictionary = {}
-        implementationDictionary = {}
-        self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
-        self._init_dictionary_with_default_parameters(implementationDictionary)
-        self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
-        self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+        d = {}
+        self._init_dictionary_with_default_parameters(d)
+        self.add_entries_to_text_replacement_dictionary(d)
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -1117,8 +932,8 @@ Material parameters:    """
                 "Abstract" + self._name,
                 namespace,
                 subdirectory + ".",
-                abstractHeaderDictionary,
-                True,
+                d,
+                abstract_overwrite,
                 True,
             )
         )
@@ -1129,7 +944,7 @@ Material parameters:    """
                 self._name,
                 namespace,
                 subdirectory + ".",
-                implementationDictionary,
+                d,
                 False,
                 True,
             )
@@ -1150,14 +965,33 @@ Material parameters:    """
                 "VariableShortcuts" + self._name,
                 namespace,
                 subdirectory + ".",
-                implementationDictionary,
+                d,
                 True,
                 True,
             )
             output.add(generated_shortcut_file)
             output.makefile.add_h_file(subdirectory + "VariableShortcuts" + self._name + ".h", generated=True)
 
-        self._generate_kernels(namespace, output, subdirectory, dimensions)
+        if self._use_enclave_tasking:
+            generated_prediction_enclave_task = (
+                peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                    headfile_template=os.path.dirname(os.path.realpath(__file__))
+                    + "/tasks/"
+                    + "Prediction.EnclaveTask.template.h",
+                    cppfile_template=os.path.dirname(os.path.realpath(__file__))
+                    + "/tasks/"
+                    + "Prediction.EnclaveTask.template.cpp",
+                    classname="Prediction{}EnclaveTask".format(self._name),
+                    namespace=namespace + ["tasks"],
+                    subdirectory=subdirectory + "tasks",
+                    dictionary=d,
+                    default_overwrite=True,
+                    apply_iteratively=True
+                )
+            )
+            output.add(generated_prediction_enclave_task)
+            output.makefile.add_h_file(subdirectory + "tasks/" + "Prediction{}EnclaveTask".format(self._name) + ".h", generated=True)
+            output.makefile.add_cpp_file(subdirectory + "tasks/" + "Prediction{}EnclaveTask".format(self._name) + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -1201,10 +1035,6 @@ Material parameters:    """
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
-    """
-    Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
-    information from the solver or which was specified by the user.
-    """
     def _init_dictionary_with_default_parameters(self, d):
         d["DIMENSIONS"]         = self._dimensions
         d["NAMESPACE"]          = self._namespace
@@ -1217,6 +1047,7 @@ Material parameters:    """
         d["SIMD_WIDTH"]         = Architectures.get_simd_width(self._architecture)
         d["ORDER"]              = self._order
         d["NUMBER_OF_DOF"]      = self._order + 1
+        d["NUMBER_OF_DOF_3D"] = 1 if self._dimensions == 2 else d["NUMBER_OF_DOF"]
         d["NUMBER_OF_DOF_PADDED"] = Architectures.get_size_with_padding(self._architecture, self._order + 1)
         d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
         d["NUMBER_OF_UNKNOWNS_PADDED"]      = Architectures.get_size_with_padding(self._architecture, self._unknowns)
@@ -1347,6 +1178,14 @@ Material parameters:    """
         d["STATELESS_MATERIAL_PARAMETERS"] = self._use_stateless_material_parameters
 
         d["CAN_FUSE"] = self._can_fuse
+        d["USE_ENCLAVE_TASKING"] = self._use_enclave_tasking
+        d["NUMBER_OF_ENCLAVE_TASKS"] = self._number_of_enclave_tasks
+        d["ENCLAVE_TASK_PRIORITY"] = self._enclave_task_priority
+        d["ENCLAVE_TASK_TYPE"] = f"{self._name}EnclaveTask"
+
+        d["SPACE_TIME_PREDICTOR_CALL"] = jinja2.Template(self._space_time_predictor_call, undefined=jinja2.DebugUndefined).render(**d)
+        d["RIEMANN_SOLVER_CALL"] = jinja2.Template(self._riemann_solver_call, undefined=jinja2.DebugUndefined).render(**d)
+        d["FACE_INTEGRAL_CALL"] = jinja2.Template(self._face_integral_call, undefined=jinja2.DebugUndefined).render(**d)
 
         d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
         d["VARIABLE_NAMES"]         = self._variable_names

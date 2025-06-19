@@ -13,7 +13,7 @@ class Quadrature(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, subdirectory, template_prefix, output_path
     ):
         if self.d["POLYNOMIAL_TYPE"] == "legendre":
             QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
@@ -162,3 +162,4 @@ class Quadrature(object):
         output.add(generated_kernels)
         output.makefile.add_h_file(output_path + "/Quadrature.h", generated=True)
         output.makefile.add_cpp_file(output_path + "/Quadrature.cpp", generated=True)
+        solver._user_action_set_includes += (f'#include "{output_path}/Quadrature.h"\n')

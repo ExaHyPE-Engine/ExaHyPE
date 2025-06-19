@@ -150,11 +150,5 @@ class DynamicAMR(AbstractADERDGActionSet):
         return result
 
     def get_includes(self):
-        return (
-            super(DynamicAMR, self).get_includes()
-            + """
-#include "kernels/"""
-            + self._solver._name
-            + """/AMRRoutines.h"
-"""
-        )
+        result = super(DynamicAMR, self).get_includes()
+        return result

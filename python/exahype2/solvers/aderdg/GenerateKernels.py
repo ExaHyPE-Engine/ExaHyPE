@@ -1,0 +1,267 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+import os
+import jinja2
+
+import peano4.output
+
+import exahype2.solvers.aderdg.kernels
+
+from exahype2.solvers.PDETerms import PDETerms
+
+def generate_kernels(solver, output, subdirectory):
+    kernels_namespace = solver._namespace + ["kernels", solver._name]
+    kernels_output_path = subdirectory + "kernels/" + solver._name
+    kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
+
+    if not os.path.exists(kernels_output_path):
+        os.makedirs(kernels_output_path)
+
+    d = output.makefile.dictionary()
+    solver._init_dictionary_with_default_parameters(d)
+    solver.add_entries_to_text_replacement_dictionary(d)
+
+    generated_kernels = (
+        peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            headfile_template=kernels_templates_prefix + "CellErrorIntegral.template.h",
+            cppfile_template=kernels_templates_prefix + "CellErrorIntegral.template.cpp",
+            classname=kernels_output_path + "/CellErrorIntegral",
+            namespace=kernels_namespace,
+            subdirectory=subdirectory + ".",
+            dictionary=d,
+            default_overwrite=True,
+            apply_iteratively=True,
+        )
+    )
+    output.add(generated_kernels)
+    output.makefile.add_h_file(kernels_output_path + "/CellErrorIntegral.h", generated=True)
+    output.makefile.add_cpp_file(kernels_output_path + "/CellErrorIntegral.cpp", generated=True)
+    solver._user_action_set_includes += (f'#include "{kernels_output_path}/CellErrorIntegral.h"\n')
+
+    generated_kernels = (
+        peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            headfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.h",
+            cppfile_template=kernels_templates_prefix + "MaxScaledEigenvalue.template.cpp",
+            classname=kernels_output_path + "/MaxScaledEigenvalue",
+            namespace=kernels_namespace,
+            subdirectory=subdirectory + ".",
+            dictionary=d,
+            default_overwrite=True,
+            apply_iteratively=True,
+        )
+    )
+    output.add(generated_kernels)
+    output.makefile.add_h_file(kernels_output_path + "/MaxScaledEigenvalue.h", generated=True)
+    output.makefile.add_cpp_file(kernels_output_path + "/MaxScaledEigenvalue.cpp", generated=True)
+    solver._user_action_set_includes += (f'#include "{kernels_output_path}/MaxScaledEigenvalue.h"\n')
+
+    generated_kernels = (
+        peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            headfile_template=kernels_templates_prefix + "FaceIntegral.template.h",
+            cppfile_template=kernels_templates_prefix + "FaceIntegral.template.cpp",
+            classname=kernels_output_path + "/FaceIntegral",
+            namespace=kernels_namespace,
+            subdirectory=subdirectory + ".",
+            dictionary=d,
+            default_overwrite=True,
+            apply_iteratively=True,
+        )
+    )
+    output.add(generated_kernels)
+    output.makefile.add_h_file(kernels_output_path + "/FaceIntegral.h", generated=True)
+    output.makefile.add_cpp_file(kernels_output_path + "/FaceIntegral.cpp", generated=True)
+    solver._user_action_set_includes += (f'#include "{kernels_output_path}/FaceIntegral.h"\n')
+
+    generated_kernels = (
+        peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            headfile_template=kernels_templates_prefix + "RiemannSolver.template.h",
+            cppfile_template=kernels_templates_prefix + "RiemannSolverLinear.template.cpp" if solver._is_linear
+            else kernels_templates_prefix + "RiemannSolverNonlinear.template.cpp",
+            classname=kernels_output_path + "/RiemannSolver",
+            namespace=kernels_namespace,
+            subdirectory=subdirectory + ".",
+            dictionary=d,
+            default_overwrite=True,
+            apply_iteratively=True,
+        )
+    )
+    output.add(generated_kernels)
+    output.makefile.add_h_file(kernels_output_path + "/RiemannSolver.h", generated=True)
+    output.makefile.add_cpp_file(kernels_output_path + "/RiemannSolver.cpp", generated=True)
+    solver._user_action_set_includes += (f'#include "{kernels_output_path}/RiemannSolver.h"\n')
+
+    if solver._point_sources_implementation != PDETerms.None_Implementation:
+        generated_kernels = (
+            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                headfile_template=kernels_templates_prefix + "PointSources.template.h",
+                cppfile_template=kernels_templates_prefix + "PointSources.template.cpp",
+                classname=kernels_output_path + "/PointSources",
+                namespace=kernels_namespace,
+                subdirectory=subdirectory + ".",
+                dictionary=d,
+                default_overwrite=True,
+                apply_iteratively=True,
+            )
+        )
+        output.add(generated_kernels)
+        output.makefile.add_h_file(kernels_output_path + "/PointSources.h", generated=True)
+        output.makefile.add_cpp_file(kernels_output_path + "/PointSources.cpp", generated=True)
+        solver._user_action_set_includes += (f'#include "{kernels_output_path}/PointSources.h"\n')
+
+    if solver._use_libxsmm:
+        generated_kernels = (
+            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                headfile_template=kernels_templates_prefix + "Gemms.template.h",
+                cppfile_template=kernels_templates_prefix + "Gemms.template.cpp",
+                classname=kernels_output_path + "/Gemms",
+                namespace=kernels_namespace,
+                subdirectory=subdirectory + ".",
+                dictionary=d,
+                default_overwrite=True,
+                apply_iteratively=True,
+            )
+        )
+        output.add(generated_kernels)
+        output.makefile.add_h_file(kernels_output_path + "/Gemms.h", generated=True)
+        output.makefile.add_cpp_file(kernels_output_path + "/Gemms.cpp", generated=True)
+        solver._user_action_set_includes += (f'#include "{kernels_output_path}/Gemms.h"\n')
+
+    exahype2.solvers.aderdg.kernels.AMRRoutines(d).generate_kernels(
+        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+    )
+    exahype2.solvers.aderdg.kernels.BufferSizes(d).generate_kernels(
+        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+    )
+    exahype2.solvers.aderdg.kernels.DGMatrices(d).generate_kernels(
+        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+    )
+    exahype2.solvers.aderdg.kernels.Quadrature(d).generate_kernels(
+        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+    )
+    exahype2.solvers.aderdg.kernels.FusedSpaceTimePredictorVolumeIntegral(d).generate_kernels(
+        solver, kernels_namespace, output, subdirectory, kernels_templates_prefix, kernels_output_path
+    )
+
+    """"
+    This is a very ugly fix that should be replaced asap.
+    Essentially, the libxsmm kernel generator generates faulty code if
+    'noarch' is specified. This code works fine except that it contains a
+    #ifdef which is missing its corresponding #endif.
+    This code just inserts that missing #endif.
+    """
+    if solver._use_libxsmm and solver._architecture == "noarch":
+        file = open("kernels/" + solver._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "r")
+        content = file.read()
+        file.close()
+        file = open("kernels/" + solver._name + "/FusedSpaceTimePredictorVolumeIntegral_libxsmm.c", "w")
+        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
+        file.write(content)
+        file.close()
+
+        file = open("kernels/" + solver._name + "/AMRRoutines_libxsmm.c", "r")
+        content = file.read()
+        file.close()
+        file = open("kernels/" + solver._name + "/AMRRoutines_libxsmm.c", "w")
+        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
+        file.write(content)
+        file.close()
+
+    solver._space_time_predictor_call = jinja2.Template(
+        """
+{% if IS_LINEAR %}
+{% if USE_POINT_SOURCE %}
+    const auto pointSources = kernels::{{SOLVER_NAME}}::pointSources(
+      repositories::{{SOLVER_INSTANCE}},
+      marker.x(),
+      marker.h()
+    );
+    if (!pointSources.empty()) {
+      // Linear, with point sources
+      const auto _ = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegralWithPointSources<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[0]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        repositories::{{SOLVER_INSTANCE}},
+        lQhbnd,
+        lFhbnd,
+        QNew,
+        marker.x(),
+        marker.h(),
+        timeStamp,
+        timeStepSize,
+        pointSources
+      );
+    } else {
+      // Linear, without point sources
+      const auto _ = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[0]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        repositories::{{SOLVER_INSTANCE}},
+        lQhbnd,
+        lFhbnd,
+        QNew,
+        marker.x(),
+        marker.h(),
+        timeStamp,
+        timeStepSize
+      );
+    }
+{% else %}
+    // Linear, without point sources
+    const auto _ = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[0]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+      repositories::{{SOLVER_INSTANCE}},
+      lQhbnd,
+      lFhbnd,
+      QNew,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize
+    );
+{% endif %}
+{% else %}
+    // Nonlinear, without point sources
+    const auto numberOfIterations = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[0]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+      repositories::{{SOLVER_INSTANCE}},
+      lQhbnd,
+      lFhbnd,
+      QNew,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize
+    );
+{% endif %}
+""",
+        undefined=jinja2.DebugUndefined,
+    ).render(**d)
+
+    solver._riemann_solver_call = jinja2.Template(
+        """
+    kernels::{{SOLVER_NAME}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      repositories::{{SOLVER_INSTANCE}},
+      FL,
+      FR,
+      QL,
+      QR,
+      timeStamp,
+      timeStepSize,
+      faceCentre,
+      marker.h(),
+      direction,
+      isBoundary,
+      faceNumber
+    );
+""",
+        undefined=jinja2.DebugUndefined,
+    ).render(**d)
+
+    solver._face_integral_call = jinja2.Template(
+        """
+    const double inverseDxDirection = 1.0 / marker.h()[d];
+    kernels::{{SOLVER_NAME}}::faceIntegral(
+      QNew,
+      FIn,
+      direction,
+      orientation,
+      inverseDxDirection,
+      timeStepSize
+    );
+""",
+        undefined=jinja2.DebugUndefined,
+    ).render(**d)
