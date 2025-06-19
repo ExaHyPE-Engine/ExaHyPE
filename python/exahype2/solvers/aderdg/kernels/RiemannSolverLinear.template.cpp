@@ -20,8 +20,29 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const double                                      timeStepSize,
   const tarch::la::Vector<Dimensions, double>&      faceCentre,
   const tarch::la::Vector<Dimensions, double>&      cellSize,
-  const int                                         direction
+  const int                                         direction,
+  const bool                                        isBoundary,
+  const int                                         faceNumber
 ) {
+{% if USE_RIEMANN_SOLVER %}
+{% if STATELESS_RIEMANN_SOLVER %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::riemannSolver(
+{% else %}
+  solver.riemannSolver(
+{% endif %}
+    FL,
+    FR,
+    QL,
+    QR,
+    timeStamp,
+    timeStepSize,
+    faceCentre,
+    cellSize,
+    direction,
+    isBoundary,
+    faceNumber
+  );
+{% else %}
   /*
    * For the linear kernels, we need the material parameters in the
    * extrapolated predictor.
@@ -191,6 +212,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       FL[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] -= smax * Qdiff[n];
     }
   } // xy
+{% endif %}
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -203,5 +225,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const double                                              timeStepSize,
   const tarch::la::Vector<Dimensions, double>&              faceCentre,
   const tarch::la::Vector<Dimensions, double>&              cellSize,
-  const int                                                 direction
+  const int                                                 direction,
+  const bool                                                isBoundary,
+  const int                                                 faceNumber
 );

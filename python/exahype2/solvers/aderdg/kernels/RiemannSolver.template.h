@@ -21,7 +21,9 @@ void riemannSolver(
   const double                                  timeStepSize,
   const tarch::la::Vector<Dimensions, double>&  faceCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize,
-  const int                                     direction
+  const int                                     direction,
+  const bool                                    isBoundary,
+  const int                                     faceNumber
 );
 
 {% for item in NAMESPACE -%}

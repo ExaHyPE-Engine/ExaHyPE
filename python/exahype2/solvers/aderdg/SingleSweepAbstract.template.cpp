@@ -33,10 +33,10 @@ double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _maxTimeStepSizeThisTimeStep(0.0) {
 
   // Initialise nodes, weights and matrices for use of the kernels.
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
-  {% endfor %}
+{% endfor %}
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
@@ -111,7 +111,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   logDebug("update()", "Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize << ": t(new)=" << _minTimeStampThisTimeStep );
 }
 
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
   return _solverState;
 }
@@ -162,14 +161,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;
     {% else %}
-    _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : SolverState::TimeStep;
+    _solverState = (_minTimeStamp == 0) ? SolverState::InitialPrediction : SolverState::TimeStep;
     {% endif %}
     return; // [nk] return if suspended
   case SolverState::Plotting:
     {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;
     {% else %}
-    _solverState = (_minTimeStamp==0) ? SolverState::InitialPrediction : SolverState::TimeStep;
+    _solverState = (_minTimeStamp == 0) ? SolverState::InitialPrediction : SolverState::TimeStep;
     {% endif %}
     break;
   case SolverState::InitialPrediction:
@@ -312,17 +311,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
     case SolverState::GridConstruction:
-      return "grid-construction";
+      return "GridConstruction";
     case SolverState::GridInitialisation:
-      return "grid-initialisation";
+      return "GridInitialisation";
     case SolverState::Plotting:
-      return "plotting";
+      return "Plotting";
     case SolverState::InitialPrediction:
-      return "initial-prediction";
+      return "InitialPrediction";
     case SolverState::PredictionOnHangingCells:
-      return "prediction-on-hanging-cells";
+      return "PredictionOnHangingCells";
     case SolverState::TimeStep:
-      return "time-step";
+      return "TimeStep";
     }
   return "<undef>";
 }

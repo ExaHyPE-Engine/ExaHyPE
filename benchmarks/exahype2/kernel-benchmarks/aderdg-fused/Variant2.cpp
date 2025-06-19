@@ -28,7 +28,7 @@
 
 #include "CellFaceData.h"
 #include "exahype2/CellData.h"
-#include "kernels/AderSolver/CellData.h"
+#include "kernels/AderSolver/BufferSizes.h"
 #include "kernels/AderSolver/FaceIntegral.h"
 #include "kernels/AderSolver/FusedSpaceTimePredictorVolumeIntegral.h"
 #include "kernels/AderSolver/MaxScaledEigenvalue.h"
@@ -154,7 +154,9 @@ void runKernels(
       0.5 * (myFaceData->dt[faceId] + myFaceData->dt[faceId]),
       0.5 * (myFaceData->cellCentre[faceId] + myFaceData->cellCentre[faceId]),
       0.5 * (myFaceData->cellSize[faceId] + myFaceData->cellSize[faceId]),
-      direction
+      direction,
+      false,
+      0
     );
 
     const double inverseDxDirection = 1.0 / myCellData->cellSize[cellId][d];
@@ -181,7 +183,9 @@ void runKernels(
       0.5 * (myFaceData->dt[faceId] + myFaceData->dt[faceId]),
       faceCentre,
       myFaceData->cellSize[faceId],
-      direction
+      direction,
+      false,
+      0
     );
 
     faceCentre[d] -= myFaceData->cellSize[faceId][d];

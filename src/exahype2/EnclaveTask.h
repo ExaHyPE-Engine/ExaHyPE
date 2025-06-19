@@ -9,7 +9,7 @@
 #include <functional>
 
 namespace exahype2 {
-  template <typename T>
+  template <typename T, int>
   class EnclaveTask;
 } // namespace exahype2
 
@@ -44,7 +44,7 @@ namespace exahype2 {
  * The enclave task does not allocate or free any own data. It purely works on the given
  * input and output data pointers.
  */
-template <typename T>
+template <typename T, int NumFaceTypes = 1>
 class exahype2::EnclaveTask: public tarch::multicore::Task {
 protected:
   typedef std::function<void()> Functor;
@@ -53,7 +53,7 @@ protected:
   const double                             _t;
   const double                             _dt;
   T* NOALIAS const                         _QIn;
-  T* NOALIAS                               _faces[TwoTimesD];
+  T* NOALIAS                               _faces[NumFaceTypes][TwoTimesD];
   T* NOALIAS const                         _QOut;
   Functor                                  _functor;
 
@@ -80,7 +80,7 @@ public:
     double                                    t,
     double                                    dt,
     T* NOALIAS const                          QIn,
-    T* NOALIAS const                          faces[TwoTimesD],
+    T* NOALIAS const                          faces[NumFaceTypes][TwoTimesD],
     T* NOALIAS const                          QOut,
     Functor                                   functor
   );

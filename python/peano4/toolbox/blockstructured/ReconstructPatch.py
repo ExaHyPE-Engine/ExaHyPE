@@ -97,7 +97,7 @@ class ReconstructPatch(ActionSet):
     def user_should_modify_template(self):
         return False
 
-    _Template_ReconstructPatch = r"""
+    _Template_TouchCellFirstTime = r"""
   if ({GUARD}) {{
     auto* /*const*/ QIn = {CELL_ACCESSOR}.value;
     auto* /*const*/ QOut = {RECONSTRUCTED_ACCESSOR}.value;
@@ -116,7 +116,7 @@ class ReconstructPatch(ActionSet):
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             d = {}
             self._add_action_set_entries_to_dictionary(d)
-            result = self._Template_ReconstructPatch.format(**d)
+            result = self._Template_TouchCellFirstTime.format(**d)
             pass
         return result
 

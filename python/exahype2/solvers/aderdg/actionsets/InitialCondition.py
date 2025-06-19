@@ -11,14 +11,14 @@ class InitialCondition(AbstractADERDGActionSet):
   if ({{PREDICATE}}) {
     int linearisedIndex = 0;
 
-    {% if INITIALISE_PATCHES is sameas True %}
+{% if INITIALISE_PATCHES is sameas True %}
     repositories::{{SOLVER_INSTANCE}}.initialCondition(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       marker.x(),
       marker.h(),
       {{GRID_IS_CONSTRUCTED}}
     );
-    {% else %}
+{% else %}
     dfor(index, {{ORDER}} + 1) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
@@ -34,7 +34,7 @@ class InitialCondition(AbstractADERDGActionSet):
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-    {% endif %}
+{% endif %}
 
 #if Dimensions==2
     constexpr int SpaceBasisSize     = {{ORDER+1}} * {{ORDER+1}} * {{NUMBER_OF_UNKNOWNS+NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -44,13 +44,13 @@ class InitialCondition(AbstractADERDGActionSet):
 
     std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, SpaceBasisSize, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
 
-    {% if USE_POINT_SOURCE %}
+{% if USE_POINT_SOURCE %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
-    {% endif %}
+{% endif %}
 
     const double timeStamp = 0.0;
     const double timeStepSize = 0.0;
-    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    {{SOLUTION_STORAGE_PRECISION}}* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     // Relevant for tracing et al which kicks in if and only if cell has been updated
@@ -83,14 +83,5 @@ class InitialCondition(AbstractADERDGActionSet):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_includes(self):
-        return (
-            super(InitialCondition, self).get_includes()
-            + """
-#include "kernels/"""
-            + self._solver._name
-            + """/Quadrature.h"
-#include "kernels/"""
-            + self._solver._name
-            + """/MaxScaledEigenvalue.h"
-"""
-        )
+        result = super(InitialCondition, self).get_includes()
+        return result

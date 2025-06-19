@@ -65,7 +65,7 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     max_cell_h=max_h,
     time_step_relaxation=0.9,
     unknowns=scenario._equation.num_unknowns,
-    auxiliary_variables=scenario._equation.num_auxiliary_variables
+    auxiliary_variables=scenario._equation.num_auxiliary_variables,
 )
 
 solver.add_kernel_optimisations(

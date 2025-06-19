@@ -13,7 +13,7 @@ class AdaptiveTimeSteppingCodeSnippets(
         return """
     const double maxEigenvalue = kernels::{{SOLVER_NAME}}::maxScaledEigenvalue(
       repositories::{{SOLVER_INSTANCE}},
-      luh,
+      QNew,
       marker.x(),
       marker.h(),
       timeStamp,

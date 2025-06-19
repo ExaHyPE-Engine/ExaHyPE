@@ -22,8 +22,29 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const double                                      timeStepSize,
   const tarch::la::Vector<Dimensions, double>&      faceCentre,
   const tarch::la::Vector<Dimensions, double>&      cellSize,
-  const int                                         direction
+  const int                                         direction,
+  const bool                                        isBoundary,
+  const int                                         faceNumber
 ) {
+{% if USE_RIEMANN_SOLVER %}
+{% if STATELESS_RIEMANN_SOLVER %}
+  {{FULL_QUALIFIED_SOLVER_NAME}}::riemannSolver(
+{% else %}
+  solver.riemannSolver(
+{% endif %}
+    FL,
+    FR,
+    QL,
+    QR,
+    timeStamp,
+    timeStepSize,
+    faceCentre,
+    cellSize,
+    direction,
+    isBoundary,
+    faceNumber
+  );
+{% else %}
   cCompType* tmp_bnd = static_cast<cCompType *>(_mm_malloc({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(cCompType), {{ALIGNMENT}}));
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned({{ALIGNMENT}}))) = {0.0};
@@ -102,9 +123,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     }
 {% endif %}
 {% if STATELESS_NCP %}
-  {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
+    {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
-  solver.nonconservativeProduct(
+    solver.nonconservativeProduct(
 {% endif %}
       Qavg,
       gradQ,
@@ -125,6 +146,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     }
   }
 {% endif %}
+{% endif %}
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -137,5 +159,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const double                                              timeStepSize,
   const tarch::la::Vector<Dimensions, double>&              faceCentre,
   const tarch::la::Vector<Dimensions, double>&              cellSize,
-  const int                                                 direction
+  const int                                                 direction,
+  const bool                                                isBoundary,
+  const int                                                 faceNumber
 );

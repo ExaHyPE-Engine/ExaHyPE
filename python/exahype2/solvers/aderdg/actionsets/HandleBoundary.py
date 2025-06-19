@@ -108,11 +108,5 @@ class HandleBoundary(AbstractADERDGActionSet):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_includes(self):
-        return (
-            super(HandleBoundary, self).get_includes()
-            + """
-#include "kernels/"""
-            + self._solver._name
-            + """/Quadrature.h"
-      """
-        )
+        result = super(HandleBoundary, self).get_includes()
+        return result

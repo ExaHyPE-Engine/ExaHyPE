@@ -27,11 +27,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TwoTimesD],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ) {
   std::swap(QIn, QOut);
-  kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces, QOut);
+  kernels::{{SOLVER_NAME}}::reconstructPatch(QIn, faces[0], QOut);
   std::swap(QIn, QOut);
 
 #if PeanoDebug > 0
@@ -47,9 +47,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
 
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
   {% if COMPUTE_MAX_EIGENVALUE %}
-  const double maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
+  const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
   {% else %}
-  const double _ = {{COMPUTE_KERNEL_CALL}}
+  const auto _ = {{COMPUTE_KERNEL_CALL}}
   {% endif %}
   {{POSTPROCESS_UPDATED_PATCH}}
 
@@ -73,7 +73,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToPatch(
   const double                                    timeStamp,
   const double                                    timeStepSize,
   {{STORAGE_PRECISION}}* NOALIAS                  QIn,
-  {{STORAGE_PRECISION}}* NOALIAS const            faces[TwoTimesD],
+  {{STORAGE_PRECISION}}* NOALIAS const            faces[1][TwoTimesD],
   {{STORAGE_PRECISION}}* NOALIAS                  QOut
 ):
   ::exahype2::EnclaveTask<{{STORAGE_PRECISION}}>(
@@ -112,7 +112,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
     << {{NUMBER_OF_ENCLAVE_TASKS}} << " asynchronous enclave tasks on target device " << TARGET_DEVICE
   );
 
-  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}> patchData(
+  ::exahype2::CellData<{{STORAGE_PRECISION}}, {{STORAGE_PRECISION}}, 1> patchData(
     numberOfPatches,
     tarch::MemoryLocation::Pinned,
     TARGET_DEVICE
@@ -122,7 +122,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   for (auto& otherTask: otherTasks) {
     patchData.QIn[patchIndex]               = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QIn;
     for (int f = 0; f < TwoTimesD; ++f) {
-      patchData.faces[patchIndex][f]        = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[f];
+      patchData.faces[0][patchIndex][f]     = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_faces[0][f];
     }
     patchData.QOut[patchIndex]              = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_QOut;
     patchData.cellSize[patchIndex]          = static_cast<{{ENCLAVE_TASK_TYPE}}*>(otherTask)->_marker.h();
@@ -135,7 +135,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   patchData.dt                            = _dt;
   patchData.QIn[patchIndex]               = _QIn;
   for (int f = 0; f < TwoTimesD; ++f) {
-    patchData.faces[patchIndex][f]        = _faces[f];
+    patchData.faces[0][patchIndex][f]     = _faces[0][f];
   }
   patchData.QOut[patchIndex]              = _QOut;
   patchData.cellCentre[patchIndex]        = _marker.x();
@@ -172,7 +172,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
     for (int f = 0; f < TwoTimesD; ++f) {
       std::copy_n(
-        patchData.faces[patchIndex][f],
+        patchData.faces[0][patchIndex][f],
         {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %},
         &patchData.facesFlattened[
           patchIndex * TwoTimesD * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %} // Skip whole patches
@@ -238,4 +238,5 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   {{COMPUTE_NEW_TIME_STEP_SIZE}}
   repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, _t + _dt, tarch::la::min(_marker.h()), tarch::la::max(_marker.h()));
 }
+
 {% endif %}

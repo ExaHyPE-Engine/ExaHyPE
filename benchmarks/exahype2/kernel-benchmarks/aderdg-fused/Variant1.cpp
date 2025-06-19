@@ -27,7 +27,7 @@
 
 #include "CellFaceData.h"
 #include "exahype2/CellData.h"
-#include "kernels/AderSolver/CellData.h"
+#include "kernels/AderSolver/BufferSizes.h"
 #include "kernels/AderSolver/FaceIntegral.h"
 #include "kernels/AderSolver/FusedSpaceTimePredictorVolumeIntegral.h"
 #include "kernels/AderSolver/MaxScaledEigenvalue.h"
@@ -121,7 +121,9 @@ inline void firstTask(
     0.5 * (myFaceData->dt[leftFaceId] + myFaceData->dt[rightFaceId]),
     0.5 * (myFaceData->cellCentre[leftFaceId] + myFaceData->cellCentre[rightFaceId]),
     0.5 * (myFaceData->cellSize[leftFaceId] + myFaceData->cellSize[rightFaceId]),
-    faceDirection
+    faceDirection,
+    false,
+    0
   );
 
   watchKernelCompute.stop();

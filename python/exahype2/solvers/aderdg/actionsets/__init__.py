@@ -5,5 +5,6 @@ from .InitialCondition import InitialCondition
 from .DynamicAMR import DynamicAMR
 from .PostprocessSolution import EmptyPostprocessSolution
 from .HandleBoundary import HandleBoundary
-from .Prediction import Prediction
 from .Correction import Correction
+from .Prediction import Prediction
+from .PredictionOnHangingCells import PredictionOnHangingCells

@@ -5,12 +5,12 @@ from copy import deepcopy
 import peano4.output
 
 
-class CellData(object):
+class BufferSizes(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, subdirectory, template_prefix, output_path
     ):
         nUnknowns = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
         nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
@@ -66,10 +66,9 @@ class CellData(object):
         self.d["BndFluxSize"] = nUnknownsPad * (nDof * nDof3D)
         self.d["BndFluxTotalSize"] = 2 * nDim * self.d["BndFluxSize"]
 
-        generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            headfile_template=template_prefix + "CellData.template.h",
-            cppfile_template=template_prefix + "CellData.template.cpp",
-            classname=output_path + "/CellData",
+        generated_kernels = peano4.output.Jinja2TemplatedHeaderFile(
+            headerfile_template=template_prefix + "BufferSizes.template.h",
+            classname=output_path + "/BufferSizes",
             namespace=namespace,
             subdirectory=subdirectory + ".",
             dictionary=self.d,
@@ -77,5 +76,5 @@ class CellData(object):
             apply_iteratively=True,
         )
         output.add(generated_kernels)
-        output.makefile.add_h_file(output_path + "/CellData.h", generated=True)
-        output.makefile.add_cpp_file(output_path + "/CellData.cpp", generated=True)
+        output.makefile.add_h_file(output_path + "/BufferSizes.h", generated=True)
+        solver._user_action_set_includes += (f'#include "{output_path}/BufferSizes.h"\n')

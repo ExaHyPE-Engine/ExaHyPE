@@ -13,7 +13,7 @@ class AMRRoutines(object):
         self.d = deepcopy(dictionary)
 
     def generate_kernels(
-        self, namespace, output, subdirectory, template_prefix, output_path
+        self, solver, namespace, output, subdirectory, template_prefix, output_path
     ):
         self._build_gemms(namespace, output, subdirectory, template_prefix, output_path)
 
@@ -30,6 +30,7 @@ class AMRRoutines(object):
         output.add(generated_kernels)
         output.makefile.add_h_file(output_path + "/AMRRoutines.h", generated=True)
         output.makefile.add_cpp_file(output_path + "/AMRRoutines.cpp", generated=True)
+        solver._user_action_set_includes += (f'#include "{output_path}/AMRRoutines.h"\n')
 
     def _build_gemms(self, namespace, output, subdirectory, template_prefix, output_path):
         # Define a sequence of GEMMS

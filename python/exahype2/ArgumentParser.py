@@ -139,7 +139,7 @@ class ArgumentParser(argparse.ArgumentParser):
         )
 
         self.add_argument(
-            "-e",
+            "-enclave",
             "--use-enclave-tasking",
             default=False,
             action="store_true",

@@ -21,34 +21,27 @@ namespace exahype2 {
    * in the constructor and freed in the destructor, it does not provide a copy
    * constructor. This one is explicitly deleted.
    */
-  template <typename inType, typename outType> struct CellData {
-    inType**                               QIn;
-    inType*                                QInFlattened;
-    inType*                                (*faces)[TwoTimesD];
-    inType*                                facesFlattened;
-    tarch::la::Vector<Dimensions, double>* cellCentre;
-    tarch::la::Vector<Dimensions, double>* cellSize;
-    outType**                              QOut;
-    outType*                               QOutFlattened;
-    outType*                               maxEigenvalue;
+  template <typename inType, typename outType, int NumFaceTypes = 1>
+  struct CellData {
+    inType**                                QIn;
+    inType*                                 QInFlattened;
 
-    // Assuming global time stepping
-    double t;
-    double dt;
+    inType*                                 (*faces)[NumFaceTypes][TwoTimesD];
+    inType*                                 facesFlattened;
 
-    const int numberOfCells;
+    tarch::la::Vector<Dimensions, double>*  cellCentre;
+    tarch::la::Vector<Dimensions, double>*  cellSize;
 
-    /**
-     * We might want to allocate data on the heap or an accelerator,
-     * therefore we save the target device id.
-     */
-    const tarch::MemoryLocation memoryLocation;
+    outType**                               QOut;
+    outType*                                QOutFlattened;
+    outType*                                maxEigenvalue;
 
-    /**
-     * We might want to allocate data on an accelerator,
-     * therefore we save the target device id.
-     */
-    const int targetDevice;
+    double                                  t;
+    double                                  dt;
+
+    const int                               numberOfCells;
+    const tarch::MemoryLocation             memoryLocation;
+    const int                               targetDevice;
 
     CellData(
       inType* const                                QIn_,
@@ -63,7 +56,7 @@ namespace exahype2 {
 
     CellData(
       inType* const                                QIn_,
-      inType* const                                faces_[TwoTimesD],
+      inType* const                                faces_[NumFaceTypes][TwoTimesD],
       const tarch::la::Vector<Dimensions, double>& cellCentre_,
       const tarch::la::Vector<Dimensions, double>& cellSize_,
       double                                       t_,
