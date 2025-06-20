@@ -42,9 +42,6 @@ class InitHigherOrderDofs(ActionSet):
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
   
-  // @todo Not sure if this is always there
-  fineGridCell{{SOLVER_NAME}}.setInverseOfSystemMatrix( nullptr );
-
   switch(dofType) {
     case celldata::{{SOLVER_NAME}}::Type::Outside:
       {
