@@ -11,6 +11,7 @@ MultigridSources = \
   mghype.cpp \
   matrixfree/solvers/DGCGCoupling.cpp \
   matrixfree/solvers/Solver.cpp \
+  matrixfree/solvers/SolverStatistics.cpp \
   matrixfree/solvers/CGMultigrid.cpp
   
 

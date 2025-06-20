@@ -14,6 +14,7 @@ namespace tarch {
     namespace taskfusion {
       class LogReadyTask;
       class ProcessReadyTask;
+      struct FusableTasksQueue;
     }
   }
 }
@@ -54,36 +55,11 @@ namespace tarch {
  */
 class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::Task {
   private:
-    ReadyFusableTasks* _taskQueue;
+    FusableTasksQueue& _taskQueue;
     const int          _taskNumber;
-
-    static const std::string ProcessFusedTasksStatisticsIdentifier;
 
     static tarch::logging::Log _log;
 
-    /**
-     * Look up if the task number to which this process task is tied to has already been done.
-     *
-     * @param tryLock If set, we use a try lock (not a lock) and return false
-     *                if the try fails. If it is unset, we use a proper lock.
-     */
-    bool hasTaskBeenProcessed( bool tryLock ) const;
-
-    /**
-     * Process tasks from queue
-     *
-     * Very simple implementation running through a few basic checks:
-     *
-     * - Get the instructions for the task type at this point and also the
-     *   size of the queue.
-     * - Log the stats for the queue size
-     * - If we are ready to fuse, extract all the tasks to be fused from the
-     *   queue and hand them over to the fused routine.
-     * - Bookkeep that these tasks are now completed.
-     *
-     *
-     */
-    void processTasks();
   public:
     /**
      * Construct process ready task
@@ -92,8 +68,14 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
      * taskNumber is completed. If taskNumber equals NoDependency, then
      * the task has to ensure that the set of fused tasks is empty before
      * it returns.
+     *
+     * @param taskNumber Pass in a bespoke task number. If this task is
+     *   already complete when the task kicks off in run(), then the process
+     *   task will return immediately. You can pass in
+     *   tarch::multicore::taskfusion::FusableTasksQueue::AnyTask as well to
+     *   disable this.
      */
-    ProcessReadyTask( int taskNumber, ReadyFusableTasks* taskQueue );
+    ProcessReadyTask( int taskNumber, FusableTasksQueue& taskQueue );
 
     /**
      * Run the task
@@ -126,17 +108,5 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
      *   for details on the realisation of the task fusion.
      */
     virtual void run() override;
-
-    /**
-     * Search for the one task we are waiting for. If you find it, process it.
-     *
-     * @param taskNumber Task number that has to be processed. If you pass in
-     *   -1, then the routine simply takes the first task (if there is one) and
-     *   finishes that one.
-     */
-    static void tryToProcessOneTask(
-      ReadyFusableTasks* taskQueue,
-      int                taskNumber
-    );
 };
 

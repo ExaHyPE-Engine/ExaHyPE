@@ -99,10 +99,9 @@ project.add_solver(solver)
 #t
 # Configure build
 #
-build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Stats
 #build_mode = peano4.output.CompileMode.Asserts
-
-#project.set_multicore_orchestration
 
 
 cube_size = 1.0
@@ -121,6 +120,15 @@ if args.max_trees>0:
     max_trees = args.max_trees
 else:
     max_trees = "::exahype2::LoadBalancingConfiguration::UseNumberOfThreads"
+
+project.set_multicore_orchestration( """new ::tarch::multicore::orchestration::Hardcoded(
+  8,256,
+  tarch::multicore::Task::Host,
+  ::tarch::multicore::orchestration::Hardcoded::NoNestedParallelism,
+  ::tarch::multicore::orchestration::Hardcoded::NoTimeout,
+  ::tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks
+)""" )
+
 
 project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates", "new ::exahype2::LoadBalancingConfiguration(0.9, 0, false, {}, {})".format(max_trees, max_trees) )
 project.set_Peano4_installation( args.peanodir, build_mode )

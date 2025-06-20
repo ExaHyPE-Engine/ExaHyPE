@@ -59,4 +59,6 @@ public:
     double averageNumberOfPendingReadyTasksPerProcessTaskExecution,
     double probabilityThatTaskIsCompleted
   ) override;
+
+  virtual FusionImplementation getFusionImplementation() const override;
 };

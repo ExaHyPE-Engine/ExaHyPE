@@ -144,6 +144,29 @@ namespace tarch {
      * ever waiting for it later on (at least not via task dependencies).
      *
      *
+     * ## OpenMP variant
+     *
+     * The OpenMP variant has to jump through a number of hoops:
+     *
+     * 1. We check if we have enough addresses to administer the task
+     *    dependencies. We basically ask: should we grow this big table
+     *    that holds the dependencies (dependencyTrackingBaseAddress).
+     * 2. If that analysis says "yes", we acquire a write lock on the
+     *    whole tasking. Otherwise, we acquire a read lock over a
+     *    MultiReadSingleWriteSemaphore instance.
+     * 3. We grow the task dependency management memory region if we
+     *    have got a write lock.
+     * 4. We look for each involved task number if this can be modelled
+     *    via an OpenMP dependency, i.e. if the task number is one that
+     *    we can manage. Otherwise, we move this dependency (we know
+     *    that the number of tasks managed is monotonously growing, i.e.
+     *    we can assume that this dependency's task has never been used).
+     * 5. If there are no out dependencies, we can just spawn this task.
+     *    It goes straight into the background.
+     * 6. If we have an out dependency (task number) and if we can serve
+     *    this one, we spawn a proper task.
+     * 7. Otherwise, we complete the task immediately.
+     *
      * @see The page @ref page_tarch_multicore contains some high level
      *      overview of the multithreading.
      * @see The documentation of tarch::multicore::taskfusion for details
@@ -488,6 +511,26 @@ namespace tarch {
        *    bookmarked in there and is already complete. In this case, we
        *    remove the entry. We kind of run an on-the-fly immediate garbage
        *    collection to slim down our map of spawned tasks.
+       *
+       * ## OpenMP
+       *
+       * Joachim Jenke has flagged that there are some OpenMP versions that
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * might fail with some (older) OpenMP versions. A workaround is the
+       * construct through an empty task:
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * #pragma omp task depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) if (0)
+       * {}
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * Here, we model a task which is actually never spawned as task due to
+       * if statement that evaluates to false. However, the in-dependencies
+       * will be resolved nevertheless.
        */
       void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
@@ -510,6 +553,14 @@ namespace tarch {
        * iteratively wait for one task after another to finish. This implies
        * that we give the runtime system a lot of freedom in which order and
        * how parallel to tidy up all tasks.
+       *
+       * ## OpenMP
+       *
+       * In OpenMP, we do a generic taskwait, but then we use the opportunity
+       * as well to grow the memory used for dependency tracking by calling
+       * reserveDependencyTrackingMemory(). We still need the generic taskwait
+       * first, as there's no guarantee that reserveDependencyTrackingMemory()
+       * will actually expand the memory and wait for all other tasks.
        */
       void waitForAllTasks();
     } // namespace native
