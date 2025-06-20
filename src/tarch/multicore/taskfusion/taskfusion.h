@@ -180,6 +180,7 @@ namespace tarch {
        *
        */
       void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies);
+      void ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
 }

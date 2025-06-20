@@ -179,10 +179,39 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks(c
     case tarch::multicore::orchestration::FusionImplementation::LazyEvaluation:
       ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation( inDependencies );
       break;
-    case tarch::multicore::orchestration::FusionImplementation::LazyConsumerTasks:
     case tarch::multicore::orchestration::FusionImplementation::EagerConsumerTasks:
+      ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks( inDependencies );
+      break;
+    case tarch::multicore::orchestration::FusionImplementation::LazyConsumerTasks:
       ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks( inDependencies );
       break;
+  }
+}
+
+
+void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_EagerConsumerTasks(const std::set<TaskNumber>& inDependencies) {
+  bool tasksArePending         = false;
+  bool tasksAreReadyOrRunning  = false;
+
+  for (auto taskNumber: inDependencies) {
+    for (auto queue: fusableTaskQueue) {
+      tasksArePending        |= queue.second->isTaskPending(taskNumber, false);
+      tasksAreReadyOrRunning |= queue.second->isTaskReadyOrRunning(taskNumber, true);
+    }
+  }
+
+  if (tasksArePending) {
+    native::waitForTasks(inDependencies);
+  }
+
+  if (tasksAreReadyOrRunning) {
+    for (auto taskNumber: inDependencies) {
+      for (auto queue: fusableTaskQueue) {
+        while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
+          queue.second->processTasks();
+        }
+      }
+    }
   }
 }
 
