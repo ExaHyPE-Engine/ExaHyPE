@@ -203,6 +203,27 @@ bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReadyOrRunning(
 }
 
 
+bool tarch::multicore::taskfusion::FusableTasksQueue::isTaskReady(
+  int                 taskNumber,
+  bool                tryLock
+) {
+  tarch::multicore::Lock readyLock(readyTasksSemaphore, false);
+
+  if (tryLock) {
+    if (
+      not readyLock.tryLock()
+    ) {
+      return true;
+    }
+  }
+  else {
+    readyLock.lock();
+  }
+
+  return readyTasks.count(taskNumber) > 0;
+}
+
+
 int tarch::multicore::taskfusion::FusableTasksQueue::getType() const {
   return _type;
 }

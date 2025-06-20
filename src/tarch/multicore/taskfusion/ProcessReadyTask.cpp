@@ -17,8 +17,6 @@ tarch::multicore::taskfusion::ProcessReadyTask::ProcessReadyTask( int taskNumber
 }
 
 
-
-
 void tarch::multicore::taskfusion::ProcessReadyTask::run() {
   assertion( not _taskQueue.isTaskPending(_taskNumber, false) );
 

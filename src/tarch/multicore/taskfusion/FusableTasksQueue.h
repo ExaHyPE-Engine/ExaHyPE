@@ -22,6 +22,11 @@ namespace tarch {
 }
 
 
+/**
+ * Represents a queue of fusable tasks
+ *
+ * @todo We might want to make the attributes private to have a stronger encapsulation
+ */
 class tarch::multicore::taskfusion::FusableTasksQueue {
   public:
     static const int AnyTask = -1;
@@ -100,6 +105,11 @@ class tarch::multicore::taskfusion::FusableTasksQueue {
     );
 
     bool isTaskReadyOrRunning(
+      int                 taskNumber,
+      bool                tryLock
+    );
+
+    bool isTaskReady(
       int                 taskNumber,
       bool                tryLock
     );

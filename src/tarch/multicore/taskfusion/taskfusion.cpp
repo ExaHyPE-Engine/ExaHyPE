@@ -230,9 +230,12 @@ void tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
 
   for (auto taskNumber: inDependencies) {
     for (auto queue: fusableTaskQueue) {
-      if (queue.second->isTaskReadyOrRunning(taskNumber, true) ) {
+      if (queue.second->isTaskReady(tarch::multicore::taskfusion::FusableTasksQueue::AnyTask, false) ) {
         Task* processTask = new ProcessReadyTask(taskNumber, *(queue.second));
         tarch::multicore::native::spawnTask( processTask, tarch::multicore::NoInDependencies, taskNumber);
+      }
+      while (queue.second->isTaskReadyOrRunning(taskNumber, false)) {
+        queue.second->processOneTask(taskNumber);
       }
     }
   }

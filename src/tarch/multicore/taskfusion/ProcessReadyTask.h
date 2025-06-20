@@ -68,6 +68,12 @@ class tarch::multicore::taskfusion::ProcessReadyTask: public tarch::multicore::T
      * taskNumber is completed. If taskNumber equals NoDependency, then
      * the task has to ensure that the set of fused tasks is empty before
      * it returns.
+     *
+     * @param taskNumber Pass in a bespoke task number. If this task is
+     *   already complete when the task kicks off in run(), then the process
+     *   task will return immediately. You can pass in
+     *   tarch::multicore::taskfusion::FusableTasksQueue::AnyTask as well to
+     *   disable this.
      */
     ProcessReadyTask( int taskNumber, FusableTasksQueue& taskQueue );
 

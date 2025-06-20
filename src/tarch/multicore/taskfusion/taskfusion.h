@@ -165,6 +165,20 @@ namespace tarch {
        *      if a particular task has completed already.
        */
       void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(const std::set<TaskNumber>& inDependencies);
+
+      /**
+       *
+       *
+       * # Implementation
+       *
+       * If the task is ready, somebody could have triggered the computation
+       * instead of us. So we issue a consumer task now, as we may assume that
+       * there are many other tasks in there as well which are ready.
+       *
+       * After that, we while loop and wait until we know that the task is
+       * complete.
+       *
+       */
       void ensureHeldBackTasksAreMappedOntoNativeTasks_LazyConsumerTasks(const std::set<TaskNumber>& inDependencies);
     } // namespace taskfusion
   }
