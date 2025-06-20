@@ -19,7 +19,7 @@
 namespace {
   static tarch::logging::Log _log( "tarch::multicore::native(omp)" );
 
-  using DependencyTrackingDataType = unsigned unsigned int;
+  using DependencyTrackingDataType = unsigned short int;
 
   #ifndef DefaultSizeOfMemoryRegionUsedForDependencyTracking
   constexpr int DefaultSizeOfMemoryRegionUsedForDependencyTracking = 16;
