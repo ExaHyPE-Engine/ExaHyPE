@@ -705,6 +705,17 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * discussed in @ref peano_domain_decomposition "Peano's generic domain decomposition" discussion.
      *
      *
+     * ## Reasons for unsuccessful splits
+     *
+     * Calling split() is an instruction that Peano might want to ignore. It
+     * notably ignores the split instruction if maySplit() on the underlying
+     * tree returns false.
+     *
+     * It also fails to split (and consequently returns false) if the routine
+     * peano4::parallel::Node::getInstance().reserveId() is unable to create
+     * a new spacetree id.
+     *
+     *
      * @param treeId  Id of tree that should split, i.e. give away cells to a
      *   new tree
      * @param cells   Number of cells to deploy to a new tree. This count refers
@@ -712,6 +723,8 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *   of the tree unfold in the next step, the new @f$ 3^d @f$ children do
      *   count only with one towards this quota.
      * @param targetRank  Rank which should host the new tree.
+     *
+     * @return Split had been successful
      */
     bool split(int treeId, const peano4::SplitInstruction& instruction, int targetRank);
 

@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include <set>
 #include <string>
@@ -20,13 +21,22 @@ namespace tarch {
  * all vertices and cells properly.
  *
  * The object is thread-safe, i.e. all modifiers are protected via a semaphore.
+ *
+ * It ensures that no number is handed out twice, by maintaining a set of
+ * _activeNumbers.
  */
 class tarch::Enumerator {
   public:
     static constexpr int NoNumber = -1;
 
-    Enumerator();
+    Enumerator(int max = std::numeric_limits<int>::max()-2 );
+
+    /**
+     * Complete reset, which basically eliminates all the active numbers.
+     */
     void reset();
+
+    void setMax( int max );
 
     /**
      * Returns a unique non-zero number which is not yet used anywhere else on
@@ -48,7 +58,11 @@ class tarch::Enumerator {
     std::string toString() const;
 
   private:
+    static tarch::logging::Log         _log;
+
     tarch::multicore::BooleanSemaphore _semaphore;
     std::set<int>                      _activeNumbers;
+    int                                _max;
+    int                                _lastNumberHandedOut;
 };
 

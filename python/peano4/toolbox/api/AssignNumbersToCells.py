@@ -96,6 +96,6 @@ class AssignNumbersToCells(ActionSet):
 
     def get_includes(self):
         return """
-#include "tarch/Enumerator.h"
+#include "tarch/multicore/TaskEnumerator.h"
  """
 
