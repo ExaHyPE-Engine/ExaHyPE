@@ -47,18 +47,18 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     double                                       dt
 ) {
     double result = 0.0;
+    double tem = 0.0;
     for (int normal=0; normal<Dimensions; normal++) {
-      result = std::max(
-        result,
         maxEigenvalue(
           & (QOut[ QOutEnumerator(patchIndex,volumeIndex,0) ]),
           ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
           ::exahype2::fd::getGridCellSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
           t,
           dt,
-          normal
-        )
-      );
+          normal,
+          &tem
+        );
+      result =std::max(result, tem);
     }
 
     return result;
