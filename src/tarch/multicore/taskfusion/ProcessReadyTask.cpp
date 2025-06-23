@@ -25,24 +25,6 @@ void tarch::multicore::taskfusion::ProcessReadyTask::run() {
   if ( isTaskStillPending ) {
     tarch::multicore::orchestration::Strategy::FuseInstruction instruction = tarch::multicore::getOrchestration().fuse(_taskQueue.getType());
 
-    if (
-      instruction.timeoutMicroSeconds>std::chrono::microseconds(0)
-      and
-      instruction.minTasks>=_taskQueue.readyTasks.size()
-    ) {
-      const    auto deadline      = std::chrono::system_clock::now() + instruction.timeoutMicroSeconds;
-      volatile int  taskQueueSize = _taskQueue.readyTasks.size();
-      while (
-        std::chrono::system_clock::now() < deadline
-        and
-        _taskQueue.isTaskReadyOrRunning(_taskNumber, false)
-        and
-        instruction.minTasks>=taskQueueSize
-      ) {
-        taskQueueSize = _taskQueue.readyTasks.size();
-      }
-    }
-
     tarch::multicore::Lock lock(_taskQueue.statisticsSemaphore);
     _taskQueue.numberOfPendingReadyTasksPerProcessTaskExecution.setValue(_taskQueue.readyTasks.size());
     _taskQueue.probabilityThatTaskIsCompleted.setValue(0.0);

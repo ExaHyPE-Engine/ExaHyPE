@@ -22,7 +22,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     int  _maxTasksToFuse;
     int  _deviceForFusedTasks;
     int  _maxNestedConcurrency;
-    std::chrono::microseconds  _timeout;
     FusionImplementation       _fusionImplementation;
 
   public:
@@ -61,7 +60,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     );
 
     static constexpr int                       NoNestedParallelism = 1;
-    static constexpr std::chrono::microseconds NoTimeout = std::chrono::microseconds(0);
 
     /**
      * Construct hardcoded scheme
@@ -80,7 +78,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
       int  maxTasksToFuse,
       int  deviceForFusedTasks,
       int  maxNestedConcurrency,
-      std::chrono::microseconds  timeout,
       FusionImplementation fusionImplementation
     );
     virtual ~Hardcoded() = default;

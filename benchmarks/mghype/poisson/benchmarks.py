@@ -103,8 +103,8 @@ project.add_solver(solver)
 #t
 # Configure build
 #
-#build_mode = peano4.output.CompileMode.Release
-build_mode = peano4.output.CompileMode.Stats
+build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Stats
 #build_mode = peano4.output.CompileMode.Asserts
 
 
