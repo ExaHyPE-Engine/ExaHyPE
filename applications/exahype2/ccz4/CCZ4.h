@@ -121,15 +121,15 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void maxEigenvalue(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double* __restrict__                         maxEigenvalue
     ) override;
-    
     
     
     virtual void nonconservativeProduct(
@@ -199,13 +199,14 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod double maxEigenvalue(
+    static GPUCallableMethod void maxEigenvalue(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
+      double* __restrict__                         maxEigenvalue,
       ::exahype2::Solver::Offloadable
     ) {
       const double np = 1.0;
@@ -222,17 +223,13 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
       double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
       bool flag = false;
-      return tem;
+      maxEigenvalue[0]=tem;
     }
 
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
-
-
-    
-     
    
     
     /**

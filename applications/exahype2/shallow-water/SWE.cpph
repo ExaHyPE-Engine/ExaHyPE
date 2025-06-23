@@ -64,6 +64,19 @@ double applications::exahype2::swe::maxEigenvalue(
   return std::fmax(std::fabs(L[0]), std::fmax(std::fabs(L[1]), std::fabs(L[2])));
 }
 
+void applications::exahype2::swe::maxEigenvalue(
+  const double* const __restrict__             Q,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const __restrict__                   maxEigenvalue
+) {
+  double L[3];
+  eigenvalues(Q, x, h, t, dt, normal, L);
+  maxEigenvalue[0] = std::fmax(std::fabs(L[0]), std::fmax(std::fabs(L[1]), std::fabs(L[2])));
+}
 
 void applications::exahype2::swe::flux(
   const double* const __restrict__             Q,

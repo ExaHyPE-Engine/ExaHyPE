@@ -41,7 +41,7 @@ class InitHigherOrderDofs(ActionSet):
   logTraceInWith2Arguments("touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellType(marker.x(),marker.h());
-
+  
   switch(dofType) {
     case celldata::{{SOLVER_NAME}}::Type::Outside:
       {
@@ -93,7 +93,7 @@ class InitHigherOrderDofs(ActionSet):
   logTraceOutWith2Arguments("touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
 
-  templatetouchFaceFirstTime = """
+  templateTouchFaceFirstTime = """
   logTraceInWith2Arguments("touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
   facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceType(marker.x(),marker.h());
@@ -168,7 +168,7 @@ class InitHigherOrderDofs(ActionSet):
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.templatetouchFaceFirstTime).render(**self.d)
+      result = jinja2.Template(self.templateTouchFaceFirstTime).render(**self.d)
       pass
     return result
 

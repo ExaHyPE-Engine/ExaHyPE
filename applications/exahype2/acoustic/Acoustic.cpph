@@ -1,15 +1,16 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-double applications::exahype2::acoustic::maxEigenvalue(
+void applications::exahype2::acoustic::maxEigenvalue(
   [[maybe_unused]] const double* const __restrict__             Q,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] const double                                 t,
   [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] const int                                    normal
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] double* const __restrict__                   maxEigenvalue
 ) {
-  return WAVE_SPEED;
+  maxEigenvalue[0] = WAVE_SPEED;
 }
 
 void applications::exahype2::acoustic::flux(

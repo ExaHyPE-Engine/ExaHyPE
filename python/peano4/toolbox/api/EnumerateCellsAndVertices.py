@@ -17,8 +17,8 @@ def construct_marker_name(task_name):
 
 
 def create_vertex_marker(task_name,
-                         full_qualified_enumerator_type = "tarch::Enumerator",
-                         enumerator_include = """ #include "tarch/Enumerator.h" """
+                         full_qualified_enumerator_type = "tarch::multicore::TaskEnumerator",
+                         enumerator_include = """ #include "tarch/multicore/TaskEnumerator.h" """
                          ):
     """!
 

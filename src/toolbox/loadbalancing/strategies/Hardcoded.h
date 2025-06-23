@@ -23,38 +23,84 @@ namespace toolbox {
 /**
  * Hardcoded domain decomposition strategy
  *
- * Hardcoded lb is useful if you know exactly which domain decomposition you
- * want to build up at which time, or if you have to debug a particular
- * (deterministic) setup.
+ * Hardcoded load balancing is useful if you know exactly which domain
+ * decomposition you want to build up at which time, or if you have to debug a
+ * particular (deterministic) setup. It also comes in handy whenever you can
+ * transform your dynamic load balancing challenge into an offline problem.
+ * The loadbalancing's Python API contains all the tools to derive good
+ * balancing strategies for offline problems.
+ *
+ * Please consult the constructor Hardcoded::Hardcoded() for details on how
+ * to pipe a certain load balancing setup into the load balancing decision.
+ *
+ *
+ * ## Support for files
+ *
+ * I originally thought it would be nice to have support for hard-coded
+ * load-balancing being encoded in a file. However, this contradicts Peano's
+ * philosophy that everything should be in the Python script. Therefore, this
+ * strategy does **not** support file I/O but the load balancing's Python
+ * interface does.
+ *
+ *
+ * ## Trivia
+ *
+ * There's also a hardcoded orchestration strategy in tarch::multicore::orchestration::Hardcoded.
+ * This is a totally different notion of being hardcoded: There's the
+ * decision-making is hardcoded whereas here the actual decisions are. In this
+ * sense, the present name might be chosen inappropriately.
  *
  */
 class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
-     * @todo I'd like to have support for a file here later on which contains
-     * entries alike
-     *
-<pre>
- 10: tree 15 splits into 4 cells to rank 4
- 25: tree 16 splits into 5 cells to rank 2
-</pre>
-     *
+     * Construct hard-coded load balancing strategy
      *
      * The splits that are to be triggered are passed here as three initialiser
      * lists. So if you pass
      *
-     * <pre> {4,5,8}, {2,2,2}, {11,12,13}, {22,23,24} </pre>
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * {4,5,8}, {2,2,2}, {11,12,13}, {22,23,24}
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * then tree 2 will split in the grid sweeps 4, 5 and eight. It will try to
      * deploy 11, 12 or 13 cells to the ranks 22, 23 or 24, respectively.
+     *
+     * ## Implementation
+     *
+     * We do not work with initialiser lists internally. Instead, the
+     * constructor takes the list and transforms it into a sequence of
+     * Split objects which are then held internally.
+     *
+     * I originally wanted the constructor to dumb some info on what
+     * type of load balancing exactly had been constructed. However, some codes
+     * use the load balancing object as static variable, so it might come up
+     * before the logging infrastructure is properly configured. This means
+     * that the logInfo will crash. So better stay silent and avoid logInfo()
+     * calls here.
+     *
+     *
      */
     Hardcoded(
       std::initializer_list<int> timeStamps,
       std::initializer_list<int> splittingTrees,
       std::initializer_list<int> numberOfCells,
       std::initializer_list<int> destinationRanks,
-      std::initializer_list<peano4::SplitInstruction::Mode> modes,
-      bool handOutOnePartitionPerCore
+      std::initializer_list<peano4::SplitInstruction::Mode> modes
+    );
+
+    /**
+     * Shortcut around other constructor
+     *
+     * In this variant, all split modes are of the same type and there's a
+     * default.
+     */
+    Hardcoded(
+      std::initializer_list<int> timeStamps,
+      std::initializer_list<int> splittingTrees,
+      std::initializer_list<int> numberOfCells,
+      std::initializer_list<int> destinationRanks,
+      peano4::SplitInstruction::Mode  mode = peano4::SplitInstruction::Mode::BottomUp
     );
 
     virtual void finishStep() override;
@@ -76,12 +122,10 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
     std::queue< Split >   _splits;
 
     /**
-     * Time stamp might be the slightly wrong wording. It is actually grid iteration
-     * or finishStep() calls.
+     * Time stamp might be the slightly wrong wording. It is actually grid
+     * iteration or finishStep() calls.
      */
     int    _currentTimeStamp;
-
-    const bool _handOutOnePartitionPerCore;
 };
 
 
