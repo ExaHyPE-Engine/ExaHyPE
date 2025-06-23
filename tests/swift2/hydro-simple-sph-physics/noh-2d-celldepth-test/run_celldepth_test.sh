@@ -28,9 +28,12 @@ PLOT_DELTA=0.01
 # will skip running experiment if outputfile already exists
 REDO="false"
 
-for N_PART in 512 256 128 64 32; do
-    for CELL_SIZE_MAX in 2 0.67 0.23; do
-        for CELL_SIZE_MIN in 2 0.67 0.23 0.075 0.025 0.0083 0.003; do
+for N_PART in 512; do
+    for CELL_SIZE_MAX in 2; do
+        for CELL_SIZE_MIN in 0.075; do
+# for N_PART in 512 256 128 64 32; do
+#     for CELL_SIZE_MAX in 2 0.67 0.23; do
+#         for CELL_SIZE_MIN in 2 0.67 0.23 0.075 0.025 0.0083 0.003; do
 
             if (( $(echo "$CELL_SIZE_MIN > $CELL_SIZE_MAX" |bc -l) )); then
                 continue;
@@ -44,7 +47,8 @@ for N_PART in 512 256 128 64 32; do
 
                 # Run python script to generate the experiment
                 echo COMPILING N_PART=$N_PART CELL_MAX=$CELL_SIZE_MAX CELL_MIN=$CELL_SIZE_MIN
-                python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA --cell-size-max $CELL_SIZE_MAX --cell-size-min $CELL_SIZE_MIN -j 64 > /dev/null
+                # python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA --cell-size-max $CELL_SIZE_MAX --cell-size-min $CELL_SIZE_MIN -j 64 > /dev/null
+                python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA --cell-size-max $CELL_SIZE_MAX --cell-size-min $CELL_SIZE_MIN -j 8 --asserts --verbose
                 # allow this to fail if we're trying to use too small cell_size_min
 
                 if [ -f noh2D ]; then

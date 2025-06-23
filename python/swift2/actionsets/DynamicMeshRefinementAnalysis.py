@@ -13,7 +13,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
     AMR criterion based upon the particle density
 
-    This implementation is almsot exactly the same as the toolbox variant,
+    This implementation is almost exactly the same as the toolbox variant,
     but it does not work with a static field, but instead pipes all the
     refinement events a global variable. Actually, it fuses two different
     action sets of the toolbox: The actual stats over the markers which
@@ -105,7 +105,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
         """
         if min_particles_per_cell < 0:
-            raise Exception(
+            raise ValueError(
                 "invalid min number of particles pre cell (has to be positive): {}".format(
                     min_particles_per_cell
                 )
@@ -115,7 +115,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
             max_particles_per_cell < min_particles_per_cell
             or max_particles_per_cell < 0
         ):
-            raise Exception(
+            raise ValueError(
                 "max number of particles ({}) has to be bigger or equal to min number ({}) and it has to be positive".format(
                     max_particles_per_cell, min_particles_per_cell
                 )
@@ -133,7 +133,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
             "PARTICLE": particle_set.particle_model.name,
             "SCALE_MARKER": scale_marker,
         }
-        pass
+        return
 
     def user_should_modify_template(self):
         return False
@@ -206,39 +206,40 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
   /*
 
-   To understand the code's behaviour, it is resonable to read through 
+   To understand the code's behaviour, it is resonable to read through
    @ref peano_amr_tex "Peano's generic AMR description".
 
    Refine
    ======
-   
+
    Refine if we have not yet reached the finest mesh resolution and violate
    the max particle count. This implies that we actually get a mesh which is
    slightly finer then min_h or this species.
-   
+
    Erase
    =====
 
    If we want to erase a cell, we actually make the region that is to be
-   erased slightly bigger. This is in line with @ref peano_amr_tex "Peano's generic AMR description". 
+   erased slightly bigger. This is in line with @ref peano_amr_tex "Peano's generic AMR description".
    Furthermore, we mark only refined cells
    one level above the finest mesh. These are cells which will be refined and
    have been refined, and also carry only few particles such that we could
    safely erase their children plus have no refined children. To find out if
    this holds for a cell, we look at the flag getParentOfRefinedCell().
-   
+
   */
   if (
     not marker.willBeRefined()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
   ) {
+  // MLADEN1 GREP FOR THIS
     const double ScaleMarker = {{SCALE_MARKER}};
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
     newEntry.setWidth( marker.h() * ScaleMarker );
-    newEntry.setH( 
+    newEntry.setH(
       tarch::la::greater( marker.h()(0), {{MIN_H}} ) ? marker.h()/3.0 * 1.1 : marker.h() * 1.1
     );
     _localGridControlEvents.push_back(newEntry);

@@ -11,8 +11,9 @@ debug  benchmarks                          -1     black always-on
 debug  swift2                              -1     black always-on
 debug  toolbox                             -1     black always-on
 
-debug  HydroPartSet                        -1     white always-on
+debug  HydroPartSet                        -1     black always-on
 debug  toolbox::particles::assignmentchecks -1    black always-on
+debug  create-grid			   -1     white always-on
 
 info  tarch                                -1     white always-on
 info  peano4                               -1     white always-on
@@ -20,6 +21,7 @@ info  tests                                -1     white always-on
 info  benchmarks                           -1     white always-on
 info  swift2                               -1     white always-on
 info  toolbox                              -1     white always-on
+info  create-grid			   -1     white always-on
  
 trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
@@ -29,4 +31,5 @@ trace  benchmarks                          -1     black always-on
 trace  toolbox                             -1     black always-on
 
 trace  toolbox::particles::assignmentchecks -1    black always-on
+trace  create-grid			   -1     white always-on
 
